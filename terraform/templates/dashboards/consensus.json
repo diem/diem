@@ -67,7 +67,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_gauge{op='last_committed_round'}[1m])",
+          "expr": "irate(libra_consensus_last_committed_round[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -162,7 +162,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_gauge{op='last_committed_version'}[1m])",
+          "expr": "irate(libra_consensus_last_committed_version[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -248,7 +248,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus_gauge{op='num_blocks_in_tree'} - 1",
+          "expr": "libra_consensus_num_blocks_in_tree - 1",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -334,7 +334,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='creation_to_qc_s'}[1m])/irate(consensus_duration_count{op='creation_to_qc_s'}[1m])",
+          "expr": "irate(libra_consensus_creation_to_qc_s_sum[1m])/irate(libra_consensus_creation_to_qc_s_count[1m])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -342,7 +342,7 @@
           "refId": "A"
         },
         {
-          "expr": "irate(consensus_duration_sum{op='creation_to_receival_s'}[1m])/irate(consensus_duration_count{op='creation_to_receival_s'}[1m])",
+          "expr": "irate(libra_consensus_creation_to_receival_s_sum[1m])/irate(libra_consensus_creation_to_receival_s_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}: vote",
@@ -370,6 +370,94 @@
       "yaxes": [
         {
           "format": "ms",
+          "label": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Percent of time the main Event Loop spends idle",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 9
+      },
+      "id": 44,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(libra_consensus_event_processing_loop_idle_duration_s_sum[1m]) /  (irate(libra_consensus_event_processing_loop_idle_duration_s_sum[1m]) +  irate(libra_consensus_event_processing_loop_busy_duration_s_sum[1m]))",
+          "legendFormat": "{{peer_id}} Idle",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Event Loop Idle Percent",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
           "label": "ms",
           "logBase": 1,
           "max": null,
@@ -440,7 +528,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus{op='qc_rounds_count'}[1m])",
+          "expr": "irate(libra_consensus_qc_rounds_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -525,7 +613,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='timeout_rounds_count'}",
+          "expr": "libra_consensus_timeout_rounds_count",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -610,7 +698,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='timeout_count'}",
+          "expr": "libra_consensus_timeout_count",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -695,7 +783,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus_gauge{op='round_timeout_ms'}",
+          "expr": "libra_consensus_round_timeout_s",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -780,7 +868,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus{op='proposals_count'}[1m])",
+          "expr": "irate(libra_consensus_proposals_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -878,7 +966,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='state_sync_count'}",
+          "expr": "libra_consensus_state_sync_count",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -963,7 +1051,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='state_sync_txns_replayed'}",
+          "expr": "libra_consensus_state_sync_txns_replayed",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1048,7 +1136,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus_duration_sum{op='state_sync_duration_s'}",
+          "expr": "libra_consensus_state_sync_duration_s_sum",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1133,7 +1221,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='block_retrieval_count'}",
+          "expr": "libra_consensus_block_retrieval_count",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1218,7 +1306,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus_duration_sum{op='block_retrieval_duration_s'}",
+          "expr": "libra_consensus_block_retrieval_duration_s_sum",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1317,7 +1405,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='proposal_no_wait_required_count'}",
+          "expr": "libra_consensus_proposals_generated_count{state='no_wait_required'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1403,7 +1491,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='proposal_wait_was_required_count'}",
+          "expr": "libra_consensus_proposals_generated_count{state='wait_was_required'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1489,7 +1577,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='proposal_max_wait_exceeded_count'}",
+          "expr": "libra_consensus_proposals_generated_count{state='max_wait_exceeded'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1575,7 +1663,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='proposal_wait_failed_count'}",
+          "expr": "libra_consensus_proposals_generated_count{state='wait_failed'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1661,7 +1749,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='proposal_success_wait_s'}[1m])/irate(consensus_duration_count{op='proposal_success_wait_s'}[1m])",
+          "expr": "irate(libra_consensus_proposal_success_wait_s_sum[1m])/irate(libra_consensus_proposal_success_wait_s_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1747,7 +1835,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='proposal_failure_wait_s'}[1m])/irate(consensus_duration_count{op='proposal_failure_wait_s'}[1m])",
+          "expr": "irate(libra_consensus_proposal_failure_wait_s_sum[1m])/irate(libra_consensus_proposal_failure_wait_s_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1833,7 +1921,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='vote_no_wait_required_count'}",
+          "expr": "libra_consensus_votes_count{state='no_wait_required'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1919,7 +2007,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='vote_wait_was_required_count'}",
+          "expr": "libra_consensus_votes_count{state='wait_was_required'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -2005,7 +2093,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='vote_max_wait_exceeded_count'}",
+          "expr": "libra_consensus_votes_count{state='max_wait_exceeded'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -2091,7 +2179,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='vote_wait_failed_count'}",
+          "expr": "libra_consensus_votes_count{state='wait_failed'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -2177,7 +2265,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='vote_success_wait_s'}[1m])/irate(consensus_duration_count{op='vote_success_wait_s'}[1m])",
+          "expr": "irate(libra_consensus_vote_success_wait_s_sum[1m])/irate(libra_consensus_vote_success_wait_s_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -2263,7 +2351,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='vote_failure_wait_s'}[1m])/irate(consensus_duration_count{op='vote_failure_wait_s'}[1m])",
+          "expr": "irate(libra_consensus_vote_failure_wait_s_sum[1m])/irate(libra_consensus_vote_failure_wait_s_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",

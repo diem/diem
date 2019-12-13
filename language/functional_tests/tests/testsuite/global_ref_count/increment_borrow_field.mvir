@@ -1,0 +1,26 @@
+module Test {
+    resource T { i: u64 }
+
+    public test() acquires T {
+        let t: Self.T;
+        let t_ref: &mut Self.T;
+        let i_ref: &u64;
+        let sender: address;
+
+        t = T { i: 0 };
+        move_to_sender<T>(move(t));
+
+        sender = get_txn_sender();
+        t_ref = borrow_global_mut<T>(copy(sender));
+        i_ref = &copy(t_ref).i;
+        _ = move(t_ref);
+
+        t_ref = borrow_global_mut<T>(copy(sender));
+        _ = move(t_ref);
+        _ = move(i_ref);
+
+        return;
+    }
+}
+
+// check: GLOBAL_REFERENCE_ERROR

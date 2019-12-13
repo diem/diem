@@ -45,19 +45,19 @@ use crate::{
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
-use crypto::hash::{CryptoHash, HashValue};
-use failure::prelude::*;
-use hex;
+use anyhow::{Error, Result};
 use lazy_static::lazy_static;
-#[cfg(any(test, feature = "testing"))]
+use libra_crypto::hash::{CryptoHash, HashValue};
+use mirai_annotations::*;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
-use std::{fmt, slice::Iter};
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt,
+    slice::Iter,
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
 pub struct Field(Identifier);
@@ -102,6 +102,7 @@ impl fmt::Display for Access {
 /// Non-empty sequence of field accesses
 #[derive(Eq, Hash, Serialize, Deserialize, Debug, Clone, PartialEq, Ord, PartialOrd)]
 pub struct Accesses(Vec<Access>);
+// invariant self.0.len() == 1
 
 /// SEPARATOR is used as a delimiter between fields. It should not be a legal part of any identifier
 /// in the language
@@ -137,6 +138,7 @@ impl Accesses {
 
     /// Return the last access in the sequence
     pub fn last(&self) -> &Access {
+        assume!(self.0.last().is_some()); // follows from invariant
         self.0.last().unwrap() // guaranteed not to fail because sequence is non-empty
     }
 
@@ -200,21 +202,8 @@ lazy_static! {
         AccessPath::new(association_address(), validator_set_path());
 }
 
-#[derive(
-    Clone,
-    Eq,
-    PartialEq,
-    Default,
-    Hash,
-    Serialize,
-    Deserialize,
-    Ord,
-    PartialOrd,
-    FromProto,
-    IntoProto,
-)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::access_path::AccessPath)]
+#[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize, Ord, PartialOrd)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccessPath {
     pub address: AccountAddress,
     pub path: Vec<u8>,
@@ -337,20 +326,19 @@ impl fmt::Display for AccessPath {
     }
 }
 
-impl CanonicalSerialize for AccessPath {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_struct(&self.address)?
-            .encode_bytes(&self.path)?;
-        Ok(())
+impl TryFrom<crate::proto::types::AccessPath> for AccessPath {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::AccessPath) -> Result<Self> {
+        Ok(AccessPath::new(proto.address.try_into()?, proto.path))
     }
 }
 
-impl CanonicalDeserialize for AccessPath {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let address = deserializer.decode_struct::<AccountAddress>()?;
-        let path = deserializer.decode_bytes()?;
-
-        Ok(Self { address, path })
+impl From<AccessPath> for crate::proto::types::AccessPath {
+    fn from(path: AccessPath) -> Self {
+        Self {
+            address: path.address.to_vec(),
+            path: path.path,
+        }
     }
 }

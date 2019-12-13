@@ -1,11 +1,15 @@
-mod aws_log_tail;
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+#![forbid(unsafe_code)]
+
 mod commit_check;
 mod debug_interface_log_tail;
 mod liveness_check;
 mod log_tail;
 
 use crate::{cluster::Cluster, util::unix_timestamp_now};
-pub use aws_log_tail::AwsLogThread;
+use anyhow::{bail, Result};
 pub use commit_check::CommitHistoryHealthCheck;
 pub use debug_interface_log_tail::DebugPortLogThread;
 use itertools::Itertools;
@@ -13,7 +17,9 @@ pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::LogTail;
 use std::{
     collections::HashMap,
+    collections::HashSet,
     env, fmt,
+    iter::FromIterator,
     time::{Duration, Instant, SystemTime},
 };
 use termion::color::*;
@@ -93,12 +99,22 @@ impl HealthCheckRunner {
         )
     }
 
-    /// Returns list of failed validators
-    pub fn run(&mut self, events: &[ValidatorEvent]) -> Vec<String> {
+    /// Takes a list of affected_validators. If there are validators which failed
+    /// which were not part of the experiment, then it returns an Err with a string
+    /// of all the unexpected failures.
+    /// Otherwise, it returns a list of ALL the failed validators
+    /// It also takes print_failures parameter that controls level of verbosity of health check
+    pub fn run(
+        &mut self,
+        events: &[ValidatorEvent],
+        affected_validators_set: &HashSet<String>,
+        print_failures: PrintFailures,
+    ) -> Result<Vec<String>> {
         let mut node_health = HashMap::new();
         for instance in self.cluster.instances() {
-            node_health.insert(instance.short_hash().clone(), true);
+            node_health.insert(instance.peer_name().clone(), true);
         }
+        let mut messages = vec![];
 
         let mut context = HealthCheckContext::new();
         for health_check in self.health_checks.iter_mut() {
@@ -110,37 +126,53 @@ impl HealthCheckRunner {
             health_check.verify(&mut context);
             let verified = Instant::now();
             if self.debug {
-                println!(
+                messages.push(format!(
                     "{} {}, on_event time: {}ms, verify time: {}ms, events: {}",
                     unix_timestamp_now().as_millis(),
                     health_check.name(),
                     (events_processed - start).as_millis(),
                     (verified - events_processed).as_millis(),
                     events.len(),
-                );
+                ));
             }
         }
         for err in context.err_acc {
             node_health.insert(err.validator.clone(), false);
-            println!("{} {:?}", unix_timestamp_now().as_millis(), err);
+            messages.push(format!("{} {:?}", unix_timestamp_now().as_millis(), err));
         }
 
         let mut failed = vec![];
+        let mut validators_message = "".to_string();
         for (i, (node, healthy)) in node_health.into_iter().sorted().enumerate() {
             if healthy {
-                print!("{}* {}{}   ", Fg(Green), node, Fg(Reset));
+                validators_message.push_str(&format!("{}* {}{}   ", Fg(Green), node, Fg(Reset)));
             } else {
-                print!("{}* {}{}   ", Fg(Red), node, Fg(Reset));
+                validators_message.push_str(&format!("{}* {}{}   ", Fg(Red), node, Fg(Reset)));
                 failed.push(node);
             }
             if (i + 1) % 15 == 0 {
-                println!();
+                validators_message.push_str("\n");
             }
         }
-        println!();
-        println!();
+        messages.push(validators_message);
+        messages.push(format!(""));
+        messages.push(format!(""));
 
-        failed
+        let affected_validators_set_refs = HashSet::from_iter(affected_validators_set.iter());
+        let failed_set: HashSet<&String> = HashSet::from_iter(failed.iter());
+        let has_unexpected_failures = !failed_set.is_subset(&affected_validators_set_refs);
+
+        if print_failures.should_print(has_unexpected_failures) {
+            messages.iter().for_each(|m| println!("{}", m));
+        }
+
+        if has_unexpected_failures {
+            let unexpected_failures = failed_set
+                .difference(&affected_validators_set_refs)
+                .join(",");
+            bail!(unexpected_failures);
+        }
+        Ok(failed)
     }
 
     pub fn invalidate(&mut self, validator: &str) {
@@ -152,6 +184,22 @@ impl HealthCheckRunner {
     pub fn clear(&mut self) {
         for hc in self.health_checks.iter_mut() {
             hc.clear();
+        }
+    }
+}
+
+pub enum PrintFailures {
+    None,
+    UnexpectedOnly,
+    All,
+}
+
+impl PrintFailures {
+    fn should_print(&self, has_unexpected_failures: bool) -> bool {
+        match self {
+            PrintFailures::None => false,
+            PrintFailures::UnexpectedOnly => has_unexpected_failures,
+            PrintFailures::All => true,
         }
     }
 }

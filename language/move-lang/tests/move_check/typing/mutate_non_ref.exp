@@ -1,0 +1,140 @@
+error: 
+
+   ┌── tests/move_check/typing/mutate_non_ref.move:6:17 ───
+   │
+ 7 │         *u = 1;
+   │          ^ Invalid mutation. Expected a mutable reference
+   ·
+ 6 │         let u = 0;
+   │                 - The type: 'u64'
+   ·
+ 7 │         *u = 1;
+   │          - Is not compatible with: '&mut _'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_non_ref.move:9:17 ───
+    │
+ 10 │         *s = S { f: 0 };
+    │          ^ Invalid mutation. Expected a mutable reference
+    ·
+ 9 │         let s = S { f: 0 };
+    │                 ---------- The type: '0x8675309::M::S'
+    ·
+ 10 │         *s = S { f: 0 };
+    │          - Is not compatible with: '&mut _'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_non_ref.move:2:19 ───
+    │
+ 11 │         *s.f = 0;
+    │          ^^^ Invalid mutation. Expected a mutable reference
+    ·
+ 2 │     struct S { f: u64 }
+    │                   --- The type: 'u64'
+    ·
+ 11 │         *s.f = 0;
+    │          --- Is not compatible with: '&mut _'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_non_ref.move:2:19 ───
+    │
+ 14 │         *s_ref.f = 0;
+    │          ^^^^^^^ Invalid mutation. Expected a mutable reference
+    ·
+ 2 │     struct S { f: u64 }
+    │                   --- The type: 'u64'
+    ·
+ 14 │         *s_ref.f = 0;
+    │          ------- Is not compatible with: '&mut _'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_non_ref.move:3:19 ───
+    │
+ 17 │         *x.s = S { f: 0 };
+    │          ^^^ Invalid mutation. Expected a mutable reference
+    ·
+ 3 │     struct X { s: S }
+    │                   - The type: '0x8675309::M::S'
+    ·
+ 17 │         *x.s = S { f: 0 };
+    │          --- Is not compatible with: '&mut _'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_non_ref.move:2:12 ───
+    │
+ 17 │         *x.s = S { f: 0 };
+    │          ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
+    ·
+ 3 │     struct X { s: S }
+    │                   - The type: 0x8675309::M::S
+    ·
+ 2 │     struct S { f: u64 }
+    │            - Is declared as a non-implicitly copyable type here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_non_ref.move:2:19 ───
+    │
+ 18 │         *x.s.f = 0;
+    │          ^^^^^ Invalid mutation. Expected a mutable reference
+    ·
+ 2 │     struct S { f: u64 }
+    │                   --- The type: 'u64'
+    ·
+ 18 │         *x.s.f = 0;
+    │          ----- Is not compatible with: '&mut _'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_non_ref.move:3:19 ───
+    │
+ 21 │         *x_ref.s = S{ f: 0 };
+    │          ^^^^^^^ Invalid mutation. Expected a mutable reference
+    ·
+ 3 │     struct X { s: S }
+    │                   - The type: '0x8675309::M::S'
+    ·
+ 21 │         *x_ref.s = S{ f: 0 };
+    │          ------- Is not compatible with: '&mut _'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_non_ref.move:2:12 ───
+    │
+ 21 │         *x_ref.s = S{ f: 0 };
+    │          ^^^^^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
+    ·
+ 3 │     struct X { s: S }
+    │                   - The type: 0x8675309::M::S
+    ·
+ 2 │     struct S { f: u64 }
+    │            - Is declared as a non-implicitly copyable type here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_non_ref.move:2:19 ───
+    │
+ 22 │         *x_ref.s.f = 0;
+    │          ^^^^^^^^^ Invalid mutation. Expected a mutable reference
+    ·
+ 2 │     struct S { f: u64 }
+    │                   --- The type: 'u64'
+    ·
+ 22 │         *x_ref.s.f = 0;
+    │          --------- Is not compatible with: '&mut _'
+    │
+

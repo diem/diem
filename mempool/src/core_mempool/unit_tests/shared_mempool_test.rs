@@ -6,15 +6,13 @@ use crate::{
     shared_mempool::{start_shared_mempool, SharedMempoolNotification, SyncEvent},
 };
 use channel;
-use config::config::{NodeConfig, NodeConfigHelpers};
-use failure::prelude::*;
 use futures::{
     sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
     Stream,
 };
-use futures_preview::{
-    compat::Stream01CompatExt, executor::block_on, SinkExt, StreamExt, TryStreamExt,
-};
+use futures_preview::{compat::Stream01CompatExt, executor::block_on, SinkExt, StreamExt};
+use libra_config::config::NodeConfig;
+use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
     proto::MempoolSyncMsg,
@@ -28,7 +26,6 @@ use std::{
 };
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use tokio::runtime::Runtime;
-use types::{transaction::SignedTransaction, PeerId};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 #[derive(Default)]
@@ -63,12 +60,7 @@ impl SharedMempoolNetwork {
                 Arc::new(MockStorageReadClient),
                 Arc::new(MockVMValidator),
                 vec![sender],
-                Some(
-                    timer_receiver
-                        .compat()
-                        .map_err(|_| format_err!("test"))
-                        .boxed(),
-                ),
+                Some(timer_receiver.compat().map(|_| SyncEvent).boxed()),
             );
 
             smp.mempools.insert(peer, mempool);
@@ -82,7 +74,7 @@ impl SharedMempoolNetwork {
     }
 
     fn bootstrap(peers: Vec<PeerId>) -> Self {
-        Self::bootstrap_with_config(peers, NodeConfigHelpers::get_single_node_test_config(true))
+        Self::bootstrap_with_config(peers, NodeConfig::random())
     }
 
     fn add_txns(&mut self, peer_id: &PeerId, txns: Vec<TestTransaction>) {

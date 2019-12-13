@@ -5,8 +5,9 @@ use crate::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
 };
+use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
-use proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto, IntoProto};
+use std::convert::TryFrom;
 
 #[test]
 fn access_path_ord() {
@@ -39,24 +40,24 @@ fn test_access_path_protobuf_conversion() {
         address,
         path: path.clone(),
     };
-    let proto_ap = ap.clone().into_proto();
-    assert_eq!(Vec::from(&address), proto_ap.get_address());
-    assert_eq!(path, proto_ap.get_path());
-    assert_eq!(AccessPath::from_proto(proto_ap).unwrap(), ap);
+    let proto_ap: crate::proto::types::AccessPath = ap.clone().into();
+    assert_eq!(Vec::from(&address), proto_ap.address);
+    assert_eq!(path, proto_ap.path);
+    assert_eq!(AccessPath::try_from(proto_ap).unwrap(), ap);
 }
 
 #[test]
 fn test_access_path_protobuf_conversion_error() {
-    let mut proto_ap = crate::proto::access_path::AccessPath::new();
+    let mut proto_ap = crate::proto::types::AccessPath::default();
     // Not a valid address.
-    proto_ap.set_address(vec![0x12, 0x34]);
-    proto_ap.set_path(b"/foo/bar".to_vec());
-    assert!(AccessPath::from_proto(proto_ap).is_err());
+    proto_ap.address = vec![0x12, 0x34];
+    proto_ap.path = b"/foo/bar".to_vec();
+    assert!(AccessPath::try_from(proto_ap).is_err());
 }
 
 proptest! {
     #[test]
     fn test_access_path_to_protobuf_roundtrip(access_path in any::<AccessPath>()) {
-        assert_protobuf_encode_decode(&access_path);
+        assert_protobuf_encode_decode::<crate::proto::types::AccessPath, AccessPath>(&access_path);
     }
 }

@@ -20,4 +20,3 @@ main() {
     assert(copy(x) == 100, 42);
     return;
 }
-

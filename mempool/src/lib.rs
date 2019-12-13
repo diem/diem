@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
 //! Mempool is used to hold transactions that have been submitted but not yet agreed upon and
 //! executed.
 //!
@@ -51,6 +53,7 @@
 //! checked periodically in the background, while the client-specified expiration is checked on
 //! every Consensus commit request. We use a separate system TTL to ensure that a transaction won't
 //! remain stuck in Mempool forever, even if Consensus doesn't make progress
+
 pub mod proto;
 pub use runtime::MempoolRuntime;
 
@@ -61,11 +64,10 @@ mod shared_mempool;
 
 // module op counters
 use lazy_static::lazy_static;
-use metrics::OpMetrics;
+use libra_metrics::OpMetrics;
 lazy_static! {
     static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("mempool");
 }
-pub use crate::core_mempool::MempoolAddTransactionStatus;
 
 #[cfg(test)]
 mod unit_tests;

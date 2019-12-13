@@ -1,0 +1,55 @@
+#!/bin/bash
+# Copyright (c) The Libra Core Contributors
+# SPDX-License-Identifier: Apache-2.0
+set -e
+
+DOCKER_IMAGE="cluster-test:latest"
+WAIT_TO="45m"
+export CONTAINER="cluster-test-$RANDOM"
+
+while (( "$#" )); do
+  case "$1" in
+    -c|--container)
+      CONTAINER=$2
+      shift 2
+      ;;
+    -P|--prune)
+      docker image prune -a -f
+      shift 1
+      ;;
+    -i|--image)
+      echo "Logging in to ECR repo"
+      $(aws ecr get-login --no-include-email --region us-west-2)
+      DOCKER_IMAGE=$2
+      shift 2
+      ;;
+    -T|--wait-timeout)
+      WAIT_TO=$2
+      shift 2
+      ;;
+    --) # end argument parsing
+      shift
+      break
+      ;;
+    *) # end argument parsing
+      break
+      ;;
+  esac
+done
+
+# Waiting for other runs to finish
+timeout $WAIT_TO bash -c 'while [ $(docker ps --quiet --filter name=$CONTAINER) ]; do echo "Another container is running, waiting..."; sleep 1m; done'
+
+# Cleanup container in case it was terminated but not removed (no -f flags to avoid killing alive container)
+docker rm $CONTAINER 2>/dev/null >/dev/null || :
+
+trap "echo Terminating on SIGINT; docker rm -f $CONTAINER >/dev/null" SIGINT
+trap "echo Terminating on SIGTERM; docker rm -f $CONTAINER >/dev/null" SIGTERM
+trap "echo Terminating on SIGHUP; docker rm -f $CONTAINER >/dev/null" SIGHUP
+
+VARS="-e SLACK_CHANGELOG_URL"
+
+# This could in theory fail due to concurrency, but it seem unlikely
+docker run $VARS -v /libra_rsa:/libra_rsa --name $CONTAINER --rm $DOCKER_IMAGE $* &
+
+wait $!

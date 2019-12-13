@@ -3,11 +3,11 @@ version: 2.1
 executors:
   build-executor:
     docker:
-      - image: circleci/rust:stretch
+      - image: circleci/rust:buster
     resource_class: 2xlarge
   audit-executor:
     docker:
-      - image: circleci/rust:stretch
+      - image: circleci/rust:buster
     resource_class: xlarge
   terraform-executor:
     docker:
@@ -15,6 +15,14 @@ executors:
     resource_class: small
 
 commands:
+  rust_setup:
+    description: Set rustc version
+    steps:
+      - run:
+          name: Set rustc version
+          command: |
+            rustup default stable
+            rustup update stable
   print_versions:
     description: Version Info
     steps:
@@ -31,20 +39,35 @@ commands:
             echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
             echo 'export LIBRA_DUMP_LOGS=1' >> $BASH_ENV
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
+            echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
   install_deps:
     steps:
       - run:
           name: Install Dependencies
           command: |
-            sudo sh -c 'echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list'
+            sudo sh -c 'echo "deb http://deb.debian.org/debian buster-backports main" > /etc/apt/sources.list.d/backports.list'
             sudo apt-get update
-            sudo apt-get install -y protobuf-compiler/stretch-backports cmake curl
+            sudo apt-get install -y cmake curl
             sudo apt-get clean
             sudo rm -r /var/lib/apt/lists/*
             rustup component add clippy rustfmt
+  install_code_coverage_deps:
+    steps:
+      - run:
+          name: Install grcov and lcov
+          command: |
+            sudo apt-get update
+            sudo apt-get install lcov
+            cargo install --force grcov
+  install_rust_nightly_toolchain:
+    steps:
+      - run:
+          name: Install nightly toolchain for features not in beta/stable
+          command: rustup install nightly
   build_setup:
     steps:
       - checkout
+      - rust_setup
       - print_versions
       - env_setup
       - install_deps
@@ -66,34 +89,46 @@ jobs:
       - run:
           name: Linting
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || ./scripts/clippy.sh
+            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo x lint
+            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo xclippy --workspace --all-targets
             [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo fmt -- --check
       - run:
           name: Build Release
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [023] ]] || RUST_BACKTRACE=1 cargo build -j 16 --all --release
+            [[ $CIRCLE_NODE_INDEX =~ [023] ]] || RUST_BACKTRACE=1 cargo build -j 16 --release
       - run:
           name: Build Dev
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [01] ]] || RUST_BACKTRACE=1 cargo build -j 16 --all
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-swarm
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cluster-test
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-fuzzer
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p language_benchmarks
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p bytecode-to-boogie
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cost-synthesis
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
       - run:
           name: Run All Unit Tests
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo test -j 16 --all --exclude testsuite
+            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --unit
+      - run:
+          name: Run Cryptography Unit Tests with the formally verified backend
+          command: |
+            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || ( RUST_BACKTRACE=1 cd crypto/crypto && $CI_TIMEOUT cargo test --features='std fiat_u64_backend fuzzing' --no-default-features )
       - run:
           name: Run All End to End Tests
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo test -j 16 --package testsuite -- --test-threads 1
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --package testsuite -- --test-threads 1
       - build_teardown
-  validate-config:
-    description: Validate that committed docker configs are up to date
+  validate-cluster-test-dockerfile:
+    description: Validate that committed docker files for cluster test are up to date
     executor: build-executor
     steps:
       - build_setup
       - run:
-          # generate config; diff config to existing one
-          name: Validate Validator-Sets Configs
-          command: ./scripts/circle_validate_configs.sh
+          # generate dockerfile; diff config to existing one
+          name: Validate cluster-test dockerfiles
+          command: ./docker/cluster-test/generate.sh
       - build_teardown
   audit:
     executor: audit-executor
@@ -105,6 +140,22 @@ jobs:
             cargo install --force cargo-audit
             cargo audit
       - build_teardown
+  code-coverage:
+    description: Run code coverage
+    executor: build-executor
+    steps:
+      - build_setup
+      - install_code_coverage_deps
+      - install_rust_nightly_toolchain
+      - run:
+          name: Setup code coverage output
+          command: echo "export CODECOV_OUTPUT=codecov" >> $BASH_ENV
+      - run:
+          name: Run code coverage
+          command: ./scripts/coverage_report.sh . $CODECOV_OUTPUT --batch
+      - run:
+          name: Upload result to codecov.io
+          command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcov.info;
   terraform:
     executor: terraform-executor
     steps:
@@ -117,12 +168,47 @@ jobs:
           name: Terraform validate
           command: terraform validate
           working_directory: terraform/
+  build-docker:
+    machine:
+      image: ubuntu-1604:201903-01
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Check if the docker build job should run
+          command: .circleci/should_build_docker.sh
+      - run:
+          name: Get the list of updated docker files
+          command: |
+            echo 'export DOCKER_FILES=$(
+              for commit in $(git rev-list origin/master..HEAD) ; do
+                git diff-tree --no-commit-id --name-only -r "$commit" -- "*.Dockerfile";
+              done
+            )' >> $BASH_ENV
+      - run:
+          name: Build each of the updated docker files
+          command: |
+            # Use the dockerfile own build.sh script if it has one.
+            for docker_file in $DOCKER_FILES; do
+              echo "Checking $docker_file"
+              build_script=$(dirname $docker_file)/build.sh
+              if [ -f "$build_script" ]; then
+                $build_script
+              elif [ -f "$docker_file" ]; then
+                file_no_ext=$(basename $docker_file)
+                module=${file_no_ext%.Dockerfile}
+                docker build -f $docker_file --tag commit_verify_${CIRCLE_BUILD_NUM}_$module .
+              else
+                echo "$docker_file is renamed or removed in pull request."
+              fi
+            done
 
 workflows:
   commit-workflow:
     jobs:
       - build
-      - validate-config
+      - build-docker
+      - validate-cluster-test-dockerfile
       - terraform
 
   scheduled-workflow:
@@ -134,3 +220,4 @@ workflows:
               only: master
     jobs:
       - audit
+      - code-coverage

@@ -1,0 +1,21 @@
+[package]
+name = "backup-restore"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1.19"
+futures = "0.3.1"
+hex = "0.4.0"
+rand = "0.7"
+
+[dev-dependencies]
+itertools = "0.8"
+proptest = "0.9.4"
+tempfile = "3.1.0"

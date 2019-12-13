@@ -62,6 +62,40 @@ fn parse_args() {
 }
 
 #[test]
+fn parse_max_gas() {
+    for s in &["//! max-gas:77", "//!max-gas:0", "//! max-gas:  123"] {
+        s.parse::<Entry>().unwrap();
+    }
+
+    for s in &["//!max-gas:", "//!max-gas:abc", "//!max-gas: 123, 45"] {
+        s.parse::<Entry>().unwrap_err();
+    }
+}
+
+#[test]
+fn parse_sequence_number() {
+    for s in &[
+        "//! sequence-number:77",
+        "//!sequence-number:0",
+        "//! sequence-number:  123",
+    ] {
+        s.parse::<Entry>().unwrap();
+    }
+
+    for s in &[
+        "//!sequence-number:",
+        "//!sequence-number:abc",
+        "//!sequence-number: 123, 45",
+    ] {
+        s.parse::<Entry>().unwrap_err();
+    }
+
+    // TODO: "//!sequence-number: 123 45" is currently parsed as 12345.
+    // This is because we remove all the spaces before parsing.
+    // Rewrite the parser to handle this case properly.
+}
+
+#[test]
 fn parse_new_transaction() {
     assert!(is_new_transaction("//! new-transaction"));
     assert!(is_new_transaction("//!new-transaction "));
@@ -70,7 +104,7 @@ fn parse_new_transaction() {
     assert!(!is_new_transaction("//! transaction"));
 }
 
-fn parse_and_build_config(global_config: &GlobalConfig, s: &str) -> Result<Config> {
+fn parse_and_build_config<'a>(global_config: &'a GlobalConfig, s: &str) -> Result<Config<'a>> {
     Config::build(&global_config, &parse_each_line_as::<Entry>(s)?)
 }
 

@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This module provides algorithms for accessing and updating a Merkle Accumulator structure
 //! persisted in a key-value store. Note that this doesn't write to the storage directly, rather,
 //! it reads from it via the `HashReader` trait and yields writes via an in memory `HashMap`.
@@ -101,14 +103,15 @@
 //! |  ...  |   ...     |
 //! ```
 
-use crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
-use failure::prelude::*;
-use std::marker::PhantomData;
-use types::proof::{
-    definition::LeafCount,
+use anyhow::{ensure, format_err, Result};
+use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
+use libra_types::proof::{
+    definition::{LeafCount, MAX_ACCUMULATOR_PROOF_DEPTH},
     position::{FrozenSubTreeIterator, FrozenSubtreeSiblingIterator, Position},
-    AccumulatorConsistencyProof, AccumulatorProof, MerkleTreeInternalNode,
+    AccumulatorConsistencyProof, AccumulatorProof, AccumulatorRangeProof, MerkleTreeInternalNode,
 };
+use mirai_annotations::*;
+use std::marker::PhantomData;
 
 /// Defines the interface between `MerkleAccumulator` and underlying storage.
 pub trait HashReader {
@@ -145,18 +148,18 @@ where
     /// `num_leaves` leaves in total. Siblings are read via `reader` (or generated dynamically
     /// if they are non-frozen).
     ///
-    /// See [`types::proof::AccumulatorProof`] for proof format.
+    /// See [`libra_types::proof::AccumulatorProof`] for proof format.
     pub fn get_proof(
         reader: &R,
         num_leaves: LeafCount,
         leaf_index: u64,
-    ) -> Result<AccumulatorProof> {
+    ) -> Result<AccumulatorProof<H>> {
         MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_proof(leaf_index)
     }
 
     /// Gets a proof that shows the full accumulator is consistent with a smaller accumulator.
     ///
-    /// See [`types::proof::AccumulatorConsistencyProof`] for proof format.
+    /// See [`libra_types::proof::AccumulatorConsistencyProof`] for proof format.
     pub fn get_consistency_proof(
         reader: &R,
         full_acc_leaves: LeafCount,
@@ -164,6 +167,19 @@ where
     ) -> Result<AccumulatorConsistencyProof> {
         MerkleAccumulatorView::<R, H>::new(reader, full_acc_leaves)
             .get_consistency_proof(sub_acc_leaves)
+    }
+
+    /// Gets a proof that shows a range of leaves are part of the accumulator.
+    ///
+    /// See [`libra_types::proof::AccumulatorRangeProof`] for proof format.
+    pub fn get_range_proof(
+        reader: &R,
+        full_acc_leaves: LeafCount,
+        first_leaf_index: Option<u64>,
+        num_leaves: LeafCount,
+    ) -> Result<AccumulatorRangeProof<H>> {
+        MerkleAccumulatorView::<R, H>::new(reader, full_acc_leaves)
+            .get_range_proof(first_leaf_index, num_leaves)
     }
 
     /// From left to right, gets frozen subtree root hashes of the accumulator. For example, if the
@@ -283,6 +299,9 @@ where
     ///     and the full route from root of that subtree to the accumulator root turns frozen
     ///         height - (log2(num_new_leaves) + 1) < height - 1 = root_level
     fn max_to_freeze(num_new_leaves: usize, root_level: u32) -> usize {
+        precondition!(root_level as usize <= MAX_ACCUMULATOR_PROOF_DEPTH);
+        precondition!(num_new_leaves < (usize::max_value() / 2));
+        precondition!(num_new_leaves * 2 <= usize::max_value() - root_level as usize);
         num_new_leaves * 2 + root_level as usize
     }
 
@@ -310,7 +329,7 @@ where
     }
 
     /// implementation for pub interface `MerkleAccumulator::get_proof`
-    fn get_proof(&self, leaf_index: u64) -> Result<AccumulatorProof> {
+    fn get_proof(&self, leaf_index: u64) -> Result<AccumulatorProof<H>> {
         ensure!(
             leaf_index < self.num_leaves as u64,
             "invalid leaf_index {}, num_leaves {}",
@@ -318,18 +337,7 @@ where
             self.num_leaves
         );
 
-        let leaf_pos = Position::from_leaf_index(leaf_index);
-        let root_pos = Position::root_from_leaf_count(self.num_leaves);
-
-        let siblings: Vec<HashValue> = leaf_pos
-            .iter_ancestor_sibling()
-            .take(root_pos.level() as usize)
-            .map(|p| self.get_hash(p))
-            .collect::<Result<Vec<HashValue>>>()?
-            .into_iter()
-            .rev()
-            .collect();
-
+        let siblings = self.get_siblings(leaf_index, |_p| true)?;
         Ok(AccumulatorProof::new(siblings))
     }
 
@@ -351,6 +359,62 @@ where
             .collect::<Result<Vec<_>>>()?;
 
         Ok(AccumulatorConsistencyProof::new(subtrees))
+    }
+
+    /// Implementation for public interface `MerkleAccumulator::get_range_proof`.
+    fn get_range_proof(
+        &self,
+        first_leaf_index: Option<u64>,
+        num_leaves: LeafCount,
+    ) -> Result<AccumulatorRangeProof<H>> {
+        if first_leaf_index.is_none() {
+            ensure!(
+                num_leaves == 0,
+                "num_leaves is not zero while first_leaf_index is None.",
+            );
+            return Ok(AccumulatorRangeProof::new_empty());
+        }
+
+        let first_leaf_index = first_leaf_index.expect("first_leaf_index should not be None.");
+        ensure!(
+            num_leaves > 0,
+            "num_leaves is zero while first_leaf_index is not None.",
+        );
+        let last_leaf_index = first_leaf_index
+            .checked_add(num_leaves - 1)
+            .ok_or_else(|| format_err!("Requesting too many leaves."))?;
+        ensure!(
+            last_leaf_index < self.num_leaves as u64,
+            "Invalid last_leaf_index: {}, num_leaves: {}",
+            last_leaf_index,
+            self.num_leaves,
+        );
+
+        let left_siblings = self.get_siblings(first_leaf_index, |p| p.is_left_child())?;
+        let right_siblings = self.get_siblings(last_leaf_index, |p| p.is_right_child())?;
+        Ok(AccumulatorRangeProof::new(left_siblings, right_siblings))
+    }
+
+    /// Helper function to get siblings on the path from the given leaf to the root. An additional
+    /// filter function can be applied to filter out certain siblings.
+    fn get_siblings(
+        &self,
+        leaf_index: u64,
+        filter: impl Fn(Position) -> bool,
+    ) -> Result<Vec<HashValue>> {
+        let root_pos = Position::root_from_leaf_count(self.num_leaves);
+        let siblings = Position::from_leaf_index(leaf_index)
+            .iter_ancestor_sibling()
+            .take(root_pos.level() as usize)
+            .filter_map(|p| {
+                if filter(p) {
+                    Some(self.get_hash(p))
+                } else {
+                    None
+                }
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(siblings)
     }
 
     /// Implementation for public interface `MerkleAccumulator::get_frozen_subtree_hashes`.

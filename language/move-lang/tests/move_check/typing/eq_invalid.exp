@@ -1,0 +1,210 @@
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:13:9 ───
+    │
+ 13 │         0 == false;
+    │              ^^^^^ Invalid argument to '=='
+    ·
+ 13 │         0 == false;
+    │         - The type: 'u64'
+    ·
+ 13 │         0 == false;
+    │              ----- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:14:9 ───
+    │
+ 14 │         &0 == 1;
+    │               ^ Invalid argument to '=='
+    ·
+ 14 │         &0 == 1;
+    │         -- The type: '&u64'
+    ·
+ 14 │         &0 == 1;
+    │               - Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:15:9 ───
+    │
+ 15 │         1 == &0;
+    │              ^^ Invalid argument to '=='
+    ·
+ 15 │         1 == &0;
+    │         - The type: 'u64'
+    ·
+ 15 │         1 == &0;
+    │              -- Is not compatible with: '&u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:12:33 ───
+    │
+ 16 │         s == s_ref;
+    │              ^^^^^ Invalid argument to '=='
+    ·
+ 12 │     t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+    │                                 - The type: '0x8675309::M::S'
+    ·
+ 12 │     t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+    │                                           -- Is not compatible with: '&0x8675309::M::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:12:33 ───
+    │
+ 17 │         s_mut == s;
+    │                  ^ Invalid argument to '=='
+    ·
+ 12 │     t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+    │                                                      ------ The type: '&mut 0x8675309::M::S'
+    ·
+ 12 │     t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+    │                                 - Is not compatible with: '0x8675309::M::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:3:5 ───
+    │
+ 21 │         r == r;
+    │         ^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
+    ·
+ 20 │     t1(r: R) {
+    │           - The type: 0x8675309::M::R
+    ·
+ 3 │     resource struct R {
+    │     -------- Is found to be a non-copyable type here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:25:9 ───
+    │
+ 25 │         G0{} == G0{};
+    │         ^^^^ Could not infer this type. Try adding an annotation
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:25:17 ───
+    │
+ 25 │         G0{} == G0{};
+    │                 ^^^^ Could not infer this type. Try adding an annotation
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:26:9 ───
+    │
+ 26 │         G1{} == G1{};
+    │         ^^^^ Could not infer this type. Try adding an annotation
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:7:18 ───
+    │
+ 26 │         G1{} == G1{};
+    │         ^^^^^^^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
+    ·
+ 26 │         G1{} == G1{};
+    │         ---- The type: 0x8675309::M::G1<_>
+    ·
+ 7 │     struct G1<T: resource> {}
+    │                  -------- Is found to be a non-copyable type here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:26:17 ───
+    │
+ 26 │         G1{} == G1{};
+    │                 ^^^^ Could not infer this type. Try adding an annotation
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:27:9 ───
+    │
+ 27 │         G2{} == G2{};
+    │         ^^^^ Could not infer this type. Try adding an annotation
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:8:15 ───
+    │
+ 27 │         G2{} == G2{};
+    │         ^^^^^^^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
+    ·
+ 27 │         G2{} == G2{};
+    │         ---- The type: 0x8675309::M::G2<_>
+    ·
+ 8 │     struct G2<T> {}
+    │               - Is found to be a non-copyable type here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:27:17 ───
+    │
+ 27 │         G2{} == G2{};
+    │                 ^^^^ Could not infer this type. Try adding an annotation
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:31:9 ───
+    │
+ 31 │         () == ();
+    │         ^^^^^^^^ Invalid use of '=='. Expected an expression of a single type but got an expression of the list: ()
+    ·
+ 31 │         () == ();
+    │         -- Type found here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:32:9 ───
+    │
+ 32 │         (0, 1) == (0, 1);
+    │         ^^^^^^^^^^^^^^^^ Invalid use of '=='. Expected an expression of a single type but got an expression of the list: (u64,u64)
+    ·
+ 32 │         (0, 1) == (0, 1);
+    │         ------ Type found here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:33:9 ───
+    │
+ 33 │         (1, 2, 3) == (0, 1);
+    │                      ^^^^^^ Invalid argument to '=='
+    ·
+ 33 │         (1, 2, 3) == (0, 1);
+    │         --------- The type: '(u64,u64,u64)'
+    ·
+ 33 │         (1, 2, 3) == (0, 1);
+    │                      ------ Is not compatible with: '(u64,u64)'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/eq_invalid.move:34:9 ───
+    │
+ 34 │         (0, 1) == (1, 2, 3);
+    │                   ^^^^^^^^^ Invalid argument to '=='
+    ·
+ 34 │         (0, 1) == (1, 2, 3);
+    │         ------ The type: '(u64,u64)'
+    ·
+ 34 │         (0, 1) == (1, 2, 3);
+    │                   --------- Is not compatible with: '(u64,u64,u64)'
+    │
+

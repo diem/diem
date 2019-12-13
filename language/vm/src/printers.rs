@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{file_format::*, vm_string::VMStr};
-use failure::*;
+use anyhow::{bail, format_err, Result};
 use hex;
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::IdentStr};
 use std::{collections::VecDeque, fmt};
-use types::{account_address::AccountAddress, byte_array::ByteArray, identifier::IdentStr};
 
 //
 // Display printing

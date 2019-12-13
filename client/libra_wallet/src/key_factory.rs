@@ -16,12 +16,14 @@
 //! Private Keys adheres to [HKDF RFC 5869](https://tools.ietf.org/html/rfc5869).
 
 use byteorder::{ByteOrder, LittleEndian};
-use crypto::{hmac::Hmac as CryptoHmac, pbkdf2::pbkdf2, sha3::Sha3};
+use hmac::Hmac;
 use libra_crypto::{ed25519::*, hash::HashValue, hkdf::Hkdf, traits::SigningKey};
+use libra_types::account_address::AccountAddress;
+use mirai_annotations::*;
+use pbkdf2::pbkdf2;
 use serde::{Deserialize, Serialize};
 use sha3::Sha3_256;
 use std::{convert::TryFrom, ops::AddAssign};
-use types::account_address::AccountAddress;
 
 use crate::{error::Result, mnemonic::Mnemonic};
 
@@ -34,6 +36,7 @@ impl_array_newtype_encodable!(Master, u8, 32);
 /// A child number for a derived key, used to derive a certain private key from the Master
 #[derive(Default, Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct ChildNumber(pub(crate) u64);
+// invariant self.0 <= u64::max_value() / 2;
 
 impl ChildNumber {
     /// Constructor from u64
@@ -49,6 +52,8 @@ impl ChildNumber {
 
 impl std::ops::AddAssign for ChildNumber {
     fn add_assign(&mut self, other: Self) {
+        assume!(self.0 <= u64::max_value() / 2); // invariant
+        assume!(other.0 <= u64::max_value() / 2); // invariant
         *self = Self(self.0 + other.0)
     }
 }
@@ -167,22 +172,23 @@ impl Seed {
     /// particular Mnemonic and salt. WalletLibrary implements a fixed salt, but a user could
     /// choose a user-defined salt instead of the hardcoded one.
     pub fn new(mnemonic: &Mnemonic, salt: &str) -> Seed {
-        let mut mac = CryptoHmac::new(Sha3::sha3_256(), mnemonic.to_string().as_bytes());
         let mut output = [0u8; 32];
 
         let mut msalt = KeyFactory::MNEMONIC_SALT_PREFIX.to_vec();
         msalt.extend_from_slice(salt.as_bytes());
 
-        pbkdf2(&mut mac, &msalt, 2048, &mut output);
+        pbkdf2::<Hmac<Sha3_256>>(mnemonic.to_string().as_ref(), &msalt, 2048, &mut output);
         Seed(output)
     }
 }
 
+#[cfg(test)]
 #[test]
 fn assert_default_child_number() {
     assert_eq!(ChildNumber::default(), ChildNumber(0));
 }
 
+#[cfg(test)]
 #[test]
 fn test_key_derivation() {
     let data = hex::decode("7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f").unwrap();

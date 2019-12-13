@@ -1,136 +1,57 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::test_utils::build_simple_tree;
 use crate::chained_bft::{
-    block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
+    block_storage::{block_store::sync_manager::NeedFetchResult, BlockReader, VoteReceptionResult},
+    test_utils::{build_empty_tree, TreeInserter},
+};
+use consensus_types::{
+    block::{
+        block_test_utils::{
+            self, certificate_for_genesis, placeholder_certificate_for_block,
+            placeholder_ledger_info,
+        },
+        Block,
+    },
     common::Author,
-    consensus_types::{
-        block::{block_test, Block, ExecutedBlock},
-        quorum_cert::QuorumCert,
-        vote_data::VoteData,
-        vote_msg::VoteMsg,
-    },
-    test_utils::{
-        build_empty_tree, build_empty_tree_with_custom_signing, placeholder_certificate_for_block,
-        placeholder_ledger_info, TreeInserter,
-    },
+    vote::Vote,
+    vote_data::VoteData,
 };
-use crypto::{HashValue, PrivateKey};
-use futures::executor::block_on;
+use libra_crypto::{HashValue, PrivateKey};
+use libra_types::crypto_proxies::random_validator_verifier;
+use libra_types::{account_address::AccountAddress, crypto_proxies::ValidatorSigner};
 use proptest::prelude::*;
-use std::{cmp::min, collections::HashSet, sync::Arc};
-use types::{
-    account_address::AccountAddress,
-    crypto_proxies::{random_validator_verifier, ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
-};
-
-fn build_simple_tree() -> (
-    Vec<Arc<ExecutedBlock<Vec<usize>>>>,
-    Arc<BlockStore<Vec<usize>>>,
-) {
-    let block_store = build_empty_tree();
-    let genesis = block_store.root();
-    let genesis_block_id = genesis.id();
-    let genesis_block = block_store
-        .get_block(genesis_block_id)
-        .expect("genesis block must exist");
-    assert_eq!(block_store.len(), 1);
-    assert_eq!(block_store.child_links(), block_store.len() - 1);
-    assert_eq!(block_store.block_exists(genesis_block.id()), true);
-
-    //       ╭--> A1--> A2--> A3
-    // Genesis--> B1--> B2
-    //             ╰--> C1
-    let mut inserter = TreeInserter::new(block_store.clone());
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis_block, 1);
-    let a2 = inserter.insert_block(&a1, 2);
-    let a3 = inserter.insert_block(&a2, 3);
-    let b1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis_block, 4);
-    let b2 = inserter.insert_block(&b1, 5);
-    let c1 = inserter.insert_block(&b1, 6);
-
-    assert_eq!(block_store.len(), 7);
-    assert_eq!(block_store.child_links(), block_store.len() - 1);
-
-    (vec![genesis_block, a1, a2, a3, b1, b2, c1], block_store)
-}
-
-#[test]
-fn test_block_store_create_block() {
-    let block_store = build_empty_tree();
-    let genesis = block_store.root();
-    let a1 = block_store.create_block(genesis.block(), vec![1], 1, 1);
-    assert_eq!(a1.parent_id(), genesis.id());
-    assert_eq!(a1.round(), 1);
-    assert_eq!(a1.height(), 1);
-    assert_eq!(a1.quorum_cert().certified_block_id(), genesis.id());
-
-    let a1_ref = block_on(block_store.execute_and_insert_block(a1)).unwrap();
-
-    // certify a1
-    let vote_msg = VoteMsg::new(
-        VoteData::new(
-            a1_ref.id(),
-            block_store
-                .get_compute_result(a1_ref.id())
-                .unwrap()
-                .executed_state
-                .state_id,
-            a1_ref.round(),
-            a1_ref.quorum_cert().parent_block_id(),
-            a1_ref.quorum_cert().parent_block_round(),
-            a1_ref.quorum_cert().grandparent_block_id(),
-            a1_ref.quorum_cert().grandparent_block_round(),
-        ),
-        block_store.signer().author(),
-        placeholder_ledger_info(),
-        block_store.signer(),
-    );
-    let validator_verifier = Arc::new(ValidatorVerifier::new_single(
-        block_store.signer().author(),
-        block_store.signer().public_key(),
-    ));
-    block_store.insert_vote_and_qc(vote_msg, validator_verifier);
-
-    let b1 = block_store.create_block(a1_ref.block(), vec![2], 2, 2);
-    assert_eq!(b1.parent_id(), a1_ref.id());
-    assert_eq!(b1.round(), 2);
-    assert_eq!(b1.height(), 2);
-    assert_eq!(b1.quorum_cert().certified_block_id(), a1_ref.id());
-}
+use std::{cmp::min, collections::HashSet};
 
 #[test]
 fn test_highest_block_and_quorum_cert() {
-    let block_store = build_empty_tree();
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
     assert_eq!(
         block_store.highest_certified_block().block(),
         &Block::make_genesis_block()
     );
     assert_eq!(
         block_store.highest_quorum_cert().as_ref(),
-        &QuorumCert::certificate_for_genesis()
+        &certificate_for_genesis()
     );
 
     let genesis = block_store.root();
-    let mut inserter = TreeInserter::new(block_store.clone());
 
     // Genesis block and quorum certificate is still the highest
-    let block_round_1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let block_round_1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     assert_eq!(
         block_store.highest_certified_block().block(),
         &Block::make_genesis_block()
     );
     assert_eq!(
         block_store.highest_quorum_cert().as_ref(),
-        &QuorumCert::certificate_for_genesis()
+        &certificate_for_genesis()
     );
 
     // block_round_1 block and quorum certificate is now the highest
-    let block_round_3 = inserter.insert_block(&block_round_1, 3);
+    let block_round_3 = inserter.insert_block(&block_round_1, 3, None);
     assert_eq!(block_store.highest_certified_block(), block_round_1);
     assert_eq!(
         block_store.highest_quorum_cert().as_ref(),
@@ -142,7 +63,7 @@ fn test_highest_block_and_quorum_cert() {
 
     // block_round_1 block and quorum certificate is still the highest, since block_round_4
     // also builds on block_round_1
-    let block_round_4 = inserter.insert_block(&block_round_1, 4);
+    let block_round_4 = inserter.insert_block(&block_round_1, 4, None);
     assert_eq!(block_store.highest_certified_block(), block_round_1);
     assert_eq!(
         block_store.highest_quorum_cert().as_ref(),
@@ -155,23 +76,22 @@ fn test_highest_block_and_quorum_cert() {
 
 #[test]
 fn test_qc_ancestry() {
-    let block_store = build_empty_tree();
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
     let genesis = block_store.root();
-    let mut inserter = TreeInserter::new(block_store.clone());
-    let block_a_1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-    let block_a_2 = inserter.insert_block(&block_a_1, 2);
+    let block_a_1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
+    let block_a_2 = inserter.insert_block(&block_a_1, 2, None);
 
     assert_eq!(
-        block_store.get_block(genesis.quorum_cert().certified_block_id()),
+        block_store.get_block(genesis.quorum_cert().certified_block().id()),
         None
     );
     assert_eq!(
-        block_store.get_block(block_a_1.quorum_cert().certified_block_id()),
+        block_store.get_block(block_a_1.quorum_cert().certified_block().id()),
         Some(genesis)
     );
     assert_eq!(
-        block_store.get_block(block_a_2.quorum_cert().certified_block_id()),
+        block_store.get_block(block_a_2.quorum_cert().certified_block().id()),
         Some(block_a_1)
     );
 }
@@ -182,22 +102,20 @@ proptest! {
 
     #[test]
     fn test_block_store_insert(
-        (mut private_keys, blocks) in block_test::block_forest_and_its_keys(
+        (private_keys, blocks) in block_test_utils::block_forest_and_its_keys(
             // quorum size
             10,
             // recursion depth
             50)
     ){
         let authors: HashSet<Author> = private_keys.iter().map(|private_key| AccountAddress::from_public_key(&private_key.public_key())).collect();
-        let priv_key = private_keys.pop().expect("several keypairs generated");
-        let signer = ValidatorSigner::new(None, priv_key);
-        let block_store = build_empty_tree_with_custom_signing(signer);
+        let block_store = build_empty_tree();
         for block in blocks {
             if block.round() > 0 && authors.contains(&block.author().unwrap()) {
                 let known_parent = block_store.block_exists(block.parent_id());
-                let certified_parent = block.quorum_cert().certified_block_id() == block.parent_id();
+                let certified_parent = block.quorum_cert().certified_block().id() == block.parent_id();
                 let verify_res = block.verify_well_formed();
-                let res = block_on(block_store.execute_and_insert_block(block.clone()));
+                let res = block_store.execute_and_insert_block(block.clone());
                 if !certified_parent {
                     prop_assert!(verify_res.is_err());
                 } else if !known_parent {
@@ -208,9 +126,7 @@ proptest! {
                 else {
                     // The parent must be present if we get to this line.
                     let parent = block_store.get_block(block.parent_id()).unwrap();
-                    if block.height() != parent.height() + 1 {
-                        prop_assert!(res.is_err());
-                    } else if block.round() <= parent.round() {
+                    if block.round() <= parent.round() {
                         prop_assert!(res.is_err());
                     } else {
                         let executed_block = res.unwrap();
@@ -286,21 +202,17 @@ fn test_block_store_prune() {
 #[test]
 fn test_block_tree_gc() {
     // build a tree with 100 nodes, max_pruned_nodes_in_mem = 10
-    let block_store = build_empty_tree();
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
     let genesis = block_store.root();
     let mut cur_node = block_store.get_block(genesis.id()).unwrap();
     let mut added_blocks = vec![];
 
-    let mut inserter = TreeInserter::new(block_store.clone());
     for round in 1..100 {
         if round == 1 {
-            cur_node = inserter.insert_block_with_qc(
-                QuorumCert::certificate_for_genesis(),
-                &cur_node,
-                round,
-            );
+            cur_node = inserter.insert_block_with_qc(certificate_for_genesis(), &cur_node, round);
         } else {
-            cur_node = inserter.insert_block(&cur_node, round);
+            cur_node = inserter.insert_block(&cur_node, round, None);
         }
         added_blocks.push(cur_node.clone());
     }
@@ -314,16 +226,16 @@ fn test_block_tree_gc() {
 
 #[test]
 fn test_path_from_root() {
-    let block_store = build_empty_tree();
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
     let genesis = block_store.get_block(block_store.root().id()).unwrap();
-    let mut inserter = TreeInserter::new(block_store.clone());
-    let b1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-    let b2 = inserter.insert_block(&b1, 2);
-    let b3 = inserter.insert_block(&b2, 3);
+    let b1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
+    let b2 = inserter.insert_block(&b1, 2, None);
+    let b3 = inserter.insert_block(&b2, 3, None);
 
     assert_eq!(
         block_store.path_from_root(b3.id()),
-        Some(vec![b3.clone(), b2.clone(), b1.clone()])
+        Some(vec![b1.clone(), b2.clone(), b3.clone()])
     );
     assert_eq!(block_store.path_from_root(genesis.id()), Some(vec![]));
 
@@ -335,44 +247,39 @@ fn test_path_from_root() {
 
 #[test]
 fn test_insert_vote() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     // Set up enough different authors to support different votes for the same block.
     let (signers, validator_verifier) = random_validator_verifier(11, Some(10), false);
-    let validator_verifier = Arc::new(validator_verifier);
     let my_signer = signers[10].clone();
-    let block_store = build_empty_tree_with_custom_signing(my_signer);
+    let mut inserter = TreeInserter::new(my_signer);
+    let block_store = inserter.block_store();
     let genesis = block_store.root();
-    let mut inserter = TreeInserter::new(block_store.clone());
-    let block = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let block = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
 
     assert!(block_store.get_quorum_cert_for_block(block.id()).is_none());
     for (i, voter) in signers.iter().enumerate().take(10).skip(1) {
-        let vote_msg = VoteMsg::new(
+        let executed_state = &block.compute_result().executed_state;
+
+        let vote = Vote::new(
             VoteData::new(
-                block.id(),
-                block_store
-                    .get_compute_result(block.id())
-                    .unwrap()
-                    .executed_state
-                    .state_id,
-                block.round(),
-                block.quorum_cert().parent_block_id(),
-                block.quorum_cert().parent_block_round(),
-                block.quorum_cert().grandparent_block_id(),
-                block.quorum_cert().grandparent_block_round(),
+                block.block().gen_block_info(
+                    executed_state.state_id,
+                    executed_state.version,
+                    executed_state.validators.clone(),
+                ),
+                block.quorum_cert().certified_block().clone(),
             ),
             voter.author(),
             placeholder_ledger_info(),
             voter,
         );
-        let vote_res =
-            block_store.insert_vote_and_qc(vote_msg.clone(), Arc::clone(&validator_verifier));
+        let vote_res = block_store.insert_vote_and_qc(&vote, &validator_verifier);
 
         // first vote of an author is accepted
         assert_eq!(vote_res, VoteReceptionResult::VoteAdded(i as u64));
         // filter out duplicates
         assert_eq!(
-            block_store.insert_vote_and_qc(vote_msg, Arc::clone(&validator_verifier)),
+            block_store.insert_vote_and_qc(&vote, &validator_verifier),
             VoteReceptionResult::DuplicateVote,
         );
         // qc is still not there
@@ -380,28 +287,24 @@ fn test_insert_vote() {
     }
 
     // Add the final vote to form a QC
+    let executed_state = &block.compute_result().executed_state;
     let final_voter = &signers[0];
-    let vote_msg = VoteMsg::new(
+    let vote = Vote::new(
         VoteData::new(
-            block.id(),
-            block_store
-                .get_compute_result(block.id())
-                .unwrap()
-                .executed_state
-                .state_id,
-            block.round(),
-            block.quorum_cert().parent_block_id(),
-            block.quorum_cert().parent_block_round(),
-            block.quorum_cert().grandparent_block_id(),
-            block.quorum_cert().grandparent_block_round(),
+            block.block().gen_block_info(
+                executed_state.state_id,
+                executed_state.version,
+                executed_state.validators.clone(),
+            ),
+            block.quorum_cert().certified_block().clone(),
         ),
         final_voter.author(),
         placeholder_ledger_info(),
         final_voter,
     );
-    match block_store.insert_vote_and_qc(vote_msg, validator_verifier) {
+    match block_store.insert_vote_and_qc(&vote, &validator_verifier) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
-            assert_eq!(qc.certified_block_id(), block.id());
+            assert_eq!(qc.certified_block().id(), block.id());
         }
         _ => {
             panic!("QC not formed!");
@@ -409,341 +312,122 @@ fn test_insert_vote() {
     }
 
     let block_qc = block_store.get_quorum_cert_for_block(block.id()).unwrap();
-    assert_eq!(block_qc.certified_block_id(), block.id());
-}
-
-#[test]
-/// Verify that votes are properly aggregated based on their LedgerInfo digest
-fn test_vote_aggregation() {
-    ::logger::try_init_for_testing();
-    let (signers, validator_verifier) = random_validator_verifier(3, Some(2), false);
-    let validator_verifier = Arc::new(validator_verifier);
-    let my_signer = signers[2].clone();
-    let block_store = build_empty_tree_with_custom_signing(my_signer);
-    let genesis = block_store.root();
-    let mut inserter = TreeInserter::new(block_store.clone());
-    let block = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-
-    // The first two signers give the same vote data but different vote msgs
-    let li1 = placeholder_ledger_info();
-    let vote_data = VoteData::new(
-        block.id(),
-        block_store
-            .get_compute_result(block.id())
-            .unwrap()
-            .executed_state
-            .state_id,
-        block.round(),
-        block.quorum_cert().parent_block_id(),
-        block.quorum_cert().parent_block_round(),
-        block.quorum_cert().grandparent_block_id(),
-        block.quorum_cert().grandparent_block_round(),
-    );
-    assert_eq!(
-        block_store.insert_vote_and_qc(
-            VoteMsg::new(
-                vote_data.clone(),
-                signers[0].author(),
-                li1.clone(),
-                &signers[0]
-            ),
-            Arc::clone(&validator_verifier),
-        ),
-        VoteReceptionResult::VoteAdded(1)
-    );
-    let li2 = LedgerInfo::new(
-        1,
-        HashValue::zero(),
-        HashValue::zero(),
-        HashValue::zero(),
-        0,
-        0,
-        None,
-    );
-    // No QC yet because LedgerInfo is different
-    assert_eq!(
-        block_store.insert_vote_and_qc(
-            VoteMsg::new(
-                vote_data.clone(),
-                signers[1].author(),
-                li2.clone(),
-                &signers[1]
-            ),
-            Arc::clone(&validator_verifier),
-        ),
-        VoteReceptionResult::VoteAdded(1)
-    );
-    // Once the second vote with the same LedgerInfo is added, QC should be formed
-    match block_store.insert_vote_and_qc(
-        VoteMsg::new(
-            vote_data.clone(),
-            signers[2].author(),
-            li1.clone(),
-            &signers[2],
-        ),
-        Arc::clone(&validator_verifier),
-    ) {
-        VoteReceptionResult::NewQuorumCertificate(_) => (),
-        _ => {
-            panic!("QC not formed!");
-        }
-    }
-}
-
-#[test]
-/// Verify that we only account for latest vote from Validator and correctly cleanup last vote.
-fn test_malicious_vote_validator() {
-    ::logger::try_init_for_testing();
-
-    let (signers, validator_verifier) = random_validator_verifier(4, Some(2), false);
-    let validator_verifier = Arc::new(validator_verifier);
-    let my_signer = signers[2].clone();
-    let bad_signer = signers[3].clone();
-
-    let block_store = build_empty_tree_with_custom_signing(my_signer);
-    let genesis = block_store.root();
-    let mut inserter = TreeInserter::new(block_store.clone());
-    let block0 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-    let block1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-
-    // Ledger Info and Vote data used by first 2 signers for Block 0
-    let li0 = placeholder_ledger_info();
-    let li1 = LedgerInfo::new(
-        1,
-        HashValue::zero(),
-        HashValue::zero(),
-        HashValue::zero(),
-        0,
-        0,
-        None,
-    );
-
-    let block0_vote_data = VoteData::new(
-        block0.id(),
-        block_store
-            .get_compute_result(block0.id())
-            .unwrap()
-            .executed_state
-            .state_id,
-        block0.round(),
-        block0.quorum_cert().parent_block_id(),
-        block0.quorum_cert().parent_block_round(),
-        block0.quorum_cert().grandparent_block_id(),
-        block0.quorum_cert().grandparent_block_round(),
-    );
-    let block1_vote_data = VoteData::new(
-        block1.id(),
-        block_store
-            .get_compute_result(block1.id())
-            .unwrap()
-            .executed_state
-            .state_id,
-        block1.round(),
-        block1.quorum_cert().parent_block_id(),
-        block1.quorum_cert().parent_block_round(),
-        block1.quorum_cert().grandparent_block_id(),
-        block1.quorum_cert().grandparent_block_round(),
-    );
-
-    // bad_signer votes on Block0 with li0
-    assert_eq!(
-        block_store.insert_vote_and_qc(
-            VoteMsg::new(
-                block0_vote_data.clone(),
-                bad_signer.author(),
-                li0.clone(),
-                &bad_signer
-            ),
-            Arc::clone(&validator_verifier)
-        ),
-        VoteReceptionResult::VoteAdded(1)
-    );
-
-    // bad_signer changes vote to Block1 with li1, making earlier vote on Block0 obsolete
-    assert_eq!(
-        block_store.insert_vote_and_qc(
-            VoteMsg::new(
-                block1_vote_data.clone(),
-                bad_signer.author(),
-                li1.clone(),
-                &bad_signer
-            ),
-            Arc::clone(&validator_verifier)
-        ),
-        VoteReceptionResult::VoteAdded(1)
-    );
-
-    // Signer0 votes on Block0 with li0. No QC since bad_signer changed the vote
-    assert_eq!(
-        block_store.insert_vote_and_qc(
-            VoteMsg::new(
-                block0_vote_data.clone(),
-                signers[0].author(),
-                li0.clone(),
-                &signers[0]
-            ),
-            Arc::clone(&validator_verifier)
-        ),
-        VoteReceptionResult::VoteAdded(1)
-    );
-
-    // Signer2 votes on Block0 with li0, QC!
-    match block_store.insert_vote_and_qc(
-        VoteMsg::new(
-            block0_vote_data.clone(),
-            signers[1].author(),
-            li0.clone(),
-            &signers[1],
-        ),
-        Arc::clone(&validator_verifier),
-    ) {
-        VoteReceptionResult::NewQuorumCertificate(_) => (),
-        _ => {
-            panic!("QC not formed!");
-        }
-    }
-
-    // Block1 already has vote from bad_signer. Add Signer0 vote on Block1 with li1 to form QC!
-    match block_store.insert_vote_and_qc(
-        VoteMsg::new(
-            block1_vote_data.clone(),
-            signers[0].author(),
-            li1.clone(),
-            &signers[0],
-        ),
-        Arc::clone(&validator_verifier),
-    ) {
-        VoteReceptionResult::NewQuorumCertificate(_) => (),
-        _ => {
-            panic!("QC not formed!");
-        }
-    }
+    assert_eq!(block_qc.certified_block().id(), block.id());
 }
 
 #[test]
 fn test_illegal_timestamp() {
+    let signer = ValidatorSigner::random(None);
     let block_store = build_empty_tree();
     let genesis = block_store.root();
-    let block_with_illegal_timestamp = Block::<Vec<usize>>::new_internal(
+    let block_with_illegal_timestamp = Block::<Vec<usize>>::new_proposal(
         vec![],
-        genesis.id(),
-        1,
-        1,
+        0,
         // This timestamp is illegal, it is the same as genesis
         genesis.timestamp_usecs(),
-        QuorumCert::certificate_for_genesis(),
-        block_store.signer(),
+        certificate_for_genesis(),
+        &signer,
     );
-    let result = block_on(block_store.execute_and_insert_block(block_with_illegal_timestamp));
+    let result = block_store.execute_and_insert_block(block_with_illegal_timestamp);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_highest_qc() {
-    let block_tree = build_empty_tree();
-    let mut inserter = TreeInserter::new(block_tree.clone());
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
 
     // build a tree of the following form
     // genesis <- a1 <- a2 <- a3
-    let genesis = block_tree.root();
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-    assert_eq!(block_tree.highest_certified_block(), genesis.clone());
-    let a2 = inserter.insert_block(&a1, 2);
-    assert_eq!(block_tree.highest_certified_block(), a1.clone());
-    let _a3 = inserter.insert_block(&a2, 3);
-    assert_eq!(block_tree.highest_certified_block(), a2.clone());
+    let genesis = block_store.root();
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
+    assert_eq!(block_store.highest_certified_block(), genesis.clone());
+    let a2 = inserter.insert_block(&a1, 2, None);
+    assert_eq!(block_store.highest_certified_block(), a1.clone());
+    let _a3 = inserter.insert_block(&a2, 3, None);
+    assert_eq!(block_store.highest_certified_block(), a2.clone());
 }
 
 #[test]
 fn test_need_fetch_for_qc() {
-    let block_tree = build_empty_tree();
-    let mut inserter = TreeInserter::new(block_tree.clone());
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
 
     // build a tree of the following form
     // genesis <- a1 <- a2 <- a3
-    let genesis = block_tree.root();
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-    let a2 = inserter.insert_block(&a1, 2);
-    let a3 = inserter.insert_block(&a2, 3);
-    block_tree.prune_tree(a2.id());
+    let genesis = block_store.root();
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
+    let a2 = inserter.insert_block(&a1, 2, None);
+    let a3 = inserter.insert_block(&a2, 3, None);
+    block_store.prune_tree(a2.id());
     let need_fetch_qc = placeholder_certificate_for_block(
-        vec![block_tree.signer()],
+        vec![inserter.signer()],
         HashValue::zero(),
         a3.round() + 1,
         HashValue::zero(),
         a3.round(),
-        HashValue::zero(),
-        a3.round() - 1,
     );
-    let too_old_qc = QuorumCert::certificate_for_genesis();
+    let too_old_qc = certificate_for_genesis();
     let can_insert_qc = placeholder_certificate_for_block(
-        vec![block_tree.signer()],
+        vec![inserter.signer()],
         a3.id(),
         a3.round(),
         a2.id(),
         a2.round(),
-        a1.id(),
-        a1.round(),
     );
-    let duplicate_qc = block_tree.get_quorum_cert_for_block(a2.id()).unwrap();
+    let duplicate_qc = block_store.get_quorum_cert_for_block(a2.id()).unwrap();
     assert_eq!(
-        block_tree.need_fetch_for_quorum_cert(&need_fetch_qc),
+        block_store.need_fetch_for_quorum_cert(&need_fetch_qc),
         NeedFetchResult::NeedFetch
     );
     assert_eq!(
-        block_tree.need_fetch_for_quorum_cert(&too_old_qc),
+        block_store.need_fetch_for_quorum_cert(&too_old_qc),
         NeedFetchResult::QCRoundBeforeRoot,
     );
     assert_eq!(
-        block_tree.need_fetch_for_quorum_cert(&can_insert_qc),
+        block_store.need_fetch_for_quorum_cert(&can_insert_qc),
         NeedFetchResult::QCBlockExist,
     );
     assert_eq!(
-        block_tree.need_fetch_for_quorum_cert(duplicate_qc.as_ref()),
+        block_store.need_fetch_for_quorum_cert(duplicate_qc.as_ref()),
         NeedFetchResult::QCAlreadyExist,
     );
 }
 
 #[test]
-fn test_need_sync_for_qc() {
-    let block_tree = build_empty_tree();
-    let mut inserter = TreeInserter::new(block_tree.clone());
-
-    // build a tree of the following form
-    // genesis <- a1 <- a2 <- a3
-    let genesis = block_tree.root();
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-    let a2 = inserter.insert_block(&a1, 2);
-    let a3 = inserter.insert_block(&a2, 3);
-    block_tree.prune_tree(a3.id());
-    let qc = placeholder_certificate_for_block(
-        vec![block_tree.signer()],
-        HashValue::zero(),
-        a3.round() + 3,
-        HashValue::zero(),
-        a3.round() + 2,
-        HashValue::zero(),
-        a3.round() + 1,
+fn test_empty_reconfiguration_suffix() {
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
+    let genesis = block_store.root();
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
+    let a2 = inserter.insert_block(&a1, 2, None);
+    let a3 = inserter.insert_reconfiguration_block(&a2, 3);
+    let a4 = inserter.create_block_with_qc(
+        inserter.create_qc_for_block(a3.as_ref(), None),
+        a3.as_ref().timestamp_usecs(),
+        4,
+        vec![42],
     );
-    assert_eq!(
-        block_tree.need_sync_for_quorum_cert(HashValue::zero(), &qc),
-        true
+    // Child of reconfiguration carries a payload will fail to insert
+    assert!(a4.verify_well_formed().is_err());
+    let a5 = inserter.create_block_with_qc(
+        inserter.create_qc_for_block(a3.as_ref(), None),
+        a3.as_ref().timestamp_usecs(),
+        4,
+        vec![],
     );
-    let qc = placeholder_certificate_for_block(
-        vec![block_tree.signer()],
-        HashValue::zero(),
-        a3.round() + 2,
-        HashValue::zero(),
-        a3.round() + 1,
-        HashValue::zero(),
-        a3.round(),
+    // Child of reconfiguration doesn't carry payload will succeed and roll over the validator set
+    let a5 = block_store.execute_and_insert_block(a5).unwrap();
+    assert!(a5.compute_result().has_reconfiguration());
+    // Block continues another branch can carry payload
+    inserter.insert_block(&a2, 4, None);
+    block_store.prune_tree(a3.id());
+    // If reconfiguration is committed, the child block will fail to insert
+    let a6 = inserter.create_block_with_qc(
+        inserter.create_qc_for_block(a5.as_ref(), None),
+        a5.as_ref().timestamp_usecs(),
+        5,
+        vec![42],
     );
-    assert_eq!(
-        block_tree.need_sync_for_quorum_cert(HashValue::zero(), &qc),
-        false,
-    );
-    assert_eq!(
-        block_tree.need_sync_for_quorum_cert(genesis.id(), &QuorumCert::certificate_for_genesis()),
-        false
-    );
+    assert!(a6.verify_well_formed().is_err());
 }

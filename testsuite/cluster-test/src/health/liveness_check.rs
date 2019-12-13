@@ -1,3 +1,8 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+#![forbid(unsafe_code)]
+
 use crate::{
     cluster::Cluster,
     health::{Event, HealthCheck, HealthCheckContext, ValidatorEvent},
@@ -8,7 +13,7 @@ pub struct LivenessHealthCheck {
     last_committed: HashMap<String, LastCommitInfo>,
 }
 
-const MAX_BEHIND: Duration = Duration::from_secs(60);
+const MAX_BEHIND: Duration = Duration::from_secs(120);
 
 #[derive(Default)]
 struct LastCommitInfo {
@@ -20,7 +25,7 @@ impl LivenessHealthCheck {
     pub fn new(cluster: &Cluster) -> Self {
         let mut last_committed = HashMap::new();
         for instance in cluster.instances() {
-            last_committed.insert(instance.short_hash().clone(), LastCommitInfo::default());
+            last_committed.insert(instance.peer_name().clone(), LastCommitInfo::default());
         }
         Self { last_committed }
     }

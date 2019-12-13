@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{FuzzTarget, FuzzTargetImpl};
-use failure::prelude::*;
+use anyhow::{format_err, Result};
 use lazy_static::lazy_static;
 use std::{collections::BTreeMap, env};
 
@@ -18,7 +18,7 @@ macro_rules! module_name {
 
 /// A fuzz target implementation for protobuf-compiled targets.
 macro_rules! proto_fuzz_target {
-    ($target:ident => $ty:ty) => {
+    ($target:ident => $ty:ty, $prototy:ty) => {
         #[derive(Clone, Debug, Default)]
         pub struct $target;
 
@@ -34,34 +34,35 @@ macro_rules! proto_fuzz_target {
             fn generate(
                 &self,
                 _idx: usize,
-                gen: &mut ::proptest_helpers::ValueGenerator,
+                gen: &mut ::libra_proptest_helpers::ValueGenerator,
             ) -> Option<Vec<u8>> {
-                use proto_conv::IntoProtoBytes;
+                use libra_prost_ext::MessageExt;
 
-                let value = gen.generate(::proptest::arbitrary::any::<$ty>());
-                Some(
-                    value
-                        .into_proto_bytes()
-                        .expect("failed to convert to bytes"),
-                )
+                let value: $prototy = gen.generate(::proptest::arbitrary::any::<$ty>()).into();
+
+                Some(value.to_vec().expect("failed to convert to bytes"))
             }
 
             fn fuzz(&self, data: &[u8]) {
-                use proto_conv::FromProtoBytes;
+                use prost::Message;
+                use std::convert::TryFrom;
 
                 // Errors are OK -- the fuzzer cares about panics and OOMs.
-                let _ = <$ty>::from_proto_bytes(data);
+                let _ = <$prototy>::decode(data).map(<$ty>::try_from);
             }
         }
     };
 }
 
 // List fuzz target modules here.
+mod accumulator_merkle_proof;
 mod admission_control;
 mod compiled_module;
 mod consensus_proposal;
+mod inbound_rpc_protocol;
 mod inner_signed_transaction;
 mod signed_transaction;
+mod sparse_merkle_proof;
 mod vm_value;
 
 lazy_static! {
@@ -71,9 +72,12 @@ lazy_static! {
             Box::new(compiled_module::CompiledModuleTarget::default()),
             Box::new(signed_transaction::SignedTransactionTarget::default()),
             Box::new(inner_signed_transaction::SignedTransactionTarget::default()),
+            Box::new(sparse_merkle_proof::SparseMerkleProofTarget::default()),
+            Box::new(accumulator_merkle_proof::AccumulatorProofTarget::default()),
             Box::new(vm_value::ValueTarget::default()),
             Box::new(consensus_proposal::ConsensusProposal::default()),
             Box::new(admission_control::AdmissionControlSubmitTransactionRequest::default()),
+            Box::new(inbound_rpc_protocol::RpcInboundRequest::default()),
         ];
         targets.into_iter().map(|target| (target.name(), target)).collect()
     };

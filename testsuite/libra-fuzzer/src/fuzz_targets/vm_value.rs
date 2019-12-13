@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTargetImpl;
+use anyhow::{bail, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use canonical_serialization::*;
-use failure::prelude::*;
-use proptest_helpers::ValueGenerator;
+use libra_proptest_helpers::ValueGenerator;
 use std::io::Cursor;
 use vm_runtime_types::{
     loaded_data::{struct_def::StructDef, types::Type},
@@ -33,11 +32,7 @@ impl FuzzTargetImpl for ValueTarget {
 
         // Values as currently serialized are not self-describing, so store a serialized form of the
         // type along with the value as well.
-        let mut serializer = SimpleSerializer::new();
-        struct_def
-            .serialize(&mut serializer)
-            .expect("must serialize");
-        let struct_def_blob: Vec<u8> = serializer.get_output();
+        let struct_def_blob = lcs::to_bytes(&struct_def).unwrap();
 
         let value_blob = value.simple_serialize().expect("must serialize");
         let mut blob = vec![];
@@ -67,9 +62,7 @@ fn deserialize(data: &[u8]) -> Result<()> {
     let struct_def_data = &data[0..len];
     let value_data = &data[len..];
 
-    // Deserialize now.
-    let mut deserializer = SimpleDeserializer::new(struct_def_data);
-    let struct_def = StructDef::deserialize(&mut deserializer)?;
+    let struct_def: StructDef = lcs::from_bytes(struct_def_data)?;
     let _ = Value::simple_deserialize(value_data, struct_def);
     Ok(())
 }

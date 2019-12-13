@@ -2,14 +2,18 @@
 name = "generate-keypair"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra generate keypair"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-bincode = { version = "1.1.4", default-features = false }
+anyhow = "1.0"
+rand = "0.6.5"
 structopt = "0.3.2"
 
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-crypto = { path = "../../crypto/crypto/"}
-tools = { path = "../../common/tools" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-crypto = { path = "../../crypto/crypto/", version = "0.1.0"}
+libra-tools = { path = "../../common/tools", version = "0.1.0" }

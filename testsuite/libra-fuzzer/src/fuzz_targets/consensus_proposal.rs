@@ -1,6 +1,9 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::FuzzTargetImpl;
 use consensus::event_processor_fuzzing::{fuzz_proposal, generate_corpus_proposal};
-use proptest_helpers::ValueGenerator;
+use libra_proptest_helpers::ValueGenerator;
 
 #[derive(Clone, Debug, Default)]
 pub struct ConsensusProposal;

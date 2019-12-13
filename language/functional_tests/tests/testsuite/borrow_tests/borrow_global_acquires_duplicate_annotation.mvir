@@ -8,5 +8,4 @@ module A {
 
 }
 
-// check: VerificationFailure
 // check: DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR

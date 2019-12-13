@@ -9,12 +9,13 @@
 /// module cache of all loaded modules in the VM.
 #[macro_export]
 macro_rules! with_loaded_vm {
-    ($module_generator:expr, $root_account:expr => $vm:ident, $mod:ident, $module_cache:ident) => {
+    ($num_modules:expr, $table_size:expr, $root_account:expr => $vm:ident, $mod:ident, $module_cache:ident) => {
         use vm::access::ModuleAccess;
 
         let mut modules = ::stdlib::stdlib_modules().to_vec();
-        let mut generated_modules = $module_generator.collect();
-        modules.append(&mut generated_modules);
+        let (root, mut callee_modules) = generate_padded_modules($num_modules, $table_size);
+        modules.append(&mut callee_modules);
+        modules.push(root);
         // The last module is the root module based upon how we generate modules.
         let root_module = modules
             .last()
@@ -27,8 +28,7 @@ macro_rules! with_loaded_vm {
         $module_cache.cache_module(root_module.clone());
         let $mod = $module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Runtime error while looking up module")
-            .expect("[Module Cache] Unable to find module in module cache.");
+            .expect("[Module Lookup] Runtime error while looking up module");
         for m in modules.clone() {
             $module_cache.cache_module(m);
         }
@@ -39,12 +39,10 @@ macro_rules! with_loaded_vm {
         for (access_path, blob) in $root_account.generate_resources(&mut inhabitor).into_iter() {
             data_cache.set(access_path, blob);
         }
+        let gas_schedule = CostTable::zero();
+        let txn_data = TransactionMetadata::default();
         let mut $vm =
-            TransactionExecutor::new(&$module_cache, &data_cache, TransactionMetadata::default());
-        $vm.turn_off_gas_metering();
-        match $vm.execution_stack.push_frame(entry_func) {
-            Ok(_) => {}
-            Err(e) => panic!("Unexpected Runtime Error: {:?}", e),
-        }
+            InterpreterForCostSynthesis::new(&$module_cache, &txn_data, &data_cache, &gas_schedule);
+        $vm.push_frame(entry_func, vec![]);
     };
 }

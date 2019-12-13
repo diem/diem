@@ -2,16 +2,19 @@
 name = "noise"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra noise"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-futures = { version = "=0.3.0-alpha.19", package = "futures-preview" }
-snow = { version = "0.5.2", features=["ring-accelerated"]}
-crypto = { path = "../../crypto/crypto" }
-netcore = { path = "../netcore" }
-logger = { path = "../../common/logger" }
+futures = "0.3.0"
+snow = { version = "0.6.1", features=["ring-accelerated"]}
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+netcore = { path = "../netcore", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
 
 [dev-dependencies]
-memsocket = { path = "../memsocket" }
+memsocket = { path = "../memsocket", version = "0.1.0" }

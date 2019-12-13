@@ -1,4 +1,3 @@
-// check: VerificationFailure
 // check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK
 
 main() {
@@ -8,4 +7,3 @@ main() {
     x, y, z = (1, 2);
     return;
 }
-

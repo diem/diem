@@ -1,0 +1,56 @@
+error: 
+
+   ┌── tests/move_check/typing/subtype_bind_invalid.move:5:16 ───
+   │
+ 5 │         let x: &mut u64 = &0;
+   │                ^^^^^^^^ Invalid type annotation
+   ·
+ 5 │         let x: &mut u64 = &0;
+   │                           -- The type: '&u64'
+   ·
+ 5 │         let x: &mut u64 = &0;
+   │                -------- Is not a subtype of: '&mut u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/subtype_bind_invalid.move:9:21 ───
+   │
+ 9 │         let (x, y): (&mut u64, &mut u64) = (&0, &0);
+   │                     ^^^^^^^^^^^^^^^^^^^^ Invalid type annotation
+   ·
+ 9 │         let (x, y): (&mut u64, &mut u64) = (&0, &0);
+   │                                             -- The type: '&u64'
+   ·
+ 9 │         let (x, y): (&mut u64, &mut u64) = (&0, &0);
+   │                      -------- Is not a subtype of: '&mut u64'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/subtype_bind_invalid.move:10:21 ───
+    │
+ 10 │         let (x, y): (&mut u64, &u64) = (&0, &0);
+    │                     ^^^^^^^^^^^^^^^^ Invalid type annotation
+    ·
+ 10 │         let (x, y): (&mut u64, &u64) = (&0, &0);
+    │                                         -- The type: '&u64'
+    ·
+ 10 │         let (x, y): (&mut u64, &u64) = (&0, &0);
+    │                      -------- Is not a subtype of: '&mut u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/subtype_bind_invalid.move:11:21 ───
+    │
+ 11 │         let (x, y): (&u64, &mut u64) = (&0, &0);
+    │                     ^^^^^^^^^^^^^^^^ Invalid type annotation
+    ·
+ 11 │         let (x, y): (&u64, &mut u64) = (&0, &0);
+    │                                             -- The type: '&u64'
+    ·
+ 11 │         let (x, y): (&u64, &mut u64) = (&0, &0);
+    │                            -------- Is not a subtype of: '&mut u64'
+    │
+

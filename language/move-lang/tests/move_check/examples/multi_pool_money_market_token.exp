@@ -1,0 +1,341 @@
+error: 
+
+    ┌── tests/move_check/examples/multi_pool_money_market_token.move:94:14 ───
+    │
+ 94 │         if (!exists<Pool<AssetType>>(sender)) move_to_sender(Pool<AssetType> { coin: init })
+    │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to exists.
+    ·
+ 94 │         if (!exists<Pool<AssetType>>(sender)) move_to_sender(Pool<AssetType> { coin: init })
+    │                     --------------- The resource cannot take any type arguments, but found 1 type arguments
+    │
+
+error: 
+
+    ┌── tests/move_check/examples/multi_pool_money_market_token.move:94:47 ───
+    │
+ 94 │         if (!exists<Pool<AssetType>>(sender)) move_to_sender(Pool<AssetType> { coin: init })
+    │                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
+    ·
+ 94 │         if (!exists<Pool<AssetType>>(sender)) move_to_sender(Pool<AssetType> { coin: init })
+    │                                                              ------------------------------ The resource cannot take any type arguments, but found 1 type arguments
+    │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:104:9 ───
+     │
+ 104 │         move_to_sender(Price<In, Out> { price })
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
+     ·
+ 104 │         move_to_sender(Price<In, Out> { price })
+     │                        ------------------------ The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:108:18 ───
+     │
+ 108 │         acquires Pool<In>, DepositRecord<In, Out>
+     │                  ^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 108 │         acquires Pool<In>, DepositRecord<In, Out>
+     │                  -------- The resource cannot take any type arguments, but found 1 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:108:28 ───
+     │
+ 108 │         acquires Pool<In>, DepositRecord<In, Out>
+     │                            ^^^^^^^^^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 108 │         acquires Pool<In>, DepositRecord<In, Out>
+     │                            ---------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:114:20 ───
+     │
+ 114 │         let pool = borrow_global_mut<Pool<In>>(pool_owner);
+     │                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
+     ·
+ 114 │         let pool = borrow_global_mut<Pool<In>>(pool_owner);
+     │                                      -------- The resource cannot take any type arguments, but found 1 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:122:18 ───
+     │
+ 122 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                  ^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 122 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                  -------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:122:34 ───
+     │
+ 122 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                  ^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 122 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                  --------- The resource cannot take any type arguments, but found 1 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:122:45 ───
+     │
+ 122 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                             ^^^^^^^^^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 122 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                             ---------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:122:69 ───
+     │
+ 122 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                                                     ^^^^^^^^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 122 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                                                     --------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:128:20 ───
+     │
+ 128 │         let pool = borrow_global_mut<Pool<Out>>(pool_owner);
+     │                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
+     ·
+ 128 │         let pool = borrow_global_mut<Pool<Out>>(pool_owner);
+     │                                      --------- The resource cannot take any type arguments, but found 1 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:133:18 ───
+     │
+ 133 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                  ^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 133 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                  -------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:133:34 ───
+     │
+ 133 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                  ^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 133 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                  --------- The resource cannot take any type arguments, but found 1 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:133:45 ───
+     │
+ 133 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                             ^^^^^^^^^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 133 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                             ---------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:133:69 ───
+     │
+ 133 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                                                     ^^^^^^^^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 133 │         acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+     │                                                                     --------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:141:31 ───
+     │
+ 141 │             input_deposited * borrow_global<Price<In, Out>>(pool_owner).price;
+     │                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
+     ·
+ 141 │             input_deposited * borrow_global<Price<In, Out>>(pool_owner).price;
+     │                                             -------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:146:24 ───
+     │
+ 146 │             let pool = borrow_global<Pool<Out>>(pool_owner);
+     │                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
+     ·
+ 146 │             let pool = borrow_global<Pool<Out>>(pool_owner);
+     │                                      --------- The resource cannot take any type arguments, but found 1 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:154:18 ───
+     │
+ 154 │         acquires DepositRecord<In, Out>
+     │                  ^^^^^^^^^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 154 │         acquires DepositRecord<In, Out>
+     │                  ---------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:157:14 ───
+     │
+ 157 │         if (!exists<DepositRecord<In, Out>>(sender)) {
+     │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to exists.
+     ·
+ 157 │         if (!exists<DepositRecord<In, Out>>(sender)) {
+     │                     ---------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:158:13 ───
+     │
+ 158 │             move_to_sender(DepositRecord<In, Out> { record: Map::empty() })
+     │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
+     ·
+ 158 │             move_to_sender(DepositRecord<In, Out> { record: Map::empty() })
+     │                            ----------------------------------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:160:27 ───
+     │
+ 160 │         let record = &mut borrow_global_mut<DepositRecord<In, Out>>(sender).record;
+     │                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
+     ·
+ 160 │         let record = &mut borrow_global_mut<DepositRecord<In, Out>>(sender).record;
+     │                                             ---------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:169:18 ───
+     │
+ 169 │         acquires BorrowRecord<In, Out>
+     │                  ^^^^^^^^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 169 │         acquires BorrowRecord<In, Out>
+     │                  --------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:172:14 ───
+     │
+ 172 │         if (!exists<BorrowRecord<In, Out>>(sender)) {
+     │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to exists.
+     ·
+ 172 │         if (!exists<BorrowRecord<In, Out>>(sender)) {
+     │                     --------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:173:13 ───
+     │
+ 173 │             move_to_sender(BorrowRecord<In, Out> { record: Map::empty() })
+     │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
+     ·
+ 173 │             move_to_sender(BorrowRecord<In, Out> { record: Map::empty() })
+     │                            ---------------------------------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:175:27 ───
+     │
+ 175 │         let record = &mut borrow_global_mut<BorrowRecord<In, Out>>(sender).record;
+     │                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
+     ·
+ 175 │         let record = &mut borrow_global_mut<BorrowRecord<In, Out>>(sender).record;
+     │                                             --------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:184:18 ───
+     │
+ 184 │         acquires DepositRecord<In, Out>
+     │                  ^^^^^^^^^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 184 │         acquires DepositRecord<In, Out>
+     │                  ---------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:187:14 ───
+     │
+ 187 │         if (!exists<DepositRecord<In, Out>>(sender)) return 0;
+     │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to exists.
+     ·
+ 187 │         if (!exists<DepositRecord<In, Out>>(sender)) return 0;
+     │                     ---------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:189:23 ───
+     │
+ 189 │         let record = &borrow_global<DepositRecord<In, Out>>(sender).record;
+     │                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
+     ·
+ 189 │         let record = &borrow_global<DepositRecord<In, Out>>(sender).record;
+     │                                     ---------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:195:18 ───
+     │
+ 195 │         acquires BorrowRecord<In, Out>
+     │                  ^^^^^^^^^^^^^^^^^^^^^ Invalid 'acquires' annotation
+     ·
+ 195 │         acquires BorrowRecord<In, Out>
+     │                  --------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:198:14 ───
+     │
+ 198 │         if (!exists<BorrowRecord<In, Out>>(sender)) return 0;
+     │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to exists.
+     ·
+ 198 │         if (!exists<BorrowRecord<In, Out>>(sender)) return 0;
+     │                     --------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+
+error: 
+
+     ┌── tests/move_check/examples/multi_pool_money_market_token.move:200:23 ───
+     │
+ 200 │         let record = &borrow_global<BorrowRecord<In, Out>>(sender).record;
+     │                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
+     ·
+ 200 │         let record = &borrow_global<BorrowRecord<In, Out>>(sender).record;
+     │                                     --------------------- The resource cannot take any type arguments, but found 2 type arguments
+     │
+

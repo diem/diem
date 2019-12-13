@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: WRITEREF_TYPE_MISMATCH_ERROR
-
 module Test {
     struct T{fr: bool}
 
@@ -15,14 +12,4 @@ module Test {
         return;
     }
 }
-
-//! new-transaction
-
-import {{default}}.Test;
-
-main() {
-    let t: Test.T;
-    t = Test.new();
-    Test.no(&mut t);
-    return;
-}
+// check: WRITEREF_TYPE_MISMATCH_ERROR

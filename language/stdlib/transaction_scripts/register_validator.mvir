@@ -1,0 +1,22 @@
+// Register the sender as a candidate validator by publishing a ValidatorConfig.T resource with the
+// given keys under their account
+
+import 0x0.ValidatorConfig;
+main(
+    consensus_pubkey: bytearray,
+    validator_network_signing_pubkey: bytearray,
+    validator_network_identity_pubkey: bytearray,
+    validator_network_address: bytearray,
+    fullnodes_network_identity_pubkey: bytearray,
+    fullnodes_network_address: bytearray,
+) {
+  ValidatorConfig.register_candidate_validator(
+      move(consensus_pubkey),
+      move(validator_network_signing_pubkey),
+      move(validator_network_identity_pubkey),
+      move(validator_network_address),
+      move(fullnodes_network_identity_pubkey),
+      move(fullnodes_network_address)
+  );
+  return;
+}

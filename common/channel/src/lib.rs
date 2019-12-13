@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Provides an mpsc (multi-producer single-consumer) channel wrapped in an
-//! [`IntGauge`](metrics::IntGauge)
+//! [`IntGauge`](libra_metrics::IntGauge)
 
 use futures::{
     channel::mpsc,
@@ -10,8 +12,8 @@ use futures::{
     stream::{FusedStream, Stream},
     task::{Context, Poll},
 };
-use logger::prelude::*;
-use metrics::IntGauge;
+use libra_logger::prelude::*;
+use libra_metrics::IntGauge;
 use std::{
     pin::Pin,
     time::{Duration, Instant},
@@ -19,6 +21,14 @@ use std::{
 
 #[cfg(test)]
 mod test;
+
+pub mod libra_channel;
+#[cfg(test)]
+mod libra_channel_test;
+
+pub mod message_queues;
+#[cfg(test)]
+mod message_queues_test;
 
 const MAX_TIMEOUT: Duration = Duration::from_secs(24 * 60 * 60);
 

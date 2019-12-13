@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/dependencies/cycle_2.move:5:9 ───
+   │
+ 5 │         0x1::B::foo()
+   │         ^^^^^^^^^^^^^ Invalid use of module '0x1::B' in module '0x1::A'.
+   ·
+ 5 │         0x1::B::foo()
+   │         ------------- Using this module creates a dependency cycle: '0x1::B' uses '0x1::A' uses '0x1::B'
+   │
+

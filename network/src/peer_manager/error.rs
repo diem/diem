@@ -3,41 +3,35 @@
 
 //! Errors that originate from the PeerManager module
 
-use failure::Fail;
 use futures::channel::oneshot;
+use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
-use types::PeerId;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum PeerManagerError {
-    #[fail(display = "IO error: {}", _0)]
-    IoError(#[fail(cause)] ::std::io::Error),
+    #[error("IO error: {0}")]
+    IoError(#[from] ::std::io::Error),
 
-    #[fail(display = "Transport error: {}", _0)]
-    TransportError(#[fail(cause)] ::failure::Error),
+    #[error("Transport error: {0}")]
+    TransportError(::anyhow::Error),
 
-    #[fail(display = "Shutting down Peer")]
+    #[error("Shutting down Peer")]
     ShuttingDownPeer,
 
-    #[fail(display = "Not connected with Peer {}", _0)]
+    #[error("Not connected with Peer {0}")]
     NotConnected(PeerId),
 
-    #[fail(display = "Already connected at {}", _0)]
+    #[error("Already connected at {0}")]
     AlreadyConnected(Multiaddr),
 
-    #[fail(display = "Sending end of oneshot dropped")]
+    #[error("Sending end of oneshot dropped")]
     OneshotSenderDropped,
 }
 
 impl PeerManagerError {
-    pub fn from_transport_error<E: Into<::failure::Error>>(error: E) -> Self {
+    pub fn from_transport_error<E: Into<::anyhow::Error>>(error: E) -> Self {
         PeerManagerError::TransportError(error.into())
-    }
-}
-
-impl From<::std::io::Error> for PeerManagerError {
-    fn from(error: ::std::io::Error) -> Self {
-        PeerManagerError::IoError(error)
     }
 }
 

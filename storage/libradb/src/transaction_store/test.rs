@@ -3,10 +3,10 @@
 
 use super::*;
 use crate::LibraDB;
+use libra_proptest_helpers::Index;
+use libra_tools::tempdir::TempPath;
+use libra_types::proptest_types::{AccountInfoUniverse, SignatureCheckedTransactionGen};
 use proptest::{collection::vec, prelude::*};
-use proptest_helpers::Index;
-use tools::tempdir::TempPath;
-use types::proptest_types::{AccountInfoUniverse, SignatureCheckedTransactionGen};
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
@@ -21,7 +21,9 @@ proptest! {
     ) {
         let txns = gens
             .into_iter()
-            .map(|(index, gen)| gen.materialize(index, &mut universe).into_inner())
+            .map(|(index, gen)| Transaction::UserTransaction(
+                gen.materialize(index, &mut universe).into_inner()
+            ))
             .collect::<Vec<_>>();
 
         let tmp_dir = TempPath::new();
@@ -41,11 +43,12 @@ proptest! {
         let ledger_version = txns.len() as Version - 1;
         for (ver, txn) in txns.iter().enumerate() {
             prop_assert_eq!(store.get_transaction(ver as Version).unwrap(), txn.clone());
+            let user_txn = txn.as_signed_user_txn().expect("All should be user transactions here.");
             prop_assert_eq!(
                 store
                     .lookup_transaction_by_account(
-                        txn.sender(),
-                        txn.sequence_number(),
+                        user_txn.sender(),
+                        user_txn.sequence_number(),
                         ledger_version
                     )
                     .unwrap(),

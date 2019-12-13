@@ -20,10 +20,14 @@ To be effective, fuzzing requires a corpus of existing inputs. This
 crate contains support for generating corpuses with `proptest`. Generate
 a corpus with `cargo run generate <target>`.
 
-Once a corpus has been generated, the fuzzer is ready to use: run
-`cargo run fuzz <target>`. 
+Once a corpus has been generated, the fuzzer is ready to use, simply run:
 
-For more options, run `cargo run -- --help`.
+```
+RUSTC_BOOTSTRAP=1 cargo run fuzz <target> -- --release --debug-assertions
+```
+
+For more options, run `cargo run -- --help`. Note that `RUSTC_BOOTSTRAP=1` is
+required as `cargo fuzz` uses unstable compiler flags.
 
 ### Adding a new target
 
@@ -52,3 +56,22 @@ are running a single test, set `NO_FORK=1` to disable forking.
 Once the deserializer has been fixed, check the artifact into the
 `artifacts/<target>/` directory. The artifact will then act as a
 regression test in `cargo test` runs.
+
+### Fuzzing Coverage
+
+To test coverage of our fuzzers you can run the following command with [tarpaulin](https://crates.io/crates/cargo-tarpaulin):
+
+```
+CORPUS_PATH=fuzz/corpus cargo tarpaulin -p libra-fuzzer -- coverage
+```
+### Investigating an artifact
+
+Running the following command (with your own artifact contained in a similar path)
+will run the fuzzer with your input.
+
+```
+cargo run investigate -- -i artifacts/compiled_module/crash-5d7f403f
+```
+
+This is helpful to investigate and debug a binary in order to find the root cause
+of a bug.

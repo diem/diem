@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/invalid_call_lhs_value.move:3:10 ───
+   │
+ 3 │         5();
+   │          ^ Unexpected token: '('
+   ·
+ 3 │         5();
+   │          - Expected: ';'
+   │
+

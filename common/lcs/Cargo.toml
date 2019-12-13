@@ -1,0 +1,18 @@
+[package]
+name = "libra-canonical-serialization"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra Canonical Serialization (LCS)"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+proptest = "0.9"
+proptest-derive = "0.1.1"

@@ -1,18 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::NodeConfig;
-use failure::prelude::*;
+use anyhow::Result;
+use libra_config::config::NodeConfig;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
 use executor::Executor;
 use grpcio::{ChannelBuilder, EnvBuilder};
-use mempool::proto::mempool_grpc::MempoolClient;
+use libra_mempool::proto::mempool::MempoolClient;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
-use vm_runtime::MoveVM;
+use vm_runtime::LibraVM;
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {
@@ -32,7 +32,7 @@ pub fn make_consensus_provider(
     node_config: &mut NodeConfig,
     network_sender: ConsensusNetworkSender,
     network_receiver: ConsensusNetworkEvents,
-    executor: Arc<Executor<MoveVM>>,
+    executor: Arc<Executor<LibraVM>>,
     state_sync_client: Arc<StateSyncClient>,
 ) -> Box<dyn ConsensusProvider> {
     Box::new(ChainedBftProvider::new(
@@ -44,6 +44,7 @@ pub fn make_consensus_provider(
         state_sync_client,
     ))
 }
+
 /// Create a mempool client assuming the mempool is running on localhost
 fn create_mempool_client(config: &NodeConfig) -> Arc<MempoolClient> {
     let port = config.mempool.mempool_service_port;

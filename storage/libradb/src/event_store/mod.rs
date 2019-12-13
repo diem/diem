@@ -16,20 +16,20 @@ use crate::{
     },
 };
 use accumulator::{HashReader, MerkleAccumulator};
-use crypto::{
+use anyhow::{ensure, format_err, Result};
+use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
-use failure::prelude::*;
-use schemadb::{schema::ValueCodec, ReadOptions, DB};
-use std::{convert::TryFrom, sync::Arc};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     contract_event::ContractEvent,
     event::EventKey,
-    proof::{position::Position, AccumulatorProof, EventProof},
+    proof::{position::Position, EventAccumulatorProof, EventProof},
     transaction::Version,
 };
+use schemadb::{schema::ValueCodec, ReadOptions, DB};
+use std::{convert::TryFrom, sync::Arc};
 
 pub(crate) struct EventStore {
     db: Arc<DB>,
@@ -64,7 +64,7 @@ impl EventStore {
         &self,
         version: Version,
         index: u64,
-    ) -> Result<(ContractEvent, AccumulatorProof)> {
+    ) -> Result<(ContractEvent, EventAccumulatorProof)> {
         // Get event content.
         let event = self
             .db
@@ -114,7 +114,7 @@ impl EventStore {
                 // from the most recent end, for limited tries.
                 // TODO: Optimize: Physical store use reverse order.
                 let mut n_try_recent = 10;
-                #[cfg(any(test, feature = "testing"))]
+                #[cfg(test)]
                 let mut n_try_recent = 1;
                 while seq > 0 && n_try_recent > 0 {
                     seq -= 1;

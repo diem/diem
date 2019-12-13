@@ -1,19 +1,52 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+#![forbid(unsafe_code)]
+
 use crate::{aws::Aws, instance::Instance};
-use failure::{self, prelude::*};
+use anyhow::{ensure, format_err, Result};
+use config_builder::ValidatorConfig;
+use generate_keypair::load_key_from_file;
+use libra_config::config::AdmissionControlConfig;
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use libra_crypto::test_utils::KeyPair;
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
+use slog_scope::*;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::{thread, time::Duration};
 
 #[derive(Clone)]
 pub struct Cluster {
     // guaranteed non-empty
     instances: Vec<Instance>,
-    prometheus_ip: String,
+    prometheus_ip: Option<String>,
+    mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 }
 
 impl Cluster {
-    pub fn discover(aws: &Aws) -> failure::Result<Self> {
+    pub fn from_host_port(peers: Vec<(String, u32)>, mint_file: &str) -> Self {
+        let instances: Vec<Instance> = peers
+            .into_iter()
+            .map(|host_port| {
+                Instance::new(
+                    format!("{}:{}", &host_port.0, host_port.1), /* short_hash */
+                    host_port.0,
+                    host_port.1,
+                )
+            })
+            .collect();
+        let mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
+            load_key_from_file(mint_file).expect("invalid faucet keypair file");
+        Self {
+            instances,
+            prometheus_ip: None,
+            mint_key_pair,
+        }
+    }
+
+    pub fn discover(aws: &Aws) -> Result<Self> {
         let mut instances = vec![];
         let mut next_token = None;
         let mut retries_left = 10;
@@ -22,7 +55,7 @@ impl Cluster {
             let filters = vec![
                 Filter {
                     name: Some("tag:Workspace".into()),
-                    values: Some(vec![aws.workplace().clone()]),
+                    values: Some(vec![aws.workspace().clone()]),
                 },
                 Filter {
                     name: Some("instance-state-name".into()),
@@ -41,7 +74,7 @@ impl Cluster {
                 .sync();
             let result = match result {
                 Err(e) => {
-                    println!(
+                    warn!(
                         "Failed to describe aws instances: {:?}, retries left: {}",
                         e, retries_left
                     );
@@ -54,6 +87,7 @@ impl Cluster {
                 }
                 Ok(r) => r,
             };
+            let ac_port = AdmissionControlConfig::default().admission_control_service_port as u32;
             for reservation in result.reservations.expect("no reservations") {
                 for aws_instance in reservation.instances.expect("no instances") {
                     let ip = aws_instance
@@ -65,9 +99,8 @@ impl Cluster {
                         InstanceRole::Prometheus => {
                             prometheus_ip = Some(ip);
                         }
-                        InstanceRole::Peer(peer_id) => {
-                            let short_hash = peer_id[..8].into();
-                            instances.push(Instance::new(short_hash, ip));
+                        InstanceRole::Peer(peer_name) => {
+                            instances.push(Instance::new(peer_name, ip, ac_port));
                         }
                         _ => {}
                     }
@@ -82,13 +115,20 @@ impl Cluster {
             !instances.is_empty(),
             "No instances were discovered for cluster"
         );
-        let prometheus_ip = match prometheus_ip {
-            Some(ip) => ip,
-            None => bail!("Prometheus was not found in workplace"),
-        };
+        let prometheus_ip =
+            prometheus_ip.ok_or_else(|| format_err!("Prometheus was not found in workspace"))?;
+        let seed = "1337133713371337133713371337133713371337133713371337133713371337";
+        let seed = hex::decode(seed).expect("Invalid hex in seed.");
+        let seed = seed[..32].try_into().expect("Invalid seed");
+        let (_, mint_key) = ValidatorConfig::new()
+            .seed(seed)
+            .build_faucet_client()
+            .expect("Unable to build faucet keys");
+        let mint_key_pair = KeyPair::from(mint_key);
         Ok(Self {
             instances,
-            prometheus_ip,
+            prometheus_ip: Some(prometheus_ip),
+            mint_key_pair,
         })
     }
 
@@ -101,14 +141,48 @@ impl Cluster {
         &self.instances
     }
 
-    pub fn prometheus_ip(&self) -> &str {
-        &self.prometheus_ip
+    pub fn into_instances(self) -> Vec<Instance> {
+        self.instances
+    }
+
+    pub fn prometheus_ip(&self) -> Option<&String> {
+        self.prometheus_ip.as_ref()
+    }
+
+    pub fn mint_key_pair(&self) -> &KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
+        &self.mint_key_pair
     }
 
     pub fn get_instance(&self, name: &str) -> Option<&Instance> {
         self.instances
             .iter()
-            .find(|instance| instance.short_hash() == name)
+            .find(|instance| instance.peer_name() == name)
+    }
+
+    /// Splits this cluster into two
+    ///
+    /// Returns tuple of two clusters:
+    /// First element in tuple contains cluster with c random instances from self
+    /// Second element in tuple contains cluster with remaining instances from self
+    pub fn split_n_random(&self, c: usize) -> (Self, Self) {
+        assert!(c <= self.instances.len());
+        let mut rng = ThreadRng::default();
+        let mut sub = vec![];
+        let mut rem = self.instances.clone();
+        for _ in 0..c {
+            let idx_remove = rng.gen_range(0, rem.len());
+            let instance = rem.remove(idx_remove);
+            sub.push(instance);
+        }
+        (self.new_sub_cluster(sub), self.new_sub_cluster(rem))
+    }
+
+    fn new_sub_cluster(&self, instances: Vec<Instance>) -> Self {
+        Cluster {
+            instances,
+            prometheus_ip: self.prometheus_ip.clone(),
+            mint_key_pair: self.mint_key_pair.clone(),
+        }
     }
 
     pub fn sub_cluster(&self, ids: Vec<String>) -> Cluster {
@@ -121,10 +195,7 @@ impl Cluster {
             }
         }
         assert!(!instances.is_empty(), "No instances for subcluster");
-        Cluster {
-            instances,
-            prometheus_ip: self.prometheus_ip.clone(),
-        }
+        self.new_sub_cluster(instances)
     }
 }
 
@@ -132,10 +203,10 @@ fn parse_tags(tags: Vec<Tag>) -> InstanceRole {
     let mut map: HashMap<_, _> = tags.into_iter().map(|tag| (tag.key, tag.value)).collect();
     let role = map.remove(&Some("Role".to_string()));
     if role == Some(Some("validator".to_string())) {
-        let peer_id = map.remove(&Some("PeerId".to_string()));
-        let peer_id = peer_id.expect("Validator instance without PeerId");
-        let peer_id = peer_id.expect("PeerId tag without value");
-        return InstanceRole::Peer(peer_id);
+        let peer_name = map.remove(&Some("Name".to_string()));
+        let peer_name = peer_name.expect("Validator instance without Name");
+        let peer_name = peer_name.expect("'Name' tag without value");
+        return InstanceRole::Peer(peer_name);
     } else if role == Some(Some("monitoring".to_string())) {
         return InstanceRole::Prometheus;
     }

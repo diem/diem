@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Result;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec},
@@ -71,13 +71,13 @@ fn collect_values(iter: SchemaIterator<TestSchema>) -> Vec<u32> {
 }
 
 struct TestDB {
-    _tmpdir: tools::tempdir::TempPath,
+    _tmpdir: libra_tools::tempdir::TempPath,
     db: DB,
 }
 
 impl TestDB {
     fn new() -> Self {
-        let tmpdir = tools::tempdir::TempPath::new();
+        let tmpdir = libra_tools::tempdir::TempPath::new();
         let cf_opts_map: ColumnFamilyOptionsMap = [
             (DEFAULT_CF_NAME, ColumnFamilyOptions::default()),
             (

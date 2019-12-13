@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
 #![recursion_limit = "128"]
 
 #[macro_use]
@@ -8,7 +9,9 @@ extern crate prometheus;
 
 pub mod counters;
 mod json_encoder;
+mod json_metrics;
 pub mod metric_server;
+mod public_metrics;
 
 mod service_metrics;
 pub use service_metrics::ServiceMetrics;
@@ -22,10 +25,11 @@ mod unit_tests;
 // Re-export counter types from prometheus crate
 pub use prometheus::{Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
 
-use failure::Result;
-use logger::prelude::*;
+use anyhow::Result;
+use libra_logger::prelude::*;
 use prometheus::{
     core::{Collector, Metric},
+    proto::MetricType,
     Encoder, TextEncoder,
 };
 use std::{
@@ -66,29 +70,37 @@ pub fn get_all_metrics() -> HashMap<String, String> {
     let all_metric_families = prometheus::gather();
     let mut all_metrics = HashMap::new();
     for metric_family in all_metric_families {
-        let metrics = metric_family.get_metric();
-        for metric in metrics {
-            let v = if metric.has_counter() {
-                metric.get_counter().get_value().to_string()
-            } else if metric.has_gauge() {
-                metric.get_gauge().get_value().to_string()
-            } else if metric.has_histogram() {
-                metric.get_histogram().get_sample_count().to_string()
-            } else {
-                panic!("Unknown counter {}", metric_family.get_name())
-            };
-            let mut metric_name = metric_family.get_name().to_owned();
-            let labels = metric.get_label();
-            if !labels.is_empty() {
-                let label_strings: Vec<String> = labels
-                    .iter()
-                    .map(|l| format!("{}={}", l.get_name(), l.get_value()))
-                    .collect();
-                let labels_string = format!("{{{}}}", label_strings.join(","));
-                metric_name.push_str(&labels_string);
-            }
+        let values: Vec<_> = match metric_family.get_field_type() {
+            MetricType::COUNTER => metric_family
+                .get_metric()
+                .iter()
+                .map(|m| m.get_counter().get_value().to_string())
+                .collect(),
+            MetricType::GAUGE => metric_family
+                .get_metric()
+                .iter()
+                .map(|m| m.get_gauge().get_value().to_string())
+                .collect(),
+            MetricType::SUMMARY => panic!("Unsupported Metric 'SUMMARY'"),
+            MetricType::UNTYPED => panic!("Unsupported Metric 'UNTYPED'"),
+            MetricType::HISTOGRAM => metric_family
+                .get_metric()
+                .iter()
+                .map(|m| m.get_histogram().get_sample_count().to_string())
+                .collect(),
+        };
+        let metric_names = metric_family.get_metric().iter().map(|m| {
+            let label_strings: Vec<String> = m
+                .get_label()
+                .iter()
+                .map(|l| format!("{}={}", l.get_name(), l.get_value()))
+                .collect();
+            let labels_string = format!("{{{}}}", label_strings.join(","));
+            format!("{}{}", metric_family.get_name(), labels_string)
+        });
 
-            all_metrics.insert(metric_name, v);
+        for (name, value) in metric_names.zip(values.into_iter()) {
+            all_metrics.insert(name, value);
         }
     }
 

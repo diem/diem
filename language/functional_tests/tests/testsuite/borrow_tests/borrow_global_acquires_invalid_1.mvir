@@ -18,5 +18,4 @@ module A {
 
 }
 
-// check: VerificationFailure
 // check: GLOBAL_REFERENCE_ERROR

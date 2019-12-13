@@ -85,8 +85,7 @@ main() {
 }
 
 // should fail with insufficient privileges error
-// check: ABORTED
-// check: 11
+// check: ABORTED 11
 
 
 //! new-transaction
@@ -111,4 +110,5 @@ import 0x0.LibraAccount;
 // check that other users can still pay into Alice's account in the normal way
 main() {
     LibraAccount.pay_from_sender({{alice}}, 1000);
+    return;
 }

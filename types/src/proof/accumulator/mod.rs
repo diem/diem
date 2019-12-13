@@ -15,15 +15,15 @@ mod accumulator_test;
 
 use super::MerkleTreeInternalNode;
 use crate::proof::definition::{LeafCount, MAX_ACCUMULATOR_LEAVES};
-use crypto::{
+use anyhow::{ensure, format_err, Result};
+use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH},
     HashValue,
 };
-use failure::prelude::*;
 use std::marker::PhantomData;
 
 /// The Accumulator implementation.
-pub struct Accumulator<H> {
+pub struct InMemoryAccumulator<H> {
     /// Represents the roots of all the full subtrees from left to right in this accumulator. For
     /// example, if we have the following accumulator, this vector will have two hashes that
     /// correspond to `X` and `e`.
@@ -50,7 +50,7 @@ pub struct Accumulator<H> {
     phantom: PhantomData<H>,
 }
 
-impl<H> Accumulator<H>
+impl<H> InMemoryAccumulator<H>
 where
     H: CryptoHasher,
 {
@@ -75,14 +75,19 @@ where
         })
     }
 
+    /// Constructs a new accumulator with given leaves.
+    pub fn from_leaves(leaves: &[HashValue]) -> Self {
+        Self::default().append(leaves)
+    }
+
     /// Appends a list of new leaves to an existing accumulator. Since the accumulator is
     /// immutable, the existing one remains unchanged and a new one representing the result is
     /// returned.
-    pub fn append(&self, leaves: Vec<HashValue>) -> Self {
+    pub fn append(&self, leaves: &[HashValue]) -> Self {
         let mut frozen_subtree_roots = self.frozen_subtree_roots.clone();
         let mut num_leaves = self.num_leaves;
         for leaf in leaves {
-            Self::append_one(&mut frozen_subtree_roots, num_leaves, leaf);
+            Self::append_one(&mut frozen_subtree_roots, num_leaves, *leaf);
             num_leaves += 1;
         }
 
@@ -228,6 +233,14 @@ where
         self.root_hash
     }
 
+    pub fn version(&self) -> u64 {
+        if self.num_leaves() == 0 {
+            0
+        } else {
+            self.num_leaves() - 1
+        }
+    }
+
     /// Computes the root hash of an accumulator given the frozen subtree roots and the number of
     /// leaves in this accumulator.
     fn compute_root_hash(frozen_subtree_roots: &[HashValue], num_leaves: LeafCount) -> HashValue {
@@ -261,6 +274,11 @@ where
         current_hash
     }
 
+    /// Returns the set of frozen subtree roots in this accumulator
+    pub fn frozen_subtree_roots(&self) -> &Vec<HashValue> {
+        &self.frozen_subtree_roots
+    }
+
     /// Returns the total number of leaves in this accumulator.
     pub fn num_leaves(&self) -> LeafCount {
         self.num_leaves
@@ -268,7 +286,7 @@ where
 }
 
 // We manually implement Debug because H (CryptoHasher) does not implement Debug.
-impl<H> std::fmt::Debug for Accumulator<H> {
+impl<H> std::fmt::Debug for InMemoryAccumulator<H> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
@@ -278,11 +296,11 @@ impl<H> std::fmt::Debug for Accumulator<H> {
     }
 }
 
-impl<H> Default for Accumulator<H>
+impl<H> Default for InMemoryAccumulator<H>
 where
     H: CryptoHasher,
 {
     fn default() -> Self {
-        Accumulator::new(vec![], 0).expect("Constructing empty accumulator should work.")
+        Self::new(vec![], 0).expect("Constructing empty accumulator should work.")
     }
 }

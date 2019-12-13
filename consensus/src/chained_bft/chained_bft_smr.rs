@@ -1,43 +1,32 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::chained_bft_consensus_provider::InitialSetup;
+use crate::chained_bft::epoch_manager::EpochManager;
+use crate::chained_bft::network::{NetworkReceivers, NetworkTask};
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        common::{Payload, Round},
         event_processor::EventProcessor,
-        liveness::{
-            multi_proposer_election::MultiProposer,
-            pacemaker::{ExponentialTimeInterval, Pacemaker},
-            pacemaker_timeout_manager::HighestTimeoutCertificates,
-            proposal_generator::ProposalGenerator,
-            proposer_election::ProposerElection,
-            rotating_proposer_election::RotatingProposer,
-        },
-        network::{ConsensusNetworkImpl, NetworkReceivers},
-        persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
-        safety::safety_rules::SafetyRules,
+        persistent_storage::{PersistentStorage, RecoveryData},
     },
     counters,
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
-    util::time_service::{ClockTimeService, TimeService},
+    util::time_service::ClockTimeService,
 };
+use anyhow::Result;
 use channel;
-use failure::prelude::*;
-use futures::{
-    compat::Future01CompatExt,
-    executor::block_on,
-    future::{FutureExt, TryFutureExt},
-    select,
-    stream::StreamExt,
+use consensus_types::common::{Payload, Round};
+use futures::{select, stream::StreamExt};
+use libra_config::config::{ConsensusConfig, ConsensusProposerType, SafetyRulesConfig};
+use libra_logger::prelude::*;
+use libra_types::crypto_proxies::EpochInfo;
+use std::sync::RwLock;
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
 };
-
-use crate::chained_bft::{common::Author, epoch_manager::EpochManager};
-use config::config::{ConsensusConfig, ConsensusProposerType};
-use logger::prelude::*;
-use std::{sync::Arc, time::Duration};
-use tokio::runtime::{Runtime, TaskExecutor};
-use types::crypto_proxies::ValidatorSigner;
+use tokio::runtime::{Handle, Runtime};
 
 /// Consensus configuration derived from ConsensusConfig
 pub struct ChainedBftSMRConfig {
@@ -51,17 +40,20 @@ pub struct ChainedBftSMRConfig {
     pub contiguous_rounds: u32,
     /// Max block size (number of transactions) that consensus pulls from mempool
     pub max_block_size: u64,
+    /// Path to SafetyRulesConfig
+    pub safety_rules: SafetyRulesConfig,
 }
 
 impl ChainedBftSMRConfig {
     pub fn from_node_config(cfg: &ConsensusConfig) -> ChainedBftSMRConfig {
-        let pacemaker_initial_timeout_ms = cfg.pacemaker_initial_timeout_ms().unwrap_or(1000);
+        let pacemaker_initial_timeout_ms = cfg.pacemaker_initial_timeout_ms.unwrap_or(1000);
         ChainedBftSMRConfig {
-            max_pruned_blocks_in_mem: cfg.max_pruned_blocks_in_mem().unwrap_or(10000) as usize,
+            max_pruned_blocks_in_mem: cfg.max_pruned_blocks_in_mem.unwrap_or(10000) as usize,
             pacemaker_initial_timeout: Duration::from_millis(pacemaker_initial_timeout_ms),
-            proposer_type: cfg.get_proposer_type(),
-            contiguous_rounds: cfg.contiguous_rounds(),
-            max_block_size: cfg.max_block_size(),
+            proposer_type: cfg.proposer_type,
+            contiguous_rounds: cfg.contiguous_rounds,
+            max_block_size: cfg.max_block_size,
+            safety_rules: cfg.safety_rules.clone(),
         }
     }
 }
@@ -70,41 +62,29 @@ impl ChainedBftSMRConfig {
 /// driver. ChainedBftSMR implements the StateMachineReplication, it is going to be used by
 /// ConsensusProvider for the e2e flow.
 pub struct ChainedBftSMR<T> {
-    author: Author,
-    signer: Option<ValidatorSigner>,
-    proposers: Vec<Author>,
+    initial_setup: Option<InitialSetup>,
     runtime: Option<Runtime>,
     block_store: Option<Arc<BlockStore<T>>>,
-    network: ConsensusNetworkImpl,
-    config: ChainedBftSMRConfig,
+    config: Option<ChainedBftSMRConfig>,
     storage: Arc<dyn PersistentStorage<T>>,
     initial_data: Option<RecoveryData<T>>,
-    epoch_mgr: Arc<EpochManager>,
 }
 
 impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
-        author: Author,
-        signer: ValidatorSigner,
-        proposers: Vec<Author>,
-        network: ConsensusNetworkImpl,
+        initial_setup: InitialSetup,
         runtime: Runtime,
         config: ChainedBftSMRConfig,
         storage: Arc<dyn PersistentStorage<T>>,
         initial_data: RecoveryData<T>,
-        epoch_mgr: Arc<EpochManager>,
     ) -> Self {
         Self {
-            author,
-            signer: Some(signer),
-            proposers,
+            initial_setup: Some(initial_setup),
             runtime: Some(runtime),
             block_store: None,
-            network,
-            config,
+            config: Some(config),
             storage,
             initial_data: Some(initial_data),
-            epoch_mgr,
         }
     }
 
@@ -113,180 +93,138 @@ impl<T: Payload> ChainedBftSMR<T> {
         self.block_store.clone()
     }
 
-    fn create_pacemaker(
-        &self,
-        persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
-        time_service: Arc<dyn TimeService>,
-        timeout_sender: channel::Sender<Round>,
-        highest_timeout_certificate: HighestTimeoutCertificates,
-    ) -> Pacemaker {
-        // 1.5^6 ~= 11
-        // Timeout goes from initial_timeout to initial_timeout*11 in 6 steps
-        let time_interval = Box::new(ExponentialTimeInterval::new(
-            self.config.pacemaker_initial_timeout,
-            1.5,
-            6,
-        ));
-        Pacemaker::new(
-            persistent_liveness_storage,
-            time_interval,
-            time_service,
-            timeout_sender,
-            highest_timeout_certificate,
-        )
-    }
-
-    /// Create a proposer election handler based on proposers
-    fn create_proposer_election(&self) -> Box<dyn ProposerElection<T> + Send + Sync> {
-        assert!(!self.proposers.is_empty());
-        match self.config.proposer_type {
-            ConsensusProposerType::MultipleOrderedProposers => {
-                Box::new(MultiProposer::new(self.proposers.clone(), 2))
-            }
-            // We don't really have a fixed proposer!
-            _ => Box::new(RotatingProposer::new(
-                self.proposers.clone(),
-                self.config.contiguous_rounds,
-            )),
-        }
-    }
-
     fn start_event_processing(
-        &mut self,
-        executor: TaskExecutor,
+        executor: Handle,
+        mut epoch_manager: EpochManager<T>,
         mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
+        network_task: NetworkTask<T>,
         mut network_receivers: NetworkReceivers<T>,
     ) {
         let fut = async move {
             event_processor.start().await;
             loop {
+                let pre_select_instant = Instant::now();
+                let idle_duration;
                 select! {
                     proposal_msg = network_receivers.proposals.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
                         event_processor.process_proposal_msg(proposal_msg).await;
                     }
                     block_retrieval = network_receivers.block_retrieval.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
                         event_processor.process_block_retrieval(block_retrieval).await;
                     }
                     vote_msg = network_receivers.votes.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
                         event_processor.process_vote(vote_msg).await;
                     }
-                    remote_timeout_msg = network_receivers.timeout_msgs.select_next_some() => {
-                        event_processor.process_remote_timeout_msg(remote_timeout_msg).await;
-                    }
                     local_timeout_round = pacemaker_timeout_sender_rx.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
                         event_processor.process_local_timeout(local_timeout_round).await;
                     }
                     sync_info_msg = network_receivers.sync_info_msgs.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
                         event_processor.process_sync_info_msg(sync_info_msg.0, sync_info_msg.1).await;
                     }
-                    complete => {
-                        break;
+                    ledger_info = network_receivers.epoch_change.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
+                        event_processor = epoch_manager.start_new_epoch(ledger_info);
+                        // clean up all the previous messages from the old epochs
+                        network_receivers.clear_prev_epoch_msgs();
+                        event_processor.start().await;
+                    }
+                    different_epoch_and_peer = network_receivers.different_epoch.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
+                        epoch_manager.process_different_epoch(different_epoch_and_peer.0, different_epoch_and_peer.1).await
+                    }
+                    epoch_retrieval_and_peer = network_receivers.epoch_retrieval.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
+                        epoch_manager.process_epoch_retrieval(epoch_retrieval_and_peer.0, epoch_retrieval_and_peer.1).await
                     }
                 }
+                counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
+                    .observe_duration(pre_select_instant.elapsed() - idle_duration);
+                counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
             }
         };
-        executor.spawn(fut.boxed().unit_error().compat());
+        executor.spawn(network_task.start());
+        executor.spawn(fut);
     }
 }
 
 impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
     type Payload = T;
 
+    /// We're following the steps to start
+    /// 1. Construct the EpochManager from the latest libradb state
+    /// 2. Construct per-epoch component with the fixed Validators provided by EpochManager including
+    /// ProposerElection, Pacemaker, SafetyRules, Network(Populate with known validators), EventProcessor
     fn start(
         &mut self,
         txn_manager: Arc<dyn TxnManager<Payload = Self::Payload>>,
         state_computer: Arc<dyn StateComputer<Payload = Self::Payload>>,
     ) -> Result<()> {
-        let executor = self
-            .runtime
-            .as_mut()
-            .expect("Consensus start: No valid runtime found!")
-            .executor();
-        // Start network receivers before blocking on state synchronizer to unblock delivery of
-        // network events.
-        let network_receivers = self.network.start(&executor);
-        let time_service = Arc::new(ClockTimeService::new(executor.clone()));
+        let initial_setup = self
+            .initial_setup
+            .take()
+            .expect("already started, initial setup is None");
         let initial_data = self
             .initial_data
             .take()
             .expect("already started, initial data is None");
-        let consensus_state = initial_data.state();
-        let highest_timeout_certificates = initial_data.highest_timeout_certificates().clone();
-        if initial_data.need_sync() {
-            // make sure we sync to the root state in case we're not
-            state_computer.sync_to_or_bail(initial_data.root_ledger_info());
-        }
-
-        // the signer is only stored in the SMR to be provided here
-        let signer = self
-            .signer
-            .take()
-            .expect("start called twice on the same Chained BFT SMR!");
-        let block_store = Arc::new(block_on(BlockStore::new(
-            Arc::clone(&self.storage),
-            initial_data,
-            signer,
-            Arc::clone(&state_computer),
-            true,
-            self.config.max_pruned_blocks_in_mem,
-        )));
-
-        self.block_store = Some(Arc::clone(&block_store));
-
-        // txn manager is required both by proposal generator (to pull the proposers)
-        // and by event processor (to update their status).
-        let proposal_generator = ProposalGenerator::new(
-            block_store.clone(),
-            Arc::clone(&txn_manager),
-            time_service.clone(),
-            self.config.max_block_size,
-            true,
-        );
-
-        let safety_rules = SafetyRules::new(consensus_state);
+        let executor = self
+            .runtime
+            .as_mut()
+            .expect("Consensus start: No valid runtime found!")
+            .handle();
+        let time_service = Arc::new(ClockTimeService::new(executor.clone()));
 
         let (timeout_sender, timeout_receiver) =
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
-        let pacemaker = self.create_pacemaker(
-            self.storage.persistent_liveness_storage(),
-            time_service.clone(),
+        let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
+        let signer = Arc::new(initial_setup.signer);
+        let epoch_info = Arc::new(RwLock::new(EpochInfo {
+            epoch: initial_data.epoch(),
+            verifier: initial_data.validators(),
+        }));
+        let mut epoch_mgr = EpochManager::new(
+            Arc::clone(&epoch_info),
+            self.config.take().expect("already started, config is None"),
+            time_service,
+            self_sender,
+            initial_setup.network_sender,
             timeout_sender,
-            highest_timeout_certificates,
-        );
-
-        let proposer_election = self.create_proposer_election();
-        let event_processor = EventProcessor::new(
-            self.author,
-            Arc::clone(&block_store),
-            pacemaker,
-            proposer_election,
-            proposal_generator,
-            safety_rules,
-            state_computer,
             txn_manager,
-            self.network.clone(),
-            Arc::clone(&self.storage),
-            time_service.clone(),
-            true,
-            Arc::clone(&self.epoch_mgr),
+            state_computer,
+            self.storage.clone(),
+            signer.clone(),
         );
 
-        self.start_event_processing(
-            executor,
+        // Step 2
+        let event_processor = epoch_mgr.start_epoch(signer, initial_data);
+
+        // TODO: this is test only, we should remove this
+        self.block_store = Some(event_processor.block_store());
+
+        let (network_task, network_receiver) =
+            NetworkTask::new(epoch_info, initial_setup.network_events, self_receiver);
+
+        Self::start_event_processing(
+            executor.clone(),
+            epoch_mgr,
             event_processor,
             timeout_receiver,
-            network_receivers,
+            network_task,
+            network_receiver,
         );
-
         debug!("Chained BFT SMR started.");
         Ok(())
     }
 
     /// Stop is synchronous: waits for all the worker threads to terminate.
     fn stop(&mut self) {
-        if let Some(rt) = self.runtime.take() {
-            block_on(rt.shutdown_now().compat()).unwrap();
+        if let Some(_rt) = self.runtime.take() {
             debug!("Chained BFT SMR stopped.")
         }
     }

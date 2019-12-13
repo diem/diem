@@ -2,15 +2,21 @@
 name = "channel"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra channel"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-futures = { version = "=0.3.0-alpha.19", package = "futures-preview" }
+anyhow = "1.0"
+futures = "0.3.0"
 lazy_static = "1.3.0"
-logger = { path = "../logger" }
-metrics = { path = "../metrics" }
+libra-logger = { path = "../logger", version = "0.1.0" }
+libra-metrics = { path = "../metrics", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0"  }
 
 [dev-dependencies]
 rusty-fork = "0.2.1"
+tokio = { version = "0.2", features = ["full"] }

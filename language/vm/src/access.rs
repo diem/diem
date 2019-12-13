@@ -15,7 +15,7 @@ use crate::{
     internals::ModuleIndex,
     vm_string::{VMStr, VMString},
 };
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},

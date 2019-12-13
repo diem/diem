@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/invalid_unpack_assign_lhs_other_value.move:3:11 ───
+   │
+ 3 │         0 {} = 0;
+   │           ^ Unexpected token: '{'
+   ·
+ 3 │         0 {} = 0;
+   │           - Expected: ';'
+   │
+

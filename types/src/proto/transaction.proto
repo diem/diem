@@ -23,19 +23,25 @@ message TransactionArgument {
 
 // A generic structure that represents signed RawTransaction
 message SignedTransaction {
-    // LCS byte code representation of a SignedTransaction
-    bytes signed_txn = 5;
+    // LCS bytes representation of a SignedTransaction.
+    bytes txn_bytes = 5;
 }
 
-message SignedTransactionWithProof {
+// A generic structure that represents a transaction, covering all possible
+// variants.
+message Transaction {
+    bytes transaction = 1;
+}
+
+message TransactionWithProof {
     // The version of the returned signed transaction.
     uint64 version = 1;
 
     // The transaction itself.
-    SignedTransaction signed_transaction = 2;
+    Transaction transaction = 2;
 
-    // The proof authenticating the signed transaction.
-    SignedTransactionProof proof = 3;
+    // The proof authenticating the transaction.
+    TransactionProof proof = 3;
 
     // The events yielded by executing the transaction, if requested.
     EventsList events = 4;
@@ -65,7 +71,7 @@ message AccountState {
 // Transaction struct to commit to storage
 message TransactionToCommit {
     // The signed transaction which was executed
-    SignedTransaction signed_txn = 1;
+    Transaction transaction = 1;
     // State db updates
     repeated AccountState account_states = 2;
     // Events yielded by the transaction.
@@ -83,23 +89,19 @@ message TransactionToCommit {
 // verification will fail.
 message TransactionListWithProof {
     // The list of transactions.
-    repeated SignedTransaction transactions = 1;
-
-    // The list of corresponding TransactionInfo objects.
-    repeated TransactionInfo infos = 2;
+    repeated Transaction transactions = 1;
 
     // The list of corresponding Event objects (only present if fetch_events was set to true in req)
-    EventsForVersions events_for_versions = 3;
+    EventsForVersions events_for_versions = 2;
 
     // If the list is not empty, the version of the first transaction.
-    google.protobuf.UInt64Value first_transaction_version = 4;
+    google.protobuf.UInt64Value first_transaction_version = 3;
 
-    // The proofs of the first and last transaction in this chunk. When this is
-    // used for state synchronization, the validator who requests the transactions
+    // The proof authenticating the transactions and events.When this is used
+    // for state synchronization, the validator who requests the transactions
     // will provide a version in the request and the proofs will be relative to
     // the given version. When this is returned in GetTransactionsResponse, the
     // proofs will be relative to the ledger info returned in
     // UpdateToLatestLedgerResponse.
-    AccumulatorProof proof_of_first_transaction = 5;
-    AccumulatorProof proof_of_last_transaction = 6;
+    TransactionListProof proof = 4;
 }

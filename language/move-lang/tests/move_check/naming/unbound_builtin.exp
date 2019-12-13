@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/naming/unbound_builtin.move:3:11 ───
+   │
+ 3 │         ::global_borrow();
+   │           ^^^^^^^^^^^^^ Unbound function: 'global_borrow'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_builtin.move:4:11 ───
+   │
+ 4 │         ::release<u64>();
+   │           ^^^^^^^ Unbound function: 'release'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_builtin.move:5:11 ───
+   │
+ 5 │         ::sudo(false);
+   │           ^^^^ Unbound function: 'sudo'
+   │
+

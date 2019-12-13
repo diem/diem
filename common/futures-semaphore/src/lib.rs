@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! `Semaphore` holds a set of permits. Permits are used to synchronize access
 //! to a shared resource. Before accessing the shared resource, callers must
 //! acquire a permit from the semaphore. Once the permit is acquired, the caller
@@ -16,9 +18,10 @@
 //! could potentially deadlock the futures runtime if enough tasks are waiting on
 //! the semaphore.
 
-use futures01::{future::Future as Future01, Async as Async01, Poll as Poll01};
-use futures03::compat::Future01CompatExt;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use tokio_sync::semaphore::{AcquireError, Permit as TokioPermit, Semaphore as TokioSemaphore};
 
 /// The wrapped tokio_sync [`Semaphore`](TokioSemaphore) and total permit capacity.
@@ -77,8 +80,7 @@ impl Semaphore {
             permit: TokioPermit::new(),
         };
 
-        PermitFuture01::new(permit)
-            .compat()
+        PermitFuture::new(permit)
             .await
             // The TokioSemaphore is not dropped yet and our wrapper never calls
             // .close(), so the TokioSemaphore can never be closed unless all
@@ -120,11 +122,11 @@ impl Drop for Permit {
     }
 }
 
-struct PermitFuture01 {
+struct PermitFuture {
     permit: Option<Permit>,
 }
 
-impl PermitFuture01 {
+impl PermitFuture {
     fn new(permit: Permit) -> Self {
         Self {
             permit: Some(permit),
@@ -132,20 +134,19 @@ impl PermitFuture01 {
     }
 }
 
-impl Future01 for PermitFuture01 {
-    type Item = Permit;
-    type Error = AcquireError;
+impl Future for PermitFuture {
+    type Output = Result<Permit, AcquireError>;
 
-    fn poll(&mut self) -> Poll01<Self::Item, Self::Error> {
+    fn poll(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Self::Output> {
         let mut permit = self.permit.take().unwrap();
 
-        match permit.permit.poll_acquire(&permit.inner.semaphore) {
-            Ok(Async01::Ready(())) => Ok(Async01::Ready(permit)),
-            Ok(Async01::NotReady) => {
+        match permit.permit.poll_acquire(context, &permit.inner.semaphore) {
+            Poll::Ready(Ok(())) => Poll::Ready(Ok(permit)),
+            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+            Poll::Pending => {
                 self.permit = Some(permit);
-                Ok(Async01::NotReady)
+                Poll::Pending
             }
-            Err(e) => Err(e),
         }
     }
 }
@@ -153,15 +154,15 @@ impl Future01 for PermitFuture01 {
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures03::{
+    use futures::{
         executor::block_on,
-        future::{Future, FutureExt, TryFutureExt},
+        future::{Future, FutureExt},
     };
     use std::{
         sync::atomic::{AtomicU32, Ordering},
-        time::{Duration, Instant},
+        time::Duration,
     };
-    use tokio::{runtime::Runtime, timer::Delay};
+    use tokio::{runtime::Runtime, time::delay_for};
 
     #[test]
     fn basic_functionality_semaphore() {
@@ -195,9 +196,7 @@ mod test {
     }
 
     fn yield_task() -> impl Future<Output = ()> {
-        Delay::new(Instant::now() + Duration::from_millis(1))
-            .compat()
-            .map(|_| ())
+        delay_for(Duration::from_millis(1)).map(|_| ())
     }
 
     // spawn NUM_TASKS futures that acquire a common semaphore, ensuring that no
@@ -210,7 +209,7 @@ mod test {
         static COMPLETED_TASKS: AtomicU32 = AtomicU32::new(0);
         let semaphore = Semaphore::new(MAX_WORKERS as usize);
 
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         for _ in 0..NUM_TASKS {
             let semaphore = semaphore.clone();
@@ -233,7 +232,7 @@ mod test {
 
                 // drop _permit and release access
             };
-            rt.spawn(f.boxed().unit_error().compat());
+            rt.spawn(f);
         }
 
         // spin until completed

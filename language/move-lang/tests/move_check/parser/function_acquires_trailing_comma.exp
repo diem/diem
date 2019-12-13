@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/function_acquires_trailing_comma.move:4:21 ───
+   │
+ 4 │     f() acquires X, {
+   │                     ^ Unexpected token: '{'
+   ·
+ 4 │     f() acquires X, {
+   │                     - Expected: '[Name]', '[Name<Types>]', '[Address]'
+   │
+

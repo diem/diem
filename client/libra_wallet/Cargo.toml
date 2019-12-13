@@ -1,40 +1,33 @@
 [package]
-name = "libra_wallet"
+name = "libra-wallet"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra wallet"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-rust-crypto = "0.2"
+anyhow = "1.0"
 rand = "0.6.5"
 rand_core = "0.4.2"
 hex = "0.3"
+hmac = "0.7.1"
 byteorder = "1.3.2"
+pbkdf2 = "0.3.0"
 serde = "1.0.96"
-protobuf = "~2.7"
 sha3 = "0.8.2"
 sha2 = "0.8.0"
-types = { path = "../../types" }
-
-[dependencies.ed25519-dalek]
-version = "1.0.0-pre.1"
-
-[dependencies.libra_crypto]
-path = "../../crypto/crypto"
-package = "crypto"
-
-[dependencies.canonical_serialization]
-path = "../../common/canonical_serialization"
-
-[dependencies.proto_conv]
-path = "../../common/proto_conv"
-
-[dependencies.failure]
-path = "../../common/failure_ext"
-package = "failure_ext"
+ed25519-dalek = "1.0.0-pre.1"
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+mirai-annotations = "1.5.0"
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"]}
-tools = { path = "../../common/tools"}
+libra-tools = { path = "../../common/tools", version = "0.1.0" }
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

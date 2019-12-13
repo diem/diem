@@ -7,20 +7,23 @@ use crate::{
             AccountTransactions, ParkingLotIndex, PriorityIndex, PriorityQueueIter, TTLIndex,
             TimelineIndex,
         },
-        transaction::{MempoolAddTransactionStatus, MempoolTransaction, TimelineState},
+        transaction::{MempoolTransaction, TimelineState},
     },
-    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
     OP_COUNTERS,
 };
-use config::config::MempoolConfig;
-use failure::prelude::*;
-use logger::prelude::*;
+use anyhow::{format_err, Result};
+use libra_config::config::MempoolConfig;
+use libra_logger::prelude::*;
+use libra_mempool_shared_proto::{
+    proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
+};
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
+use mirai_annotations::*;
 use std::{
     collections::HashMap,
     ops::Bound,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 /// TransactionStore is in-memory storage for all transactions in mempool
 pub struct TransactionStore {
@@ -112,6 +115,8 @@ impl TransactionStore {
         self.transactions
             .entry(address)
             .or_insert_with(AccountTransactions::new);
+
+        self.clean_committed_transactions(&address, current_sequence_number);
 
         if let Some(txns) = self.transactions.get_mut(&address) {
             // capacity check
@@ -226,20 +231,13 @@ impl TransactionStore {
         }
     }
 
-    /// handles transaction commit
-    /// it includes deletion of all transactions with sequence number <= `account_sequence_number`
-    /// and potential promotion of sequential txns to PriorityIndex/TimelineIndex
-    pub(crate) fn commit_transaction(
-        &mut self,
-        account: &AccountAddress,
-        account_sequence_number: u64,
-    ) {
-        if let Some(txns) = self.transactions.get_mut(&account) {
-            // remove all previous seq number transactions for this account
-            // This can happen if transactions are sent to multiple nodes and one of
-            // nodes has sent the transaction to consensus but this node still has the
-            // transaction sitting in mempool
-            let mut active = txns.split_off(&account_sequence_number);
+    fn clean_committed_transactions(&mut self, address: &AccountAddress, sequence_number: u64) {
+        // remove all previous seq number transactions for this account
+        // This can happen if transactions are sent to multiple nodes and one of
+        // nodes has sent the transaction to consensus but this node still has the
+        // transaction sitting in mempool
+        if let Some(txns) = self.transactions.get_mut(&address) {
+            let mut active = txns.split_off(&sequence_number);
             let txns_for_removal = txns.clone();
             txns.clear();
             txns.append(&mut active);
@@ -248,6 +246,17 @@ impl TransactionStore {
                 self.index_remove(transaction);
             }
         }
+    }
+
+    /// handles transaction commit
+    /// it includes deletion of all transactions with sequence number <= `account_sequence_number`
+    /// and potential promotion of sequential txns to PriorityIndex/TimelineIndex
+    pub(crate) fn commit_transaction(
+        &mut self,
+        account: &AccountAddress,
+        account_sequence_number: u64,
+    ) {
+        self.clean_committed_transactions(account, account_sequence_number);
         self.process_ready_transactions(account, account_sequence_number);
     }
 
@@ -273,6 +282,9 @@ impl TransactionStore {
     pub(crate) fn get_required_balance(&mut self, address: &AccountAddress) -> u64 {
         self.transactions.get_mut(&address).map_or(0, |txns| {
             txns.iter().fold(0, |acc, (_, txn)| {
+                assume!(txn.gas_amount < u32::max_value() as u64); // seems more than reasonable
+                assume!(txn.txn.gas_unit_price() < u32::max_value() as u64);
+                assume!(acc <= u64::max_value() - txn.txn.gas_unit_price() * txn.gas_amount);
                 acc + txn.txn.gas_unit_price() * txn.gas_amount
             })
         })

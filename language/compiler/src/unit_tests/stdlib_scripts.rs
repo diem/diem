@@ -22,7 +22,6 @@ fn compile_account_module() {
     let address_util_code = include_str!("../../../stdlib/modules/address_util.mvir");
     let u64_util_code = include_str!("../../../stdlib/modules/u64_util.mvir");
     let bytearray_util_code = include_str!("../../../stdlib/modules/bytearray_util.mvir");
-    let event_code = include_str!("../../../stdlib/modules/event.mvir");
 
     let hash_code = include_str!("../../../stdlib/modules/hash.mvir");
     let coin_code = include_str!("../../../stdlib/modules/libra_coin.mvir");
@@ -33,16 +32,6 @@ fn compile_account_module() {
     let bytearray_util_module = compile_module_string(bytearray_util_code).unwrap();
     let hash_module = compile_module_string(hash_code).unwrap();
 
-    let event_module = compile_module_string_with_deps(
-        event_code,
-        vec![
-            hash_module.clone(),
-            address_util_module.clone(),
-            u64_util_module.clone(),
-            bytearray_util_module.clone(),
-        ],
-    )
-    .unwrap();
     let coin_module = compile_module_string(coin_code).unwrap();
 
     let _compiled_module = compile_module_string_with_deps(
@@ -52,7 +41,6 @@ fn compile_account_module() {
             address_util_module,
             u64_util_module,
             bytearray_util_module,
-            event_module,
             coin_module,
         ],
     )

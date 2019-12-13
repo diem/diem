@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 #[macro_use]
 extern crate mirai_annotations;
 
@@ -19,7 +21,7 @@ pub mod file_format_common;
 pub mod gas_schedule;
 pub mod internals;
 pub mod printers;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
 pub mod resolver;
 pub mod serializer;
@@ -59,6 +61,7 @@ impl IndexKind {
 
         // XXX ensure this list stays up to date!
         &[
+            ByteArrayPool,
             ModuleHandle,
             StructHandle,
             FunctionHandle,

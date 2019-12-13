@@ -1,0 +1,66 @@
+error: 
+
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:2:14 ───
+   │
+ 2 │     struct S<T, T> {}
+   │                 ^ Duplicate type parameter declared with name 'T'
+   ·
+ 2 │     struct S<T, T> {}
+   │              - Previously defined here
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:3:15 ───
+   │
+ 3 │     struct S2<T: copyable, T: resource, T> {}
+   │                            ^ Duplicate type parameter declared with name 'T'
+   ·
+ 3 │     struct S2<T: copyable, T: resource, T> {}
+   │               - Previously defined here
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:3:28 ───
+   │
+ 3 │     struct S2<T: copyable, T: resource, T> {}
+   │                                         ^ Duplicate type parameter declared with name 'T'
+   ·
+ 3 │     struct S2<T: copyable, T: resource, T> {}
+   │                            - Previously defined here
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:4:14 ───
+   │
+ 4 │     struct R<T, T> {}
+   │                 ^ Duplicate type parameter declared with name 'T'
+   ·
+ 4 │     struct R<T, T> {}
+   │              - Previously defined here
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:5:15 ───
+   │
+ 5 │     struct R2<T: copyable, T: resource, T> {}
+   │                            ^ Duplicate type parameter declared with name 'T'
+   ·
+ 5 │     struct R2<T: copyable, T: resource, T> {}
+   │               - Previously defined here
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:5:28 ───
+   │
+ 5 │     struct R2<T: copyable, T: resource, T> {}
+   │                                         ^ Duplicate type parameter declared with name 'T'
+   ·
+ 5 │     struct R2<T: copyable, T: resource, T> {}
+   │                            - Previously defined here
+   │
+

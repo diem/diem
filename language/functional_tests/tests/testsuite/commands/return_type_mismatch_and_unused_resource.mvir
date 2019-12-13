@@ -1,9 +1,11 @@
 module M {
     import 0x0.LibraCoin;
 
+    // Currently, checking that stack frame can be torn down safely
+    // is done before type checking of return values
+
     t1(): bool {
         let c: LibraCoin.T;
-        // Return type check takes precedence over unused resource
         c = LibraCoin.zero();
         return 0;
     }
@@ -11,13 +13,11 @@ module M {
     t2(): bool {
         let u: u64;
         let r: &u64;
-        // Return type check takes precedence returning returning local ref
         u = 0;
         r = &u;
         return move(r);
     }
 }
 
-// check: VerificationFailure
-// check: RET_TYPE_MISMATCH_ERROR
-// check: RET_TYPE_MISMATCH_ERROR
+// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: RET_UNSAFE_TO_DESTROY_ERROR

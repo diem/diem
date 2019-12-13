@@ -1,12 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{chained_bft::QuorumCert, counters, state_replication::StateComputer};
-use crypto::HashValue;
-use executor::{Executor, StateComputeResult};
-use failure::Result;
+use crate::{counters, state_replication::StateComputer};
+use anyhow::{ensure, Result};
+use consensus_types::block::Block;
+use consensus_types::executed_block::ExecutedBlock;
+use executor::{ExecutedTrees, Executor, ProcessedVMOutput};
 use futures::{Future, FutureExt};
-use logger::prelude::*;
+use libra_logger::prelude::*;
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
+use libra_types::{
+    crypto_proxies::LedgerInfoWithSignatures,
+    transaction::{SignedTransaction, Transaction},
+};
 use state_synchronizer::StateSyncClient;
 use std::{
     convert::TryFrom,
@@ -14,22 +20,33 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use types::{crypto_proxies::LedgerInfoWithSignatures, transaction::SignedTransaction};
-use vm_runtime::MoveVM;
+use vm_runtime::LibraVM;
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
-    executor: Arc<Executor<MoveVM>>,
+    executor: Arc<Executor<LibraVM>>,
     synchronizer: Arc<StateSyncClient>,
 }
 
 impl ExecutionProxy {
-    pub fn new(executor: Arc<Executor<MoveVM>>, synchronizer: Arc<StateSyncClient>) -> Self {
+    pub fn new(executor: Arc<Executor<LibraVM>>, synchronizer: Arc<StateSyncClient>) -> Self {
         Self {
             executor,
             synchronizer,
         }
+    }
+
+    fn transactions_from_block(block: &Block<Vec<SignedTransaction>>) -> Vec<Transaction> {
+        let mut transactions = vec![Transaction::BlockMetadata(block.into())];
+        transactions.extend(
+            block
+                .payload()
+                .unwrap_or(&vec![])
+                .iter()
+                .map(|txn| Transaction::UserTransaction(txn.clone())),
+        );
+        transactions
     }
 }
 
@@ -38,79 +55,98 @@ impl StateComputer for ExecutionProxy {
 
     fn compute(
         &self,
-        // The id of a parent block, on top of which the given transactions should be executed.
-        parent_block_id: HashValue,
-        // The id of a current block.
-        block_id: HashValue,
-        // Transactions to execute.
-        transactions: &Self::Payload,
-    ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>> {
+        // The block to be executed.
+        block: &Block<Self::Payload>,
+        // The executed trees after executing the parent block.
+        parent_executed_trees: &ExecutedTrees,
+        // The last committed trees.
+        committed_trees: &ExecutedTrees,
+    ) -> Result<ProcessedVMOutput> {
         let pre_execution_instant = Instant::now();
-        let execute_future =
-            self.executor
-                .execute_block(transactions.clone(), parent_block_id, block_id);
-        async move {
-            match execute_future.await {
-                Ok(Ok(state_compute_result)) => {
-                    let execution_duration = pre_execution_instant.elapsed();
-                    let num_txns = state_compute_result.compute_status.len();
-                    if num_txns == 0 {
-                        // no txns in that block
-                        counters::EMPTY_BLOCK_EXECUTION_DURATION_S
-                            .observe_duration(execution_duration);
-                    } else {
-                        counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
-                        if let Ok(nanos_per_txn) =
-                            u64::try_from(execution_duration.as_nanos() / num_txns as u128)
-                        {
-                            // TODO: use duration_float once it's stable
-                            // Tracking: https://github.com/rust-lang/rust/issues/54361
-                            counters::TXN_EXECUTION_DURATION_S
-                                .observe_duration(Duration::from_nanos(nanos_per_txn));
-                        }
-                    }
-                    Ok(state_compute_result)
+        // TODO: figure out error handling for the prologue txn
+        self.executor
+            .execute_block(
+                Self::transactions_from_block(block),
+                parent_executed_trees,
+                committed_trees,
+                block.parent_id(),
+                block.id(),
+            )
+            .and_then(|output| {
+                let execution_duration = pre_execution_instant.elapsed();
+                let num_txns = output.transaction_data().len();
+                ensure!(num_txns > 0, "metadata txn failed to execute");
+                counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
+                if let Ok(nanos_per_txn) =
+                    u64::try_from(execution_duration.as_nanos() / num_txns as u128)
+                {
+                    // TODO: use duration_float once it's stable
+                    // Tracking: https://github.com/rust-lang/rust/issues/54361
+                    counters::TXN_EXECUTION_DURATION_S
+                        .observe_duration(Duration::from_nanos(nanos_per_txn));
                 }
-                Ok(Err(e)) => Err(e),
-                Err(e) => Err(e.into()),
-            }
-        }
-            .boxed()
+                Ok(output)
+            })
     }
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
-        commit: LedgerInfoWithSignatures,
+        blocks: Vec<&ExecutedBlock<Self::Payload>>,
+        finality_proof: LedgerInfoWithSignatures,
+        committed_trees: &ExecutedTrees,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        let version = commit.ledger_info().version();
+        let version = finality_proof.ledger_info().version();
         counters::LAST_COMMITTED_VERSION.set(version as i64);
 
         let pre_commit_instant = Instant::now();
         let synchronizer = Arc::clone(&self.synchronizer);
-        let commit_future = self.executor.commit_block(commit);
+
+        let committable_blocks = blocks
+            .into_iter()
+            .map(|executed_block| {
+                (
+                    Self::transactions_from_block(executed_block.block()),
+                    Arc::clone(executed_block.output()),
+                )
+            })
+            .collect();
+
+        let commit_result =
+            self.executor
+                .commit_blocks(committable_blocks, finality_proof, committed_trees);
         async move {
-            match commit_future.await {
-                Ok(Ok(())) => {
+            match commit_result {
+                Ok(()) => {
                     counters::BLOCK_COMMIT_DURATION_S
                         .observe_duration(pre_commit_instant.elapsed());
-                    if let Err(e) = synchronizer.commit(version).await {
+                    if let Err(e) = synchronizer.commit().await {
                         error!("failed to notify state synchronizer: {:?}", e);
                     }
                     Ok(())
                 }
-                Ok(Err(e)) => Err(e),
-                Err(e) => Err(e.into()),
+                Err(e) => Err(e),
             }
         }
             .boxed()
     }
 
     /// Synchronize to a commit that not present locally.
-    fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
+    fn sync_to(
+        &self,
+        target: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();
+        self.synchronizer.sync_to(target).boxed()
+    }
+
+    fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
         self.synchronizer
-            .sync_to(commit.ledger_info().clone())
+            .get_epoch_proof(start_epoch, end_epoch)
             .boxed()
     }
 }

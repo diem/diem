@@ -3,9 +3,8 @@
 
 use super::*;
 use crate::LibraDB;
+use libra_tools::tempdir::TempPath;
 use proptest::{collection::vec, prelude::*};
-use tools::tempdir::TempPath;
-use types::proof::verify_transaction_accumulator_element;
 
 fn verify(
     store: &LedgerStore,
@@ -25,8 +24,7 @@ fn verify(
                 .unwrap();
 
             assert_eq!(&txn_info, expected_txn_info);
-            verify_transaction_accumulator_element(root_hash, txn_info.hash(), version, &proof)
-                .unwrap();
+            proof.verify(root_hash, txn_info.hash(), version).unwrap();
         })
 }
 

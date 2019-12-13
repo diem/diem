@@ -1,10 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use crate::chained_bft::liveness::proposer_election::ProposerElection;
+use consensus_types::{
+    block::Block,
     common::{Author, Payload, Round},
-    consensus_types::block::Block,
-    liveness::proposer_election::ProposerElection,
 };
 
 /// The rotating proposer maps a round to an author according to a round-robin rotation.
@@ -16,6 +16,14 @@ pub struct RotatingProposer {
     // Number of contiguous rounds (i.e. round numbers increase by 1) a proposer is active
     // in a row
     contiguous_rounds: u32,
+}
+
+/// Choose a proposer that is going to be the single leader (relevant for a mock fixed proposer
+/// election only).
+pub fn choose_leader(peers: Vec<Author>) -> Author {
+    // As it is just a tmp hack function, pick the min PeerId to be a proposer.
+    // TODO: VRF will be integrated later.
+    peers.into_iter().min().expect("No trusted peers found!")
 }
 
 impl RotatingProposer {

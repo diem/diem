@@ -6,7 +6,7 @@ syntax = "proto3";
 package mempool;
 
 import "transaction.proto";
-import "shared/mempool_status.proto";
+import "mempool_status.proto";
 
 // -----------------------------------------------------------------------------
 // ---------------- Mempool Service Definition
@@ -38,7 +38,7 @@ service Mempool {
 
 message AddTransactionWithValidationRequest {
   // Transaction from a wallet
-  types.SignedTransaction signed_txn = 1;
+  types.SignedTransaction transaction = 1;
   // Max amount of gas required to execute the transaction
   // Without running the program, it is very difficult to determine this number,
   // so we use the max gas specified by the signed transaction.
@@ -57,7 +57,7 @@ message AddTransactionWithValidationResponse {
   // transaction will have version bigger than this 'current_version'
   uint64 current_version = 1;
   // The result of the transaction submission
-  MempoolAddTransactionStatus status = 2;
+  mempool_status.MempoolAddTransactionStatus status = 2;
 }
 
 // -----------------------------------------------------------------------------

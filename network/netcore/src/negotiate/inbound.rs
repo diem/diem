@@ -1,18 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    negotiate::{
-        framing::{read_u16frame, write_u16frame},
-        PROTOCOL_INTERACTIVE, PROTOCOL_NOT_SUPPORTED, PROTOCOL_SELECT,
-    },
-    utils::Captures,
+use crate::negotiate::{
+    framing::{read_u16frame, write_u16frame},
+    PROTOCOL_INTERACTIVE, PROTOCOL_NOT_SUPPORTED, PROTOCOL_SELECT,
 };
 use bytes::BytesMut;
-use futures::{
-    future::Future,
-    io::{AsyncRead, AsyncWrite, AsyncWriteExt},
-};
+use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::io::Result;
 
 /// Perform protocol negotiation on an inbound `stream` attempting to match
@@ -50,76 +44,72 @@ where
     }
 }
 
-fn negotiate_inbound_interactive<'stream, 'c, TSocket, TProto, TProtocols>(
+async fn negotiate_inbound_interactive<'stream, 'c, TSocket, TProto, TProtocols>(
     mut stream: &'stream mut TSocket,
     supported_protocols: TProtocols,
     mut buf: BytesMut,
-) -> impl Future<Output = Result<TProto>> + Captures<'stream> + 'c
+) -> Result<TProto>
 where
     'stream: 'c,
     TSocket: AsyncRead + AsyncWrite + Unpin,
     TProto: AsRef<[u8]> + Clone,
     TProtocols: AsRef<[TProto]> + 'c,
 {
-    async move {
-        // ACK that we are speaking PROTOCOL_INTERACTIVE
-        write_u16frame(&mut stream, PROTOCOL_INTERACTIVE).await?;
-        stream.flush().await?;
+    // ACK that we are speaking PROTOCOL_INTERACTIVE
+    write_u16frame(&mut stream, PROTOCOL_INTERACTIVE).await?;
+    stream.flush().await?;
 
-        // We make up to 10 attempts to negotiate a protocol.
-        for _ in 0..10 {
-            // Read in the Protocol they want to speak and attempt to match
-            // it against our supported protocols
-            read_u16frame(&mut stream, &mut buf).await?;
-            for proto in supported_protocols.as_ref() {
-                // Found a match!
-                if buf.as_ref() == proto.as_ref() {
-                    // Echo back the selected protocol
-                    write_u16frame(&mut stream, proto.as_ref()).await?;
-                    stream.flush().await?;
-                    return Ok(proto.clone());
-                }
-            }
-            // If the desired protocol doesn't match any of our supported
-            // ones then send PROTOCOL_NOT_SUPPORTED
-            write_u16frame(&mut stream, PROTOCOL_NOT_SUPPORTED).await?;
-            stream.flush().await?;
-        }
-
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Unable to negotiate protocol - all attempts failed",
-        ))
-    }
-}
-
-fn negotiate_inbound_select<'stream, 'c, TSocket, TProto, TProtocols>(
-    mut stream: &'stream mut TSocket,
-    supported_protocols: TProtocols,
-    mut buf: BytesMut,
-) -> impl Future<Output = Result<TProto>> + Captures<'stream> + 'c
-where
-    'stream: 'c,
-    TSocket: AsyncRead + AsyncWrite + Unpin,
-    TProto: AsRef<[u8]> + Clone,
-    TProtocols: AsRef<[TProto]> + 'c,
-{
-    async move {
+    // We make up to 10 attempts to negotiate a protocol.
+    for _ in 0..10 {
         // Read in the Protocol they want to speak and attempt to match
         // it against our supported protocols
         read_u16frame(&mut stream, &mut buf).await?;
         for proto in supported_protocols.as_ref() {
             // Found a match!
             if buf.as_ref() == proto.as_ref() {
+                // Echo back the selected protocol
+                write_u16frame(&mut stream, proto.as_ref()).await?;
+                stream.flush().await?;
                 return Ok(proto.clone());
             }
         }
-
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Unable to negotiate Protocol - protocol not supported",
-        ))
+        // If the desired protocol doesn't match any of our supported
+        // ones then send PROTOCOL_NOT_SUPPORTED
+        write_u16frame(&mut stream, PROTOCOL_NOT_SUPPORTED).await?;
+        stream.flush().await?;
     }
+
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        "Unable to negotiate protocol - all attempts failed",
+    ))
+}
+
+async fn negotiate_inbound_select<'stream, 'c, TSocket, TProto, TProtocols>(
+    mut stream: &'stream mut TSocket,
+    supported_protocols: TProtocols,
+    mut buf: BytesMut,
+) -> Result<TProto>
+where
+    'stream: 'c,
+    TSocket: AsyncRead + Unpin,
+    TProto: AsRef<[u8]> + Clone,
+    TProtocols: AsRef<[TProto]> + 'c,
+{
+    // Read in the Protocol they want to speak and attempt to match
+    // it against our supported protocols
+    read_u16frame(&mut stream, &mut buf).await?;
+    for proto in supported_protocols.as_ref() {
+        // Found a match!
+        if buf.as_ref() == proto.as_ref() {
+            return Ok(proto.clone());
+        }
+    }
+
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        "Unable to negotiate Protocol - protocol not supported",
+    ))
 }
 
 #[cfg(test)]

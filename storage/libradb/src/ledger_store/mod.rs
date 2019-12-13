@@ -4,6 +4,7 @@
 //! This file defines ledger store APIs that are related to the main ledger accumulator, from the
 //! root(LedgerInfo) to leaf(TransactionInfo).
 
+use crate::schema::epoch_by_version::EpochByVersionSchema;
 use crate::{
     change_set::ChangeSet,
     errors::LibraDbError,
@@ -13,20 +14,23 @@ use crate::{
     },
 };
 use accumulator::{HashReader, MerkleAccumulator};
+use anyhow::{ensure, format_err, Result};
 use arc_swap::ArcSwap;
-use crypto::{
+use itertools::Itertools;
+use libra_crypto::{
     hash::{CryptoHash, TransactionAccumulatorHasher},
     HashValue,
 };
-use failure::prelude::*;
-use itertools::Itertools;
-use schemadb::{ReadOptions, DB};
-use std::{ops::Deref, sync::Arc};
-use types::{
-    crypto_proxies::LedgerInfoWithSignatures,
-    proof::{position::Position, AccumulatorConsistencyProof, AccumulatorProof},
+use libra_types::{
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
+    proof::{
+        position::Position, AccumulatorConsistencyProof, TransactionAccumulatorProof,
+        TransactionAccumulatorRangeProof,
+    },
     transaction::{TransactionInfo, Version},
 };
+use schemadb::{ReadOptions, DB};
+use std::{ops::Deref, sync::Arc};
 
 pub(crate) struct LedgerStore {
     db: Arc<DB>,
@@ -57,17 +61,74 @@ impl LedgerStore {
         }
     }
 
-    /// Return the ledger infos with their least 2f+1 signatures starting from `start_epoch` to
-    /// the most recent one.
-    /// Note: ledger infos and signatures are only available at the last version of each earlier
-    /// epoch and at the latest version of current epoch.
-    pub fn get_latest_ledger_infos_per_epoch(
+    pub fn get_epoch(&self, version: Version) -> Result<u64> {
+        let mut iter = self
+            .db
+            .iter::<EpochByVersionSchema>(ReadOptions::default())?;
+        // Search for the end of the previous epoch.
+        iter.seek_for_prev(&version)?;
+        let (epoch_end_version, epoch) = match iter.next().transpose()? {
+            Some(x) => x,
+            None => {
+                // There should be a genesis LedgerInfo at version 0 (genesis only consists of one
+                // transaction), so this normally doesn't happen. However this part of
+                // implementation doesn't need to rely on this assumption.
+                return Ok(0);
+            }
+        };
+        ensure!(
+            epoch_end_version <= version,
+            "DB corruption: looking for epoch for version {}, got epoch {} ends at version {}",
+            version,
+            epoch,
+            epoch_end_version
+        );
+        // If the obtained epoch ended before the given version, return epoch+1, otherwise
+        // the given version is exactly the last version of the found epoch.
+        Ok(if epoch_end_version < version {
+            epoch + 1
+        } else {
+            epoch
+        })
+    }
+
+    /// Returns the ledger infos reflecting epoch bumps with their 2f+1 signatures in
+    /// [`start_epoch`, `end_epoch`). If there is no more than `limit` results, this function
+    /// returns all of them, otherwise the first `limit` results are returned and a flag
+    /// (when true) will be used to indicate the fact that there is more.
+    pub fn get_first_n_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
-    ) -> Result<Vec<LedgerInfoWithSignatures>> {
+        end_epoch: u64,
+        limit: usize,
+    ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek(&start_epoch)?;
-        Ok(iter.map(|kv| Ok(kv?.1)).collect::<Result<Vec<_>>>()?)
+
+        let mut results = Vec::new();
+        for res in iter {
+            let (epoch, ledger_info_with_sigs) = res?;
+            debug_assert_eq!(epoch, ledger_info_with_sigs.ledger_info().epoch());
+
+            if epoch >= end_epoch {
+                break;
+            }
+            if results.len() >= limit {
+                return Ok((results, true));
+            }
+
+            ensure!(
+                ledger_info_with_sigs
+                    .ledger_info()
+                    .next_validator_set()
+                    .is_some(),
+                "DB corruption: the last ledger info of epoch {} is missing next validator set",
+                epoch,
+            );
+            results.push(ledger_info_with_sigs);
+        }
+
+        Ok((results, false))
     }
 
     pub fn get_latest_ledger_info_option(&self) -> Option<LedgerInfoWithSignatures> {
@@ -84,6 +145,49 @@ impl LedgerStore {
     pub fn set_latest_ledger_info(&self, ledger_info_with_sigs: LedgerInfoWithSignatures) {
         self.latest_ledger_info
             .store(Arc::new(Some(ledger_info_with_sigs)));
+    }
+
+    /// Returns `None` if the DB is empty. Otherwise returns a tuple
+    /// `(LedgerInfoWithSignatures, Option<ValidatorSet>)`: either the first element carries a
+    /// validator set and the second element is `None`, or the second element carries a validator
+    /// set.
+    pub fn get_startup_info(
+        &self,
+    ) -> Result<Option<(LedgerInfoWithSignatures, Option<ValidatorSet>)>> {
+        let latest_ledger_info_with_sigs = match self.get_latest_ledger_info_option() {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        if latest_ledger_info_with_sigs
+            .ledger_info()
+            .next_validator_set()
+            .is_some()
+        {
+            return Ok(Some((latest_ledger_info_with_sigs, None)));
+        }
+
+        // If the latest LedgerInfo doesn't carry a validator set, we look for the previous
+        // LedgerInfo which should always carry a validator set.
+        let latest_epoch = latest_ledger_info_with_sigs.ledger_info().epoch();
+        ensure!(
+            latest_epoch > 0,
+            "Genesis epoch should always carry a validator set.",
+        );
+
+        let prev_ledger_info_with_sigs = self
+            .db
+            .get::<LedgerInfoSchema>(&(latest_epoch - 1))?
+            .ok_or_else(|| format_err!("At least one epoch change LedgerInfo must exist."))?;
+
+        let latest_validator_set = prev_ledger_info_with_sigs
+            .ledger_info()
+            .next_validator_set()
+            .ok_or_else(|| format_err!("All previous LedgerInfo should have a validator set."))?;
+        Ok(Some((
+            latest_ledger_info_with_sigs,
+            Some(latest_validator_set.clone()),
+        )))
     }
 
     /// Get transaction info given `version`
@@ -113,7 +217,7 @@ impl LedgerStore {
         &self,
         version: Version,
         ledger_version: Version,
-    ) -> Result<(TransactionInfo, AccumulatorProof)> {
+    ) -> Result<(TransactionInfo, TransactionAccumulatorProof)> {
         Ok((
             self.get_transaction_info(version)?,
             self.get_transaction_proof(version, ledger_version)?,
@@ -125,8 +229,24 @@ impl LedgerStore {
         &self,
         version: Version,
         ledger_version: Version,
-    ) -> Result<AccumulatorProof> {
+    ) -> Result<TransactionAccumulatorProof> {
         Accumulator::get_proof(self, ledger_version + 1 /* num_leaves */, version)
+    }
+
+    /// Get proof for `num_txns` consecutive transactions starting from `start_version` towards
+    /// root of ledger at `ledger_version`.
+    pub fn get_transaction_range_proof(
+        &self,
+        start_version: Option<Version>,
+        num_txns: u64,
+        ledger_version: Version,
+    ) -> Result<TransactionAccumulatorRangeProof> {
+        Accumulator::get_range_proof(
+            self,
+            ledger_version + 1, /* num_leaves */
+            start_version,
+            num_txns,
+        )
     }
 
     /// Gets proof that shows the ledger at `ledger_version` is consistent with the ledger at
@@ -173,8 +293,15 @@ impl LedgerStore {
         ledger_info_with_sigs: &LedgerInfoWithSignatures,
         cs: &mut ChangeSet,
     ) -> Result<()> {
+        let ledger_info = ledger_info_with_sigs.ledger_info();
+
+        if ledger_info.next_validator_set().is_some() {
+            // This is the last version of the current epoch, update the epoch by version index.
+            cs.batch
+                .put::<EpochByVersionSchema>(&ledger_info.version(), &ledger_info.epoch())?;
+        }
         cs.batch.put::<LedgerInfoSchema>(
-            &ledger_info_with_sigs.ledger_info().epoch_num(),
+            &ledger_info_with_sigs.ledger_info().epoch(),
             ledger_info_with_sigs,
         )
     }

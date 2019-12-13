@@ -3,7 +3,6 @@
 
 use super::*;
 use proptest::{collection::vec, prelude::*};
-use types::proof::verify_test_accumulator_element;
 
 #[test]
 fn test_error_on_bad_parameters() {
@@ -78,6 +77,39 @@ proptest! {
             .unwrap();
         prop_assert_eq!(root_hash2, in_mem_acc2.root_hash());
     }
+
+    #[test]
+    fn test_range_proof(
+        batch1 in vec(any::<HashValue>(), 0..100),
+        batch2 in vec(any::<HashValue>(), 0..100),
+        batch3 in vec(any::<HashValue>(), 0..100),
+    ) {
+        let mut store = MockHashStore::new();
+
+        let mut all_hashes = vec![];
+        all_hashes.extend_from_slice(&batch1);
+        all_hashes.extend_from_slice(&batch2);
+        all_hashes.extend_from_slice(&batch3);
+
+        let (root_hash, writes) = TestAccumulator::append(&store, 0, &all_hashes).unwrap();
+        store.put_many(&writes);
+
+        let first_leaf_index = if !batch2.is_empty() {
+            Some(batch1.len() as u64)
+        } else {
+            None
+        };
+        let proof = TestAccumulator::get_range_proof(
+            &store,
+            all_hashes.len() as LeafCount,
+            first_leaf_index,
+            batch2.len() as LeafCount,
+        )
+        .unwrap();
+        proof
+            .verify(root_hash, first_leaf_index, &batch2)
+            .unwrap();
+    }
 }
 
 fn verify(
@@ -90,6 +122,6 @@ fn verify(
     leaves.iter().enumerate().for_each(|(i, hash)| {
         let leaf_index = first_leaf_idx + i as u64;
         let proof = TestAccumulator::get_proof(store, num_leaves, leaf_index).unwrap();
-        verify_test_accumulator_element(root_hash, *hash, leaf_index, &proof).unwrap();
+        proof.verify(root_hash, *hash, leaf_index).unwrap();
     });
 }

@@ -1,0 +1,19 @@
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+    let ten_coins: LibraCoin.T;
+    let i_created_money: LibraCoin.T;
+    let addr: address;
+
+    addr = get_txn_sender();
+    ten_coins = LibraAccount.withdraw_from_sender(10);
+    i_created_money = copy(ten_coins);
+
+    LibraAccount.deposit(copy(addr), move(ten_coins));
+    LibraAccount.deposit(copy(addr), move(i_created_money));
+
+    return;
+}
+
+// check: COPYLOC_RESOURCE_ERROR,

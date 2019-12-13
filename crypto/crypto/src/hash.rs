@@ -25,7 +25,7 @@
 //! # Examples
 //!
 //! ```
-//! use crypto::hash::{CryptoHasher, TestOnlyHasher};
+//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
 //!
 //! let mut hasher = TestOnlyHasher::default();
 //! hasher.write("Test message".as_bytes());
@@ -34,6 +34,25 @@
 //! The output is of type [`HashValue`], which can be used as an input for signing.
 //!
 //! # Implementing new hashers
+//!
+//! ## The automatic way
+//!
+//! For any new structure `MyNewStruct` that needs to be hashed, the developer
+//! should use the [`CryptoHasher` derive macro](https://doc.rust-lang.org/reference/procedural-macros.html).
+//!
+//! ```ignore
+//! #[derive(CryptoHasher)]
+//! struct MyNewStruct {
+//!   ...
+//! }
+//! ```
+//!
+//! The macro will define a hasher automatically called `MyNewStructHasher`, and pick a salt
+//! equal to the full module path + "::"  + structure name, i.e. if
+//! `MyNewStruct` is defined in `bar::baz::quux`, the salt will be `b"bar::baz::quux::MyNewStruct"`.
+//! You can then use it in your implementation of `CryptoHash` (see below).
+//!
+//! ## The semi-automatic way
 //!
 //! For any new structure `MyNewStruct` that needs to be hashed, the developer should define a
 //! new hasher with:
@@ -46,9 +65,10 @@
 //!
 //! **Note**: The last argument for the `define_hasher` macro must be a unique string.
 //!
+//! ## The `CryptoHash` implementation (for both automatic and semi-automatic way)
 //! Then, the `CryptoHash` trait should be implemented:
 //! ```
-//! # use crypto::hash::*;
+//! # use libra_crypto::hash::*;
 //! # #[derive(Default)]
 //! # struct MyNewStructHasher;
 //! # impl CryptoHasher for MyNewStructHasher {
@@ -68,14 +88,15 @@
 //! }
 //! ```
 
+use anyhow::{ensure, Result};
 use bytes::Bytes;
-use failure::prelude::*;
 use lazy_static::lazy_static;
-use nibble::Nibble;
+use libra_nibble::Nibble;
+use mirai_annotations::*;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::EntropyRng, Rng};
-use serde::{Deserialize, Serialize};
+use serde::{de, ser};
 use std::{self, convert::AsRef, fmt};
 use tiny_keccak::Keccak;
 
@@ -88,7 +109,8 @@ mod hash_test;
 const SHORT_STRING_LENGTH: usize = 4;
 
 /// Output value of our hash function. Intentionally opaque for safety and modularity.
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, PartialOrd, Ord, Arbitrary)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct HashValue {
     hash: [u8; HashValue::LENGTH],
 }
@@ -185,6 +207,24 @@ impl HashValue {
         HashValueBitIterator::new(self)
     }
 
+    /// Constructs a `HashValue` from an iterator of bits.
+    pub fn from_bit_iter(iter: impl ExactSizeIterator<Item = bool>) -> Result<Self> {
+        ensure!(
+            iter.len() == Self::LENGTH_IN_BITS,
+            "The iterator should yield exactly {} bits. Actual number of bits: {}.",
+            Self::LENGTH_IN_BITS,
+            iter.len(),
+        );
+
+        let mut buf = [0; Self::LENGTH];
+        for (i, bit) in iter.enumerate() {
+            if bit {
+                buf[i / 8] |= 1 << (7 - i % 8);
+            }
+        }
+        Ok(Self::new(buf))
+    }
+
     /// Returns the length of common prefix of `self` and `other` in bits.
     pub fn common_prefix_bits_len(&self, other: HashValue) -> usize {
         self.iter_bits()
@@ -210,6 +250,51 @@ impl HashValue {
     /// Returns first SHORT_STRING_LENGTH bytes as String in hex
     pub fn short_str(&self) -> String {
         hex::encode(&self.hash[0..SHORT_STRING_LENGTH]).to_string()
+    }
+
+    /// Full hex representation of a given hash value.
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.hash).to_string()
+    }
+
+    /// Parse a given hex string to a hash value.
+    pub fn from_hex(hex_str: &str) -> Result<Self> {
+        Self::from_slice(hex::decode(hex_str)?.as_slice())
+    }
+}
+
+// TODO(#1307)
+impl ser::Serialize for HashValue {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        serializer.serialize_bytes(&self.hash[..])
+    }
+}
+
+impl<'de> de::Deserialize<'de> for HashValue {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct HashValueVisitor;
+        impl<'de> de::Visitor<'de> for HashValueVisitor {
+            type Value = HashValue;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("HashValue in bytes")
+            }
+
+            fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<HashValue, E>
+            where
+                E: de::Error,
+            {
+                HashValue::from_slice(value).map_err(E::custom)
+            }
+        }
+
+        deserializer.deserialize_bytes(HashValueVisitor)
     }
 }
 
@@ -270,25 +355,9 @@ impl fmt::Display for HashValue {
     }
 }
 
-impl FromProto for HashValue {
-    type ProtoType = Vec<u8>;
-
-    fn from_proto(bytes: Self::ProtoType) -> Result<Self> {
-        HashValue::from_slice(&bytes)
-    }
-}
-
-impl IntoProto for HashValue {
-    type ProtoType = Vec<u8>;
-
-    fn into_proto(self) -> Self::ProtoType {
-        self.to_vec()
-    }
-}
-
 impl From<HashValue> for Bytes {
     fn from(value: HashValue) -> Bytes {
-        value.hash.as_ref().into()
+        Bytes::copy_from_slice(value.hash.as_ref())
     }
 }
 
@@ -297,6 +366,8 @@ pub struct HashValueBitIterator<'a> {
     /// The reference to the bytes that represent the `HashValue`.
     hash_bytes: &'a [u8],
     pos: std::ops::Range<usize>,
+    // invariant hash_bytes.len() == HashValue::LENGTH;
+    // invariant pos.end == hash_bytes.len() * 8;
 }
 
 impl<'a> HashValueBitIterator<'a> {
@@ -310,6 +381,9 @@ impl<'a> HashValueBitIterator<'a> {
 
     /// Returns the `index`-th bit in the bytes.
     fn get_bit(&self, index: usize) -> bool {
+        assume!(index < self.pos.end); // assumed precondition
+        assume!(self.hash_bytes.len() == HashValue::LENGTH); // invariant
+        assume!(self.pos.end == self.hash_bytes.len() * 8); // invariant
         let pos = index / 8;
         let bit = 7 - index % 8;
         (self.hash_bytes[pos] >> bit) & 1 != 0
@@ -372,7 +446,7 @@ pub trait CryptoHasher: Default {
 /// ambiguities within a same domain.
 /// * Only used internally within this crate
 #[derive(Clone)]
-struct DefaultHasher {
+pub struct DefaultHasher {
     state: Keccak,
 }
 
@@ -398,7 +472,8 @@ impl Default for DefaultHasher {
 }
 
 impl DefaultHasher {
-    fn new_with_salt(typename: &[u8]) -> Self {
+    /// initialize a new hasher with a specific salt
+    pub fn new_with_salt(typename: &[u8]) -> Self {
         let mut state = Keccak::new_sha3_256();
         if !typename.is_empty() {
             let mut salt = typename.to_vec();
@@ -449,25 +524,6 @@ macro_rules! define_hasher {
 }
 
 define_hasher! {
-    /// The hasher used to compute the hash of an AccessPath object.
-    (AccessPathHasher, ACCESS_PATH_HASHER, b"VM_ACCESS_PATH")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of an AccountAddress object.
-    (
-        AccountAddressHasher,
-        ACCOUNT_ADDRESS_HASHER,
-        b"AccountAddress"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a LedgerInfo object.
-    (LedgerInfoHasher, LEDGER_INFO_HASHER, b"LedgerInfo")
-}
-
-define_hasher! {
     /// The hasher used to compute the hash of an internal node in the transaction accumulator.
     (
         TransactionAccumulatorHasher,
@@ -492,76 +548,6 @@ define_hasher! {
         SPARSE_MERKLE_INTERNAL_HASHER,
         b"SparseMerkleInternal"
     )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a leaf node in the Sparse Merkle Tree.
-    (
-        SparseMerkleLeafHasher,
-        SPARSE_MERKLE_LEAF_HASHER,
-        b"SparseMerkleLeaf"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of the blob content of an account.
-    (
-        AccountStateBlobHasher,
-        ACCOUNT_STATE_BLOB_HASHER,
-        b"AccountStateBlob"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a TransactionInfo object.
-    (
-        TransactionInfoHasher,
-        TRANSACTION_INFO_HASHER,
-        b"TransactionInfo"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a RawTransaction object.
-    (
-        RawTransactionHasher,
-        RAW_TRANSACTION_HASHER,
-        b"RawTransaction"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a SignedTransaction object.
-    (
-        SignedTransactionHasher,
-        SIGNED_TRANSACTION_HASHER,
-        b"SignedTransaction"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash (block_id) of a Block object.
-    (BlockHasher, BLOCK_HASHER, b"BlockId")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a PacemakerTimeout object.
-    (PacemakerTimeoutHasher, PACEMAKER_TIMEOUT_HASHER, b"PacemakerTimeout")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a TimeoutMsgHasher object.
-    (TimeoutMsgHasher, TIMEOUT_MSG_HASHER, b"TimeoutMsg")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a VoteData object.
-    (VoteDataHasher, VOTE_DATA_HASHER, b"VoteData")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a ContractEvent object.
-    (ContractEventHasher, CONTRACT_EVENT_HASHER, b"ContractEvent")
 }
 
 define_hasher! {
@@ -596,7 +582,13 @@ lazy_static! {
 
     /// Genesis block id is used as a parent of the very first block executed by the executor.
     pub static ref GENESIS_BLOCK_ID: HashValue =
-        create_literal_hash("GENESIS_BLOCK_ID");
+        // This maintains the invariant that block.id() == block.hash(), for
+        // the genesis block and allows us to (de/)serialize it consistently
+        HashValue::new([
+            0x5e, 0x10, 0xba, 0xd4, 0x5b, 0x35, 0xed, 0x92, 0x9c, 0xd6, 0xd2,
+            0xc7, 0x09, 0x8b, 0x13, 0x5d, 0x02, 0xdd, 0x25, 0x9a, 0xe8, 0x8a,
+            0x8d, 0x09, 0xf4, 0xeb, 0x5f, 0xba, 0xe9, 0xa6, 0xf6, 0xe4
+        ]);
 }
 
 /// Provides a test_only_hash() method that can be used in tests on types that implement
@@ -604,7 +596,7 @@ lazy_static! {
 ///
 /// # Example
 /// ```
-/// use crypto::hash::TestOnlyHash;
+/// use libra_crypto::hash::TestOnlyHash;
 ///
 /// b"hello world".test_only_hash();
 /// ```
@@ -613,9 +605,9 @@ pub trait TestOnlyHash {
     fn test_only_hash(&self) -> HashValue;
 }
 
-impl<T: Serialize + ?Sized> TestOnlyHash for T {
+impl<T: ser::Serialize + ?Sized> TestOnlyHash for T {
     fn test_only_hash(&self) -> HashValue {
-        let bytes = ::bincode::serialize(self).expect("serialize failed during hash.");
+        let bytes = lcs::to_bytes(self).expect("serialize failed during hash.");
         let mut hasher = TestOnlyHasher::default();
         hasher.write(&bytes);
         hasher.finish()

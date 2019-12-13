@@ -1,0 +1,112 @@
+error: 
+
+   ┌── tests/move_check/typing/if_condition_invalid.move:3:13 ───
+   │
+ 3 │         if (()) () else ();
+   │             ^^ Invalid if condition
+   ·
+ 3 │         if (()) () else ();
+   │             -- The type: '()'
+   ·
+ 3 │         if (()) () else ();
+   │             -- Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/if_condition_invalid.move:4:13 ───
+   │
+ 4 │         if ((())) () else ();
+   │             ^^^^ Invalid if condition
+   ·
+ 4 │         if ((())) () else ();
+   │             ---- The type: '()'
+   ·
+ 4 │         if ((())) () else ();
+   │             ---- Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/if_condition_invalid.move:5:13 ───
+   │
+ 5 │         if ({}) () else ()
+   │             ^^ Invalid if condition
+   ·
+ 5 │         if ({}) () else ()
+   │             -- The type: '()'
+   ·
+ 5 │         if ({}) () else ()
+   │             -- Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/if_condition_invalid.move:8:24 ───
+   │
+ 9 │         if (x) () else ();
+   │             ^ Invalid if condition
+   ·
+ 8 │     t1<T: copyable>(x: T) {
+   │                        - The type: 'T'
+   ·
+ 9 │         if (x) () else ();
+   │             - Is not compatible with: 'bool'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/if_condition_invalid.move:10:13 ───
+    │
+ 10 │         if (0) () else ();
+    │             ^ Invalid if condition
+    ·
+ 10 │         if (0) () else ();
+    │             - The type: 'u64'
+    ·
+ 10 │         if (0) () else ();
+    │             - Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/if_condition_invalid.move:11:13 ───
+    │
+ 11 │         if (0x0) () else ()
+    │             ^^^ Invalid if condition
+    ·
+ 11 │         if (0x0) () else ()
+    │             --- The type: 'address'
+    ·
+ 11 │         if (0x0) () else ()
+    │             --- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/if_condition_invalid.move:15:13 ───
+    │
+ 15 │         if ((false, true)) () else ();
+    │             ^^^^^^^^^^^^^ Invalid if condition
+    ·
+ 15 │         if ((false, true)) () else ();
+    │             ------------- The type: '(bool,bool)'
+    ·
+ 15 │         if ((false, true)) () else ();
+    │             ------------- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/if_condition_invalid.move:16:13 ───
+    │
+ 16 │         if ((0, false)) () else ()
+    │             ^^^^^^^^^^ Invalid if condition
+    ·
+ 16 │         if ((0, false)) () else ()
+    │             ---------- The type: '(u64,bool)'
+    ·
+ 16 │         if ((0, false)) () else ()
+    │             ---------- Is not compatible with: 'bool'
+    │
+

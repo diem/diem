@@ -1,0 +1,17 @@
+[package]
+name = "crash-handler"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra crash handler"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+backtrace = "0.3.37"
+toml = "0.5.3"
+
+libra-logger = { path = "../logger", version = "0.1.0" }
+serde = { version = "1.0.96", features = ["derive"] }

@@ -2,58 +2,63 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
-use metrics::{Histogram, IntCounter, IntGauge, OpMetrics};
+use libra_metrics::{Histogram, IntGauge, OpMetrics};
+use prometheus::{HistogramVec, IntCounterVec, IntGaugeVec};
+
+lazy_static::lazy_static! {
+    pub static ref LIBRA_NETWORK_PEERS: IntGaugeVec = register_int_gauge_vec!(
+        // metric name
+        "libra_network_peers",
+        // metric description
+        "Libra network peers counter",
+        // metric labels (dimensions)
+        &["role_type", "state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_DISCOVERY_NOTES: IntGaugeVec = register_int_gauge_vec!(
+        // metric name
+        "libra_network_discovery_notes",
+        // metric description
+        "Libra network discovery notes",
+        // metric labels (dimensions)
+        &["role_type"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_RPC_MESSAGES: IntCounterVec = register_int_counter_vec!(
+        "libra_network_rpc_messages",
+        "Libra network rpc messages counter",
+        &["type", "state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_RPC_BYTES: HistogramVec = register_histogram_vec!(
+        "libra_network_rpc_bytes",
+        "Libra network rpc bytes histogram",
+        &["type", "state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_RPC_LATENCY: Histogram = register_histogram!(
+        "libra_network_rpc_latency_seconds",
+        "Libra network rpc latency histogram"
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_DIRECT_SEND_MESSAGES: IntCounterVec = register_int_counter_vec!(
+        "libra_network_direct_send_messages",
+        "Libra network direct send messages counter",
+        &["state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_DIRECT_SEND_BYTES: HistogramVec = register_histogram_vec!(
+        "libra_network_direct_send_bytes",
+        "Libra network direct send bytes histogram",
+        &["state"]
+    ).unwrap();
+}
 
 lazy_static::lazy_static! {
     pub static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("network");
 }
 
 lazy_static::lazy_static! {
-    /// Counter of currently connected peers
-    pub static ref CONNECTED_PEERS: IntGauge = OP_COUNTERS.gauge("connected_peers");
-
-    /// Counter of rpc requests sent
-    pub static ref RPC_REQUESTS_SENT: IntCounter = OP_COUNTERS.counter("rpc_requests_sent");
-
-    /// Counter of rpc request bytes sent
-    pub static ref RPC_REQUEST_BYTES_SENT: IntCounter = OP_COUNTERS.counter("rpc_request_bytes_sent");
-
-    /// Counter of rpc requests failed
-    pub static ref RPC_REQUESTS_FAILED: IntCounter = OP_COUNTERS.counter("rpc_requests_failed");
-
-    /// Counter of rpc requests cancelled
-    pub static ref RPC_REQUESTS_CANCELLED: IntCounter = OP_COUNTERS.counter("rpc_requests_cancelled");
-
-    /// Counter of rpc requests received
-    pub static ref RPC_REQUESTS_RECEIVED: IntCounter = OP_COUNTERS.counter("rpc_requests_received");
-
-    /// Counter of rpc responses sent
-    pub static ref RPC_RESPONSES_SENT: IntCounter = OP_COUNTERS.counter("rpc_responses_sent");
-
-    /// Counter of rpc response bytes sent
-    pub static ref RPC_RESPONSE_BYTES_SENT: IntCounter = OP_COUNTERS.counter("rpc_response_bytes_sent");
-
-    /// Counter of rpc responses failed
-    pub static ref RPC_RESPONSES_FAILED: IntCounter = OP_COUNTERS.counter("rpc_responses_failed");
-
-    /// Histogram of rpc latency
-    pub static ref RPC_LATENCY: Histogram = OP_COUNTERS.histogram("rpc_latency");
-
-    /// Counter of messages sent via the direct send protocol
-    pub static ref DIRECT_SEND_MESSAGES_SENT: IntCounter = OP_COUNTERS.counter("direct_send_messages_sent");
-
-    /// Counter of bytes sent via the direct send protocol
-    pub static ref DIRECT_SEND_BYTES_SENT: IntCounter = OP_COUNTERS.counter("direct_send_bytes_sent");
-
-    /// Counter of messages dropped via the direct send protocol
-    pub static ref DIRECT_SEND_MESSAGES_DROPPED: IntCounter = OP_COUNTERS.counter("direct_send_messages_dropped");
-
-    /// Counter of messages received via the direct send protocol
-    pub static ref DIRECT_SEND_MESSAGES_RECEIVED: IntCounter = OP_COUNTERS.counter("direct_send_messages_received");
-
-    /// Counter of bytes received via the direct send protocol
-    pub static ref DIRECT_SEND_BYTES_RECEIVED: IntCounter = OP_COUNTERS.counter("direct_send_bytes_received");
-
     ///
     /// Channel Counters
     ///
@@ -67,8 +72,17 @@ lazy_static::lazy_static! {
     /// Counter of pending network events to Consensus
     pub static ref PENDING_CONSENSUS_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_consensus_network_events");
 
-    /// Counter of pending network events to Consensus
+    /// Counter of pending network events to State Synchronizer
     pub static ref PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_state_sync_network_events");
+
+    /// Counter of pending network events to Admission Control
+    pub static ref PENDING_ADMISSION_CONTROL_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_admission_control_network_events");
+
+    /// Counter of pending network events to Health Checker.
+    pub static ref PENDING_HEALTH_CHECKER_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_health_checker_network_events");
+
+    /// Counter of pending network events to Discovery.
+    pub static ref PENDING_DISCOVERY_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_discovery_network_events");
 
     /// Counter of pending requests in Peer Manager
     pub static ref PENDING_PEER_MANAGER_REQUESTS: IntGauge = OP_COUNTERS.gauge("pending_peer_manager_requests");
@@ -106,8 +120,11 @@ lazy_static::lazy_static! {
     /// Counter of pending Peer Manager notifications to Connectivity Manager
     pub static ref PENDING_PEER_MANAGER_CONNECTIVITY_MANAGER_NOTIFICATIONS: IntGauge = OP_COUNTERS.gauge("pending_peer_manager_connectivity_manager_notifications");
 
-    /// Counter of pending internal events in Peer Manager
-    pub static ref PENDING_PEER_MANAGER_INTERNAL_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_peer_manager_internal_events");
+    /// Counter of pending Peer events to PeerManager.
+    pub static ref PENDING_PEER_NOTIFICATIONS: IntGauge = OP_COUNTERS.gauge("pending_peer_notifications");
+
+    /// Counter of pending Connection Handler notifications to PeerManager.
+    pub static ref PENDING_CONNECTION_HANDLER_NOTIFICATIONS: IntGauge = OP_COUNTERS.gauge("pending_connection_handler_notifications");
 
     /// Counter of pending dial requests in Peer Manager
     pub static ref PENDING_PEER_MANAGER_DIAL_REQUESTS: IntGauge  = OP_COUNTERS.gauge("pending_peer_manager_dial_requests");

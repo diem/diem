@@ -7,9 +7,9 @@ use language_e2e_tests::{
     executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
 };
+use libra_proptest_helpers::ValueGenerator;
+use libra_types::transaction::SignedTransaction;
 use proptest::{collection::vec, strategy::Strategy};
-use proptest_helpers::ValueGenerator;
-use types::transaction::SignedTransaction;
 
 /// Benchmarking support for transactions.
 #[derive(Clone, Debug)]
@@ -132,7 +132,9 @@ impl TransactionBenchState {
     fn execute(self) {
         // The output is ignored here since we're just testing transaction performance, not trying
         // to assert correctness.
-        self.executor.execute_block(self.transactions);
+        self.executor
+            .execute_block(self.transactions)
+            .expect("VM should not fail to start");
     }
 }
 

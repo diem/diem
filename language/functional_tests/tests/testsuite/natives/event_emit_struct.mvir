@@ -1,0 +1,26 @@
+module M {
+    import 0x0.LibraAccount;
+
+    struct MyEvent { b: bool }
+
+    public emit_event() {
+        let handle: LibraAccount.EventHandle<Self.MyEvent>;
+        handle = LibraAccount.new_event_handle<Self.MyEvent>();
+        LibraAccount.emit_event<Self.MyEvent>(&mut handle, MyEvent{ b: true });
+        LibraAccount.destroy_handle<Self.MyEvent>(move(handle));
+        return;
+    }
+}
+
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    M.emit_event();
+    return;
+}
+
+// check: ContractEvent
+// check: MyEvent
+// check: EXECUTED

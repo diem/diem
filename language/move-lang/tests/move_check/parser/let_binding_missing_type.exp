@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/let_binding_missing_type.move:3:17 ───
+   │
+ 3 │         let x : = 0;
+   │                 ^ Unexpected token: '='
+   ·
+ 3 │         let x : = 0;
+   │                 - Expected: '[Name]', '[Name<Types>]', '[Address]'
+   │
+

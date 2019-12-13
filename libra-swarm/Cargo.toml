@@ -2,28 +2,25 @@
 name = "libra-swarm"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra swarm"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-client_lib = { package = "client", path = "../client" }
+anyhow = "1.0"
+client_lib = { package = "client", path = "../client", version = "0.1.0" }
 ctrlc = { version = "3.1.3", default-features = false }
 lazy_static = { version = "1.3.0", default-features = false }
 structopt = "0.3.2"
+thiserror = "1.0"
 
-config = { path = "../config" }
-config-builder = { path = "../config/config-builder" }
-debug_interface = { path = "../common/debug_interface" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
-generate-keypair = { path = "../config/generate-keypair" }
-logger = { path = "../common/logger" }
-crypto = { path = "../crypto/crypto" }
-tools = { path = "../common/tools" }
-
-[dev-dependencies]
-crypto = { path = "../crypto/crypto", features = ["testing"]}
-
-[features]
-default = []
-testing = ["crypto/testing", "client_lib/testing"]
+config-builder = { path = "../config/config-builder", version = "0.1.0" }
+libra-config = { path = "../config", version = "0.1.0", features = ["fuzzing"] }
+debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
+generate-keypair = { path = "../config/generate-keypair", version = "0.1.0" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["cloneable-private-keys"] }
+libra-tools = { path = "../common/tools", version = "0.1.0" }

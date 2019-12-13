@@ -433,7 +433,6 @@ impl BytecodeGen {
             GetTxnGasUnitPrice,
             GetTxnMaxGasUnits,
             GetTxnSenderAddress,
-            CreateAccount,
             GetTxnSequenceNumber,
             GetTxnPublicKey,
         ];

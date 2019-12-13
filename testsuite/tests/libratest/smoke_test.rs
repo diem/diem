@@ -2,50 +2,59 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_mut)]
 use cli::{
-    client_proxy::ClientProxy, AccountAddress, CryptoHash, TransactionArgument, TransactionPayload,
+    association_address, client_proxy::ClientProxy, AccountAddress, CryptoHash,
+    TransactionArgument, TransactionPayload,
 };
-use config::config::{NodeConfig, RoleType};
-use crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
+use libra_config::config::{NodeConfig, RoleType};
+use libra_crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
+use libra_logger::prelude::*;
+use libra_swarm::swarm::LibraNode;
 use libra_swarm::{swarm::LibraSwarm, utils};
-use logger::prelude::*;
+use libra_tools::tempdir::TempPath;
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
+use std::fs::{self, File};
+use std::io::Read;
 use std::str::FromStr;
-use tools::tempdir::TempPath;
+use std::{thread, time};
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,
     full_node_swarm: Option<LibraSwarm>,
-    faucet_key: (
-        KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
-        String,
-        Option<TempPath>,
-    ),
+    faucet_key: (KeyPair<Ed25519PrivateKey, Ed25519PublicKey>, String),
     mnemonic_file: TempPath,
 }
 
 impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
-        ::logger::init_for_e2e_testing();
-        let faucet_key = generate_keypair::load_faucet_key_or_create_default(None);
-        let validator_swarm = LibraSwarm::configure_swarm(
-            num_validators,
-            RoleType::Validator,
-            faucet_key.0.clone(),
-            None,
-            None,
-            None,
-        )
-        .unwrap();
+        ::libra_logger::init_for_e2e_testing();
+        let validator_swarm =
+            LibraSwarm::configure_swarm(num_validators, RoleType::Validator, None, None, None)
+                .unwrap();
 
-        let mnemonic_file = tools::tempdir::TempPath::new();
+        let mnemonic_file = libra_tools::tempdir::TempPath::new();
         mnemonic_file
             .create_as_file()
             .expect("could not create temporary mnemonic_file_path");
+
+        let mut key_file = File::open(&validator_swarm.config.faucet_key_path)
+            .expect("Unable to create faucet key file");
+        let mut serialized_key = Vec::new();
+        key_file
+            .read_to_end(&mut serialized_key)
+            .expect("Unable to read serialized faucet key");
+        let keypair = lcs::from_bytes(&serialized_key).expect("Unable to deserialize faucet key");
+        let keypair_path = validator_swarm
+            .config
+            .faucet_key_path
+            .to_str()
+            .expect("Unable to read faucet path")
+            .to_string();
+
         Self {
             validator_swarm,
             full_node_swarm: None,
-            faucet_key,
+            faucet_key: (keypair, keypair_path),
             mnemonic_file,
         }
     }
@@ -55,7 +64,6 @@ impl TestEnvironment {
             LibraSwarm::configure_swarm(
                 num_full_nodes,
                 RoleType::FullNode,
-                self.faucet_key.0.clone(),
                 None,
                 None,
                 Some(String::from(
@@ -78,7 +86,7 @@ impl TestEnvironment {
         };
         let num_attempts = 5;
         for _ in 0..num_attempts {
-            match swarm.launch_attempt(false) {
+            match swarm.launch_attempt(role, false) {
                 Ok(_) => {
                     return;
                 }
@@ -91,13 +99,6 @@ impl TestEnvironment {
     }
 
     fn get_ac_client(&self, port: u16) -> ClientProxy {
-        let config = NodeConfig::load(&self.validator_swarm.config.configs[0]).unwrap();
-        let validator_set_file = self
-            .validator_swarm
-            .dir
-            .as_ref()
-            .join("0")
-            .join(&config.consensus.consensus_peers_file);
         let mnemonic_file_path = self
             .mnemonic_file
             .path()
@@ -111,7 +112,6 @@ impl TestEnvironment {
         ClientProxy::new(
             "localhost",
             port,
-            validator_set_file.to_str().unwrap(),
             &self.faucet_key.1,
             false,
             /* faucet server */ None,
@@ -135,6 +135,10 @@ impl TestEnvironment {
                 panic!("Full Node swarm is not initialized");
             }
         }
+    }
+
+    fn get_validator(&self, node_index: usize) -> Option<&LibraNode> {
+        self.validator_swarm.get_validator(node_index)
     }
 }
 
@@ -239,6 +243,19 @@ fn smoke_test_single_node() {
 }
 
 #[test]
+fn smoke_test_single_node_block_metadata() {
+    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    // just need an address to get the latest version
+    let address = AccountAddress::from_hex_literal("0xA550C18").unwrap();
+    // sleep 1s to commit some blocks
+    thread::sleep(time::Duration::from_secs(1));
+    let (_state, version) = client_proxy
+        .get_latest_account_state(&["q", &address.to_string()])
+        .unwrap();
+    assert!(version > 0, "BlockMetadata txn not persisted");
+}
+
+#[test]
 fn smoke_test_multi_node() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
     test_smoke_script(client_proxy);
@@ -300,7 +317,10 @@ fn test_basic_restartability() {
     let peer_to_restart = 0;
     // restart node
     env.validator_swarm.kill_node(peer_to_restart);
-    assert!(env.validator_swarm.add_node(peer_to_restart, false).is_ok());
+    assert!(env
+        .validator_swarm
+        .add_node(peer_to_restart, RoleType::Validator, false)
+        .is_ok());
     assert_eq!(
         Decimal::from_f64(90.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
@@ -319,6 +339,76 @@ fn test_basic_restartability() {
     assert_eq!(
         Decimal::from_f64(20.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+}
+
+#[test]
+fn test_startup_sync_state() {
+    let (mut env, mut client_proxy_1) = setup_swarm_and_client_proxy(4, 1);
+    client_proxy_1.create_next_account(false).unwrap();
+    client_proxy_1.create_next_account(false).unwrap();
+    client_proxy_1
+        .mint_coins(&["mb", "0", "100"], true)
+        .unwrap();
+    client_proxy_1
+        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(90.0),
+        Decimal::from_str(&client_proxy_1.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy_1.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+    let peer_to_stop = 0;
+    env.validator_swarm.kill_node(peer_to_stop);
+    let node_config = NodeConfig::load(
+        env.validator_swarm
+            .config
+            .config_files
+            .get(peer_to_stop)
+            .unwrap(),
+    )
+    .unwrap();
+    // TODO Remove hardcoded path to state db
+    let state_db_path = node_config.storage.dir().join("libradb");
+    // Verify that state_db_path exists and
+    // we are not deleting a non-existent directory
+    assert!(state_db_path.as_path().exists());
+    // Delete the state db to simulate state db lagging
+    // behind consensus db and forcing a state sync
+    // during a node startup
+    fs::remove_dir_all(state_db_path).unwrap();
+    assert!(env
+        .validator_swarm
+        .add_node(peer_to_stop, RoleType::Validator, false)
+        .is_ok());
+    // create the client for the restarted node
+    let accounts = client_proxy_1.copy_all_accounts();
+    let mut client_proxy_0 = env.get_validator_ac_client(0);
+    let sender_address = accounts[0].address;
+    client_proxy_0.set_accounts(accounts);
+    client_proxy_0.wait_for_transaction(sender_address, 1);
+    assert_eq!(
+        Decimal::from_f64(90.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+    client_proxy_1
+        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .unwrap();
+    client_proxy_0.wait_for_transaction(sender_address, 2);
+    assert_eq!(
+        Decimal::from_f64(80.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(20.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "1"]).unwrap()).ok()
     );
 }
 
@@ -363,7 +453,10 @@ fn test_basic_state_synchronization() {
     }
 
     // Reconnect and synchronize the state
-    assert!(env.validator_swarm.add_node(node_to_restart, false).is_ok());
+    assert!(env
+        .validator_swarm
+        .add_node(node_to_restart, RoleType::Validator, false)
+        .is_ok());
 
     // Wait for all the nodes to catch up
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
@@ -436,7 +529,7 @@ fn test_external_transaction_signer() {
     assert!(submit_txn_result.is_ok());
 
     // query the transaction and check it contains the same values as requested
-    let submitted_signed_txn = client_proxy
+    let txn = client_proxy
         .get_committed_txn_by_acc_seq(&[
             "txn_acc_seq",
             &format!("{}", sender_address),
@@ -446,6 +539,9 @@ fn test_external_transaction_signer() {
         .unwrap()
         .unwrap()
         .0;
+    let submitted_signed_txn = txn
+        .as_signed_user_txn()
+        .expect("Query should get user transaction.");
 
     assert_eq!(submitted_signed_txn.sender(), sender_address);
     assert_eq!(submitted_signed_txn.sequence_number(), sequence_number);
@@ -486,9 +582,11 @@ fn test_full_node_basic_flow() {
     // read state from full node client
     let mut validator_ac_client = env.get_validator_ac_client(1);
     let mut full_node_client = env.get_full_node_ac_client(1);
-    for idx in 0..2 {
+    let mut full_node_client_2 = env.get_full_node_ac_client(0);
+    for idx in 0..3 {
         validator_ac_client.create_next_account(false).unwrap();
         full_node_client.create_next_account(false).unwrap();
+        full_node_client_2.create_next_account(false).unwrap();
         assert_eq!(
             validator_ac_client
                 .get_balance(&["b", &idx.to_string()])
@@ -499,7 +597,152 @@ fn test_full_node_basic_flow() {
         );
     }
 
-    // writes through full node AC are disabled for now
-    let mint_result = full_node_client.mint_coins(&["mintb", "0", "1"], true);
-    assert!(mint_result.is_err());
+    let sender_account = &format!(
+        "{}",
+        validator_ac_client.faucet_account.clone().unwrap().address
+    );
+    // mint from full node and check both validator and full node have correct balance
+    let account3 = validator_ac_client
+        .create_next_account(false)
+        .unwrap()
+        .address;
+    full_node_client.create_next_account(false).unwrap();
+    full_node_client_2.create_next_account(false).unwrap();
+
+    let mint_result = full_node_client.mint_coins(&["mintb", "3", "10"], true);
+    assert!(mint_result.is_ok());
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&full_node_client.get_balance(&["b", "3"]).unwrap()).ok()
+    );
+    let sequence = full_node_client
+        .get_sequence_number(&["sequence", sender_account, "true"])
+        .unwrap();
+    validator_ac_client.wait_for_transaction(
+        validator_ac_client.faucet_account.clone().unwrap().address,
+        sequence,
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&validator_ac_client.get_balance(&["b", "3"]).unwrap()).ok()
+    );
+
+    // reset sequence number for sender account
+    validator_ac_client
+        .get_sequence_number(&["sequence", sender_account, "true"])
+        .unwrap();
+    full_node_client
+        .get_sequence_number(&["sequence", sender_account, "true"])
+        .unwrap();
+
+    // mint from validator and check both nodes have correct balance
+    validator_ac_client.create_next_account(false).unwrap();
+    full_node_client.create_next_account(false).unwrap();
+    full_node_client_2.create_next_account(false).unwrap();
+
+    validator_ac_client
+        .mint_coins(&["mintb", "4", "10"], true)
+        .unwrap();
+    let sequence = validator_ac_client
+        .get_sequence_number(&["sequence", sender_account, "true"])
+        .unwrap();
+    full_node_client.wait_for_transaction(
+        validator_ac_client.faucet_account.clone().unwrap().address,
+        sequence,
+    );
+
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&validator_ac_client.get_balance(&["b", "4"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&full_node_client.get_balance(&["b", "4"]).unwrap()).ok()
+    );
+
+    // minting again on validator doesn't cause error since client sequence has been updated
+    validator_ac_client
+        .mint_coins(&["mintb", "4", "10"], true)
+        .unwrap();
+
+    // test transferring balance from 0 to 1 through full node proxy
+    full_node_client
+        .transfer_coins(&["tb", "3", "4", "10"], true)
+        .unwrap();
+
+    assert_eq!(
+        Decimal::from_f64(0.0),
+        Decimal::from_str(&full_node_client.get_balance(&["b", "3"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(30.0),
+        Decimal::from_str(&validator_ac_client.get_balance(&["b", "4"]).unwrap()).ok()
+    );
+
+    let sequence = validator_ac_client
+        .get_sequence_number(&["sequence", &format!("{}", account3), "true"])
+        .unwrap();
+    full_node_client_2.wait_for_transaction(account3, sequence);
+    assert_eq!(
+        Decimal::from_f64(0.0),
+        Decimal::from_str(&full_node_client_2.get_balance(&["b", "3"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(30.0),
+        Decimal::from_str(&full_node_client_2.get_balance(&["b", "4"]).unwrap()).ok()
+    );
+}
+
+#[test]
+fn test_e2e_reconfiguration() {
+    let (mut env, mut client_proxy_1) = setup_swarm_and_client_proxy(3, 1);
+    // the client connected to the removed validator
+    let mut client_proxy_0 = env.get_validator_ac_client(0);
+    client_proxy_1.create_next_account(false).unwrap();
+    client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
+    client_proxy_1
+        .mint_coins(&["mintb", "0", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy_1.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    // wait for the mint txn in node 0
+    client_proxy_0.wait_for_transaction(association_address(), 1);
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    let peer_id = env
+        .get_validator(0)
+        .unwrap()
+        .validator_peer_id()
+        .unwrap()
+        .to_string();
+    client_proxy_1
+        .remove_validator(&["remove_validator", &peer_id], true)
+        .unwrap();
+    // mint another 10 coins after remove node 0
+    client_proxy_1
+        .mint_coins(&["mintb", "0", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(20.0),
+        Decimal::from_str(&client_proxy_1.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    // client connected to removed validator can not see the update
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    // Add the node back
+    client_proxy_1
+        .add_validator(&["add_validator", &peer_id], true)
+        .unwrap();
+    // Wait for it catches up, mint1 + remove + mint2 + add => seq == 4
+    client_proxy_0.wait_for_transaction(association_address(), 4);
+    assert_eq!(
+        Decimal::from_f64(20.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
+    );
 }

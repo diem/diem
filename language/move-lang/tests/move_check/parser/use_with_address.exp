@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/use_with_address.move:3:9 ───
+   │
+ 3 │ address 0x1:
+   │         ^^^ Unexpected token: '0x1'
+   ·
+ 3 │ address 0x1:
+   │         --- Expected: '('
+   │
+

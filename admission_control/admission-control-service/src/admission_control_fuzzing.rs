@@ -1,18 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::AdmissionControlService;
-use crate::{
-    admission_control_service::SubmitTransactionRequest,
-    mocks::local_mock_mempool::LocalMockMempool,
-};
+use crate::{mocks::local_mock_mempool::LocalMockMempool, upstream_proxy};
+use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
+use channel;
+use futures::executor::block_on;
+use libra_config::config::{AdmissionControlConfig, RoleType};
+use libra_proptest_helpers::ValueGenerator;
+use libra_prost_ext::MessageExt;
+use libra_types::transaction::SignedTransaction;
+use network::validator_network::AdmissionControlNetworkSender;
 use proptest;
-use proptest_helpers::ValueGenerator;
-use proto_conv::IntoProto;
-use protobuf;
+use prost::Message;
 use std::sync::Arc;
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
-use types::transaction::SignedTransaction;
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 #[test]
@@ -27,17 +28,17 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
     // use proptest to generate a SignedTransaction
     let signed_txn = gen.generate(proptest::arbitrary::any::<SignedTransaction>());
     // wrap it in a SubmitTransactionRequest
-    let mut req = SubmitTransactionRequest::new();
-    req.set_signed_txn(signed_txn.into_proto());
+    let mut req = SubmitTransactionRequest::default();
+    req.transaction = Some(signed_txn.into());
 
-    protobuf::Message::write_to_bytes(&req).unwrap()
+    req.to_vec().unwrap()
 }
 
 /// fuzzer takes a serialized SubmitTransactionRequest an process it with an admission control
 /// service
 pub fn fuzzer(data: &[u8]) {
     // parse SubmitTransactionRequest
-    let req: SubmitTransactionRequest = match protobuf::parse_from_bytes(data) {
+    let req = match SubmitTransactionRequest::decode(data) {
         Ok(value) => value,
         Err(_) => {
             if cfg!(test) {
@@ -47,8 +48,13 @@ pub fn fuzzer(data: &[u8]) {
         }
     };
 
-    // create service to receive it
-    let ac_service = AdmissionControlService::new(
+    let (network_reqs_tx, _) = channel::new_test(8);
+    let network_sender = AdmissionControlNetworkSender::new(network_reqs_tx);
+
+    let upstream_proxy_data = upstream_proxy::UpstreamProxyData::new(
+        AdmissionControlConfig::default(),
+        network_sender,
+        RoleType::Validator,
         Some(Arc::new(LocalMockMempool::new())),
         Arc::new(MockStorageReadClient),
         Arc::new(MockVMValidator),
@@ -56,7 +62,10 @@ pub fn fuzzer(data: &[u8]) {
     );
 
     // process the request
-    let res = ac_service.submit_transaction_inner(req);
+    let res = block_on(upstream_proxy::submit_transaction_to_mempool(
+        upstream_proxy_data,
+        req,
+    ));
     if cfg!(test) && res.is_err() {
         panic!();
     }

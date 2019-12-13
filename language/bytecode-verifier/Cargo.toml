@@ -1,0 +1,26 @@
+[package]
+name = "bytecode-verifier"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra bytecode verifier"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+mirai-annotations = "1.4.0"
+petgraph = "0.4"
+
+vm = { path = "../vm", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+vm-runtime-types = { path = "../vm/vm-runtime/vm-runtime-types", version = "0.1.0" }
+
+[dev-dependencies]
+invalid-mutations = { path = "invalid-mutations", version = "0.1.0" }
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

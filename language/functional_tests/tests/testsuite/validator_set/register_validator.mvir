@@ -1,14 +1,66 @@
-import 0x0.ValidatorSet;
+import 0x0.ValidatorConfig;
+import 0x0.LibraSystem;
 
-// register Alice as a validator candidate, then rotate a key + check that it worked
+//! account: alice
+//! account: vivian, 100000, 0, validator
+//! account: viola, 100000, 0, validator
+
+// check that the validator account config works
+import 0x0.LibraSystem;
+
 main() {
-    ValidatorSet.register_candidate_validator(h"10", h"20", h"30");
-
-    assert(ValidatorSet.get_consensus_pubkey(get_txn_sender()) == h"30", 77);
-
-    ValidatorSet.rotate_consensus_pubkey(h"40");
-
-    assert(ValidatorSet.get_consensus_pubkey(get_txn_sender()) == h"40", 88);
+    assert(!LibraSystem.is_validator(get_txn_sender()), 1);
+    assert(!LibraSystem.is_validator({{alice}}), 2);
+    assert(LibraSystem.is_validator({{vivian}}), 3);
+    assert(LibraSystem.is_validator({{viola}}), 4);
+    // number of validators should equal the number we declared
+    assert(LibraSystem.validator_set_size() == 2, 5);
+    assert(LibraSystem.get_ith_validator_address(1) == {{vivian}}, 6);
+    assert(LibraSystem.get_ith_validator_address(0) == {{viola}}, 7);
 
     return;
 }
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+
+// check that sending from validator accounts works
+main() {
+    assert(LibraSystem.is_validator(get_txn_sender()), 8);
+
+    return;
+}
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: alice
+import 0x0.ValidatorConfig;
+
+// register Alice as a validator candidate, then rotate a key + check that it worked.
+main() {
+    let config: ValidatorConfig.Config;
+
+    // Alice registers as a validator candidate
+    assert(!ValidatorConfig.has(get_txn_sender()), 9);
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
+    assert(ValidatorConfig.has(get_txn_sender()), 10);
+
+    // Rotating the consensus_pubkey should work
+    config = ValidatorConfig.config(get_txn_sender());
+    assert(ValidatorConfig.consensus_pubkey(&config) == h"10", 11);
+    ValidatorConfig.rotate_consensus_pubkey(h"70");
+    assert(ValidatorConfig.consensus_pubkey(&config) == h"70", 12);
+
+    // Rotating the validator_network_pubkey should work
+    assert(ValidatorConfig.validator_network_identity_pubkey(&config) == h"30", 13);
+    ValidatorConfig.rotate_validator_network_identity_pubkey(h"80");
+    assert(ValidatorConfig.validator_network_identity_pubkey(&config) == h"80", 14);
+
+    return;
+}
+
+// check: EXECUTED

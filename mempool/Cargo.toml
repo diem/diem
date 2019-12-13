@@ -1,42 +1,49 @@
 [package]
-name = "mempool"
+name = "libra-mempool"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra mempool"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
+bytes = "0.4.12"
 chrono = "0.4.7"
 futures = "0.1.28"
-futures-preview = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["compat"] }
-grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["protobuf-codec"] }
+futures-preview = { version = "0.3.0", package = "futures", features = ["compat"] }
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 num_cpus = "1.10.1"
 lazy_static = "1.3.0"
 lru-cache = "0.1.1"
-protobuf = "~2.7"
 prost = "0.5.0"
-tokio = "0.1.22"
+tokio = { version = "0.2", features = ["full"] }
 ttl_cache = "0.4.2"
 
-bounded-executor = { path = "../common/bounded-executor" }
-config = { path = "../config" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
-grpc_helpers = { path = "../common/grpc_helpers" }
-logger = { path = "../common/logger" }
-metrics = { path = "../common/metrics" }
-network = { path = "../network" }
-crypto = { path = "../crypto/crypto" }
-proto_conv = { path = "../common/proto_conv" }
-storage_client = { path = "../storage/storage_client" }
-types = { path = "../types" }
-vm_validator = { path = "../vm_validator" }
+libra-mempool-shared-proto = { path = "mempool-shared-proto", version = "0.1.0" }
+bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
+libra-config = { path = "../config", version = "0.1.0" }
+grpc-helpers = { path = "../common/grpc-helpers", version = "0.1.0" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+mirai-annotations = "1.5.0"
+network = { path = "../network", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+storage-client = { path = "../storage/storage-client", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
+vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [dev-dependencies]
 rand = "0.6.5"
-channel = { path = "../common/channel" }
-storage-service = { path = "../storage/storage-service" }
-types = { path = "../types", features = ["testing"] }
+channel = { path = "../common/channel", version = "0.1.0" }
+storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 
 [build-dependencies]
-build_helpers = { path = "../common/build_helpers" }
+grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing", "storage-service/fuzzing"]

@@ -1,0 +1,26 @@
+//! account: alice, 10000
+//! account: bob, 10000
+
+//! sender: alice
+main() {
+    return;
+}
+
+
+//! new-transaction
+//! sender: bob
+main() {
+    let x: u64;
+    x = 1 + 2 + 3;
+    return;
+}
+
+
+//! new-transaction
+import 0x0.LibraAccount;
+
+main() {
+    // Alice did less work than bob so she should pay less gas.
+    assert(LibraAccount.balance({{bob}}) < LibraAccount.balance({{alice}}), 42);
+    return;
+}

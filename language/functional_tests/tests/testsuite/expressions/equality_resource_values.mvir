@@ -1,21 +1,10 @@
 module Token {
-    resource T { }
+    resource T { b: bool }
 
     public test() {
         let no: bool;
-        no = T{} == T{};
+        no = T{ b: true } == T{ b: true };
         return;
     }
 }
-
-//! new-transaction
-
-import {{default}}.Token;
-
-main() {
-    Token.test();
-    return;
-}
-
-// check: VerificationFailure
 // check: EQUALITY_OP_TYPE_MISMATCH_ERROR

@@ -18,15 +18,15 @@
 //! its numeric value.
 
 use crate::schema::{ensure_slice_len_eq, STALE_NODE_INDEX_CF_NAME};
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::prelude::*;
 use jellyfish_merkle::{node_type::NodeKey, StaleNodeIndex};
+use libra_types::transaction::Version;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, SeekKeyCodec, ValueCodec},
 };
 use std::{io::Write, mem::size_of};
-use types::transaction::Version;
 
 define_schema!(
     StaleNodeIndexSchema,

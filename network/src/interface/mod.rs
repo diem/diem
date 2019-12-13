@@ -15,26 +15,34 @@ use crate::{
     common::NetworkPublicKeys,
     connectivity_manager::ConnectivityRequest,
     counters,
-    peer_manager::PeerManagerNotification,
+    peer_manager::{PeerManagerNotification, PeerManagerRequest},
     protocols::{
         direct_send::{DirectSendNotification, DirectSendRequest, Message},
         rpc::{InboundRpcRequest, OutboundRpcRequest, RpcNotification, RpcRequest},
     },
     validator_network::{
-        ConsensusNetworkEvents, ConsensusNetworkSender, MempoolNetworkEvents, MempoolNetworkSender,
-        StateSynchronizerEvents, StateSynchronizerSender,
+        AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ConsensusNetworkEvents,
+        ConsensusNetworkSender, DiscoveryNetworkEvents, DiscoveryNetworkSender,
+        HealthCheckerNetworkEvents, HealthCheckerNetworkSender, MempoolNetworkEvents,
+        MempoolNetworkSender, StateSynchronizerEvents, StateSynchronizerSender,
     },
     ProtocolId,
 };
 use channel;
-use futures::{future::BoxFuture, FutureExt, SinkExt, StreamExt};
-use logger::prelude::*;
+use futures::{channel::oneshot, future::BoxFuture, FutureExt, SinkExt, StreamExt};
+use libra_logger::prelude::*;
+use libra_types::PeerId;
+use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, fmt::Debug, time::Duration};
-use types::PeerId;
 
-pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
-pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
-pub const STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
+pub use crate::peer_manager::PeerManagerError;
+
+pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
+pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
+pub const STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
+pub const ADMISSION_CONTROL_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
+pub const HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
+pub const DISCOVERY_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds.
 
 /// Requests [`NetworkProvider`] receives from the network interface.
 #[derive(Debug)]
@@ -45,6 +53,18 @@ pub enum NetworkRequest {
     SendMessage(PeerId, Message),
     /// Update set of nodes eligible to join the network.
     UpdateEligibleNodes(HashMap<PeerId, NetworkPublicKeys>),
+    /// Dial the peer at the given `Multiaddr` to establish a connection. When
+    /// the dial attempt succeeds or fails, the result will be returned over the
+    /// oneshot channel.
+    DialPeer(
+        PeerId,
+        Multiaddr,
+        oneshot::Sender<Result<(), PeerManagerError>>,
+    ),
+    /// Disconnect from the peer with `PeerId`. The disconnect request could fail
+    /// if, for example, we are not currently connected with the peer. Results
+    /// are sent back to the caller via the oneshot channel.
+    DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
 }
 
 /// Notifications that [`NetworkProvider`] sends to consumers of its API. The
@@ -76,12 +96,26 @@ pub trait LibraNetworkProvider {
         &mut self,
         state_sync_protocols: Vec<ProtocolId>,
     ) -> (StateSynchronizerSender, StateSynchronizerEvents);
+    fn add_admission_control(
+        &mut self,
+        ac_protocols: Vec<ProtocolId>,
+    ) -> (AdmissionControlNetworkSender, AdmissionControlNetworkEvents);
+    fn add_health_checker(
+        &mut self,
+        hc_protocols: Vec<ProtocolId>,
+    ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents);
+    fn add_discovery(
+        &mut self,
+        discovery_protocols: Vec<ProtocolId>,
+    ) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents);
     fn start(self: Box<Self>) -> BoxFuture<'static, ()>;
 }
 
 pub struct NetworkProvider<TSubstream> {
     /// Map from protocol to upstream handlers for events of that protocol type.
     upstream_handlers: HashMap<ProtocolId, channel::Sender<NetworkNotification>>,
+    /// Channel to send requests to the PeerManager actor.
+    peer_mgr_reqs_tx: channel::Sender<PeerManagerRequest<TSubstream>>,
     /// Channel over which we receive notifications from PeerManager.
     peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
     /// Channel over which we send requets to RPC actor.
@@ -170,8 +204,62 @@ where
         (state_sync_network_sender, state_sync_network_events)
     }
 
+    fn add_admission_control(
+        &mut self,
+        ac_protocols: Vec<ProtocolId>,
+    ) -> (AdmissionControlNetworkSender, AdmissionControlNetworkEvents) {
+        // Construct Admission Control network interfaces
+        let (ac_tx, ac_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_ADMISSION_CONTROL_NETWORK_EVENTS,
+            Duration::from_millis(ADMISSION_CONTROL_INBOUND_MSG_TIMEOUT_MS),
+        );
+        let ac_network_sender = AdmissionControlNetworkSender::new(self.requests_tx.clone());
+        let ac_network_events = AdmissionControlNetworkEvents::new(ac_rx);
+        let ac_handlers = ac_protocols.iter().map(|p| (p.clone(), ac_tx.clone()));
+        self.upstream_handlers.extend(ac_handlers);
+        (ac_network_sender, ac_network_events)
+    }
+
+    fn add_health_checker(
+        &mut self,
+        hc_protocols: Vec<ProtocolId>,
+    ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
+        // Construct Health Checker network interfaces
+        let (hc_tx, hc_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS,
+            Duration::from_millis(HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS),
+        );
+        let hc_network_sender = HealthCheckerNetworkSender::new(self.requests_tx.clone());
+        let hc_network_events = HealthCheckerNetworkEvents::new(hc_rx);
+        let hc_handlers = hc_protocols.iter().map(|p| (p.clone(), hc_tx.clone()));
+        self.upstream_handlers.extend(hc_handlers);
+        (hc_network_sender, hc_network_events)
+    }
+
+    fn add_discovery(
+        &mut self,
+        discovery_protocols: Vec<ProtocolId>,
+    ) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
+        // Construct Discovery Network interfaces
+        let (discovery_tx, discovery_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_DISCOVERY_NETWORK_EVENTS,
+            Duration::from_millis(DISCOVERY_INBOUND_MSG_TIMEOUT_MS),
+        );
+        let discovery_network_sender = DiscoveryNetworkSender::new(self.requests_tx.clone());
+        let discovery_network_events = DiscoveryNetworkEvents::new(discovery_rx);
+        let discovery_handlers = discovery_protocols
+            .iter()
+            .map(|p| (p.clone(), discovery_tx.clone()));
+        self.upstream_handlers.extend(discovery_handlers);
+        (discovery_network_sender, discovery_network_events)
+    }
+
     fn start(self: Box<Self>) -> BoxFuture<'static, ()> {
         let f = async move {
+            let peer_mgr_reqs_tx = self.peer_mgr_reqs_tx.clone();
             let rpc_reqs_tx = self.rpc_reqs_tx.clone();
             let ds_reqs_tx = self.ds_reqs_tx.clone();
             let conn_mgr_reqs_tx = self.conn_mgr_reqs_tx.clone();
@@ -180,6 +268,7 @@ where
                 .map(move |req| {
                     Self::handle_network_request(
                         req,
+                        peer_mgr_reqs_tx.clone(),
                         rpc_reqs_tx.clone(),
                         ds_reqs_tx.clone(),
                         conn_mgr_reqs_tx.clone(),
@@ -232,6 +321,7 @@ where
     TSubstream: Debug + Send,
 {
     pub fn new(
+        peer_mgr_reqs_tx: channel::Sender<PeerManagerRequest<TSubstream>>,
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
         rpc_reqs_tx: channel::Sender<RpcRequest>,
         rpc_notifs_rx: channel::Receiver<RpcNotification>,
@@ -246,6 +336,7 @@ where
     ) -> Self {
         Self {
             upstream_handlers: HashMap::new(),
+            peer_mgr_reqs_tx,
             peer_mgr_notifs_rx,
             rpc_reqs_tx,
             rpc_notifs_rx,
@@ -262,6 +353,7 @@ where
 
     async fn handle_network_request(
         req: NetworkRequest,
+        mut peer_mgr_reqs_tx: channel::Sender<PeerManagerRequest<TSubstream>>,
         mut rpc_reqs_tx: channel::Sender<RpcRequest>,
         mut ds_reqs_tx: channel::Sender<DirectSendRequest>,
         conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
@@ -275,8 +367,12 @@ where
                     .unwrap();
             }
             NetworkRequest::SendMessage(peer_id, msg) => {
-                counters::DIRECT_SEND_MESSAGES_SENT.inc();
-                counters::DIRECT_SEND_BYTES_SENT.inc_by(msg.mdata.len() as i64);
+                counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                    .with_label_values(&["sent"])
+                    .inc();
+                counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
+                    .with_label_values(&["sent"])
+                    .observe(msg.mdata.len() as f64);
                 ds_reqs_tx
                     .send(DirectSendRequest::SendMessage(peer_id, msg))
                     .await
@@ -284,10 +380,21 @@ where
             }
             NetworkRequest::UpdateEligibleNodes(nodes) => {
                 let mut conn_mgr_reqs_tx = conn_mgr_reqs_tx
-                    .clone()
                     .expect("Received requst to update eligible nodes in permissionless network");
                 conn_mgr_reqs_tx
                     .send(ConnectivityRequest::UpdateEligibleNodes(nodes))
+                    .await
+                    .unwrap();
+            }
+            NetworkRequest::DialPeer(peer_id, addr, sender) => {
+                peer_mgr_reqs_tx
+                    .send(PeerManagerRequest::DialPeer(peer_id, addr, sender))
+                    .await
+                    .unwrap();
+            }
+            NetworkRequest::DisconnectPeer(peer_id, sender) => {
+                peer_mgr_reqs_tx
+                    .send(PeerManagerRequest::DisconnectPeer(peer_id, sender))
                     .await
                     .unwrap();
             }
@@ -301,7 +408,6 @@ where
         trace!("PeerManagerNotification::{:?}", notif);
         match notif {
             PeerManagerNotification::NewPeer(peer_id, _addr) => {
-                counters::CONNECTED_PEERS.inc();
                 for ch in upstream_handlers.values_mut() {
                     ch.send(NetworkNotification::NewPeer(peer_id))
                         .await
@@ -309,7 +415,6 @@ where
                 }
             }
             PeerManagerNotification::LostPeer(peer_id, _addr) => {
-                counters::CONNECTED_PEERS.dec();
                 for ch in upstream_handlers.values_mut() {
                     ch.send(NetworkNotification::LostPeer(peer_id))
                         .await
@@ -347,8 +452,12 @@ where
         trace!("DirectSendNotification::{:?}", notif);
         match notif {
             DirectSendNotification::RecvMessage(peer_id, msg) => {
-                counters::DIRECT_SEND_MESSAGES_RECEIVED.inc();
-                counters::DIRECT_SEND_BYTES_RECEIVED.inc_by(msg.mdata.len() as i64);
+                counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                    .with_label_values(&["received"])
+                    .inc();
+                counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
+                    .with_label_values(&["received"])
+                    .observe(msg.mdata.len() as f64);
                 let ch = upstream_handlers
                     .get_mut(&msg.protocol)
                     .expect("DirectSend protocol not registered");

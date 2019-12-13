@@ -1,0 +1,28 @@
+error: 
+
+   ┌── tests/move_check/typing/type_variable_join_single_pack_invalid.move:5:27 ───
+   │
+ 5 │         let b = Box { f1: false, f2: 1 };
+   │                                      ^ Invalid argument for field 'f2' for '0x8675309::M::Box'
+   ·
+ 5 │         let b = Box { f1: false, f2: 1 };
+   │                           ----- The type: 'bool'
+   ·
+ 5 │         let b = Box { f1: false, f2: 1 };
+   │                                      - Is not compatible with: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/type_variable_join_single_pack_invalid.move:6:38 ───
+   │
+ 6 │         let b2 = Box { f1: Box { f1: 0, f2: 0 }, f2:  Box { f1: false, f2: false } };
+   │                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid argument for field 'f2' for '0x8675309::M::Box'
+   ·
+ 6 │         let b2 = Box { f1: Box { f1: 0, f2: 0 }, f2:  Box { f1: false, f2: false } };
+   │                                      - The type: 'u64'
+   ·
+ 6 │         let b2 = Box { f1: Box { f1: 0, f2: 0 }, f2:  Box { f1: false, f2: false } };
+   │                                                                 ----- Is not compatible with: 'bool'
+   │
+

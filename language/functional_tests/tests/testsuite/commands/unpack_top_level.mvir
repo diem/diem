@@ -1,8 +1,8 @@
 module Test {
-    struct T { }
+    struct T { b: bool }
 
     public new_t(): Self.T {
-        return T { };
+        return T { b: true };
     }
 
 }
@@ -13,9 +13,10 @@ import {{default}}.Test;
 
 main() {
     let t: Test.T;
+    let b: bool;
 
     t = Test.new_t();
-    T { } = move(t);
+    T { b } = move(t);
 
     return;
 }

@@ -1,0 +1,70 @@
+error: 
+
+   ┌── tests/move_check/typing/pack_invalid_argument.move:2:19 ───
+   │
+ 7 │         (S { f: false } : S);
+   │                 ^^^^^ Invalid argument for field 'f' for '0x8675309::M::S'
+   ·
+ 7 │         (S { f: false } : S);
+   │                 ----- The type: 'bool'
+   ·
+ 2 │     struct S { f: u64 }
+   │                   --- Is not compatible with: 'u64'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_invalid_argument.move:4:28 ───
+    │
+ 17 │             s: r,
+    │                ^ Invalid argument for field 's' for '0x8675309::M::R'
+    ·
+ 15 │          } : R);
+    │              - The type: '0x8675309::M::R'
+    ·
+ 4 │     resource struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
+    │                            - Is not compatible with: '0x8675309::M::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_invalid_argument.move:4:34 ───
+    │
+ 18 │             f: false,
+    │                ^^^^^ Invalid argument for field 'f' for '0x8675309::M::R'
+    ·
+ 18 │             f: false,
+    │                ----- The type: 'bool'
+    ·
+ 4 │     resource struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
+    │                                  --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_invalid_argument.move:4:47 ───
+    │
+ 19 │             n1: Nat { f: false },
+    │                 ^^^^^^^^^^^^^^^^ Invalid argument for field 'n1' for '0x8675309::M::R'
+    ·
+ 19 │             n1: Nat { f: false },
+    │                          ----- The type: 'bool'
+    ·
+ 4 │     resource struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
+    │                                               --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_invalid_argument.move:4:61 ───
+    │
+ 20 │             n2: Nat{ f: r }
+    │                 ^^^^^^^^^^^ Invalid argument for field 'n2' for '0x8675309::M::R'
+    ·
+ 15 │          } : R);
+    │              - The type: '0x8675309::M::R'
+    ·
+ 4 │     resource struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
+    │                                                             - Is not compatible with: '0x8675309::M::S'
+    │
+

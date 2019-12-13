@@ -1,0 +1,224 @@
+// Tests for parsing specifications
+
+// Test parsing the conditions themselves relative to return values, acquires clauses
+//! no-run: runtime
+module TestConditions {
+
+  resource T { i: u64 }
+
+  public ensures_alone()
+  ensures true
+  {
+      return;
+  }
+
+  public requires_alone()
+  requires true
+  {
+      return;
+  }
+
+  public aborts_if_alone()
+  aborts_if true
+  {
+      return;
+  }
+
+  public succeeds_if_alone()
+  succeeds_if true
+  {
+      return;
+  }
+
+  public ensures_with_return(): bool
+  ensures true
+  {
+      return true;
+  }
+
+  public ensures_with_acquires()
+  acquires T
+  ensures true
+  {
+      _ = borrow_global<T>(0x0);
+      return;
+  }
+
+  public ensures_with_return_acquires(): bool
+  acquires T
+  ensures true
+  {
+      _ = borrow_global<T>(0x0);
+      return true;
+  }
+
+  public multiple_ensures()
+  ensures true
+  ensures false
+  ensures true
+  {
+      return;
+  }
+
+  public all_together_now(): bool
+  acquires T
+  requires true
+  requires false
+  ensures true
+  ensures false
+  aborts_if true
+  aborts_if false
+  succeeds_if true
+  succeeds_if false
+  {
+      _ = borrow_global<T>(0x0);
+     return true;
+  }
+
+}
+
+// check that we can parse the language of spec expressions without access paths
+//! new-transaction
+//! no-run: runtime
+module TestSpecExp {
+
+  public ensures_ret()
+  ensures return
+  {
+      return;
+  }
+
+  public ensures_txn_sender()
+  ensures txn_sender {
+      return;
+  }
+
+  public ensures_addr()
+  ensures 0x0
+  {
+      return;
+  }
+
+  public ensures_formal(b: bool)
+  ensures b
+  {
+      return;
+  }
+
+  public ensures_global(a: address)
+  ensures global<T>(a)
+  {
+      return;
+  }
+
+  public ensures_exists(a: address)
+  ensures global_exists<T>(a)
+  {
+      return;
+  }
+
+  public ensures_old(b: bool)
+  ensures old(b)
+  {
+      return;
+  }
+
+  public ensures_old_global(a: address)
+  ensures old(global<T>(a))
+  {
+      return;
+  }
+
+}
+
+// check that we can handle the trickier case of access paths
+//! new-transaction
+//! no-run: runtime
+module TestEnsuresAccessPath {
+
+  resource T { b: bool, a: address }
+  resource T1 { y: Self.T }
+  resource T2 { x: Self.T1 }
+
+
+  public ensures_access_path(t: Self.T): Self.T
+  ensures t/b
+  {
+      return move(t);
+  }
+
+  public ensures_access_path2(t: Self.T1): Self.T1
+  ensures t/y/b
+  {
+      return move(t);
+  }
+
+  public ensures_access_path3(t: Self.T2): Self.T2
+  ensures t/x/y/b
+  {
+      return move(t);
+  }
+
+  public ensures_old_access_path(t: Self.T): Self.T
+  ensures old(t/b)
+  {
+      return move(t);
+  }
+
+  public ensures_exists_access_path(t: Self.T): Self.T
+  ensures global_exists<T>(t/a)
+  {
+      return move(t);
+  }
+
+  public ensures_global_access_path(t: Self.T): Self.T
+  ensures global<T>(t/a)
+  {
+      return move(t);
+  }
+
+}
+
+//! new-transaction
+//! no-run: runtime
+module TestBinaryOps {
+  resource T { b: bool }
+  resource Pair { x: u64, y: u64}
+
+  public ret_eq_seven(): u64
+  ensures return == 7
+  {
+      return 7;
+  }
+
+  public ret_neq_seven(): u64
+  ensures return != 7
+  {
+      return 5;
+  }
+
+  public ret_add(x: u64): u64
+  ensures return == x + 1
+  {
+      return move(x) + 1;
+  }
+
+  public ret_sub(x: u64): u64
+  ensures return - 1 == x
+  {
+      return move(x) + 1;
+  }
+
+  public ret_unop(x: bool): bool
+  ensures return == !x
+  {
+      return !move(x);
+  }
+
+  public ret_access_path_exp(p: &Self.Pair): u64
+  ensures return == p/x + p/y
+  {
+      return *&copy(p).x + *&move(p).y;
+  }
+
+}

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/naming/standalone_module_ident.move:9:23 ───
+   │
+ 9 │         let x = 0x1::X;
+   │                       ^ Unexpected token: ';'
+   ·
+ 9 │         let x = 0x1::X;
+   │                       - Expected: '::'
+   │
+

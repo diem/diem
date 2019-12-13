@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/expr_abort_missing_value.move:5:5 ───
+   │
+ 5 │     }
+   │     ^ Unexpected token: '}'
+   ·
+ 5 │     }
+   │     - Expected: 'move', 'copy', 'break', 'continue', '[Name]', '[Name<Types>]', '[Address]', 'true', 'false', '[U64]', '(', '{', '::'
+   │
+

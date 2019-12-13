@@ -1,10 +1,10 @@
 module Test {
-    struct X { }
+    struct X { b: bool }
     struct T { i: u64, x: Self.X, b: bool, y: u64 }
 
     public new_t(): Self.T {
         let x: Self.X;
-        x = X { };
+        x = X { b: true };
         return T { i: 0, x: move(x), b: false, y: 0 };
     }
 
@@ -17,22 +17,4 @@ module Test {
     }
 
 }
-
-//! new-transaction
-
-import {{default}}.Test;
-
-main() {
-    let x: Test.X;
-    let i: u64;
-    let t: Test.T;
-    let b: bool;
-
-    t = Test.new_t();
-    i, x, b = Test.destroy_t(move(t));
-
-    return;
-}
-
-// check: VerificationFailure
 // check: POSITIVE_STACK_SIZE_AT_BLOCK_END

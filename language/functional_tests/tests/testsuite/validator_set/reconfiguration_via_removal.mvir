@@ -1,0 +1,65 @@
+//! account: alice
+//! account: vivian, 1000000, 0, validator
+//! account: viola, 1000000, 0, validator
+
+//! sender: association
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.remove_validator({{vivian}});
+
+    return;
+}
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: alice
+import 0x0.ValidatorConfig;
+main() {
+    let config: ValidatorConfig.Config;
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
+
+    return;
+}
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: association
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.add_validator({{alice}});
+
+    return;
+}
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: viola
+// Run the block prologue. Reconfiguration should be triggered, which will both remove Vivian and
+// add Alice
+// TODO: trigger a BlockMetadata transaction here instead
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.block_prologue(1, h"aa", h"bb", {{viola}});
+    return;
+}
+
+// check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
+// check: EXECUTED
+
+//! new-transaction
+// check that Vivian is no longer a validator,  Alice is now a validator, and Viola is still a
+// validator
+import 0x0.LibraSystem;
+main() {
+    assert(!LibraSystem.is_validator({{vivian}}), 70);
+    assert(LibraSystem.is_validator({{alice}}), 71);
+    assert(LibraSystem.is_validator({{viola}}), 72);
+
+    return;
+}
+
+// check: EXECUTED

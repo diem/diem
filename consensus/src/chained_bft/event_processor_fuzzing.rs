@@ -1,33 +1,32 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-        epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
             pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
-            pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
             rotating_proposer_election::RotatingProposer,
         },
-        network::ConsensusNetworkImpl,
+        network::NetworkSender,
         persistent_storage::{PersistentStorage, RecoveryData},
-        safety::safety_rules::SafetyRules,
         test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager, TestPayload},
     },
     util::mock_time_service::SimulatedTimeService,
 };
+use consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures};
 use futures::{channel::mpsc, executor::block_on};
 use lazy_static::lazy_static;
-use network::{
-    proto::Proposal,
-    validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
-};
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message as Message_imported_for_functions;
+use libra_prost_ext::MessageExt;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
+use network::{proto::Proposal, validator_network::ConsensusNetworkSender};
+use prost::Message as _;
+use safety_rules::{InMemoryStorage, SafetyRules};
+use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
-use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
 // This generates a proposal for round 1
 pub fn generate_corpus_proposal() -> Vec<u8> {
@@ -42,7 +41,11 @@ pub fn generate_corpus_proposal() -> Vec<u8> {
             .await;
         // serialize and return proposal
         let proposal = proposal.unwrap();
-        proposal.into_proto().write_to_bytes().unwrap()
+        Proposal::try_from(proposal)
+            .unwrap()
+            .to_bytes()
+            .unwrap()
+            .to_vec()
     })
 }
 
@@ -54,20 +57,17 @@ lazy_static! {
 
 // helpers
 fn build_empty_store(
-    signer: ValidatorSigner,
     storage: Arc<dyn PersistentStorage<TestPayload>>,
     initial_data: RecoveryData<TestPayload>,
 ) -> Arc<BlockStore<TestPayload>> {
     let (_commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
 
-    Arc::new(block_on(BlockStore::new(
+    Arc::new(BlockStore::new(
         storage,
         initial_data,
-        signer,
         Arc::new(EmptyStateComputer),
-        true,
         10, // max pruned blocks in mem
-    )))
+    ))
 }
 
 // TODO: MockStorage -> EmptyStorage
@@ -76,15 +76,7 @@ fn create_pacemaker() -> Pacemaker {
     let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
     let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
     let time_service = Arc::new(SimulatedTimeService::new());
-    Pacemaker::new(
-        MockStorage::<TestPayload>::start_for_testing()
-            .0
-            .persistent_liveness_storage(),
-        time_interval,
-        time_service,
-        pacemaker_timeout_sender,
-        HighestTimeoutCertificates::default(),
-    )
+    Pacemaker::new(time_interval, time_service, pacemaker_timeout_sender)
 }
 
 // Creates an EventProcessor for fuzzing
@@ -94,42 +86,41 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 
     // TODO: remove
     let validator = ValidatorVerifier::new_single(signer.author(), signer.public_key());
-
-    // EpochManager
-    let epoch_mgr = Arc::new(EpochManager::new(0, validator));
+    let validator_set = (&validator).into();
 
     // TODO: EmptyStorage
-    let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
-    let consensus_state = initial_data.state();
+    let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing(validator_set);
 
     // TODO: remove
-    let safety_rules = SafetyRules::new(consensus_state);
+    let safety_rules =
+        SafetyRules::new(InMemoryStorage::default_storage(), Arc::new(signer.clone()));
 
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) = channel::new_test(8);
-    let (_consensus_tx, consensus_rx) = channel::new_test(8);
     let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
-    let network_events = ConsensusNetworkEvents::new(consensus_rx);
-    let network = ConsensusNetworkImpl::new(
+    let (self_sender, _self_receiver) = channel::new_test(8);
+    let network = NetworkSender::new(
         signer.author(),
         network_sender,
-        network_events,
-        Arc::clone(&epoch_mgr),
+        self_sender,
+        initial_data.validators(),
     );
 
+    let validators = initial_data.validators();
+
     // TODO: mock
-    let block_store = build_empty_store(signer.clone(), storage.clone(), initial_data);
+    let block_store = build_empty_store(storage.clone(), initial_data);
 
     // TODO: remove
     let time_service = Arc::new(SimulatedTimeService::new());
 
     // TODO: remove
     let proposal_generator = ProposalGenerator::new(
+        signer.author(),
         block_store.clone(),
         Arc::new(MockTransactionManager::new()),
         time_service.clone(),
         1,
-        true,
     );
 
     //
@@ -138,27 +129,19 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     // TODO: have two different nodes, one for proposing, one for accepting a proposal
     let proposer_election = Box::new(RotatingProposer::new(vec![signer.author()], 1));
 
-    // TODO: do we want to fuzz the real StateComputer as well?
-    let empty_state_computer = Arc::new(EmptyStateComputer);
-
-    // We do not want to care about the time
-    let enforce_increasing_timestamps = false;
-
     // event processor
     EventProcessor::new(
-        signer.author(),
         Arc::clone(&block_store),
+        None,
         pacemaker,
         proposer_election,
         proposal_generator,
         safety_rules,
-        empty_state_computer,
         Arc::new(MockTransactionManager::new()),
         network,
         storage.clone(),
         time_service,
-        enforce_increasing_timestamps,
-        Arc::clone(&epoch_mgr),
+        validators,
     )
 }
 
@@ -167,7 +150,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     // create node
     let mut event_processor = create_node_for_fuzzing();
 
-    let proposal: Proposal = match protobuf::parse_from_bytes(data) {
+    let proposal = match Proposal::decode(data) {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {
@@ -177,7 +160,7 @@ pub fn fuzz_proposal(data: &[u8]) {
         }
     };
 
-    let proposal = match ProposalUncheckedSignatures::<TestPayload>::from_proto(proposal) {
+    let proposal = match ProposalUncheckedSignatures::<TestPayload>::try_from(proposal) {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {

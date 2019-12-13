@@ -1,0 +1,19 @@
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+    let addr: address;
+    let old_balance: u64;
+
+    addr = get_txn_sender();
+    old_balance = LibraAccount.balance(copy(addr));
+
+    LibraAccount.deposit(copy(addr), LibraCoin.zero());
+
+    assert(LibraAccount.balance(copy(addr)) == move(old_balance), 42);
+
+    return;
+}
+
+// check: ABORTED
+// check: 7

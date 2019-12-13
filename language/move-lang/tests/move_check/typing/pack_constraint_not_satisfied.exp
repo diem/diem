@@ -1,0 +1,181 @@
+error: 
+
+   ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:3:16 ───
+   │
+ 7 │         R {r:_ } = R { r: 0 };
+   │         ^^^^^^^^ Constraint not satisfied.
+   ·
+ 7 │         R {r:_ } = R { r: 0 };
+   │                           - The copyable type 'u64' does not satisfy the constraint 'resource'
+   ·
+ 7 │         R {r:_ } = R { r: 0 };
+   │                           - The type's constraint information was declared here
+   ·
+ 3 │     struct R<T:resource>  { r: T }
+   │                -------- 'resource' constraint declared here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:3:16 ───
+   │
+ 7 │         R {r:_ } = R { r: 0 };
+   │                    ^^^^^^^^^^ Constraint not satisfied.
+   ·
+ 7 │         R {r:_ } = R { r: 0 };
+   │                           - The copyable type 'u64' does not satisfy the constraint 'resource'
+   ·
+ 7 │         R {r:_ } = R { r: 0 };
+   │                           - The type's constraint information was declared here
+   ·
+ 3 │     struct R<T:resource>  { r: T }
+   │                -------- 'resource' constraint declared here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:2:5 ───
+   │
+ 8 │         S { c: Coin {} };
+   │         ^^^^^^^^^^^^^^^^ Constraint not satisfied.
+   ·
+ 8 │         S { c: Coin {} };
+   │                ------- The resource type '0x8675309::M::Coin' does not satisfy the constraint 'copyable'
+   ·
+ 2 │     resource struct Coin {}
+   │     -------- The type's constraint information was declared here
+   ·
+ 4 │     struct S<T:copyable> { c: T }
+   │                -------- 'copyable' constraint declared here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:2:5 ───
+   │
+ 8 │         S { c: Coin {} };
+   │         ^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+   ·
+ 8 │         S { c: Coin {} };
+   │         ---------------- The type: 0x8675309::M::S<0x8675309::M::Coin>
+   ·
+ 2 │     resource struct Coin {}
+   │     -------- Is found to be a non-copyable type here
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:3:16 ───
+    │
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │         ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │                                     ---------- The copyable type '0x8675309::M::R<u64>' does not satisfy the constraint 'resource'
+    ·
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │                                            - The type's constraint information was declared here
+    ·
+ 3 │     struct R<T:resource>  { r: T }
+    │                -------- 'resource' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:3:16 ───
+    │
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │               ^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │                                            - The copyable type 'u64' does not satisfy the constraint 'resource'
+    ·
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │                                            - The type's constraint information was declared here
+    ·
+ 3 │     struct R<T:resource>  { r: T }
+    │                -------- 'resource' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:3:16 ───
+    │
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │                              ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │                                     ---------- The copyable type '0x8675309::M::R<u64>' does not satisfy the constraint 'resource'
+    ·
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │                                            - The type's constraint information was declared here
+    ·
+ 3 │     struct R<T:resource>  { r: T }
+    │                -------- 'resource' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:3:16 ───
+    │
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │                                     ^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │                                            - The copyable type 'u64' does not satisfy the constraint 'resource'
+    ·
+ 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+    │                                            - The type's constraint information was declared here
+    ·
+ 3 │     struct R<T:resource>  { r: T }
+    │                -------- 'resource' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:2:5 ───
+    │
+ 13 │         S { c: S { c: Coin {} } };
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 13 │         S { c: S { c: Coin {} } };
+    │                ---------------- The resource type '0x8675309::M::S<0x8675309::M::Coin>' does not satisfy the constraint 'copyable'
+    ·
+ 2 │     resource struct Coin {}
+    │     -------- The type's constraint information was declared here
+    ·
+ 4 │     struct S<T:copyable> { c: T }
+    │                -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:2:5 ───
+    │
+ 13 │         S { c: S { c: Coin {} } };
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+    ·
+ 13 │         S { c: S { c: Coin {} } };
+    │         ------------------------- The type: 0x8675309::M::S<0x8675309::M::S<0x8675309::M::Coin>>
+    ·
+ 2 │     resource struct Coin {}
+    │     -------- Is found to be a non-copyable type here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:2:5 ───
+    │
+ 13 │         S { c: S { c: Coin {} } };
+    │                ^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 13 │         S { c: S { c: Coin {} } };
+    │                       ------- The resource type '0x8675309::M::Coin' does not satisfy the constraint 'copyable'
+    ·
+ 2 │     resource struct Coin {}
+    │     -------- The type's constraint information was declared here
+    ·
+ 4 │     struct S<T:copyable> { c: T }
+    │                -------- 'copyable' constraint declared here
+    │
+

@@ -1,5 +1,5 @@
 module M {
-    struct S {}
+    struct S { b: bool }
 
     foo() {
         let x: Self.S<u64>;

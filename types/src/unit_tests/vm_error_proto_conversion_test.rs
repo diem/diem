@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_error::{StatusCode, VMStatus};
-use proto_conv::test_helper::assert_protobuf_encode_decode_non_message;
+use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use std::convert::TryFrom;
 
 #[test]
@@ -16,6 +16,6 @@ fn status_roundtrip() {
             assert!(stat_number == status_number);
         }
         let status = VMStatus::new(status);
-        assert_protobuf_encode_decode_non_message(&status);
+        assert_protobuf_encode_decode::<crate::proto::types::VmStatus, VMStatus>(&status);
     }
 }

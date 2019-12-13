@@ -5,11 +5,10 @@ use crate::{
     account_commands::AccountCommand, client_proxy::ClientProxy, dev_commands::DevCommand,
     query_commands::QueryCommand, transfer_commands::TransferCommand,
 };
-
-use failure::prelude::*;
-use metrics::counters::*;
+use anyhow::Error;
+use libra_metrics::counters::*;
+use libra_types::account_address::ADDRESS_LENGTH;
 use std::{collections::HashMap, sync::Arc};
-use types::account_address::ADDRESS_LENGTH;
 
 /// Print the error and bump up error counter.
 pub fn report_error(msg: &str, e: Error) {

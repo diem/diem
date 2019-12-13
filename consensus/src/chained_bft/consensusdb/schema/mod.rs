@@ -5,7 +5,7 @@ pub(crate) mod block;
 pub(crate) mod quorum_certificate;
 pub(crate) mod single_entry;
 
-use failure::prelude::*;
+use anyhow::{ensure, Result};
 use schemadb::ColumnFamilyName;
 
 pub(super) const BLOCK_CF_NAME: ColumnFamilyName = "block";

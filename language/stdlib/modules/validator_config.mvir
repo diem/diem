@@ -1,0 +1,143 @@
+module ValidatorConfig {
+
+    // TODO(philiphayes): We should probably enforce a max length for these fields
+
+    struct Config {
+        consensus_pubkey: bytearray,
+        validator_network_signing_pubkey: bytearray,
+        validator_network_identity_pubkey: bytearray,
+        validator_network_address: bytearray,
+        fullnodes_network_identity_pubkey: bytearray,
+        fullnodes_network_address: bytearray,
+    }
+
+    // A current or prospective validator should publish one of these under their address
+    resource T {
+        config: Self.Config,
+    }
+
+    // Returns true if addr has a published ValidatorConfig.T resource
+    public has(addr: address): bool {
+        return exists<T>(move(addr));
+    }
+
+    // The following are public accessors for retrieving config information about Validators
+
+    // Retrieve a read-only instance of a specific accounts ValidatorConfig.T.config
+    public config(addr: address): Self.Config acquires T {
+        let t_ref: &Self.T;
+
+        t_ref = borrow_global<T>(move(addr));
+        return *&move(t_ref).config;
+    }
+
+    // Public accessor for consensus_pubkey
+    public consensus_pubkey(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).consensus_pubkey;
+    }
+
+    // Public accessor for validator_network_signing_pubkey
+    public validator_network_signing_pubkey(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).validator_network_signing_pubkey;
+    }
+
+    // Public accessor for validator_network_identity_pubkey
+    public validator_network_identity_pubkey(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).validator_network_identity_pubkey;
+    }
+
+    // Public accessor for validator_network_address
+    public validator_network_address(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).validator_network_address;
+    }
+
+    // Public accessor for fullnodes_network_identity_pubkey
+    public fullnodes_network_identity_pubkey(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).fullnodes_network_identity_pubkey;
+    }
+
+    // Public accessor for fullnodes_network_address
+    public fullnodes_network_address(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).fullnodes_network_address;
+    }
+
+    // The following are self methods for initializing and maintaining a Validator's config
+
+    // Register the transaction sender as a candidate validator by creating a ValidatorConfig
+    // resource under their account
+    public register_candidate_validator(
+        consensus_pubkey: bytearray,
+        validator_network_signing_pubkey: bytearray,
+        validator_network_identity_pubkey: bytearray,
+        validator_network_address: bytearray,
+        fullnodes_network_identity_pubkey: bytearray,
+        fullnodes_network_address: bytearray) {
+
+        move_to_sender<T>(
+            T {
+                config: Config {
+                    consensus_pubkey: move(consensus_pubkey),
+                    validator_network_signing_pubkey: move(validator_network_signing_pubkey),
+                    validator_network_identity_pubkey: move(validator_network_identity_pubkey),
+                    validator_network_address: move(validator_network_address),
+                    fullnodes_network_identity_pubkey: move(fullnodes_network_identity_pubkey),
+                    fullnodes_network_address: move(fullnodes_network_address),
+                }
+            }
+        );
+
+        return;
+    }
+
+    // Rotate a validator candidate's consensus public key. The change will not take effect until
+    // the next reconfiguration.
+    public rotate_consensus_pubkey(consensus_pubkey: bytearray) acquires T {
+        let t_ref: &mut Self.T;
+        let config_ref: &mut Self.Config;
+        let key_ref: &mut bytearray;
+
+        t_ref = borrow_global_mut<T>(get_txn_sender());
+        config_ref = &mut move(t_ref).config;
+        key_ref = &mut move(config_ref).consensus_pubkey;
+        *move(key_ref) = move(consensus_pubkey);
+
+        return;
+    }
+
+    // TODO(philiphayes): fill out the rest of the rotate methods
+
+    // Rotate the network public key for validator discovery. This change will be
+    // committed in the next reconfiguration.
+    public rotate_validator_network_identity_pubkey(
+        validator_network_identity_pubkey: bytearray) acquires T {
+
+        let t_ref: &mut Self.T;
+        let config_ref: &mut Self.Config;
+        let key_ref: &mut bytearray;
+
+        t_ref = borrow_global_mut<T>(get_txn_sender());
+        config_ref = &mut move(t_ref).config;
+        key_ref = &mut move(config_ref).validator_network_identity_pubkey;
+        *move(key_ref) = move(validator_network_identity_pubkey);
+
+        return;
+    }
+
+    // Rotate the network address for validator discovery. This change will be
+    // committed in the next reconfiguration.
+    public rotate_validator_network_address(
+        validator_network_address: bytearray) acquires T {
+
+        let t_ref: &mut Self.T;
+        let config_ref: &mut Self.Config;
+        let key_ref: &mut bytearray;
+
+        t_ref = borrow_global_mut<T>(get_txn_sender());
+        config_ref = &mut move(t_ref).config;
+        key_ref = &mut move(config_ref).validator_network_address;
+        *move(key_ref) = move(validator_network_address);
+
+        return;
+    }
+
+}

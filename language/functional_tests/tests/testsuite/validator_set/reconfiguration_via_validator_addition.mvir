@@ -1,0 +1,67 @@
+//! account: alice
+//! account: bob
+//! account: vivian, 1000000, 0, validator
+
+//! sender: alice
+// register Alice as a validator candidate
+import 0x0.ValidatorConfig;
+main() {
+    let config: ValidatorConfig.Config;
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
+
+    return;
+}
+//! new-transaction
+//! sender: bob
+// register Bob as a validator candidate
+import 0x0.ValidatorConfig;
+main() {
+    let config: ValidatorConfig.Config;
+    ValidatorConfig.register_candidate_validator(h"11", h"22", h"33", h"44", h"55", h"66");
+
+    return;
+}
+
+//! new-transaction
+//! sender: association
+// run a tx from the association that adds Alice and Bob as validators
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.add_validator({{alice}});
+    LibraSystem.add_validator({{bob}});
+
+    // this will not take affect until the next epoch
+    assert(!LibraSystem.is_validator({{alice}}), 77);
+    assert(!LibraSystem.is_validator({{bob}}), 78);
+
+    return;
+}
+
+//! new-transaction
+//! sender: vivian
+// Run the block prologue. Reconfiguration should be triggered
+// TODO: trigger a BlockMetadata transaction here instead
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
+    return;
+}
+
+// check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
+// check: EXECUTED
+
+//! new-transaction
+// check that Alice and Bob are now validators
+import 0x0.LibraSystem;
+main() {
+    assert(LibraSystem.is_validator({{alice}}), 79);
+    assert(LibraSystem.is_validator({{bob}}), 80);
+
+    // check that Vivian is also still a validator
+    assert(LibraSystem.is_validator({{vivian}}), 81);
+
+    return;
+}
+
+// check: EXECUTED

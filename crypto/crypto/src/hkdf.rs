@@ -58,7 +58,7 @@
 //! Run HKDF extract-then-expand so as to return 64 bytes, using 'salt', 'seed' and 'info' as
 //! inputs.
 //! ```
-//! use crypto::hkdf::Hkdf;
+//! use libra_crypto::hkdf::Hkdf;
 //! use sha2::Sha256;
 //!
 //! // some bytes required for this example.
@@ -82,6 +82,7 @@ use digest::{
 use generic_array::typenum::Unsigned;
 use hmac::{Hmac, Mac};
 use std::marker::PhantomData;
+use thiserror::Error;
 
 /// Structure representing the HKDF, capable of HKDF-Extract and HKDF-Expand operations, as defined
 /// in RFC 5869.
@@ -172,24 +173,24 @@ where
 /// b) hash functions outputting less than 32 bits are not supported (i.e., SHA1 is not supported).
 /// c) small PRK value in HKDF-Expand according to RFC 5869.
 /// d) any other underlying HMAC error.
-#[derive(Clone, Debug, PartialEq, Eq, failure::prelude::Fail)]
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum HkdfError {
     /// HKDF expand output exceeds the maximum allowed or is zero.
-    #[fail(
-        display = "HKDF expand error - requested output size exceeds the maximum allowed or is zero"
-    )]
+    #[error("HKDF expand error - requested output size exceeds the maximum allowed or is zero")]
     InvalidOutputLengthError,
     /// Hash function is not supported because its output is less than 32 bits.
-    #[fail(display = "HKDF error - the hash function is not supported because \
-                      its output is less than 32 bits")]
+    #[error(
+        "HKDF error - the hash function is not supported because \
+         its output is less than 32 bits"
+    )]
     NotSupportedHashFunctionError,
     /// PRK on HKDF-Expand should not be less than the underlying hash output bits.
-    #[fail(
-        display = "HKDF expand error - the pseudorandom key input ('prk' in RFC 5869) \
-                   is less than the underlying hash output bits"
+    #[error(
+        "HKDF expand error - the pseudorandom key input ('prk' in RFC 5869) \
+         is less than the underlying hash output bits"
     )]
     WrongPseudorandomKeyError,
     /// HMAC key related error; unlikely to happen because every key size is accepted in HMAC.
-    #[fail(display = "HMAC key error")]
+    #[error("HMAC key error")]
     MACKeyError,
 }

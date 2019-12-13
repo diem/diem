@@ -1,0 +1,13 @@
+[consensus]
+consensus_keypair_file = "consensus.keys.toml"
+consensus_peers_file = "consensus_peers.config.toml"
+
+[validator_network]
+peer_id = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654"
+network_keypairs_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654.network.keys.toml"
+network_peers_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654.network_peers.config.toml"
+seed_peers_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654.seed_peers.toml"
+
+[test.account_keypair]
+private_key = "a9ccbb14534fa25b8e2c8062f82592ca4a6ecd228895ef48a21faf480f4fdb9f"
+public_key = "8a09af25da4e547c7192a0f7f05c2b8db94af316a5b599bd2cff8797c28ae68b"

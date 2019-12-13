@@ -4,7 +4,7 @@
 use crate::*;
 use move_ir::{assert_error_type, assert_no_error};
 use proptest::prelude::*;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     transaction::{TransactionArgument, TransactionPayload},
 };
@@ -17,7 +17,7 @@ fn write_set_txn_roundtrip() {
     proptest!(|(signed_txn in SignedTransaction::genesis_strategy())| {
         let write_set = match signed_txn.payload() {
             TransactionPayload::WriteSet(write_set) => write_set.clone(),
-            TransactionPayload::Program(_) | TransactionPayload::Script(_) | TransactionPayload::Module(_) => unreachable!(
+            TransactionPayload::Program | TransactionPayload::Script(_) | TransactionPayload::Module(_) => unreachable!(
                 "write set strategy should only generate write set transactions",
             ),
         };

@@ -1,0 +1,33 @@
+error: 
+
+   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:2:9 ───
+   │
+ 2 │     foo<T, T>() {}
+   │            ^ Duplicate type parameter declared with name 'T'
+   ·
+ 2 │     foo<T, T>() {}
+   │         - Previously defined here
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:10 ───
+   │
+ 3 │     foo2<T: copyable, T: resource, T>() {}
+   │                       ^ Duplicate type parameter declared with name 'T'
+   ·
+ 3 │     foo2<T: copyable, T: resource, T>() {}
+   │          - Previously defined here
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:23 ───
+   │
+ 3 │     foo2<T: copyable, T: resource, T>() {}
+   │                                    ^ Duplicate type parameter declared with name 'T'
+   ·
+ 3 │     foo2<T: copyable, T: resource, T>() {}
+   │                       - Previously defined here
+   │
+

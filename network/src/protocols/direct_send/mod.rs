@@ -18,7 +18,7 @@
 //! 3. The actual structure of the wire messages is left for higher layers to specify. The
 //!    DirectSend protocol is only concerned with shipping around opaque blobs. Current libra
 //!    DirectSend clients (consensus, mempool) mostly send protobuf enums around over a single
-//!    DirectSend protocol, e.g., `/libra/consensus/direct_send/0.1.0`.
+//!    DirectSend protocol, e.g., `/libra/direct_send/0.1.0/consensus/0.1.0`.
 //!
 //! ## Wire Protocol (dialer):
 //!
@@ -26,7 +26,7 @@
 //!
 //! 1. Requests a new outbound substream from the muxer.
 //! 2. Negotiates the substream using [`protocol-select`] to the protocol they
-//!    wish to speak, e.g., `/libra/mempool/direct_send/0.1.0`.
+//!    wish to speak, e.g., `/libra/direct_send/0.1.0/mempool/0.1.0`.
 //! 3. Sends the serialized message on the newly negotiated substream.
 //! 4. Drops the substream.
 //!
@@ -40,9 +40,6 @@
 //! 3. Awaits the serialized message on the newly negotiated substream.
 //! 4. Drops the substream.
 //!
-//! Note: negotiated substreams are currently framed with the
-//! [muiltiformats unsigned varint length-prefix](https://github.com/multiformats/unsigned-varint)
-//!
 //! [muxers]: ../../../netcore/multiplexing/index.html
 //! [substream negotiation]: ../../../netcore/negotiate/index.html
 //! [`protocol-select`]: ../../../netcore/negotiate/index.html
@@ -52,23 +49,22 @@ use crate::{
     peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
     ProtocolId,
 };
-use bytes::Bytes;
+use bytes05::Bytes;
 use channel;
 use futures::{
-    compat::Sink01CompatExt,
-    future::{FutureExt, TryFutureExt},
-    io::{AsyncRead, AsyncReadExt, AsyncWrite},
+    io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::StreamExt,
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
+use libra_types::PeerId;
+use netcore::compat::IoCompat;
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
 };
-use tokio::{codec::Framed, runtime::TaskExecutor};
-use types::PeerId;
-use unsigned_varint::codec::UviBytes;
+use tokio::runtime::Handle;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 #[cfg(test)]
 mod test;
@@ -98,7 +94,7 @@ impl Debug for Message {
         let mdata_str = if self.mdata.len() <= 10 {
             format!("{:?}", self.mdata)
         } else {
-            format!("{:?}...", self.mdata.slice_to(10))
+            format!("{:?}...", self.mdata.slice(..10))
         };
         write!(
             f,
@@ -111,7 +107,7 @@ impl Debug for Message {
 /// The DirectSend actor.
 pub struct DirectSend<TSubstream> {
     /// A handle to a tokio executor.
-    executor: TaskExecutor,
+    executor: Handle,
     /// Channel to receive requests from other upstream actors.
     ds_requests_rx: channel::Receiver<DirectSendRequest>,
     /// Channels to send notifictions to upstream actors.
@@ -129,7 +125,7 @@ where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin + Debug + 'static,
 {
     pub fn new(
-        executor: TaskExecutor,
+        executor: Handle,
         ds_requests_rx: channel::Receiver<DirectSendRequest>,
         ds_notifs_tx: channel::Sender<DirectSendNotification>,
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
@@ -167,17 +163,12 @@ where
         trace!("PeerManagerNotification::{:?}", notif);
         match notif {
             PeerManagerNotification::NewInboundSubstream(peer_id, substream) => {
-                self.executor.spawn(
-                    Self::handle_inbound_substream(
-                        peer_id,
-                        substream.protocol,
-                        substream.substream,
-                        self.ds_notifs_tx.clone(),
-                    )
-                    .boxed()
-                    .unit_error()
-                    .compat(),
-                );
+                self.executor.spawn(Self::handle_inbound_substream(
+                    peer_id,
+                    substream.protocol,
+                    substream.substream,
+                    self.ds_notifs_tx.clone(),
+                ));
             }
             _ => unreachable!("Unexpected PeerManagerNotification"),
         }
@@ -190,8 +181,7 @@ where
         substream: TSubstream,
         mut ds_notifs_tx: channel::Sender<DirectSendNotification>,
     ) {
-        let mut substream =
-            Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
         while let Some(item) = substream.next().await {
             match item {
                 Ok(data) => {
@@ -226,7 +216,7 @@ where
     // Create a new message queue and spawn a task to forward the messages from the queue to the
     // corresponding substream.
     async fn start_message_queue_handler(
-        executor: TaskExecutor,
+        executor: Handle,
         mut peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
         peer_id: PeerId,
         protocol: ProtocolId,
@@ -242,8 +232,7 @@ where
 
         // Open a new substream for the (PeerId, ProtocolId) pair
         let raw_substream = peer_mgr_reqs_tx.open_substream(peer_id, protocol).await?;
-        let substream =
-            Framed::new(raw_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let substream = Framed::new(IoCompat::new(raw_substream), LengthDelimitedCodec::new());
 
         // Spawn a task to forward the messages from the queue to the substream.
         let f_substream = async move {
@@ -255,16 +244,18 @@ where
                 );
             }
             // The messages in queue will be dropped
-            counters::DIRECT_SEND_MESSAGES_DROPPED.inc_by(
-                counters::OP_COUNTERS
-                    .peer_gauge(
-                        &counters::PENDING_DIRECT_SEND_OUTBOUND_MESSAGES,
-                        &peer_id.short_str(),
-                    )
-                    .get(),
-            );
+            counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                .with_label_values(&["dropped"])
+                .inc_by(
+                    counters::OP_COUNTERS
+                        .peer_gauge(
+                            &counters::PENDING_DIRECT_SEND_OUTBOUND_MESSAGES,
+                            &peer_id.short_str(),
+                        )
+                        .get(),
+                );
         };
-        executor.spawn(f_substream.boxed().unit_error().compat());
+        executor.spawn(f_substream);
 
         Ok(msg_tx)
     }
@@ -311,7 +302,9 @@ where
                     .try_send_msg(peer_id, msg.clone(), self.peer_mgr_reqs_tx.clone())
                     .await
                 {
-                    counters::DIRECT_SEND_MESSAGES_DROPPED.inc();
+                    counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                        .with_label_values(&["dropped"])
+                        .inc();
                     warn!("DirectSend to peer {} failed: {}", peer_id.short_str(), e);
                 }
             }

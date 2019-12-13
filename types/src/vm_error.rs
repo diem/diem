@@ -3,14 +3,13 @@
 
 #![allow(clippy::unit_arg)]
 
-use failure::prelude::*;
+use anyhow::{Error, Result};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
-use serde::{Deserialize, Serialize};
+use serde::{de, ser};
 use std::{convert::TryFrom, fmt};
 
 /// The minimum status code for validation statuses
@@ -46,8 +45,8 @@ pub static EXECUTION_STATUS_MAX_CODE: u64 = 4999;
 /// A `VMStatus` is represented as a required major status that is semantic coupled with with
 /// an optional sub status and message.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct VMStatus {
     /// The major status, e.g. ABORTED, OUT_OF_GAS, etc.
     pub major_status: StatusCode,
@@ -203,80 +202,55 @@ impl VMStatus {
 //***********************************
 // Decoding/Encoding to Protobuffers
 //***********************************
+impl TryFrom<crate::proto::types::VmStatus> for VMStatus {
+    type Error = Error;
 
-impl IntoProto for VMStatus {
-    type ProtoType = crate::proto::vm_errors::VMStatus;
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto_status = Self::ProtoType::new();
+    fn try_from(proto: crate::proto::types::VmStatus) -> Result<Self> {
+        let mut status = VMStatus::new(
+            StatusCode::try_from(proto.major_status).unwrap_or(StatusCode::UNKNOWN_STATUS),
+        );
 
-        proto_status.set_has_sub_status(false);
-        proto_status.set_has_message(false);
-
-        // Set major status
-        proto_status.set_major_status(self.major_status.into_proto());
-
-        // Set minor status if there is one
-        if let Some(sub_status) = self.sub_status {
-            proto_status.set_has_sub_status(true);
-            proto_status.set_sub_status(sub_status);
+        if proto.has_sub_status {
+            status.set_sub_status(proto.sub_status);
         }
 
-        // Set info string
-        if let Some(string) = self.message {
-            proto_status.set_has_message(true);
-            proto_status.set_message(string);
-        }
-
-        proto_status
-    }
-}
-
-impl FromProto for VMStatus {
-    type ProtoType = crate::proto::vm_errors::VMStatus;
-
-    fn from_proto(mut proto_status: Self::ProtoType) -> Result<Self> {
-        let mut status = VMStatus::new(StatusCode::from_proto(proto_status.get_major_status())?);
-
-        if proto_status.get_has_sub_status() {
-            status.set_sub_status(proto_status.get_sub_status());
-        }
-
-        if proto_status.get_has_message() {
-            status.set_message(proto_status.take_message());
+        if proto.has_message {
+            status.set_message(proto.message);
         }
 
         Ok(status)
     }
 }
 
-impl IntoProto for StatusCode {
-    type ProtoType = u64;
-    fn into_proto(self) -> Self::ProtoType {
-        self.into()
-    }
-}
+impl From<VMStatus> for crate::proto::types::VmStatus {
+    fn from(status: VMStatus) -> Self {
+        let mut proto_status = Self::default();
 
-impl FromProto for StatusCode {
-    type ProtoType = u64;
-    fn from_proto(proto_code: Self::ProtoType) -> Result<Self> {
-        StatusCode::try_from(proto_code).or_else(|_| Ok(StatusCode::UNKNOWN_STATUS))
+        proto_status.has_sub_status = false;
+        proto_status.has_message = false;
+
+        // Set major status
+        proto_status.major_status = status.major_status.into();
+
+        // Set minor status if there is one
+        if let Some(sub_status) = status.sub_status {
+            proto_status.has_sub_status = true;
+            proto_status.sub_status = sub_status;
+        }
+
+        // Set info string
+        if let Some(string) = status.message {
+            proto_status.has_message = true;
+            proto_status.message = string;
+        }
+
+        proto_status
     }
 }
 
 #[allow(non_camel_case_types)]
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    IntoPrimitive,
-    TryFromPrimitive,
-    Serialize,
-    Deserialize,
+    Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, IntoPrimitive, TryFromPrimitive,
 )]
 #[repr(u64)]
 /// We don't derive Arbitrary on this enum because it is too large and breaks proptest. It is
@@ -359,57 +333,60 @@ pub enum StatusCode {
     STLOC_UNSAFE_TO_DESTROY_ERROR = 1028,
     RET_UNSAFE_TO_DESTROY_ERROR = 1029,
     RET_TYPE_MISMATCH_ERROR = 1030,
-    FREEZEREF_TYPE_MISMATCH_ERROR = 1031,
-    FREEZEREF_EXISTS_MUTABLE_BORROW_ERROR = 1032,
-    BORROWFIELD_TYPE_MISMATCH_ERROR = 1033,
-    BORROWFIELD_BAD_FIELD_ERROR = 1034,
-    BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR = 1035,
-    COPYLOC_UNAVAILABLE_ERROR = 1036,
-    COPYLOC_RESOURCE_ERROR = 1037,
-    COPYLOC_EXISTS_BORROW_ERROR = 1038,
-    MOVELOC_UNAVAILABLE_ERROR = 1039,
-    MOVELOC_EXISTS_BORROW_ERROR = 1040,
-    BORROWLOC_REFERENCE_ERROR = 1041,
-    BORROWLOC_UNAVAILABLE_ERROR = 1042,
-    BORROWLOC_EXISTS_BORROW_ERROR = 1043,
-    CALL_TYPE_MISMATCH_ERROR = 1044,
-    CALL_BORROWED_MUTABLE_REFERENCE_ERROR = 1045,
-    PACK_TYPE_MISMATCH_ERROR = 1046,
-    UNPACK_TYPE_MISMATCH_ERROR = 1047,
-    READREF_TYPE_MISMATCH_ERROR = 1048,
-    READREF_RESOURCE_ERROR = 1049,
-    READREF_EXISTS_MUTABLE_BORROW_ERROR = 1050,
-    WRITEREF_TYPE_MISMATCH_ERROR = 1051,
-    WRITEREF_RESOURCE_ERROR = 1052,
-    WRITEREF_EXISTS_BORROW_ERROR = 1053,
-    WRITEREF_NO_MUTABLE_REFERENCE_ERROR = 1054,
-    INTEGER_OP_TYPE_MISMATCH_ERROR = 1055,
-    BOOLEAN_OP_TYPE_MISMATCH_ERROR = 1056,
-    EQUALITY_OP_TYPE_MISMATCH_ERROR = 1057,
-    EXISTS_RESOURCE_TYPE_MISMATCH_ERROR = 1058,
-    BORROWGLOBAL_TYPE_MISMATCH_ERROR = 1059,
-    BORROWGLOBAL_NO_RESOURCE_ERROR = 1060,
-    MOVEFROM_TYPE_MISMATCH_ERROR = 1061,
-    MOVEFROM_NO_RESOURCE_ERROR = 1062,
-    MOVETOSENDER_TYPE_MISMATCH_ERROR = 1063,
-    MOVETOSENDER_NO_RESOURCE_ERROR = 1064,
-    CREATEACCOUNT_TYPE_MISMATCH_ERROR = 1065,
+    RET_BORROWED_MUTABLE_REFERENCE_ERROR = 1031,
+    FREEZEREF_TYPE_MISMATCH_ERROR = 1032,
+    FREEZEREF_EXISTS_MUTABLE_BORROW_ERROR = 1033,
+    BORROWFIELD_TYPE_MISMATCH_ERROR = 1034,
+    BORROWFIELD_BAD_FIELD_ERROR = 1035,
+    BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR = 1036,
+    COPYLOC_UNAVAILABLE_ERROR = 1037,
+    COPYLOC_RESOURCE_ERROR = 1038,
+    COPYLOC_EXISTS_BORROW_ERROR = 1039,
+    MOVELOC_UNAVAILABLE_ERROR = 1040,
+    MOVELOC_EXISTS_BORROW_ERROR = 1041,
+    BORROWLOC_REFERENCE_ERROR = 1042,
+    BORROWLOC_UNAVAILABLE_ERROR = 1043,
+    BORROWLOC_EXISTS_BORROW_ERROR = 1044,
+    CALL_TYPE_MISMATCH_ERROR = 1045,
+    CALL_BORROWED_MUTABLE_REFERENCE_ERROR = 1046,
+    PACK_TYPE_MISMATCH_ERROR = 1047,
+    UNPACK_TYPE_MISMATCH_ERROR = 1048,
+    READREF_TYPE_MISMATCH_ERROR = 1049,
+    READREF_RESOURCE_ERROR = 1050,
+    READREF_EXISTS_MUTABLE_BORROW_ERROR = 1051,
+    WRITEREF_TYPE_MISMATCH_ERROR = 1052,
+    WRITEREF_RESOURCE_ERROR = 1053,
+    WRITEREF_EXISTS_BORROW_ERROR = 1054,
+    WRITEREF_NO_MUTABLE_REFERENCE_ERROR = 1055,
+    INTEGER_OP_TYPE_MISMATCH_ERROR = 1056,
+    BOOLEAN_OP_TYPE_MISMATCH_ERROR = 1057,
+    EQUALITY_OP_TYPE_MISMATCH_ERROR = 1058,
+    EXISTS_RESOURCE_TYPE_MISMATCH_ERROR = 1059,
+    BORROWGLOBAL_TYPE_MISMATCH_ERROR = 1060,
+    BORROWGLOBAL_NO_RESOURCE_ERROR = 1061,
+    MOVEFROM_TYPE_MISMATCH_ERROR = 1062,
+    MOVEFROM_NO_RESOURCE_ERROR = 1063,
+    MOVETOSENDER_TYPE_MISMATCH_ERROR = 1064,
+    MOVETOSENDER_NO_RESOURCE_ERROR = 1065,
+    CREATEACCOUNT_TYPE_MISMATCH_ERROR = 1066,
     // The self address of a module the transaction is publishing is not the sender address
-    MODULE_ADDRESS_DOES_NOT_MATCH_SENDER = 1066,
+    MODULE_ADDRESS_DOES_NOT_MATCH_SENDER = 1067,
     // The module does not have any module handles. Each module or script must have at least one
     // module handle.
-    NO_MODULE_HANDLES = 1067,
-    POSITIVE_STACK_SIZE_AT_BLOCK_END = 1068,
-    MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR = 1069,
-    EXTRANEOUS_ACQUIRES_RESOURCE_ANNOTATION_ERROR = 1070,
-    DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR = 1071,
-    INVALID_ACQUIRES_RESOURCE_ANNOTATION_ERROR = 1072,
-    GLOBAL_REFERENCE_ERROR = 1073,
-    CONTRAINT_KIND_MISMATCH = 1074,
-    NUMBER_OF_TYPE_ACTUALS_MISMATCH = 1075,
-    LOOP_IN_INSTANTIATION_GRAPH = 1076,
-    UNUSED_LOCALS_SIGNATURE = 1077,
-    UNUSED_TYPE_SIGNATURE = 1078,
+    NO_MODULE_HANDLES = 1068,
+    POSITIVE_STACK_SIZE_AT_BLOCK_END = 1069,
+    MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR = 1070,
+    EXTRANEOUS_ACQUIRES_RESOURCE_ANNOTATION_ERROR = 1071,
+    DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR = 1072,
+    INVALID_ACQUIRES_RESOURCE_ANNOTATION_ERROR = 1073,
+    GLOBAL_REFERENCE_ERROR = 1074,
+    CONTRAINT_KIND_MISMATCH = 1075,
+    NUMBER_OF_TYPE_ACTUALS_MISMATCH = 1076,
+    LOOP_IN_INSTANTIATION_GRAPH = 1077,
+    UNUSED_LOCALS_SIGNATURE = 1078,
+    UNUSED_TYPE_SIGNATURE = 1079,
+    /// Reported when a struct has zero fields
+    ZERO_SIZED_STRUCT = 1080,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
@@ -425,6 +402,8 @@ pub enum StatusCode {
     STORAGE_ERROR = 2008,
     INTERNAL_TYPE_ERROR = 2009,
     EVENT_KEY_MISMATCH = 2010,
+    UNREACHABLE = 2011,
+    VM_STARTUP_FAILURE = 2012,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999
@@ -473,9 +452,45 @@ pub enum StatusCode {
     EXECUTION_STACK_OVERFLOW = 4020,
     CALL_STACK_OVERFLOW = 4021,
     NATIVE_FUNCTION_ERROR = 4022,
+    GAS_SCHEDULE_ERROR = 4023,
 
     // A reserved status to represent an unknown vm status.
     UNKNOWN_STATUS = std::u64::MAX,
+}
+
+// TODO(#1307)
+impl ser::Serialize for StatusCode {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        serializer.serialize_u64((*self).into())
+    }
+}
+
+impl<'de> de::Deserialize<'de> for StatusCode {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct StatusCodeVisitor;
+        impl<'de> de::Visitor<'de> for StatusCodeVisitor {
+            type Value = StatusCode;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("StatusCode as u64")
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<StatusCode, E>
+            where
+                E: de::Error,
+            {
+                Ok(StatusCode::try_from(v).unwrap_or(StatusCode::UNKNOWN_STATUS))
+            }
+        }
+
+        deserializer.deserialize_u64(StatusCodeVisitor)
+    }
 }
 
 pub mod sub_status {
@@ -484,6 +499,8 @@ pub mod sub_status {
     pub const AEU_UNDERFLOW: u64 = 1;
     pub const AEO_OVERFLOW: u64 = 2;
     pub const AED_DIVISION_BY_ZERO: u64 = 3;
+
+    pub const VSF_GAS_SCHEDULE_NOT_FOUND: u64 = 0;
 
     // Dynamic Reference status sub-codes
     pub const DRE_UNKNOWN_DYNAMIC_REFERENCE_ERROR: u64 = 0;
@@ -494,4 +511,8 @@ pub mod sub_status {
 
     // Native Function Error sub-codes
     pub const NFE_VECTOR_ERROR_BASE: u64 = 0;
+
+    pub const GSE_UNABLE_TO_LOAD_MODULE: u64 = 0;
+    pub const GSE_UNABLE_TO_LOAD_RESOURCE: u64 = 1;
+    pub const GSE_UNABLE_TO_DESERIALIZE: u64 = 2;
 }

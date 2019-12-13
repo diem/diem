@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines physical storage schema for nodes in the state Jellyfish Merkle Tree.
-//! Node is identified by [NodeKey](jellyfish_merkle::node_type::NodeKey).
+//! Node is identified by [NodeKey](jellyfish-merkle::node_type::NodeKey).
 //! ```text
 //! |<----key--->|<-----value----->|
 //! |  node_key  | serialized_node |
 //! ```
 
 use crate::schema::JELLYFISH_MERKLE_NODE_CF_NAME;
-use failure::prelude::*;
+use anyhow::Result;
 use jellyfish_merkle::node_type::{Node, NodeKey};
 use schemadb::{
     define_schema,

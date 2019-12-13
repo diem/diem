@@ -1,0 +1,22 @@
+//! account: default, 1000000, 0
+
+// When a transaction aborts, the sequence number should still be bumped up.
+main() {
+    assert(false, 77);
+    return;
+}
+
+// check: ABORTED
+// check: 77
+
+
+//! new-transaction
+import 0x0.LibraAccount;
+
+main() {
+    assert(get_txn_sequence_number() == 1, 42);
+    assert(LibraAccount.sequence_number(get_txn_sender()) == 1, 42);
+    return;
+}
+
+// check: EXECUTED

@@ -1,0 +1,144 @@
+error: 
+
+   ┌── tests/move_check/typing/binary_bit_and_invalid.move:8:9 ───
+   │
+ 8 │         false & true;
+   │         ^^^^^ Invalid argument to '&'
+   ·
+ 8 │         false & true;
+   │         ----- Found: 'bool'. But expected: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/binary_bit_and_invalid.move:9:9 ───
+   │
+ 9 │         1 & false;
+   │             ^^^^^ Invalid argument to '&'
+   ·
+ 9 │         1 & false;
+   │             ----- The type: 'bool'
+   ·
+ 9 │         1 & false;
+   │         - Is not compatible with: 'u64'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_and_invalid.move:10:9 ───
+    │
+ 10 │         false & 1;
+    │         ^^^^^ Invalid argument to '&'
+    ·
+ 10 │         false & 1;
+    │         ----- Found: 'bool'. But expected: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_and_invalid.move:11:9 ───
+    │
+ 11 │         0x0 & 0x1;
+    │         ^^^ Invalid argument to '&'
+    ·
+ 11 │         0x0 & 0x1;
+    │         --- Found: 'address'. But expected: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_and_invalid.move:7:19 ───
+    │
+ 12 │         r & r;
+    │         ^ Invalid argument to '&'
+    ·
+ 7 │     t0(x: u64, r: R, s: S) {
+    │                   - Found: '0x8675309::M::R'. But expected: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_and_invalid.move:7:25 ───
+    │
+ 13 │         s & s;
+    │         ^ Invalid argument to '&'
+    ·
+ 7 │     t0(x: u64, r: R, s: S) {
+    │                         - Found: '0x8675309::M::S'. But expected: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_and_invalid.move:14:9 ───
+    │
+ 14 │         1 & false & 0x0 & 0;
+    │             ^^^^^ Invalid argument to '&'
+    ·
+ 14 │         1 & false & 0x0 & 0;
+    │             ----- The type: 'bool'
+    ·
+ 14 │         1 & false & 0x0 & 0;
+    │         - Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_and_invalid.move:14:9 ───
+    │
+ 14 │         1 & false & 0x0 & 0;
+    │                     ^^^ Invalid argument to '&'
+    ·
+ 14 │         1 & false & 0x0 & 0;
+    │                     --- The type: 'address'
+    ·
+ 14 │         1 & false & 0x0 & 0;
+    │         - Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_and_invalid.move:15:9 ───
+    │
+ 15 │         () & ();
+    │         ^^ Invalid argument to '&'
+    ·
+ 15 │         () & ();
+    │         -- Found: '()'. But expected: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_and_invalid.move:16:9 ───
+    │
+ 16 │         1 & ();
+    │             ^^ Invalid argument to '&'
+    ·
+ 16 │         1 & ();
+    │             -- The type: '()'
+    ·
+ 16 │         1 & ();
+    │         - Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_and_invalid.move:17:9 ───
+    │
+ 17 │         (0, 1) & (0, 1, 2);
+    │         ^^^^^^ Invalid argument to '&'
+    ·
+ 17 │         (0, 1) & (0, 1, 2);
+    │         ------ Found: '(u64,u64)'. But expected: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_and_invalid.move:18:9 ───
+    │
+ 18 │         (1, 2) & (0, 1);
+    │         ^^^^^^ Invalid argument to '&'
+    ·
+ 18 │         (1, 2) & (0, 1);
+    │         ------ Found: '(u64,u64)'. But expected: 'u64'
+    │
+

@@ -1,0 +1,15 @@
+[package]
+name = "libra-proptest-helpers"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra proptest helpers"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+crossbeam = "0.7.2"
+proptest = "0.9.4"
+proptest-derive = "0.1.2"

@@ -5,8 +5,8 @@ use crate::hash::*;
 use bitvec::BitVec;
 use byteorder::{LittleEndian, WriteBytesExt};
 use proptest::{collection::vec, prelude::*};
-use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::StdRng, SeedableRng};
+use serde::Serialize;
 
 #[derive(Serialize)]
 struct Foo(u32);
@@ -15,7 +15,7 @@ struct Foo(u32);
 fn test_default_hasher() {
     assert_eq!(
         Foo(3).test_only_hash(),
-        HashValue::from_iter_sha3(vec![::bincode::serialize(&Foo(3)).unwrap().as_slice()]),
+        HashValue::from_iter_sha3(vec![lcs::to_bytes(&Foo(3)).unwrap().as_slice()]),
     );
     assert_eq!(
         format!("{:x}", b"hello".test_only_hash()),
@@ -58,6 +58,10 @@ fn test_from_slice() {
         // The length is mismatched.
         let zero_byte_vec = vec![0; 31];
         assert!(HashValue::from_slice(&zero_byte_vec).is_err());
+    }
+    {
+        let bytes = vec![1; 123];
+        assert!(HashValue::from_slice(&bytes[..]).is_err());
     }
 }
 
@@ -215,12 +219,6 @@ fn test_common_prefix_nibbles_len() {
     }
 }
 
-#[test]
-fn test_from_proto_invalid_length() {
-    let bytes = vec![1; 123];
-    assert!(HashValue::from_proto(bytes).is_err());
-}
-
 proptest! {
     #[test]
     fn test_hashvalue_to_bits_roundtrip(hash in any::<HashValue>()) {
@@ -257,10 +255,14 @@ proptest! {
     }
 
     #[test]
-    fn test_hashvalue_proto_conversion_roundtrip(hash in any::<HashValue>()) {
-        let bytes = hash.into_proto();
-        prop_assert_eq!(bytes.clone(), hash.as_ref());
-        let hash2 = HashValue::from_proto(bytes).unwrap();
+    fn test_hashvalue_from_bit_iter(hash in any::<HashValue>()) {
+        let hash2 = HashValue::from_bit_iter(hash.iter_bits()).unwrap();
         prop_assert_eq!(hash, hash2);
+
+        let bits1 = vec![false; HashValue::LENGTH_IN_BITS - 10];
+        prop_assert!(HashValue::from_bit_iter(bits1.into_iter()).is_err());
+
+        let bits2 = vec![false; HashValue::LENGTH_IN_BITS + 10];
+        prop_assert!(HashValue::from_bit_iter(bits2.into_iter()).is_err());
     }
 }

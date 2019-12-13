@@ -1,0 +1,35 @@
+[package]
+name = "language-e2e-tests"
+version = "0.1.0"
+edition = "2018"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra language e2e tests"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+anyhow = "1.0"
+bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+compiler = { path = "../compiler", version = "0.1.0" }
+lazy_static = "1.3.0"
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+rand = "0.6.5"
+libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+transaction-builder = { path = "../transaction-builder", version = "0.1.0", features = ["fuzzing"]}
+vm = { path = "../vm", version = "0.1.0" }
+vm-cache-map = { path = "../vm/vm-runtime/vm-cache-map", version = "0.1.0" }
+vm-genesis = { path = "../vm/vm-genesis", version = "0.1.0" }
+vm-runtime = { path = "../vm/vm-runtime", version = "0.1.0" }
+vm-runtime-types = { path = "../vm/vm-runtime/vm-runtime-types", version = "0.1.0" }
+proptest = "0.9.3"
+proptest-derive = "0.1.1"
+libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
+prost = "0.5.0"
+libra-config =  { path = "../../config", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+stdlib = { path = "../stdlib", version = "0.1.0" }
+walkdir = "2.2.9"

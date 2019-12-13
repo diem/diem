@@ -3,8 +3,8 @@ data "template_file" "prometheus_yml" {
 
   vars = {
     workspace             = terraform.workspace
-    validator_nodes       = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, var.peer_ids))
-    validator_svcs        = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, var.peer_ids))
+    validators            = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, range(var.num_validators)))
+    fullnodes             = join(",", formatlist("%s:%s", aws_instance.fullnode.*.private_ip, range(var.num_fullnodes)))
     other_nodes           = join(",", ["${aws_instance.monitoring.private_ip}:monitoring", "${aws_instance.faucet.private_ip}:faucet"])
     monitoring_private_ip = aws_instance.monitoring.private_ip
   }
@@ -64,7 +64,7 @@ resource "aws_instance" "monitoring" {
 
 resource "aws_ebs_volume" "monitoring" {
   availability_zone = data.aws_availability_zones.available.names[0]
-  size              = 10
+  size              = var.monitoring_ebs_volume
   type              = "standard"
   snapshot_id       = var.monitoring_snapshot
 

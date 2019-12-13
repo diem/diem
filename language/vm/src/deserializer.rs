@@ -3,16 +3,16 @@
 
 use crate::{errors::*, file_format::*, file_format_common::*, vm_string::VMString};
 use byteorder::{LittleEndian, ReadBytesExt};
-use std::{
-    collections::HashSet,
-    convert::TryInto,
-    io::{Cursor, Read},
-};
-use types::{
+use libra_types::{
     account_address::ADDRESS_LENGTH,
     byte_array::ByteArray,
     identifier::Identifier,
     vm_error::{StatusCode, VMStatus},
+};
+use std::{
+    collections::HashSet,
+    convert::TryInto,
+    io::{Cursor, Read},
 };
 
 impl CompiledScript {
@@ -543,10 +543,8 @@ fn load_identifiers(
             if count != size {
                 return Err(VMStatus::new(StatusCode::MALFORMED));
             }
-            let s = match Identifier::from_utf8(buffer) {
-                Ok(bytes) => bytes,
-                Err(_) => return Err(VMStatus::new(StatusCode::MALFORMED)),
-            };
+            let s =
+                Identifier::from_utf8(buffer).map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
 
             identifiers.push(s);
         }
@@ -573,10 +571,8 @@ fn load_user_strings(
             if count != size {
                 return Err(VMStatus::new(StatusCode::MALFORMED));
             }
-            let us = match VMString::from_utf8(buffer) {
-                Ok(bytes) => bytes,
-                Err(_) => return Err(VMStatus::new(StatusCode::MALFORMED)),
-            };
+            let us =
+                VMString::from_utf8(buffer).map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
 
             user_strings.push(us);
         }
@@ -1056,7 +1052,6 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
                 let types_idx = read_uleb_u16_internal(cursor)?;
                 Bytecode::MoveToSender(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
-            Opcodes::CREATE_ACCOUNT => Bytecode::CreateAccount,
             Opcodes::GET_TXN_SEQUENCE_NUMBER => Bytecode::GetTxnSequenceNumber,
             Opcodes::GET_TXN_PUBLIC_KEY => Bytecode::GetTxnPublicKey,
             Opcodes::FREEZE_REF => Bytecode::FreezeRef,
@@ -1231,10 +1226,9 @@ impl Opcodes {
             0x30 => Ok(Opcodes::IMM_BORROW_GLOBAL),
             0x31 => Ok(Opcodes::MOVE_FROM),
             0x32 => Ok(Opcodes::MOVE_TO),
-            0x33 => Ok(Opcodes::CREATE_ACCOUNT),
-            0x34 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
-            0x35 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
-            0x36 => Ok(Opcodes::FREEZE_REF),
+            0x33 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
+            0x34 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
+            0x35 => Ok(Opcodes::FREEZE_REF),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }

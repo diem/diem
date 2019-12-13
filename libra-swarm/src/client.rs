@@ -148,18 +148,12 @@ pub struct InProcessTestClient {
 }
 
 impl InProcessTestClient {
-    pub fn new(
-        port: u16,
-        faucet_key_file_path: &Path,
-        mnemonic_file_path: &str,
-        validator_set_file: String,
-    ) -> Self {
+    pub fn new(port: u16, faucet_key_file_path: &Path, mnemonic_file_path: &str) -> Self {
         let (_, alias_to_cmd) = commands::get_commands(true);
         Self {
             client: ClientProxy::new(
                 "localhost",
                 port,
-                &validator_set_file,
                 faucet_key_file_path
                     .canonicalize()
                     .expect("Unable to get canonical path of faucet key file")

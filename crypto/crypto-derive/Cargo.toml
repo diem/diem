@@ -1,0 +1,19 @@
+[package]
+name = "libra-crypto-derive"
+version = "0.1.0"
+description = "Libra custom derives for `libra-crypto`"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+edition = "2018"
+
+[lib]
+proc_macro = true
+
+[dependencies]
+syn = { version = "1.0.1", features = ["derive"] }
+quote = "1.0.0"
+proc-macro2 = "1.0.1"
+
+[dev-dependencies]
+anyhow = "1.0"

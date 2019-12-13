@@ -1,5 +1,3 @@
-// check: VerificationFailure
-
 main() {
     let x: u64;
     let y: u64;
@@ -7,3 +5,4 @@ main() {
     y = move(x);
     return move(x);
 }
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END

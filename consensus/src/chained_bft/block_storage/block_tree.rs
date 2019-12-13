@@ -1,19 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::block_storage::pending_votes::PendingVotes;
 use crate::{
-    chained_bft::{
-        block_storage::VoteReceptionResult,
-        common::Author,
-        consensus_types::{block::ExecutedBlock, quorum_cert::QuorumCert, vote_msg::VoteMsg},
-    },
-    counters,
+    chained_bft::block_storage::VoteReceptionResult, counters,
     util::time_service::duration_since_epoch,
 };
-use canonical_serialization::CanonicalSerialize;
-use crypto::{hash::CryptoHash, HashValue};
-use executor::StateComputeResult;
-use logger::prelude::*;
+use anyhow::bail;
+use consensus_types::{
+    executed_block::ExecutedBlock, quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
+};
+use libra_crypto::HashValue;
+use libra_logger::prelude::*;
+use libra_types::crypto_proxies::ValidatorVerifier;
 use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;
 use std::{
@@ -21,10 +21,6 @@ use std::{
     fmt::Debug,
     sync::Arc,
     time::Duration,
-};
-use types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
-    validator_verifier::VerifyError,
 };
 
 /// This structure is a wrapper of [`ExecutedBlock`](crate::consensus_types::block::ExecutedBlock)
@@ -63,19 +59,11 @@ impl<T> LinkableBlock<T> {
 
 impl<T> LinkableBlock<T>
 where
-    T: Serialize + Default + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + PartialEq,
 {
     pub fn id(&self) -> HashValue {
         self.executed_block().id()
     }
-}
-
-/// This structure maintains tuple of block_id and LedgerInfo for last voted block by an Author
-/// We only remember latest vote from Author. Digest is used to identify and prune pending vote from
-/// same Author.
-struct BlockPendingVote {
-    block_id: HashValue,
-    digest: HashValue,
 }
 
 /// This structure maintains a consistent block tree of parent and children links. Blocks contain
@@ -91,19 +79,12 @@ pub struct BlockTree<T> {
 
     /// The quorum certificate of highest_certified_block
     highest_quorum_cert: Arc<QuorumCert>,
-    /// The quorum certificate that carries a highest ledger info
-    highest_ledger_info: Arc<QuorumCert>,
-    /// `id_to_votes` might keep multiple LedgerInfos per proposed block in order
-    /// to tolerate non-determinism in execution: given a proposal, a QuorumCertificate is going
-    /// to be collected only for all the votes that carry identical LedgerInfo.
-    /// LedgerInfo digest covers the potential commit ids, as well as the vote information
-    /// (including the 3-chain of a voted proposal).
-    /// Thus, the structure of `id_to_votes` is as follows:
-    /// HashMap<proposed_block_id, HashMap<ledger_info_digest, LedgerInfoWithSignatures>>
-    id_to_votes: HashMap<HashValue, HashMap<HashValue, LedgerInfoWithSignatures>>,
-    /// Map of Author to last voted block id & digest. Any pending vote from Author is cleaned up
-    /// whenever new vote is added by same Author
-    author_to_last_voted_block_id: HashMap<Author, BlockPendingVote>,
+    /// The highest timeout certificate (if any).
+    highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
+    /// The quorum certificate that has highest commit info.
+    highest_commit_cert: Arc<QuorumCert>,
+    /// Manages pending votes to be aggregated.
+    pending_votes: PendingVotes,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
     id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert>>,
     /// To keep the IDs of the elements that have been pruned from the tree but not cleaned up yet.
@@ -114,20 +95,18 @@ pub struct BlockTree<T> {
 
 impl<T> BlockTree<T>
 where
-    T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + Debug + PartialEq,
 {
     pub(super) fn new(
         root: ExecutedBlock<T>,
         root_quorum_cert: QuorumCert,
         root_ledger_info: QuorumCert,
         max_pruned_blocks_in_mem: usize,
+        highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
     ) -> Self {
         assert_eq!(
             root.id(),
-            root_ledger_info
-                .ledger_info()
-                .ledger_info()
-                .consensus_block_id(),
+            root_ledger_info.commit_info().id(),
             "inconsistent root and ledger info"
         );
         let root_id = root.id();
@@ -139,7 +118,7 @@ where
         let root_quorum_cert = Arc::new(root_quorum_cert);
         let mut id_to_quorum_cert = HashMap::new();
         id_to_quorum_cert.insert(
-            root_quorum_cert.certified_block_id(),
+            root_quorum_cert.certified_block().id(),
             Arc::clone(&root_quorum_cert),
         );
 
@@ -150,9 +129,9 @@ where
             root_id,
             highest_certified_block_id: root_id,
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
-            highest_ledger_info: Arc::new(root_ledger_info),
-            id_to_votes: HashMap::new(),
-            author_to_last_voted_block_id: HashMap::new(),
+            highest_timeout_cert,
+            highest_commit_cert: Arc::new(root_ledger_info),
+            pending_votes: PendingVotes::new(),
             id_to_quorum_cert,
             pruned_block_ids,
             max_pruned_blocks_in_mem,
@@ -178,7 +157,6 @@ where
     fn remove_block(&mut self, block_id: HashValue) {
         // Remove the block from the store
         self.id_to_block.remove(&block_id);
-        self.id_to_votes.remove(&block_id);
         self.id_to_quorum_cert.remove(&block_id);
     }
 
@@ -189,17 +167,6 @@ where
     pub(super) fn get_block(&self, block_id: &HashValue) -> Option<Arc<ExecutedBlock<T>>> {
         self.get_linkable_block(block_id)
             .map(|lb| Arc::clone(lb.executed_block()))
-    }
-
-    pub(super) fn get_compute_result(
-        &self,
-        block_id: &HashValue,
-    ) -> Option<Arc<StateComputeResult>> {
-        if self.root_id == *block_id {
-            None
-        } else {
-            self.get_block(block_id).map(|b| b.compute_result().clone())
-        }
     }
 
     pub(super) fn root(&self) -> Arc<ExecutedBlock<T>> {
@@ -215,8 +182,17 @@ where
         Arc::clone(&self.highest_quorum_cert)
     }
 
-    pub(super) fn highest_ledger_info(&self) -> Arc<QuorumCert> {
-        Arc::clone(&self.highest_ledger_info)
+    pub(super) fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>> {
+        self.highest_timeout_cert.clone()
+    }
+
+    /// Replace highest timeout cert with the given value.
+    pub(super) fn replace_timeout_cert(&mut self, tc: Arc<TimeoutCertificate>) {
+        self.highest_timeout_cert.replace(tc);
+    }
+
+    pub(super) fn highest_commit_cert(&self) -> Arc<QuorumCert> {
+        Arc::clone(&self.highest_commit_cert)
     }
 
     pub(super) fn get_quorum_cert_for_block(
@@ -229,7 +205,7 @@ where
     pub(super) fn insert_block(
         &mut self,
         block: ExecutedBlock<T>,
-    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
+    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         let block_id = block.id();
         if let Some(existing_block) = self.get_block(&block_id) {
             debug!("Already had block {:?} for id {:?} when trying to add another block {:?} for the same id",
@@ -251,8 +227,8 @@ where
         }
     }
 
-    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> failure::Result<()> {
-        let block_id = qc.certified_block_id();
+    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> anyhow::Result<()> {
+        let block_id = qc.certified_block().id();
         let qc = Arc::new(qc);
 
         // Safety invariant: For any two quorum certificates qc1, qc2 in the block store,
@@ -260,11 +236,11 @@ where
         // The invariant is quadratic but can be maintained in linear time by the check
         // below.
         precondition!({
-            let qc_round = qc.certified_block_round();
+            let qc_round = qc.certified_block().round();
             self.id_to_quorum_cert.values().all(|x| {
                 (*(*x).ledger_info()).ledger_info().consensus_data_hash()
                     == (*(*qc).ledger_info()).ledger_info().consensus_data_hash()
-                    || x.certified_block_round() != qc_round
+                    || x.certified_block().round() != qc_round
             })
         });
 
@@ -282,119 +258,33 @@ where
             .entry(block_id)
             .or_insert_with(|| Arc::clone(&qc));
 
-        let committed_block_id = qc.ledger_info().ledger_info().consensus_block_id();
-        if let Some(block) = self.get_block(&committed_block_id) {
-            if block.round()
-                > self
-                    .get_block(
-                        &self
-                            .highest_ledger_info
-                            .ledger_info()
-                            .ledger_info()
-                            .consensus_block_id(),
-                    )
-                    .expect("Highest ledger info's block should exist")
-                    .round()
-            {
-                self.highest_ledger_info = qc;
-            }
-        }
-        Ok(())
-    }
-
-    /// Check if vote is valid. If this is the first vote from Author, add it to map. If Author has
-    /// already voted on same block then return DuplicateVote error. If Author has already voted
-    /// on some other block, prune last vote and insert new one in map.
-    fn check_vote_valid(&mut self, vote_msg: &VoteMsg) -> Result<(), VoteReceptionResult> {
-        let author = vote_msg.author();
-        let block_id = vote_msg.vote_data().block_id();
-        let digest = vote_msg.ledger_info().hash();
-
-        let last_voted_block = match self
-            .author_to_last_voted_block_id
-            .insert(author, BlockPendingVote { block_id, digest })
-        {
-            None => {
-                // First vote from Author, do nothing.
-                return Ok(());
-            }
-            Some(last_voted_block) => last_voted_block,
-        };
-
-        // Prune last pending vote from Author
-        if block_id == last_voted_block.block_id {
-            // Author has already voted for this block
-            return Err(VoteReceptionResult::DuplicateVote);
+        if self.highest_commit_cert.commit_info().round() < qc.commit_info().round() {
+            self.highest_commit_cert = qc;
         }
 
-        if let Some(block_pending_votes) = self.id_to_votes.get_mut(&last_voted_block.block_id) {
-            if let Some(li_digest_to_sig) = block_pending_votes.get_mut(&last_voted_block.digest) {
-                // Removing signature from last voted block
-                li_digest_to_sig.remove_signature(author);
-                if li_digest_to_sig.signatures().is_empty() {
-                    // Last vote/signature for block, remove digest entry
-                    block_pending_votes.remove(&last_voted_block.digest);
-                    if block_pending_votes.is_empty() {
-                        self.id_to_votes.remove(&last_voted_block.block_id);
-                    }
-                }
-            }
-        }
         Ok(())
     }
 
     pub(super) fn insert_vote(
         &mut self,
-        vote_msg: &VoteMsg,
-        validator_verifier: Arc<ValidatorVerifier>,
+        vote: &Vote,
+        validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
-        let author = vote_msg.author();
-        let block_id = vote_msg.vote_data().block_id();
+        let block_id = vote.vote_data().proposed().id();
         if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
             return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
         }
-
-        if let Err(e) = self.check_vote_valid(vote_msg) {
-            return e;
-        }
-
-        // All the votes collected for all the execution results of a given proposal.
-        let block_votes = self
-            .id_to_votes
-            .entry(block_id)
-            .or_insert_with(HashMap::new);
-
-        // Note that the digest covers the ledger info information, which is also indirectly
-        // covering vote data hash (in its `consensus_data_hash` field).
-        let digest = vote_msg.ledger_info().hash();
-        let li_with_sig = block_votes.entry(digest).or_insert_with(|| {
-            LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), HashMap::new())
-        });
-
-        vote_msg.signature().clone().add_to_li(author, li_with_sig);
-        match validator_verifier.check_voting_power(li_with_sig.signatures().keys())
-        {
-            Ok(_) => {
-                let quorum_cert =
-                    QuorumCert::new(vote_msg.vote_data().clone(), li_with_sig.clone());
-                // Note that the block might not be present locally, in which case we cannot
-                // calculate time between block creation and qc
-                if let Some(time_to_qc) = self.get_block(&block_id).and_then(|block| {
-                    duration_since_epoch()
-                        .checked_sub(Duration::from_micros(block.timestamp_usecs()))
-                }) {
-                    counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
-                }
-
-                VoteReceptionResult::NewQuorumCertificate(Arc::new(quorum_cert))
+        let res = self.pending_votes.insert_vote(vote, validator_verifier);
+        if let VoteReceptionResult::NewQuorumCertificate(_) = res {
+            // Note that the block might not be present locally, in which case we cannot calculate
+            // time between block creation and qc
+            if let Some(time_to_qc) = self.get_block(&block_id).and_then(|block| {
+                duration_since_epoch().checked_sub(Duration::from_micros(block.timestamp_usecs()))
+            }) {
+                counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
             }
-            Err(err) => match err {
-                VerifyError::TooLittleVotingPower { voting_power, .. } => {
-                    VoteReceptionResult::VoteAdded(voting_power)
-                }
-                _ => panic!("Impossible to get any other error except TooLittleVotingPower since messages with invalid authors are dropped, vote_msg = {}", vote_msg),
-            },
         }
+        res
     }
 
     /// Find the blocks to prune up to next_root_id (keep next_root_id's block). Any branches not
@@ -489,6 +379,8 @@ where
         if cur_block_id != self.root_id {
             return None;
         }
+        // Called `.reverse()` to get the chronically increased order.
+        res.reverse();
         Some(res)
     }
 
@@ -504,7 +396,7 @@ where
 #[cfg(any(test, feature = "fuzzing"))]
 impl<T> BlockTree<T>
 where
-    T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + Debug + PartialEq,
 {
     /// Returns the number of blocks in the tree
     pub(super) fn len(&self) -> usize {

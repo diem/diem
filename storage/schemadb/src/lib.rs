@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This library implements a schematized DB on top of [RocksDB](https://rocksdb.org/). It makes
 //! sure all data passed in and out are structured according to predefined schemas and prevents
 //! access to raw keys and values. This library also enforces a set of Libra specific DB options,
@@ -15,9 +17,9 @@
 pub mod schema;
 
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
-use failure::prelude::*;
+use anyhow::{format_err, Result};
 use lazy_static::lazy_static;
-use metrics::OpMetrics;
+use libra_metrics::OpMetrics;
 use rocksdb::{
     rocksdb_options::ColumnFamilyDescriptor, CFHandle, DBOptions, Writable, WriteOptions,
 };
@@ -165,8 +167,8 @@ fn db_exists(path: &Path) -> bool {
 }
 
 /// All the RocksDB methods return `std::result::Result<T, String>`. Since our methods return
-/// `failure::Result<T>`, manual conversion is needed.
-fn convert_rocksdb_err(msg: String) -> failure::Error {
+/// `anyhow::Result<T>`, manual conversion is needed.
+fn convert_rocksdb_err(msg: String) -> anyhow::Error {
     format_err!("RocksDB internal error: {}.", msg)
 }
 
@@ -263,7 +265,7 @@ impl DB {
 
     /// Delete all keys in range [begin, end).
     ///
-    /// `SK` has to be an explict type parameter since
+    /// `SK` has to be an explicit type parameter since
     /// https://github.com/rust-lang/rust/issues/44721
     pub fn range_delete<S, SK>(&self, begin: &SK, end: &SK) -> Result<()>
     where

@@ -1,0 +1,5 @@
+import 0x0.ValidatorConfig;
+main (new_key: bytearray) {
+  ValidatorConfig.rotate_consensus_pubkey(move(new_key));
+  return;
+}

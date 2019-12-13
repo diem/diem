@@ -4,15 +4,15 @@
 //! This module provides reusable helpers in tests.
 
 use super::*;
-use crate::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
-use crypto::hash::CryptoHash;
-use proptest::{collection::vec, prelude::*};
-use tools::tempdir::TempPath;
-use types::{
+use libra_crypto::hash::CryptoHash;
+use libra_tools::tempdir::TempPath;
+use libra_types::block_info::BlockInfo;
+use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
-    proptest_types::{AccountInfoUniverse, TransactionToCommitGen},
+    proptest_types::{AccountInfoUniverse, LedgerInfoWithSignaturesGen, TransactionToCommitGen},
 };
+use proptest::{collection::vec, prelude::*};
 
 fn to_blocks_to_commit(
     partial_blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
@@ -20,20 +20,17 @@ fn to_blocks_to_commit(
     // Use temporary LibraDB and STORE LEVEL APIs to calculate hashes on a per transaction basis.
     // Result is used to test the batch PUBLIC API for saving everything, i.e. `save_transactions()`
     let tmp_dir = TempPath::new();
-    let db = db_with_mock_genesis(&tmp_dir.path())?;
+    let db = LibraDB::new(&tmp_dir);
 
-    let genesis_ledger_info_with_sigs = GENESIS_INFO.1.clone();
-    let genesis_ledger_info = genesis_ledger_info_with_sigs.ledger_info();
     let mut cur_ver = 0;
-    let mut cur_txn_accu_hash = genesis_ledger_info.transaction_accumulator_hash();
+    let mut cur_txn_accu_hash = HashValue::zero();
     let blocks_to_commit = partial_blocks
         .into_iter()
         .map(|(txns_to_commit, partial_ledger_info_with_sigs)| {
             for txn_to_commit in txns_to_commit.iter() {
-                cur_ver += 1;
                 let mut cs = ChangeSet::new();
 
-                let txn_hash = txn_to_commit.signed_txn().hash();
+                let txn_hash = txn_to_commit.transaction().hash();
                 let state_root_hash = db.state_store.put_account_state_sets(
                     vec![txn_to_commit.account_states().clone()],
                     cur_ver,
@@ -55,31 +52,26 @@ fn to_blocks_to_commit(
                         .put_transaction_infos(cur_ver, &[txn_info], &mut cs)?;
                 db.db.write_schemas(cs.batch)?;
 
+                cur_ver += 1;
                 cur_txn_accu_hash = txn_accu_hash;
             }
 
-            let ledger_info = LedgerInfo::new(
-                cur_ver,
+            let partial_ledger_info = partial_ledger_info_with_sigs.ledger_info();
+            let signatures = partial_ledger_info_with_sigs.signatures().clone();
+            assert_eq!(cur_ver, partial_ledger_info.version() + 1);
+
+            let block_info = BlockInfo::new(
+                partial_ledger_info.epoch(),
+                partial_ledger_info.round(),
+                partial_ledger_info.consensus_block_id(),
                 cur_txn_accu_hash,
-                partial_ledger_info_with_sigs
-                    .ledger_info()
-                    .consensus_data_hash(),
-                partial_ledger_info_with_sigs
-                    .ledger_info()
-                    .consensus_block_id(),
-                partial_ledger_info_with_sigs.ledger_info().epoch_num(),
-                partial_ledger_info_with_sigs
-                    .ledger_info()
-                    .timestamp_usecs(),
-                partial_ledger_info_with_sigs
-                    .ledger_info()
-                    .next_validator_set()
-                    .cloned(),
+                partial_ledger_info.version(),
+                partial_ledger_info.timestamp_usecs(),
+                partial_ledger_info.next_validator_set().cloned(),
             );
-            let ledger_info_with_sigs = LedgerInfoWithSignatures::new(
-                ledger_info,
-                partial_ledger_info_with_sigs.signatures().clone(),
-            );
+            let ledger_info =
+                LedgerInfo::new(block_info, partial_ledger_info.consensus_data_hash());
+            let ledger_info_with_sigs = LedgerInfoWithSignatures::new(ledger_info, signatures);
             Ok((txns_to_commit, ledger_info_with_sigs))
         })
         .collect::<Result<Vec<_>>>()?;
@@ -98,8 +90,8 @@ prop_compose! {
         mut universe in any_with::<AccountInfoUniverse>(5).no_shrink(),
         batches in vec(
             (
-                vec(any::<TransactionToCommitGen>(), 0..=2),
-                any::<LedgerInfoWithSignatures>()
+                vec(any::<TransactionToCommitGen>(), 1..=2),
+                any::<LedgerInfoWithSignaturesGen>(),
             ),
             1..10,
         ),
@@ -111,13 +103,14 @@ prop_compose! {
     {
         let partial_blocks = batches
             .into_iter()
-            .map(|(txn_gens, partial_ledger_info)| {
+            .map(|(txn_gens, ledger_info_gen)| {
+                let block_size = txn_gens.len();
                 (
                     txn_gens
                         .into_iter()
                         .map(|gen| gen.materialize(&mut universe))
                         .collect(),
-                    partial_ledger_info,
+                    ledger_info_gen.materialize(&mut universe, block_size),
                 )
             })
             .collect();

@@ -1,0 +1,55 @@
+error: 
+
+   ┌── tests/move_check/typing/assign_wrong_arity.move:6:9 ───
+   │
+ 6 │         x = ();
+   │         ^ Invalid list-assignment. The list-assignment expected 1 argument(s) but got 0
+   ·
+ 6 │         x = ();
+   │             -- Found 0 arguments here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/assign_wrong_arity.move:7:9 ───
+   │
+ 7 │         x = (0, 1, 2);
+   │         ^ Invalid list-assignment. The list-assignment expected 1 argument(s) but got 3
+   ·
+ 7 │         x = (0, 1, 2);
+   │             --------- Found 3 arguments here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/assign_wrong_arity.move:8:9 ───
+   │
+ 8 │         () = 0;
+   │         ^^ Invalid list-assignment. The list-assignment expected 0 argument(s) but got 1
+   ·
+ 8 │         () = 0;
+   │              - Found 1 arguments here
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_wrong_arity.move:11:9 ───
+    │
+ 11 │         (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
+    │         ^^^^^^^^^^^^ Invalid list-assignment. The list-assignment expected 3 argument(s) but got 4
+    ·
+ 11 │         (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
+    │                        ---------------------------- Found 4 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_wrong_arity.move:12:9 ───
+    │
+ 12 │         (x, b, R{f}) = (0, false);
+    │         ^^^^^^^^^^^^ Invalid list-assignment. The list-assignment expected 3 argument(s) but got 2
+    ·
+ 12 │         (x, b, R{f}) = (0, false);
+    │                        ---------- Found 2 arguments here
+    │
+

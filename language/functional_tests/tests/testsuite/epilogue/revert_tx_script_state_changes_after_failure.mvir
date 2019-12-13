@@ -1,0 +1,25 @@
+//! account: alice, 100000
+//! account: bob, 100000
+
+//! sender: alice
+import 0x0.LibraAccount;
+
+main() {
+    LibraAccount.pay_from_sender({{bob}}, 514);
+    assert(false, 42);
+    return;
+}
+
+// check: ABORTED
+// check: 42
+
+
+//! new-transaction
+import 0x0.LibraAccount;
+
+main() {
+    assert(LibraAccount.balance({{bob}}) == 100000, 43);
+    return;
+}
+
+// check: EXECUTED

@@ -10,22 +10,18 @@ use crate::{
     utils::MessageExt,
     ProtocolId,
 };
-use config::config::RoleType;
-use futures::{
-    compat::{Compat, Sink01CompatExt},
-    sink::SinkExt,
-    stream::StreamExt,
-};
+use futures::{sink::SinkExt, stream::StreamExt};
+use libra_config::config::RoleType;
+use libra_types::PeerId;
 use netcore::{
+    compat::IoCompat,
     multiplexing::StreamMultiplexer,
     negotiate::{negotiate_inbound, negotiate_outbound_interactive},
     transport::ConnectionOrigin,
 };
 use prost::Message;
 use std::{convert::TryInto, io};
-use tokio::codec::Framed;
-use types::PeerId;
-use unsigned_varint::codec::UviBytes;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 const IDENTITY_PROTOCOL_NAME: &[u8] = b"/identity/0.1.0";
 
@@ -97,8 +93,7 @@ where
     assert_eq!(proto, IDENTITY_PROTOCOL_NAME);
 
     // Create the Framed Sink/Stream
-    let mut framed_substream =
-        Framed::new(Compat::new(substream), UviBytes::default()).sink_compat();
+    let mut framed_substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
 
     // Build Identity Message
     let mut msg = IdentityMsg::default();
@@ -118,7 +113,9 @@ where
     let bytes = msg
         .to_bytes()
         .expect("writing protobuf failed; should never happen");
-    framed_substream.send(bytes).await?;
+    framed_substream
+        .send(bytes05::Bytes::copy_from_slice(bytes.as_ref()))
+        .await?;
     framed_substream.close().await?;
 
     // Read an IdentityMsg from the Remote
@@ -128,7 +125,7 @@ where
             "Connection closed by remote",
         )
     })??;
-    let response = IdentityMsg::decode(&response).map_err(|e| {
+    let response = IdentityMsg::decode(response.as_ref()).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             format!("Failed to parse identity msg: {}", e),
@@ -155,14 +152,14 @@ mod tests {
         protocols::identity::{exchange_identity, Identity},
         ProtocolId,
     };
-    use config::config::RoleType;
     use futures::{executor::block_on, future::join};
+    use libra_config::config::RoleType;
+    use libra_types::PeerId;
     use memsocket::MemorySocket;
     use netcore::{
         multiplexing::yamux::{Mode, Yamux},
         transport::ConnectionOrigin,
     };
-    use types::PeerId;
 
     fn build_test_connection() -> (Yamux<MemorySocket>, Yamux<MemorySocket>) {
         let (dialer, listener) = MemorySocket::new_pair();

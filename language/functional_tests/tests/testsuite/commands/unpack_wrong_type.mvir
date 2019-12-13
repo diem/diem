@@ -1,33 +1,16 @@
 module Test {
-    struct X { }
-    struct T { }
+    struct X { b: bool }
+    struct T { b: bool }
 
     public new_t(): Self.T {
-        return T { };
+        return T { b: true };
     }
 
     public destroy_t(t: Self.T) {
-        X { } = move(t);
+        let b: bool;
+        X { b } = move(t);
         return;
     }
 
 }
-
-//! new-transaction
-
-import {{default}}.Test;
-
-main() {
-    let x: Test.X;
-    let i: u64;
-    let t: Test.T;
-    let b: bool;
-
-    t = Test.new_t();
-    Test.destroy_t(move(t));
-
-    return;
-}
-
-// check: VerificationFailure
 // check: UNPACK_TYPE_MISMATCH_ERROR

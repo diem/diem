@@ -1,0 +1,170 @@
+//! account: alice
+//! account: vivian, 1000000, 0, validator
+//! account: viola, 1000000, 0, validator
+
+//! new-transaction
+//! sender: alice
+import 0x0.ValidatorConfig;
+// register Alice as a validator candidate
+main() {
+    let config: ValidatorConfig.Config;
+
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
+    return;
+}
+// check: events: []
+// check: EXECUTED
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+// rotate alice's network address
+main() {
+    ValidatorConfig.rotate_validator_network_address(h"40");
+    return;
+}
+// check: events: []
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+
+// Run the block prologue. No reconfiguration should be triggered, since alice is
+// not a validator
+// TODO: trigger a BlockMetadata transaction here instead
+main() {
+    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
+    return;
+}
+// check: events: []
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+// rotate vivian's network address
+main() {
+    let info: LibraSystem.DiscoveryInfo;
+    ValidatorConfig.rotate_validator_network_address(h"40");
+    // check that the discovery set contains Vivian's old address before reconfiguration
+    info = LibraSystem.get_ith_discovery_info(1);
+    assert(*LibraSystem.get_validator_network_address(&info) != h"40", 98);
+    return;
+}
+// check: events: []
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+// the reconfiguration should be triggered
+main() {
+    LibraSystem.block_prologue(2, h"aa", h"bb", {{vivian}});
+    return;
+}
+// not: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+main() {
+    let info: LibraSystem.DiscoveryInfo;
+    // check that the discovery set contains Vivian's new address after reconfiguration
+    info = LibraSystem.get_ith_discovery_info(1);
+    assert(*LibraSystem.get_validator_network_address(&info) == h"40", 99);
+    return;
+}
+// check: events: []
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+// rotate vivian's network address to the same value
+main() {
+    ValidatorConfig.rotate_validator_network_address(h"40");
+    return;
+}
+// check: events: []
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+// No reconfiguration should be triggered, since the current and previous values
+// are equal
+main() {
+    LibraSystem.block_prologue(3, h"aa", h"bb", {{vivian}});
+    return;
+}
+// check: events: []
+// check: EXECUTED
+
+//! new-transaction
+//! sender: viola
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+// rotate viola's network address to a new value
+main() {
+    ValidatorConfig.rotate_validator_network_address(h"80");
+    return;
+}
+// check: events: []
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+// rotate vivian's network address to a new value
+main() {
+    ValidatorConfig.rotate_validator_network_address(h"90");
+    return;
+}
+// check: events: []
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+main() {
+    LibraSystem.block_prologue(4, h"aa", h"bb", {{vivian}});
+    return;
+}
+// not: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+// check that both vivian and viola's network address updates are reflected in
+// the new discovery set
+main() {
+    let info: LibraSystem.DiscoveryInfo;
+
+    // check that the discovery set contains Viola's new address
+    info = LibraSystem.get_ith_discovery_info(0);
+    assert(*LibraSystem.get_discovery_address(&info) == {{viola}}, 14);
+    assert(*LibraSystem.get_validator_network_address(&info) == h"80", 15);
+
+    // check that the discovery set contains Vivian's new address
+    info = LibraSystem.get_ith_discovery_info(1);
+    assert(*LibraSystem.get_discovery_address(&info) == {{vivian}}, 16);
+    assert(*LibraSystem.get_validator_network_address(&info) == h"90", 17);
+
+    return;
+}
+// check: events: []
+// check: EXECUTED

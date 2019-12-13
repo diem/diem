@@ -4,7 +4,7 @@
 use crate::abstract_state::{AbstractValue, BorrowState};
 use rand::{rngs::StdRng, Rng};
 use std::collections::{HashMap, VecDeque};
-use vm::file_format::{Bytecode, FunctionSignature, SignatureToken};
+use vm::file_format::{Bytecode, FunctionSignature, Kind, SignatureToken};
 
 /// This type holds basic block identifiers
 type BlockIDSize = u16;
@@ -238,6 +238,7 @@ impl CFG {
             !cfg.basic_blocks.is_empty(),
             "Cannot add locals to empty cfg"
         );
+        debug!("add locals: {:#?}", locals);
         for block_id in 0..cfg.basic_blocks.len() {
             let cfg_copy = cfg.clone();
             let basic_block = cfg
@@ -256,7 +257,10 @@ impl CFG {
                         };
                         (
                             i,
-                            (AbstractValue::new_primitive(token.clone()), borrow_state),
+                            (
+                                AbstractValue::new_value(token.clone(), Kind::Unrestricted),
+                                borrow_state,
+                            ),
                         )
                     })
                     .collect();

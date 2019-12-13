@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::HashValue;
 use jellyfish_merkle::node_type::Node;
+use libra_crypto::HashValue;
+use libra_types::account_state_blob::AccountStateBlob;
 use proptest::prelude::*;
 use schemadb::schema::assert_encode_decode;
-use types::account_state_blob::AccountStateBlob;
 
 proptest! {
     #[test]

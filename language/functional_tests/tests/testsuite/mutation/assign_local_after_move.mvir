@@ -1,6 +1,3 @@
-// check:  VerificationFailure
-// check: MOVELOC_EXISTS_BORROW_ERROR
-
 main() {
     let v: u64;
     let ref_v: &mut u64;
@@ -12,3 +9,4 @@ main() {
     *move(ref_v) = 42;
     return;
 }
+// check: MOVELOC_EXISTS_BORROW_ERROR

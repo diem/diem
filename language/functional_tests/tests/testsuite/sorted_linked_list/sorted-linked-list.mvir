@@ -1,0 +1,547 @@
+//! account: sys
+//! account: alice, 100000000
+//! account: bob
+//! account: carol
+//! account: david
+//! account: eve
+//! account: frank
+
+//! sender: sys
+// Implements a sorted linked list in which everyone can insert a new node (e.g. for DNS)
+// but only the list owner/node owner can remove a node
+module SortedLinkedList
+{
+    resource Node
+    {
+        prev: address, //account address where the previous node is stored (head if no previous node exists)
+        next: address, //account address where the next node is stored (head if no next node exists)
+        head: address, //account address where current list's head is stored -- whoever stores head is the owner of the whole list
+        value: u64 //TODO: make generic
+    }
+
+    public node_exists(node_address: address): bool
+    {
+        return exists<Node>(move(node_address));
+    }
+
+    public get_value_of_node(node_address: address): u64 acquires Node
+    {
+        let node_ref: & Self.Node;
+        let result: u64;
+
+        assert(exists<Node>(copy(node_address)), 20);
+
+        node_ref = borrow_global<Node>(move(node_address));
+        result = *&move(node_ref).value;
+
+        return move(result);
+    }
+
+    //checks whether this address is the head of a list -- fails if there is no node here
+    public is_head_node(current_node_address: address): bool acquires Node
+    {
+		let current_node_ref: & Self.Node;
+		let head_node_address: address;
+		let result: bool;
+
+		//check that a node exists
+		assert(exists<Node>(copy(current_node_address)), 19);
+
+        //find the head node
+		current_node_ref = borrow_global<Node>(copy(current_node_address));
+        head_node_address = *&move(current_node_ref).head;
+
+        //check if this is the head node
+        result = (move(head_node_address) == move(current_node_address));
+
+        return move(result);
+    }
+
+    //creates a new list whose head is at txn_sender (is owned by the caller)
+    public create_new_list()
+    {
+        let sender_address: address;
+        let head: Self.Node;
+
+        sender_address = get_txn_sender();
+
+        //make sure no node/list is already stored in this account
+        assert(!exists<Node>(copy(sender_address)), 1);
+
+        head = Node {
+            prev: copy(sender_address),
+            next: copy(sender_address),
+            head: move(sender_address),
+            value: 0
+        };
+        move_to_sender<Node>(move(head));
+
+
+        return;
+    }
+
+    //adds a node that is stored in txn_sender's account and whose location in the list is right after prev_node_address
+    public add_node(value: u64, prev_node_address: address) acquires Node //TODO: make value generic
+    {
+        let sender_address: address;
+        let prev_node_ref: & Self.Node;
+        let prev_node_mut_ref: &mut Self.Node;
+        let next_node_address: address;
+        let next_node_mut_ref: &mut Self.Node;
+        let next_node_ref: & Self.Node;
+        let prev_is_head: bool;
+        let next_is_head: bool;
+        let prev_value: u64; //TODO: make generic
+        let next_value: u64; //TODO: make generic
+        let current_node: Self.Node;
+        let head_address: address;
+
+
+        sender_address = get_txn_sender();
+
+        //make sure no node is already stored in this account
+        assert(!exists<Node>(copy(sender_address)), 3);
+
+        //make sure a node exists in prev_node_address
+        assert(exists<Node>(copy(prev_node_address)), 5);
+
+        //get a reference to prev_node and find the address and reference to next_node, head
+        prev_node_ref = borrow_global<Node>(copy(prev_node_address));
+        next_node_address = *&copy(prev_node_ref).next;
+        next_node_ref = borrow_global<Node>(copy(next_node_address));
+        head_address = *&copy(next_node_ref).head;
+
+        //see if either prev or next are the head and get their values
+        prev_value = *&move(prev_node_ref).value;
+        next_value = *&move(next_node_ref).value;
+        prev_is_head = Self.is_head_node(copy(prev_node_address));
+        next_is_head = Self.is_head_node(copy(next_node_address));
+
+        //check the order -- the list must be sorted
+        assert(move(prev_is_head) || (move(prev_value) < copy(value)), 6);
+        assert(move(next_is_head) || (move(next_value) > copy(value)), 7);
+
+        //create the new node
+        current_node = Node {
+            prev: copy(prev_node_address),
+            next: copy(next_node_address),
+            head: move(head_address),
+            value: move(value)
+        };
+        move_to_sender<Node>(move(current_node));
+
+        //fix the pointers at prev
+        prev_node_mut_ref = borrow_global_mut<Node>(move(prev_node_address));
+        *&mut move(prev_node_mut_ref).next = copy(sender_address);
+
+        //fix the pointers at next
+        next_node_mut_ref = borrow_global_mut<Node>(move(next_node_address));
+        *&mut move(next_node_mut_ref).prev = copy(sender_address);
+
+        return;
+    }
+
+    //can only called by the list owner (head) -- removes the list if it is empty, fails if it is non-empty or if no list is owned by the caller
+    public remove_list() acquires Node
+    {
+        let sender_address: address;
+        let current_node_ref: & Self.Node;
+        let next_node_address: address;
+        let prev_node_address: address;
+        let temp_address: address;
+        let temp_value: u64; //TODO: make generic
+        let temp_bool: bool;
+
+        sender_address = get_txn_sender();
+
+        //fail if the caller does not own a list
+        assert(Self.is_head_node(copy(sender_address)), 18)
+
+        assert(exists<Node>(copy(sender_address)), 8);
+        current_node_ref = borrow_global<Node>(copy(sender_address));
+
+        //check that the list is empty
+        next_node_address = *&copy(current_node_ref).next;
+        prev_node_address = *&move(current_node_ref).prev;
+        assert(move(next_node_address) == copy(sender_address), 9);
+        assert(move(prev_node_address) == copy(sender_address), 10);
+
+        //destroy the Node
+        Node{temp_address, temp_address, temp_address, temp_value} = move_from<Node>(copy(sender_address));
+
+
+        return;
+    }
+
+    //removes the current non-head node -- fails if the passed node is the head of a list
+    public remove_node_by_node_owner()  acquires Node
+    {
+        let sender_address: address;
+        sender_address = get_txn_sender();
+
+        //make sure a node exists
+        assert(exists<Node>(copy(sender_address)), 11);
+
+        //make sure it is not a head node (heads can be removed using remove_list)
+        assert(!Self.is_head_node(copy(sender_address)),12);
+
+        //remove it
+        Self.remove_node(move(sender_address));
+
+        return;
+    }
+
+    public remove_node_by_list_owner(node_address: address) acquires Node
+    {
+
+        let node_ref: & Self.Node;
+        let list_owner: address;
+
+        //make sure the node exists
+        assert(exists<Node>(copy(node_address)), 13);
+
+        //make sure it is not a head node
+        assert(!Self.is_head_node(copy(node_address)), 14);
+
+        //make sure the caller owns the list
+        node_ref = borrow_global<Node>(copy(node_address));
+        list_owner = *&move(node_ref).head;
+        assert(move(list_owner) == get_txn_sender(), 15);
+
+        //remove it
+        Self.remove_node(move(node_address));
+
+        return;
+    }
+
+    //private function used for removing a non-head node -- does not check permissions
+    remove_node(node_address: address) acquires Node
+    {
+        let current_node_ref: & Self.Node;
+        let next_node_address: address;
+        let next_node_mut_ref: &mut Self.Node;
+        let prev_node_address: address;
+        let prev_node_mut_ref: &mut Self.Node;
+        let temp_address: address;
+        let temp_value: u64; //TODO: make generic
+
+        //make sure the node exists
+        assert(exists<Node>(copy(node_address)),16);
+
+        //find prev and next
+        current_node_ref = borrow_global<Node>(copy(node_address));
+        next_node_address = *&copy(current_node_ref).next;
+        prev_node_address = *&move(current_node_ref).prev;
+
+
+        //update next
+        next_node_mut_ref = borrow_global_mut<Node>(copy(next_node_address));
+        *&mut move(next_node_mut_ref).prev = copy(prev_node_address);
+
+        //update prev
+        prev_node_mut_ref = borrow_global_mut<Node>(move(prev_node_address));
+        *&mut move(prev_node_mut_ref).next = move(next_node_address);
+
+        //destroy the current node
+        Node {temp_address,temp_address,temp_address,temp_value} = move_from<Node>(move(node_address));
+
+        return;
+    }
+
+
+}
+
+
+//! new-transaction
+//! sender: alice
+//creating a new list _@alice
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.create_new_list();
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: alice
+//attempting to create another list with the same head
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.create_new_list();
+    return;
+}
+// check: ABORTED
+// check: 1
+
+//! new-transaction
+//! sender: bob
+//adding a new element to Alice's list _@alice -> 10@bob
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(10, {{alice}});
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: bob
+//adding another Bob node
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(12, {{alice}});
+    return;
+}
+// check: ABORTED
+// check: 3
+
+//! new-transaction
+//! sender: carol
+//adding a node that does not satisfy the order between Alice and Bob _@alice -> 15@carol -> 10@bob
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(15, {{alice}});
+    return;
+}
+// check: ABORTED
+// check: 7
+
+//! new-transaction
+//! sender: carol
+//adding a node between Alice and Bob _@alice -> 5@carol -> 10@bob
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(5, {{alice}});
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: david
+//adding a node that does not satisfy order after Bob _@alice -> 5@carol -> 10@bob -> 4@david
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(4, {{bob}});
+    return;
+}
+// check: ABORTED
+// check: 6
+
+//! new-transaction
+//! sender: david
+//adding a node after Bob _@alice -> 5@carol -> 10@bob -> 15@david
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(15, {{bob}});
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: frank
+//adding a node after a non-existent node
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(15, {{eve}});
+    return;
+}
+// check: ABORTED
+// check: 5
+
+//! new-transaction
+//! sender: eve
+//adding a node after Carol with the same value _@alice -> 5@carol -> 5@eve -> 10@bob -> 15@david
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(5, {{carol}});
+    return;
+}
+// check: ABORTED
+// check: 6
+
+//! new-transaction
+//! sender: carol
+//adding a node after itself
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(5, {{carol}});
+    return;
+}
+// check: ABORTED
+// check: 3
+
+//! new-transaction
+//! sender: eve
+//adding a node between Carol and Bob _@alice -> 5@carol -> 7@eve -> 10@bob -> 15@david
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(7, {{carol}});
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: carol
+//remove node  _@alice -> 7@eve -> 10@bob -> 15@david
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node_by_node_owner();
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: carol
+//remove node again
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node_by_node_owner();
+    return;
+}
+// check: ABORTED
+// check: 11
+
+//! new-transaction
+//! sender: carol
+//add a new carol node elsewhere in the list _@alice -> 7@eve -> 9@carol -> 10@bob -> 15@david
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.add_node(9, {{eve}});
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: alice
+//Alice removes Bob's node _@alice -> 7@eve -> 9@carol -> 15@david
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node_by_list_owner({{bob}});
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: bob
+//Bob tries to remove his now-non-existent node
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node_by_node_owner();
+    return;
+}
+// check: ABORTED
+// check: 11
+
+//! new-transaction
+//! sender: bob
+//A non-owner tries to remove a node
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node_by_list_owner({{david}});
+    return;
+}
+// check: ABORTED
+// check: 15
+
+//! new-transaction
+//! sender: alice
+//Alice attempts to remove her head node
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node_by_list_owner({{alice}});
+    return;
+}
+// check: ABORTED
+// check: 14
+
+//! new-transaction
+//! sender: alice
+//Alice attempts to remove her head node
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node_by_node_owner();
+    return;
+}
+// check: ABORTED
+// check: 12
+
+//! new-transaction
+//! sender: alice
+//Alice attempts to remove her list while it is not empty
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_list();
+    return;
+}
+// check: ABORTED
+// check: 9
+
+//! new-transaction
+//! sender: alice
+//Alice empties her list and removes it using the wrong method
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node_by_list_owner({{carol}});
+    SortedLinkedList.remove_node_by_list_owner({{david}});
+    SortedLinkedList.remove_node_by_list_owner({{eve}});
+    SortedLinkedList.remove_node_by_list_owner({{alice}});
+    return;
+}
+// check: ABORTED
+// check: 14
+
+//! new-transaction
+//! sender: alice
+//Alice empties her list and removes it using the wrong method
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node_by_list_owner({{david}});
+    SortedLinkedList.remove_node_by_list_owner({{carol}});
+    SortedLinkedList.remove_node_by_list_owner({{eve}});
+    SortedLinkedList.remove_node_by_node_owner();
+    return;
+}
+// check: ABORTED
+// check: 12
+
+//! new-transaction
+//! sender: alice
+//Alice empties her list and removes it
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node_by_list_owner({{eve}});
+    SortedLinkedList.remove_node_by_list_owner({{david}});
+    SortedLinkedList.remove_node_by_list_owner({{carol}});
+    SortedLinkedList.remove_list();
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: bob
+//Bob creates a new list _@bob
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.create_new_list();
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: bob
+//Attempts to call a private function
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node({{bob}});
+    return;
+}
+// check: VISIBILITY_MISMATCH
+
+//! new-transaction
+//! sender: sys
+//Attempts to call a private function in a module that is owned by the caller
+import {{sys}}.SortedLinkedList;
+main() {
+    SortedLinkedList.remove_node({{bob}});
+    return;
+}
+// check: VISIBILITY_MISMATCH

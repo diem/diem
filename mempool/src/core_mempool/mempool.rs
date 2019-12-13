@@ -8,19 +8,21 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::{
     core_mempool::{
         index::TxnPointer,
-        transaction::{MempoolAddTransactionStatus, MempoolTransaction, TimelineState},
+        transaction::{MempoolTransaction, TimelineState},
         transaction_store::TransactionStore,
     },
-    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
     OP_COUNTERS,
 };
 use chrono::Utc;
-use config::config::NodeConfig;
-use logger::prelude::*;
+use libra_config::config::NodeConfig;
+use libra_logger::prelude::*;
+use libra_mempool_shared_proto::{
+    proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
+};
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use lru_cache::LruCache;
 use std::{cmp::max, collections::HashSet, convert::TryFrom};
 use ttl_cache::TtlCache;
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 pub struct Mempool {
     // stores metadata of all transactions in mempool (of all states)

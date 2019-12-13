@@ -1,11 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::{NodeConfig, RoleType};
+#![forbid(unsafe_code)]
+
+use libra_config::config::{NodeConfig, RoleType};
 use libra_swarm::{client, swarm::LibraSwarm};
+use libra_tools::tempdir::TempPath;
 use std::path::Path;
 use structopt::StructOpt;
-use tools::tempdir::TempPath;
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Libra swarm to start local nodes")]
@@ -34,18 +36,10 @@ fn main() {
     let args = Args::from_args();
     let num_nodes = args.num_nodes;
     let num_full_nodes = args.num_full_nodes;
-    let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
-        generate_keypair::load_faucet_key_or_create_default(None);
-
-    println!(
-        "Faucet account created in (loaded from) file {:?}",
-        faucet_key_file_path
-    );
 
     let mut validator_swarm = LibraSwarm::configure_swarm(
         num_nodes,
         RoleType::Validator,
-        faucet_account_keypair.clone(),
         args.config_dir.clone(),
         None, /* template_path */
         None, /* upstream_config_dir */
@@ -57,7 +51,6 @@ fn main() {
             LibraSwarm::configure_swarm(
                 num_full_nodes,
                 RoleType::FullNode,
-                faucet_account_keypair,
                 None, /* config dir */
                 None, /* template_path */
                 Some(String::from(
@@ -75,15 +68,16 @@ fn main() {
         None
     };
     validator_swarm
-        .launch_attempt(!args.enable_logging)
+        .launch_attempt(RoleType::Validator, !args.enable_logging)
         .expect("Failed to launch validator swarm");
     if let Some(ref mut swarm) = full_node_swarm {
         swarm
-            .launch_attempt(!args.enable_logging)
+            .launch_attempt(RoleType::FullNode, !args.enable_logging)
             .expect("Failed to launch full node swarm");
     }
 
-    let validator_config = NodeConfig::load(&validator_swarm.config.configs[0]).unwrap();
+    let faucet_key_file_path = &validator_swarm.config.faucet_key_path;
+    let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
     let validator_set_file = validator_swarm
         .dir
         .as_ref()
@@ -98,8 +92,26 @@ fn main() {
         validator_set_file,
         faucet_key_file_path,
     );
+    let node_address_list = validator_swarm
+        .config
+        .config_files
+        .iter()
+        .map(|config| {
+            let port = NodeConfig::load(config)
+                .unwrap()
+                .admission_control
+                .admission_control_service_port;
+            format!("localhost:{}", port)
+        })
+        .collect::<Vec<String>>()
+        .join(",");
+    println!("To run transaction generator run:");
+    println!(
+        "\tcargo run --bin cluster-test -- --mint-file {:?} --swarm --peers {:?}  --emit-tx",
+        faucet_key_file_path, node_address_list,
+    );
     if let Some(ref swarm) = full_node_swarm {
-        let full_node_config = NodeConfig::load(&swarm.config.configs[0]).unwrap();
+        let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
             "\tcargo run --bin client -- -a localhost -p {} -s {:?} -m {:?}",

@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use std::path::{Path, PathBuf};
 
 /// Helper function to iterate through all the files in the given directory, skipping hidden files,

@@ -1,36 +1,30 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::utils::Captures;
 use bytes::BytesMut;
-use futures::{
-    future::Future,
-    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
-};
+use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::{convert::TryInto, io::Result};
 
 /// Read a u16 length prefixed frame from `Stream` into `buf`.
-pub fn read_u16frame<'stream, 'buf, 'c, TSocket>(
+pub async fn read_u16frame<'stream, 'buf, 'c, TSocket>(
     mut stream: &'stream mut TSocket,
     buf: &'buf mut BytesMut,
-) -> impl Future<Output = Result<()>> + Captures<'stream> + Captures<'buf> + 'c
+) -> Result<()>
 where
     'stream: 'c,
     'buf: 'c,
-    TSocket: AsyncRead + AsyncWrite + Unpin,
+    TSocket: AsyncRead + Unpin,
 {
-    async move {
-        let len = read_u16frame_len(&mut stream).await?;
-        buf.resize(len as usize, 0);
-        stream.read_exact(buf.as_mut()).await?;
-        Ok(())
-    }
+    let len = read_u16frame_len(&mut stream).await?;
+    buf.resize(len as usize, 0);
+    stream.read_exact(buf.as_mut()).await?;
+    Ok(())
 }
 
 /// Read a u16 (encoded as BE bytes) from `Stream` and return the length.
 async fn read_u16frame_len<TSocket>(stream: &mut TSocket) -> Result<u16>
 where
-    TSocket: AsyncRead + AsyncWrite + Unpin,
+    TSocket: AsyncRead + Unpin,
 {
     let mut len_buf = [0, 0];
     stream.read_exact(&mut len_buf).await?;
@@ -42,26 +36,24 @@ where
 /// The length of `buf` must be less than or equal to u16::max_value().
 ///
 /// Caller is responsible for flushing the write to `stream`.
-pub fn write_u16frame<'stream, 'buf, 'c, TSocket>(
+pub async fn write_u16frame<'stream, 'buf, 'c, TSocket>(
     mut stream: &'stream mut TSocket,
     buf: &'buf [u8],
-) -> impl Future<Output = Result<()>> + Captures<'stream> + Captures<'buf> + 'c
+) -> Result<()>
 where
     'stream: 'c,
     'buf: 'c,
-    TSocket: AsyncRead + AsyncWrite + Unpin,
+    TSocket: AsyncWrite + Unpin,
 {
-    async move {
-        let len = buf
-            .len()
-            .try_into()
-            // TODO Maybe use our own Error Type?
-            .map_err(|_e| std::io::Error::new(std::io::ErrorKind::Other, "Too big"))?;
-        write_u16frame_len(&mut stream, len).await?;
-        stream.write_all(buf).await?;
+    let len = buf
+        .len()
+        .try_into()
+        // TODO Maybe use our own Error Type?
+        .map_err(|_e| std::io::Error::new(std::io::ErrorKind::Other, "Too big"))?;
+    write_u16frame_len(&mut stream, len).await?;
+    stream.write_all(buf).await?;
 
-        Ok(())
-    }
+    Ok(())
 }
 
 /// Write a u16 `len` as BE bytes to `stream`.
@@ -69,7 +61,7 @@ where
 /// Caller is responsible for flushing the write to `stream`.
 async fn write_u16frame_len<TSocket>(stream: &mut TSocket, len: u16) -> Result<()>
 where
-    TSocket: AsyncRead + AsyncWrite + Unpin,
+    TSocket: AsyncWrite + Unpin,
 {
     let len = u16::to_be_bytes(len);
     stream.write_all(&len).await?;

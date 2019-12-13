@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: PACK_TYPE_MISMATCH_ERROR
-
 module Test {
     struct T{fint: u64}
 
@@ -8,13 +5,4 @@ module Test {
         return T{fint: false};
     }
 }
-
-//! new-transaction
-
-import {{default}}.Test;
-
-main() {
-    let t1: Test.T;
-    t1 = Test.t1();
-    return;
-}
+// check: PACK_TYPE_MISMATCH_ERROR

@@ -1,14 +1,15 @@
 module M {
-    resource X {}
+    resource X { b: bool }
     struct S { z: u64 }
     t1() {
         let x: Self.X;
         let y: &Self.X;
-        x = X {};
+        let b: bool;
+        x = X { b: true };
         y = &x;
-        x = X {};
+        x = X { b: true };
         _ = move(y);
-        X {} = move(x);
+        X { b } = move(x);
         return;
     }
 
@@ -25,6 +26,5 @@ module M {
 
 }
 
-// check: VerificationFailure
 // check: STLOC_UNSAFE_TO_DESTROY_ERROR
 // check: STLOC_UNSAFE_TO_DESTROY_ERROR

@@ -1,8 +1,7 @@
 // The module for the account resource that governs every Libra account
 module LibraAccount {
     import 0x0.LibraCoin;
-    import 0x00.Hash;
-    import 0x0.Event;
+    import 0x0.Hash;
     import 0x0.U64Util;
     import 0x0.AddressUtil;
     import 0x0.BytearrayUtil;
@@ -19,12 +18,14 @@ module LibraAccount {
         // If true, the authority to withdraw funds from this account resides elsewhere
         delegated_withdrawal_capability: bool,
         // Event handle for received event
-        received_events: Event.Handle<Self.ReceivedPaymentEvent>,
+        received_events: Self.EventHandle<Self.ReceivedPaymentEvent>,
         // Event handle for sent event
-        sent_events: Event.Handle<Self.SentPaymentEvent>,
+        sent_events: Self.EventHandle<Self.SentPaymentEvent>,
         // The current sequence number.
         // Incremented by one each time a transaction is submitted
         sequence_number: u64,
+        // Generator for event handles
+        event_generator: Self.EventHandleGenerator,
     }
 
     // The holder of WithdrawalCapability for account_address can withdraw Libra from
@@ -47,6 +48,8 @@ module LibraAccount {
         amount: u64,
         // The address that was paid
         payee: address,
+        // Metadata associated with the payment
+        metadata: bytearray,
     }
 
     // Message for received events
@@ -55,17 +58,41 @@ module LibraAccount {
         amount: u64,
         // The address that sent the coin
         payer: address,
+        // Metadata associated with the payment
+        metadata: bytearray,
+    }
+
+    /// Events
+    // A resource representing the counter used to generate uniqueness under each account. There won't be destructor for
+    // this resource to guarantee the uniqueness of the generated handle.
+    resource EventHandleGenerator {
+        // A monotonically increasing counter
+        counter: u64,
+    }
+
+    // A handle for a event such that:
+    // 1. Other modules can emit event to this handle.
+    // 2. Storage can use this handle to prove the total number of events that happened in the past.
+    resource EventHandle<T: unrestricted> {
+        // Total number of events emitted to this event stream.
+        counter: u64,
+        // A globally unique ID for this event stream.
+        guid: bytearray,
     }
 
     // Creates a new LibraAccount.T
     // Invoked by the `create_account` builtin
-    make(auth_key: bytearray): Self.T {
+    make(fresh_address: address): Self.T {
         let zero_balance: LibraCoin.T;
-        let sent_handle: Event.Handle<Self.SentPaymentEvent>;
-        let received_handle: Event.Handle<Self.ReceivedPaymentEvent>;
+        let generator: Self.EventHandleGenerator;
+        let sent_handle: Self.EventHandle<Self.SentPaymentEvent>;
+        let received_handle: Self.EventHandle<Self.ReceivedPaymentEvent>;
+        let auth_key: bytearray;
 
-        sent_handle = Event.new_event_handle<Self.SentPaymentEvent>();
-        received_handle = Event.new_event_handle<Self.ReceivedPaymentEvent>();
+        auth_key = AddressUtil.address_to_bytes(copy(fresh_address));
+        generator = EventHandleGenerator {counter: 0};
+        sent_handle = Self.new_event_handle_impl<Self.SentPaymentEvent>(&mut generator, copy(fresh_address));
+        received_handle = Self.new_event_handle_impl<Self.ReceivedPaymentEvent>(&mut generator, move(fresh_address));
         zero_balance = LibraCoin.zero();
 
         return T {
@@ -76,19 +103,26 @@ module LibraAccount {
             received_events: move(received_handle),
             sent_events: move(sent_handle),
             sequence_number: 0,
+            event_generator: move(generator),
         };
     }
 
     // Deposits the `to_deposit` coin into the `payee`'s account
     public deposit(payee: address, to_deposit: LibraCoin.T) acquires T {
+        Self.deposit_with_metadata(move(payee), move(to_deposit), h"");
+        return;
+    }
+
+    // Deposits the `to_deposit` coin into the `payee`'s account with the attached `metadata`
+    public deposit_with_metadata(
+        payee: address,
+        to_deposit: LibraCoin.T,
+        metadata: bytearray
+    ) acquires T {
         let deposit_value: u64;
         let payee_account_ref: &mut Self.T;
         let sender: address;
         let sender_account_ref: &mut Self.T;
-        let sent_event: Self.SentPaymentEvent;
-        let received_event: Self.ReceivedPaymentEvent;
-        let sent_event_bytes: bytearray;
-        let received_event_bytes: bytearray;
 
         // Check that the `to_deposit` coin is non-zero
         deposit_value = LibraCoin.value(&to_deposit);
@@ -97,18 +131,29 @@ module LibraAccount {
         // Load the sender's account
         sender = get_txn_sender();
         sender_account_ref = borrow_global_mut<T>(copy(sender));
-        // Log a send event
-        sent_event = SentPaymentEvent { amount: copy(deposit_value), payee: copy(payee) };
-
-        Event.emit_event<Self.SentPaymentEvent>(&mut move(sender_account_ref).sent_events, move(sent_event));
+        // Log a sent event
+        Self.emit_event<Self.SentPaymentEvent>(
+            &mut move(sender_account_ref).sent_events,
+            SentPaymentEvent {
+                amount: copy(deposit_value),
+                payee: copy(payee),
+                metadata: copy(metadata)
+            },
+        );
 
         // Load the payee's account
         payee_account_ref = borrow_global_mut<T>(move(payee));
         // Deposit the `to_deposit` coin
         LibraCoin.deposit(&mut copy(payee_account_ref).balance, move(to_deposit));
         // Log a received event
-        received_event = ReceivedPaymentEvent { amount: move(deposit_value), payer: move(sender) };
-        Event.emit_event<Self.ReceivedPaymentEvent>(&mut move(payee_account_ref).received_events, move(received_event));
+        Self.emit_event<Self.ReceivedPaymentEvent>(
+            &mut move(payee_account_ref).received_events,
+            ReceivedPaymentEvent {
+                amount: move(deposit_value),
+                payer: move(sender),
+                metadata: move(metadata)
+            }
+        );
         return;
     }
 
@@ -119,7 +164,7 @@ module LibraAccount {
     public mint_to_address(payee: address, amount: u64) acquires T {
         // Create an account if it does not exist
         if (!exists<T>(copy(payee))) {
-            Self.create_new_account(copy(payee), 0);
+            Self.create_account(copy(payee));
         }
 
         // Mint and deposit the coin
@@ -194,16 +239,29 @@ module LibraAccount {
     }
 
     // Withdraw `amount` LibraCoin.T from the transaction sender's account and send the coin
+    // to the `payee` address with the attached `metadata`
+    // Creates the `payee` account if it does not exist
+    public pay_from_sender_with_metadata(
+        payee: address,
+        amount: u64,
+        metadata: bytearray
+    ) acquires T {
+        if (!exists<T>(copy(payee))) {
+            Self.create_account(copy(payee));
+        }
+        Self.deposit_with_metadata(
+            move(payee),
+            Self.withdraw_from_sender(move(amount)),
+            move(metadata)
+        );
+        return;
+    }
+
+    // Withdraw `amount` LibraCoin.T from the transaction sender's account and send the coin
     // to the `payee` address
     // Creates the `payee` account if it does not exist
     public pay_from_sender(payee: address, amount: u64) acquires T {
-        let to_pay: LibraCoin.T;
-        if (exists<T>(copy(payee))) {
-            to_pay = Self.withdraw_from_sender(move(amount));
-            Self.deposit(move(payee), move(to_pay));
-        } else {
-            Self.create_new_account(move(payee), move(amount));
-        }
+        Self.pay_from_sender_with_metadata(move(payee), move(amount), h"");
         return;
     }
 
@@ -275,15 +333,39 @@ module LibraAccount {
         return;
     }
 
+    // Creates a new account at `fresh_address` with an initial balance of zero
+    public create_account(fresh_address: address) {
+        let generator: Self.EventHandleGenerator;
+
+        generator = EventHandleGenerator {counter: 0};
+        Self.save_account(
+            copy(fresh_address),
+            T {
+                authentication_key: AddressUtil.address_to_bytes(copy(fresh_address)),
+                balance: LibraCoin.zero(),
+                delegated_key_rotation_capability: false,
+                delegated_withdrawal_capability: false,
+                received_events: Self.new_event_handle_impl<Self.ReceivedPaymentEvent>(&mut generator, copy(fresh_address)),
+                sent_events: Self.new_event_handle_impl<Self.SentPaymentEvent>(&mut generator, move(fresh_address)),
+                sequence_number: 0,
+                event_generator: move(generator),
+            }
+        );
+        return;
+    }
+
     // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
     // transaction sender's account
     public create_new_account(fresh_address: address, initial_balance: u64) acquires T {
-        create_account(copy(fresh_address));
+        Self.create_account(copy(fresh_address));
         if (copy(initial_balance) > 0) {
             Self.pay_from_sender(move(fresh_address), move(initial_balance));
         }
         return;
     }
+
+    // Save an account to a given address if the address does not have an account resource yet
+    native save_account(addr: address, account: Self.T);
 
     // Helper to return u64 value of the `balance` field for given `account`
     balance_for_account(account: &Self.T): u64 {
@@ -317,6 +399,7 @@ module LibraAccount {
         return *&(borrow_global<T>(move(addr))).delegated_withdrawal_capability;
     }
 
+
     // Return a reference to the address associated with the given withdrawal capability
     public withdrawal_capability_address(cap: &Self.WithdrawalCapability): &address {
         return &move(cap).account_address;
@@ -329,7 +412,7 @@ module LibraAccount {
 
     // Checks if an account exists at `check_addr`
     public exists(check_addr: address): bool {
-        return  exists<T>(move(check_addr));
+        return exists<T>(move(check_addr));
     }
 
     // The prologue is invoked at the beginning of every transaction
@@ -346,7 +429,7 @@ module LibraAccount {
         let public_key_hash: bytearray;
         let gas_price: u64;
         let gas_units: u64;
-        let gas_fee: u64;
+        let max_transaction_fee: u64;
         let balance_amount: u64;
         let sequence_number_value: u64;
         let transaction_sequence_number_value: u64;
@@ -369,10 +452,10 @@ module LibraAccount {
         // Check that the account has enough balance for all of the gas
         gas_price = get_txn_gas_unit_price();
         gas_units = get_txn_max_gas_units();
-        gas_fee = move(gas_price) * move(gas_units);
+        max_transaction_fee = move(gas_price) * move(gas_units);
         imm_sender_account = freeze(copy(sender_account));
         balance_amount = Self.balance_for_account(move(imm_sender_account));
-        assert(move(balance_amount) >= move(gas_fee), 6);
+        assert(move(balance_amount) >= move(max_transaction_fee), 6);
 
         // Check that the transaction sequence number matches the sequence number of the account
         sequence_number_value = *(&mut move(sender_account).sequence_number);
@@ -384,16 +467,16 @@ module LibraAccount {
 
     // The epilogue is invoked at the end of transactions.
     // It collects gas and bumps the sequence number
-    epilogue() acquires T {
+    epilogue(gas_units_remaining: u64) acquires T {
         let transaction_sender: address;
         let sender_account: &mut Self.T;
+        let transaction_fee_account: &mut Self.T;
         let imm_sender_account: &Self.T;
         let gas_price: u64;
-        let gas_units_remaining: u64;
         let starting_gas_units: u64;
-        let gas_fee_amount: u64;
+        let transaction_fee_amount: u64;
         let balance_amount: u64;
-        let gas_fee: LibraCoin.T;
+        let transaction_fee: LibraCoin.T;
         let transaction_sequence_number_value: u64;
 
         transaction_sender = get_txn_sender();
@@ -404,19 +487,83 @@ module LibraAccount {
         // Charge for gas
         gas_price = get_txn_gas_unit_price();
         starting_gas_units = get_txn_max_gas_units();
-        gas_units_remaining = get_gas_remaining();
-        gas_fee_amount = move(gas_price) * (move(starting_gas_units) - move(gas_units_remaining));
+        transaction_fee_amount = move(gas_price) * (move(starting_gas_units) - move(gas_units_remaining));
         imm_sender_account = freeze(copy(sender_account));
         balance_amount = Self.balance_for_account(move(imm_sender_account));
-        assert(move(balance_amount) >= copy(gas_fee_amount), 6);
+        assert(move(balance_amount) >= copy(transaction_fee_amount), 6);
 
-        gas_fee = Self.withdraw_from_account(copy(sender_account), move(gas_fee_amount));
-        LibraCoin.TODO_REMOVE_burn_gas_fee(move(gas_fee));
+        transaction_fee = Self.withdraw_from_account(copy(sender_account), move(transaction_fee_amount));
 
         // Bump the sequence number
         transaction_sequence_number_value = get_txn_sequence_number();
         *(&mut move(sender_account).sequence_number) = move(transaction_sequence_number_value) + 1;
+        // Pay the transaction fee into the transaction fee pot
+        transaction_fee_account = borrow_global_mut<T>(0xFEE);
+        LibraCoin.deposit(&mut move(transaction_fee_account).balance, move(transaction_fee));
         return;
     }
 
+    /// Events
+    //
+    // Derive a fresh unique id by using sender's EventHandleGenerator. The generated bytearray is indeed unique because it
+    // was derived from the hash(sender's EventHandleGenerator || sender_address). This module guarantees that the
+    // EventHandleGenerator is only going to be monotonically increased and there's no way to revert it or destroy it. Thus
+    // such counter is going to give distinct value for each of the new event stream under each sender. And since we
+    // hash it with the sender's address, the result is guaranteed to be globally unique.
+    fresh_guid(counter: &mut Self.EventHandleGenerator, sender: address): bytearray {
+        let count: &mut u64;
+        let count_bytes: bytearray;
+        let preimage: bytearray;
+        let sender_bytes: bytearray;
+
+        count = &mut move(counter).counter;
+        sender_bytes = AddressUtil.address_to_bytes(move(sender));
+
+        count_bytes = U64Util.u64_to_bytes(*copy(count));
+        *move(count) = *copy(count) + 1;
+
+        // EventHandleGenerator goes first just in case we want to extend address in the future.
+        preimage = BytearrayUtil.bytearray_concat(move(count_bytes), move(sender_bytes));
+
+        return move(preimage);
+    }
+
+    // Use EventHandleGenerator to generate a unique event handle that one can emit an event to.
+    new_event_handle_impl<T: unrestricted>(counter: &mut Self.EventHandleGenerator, sender: address): Self.EventHandle<T> {
+        return EventHandle<T> {counter: 0, guid: Self.fresh_guid(move(counter), move(sender))};
+    }
+
+    // Use sender's EventHandleGenerator to generate a unique event handle that one can emit an event to.
+    public new_event_handle<T: unrestricted>(): Self.EventHandle<T> acquires T {
+        let sender_account_ref: &mut Self.T;
+        let sender_bytes: bytearray;
+        sender_account_ref = borrow_global_mut<T>(get_txn_sender());
+        return Self.new_event_handle_impl<T>(&mut (move(sender_account_ref)).event_generator, get_txn_sender());
+    }
+
+    // Emit an event with payload `msg` by using handle's key and counter. Will change the payload from bytearray to a
+    // generic type parameter once we have generics.
+    public emit_event<T: unrestricted>(handle_ref: &mut Self.EventHandle<T>, msg: T) {
+        let count: &mut u64;
+        let guid: bytearray;
+
+        guid = *&copy(handle_ref).guid;
+        count = &mut move(handle_ref).counter;
+
+        Self.write_to_event_store<T>(move(guid), *copy(count), move(msg));
+        *move(count) = *copy(count) + 1;
+        return;
+    }
+
+    // Native procedure that writes to the actual event stream in Event store
+    // This will replace the "native" portion of EmitEvent bytecode
+    native write_to_event_store<T: unrestricted>(guid: bytearray, count: u64, msg: T);
+
+    // Destroy a unique handle.
+    public destroy_handle<T: unrestricted>(handle: Self.EventHandle<T>) {
+        let guid: bytearray;
+        let count: u64;
+        EventHandle<T> { count, guid } = move(handle);
+        return;
+    }
 }

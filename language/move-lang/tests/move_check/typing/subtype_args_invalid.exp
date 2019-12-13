@@ -1,0 +1,84 @@
+error: 
+
+    ┌── tests/move_check/typing/subtype_args_invalid.move:4:15 ───
+    │
+ 10 │         mut<u64>(&0);
+    │         ^^^^^^^^^^^^ Invalid call of '0x8675309::M::mut'. Invalid argument for parameter 'x'
+    ·
+ 10 │         mut<u64>(&0);
+    │                  -- The type: '&u64'
+    ·
+ 4 │     mut<T>(x: &mut T) {}
+    │               ------ Is not a subtype of: '&mut u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/subtype_args_invalid.move:4:15 ───
+    │
+ 11 │         mut<u64>(&S{});
+    │         ^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::mut'. Invalid argument for parameter 'x'
+    ·
+ 11 │         mut<u64>(&S{});
+    │                  ---- The type: '&0x8675309::M::S'
+    ·
+ 4 │     mut<T>(x: &mut T) {}
+    │               ------ Is not a subtype of: '&mut u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/subtype_args_invalid.move:5:26 ───
+    │
+ 15 │         imm_mut<u64>(&0, &0);
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::imm_mut'. Invalid argument for parameter 'y'
+    ·
+ 15 │         imm_mut<u64>(&0, &0);
+    │                          -- The type: '&u64'
+    ·
+ 5 │     imm_mut<T>(x: &T, y: &mut T) {}
+    │                          ------ Is not a subtype of: '&mut u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/subtype_args_invalid.move:6:19 ───
+    │
+ 16 │         mut_imm<u64>(&0, &0);
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::mut_imm'. Invalid argument for parameter 'x'
+    ·
+ 16 │         mut_imm<u64>(&0, &0);
+    │                      -- The type: '&u64'
+    ·
+ 6 │     mut_imm<T>(x: &mut T, y: &T) {}
+    │                   ------ Is not a subtype of: '&mut u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/subtype_args_invalid.move:7:19 ───
+    │
+ 17 │         mut_mut<u64>(&0, &0);
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::mut_mut'. Invalid argument for parameter 'x'
+    ·
+ 17 │         mut_mut<u64>(&0, &0);
+    │                      -- The type: '&u64'
+    ·
+ 7 │     mut_mut<T>(x: &mut T, y: &mut T) {}
+    │                   ------ Is not a subtype of: '&mut u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/subtype_args_invalid.move:7:30 ───
+    │
+ 17 │         mut_mut<u64>(&0, &0);
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::mut_mut'. Invalid argument for parameter 'y'
+    ·
+ 17 │         mut_mut<u64>(&0, &0);
+    │                          -- The type: '&u64'
+    ·
+ 7 │     mut_mut<T>(x: &mut T, y: &mut T) {}
+    │                              ------ Is not a subtype of: '&mut u64'
+    │
+

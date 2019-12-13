@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/unpack_assign_block_single_expr.move:4:13 ───
+   │
+ 4 │         S { 0 } = S { f: 0 };
+   │             ^ Unexpected token: '0'
+   ·
+ 4 │         S { 0 } = S { f: 0 };
+   │             - Expected: a name value
+   │
+

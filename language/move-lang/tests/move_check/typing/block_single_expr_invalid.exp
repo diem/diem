@@ -1,0 +1,70 @@
+error: 
+
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:4:12 ───
+   │
+ 4 │         ({ 0 } : bool);
+   │                  ^^^^ Invalid type annotation
+   ·
+ 4 │         ({ 0 } : bool);
+   │            - The type: 'u64'
+   ·
+ 4 │         ({ 0 } : bool);
+   │                  ---- Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:5:12 ───
+   │
+ 5 │         ({ &0 } : u64);
+   │                   ^^^ Invalid type annotation
+   ·
+ 5 │         ({ &0 } : u64);
+   │            -- The type: '&u64'
+   ·
+ 5 │         ({ &0 } : u64);
+   │                   --- Is not compatible with: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:6:12 ───
+   │
+ 6 │         ({ &mut 0 } : ());
+   │                       ^^ Invalid type annotation
+   ·
+ 6 │         ({ &mut 0 } : ());
+   │            ------ The type: '&mut u64'
+   ·
+ 6 │         ({ &mut 0 } : ());
+   │                       -- Is not compatible with: '()'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:2:5 ───
+   │
+ 7 │         ({ R {} } : R);
+   │         ^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+   ·
+ 7 │         ({ R {} } : R);
+   │                     - The type: 0x8675309::M::R
+   ·
+ 2 │     resource struct R {}
+   │     -------- Is found to be a non-copyable type here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:8:12 ───
+   │
+ 8 │         ({ (0, false, false) } : (u64, bool));
+   │                                  ^^^^^^^^^^^ Invalid type annotation
+   ·
+ 8 │         ({ (0, false, false) } : (u64, bool));
+   │            ----------------- The type: '(u64,bool,bool)'
+   ·
+ 8 │         ({ (0, false, false) } : (u64, bool));
+   │                                  ----------- Is not compatible with: '(u64,bool)'
+   │
+

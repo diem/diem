@@ -1,0 +1,168 @@
+error: 
+
+   ┌── tests/move_check/typing/derefrence_invalid.move:5:12 ───
+   │
+ 6 │         (*x : bool);
+   │               ^^^^ Invalid type annotation
+   ·
+ 5 │     t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
+   │            --- The type: 'u64'
+   ·
+ 6 │         (*x : bool);
+   │               ---- Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/derefrence_invalid.move:7:10 ───
+   │
+ 7 │         (*x_mut: &u64);
+   │                  ^^^^ Invalid type annotation
+   ·
+ 7 │         (*x_mut: &u64);
+   │          ------ The type: 'u64'
+   ·
+ 7 │         (*x_mut: &u64);
+   │                  ---- Is not compatible with: '&u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/derefrence_invalid.move:5:38 ───
+   │
+ 9 │         (*s: X);
+   │              ^ Invalid type annotation
+   ·
+ 5 │     t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
+   │                                      - The type: '0x8675309::M::S'
+   ·
+ 9 │         (*s: X);
+   │              - Is not compatible with: '0x8675309::M::X'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/derefrence_invalid.move:3:19 ───
+    │
+ 10 │         (*&s.f: bool);
+    │                 ^^^^ Invalid type annotation
+    ·
+ 3 │     struct S { f: u64, x: X }
+    │                   --- The type: 'u64'
+    ·
+ 10 │         (*&s.f: bool);
+    │                 ---- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/derefrence_invalid.move:3:19 ───
+    │
+ 11 │         (s.f: &u64);
+    │               ^^^^ Invalid type annotation
+    ·
+ 3 │     struct S { f: u64, x: X }
+    │                   --- The type: 'u64'
+    ·
+ 11 │         (s.f: &u64);
+    │               ---- Is not compatible with: '&u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/derefrence_invalid.move:12:10 ───
+    │
+ 12 │         (*&s.x: &X);
+    │                 ^^ Invalid type annotation
+    ·
+ 12 │         (*&s.x: &X);
+    │          ----- The type: '0x8675309::M::X'
+    ·
+ 12 │         (*&s.x: &X);
+    │                 -- Is not compatible with: '&0x8675309::M::X'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/derefrence_invalid.move:5:53 ───
+    │
+ 14 │         (*s_mut: X);
+    │                  ^ Invalid type annotation
+    ·
+ 5 │     t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
+    │                                                     - The type: '0x8675309::M::S'
+    ·
+ 14 │         (*s_mut: X);
+    │                  - Is not compatible with: '0x8675309::M::X'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/derefrence_invalid.move:3:19 ───
+    │
+ 15 │         (*&s_mut.f: bool);
+    │                     ^^^^ Invalid type annotation
+    ·
+ 3 │     struct S { f: u64, x: X }
+    │                   --- The type: 'u64'
+    ·
+ 15 │         (*&s_mut.f: bool);
+    │                     ---- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/derefrence_invalid.move:16:10 ───
+    │
+ 16 │         (*&mut s_mut.f: (bool, u64));
+    │                         ^^^^^^^^^^^ Invalid type annotation
+    ·
+ 16 │         (*&mut s_mut.f: (bool, u64));
+    │          ------------- The type: 'u64'
+    ·
+ 16 │         (*&mut s_mut.f: (bool, u64));
+    │                         ----------- Is not compatible with: '(bool,u64)'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/derefrence_invalid.move:3:19 ───
+    │
+ 17 │         (s_mut.f: &u64);
+    │                   ^^^^ Invalid type annotation
+    ·
+ 3 │     struct S { f: u64, x: X }
+    │                   --- The type: 'u64'
+    ·
+ 17 │         (s_mut.f: &u64);
+    │                   ---- Is not compatible with: '&u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/derefrence_invalid.move:18:10 ───
+    │
+ 18 │         (*&s_mut.x: (X, S));
+    │                     ^^^^^^ Invalid type annotation
+    ·
+ 18 │         (*&s_mut.x: (X, S));
+    │          --------- The type: '0x8675309::M::X'
+    ·
+ 18 │         (*&s_mut.x: (X, S));
+    │                     ------ Is not compatible with: '(0x8675309::M::X,0x8675309::M::S)'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/derefrence_invalid.move:19:10 ───
+    │
+ 19 │         (*&mut s_mut.x: ());
+    │                         ^^ Invalid type annotation
+    ·
+ 19 │         (*&mut s_mut.x: ());
+    │          ------------- The type: '0x8675309::M::X'
+    ·
+ 19 │         (*&mut s_mut.x: ());
+    │                         -- Is not compatible with: '()'
+    │
+

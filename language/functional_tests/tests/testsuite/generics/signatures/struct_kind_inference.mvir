@@ -1,0 +1,66 @@
+// ensure that generic structs instantiated with resource types behave like resources
+module M1 {
+    resource MyResource { b: bool }
+    struct S<T> { t: T }
+
+    // verifer should reject; didn't move resource;
+    public p(s: Self.S<Self.MyResource>) {
+        return;
+    }
+}
+
+// check: RET_UNSAFE_TO_DESTROY_ERROR
+
+//! new-transaction
+module M2 {
+    resource MyResource { b: bool }
+    struct S<T> { t: T }
+
+    // verifier should reject; drops s2 on the floor
+    public p(s1: Self.S<Self.MyResource>, s2: Self.S<Self.MyResource>): Self.S<Self.MyResource> {
+        s1 = move(s2);
+        return move(s1);
+    }
+}
+
+// check: STLOC_UNSAFE_TO_DESTROY_ERROR
+
+//! new-transaction
+module M3 {
+    resource MyResource { b: bool }
+    struct S<T> { t: T }
+
+    // verifier should reject; copies s
+    public p(s: &Self.S<Self.MyResource>): Self.S<Self.MyResource> {
+        return *move(s);
+    }
+}
+
+// check: READREF_RESOURCE_ERROR
+
+//! new-transaction
+module M4 {
+    resource MyResource { b: bool }
+    struct S<T> { t: T }
+
+    // verifier should reject; drops s1 on the floor
+    public p(s1: &mut Self.S<Self.MyResource>, s2: Self.S<Self.MyResource>) {
+        *move(s1) = move(s2);
+        return;
+    }
+}
+
+// check: WRITEREF_RESOURCE_ERROR
+
+//! new-transaction
+module M5 {
+    resource MyResource { b: bool }
+    struct S<T> { t: T }
+
+    // verifier should reject; copies s
+    public p(s: Self.S<Self.MyResource>): Self.S<Self.MyResource> * Self.S<Self.MyResource> {
+        return (copy(s), move(s));
+    }
+}
+
+// check: COPYLOC_RESOURCE_ERROR

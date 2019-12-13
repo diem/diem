@@ -1,4 +1,4 @@
-// check: Unbound field balance
+// check: "Unbound field balance"
 
 module Hack {
     import 0x0.LibraCoin;
@@ -23,8 +23,8 @@ module Hack {
     }
 }
 
-//! new-transaction
 
+//! new-transaction
 import {{default}}.Hack;
 import 0x0.LibraCoin;
 
@@ -44,3 +44,4 @@ main() {
 
     return;
 }
+// check: "Dependency not provided for" .Hack

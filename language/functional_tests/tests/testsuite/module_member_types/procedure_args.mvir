@@ -1,4 +1,3 @@
-// check: VerificationFailure
 // check: CALL_TYPE_MISMATCH_ERROR
 
 module Test {

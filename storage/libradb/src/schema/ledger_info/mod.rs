@@ -3,26 +3,28 @@
 
 //! This module defines physical storage schema for LedgerInfoWithSignatures structure.
 //!
-//! Serialized LedgerInfoWithSignatures identified by `epoch_num`.
+//! Serialized LedgerInfoWithSignatures identified by `epoch`.
 //! ```text
 //! |<---key--->|<---------------value------------->|
-//! | epoch_num | ledger_info_with_signatures bytes |
+//! | epoch | ledger_info_with_signatures bytes |
 //! ```
 //!
-//! `epoch_num` is serialized in big endian so that records in RocksDB will be in order of it's
+//! `epoch` is serialized in big endian so that records in RocksDB will be in order of their
 //! numeric value.
 
 use crate::schema::ensure_slice_len_eq;
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt};
-use failure::prelude::*;
-use proto_conv::{FromProtoBytes, IntoProtoBytes};
+use libra_prost_ext::MessageExt;
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
+use prost::Message;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
     DEFAULT_CF_NAME,
 };
+use std::convert::TryInto;
 use std::mem::size_of;
-use types::crypto_proxies::LedgerInfoWithSignatures;
 
 define_schema!(
     LedgerInfoSchema,
@@ -44,11 +46,12 @@ impl KeyCodec<LedgerInfoSchema> for u64 {
 
 impl ValueCodec<LedgerInfoSchema> for LedgerInfoWithSignatures {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        self.clone().into_proto_bytes()
+        let event: libra_types::proto::types::LedgerInfoWithSignatures = self.clone().into();
+        Ok(event.to_vec()?)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        Self::from_proto_bytes(data)
+        libra_types::proto::types::LedgerInfoWithSignatures::decode(data)?.try_into()
     }
 }
 

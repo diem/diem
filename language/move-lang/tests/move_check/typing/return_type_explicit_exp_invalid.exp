@@ -1,0 +1,84 @@
+error: 
+
+   ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:4:11 ───
+   │
+ 5 │         return ()
+   │         ^^^^^^^^^ Invalid return
+   ·
+ 5 │         return ()
+   │                -- The type: '()'
+   ·
+ 4 │     t0(): u64 {
+   │           --- Is not compatible with: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:8:11 ───
+   │
+ 9 │         if (true) return 1 else return 0
+   │                   ^^^^^^^^ Invalid return
+   ·
+ 9 │         if (true) return 1 else return 0
+   │                          - The type: 'u64'
+   ·
+ 8 │     t1(): () {
+   │           -- Is not compatible with: '()'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:8:11 ───
+   │
+ 9 │         if (true) return 1 else return 0
+   │                                 ^^^^^^^^ Invalid return
+   ·
+ 9 │         if (true) return 1 else return 0
+   │                                        - The type: 'u64'
+   ·
+ 8 │     t1(): () {
+   │           -- Is not compatible with: '()'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:12:11 ───
+    │
+ 13 │         loop return (0, false, R{});
+    │              ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
+    ·
+ 13 │         loop return (0, false, R{});
+    │                     --------------- The type: '(u64,bool,0x8675309::M::R)'
+    ·
+ 12 │     t2(): (u64, bool) {
+    │           ----------- Is not compatible with: '(u64,bool)'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:17:11 ───
+    │
+ 18 │         while (true) return (0, false, R{});
+    │                      ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
+    ·
+ 18 │         while (true) return (0, false, R{});
+    │                             --------------- The type: '(u64,bool,0x8675309::M::R)'
+    ·
+ 17 │     t3(): (u64, bool, R, bool) {
+    │           -------------------- Is not compatible with: '(u64,bool,0x8675309::M::R,bool)'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:22:12 ───
+    │
+ 23 │         while (false) return (0, false, R{});
+    │                       ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
+    ·
+ 23 │         while (false) return (0, false, R{});
+    │                               - The type: 'u64'
+    ·
+ 22 │     t4(): (bool, u64, R) {
+    │            ---- Is not compatible with: 'bool'
+    │
+

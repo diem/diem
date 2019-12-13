@@ -5,7 +5,7 @@
 //! The concept of known users can be helpful for testing to provide reproducible results.
 
 use crate::*;
-use failure::prelude::*;
+use anyhow::{ensure, Result};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},

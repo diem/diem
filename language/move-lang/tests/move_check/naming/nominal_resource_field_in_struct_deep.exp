@@ -1,0 +1,68 @@
+error: 
+
+   ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:2:5 ───
+   │
+ 6 │         f: RCup<R>,
+   │         ^ Invalid resource field 'f' for struct 'S'. Structs cannot contain resource types, except through type parameters
+   ·
+ 6 │         f: RCup<R>,
+   │                 - Field 'f' is a resource due to the type: '0x8675309::M::R'
+   ·
+ 2 │     resource struct R {}
+   │     -------- Type '0x8675309::M::R' was declared as a resource here
+   ·
+ 5 │     struct S {
+   │            - 'S' declared as a `struct` here
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:2:5 ───
+   │
+ 7 │         g: Cup<R>,
+   │         ^ Invalid resource field 'g' for struct 'S'. Structs cannot contain resource types, except through type parameters
+   ·
+ 7 │         g: Cup<R>,
+   │                - Field 'g' is a resource due to the type: '0x8675309::M::R'
+   ·
+ 2 │     resource struct R {}
+   │     -------- Type '0x8675309::M::R' was declared as a resource here
+   ·
+ 5 │     struct S {
+   │            - 'S' declared as a `struct` here
+   │
+
+error: 
+
+    ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:2:5 ───
+    │
+ 12 │         g1: RCup<RCup<RCup<R>>>,
+    │         ^^ Invalid resource field 'g1' for struct 'S2'. Structs cannot contain resource types, except through type parameters
+    ·
+ 12 │         g1: RCup<RCup<RCup<R>>>,
+    │                            - Field 'g1' is a resource due to the type: '0x8675309::M::R'
+    ·
+ 2 │     resource struct R {}
+    │     -------- Type '0x8675309::M::R' was declared as a resource here
+    ·
+ 9 │     struct S2<T: resource> {
+    │            -- 'S2' declared as a `struct` here
+    │
+
+error: 
+
+    ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:2:5 ───
+    │
+ 13 │         g2: Cup<Cup<Cup<R>>>,
+    │         ^^ Invalid resource field 'g2' for struct 'S2'. Structs cannot contain resource types, except through type parameters
+    ·
+ 13 │         g2: Cup<Cup<Cup<R>>>,
+    │                         - Field 'g2' is a resource due to the type: '0x8675309::M::R'
+    ·
+ 2 │     resource struct R {}
+    │     -------- Type '0x8675309::M::R' was declared as a resource here
+    ·
+ 9 │     struct S2<T: resource> {
+    │            -- 'S2' declared as a `struct` here
+    │
+

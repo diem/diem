@@ -1,0 +1,25 @@
+[package]
+name = "ir-to-bytecode"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra ir to bytecode"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+ir-to-bytecode-syntax = { path = "syntax", version = "0.1.0" }
+libra-types = { path = "../../../types", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
+bytecode-source-map = { path = "../bytecode-source-map", version = "0.1.0" }
+log = "0.4.7"
+codespan = "0.2.1"
+codespan-reporting = "0.2.1"
+thiserror = "1.0"
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

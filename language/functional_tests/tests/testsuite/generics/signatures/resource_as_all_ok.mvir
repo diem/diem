@@ -1,6 +1,6 @@
 module M {
-    struct S<T> {}
-    resource R {}
+    struct S<T> { b: bool }
+    resource R { b: bool }
 
     foo() {
         let x: Self.S<Self.R>;

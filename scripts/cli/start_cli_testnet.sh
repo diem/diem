@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) The Libra Core Contributors
+# SPDX-License-Identifier: Apache-2.0
 
 print_help()
 {
@@ -11,7 +13,7 @@ source "$HOME/.cargo/env"
 
 SCRIPT_PATH="$(dirname $0)"
 
-RUN_PARAMS="--host ac.testnet.libra.org --port 8000 -s $SCRIPT_PATH/consensus_peers.config.toml"
+RUN_PARAMS="--host ac.testnet.libra.org --port 8000 "
 RELEASE=""
 
 while [[ ! -z "$1" ]]; do

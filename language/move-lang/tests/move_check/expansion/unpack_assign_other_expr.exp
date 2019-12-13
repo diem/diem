@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/unpack_assign_other_expr.move:9:11 ───
+   │
+ 9 │         S f = S { f: 0 };
+   │           ^ Unexpected token: 'f'
+   ·
+ 9 │         S f = S { f: 0 };
+   │           - Expected: ';'
+   │
+

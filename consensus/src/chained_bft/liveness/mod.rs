@@ -3,7 +3,6 @@
 
 pub(crate) mod multi_proposer_election;
 pub(crate) mod pacemaker;
-pub(crate) mod pacemaker_timeout_manager;
 pub(crate) mod proposal_generator;
 pub(crate) mod proposer_election;
 pub(crate) mod rotating_proposer_election;

@@ -1,3 +1,8 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+#![forbid(unsafe_code)]
+
 use crate::{
     cluster::Cluster,
     health::{Commit, Event, LogTail, ValidatorEvent},
@@ -10,6 +15,7 @@ use debug_interface::{
 };
 use grpcio::{self, ChannelBuilder, EnvBuilder};
 use serde_json::{self, value as json};
+use slog_scope::*;
 use std::{
     env,
     sync::{atomic::AtomicI64, mpsc, Arc},
@@ -42,7 +48,7 @@ impl DebugPortLogThread {
                 started_sender: Some(started_sender),
             };
             thread::Builder::new()
-                .name(format!("log-tail-{}", instance.short_hash()))
+                .name(format!("log-tail-{}", instance.peer_name()))
                 .spawn(move || debug_port_log_thread.run())
                 .expect("Failed to spawn log tail thread");
         }
@@ -69,7 +75,7 @@ impl DebugPortLogThread {
             {
                 Err(e) => {
                     if print_failures {
-                        println!("Failed to get events from {}: {:?}", self.instance, e);
+                        info!("Failed to get events from {}: {:?}", self.instance, e);
                     }
                     thread::sleep(Duration::from_secs(1));
                 }
@@ -97,11 +103,11 @@ impl DebugPortLogThread {
         let e = if event.name == "committed" {
             Self::parse_commit(json)
         } else {
-            println!("Unknown event: {} from {}", event.name, self.instance);
+            warn!("Unknown event: {} from {}", event.name, self.instance);
             return None;
         };
         Some(ValidatorEvent {
-            validator: self.instance.short_hash().clone(),
+            validator: self.instance.peer_name().clone(),
             timestamp: Duration::from_millis(event.timestamp as u64),
             received_timestamp: unix_timestamp_now(),
             event: e,

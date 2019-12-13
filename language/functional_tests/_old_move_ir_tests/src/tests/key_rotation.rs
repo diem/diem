@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::*;
-use crypto;
 use language_common::{error_codes::*, tooling::fake_executor::Account};
+use libra_crypto;
+use libra_types::account_address::AccountAddress;
 use move_ir::{assert_error_type, assert_no_error};
-use types::account_address::AccountAddress;
 
 #[test]
 fn cant_send_transaction_with_old_key_after_rotation() {
@@ -66,7 +66,7 @@ main() {{
     };
 
     let sequence_number = test_env.get_txn_sequence_number(0);
-    let txn = test_env.create_signed_txn(
+    let txn = test_env.create_user_txn(
         to_standalone_script(b"main() { return; }"),
         old_account.addr,
         new_account,

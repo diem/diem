@@ -4,8 +4,8 @@
 use super::*;
 use crate::peer_manager::PeerManagerRequest;
 use core::str::FromStr;
-use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
-use futures::{FutureExt, SinkExt, TryFutureExt};
+use futures::SinkExt;
+use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use memsocket::MemorySocket;
 use rand::{rngs::StdRng, SeedableRng};
 use std::io;
@@ -52,7 +52,7 @@ fn setup_conn_mgr(
             300, /* ms */
         )
     };
-    rt.spawn(conn_mgr.start().boxed().unit_error().compat());
+    rt.spawn(conn_mgr.start());
     (
         peer_mgr_reqs_rx,
         peer_mgr_notifs_tx,
@@ -157,7 +157,7 @@ async fn expect_dial_request<'a, TSubstream>(
 
 #[test]
 fn addr_change() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -252,13 +252,12 @@ fn addr_change() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }
 
 #[test]
 fn lost_connection() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -322,13 +321,12 @@ fn lost_connection() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }
 
 #[test]
 fn disconnect() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -386,13 +384,13 @@ fn disconnect() {
         )
         .await;
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 // Tests that connectivity manager retries dials and disconnects on failure.
 #[test]
 fn retry_on_failure() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -486,14 +484,14 @@ fn retry_on_failure() {
         )
         .await;
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 #[test]
 // Tests that if we dial an already connected peer or disconnect from an already disconnected
 // peer, connectivity manager does not send any additional dial or disconnect requests.
 fn no_op_requests() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -580,12 +578,12 @@ fn no_op_requests() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 #[test]
 fn backoff_on_failure() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -664,14 +662,14 @@ fn backoff_on_failure() {
             assert!(elapsed.as_millis() >= 100);
         }
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 // Test that connectivity manager will still connect to a peer if it advertises
 // multiple listen addresses and some of them don't work.
 #[test]
 fn multiple_addrs_basic() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -731,15 +729,14 @@ fn multiple_addrs_basic() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }
 
 // Test that connectivity manager will work with multiple addresses even if we
 // retry more times than there are addresses.
 #[test]
 fn multiple_addrs_wrapping() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -813,15 +810,14 @@ fn multiple_addrs_wrapping() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }
 
 // Test that connectivity manager will still work when dialing a peer with
 // multiple listen addrs and then that peer advertises a smaller number of addrs.
 #[test]
 fn multiple_addrs_shrinking() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -896,6 +892,5 @@ fn multiple_addrs_shrinking() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }

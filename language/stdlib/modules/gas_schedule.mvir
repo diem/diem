@@ -1,0 +1,49 @@
+// The gas schedule keeps two separate schedules for the gas:
+// * The instruction_schedule: This holds the gas for each bytecode instruction.
+// * The native_schedule: This holds the gas for used (per-byte operated over) for each native
+//   function.
+// A couple notes:
+// 1. In the case that an instruction is deleted from the bytecode, that part of the cost schedule
+//    still needs to remain the same; once a slot in the table is taken by an instruction, that is its
+//    slot for the rest of time (since that instruction could already exist in a module on-chain).
+// 2. The initialization of the module will publish the instruction table to the association
+//    address, and will preload the vector with the gas schedule for instructions. The VM will then
+//    load this into memory at the startup of each block.
+module GasSchedule {
+    import 0x0.Vector;
+
+    // The gas cost for each instruction is represented using two amounts;
+    // one for the cpu, and the other for storage.
+    struct Cost {
+      cpu: u64,
+      storage: u64,
+    }
+
+    resource T {
+        instruction_schedule: Vector.T<Self.Cost>,
+        native_schedule: Vector.T<Self.Cost>,
+    }
+
+    // Initialize the table under the association account
+    initialize(gas_schedule: Self.T) {
+        assert(get_txn_sender() == 0xA550C18, 0);
+        move_to_sender<T>(move(gas_schedule));
+        return;
+    }
+
+    public instruction_table_size(): u64 acquires T {
+        let table: &Self.T;
+        let instruction_table_len: u64;
+        table = borrow_global<T>(0xA550C18);
+        instruction_table_len = Vector.length<Self.Cost>(&move(table).instruction_schedule);
+        return move(instruction_table_len);
+    }
+
+    public native_table_size(): u64 acquires T {
+        let table: &Self.T;
+        let native_table_len: u64;
+        table = borrow_global<T>(0xA550C18);
+        native_table_len = Vector.length<Self.Cost>(&move(table).native_schedule);
+        return move(native_table_len);
+    }
+}

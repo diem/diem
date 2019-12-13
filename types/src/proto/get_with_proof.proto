@@ -171,7 +171,7 @@ message UpdateToLatestLedgerResponse {
     // Validator change events from what the client last knew.  This is used to
     // inform the client of validator changes from the client's last known version
     // until the current version
-    repeated ValidatorChangeEventWithProof validator_change_events = 3;
+    ValidatorChangeEventWithProof validator_change_events = 3;
 
     // A proof that shows the latest ledger accumulator is consistent with the
     // old accumulator at "client_known_version".
@@ -247,7 +247,7 @@ message GetAccountTransactionBySequenceNumberRequest {
 message GetAccountTransactionBySequenceNumberResponse {
   // When the transaction requested is committed, return the committed
   // transaction with proof.
-  SignedTransactionWithProof signed_transaction_with_proof = 2;
+  TransactionWithProof transaction_with_proof = 2;
   // When the transaction requested is not committed, we give a proof that
   // shows the current sequence number is smaller than what would have been if
   // the transaction was committed.

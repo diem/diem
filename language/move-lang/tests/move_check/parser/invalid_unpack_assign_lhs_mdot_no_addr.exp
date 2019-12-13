@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/invalid_unpack_assign_lhs_mdot_no_addr.move:4:14 ───
+   │
+ 4 │         false::M { f } = 0;
+   │              ^^ Unexpected token: '::'
+   ·
+ 4 │         false::M { f } = 0;
+   │              -- Expected: ';'
+   │
+

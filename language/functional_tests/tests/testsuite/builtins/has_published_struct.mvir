@@ -1,8 +1,8 @@
 module Token {
-    resource T { }
+    resource T { b: bool }
 
     public new(): Self.T {
-        return T{ };
+        return T{ b: true };
     }
 
     public has(addr: address): bool {

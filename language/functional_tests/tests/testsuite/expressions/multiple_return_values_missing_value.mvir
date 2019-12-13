@@ -1,11 +1,8 @@
-// check: VerificationFailure
-// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK
-
 module Test {
-    resource T { }
+    resource T { b: bool }
 
     public new(): Self.T {
-        return T { };
+        return T { b: true };
     }
 
     public test(i: &u64, x: Self.T): u64 * Self.T * bool {
@@ -13,28 +10,9 @@ module Test {
     }
 
     public destroy(x: Self.T) {
-        T { } = move(x);
+        let b: bool;
+        T { b } = move(x);
         return;
     }
 }
-
-//! new-transaction
-
-import {{default}}.Test;
-
-main() {
-    let i: u64;
-    let t: Test.T;
-    let a: u64;
-    let b: bool;
-    let x: Test.T;
-
-    i = 0;
-    t = Test.new();
-    a, x, b = Test.test(&i, move(t));
-    assert(move(a) == 0, 42);
-    Test.destroy(move(x));
-    assert(!move(b), 43);
-
-    return;
-}
+// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK

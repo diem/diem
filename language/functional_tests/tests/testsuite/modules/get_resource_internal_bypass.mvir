@@ -1,9 +1,9 @@
-// check: Unrecognized token
+// check: Invalid token
 
 module Token {
-    resource T { }
+    resource T { b: bool }
     public new(): Self.T {
-        return T{ };
+        return T{ b: true };
     }
 }
 

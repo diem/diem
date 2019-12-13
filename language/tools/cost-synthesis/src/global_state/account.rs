@@ -1,14 +1,17 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::global_state::inhabitor::RandomInhabitor;
 use bytecode_verifier::VerifiedModule;
-use crypto::ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey};
+use libra_crypto::ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey};
+use libra_types::{
+    access_path::AccessPath, account_address::AccountAddress, account_config, byte_array::ByteArray,
+};
 use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,
 };
 use std::iter::Iterator;
-use types::{
-    access_path::AccessPath, account_address::AccountAddress, account_config, byte_array::ByteArray,
-};
 use vm::{
     access::*,
     file_format::{SignatureToken, StructDefinitionIndex, TableIndex},

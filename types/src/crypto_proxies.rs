@@ -3,7 +3,7 @@
 
 //! This module defines a data structure made to contain a cryptographic
 //! signature, in the sense of an implementation of
-//! crypto::traits::Signature. The container is an opaque NewType that
+//! libra_crypto::traits::Signature. The container is an opaque NewType that
 //! intentionally does not allow access to the inner impl.
 //!
 //! It also proxies the four methods used in consensus on structures that
@@ -11,7 +11,7 @@
 //!
 //! The goal of this structure is two-fold:
 //! - help make sure that any consensus data that uses cryptographic material is defined generically
-//!   in terms of crypto::traits, rather than accessing the implementation details of a particular
+//!   in terms of libra_crypto::traits, rather than accessing the implementation details of a particular
 //!   scheme (a.k.a. encapsulation),
 //! - contribute to a single-location place for instantiations of these polymorphic types
 //!   (`crate::chained_bft::consensus_types`)
@@ -22,13 +22,14 @@
 use crate::{
     account_address::AccountAddress,
     ledger_info::LedgerInfoWithSignatures as RawLedgerInfoWithSignatures,
-    validator_change::ValidatorChangeEventWithProof as RawValidatorChangeEventWithProof,
+    validator_public_keys::ValidatorPublicKeys as RawValidatorPublicKeys,
+    validator_set::ValidatorSet as RawValidatorSet,
     validator_signer::ValidatorSigner as RawValidatorSigner,
     validator_verifier::{
         ValidatorInfo as RawValidatorInfo, ValidatorVerifier as RawValidatorVerifier, VerifyError,
     },
 };
-use crypto::{hash::HashValue, traits::Signature as RawSignature};
+use libra_crypto::{hash::HashValue, traits::Signature as RawSignature};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
@@ -44,7 +45,7 @@ impl<Sig: RawSignature> SignatureWrapper<Sig> {
         validator_verifier.verify_signature(author, message, &self.0)
     }
 
-    pub fn try_from(bytes: &[u8]) -> Result<Self, crypto::traits::CryptoMaterialError> {
+    pub fn try_from(bytes: &[u8]) -> Result<Self, libra_crypto::traits::CryptoMaterialError> {
         Sig::try_from(bytes).map(SignatureWrapper)
     }
 
@@ -78,11 +79,12 @@ impl<Sig: RawSignature> From<Sig> for SignatureWrapper<Sig> {
 // types that do not go through the instantiated polymorphic structures
 // below is banned.
 
-use crypto::ed25519::*;
-use std::collections::HashMap;
+use libra_crypto::ed25519::*;
+use std::collections::BTreeMap;
+use std::fmt;
 
 // used in chained_bft::consensus_types::block_test
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub type SecretKey = Ed25519PrivateKey;
 
 pub type Signature = SignatureWrapper<Ed25519Signature>;
@@ -90,7 +92,28 @@ pub type LedgerInfoWithSignatures = RawLedgerInfoWithSignatures<Ed25519Signature
 pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
 pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub type ValidatorSigner = RawValidatorSigner<Ed25519PrivateKey>;
-pub type ValidatorChangeEventWithProof = RawValidatorChangeEventWithProof<Ed25519Signature>;
+pub type ValidatorPublicKeys = RawValidatorPublicKeys<Ed25519PublicKey>;
+pub type ValidatorSet = RawValidatorSet<Ed25519PublicKey>;
+pub use crate::validator_change::ValidatorChangeEventWithProof;
+use std::sync::Arc;
+
+#[derive(Clone)]
+/// EpochInfo represents a trusted validator set to validate messages from the specific epoch,
+/// it could be updated with ValidatorChangeEventWithProof.
+pub struct EpochInfo {
+    pub epoch: u64,
+    pub verifier: Arc<ValidatorVerifier>,
+}
+
+impl fmt::Display for EpochInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "EpochInfo [epoch: {}, validator: {}]",
+            self.epoch, self.verifier
+        )
+    }
+}
 
 /// Helper function to get random validator signers and a corresponding validator verifier for
 /// testing.  If custom_voting_power_quorum is not None, set a custom voting power quorum amount.
@@ -101,8 +124,7 @@ pub fn random_validator_verifier(
     pseudo_random_account_address: bool,
 ) -> (Vec<ValidatorSigner>, ValidatorVerifier) {
     let mut signers = Vec::new();
-    let mut account_address_to_validator_info: HashMap<AccountAddress, ValidatorInfo> =
-        HashMap::new();
+    let mut account_address_to_validator_info = BTreeMap::new();
     for i in 0..count {
         let random_signer = if pseudo_random_account_address {
             ValidatorSigner::from_int(i as u8)

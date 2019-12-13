@@ -36,12 +36,42 @@ variable "image_repo" {
 variable "image_tag" {
   type        = string
   description = "Docker image tag to use for validator"
-  default     = "latest"
+  default     = "latest_dynamic"
 }
 
-variable "peer_ids" {
-  type        = list(string)
-  description = "List of PeerIds"
+# This var is used by cluster test in cluster.rs, please update in both places if this value changes
+variable "config_seed" {
+  default     = 1337133713371337133713371337133713371337133713371337133713371337
+  description = "Seed to be used by libra-config for"
+}
+
+variable "num_validators" {
+  default     = 4
+  description = "Number of validator nodes to run on this network"
+}
+
+variable "num_fullnodes" {
+  default     = 1
+  description = "Number of full nodes to run on validators"
+}
+
+variable "fullnode_distribution" {
+  type        = list(number)
+  default     = [1, 0, 0, 0]
+  description = "List of number of fullnodes on each validator"
+}
+
+# This is to generate a list of fullnode with validator index to indicate
+# which validator they should be connected to
+locals {
+  validator_index = range(0, length(var.fullnode_distribution))
+  fullnode_pair = zipmap(local.validator_index, var.fullnode_distribution)
+  expanded_fullnodes = {
+    for key, val in local.fullnode_pair : key => [
+      for i in range(val) : format("%d", key)
+    ]
+  }
+  fullnode_list = flatten(values(local.expanded_fullnodes))
 }
 
 variable "validator_type" {
@@ -57,11 +87,6 @@ variable "validator_ebs_size" {
 variable "zone_id" {
   description = "Route53 ZoneId to create records in"
   default     = ""
-}
-
-variable "validator_set" {
-  description = "Relative path to directory containing validator set configs"
-  default     = "validator-sets/dev"
 }
 
 variable "validator_log_level" {
@@ -110,4 +135,9 @@ variable "monitoring_snapshot" {
 variable "cloudwatch_logs" {
   description = "Send container logs to CloudWatch"
   default     = false
+}
+
+variable "monitoring_ebs_volume" {
+  default     = 100
+  description = "Size of monitoring instance EBS volume in GB"
 }

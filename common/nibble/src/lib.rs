@@ -1,8 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! `Nibble` represents a four-bit unsigned integer.
 
+#[cfg(feature = "fuzzing")]
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -29,6 +32,7 @@ impl fmt::LowerHex for Nibble {
     }
 }
 
+#[cfg(feature = "fuzzing")]
 impl Arbitrary for Nibble {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;

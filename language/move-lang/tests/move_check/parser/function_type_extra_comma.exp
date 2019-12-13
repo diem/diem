@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/function_type_extra_comma.move:2:8 ───
+   │
+ 2 │     fn<,T>() { }
+   │        ^ Unexpected token: ','
+   ·
+ 2 │     fn<,T>() { }
+   │        - Expected: a name value
+   │
+

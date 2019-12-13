@@ -1,26 +1,18 @@
-// check: VerificationFailure
-// check: PACK_TYPE_MISMATCH_ERROR
-
 module Test {
     import 0x0.LibraCoin;
-    resource B{}
+    resource B{b: bool}
     resource T{ft: Self.B}
 
     public t1(x: LibraCoin.T): Self.T {
         return T{ft: move(x)};
     }
+
+    public destroy_t1(t: Self.T) {
+        let r: Self.B;
+        let b: bool;
+        T { ft: r } = move(t);
+        B { b } = move(r);
+        return;
+    }
 }
-
-//! new-transaction
-
-import {{default}}.Test;
-import 0x0.LibraCoin;
-
-main() {
-    let z1: LibraCoin.T;
-    let t1: Test.T;
-    z1 = LibraCoin.zero();
-    t1 = Test.t1(move(z1));
-
-    return;
-}
+// check: PACK_TYPE_MISMATCH_ERROR

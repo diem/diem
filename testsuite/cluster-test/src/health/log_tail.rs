@@ -1,4 +1,10 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+#![forbid(unsafe_code)]
+
 use crate::{health::ValidatorEvent, util::unix_timestamp_now};
+use slog_scope::*;
 use std::{
     sync::{
         atomic::{AtomicI64, Ordering},
@@ -31,7 +37,7 @@ impl LogTail {
         if let Some(last) = events.last() {
             let delay = now - last.received_timestamp;
             if delay > Duration::from_secs(1) {
-                println!(
+                warn!(
                     "{} Last event delay: {}, pending {}",
                     now.as_millis(),
                     delay.as_millis(),
@@ -39,7 +45,7 @@ impl LogTail {
                 );
             }
         } else {
-            println!("{} No events", now.as_millis());
+            debug!("{} No events", now.as_millis());
         }
         events
     }

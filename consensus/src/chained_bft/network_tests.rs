@@ -2,31 +2,31 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    common::Author,
-    consensus_types::{
-        block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
-        vote_data::VoteData, vote_msg::VoteMsg,
-    },
-    epoch_manager::EpochManager,
-    network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
-    test_utils::{consensus_runtime, placeholder_ledger_info},
+    network::{NetworkReceivers, NetworkSender},
+    test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
 use channel;
-use crypto::HashValue;
-use executor::ExecutedState;
-use futures::{channel::mpsc, executor::block_on, FutureExt, SinkExt, StreamExt, TryFutureExt};
+use consensus_types::{
+    block::block_test_utils::certificate_for_genesis, block::Block, common::Author,
+    proposal_msg::ProposalMsg, sync_info::SyncInfo, vote::Vote, vote_data::VoteData,
+    vote_msg::VoteMsg,
+};
+use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
+use libra_prost_ext::MessageExt;
+use libra_types::block_info::BlockInfo;
 use network::{
     interface::{NetworkNotification, NetworkRequest},
-    proto::{BlockRetrievalStatus, ConsensusMsg},
+    proto::{ConsensusMsg, ConsensusMsg_oneof},
     protocols::rpc::InboundRpcRequest,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
+use prost::Message;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex, RwLock},
     time::Duration,
 };
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
 
 /// `NetworkPlayground` mocks the network implementation and provides convenience
 /// methods for testing. Test clients can use `wait_for_messages` or
@@ -49,11 +49,11 @@ pub struct NetworkPlayground {
     /// Allow test code to drop direct-send messages between peers.
     drop_config: Arc<RwLock<DropConfig>>,
     /// An executor for spawning node outbound network event handlers
-    executor: TaskExecutor,
+    executor: Handle,
 }
 
 impl NetworkPlayground {
-    pub fn new(executor: TaskExecutor) -> Self {
+    pub fn new(executor: Handle) -> Self {
         let (outbound_msgs_tx, outbound_msgs_rx) = mpsc::channel(1_024);
 
         NetworkPlayground {
@@ -152,7 +152,7 @@ impl NetworkPlayground {
             self.outbound_msgs_tx.clone(),
             self.node_consensus_txs.clone(),
         );
-        self.executor.spawn(fut.boxed().unit_error().compat());
+        self.executor.spawn(fut);
     }
 
     /// Deliver a `NetworkRequest` from peer `src` to the destination peer.
@@ -186,7 +186,7 @@ impl NetworkPlayground {
         // copy message data
         let msg_copy = match &msg_notif {
             NetworkNotification::RecvMessage(src, msg) => {
-                let msg: ConsensusMsg = ::protobuf::parse_from_bytes(msg.mdata.as_ref()).unwrap();
+                let msg = ConsensusMsg::decode(msg.mdata.as_ref()).unwrap();
                 (*src, msg)
             }
             msg_notif => panic!(
@@ -236,27 +236,53 @@ impl NetworkPlayground {
 
     /// Returns true for any message other than timeout
     pub fn exclude_timeout_msg(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        !msg_copy.1.has_timeout_msg()
+        !Self::timeout_votes_only(msg_copy)
     }
 
     /// Returns true for proposal messages only.
     pub fn proposals_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        msg_copy.1.has_proposal()
+        if let Some(ConsensusMsg_oneof::Proposal(_)) = msg_copy.1.message {
+            true
+        } else {
+            false
+        }
     }
 
     /// Returns true for vote messages only.
     pub fn votes_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        msg_copy.1.has_vote()
+        if let Some(ConsensusMsg_oneof::VoteMsg(_)) = msg_copy.1.message {
+            true
+        } else {
+            false
+        }
     }
 
-    /// Returns true for timeout messages only.
-    pub fn timeout_msg_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        msg_copy.1.has_timeout_msg()
+    /// Returns true for vote messages that carry round signatures only.
+    pub fn timeout_votes_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
+        // Timeout votes carry non-empty round signatures.
+        if let Some(ConsensusMsg_oneof::VoteMsg(vote_msg)) = &msg_copy.1.message {
+            let vote_msg = VoteMsg::try_from(vote_msg.clone()).unwrap();
+            vote_msg.vote().timeout_signature().is_some()
+        } else {
+            false
+        }
     }
 
     /// Returns true for sync info messages only.
     pub fn sync_info_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        msg_copy.1.has_sync_info()
+        if let Some(ConsensusMsg_oneof::SyncInfo(_)) = msg_copy.1.message {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn epoch_change_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
+        if let Some(ConsensusMsg_oneof::EpochChange(_)) = msg_copy.1.message {
+            true
+        } else {
+            false
+        }
     }
 
     fn is_message_dropped(&self, src: &Author, net_req: &NetworkRequest) -> bool {
@@ -302,19 +328,27 @@ impl DropConfig {
     }
 }
 
+use crate::chained_bft::network::NetworkTask;
+use crate::chained_bft::test_utils::TestPayload;
+use consensus_types::block_retrieval::{
+    BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
+};
+use libra_crypto::HashValue;
 #[cfg(test)]
-use types::crypto_proxies::random_validator_verifier;
+use libra_types::crypto_proxies::random_validator_verifier;
+use libra_types::crypto_proxies::EpochInfo;
+use std::convert::{TryFrom, TryInto};
 
 #[test]
 fn test_network_api() {
     let runtime = consensus_runtime();
     let num_nodes = 5;
     let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
-    let mut playground = NetworkPlayground::new(runtime.executor());
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = Vec::new();
     let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
     let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
-    let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
+    let validators = Arc::new(validator_verifier);
     for peer in &peers {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -322,45 +356,46 @@ fn test_network_api() {
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 
         playground.add_node(*peer, consensus_tx, network_reqs_rx);
-        let mut node = ConsensusNetworkImpl::new(
-            *peer,
-            network_sender,
+        let (self_sender, self_receiver) = channel::new_test(8);
+        let node = NetworkSender::new(*peer, network_sender, self_sender, Arc::clone(&validators));
+        let (task, receiver) = NetworkTask::new(
+            Arc::new(RwLock::new(EpochInfo {
+                epoch: 1,
+                verifier: Arc::clone(&validators),
+            })),
             network_events,
-            Arc::clone(&epoch_mgr),
+            self_receiver,
         );
-        receivers.push(node.start(&runtime.executor()));
+        receivers.push(receiver);
+        runtime.handle().spawn(task.start());
         nodes.push(node);
     }
-    let vote = VoteMsg::new(
-        VoteData::new(
-            HashValue::random(),
-            ExecutedState::state_for_genesis().state_id,
-            1,
-            HashValue::random(),
-            0,
-            HashValue::random(),
-            0,
+    let vote_msg = VoteMsg::new(
+        Vote::new(
+            VoteData::new(BlockInfo::random(1), BlockInfo::random(0)),
+            peers[0],
+            placeholder_ledger_info(),
+            &signers[0],
         ),
-        peers[0],
-        placeholder_ledger_info(),
-        &signers[0],
+        test_utils::placeholder_sync_info(),
     );
-    let previous_block = Block::make_genesis_block();
-    let previous_qc = QuorumCert::certificate_for_genesis();
+    let previous_qc = certificate_for_genesis();
     let proposal = ProposalMsg::new(
-        Block::make_block(&previous_block, 0, 1, 0, previous_qc.clone(), &signers[0]),
+        Block::new_proposal(0, 1, 1, previous_qc.clone(), &signers[0]),
         SyncInfo::new(previous_qc.clone(), previous_qc.clone(), None),
     );
     block_on(async move {
-        nodes[0].send_vote(vote.clone(), peers[2..5].to_vec()).await;
+        nodes[0]
+            .send_vote(vote_msg.clone(), peers[2..5].to_vec())
+            .await;
         playground
             .wait_for_messages(3, NetworkPlayground::take_all)
             .await;
         for r in receivers.iter_mut().take(5).skip(2) {
             let v = r.votes.next().await.unwrap();
-            assert_eq!(v, vote);
+            assert_eq!(v, vote_msg);
         }
-        nodes[4].broadcast_proposal(proposal.clone()).await;
+        nodes[0].broadcast_proposal(proposal.clone()).await;
         playground
             .wait_for_messages(4, NetworkPlayground::take_all)
             .await;
@@ -377,54 +412,88 @@ fn test_rpc() {
     let num_nodes = 2;
     let mut senders = Vec::new();
     let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
-    let mut playground = NetworkPlayground::new(runtime.executor());
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = Vec::new();
     let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
+    let validators = Arc::new(validator_verifier);
     let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
-    let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
     for peer in peers.iter() {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-        let (consensus_tx, consensus_rx) = channel::new_test(8);
+        let (consensus_tx, consensus_rx) = channel::new_test(1);
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 
         playground.add_node(*peer, consensus_tx, network_reqs_rx);
-        let mut node = ConsensusNetworkImpl::new(
+        let (self_sender, self_receiver) = channel::new_test(8);
+        let node = NetworkSender::new(
             *peer,
             network_sender.clone(),
+            self_sender,
+            Arc::clone(&validators),
+        );
+        let (task, receiver) = NetworkTask::new(
+            Arc::new(RwLock::new(EpochInfo {
+                epoch: 1,
+                verifier: Arc::clone(&validators),
+            })),
             network_events,
-            Arc::clone(&epoch_mgr),
+            self_receiver,
         );
         senders.push(network_sender);
-        receivers.push(node.start(&runtime.executor()));
+        receivers.push(receiver);
+        runtime.handle().spawn(task.start());
         nodes.push(node);
     }
     let receiver_1 = receivers.remove(1);
-    let genesis = Arc::new(Block::<u64>::make_genesis_block());
-    let genesis_clone = Arc::clone(&genesis);
+    let node0 = nodes[0].clone();
+    let peer1 = peers[1];
+    let vote_msg = VoteMsg::new(
+        Vote::new(
+            VoteData::new(BlockInfo::random(1), BlockInfo::random(0)),
+            peers[0],
+            placeholder_ledger_info(),
+            &signers[0],
+        ),
+        test_utils::placeholder_sync_info(),
+    );
 
     // verify request block rpc
     let mut block_retrieval = receiver_1.block_retrieval;
     let on_request_block = async move {
         while let Some(request) = block_retrieval.next().await {
-            request
-                .response_sender
-                .send(BlockRetrievalResponse {
-                    status: BlockRetrievalStatus::SUCCEEDED,
-                    blocks: vec![Block::clone(genesis_clone.as_ref())],
-                })
-                .unwrap();
+            // make sure the network task is not blocked during RPC
+            // we limit the network notification queue size to 1 so if it's blocked,
+            // we can not process 2 votes and the test will timeout
+            node0.send_vote(vote_msg.clone(), vec![peer1]).await;
+            node0.send_vote(vote_msg.clone(), vec![peer1]).await;
+            playground
+                .wait_for_messages(2, NetworkPlayground::votes_only)
+                .await;
+            let response = BlockRetrievalResponse::<TestPayload>::new(
+                BlockRetrievalStatus::IdNotFound,
+                vec![],
+            );
+            let bytes = ConsensusMsg {
+                message: Some(ConsensusMsg_oneof::RespondBlock(
+                    response.try_into().unwrap(),
+                )),
+            }
+            .to_bytes()
+            .unwrap();
+            request.response_sender.send(Ok(bytes)).unwrap();
         }
     };
-    runtime
-        .executor()
-        .spawn(on_request_block.boxed().unit_error().compat());
+    runtime.handle().spawn(on_request_block);
     let peer = peers[1];
     block_on(async move {
         let response = nodes[0]
-            .request_block(genesis.id(), 1, peer, Duration::from_secs(5))
+            .request_block::<TestPayload>(
+                BlockRetrievalRequest::new(HashValue::zero(), 1),
+                peer,
+                Duration::from_secs(5),
+            )
             .await
             .unwrap();
-        assert_eq!(response.blocks[0], *genesis);
+        assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
     });
 }

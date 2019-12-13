@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This performs instruction cost synthesis for the various bytecode instructions that we have. We
 //! separate instructions into three sets:
 //! * Global-memory independent instructions;
@@ -8,13 +10,14 @@
 //! * Native operations.
 use cost_synthesis::{
     global_state::{account::Account, inhabitor::RandomInhabitor},
-    module_generator::ModuleGenerator,
+    module_generator::generate_padded_modules,
     natives::StackAccessorMocker,
     stack_generator::RandomStackGenerator,
     with_loaded_vm,
 };
 use csv;
 use language_e2e_tests::data_store::FakeDataStore;
+use libra_types::vm_error::StatusCode;
 use std::{
     collections::{HashMap, VecDeque},
     convert::TryFrom,
@@ -23,21 +26,20 @@ use std::{
     u64,
 };
 use structopt::StructOpt;
-use types::vm_error::StatusCode;
 use vm::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex,
         FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, UserStringIndex,
         NO_TYPE_ACTUALS,
     },
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
 use vm_runtime::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
+    interpreter::InterpreterForCostSynthesis,
     loaded_data::function::{FunctionRef, FunctionReference},
-    txn_executor::TransactionExecutor,
 };
 use vm_runtime_types::{native_functions::hash, value::Value};
 
@@ -118,7 +120,6 @@ fn stack_instructions(options: &Opt) {
         Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
-        CreateAccount,
         Sub,
         Ret,
         Add,
@@ -156,9 +157,8 @@ fn stack_instructions(options: &Opt) {
         GetTxnPublicKey,
     ];
 
-    let mod_gen: ModuleGenerator = ModuleGenerator::new(options.num_iters as u16, 3);
     let mut account = Account::new();
-    with_loaded_vm! (mod_gen, account => vm, loaded_module, module_cache);
+    with_loaded_vm! (3, options.num_iters as usize, account => vm, loaded_module, module_cache);
     let costs: HashMap<String, Vec<u64>> = stack_opcodes
         .into_iter()
         .map(|instruction| {
@@ -173,16 +173,14 @@ fn stack_instructions(options: &Opt) {
             );
             let instr_costs: Vec<u64> = stack_gen
                 .map(|stack_state| {
-                    let (instr, size) = RandomStackGenerator::stack_transition(
-                        &mut vm.execution_stack,
-                        stack_state,
-                    );
+                    let (instr, size) =
+                        RandomStackGenerator::stack_transition(&mut vm, stack_state);
                     // Clear the VM's data cache -- otherwise we'll windup grabbing the data from
                     // the cache on subsequent iterations and across future instructions that
                     // effect global memory.
                     vm.clear_writes();
                     let before = Instant::now();
-                    let ignore = vm.execute_block(&[instr], 0);
+                    let ignore = vm.execute_code_snippet(&[instr]);
                     let time = before.elapsed().as_nanos();
                     // Check to make sure we didn't error. Need to special case the abort bytecode.
                     if instruction != Bytecode::Abort {
@@ -217,6 +215,7 @@ fn stack_instructions(options: &Opt) {
 macro_rules! bench_native {
     ($name:expr, $function:path, $table:ident, $iters:expr) => {
         let mut stack_access = StackAccessorMocker::new();
+        let cost_table = CostTable::zero();
         let per_byte_costs: Vec<u64> = (1..512)
             .map(|i| {
                 stack_access.set_hash_length(i);
@@ -224,7 +223,7 @@ macro_rules! bench_native {
                     let before = Instant::now();
                     let mut args = VecDeque::new();
                     args.push_front(Value::byte_array(stack_access.next_bytearray()));
-                    let _ = $function(args);
+                    let _ = $function(args, &cost_table);
                     acc + before.elapsed().as_nanos()
                 });
                 // Time per byte averaged over the number of iterations that we performed.

@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::*;
+use libra_types::transaction::{RawTransaction, Script, SignedTransaction, TransactionPayload};
 use move_ir::assert_no_error;
 use proptest::prelude::*;
 use std::time::Duration;
-use types::transaction::{RawTransaction, SignedTransaction, TransactionPayload, Script};
 
 #[test]
 fn verify_txn_accepts_good_sequence_number() {
@@ -95,7 +95,7 @@ fn verify_txn_accepts_good_signature() {
     let test_env = TestEnvironment::default();
 
     let sender_account = test_env.accounts.get_account(0);
-    let signed_txn = test_env.create_signed_txn(
+    let signed_txn = test_env.create_user_txn(
         to_script(b"main() { return; }", vec![]),
         sender_account.addr,
         sender_account,
@@ -124,7 +124,7 @@ fn verify_txn_rejects_genesis_deletion() {
     proptest!(|(txn in SignedTransaction::write_set_strategy())| {
         let write_set = match txn.payload() {
             TransactionPayload::WriteSet(write_set) => write_set,
-            TransactionPayload::Program(_) | TransactionPayload::Script(_) | TransactionPayload::Module(_) => panic!(
+            TransactionPayload::Program | TransactionPayload::Script(_) | TransactionPayload::Module(_) => panic!(
                 "write_set_strategy shouldn't generate other transactions",
             ),
         };

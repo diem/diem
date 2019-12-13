@@ -9,22 +9,14 @@ use crate::{
     protocols::direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
     ProtocolId,
 };
-use bytes::Bytes;
+use bytes05::Bytes;
 use channel;
-use futures::{
-    compat::Sink01CompatExt,
-    future::{FutureExt, TryFutureExt},
-    io::AsyncReadExt,
-    sink::SinkExt,
-    stream::StreamExt,
-};
+use futures::{sink::SinkExt, stream::StreamExt};
+use libra_types::PeerId;
 use memsocket::MemorySocket;
-use tokio::{
-    codec::Framed,
-    runtime::{Runtime, TaskExecutor},
-};
-use types::PeerId;
-use unsigned_varint::codec::UviBytes;
+use netcore::compat::IoCompat;
+use tokio::runtime::{Handle, Runtime};
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 const PROTOCOL_1: &[u8] = b"/direct_send/1.0.0";
 const PROTOCOL_2: &[u8] = b"/direct_send/2.0.0";
@@ -33,7 +25,7 @@ const MESSAGE_2: &[u8] = b"Direct Send 2";
 const MESSAGE_3: &[u8] = b"Direct Send 3";
 
 fn start_direct_send_actor(
-    executor: TaskExecutor,
+    executor: Handle,
 ) -> (
     channel::Sender<DirectSendRequest>,
     channel::Receiver<DirectSendNotification>,
@@ -51,7 +43,7 @@ fn start_direct_send_actor(
         peer_mgr_notifs_rx,
         PeerManagerRequestSender::new(peer_mgr_reqs_tx),
     );
-    executor.spawn(direct_send.start().boxed().unit_error().compat());
+    executor.spawn(direct_send.start());
 
     (
         ds_requests_tx,
@@ -99,7 +91,7 @@ fn test_inbound_substream() {
     let mut rt = Runtime::new().unwrap();
 
     let (_ds_requests_tx, mut ds_notifs_rx, mut peer_mgr_notifs_tx, _peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -107,7 +99,7 @@ fn test_inbound_substream() {
     // The dialer sends two messages to the listener.
     let f_substream = async move {
         let mut dialer_substream =
-            Framed::new(dialer_substream.compat(), UviBytes::default()).sink_compat();
+            Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         dialer_substream
             .send(Bytes::from_static(MESSAGE_1))
             .await
@@ -138,9 +130,8 @@ fn test_inbound_substream() {
             .await;
     };
 
-    rt.spawn(f_substream.boxed().unit_error().compat());
-    rt.block_on(f_network_provider.boxed().unit_error().compat())
-        .unwrap();
+    rt.spawn(f_substream);
+    rt.block_on(f_network_provider);
 }
 
 #[test]
@@ -148,7 +139,7 @@ fn test_inbound_substream_closed() {
     let mut rt = Runtime::new().unwrap();
 
     let (_ds_requests_tx, mut ds_notifs_rx, mut peer_mgr_notifs_tx, _peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -156,7 +147,7 @@ fn test_inbound_substream_closed() {
     // The dialer sends a message to the listener.
     let f_substream = async move {
         let mut dialer_substream =
-            Framed::new(dialer_substream.compat(), UviBytes::default()).sink_compat();
+            Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         dialer_substream
             .send(Bytes::from_static(MESSAGE_1))
             .await
@@ -182,9 +173,8 @@ fn test_inbound_substream_closed() {
             .await;
     };
 
-    rt.spawn(f_substream.boxed().unit_error().compat());
-    rt.block_on(f_network_provider.boxed().unit_error().compat())
-        .unwrap();
+    rt.spawn(f_substream);
+    rt.block_on(f_network_provider);
 }
 
 #[test]
@@ -192,7 +182,7 @@ fn test_outbound_single_protocol() {
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -233,17 +223,18 @@ fn test_outbound_single_protocol() {
 
     // The listener should receive these two messages.
     let f_substream = async move {
-        let mut listener_substream =
-            Framed::new(listener_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut listener_substream = Framed::new(
+            IoCompat::new(listener_substream),
+            LengthDelimitedCodec::new(),
+        );
         let msg = listener_substream.next().await.unwrap().unwrap();
         assert_eq!(msg.as_ref(), MESSAGE_1);
         let msg = listener_substream.next().await.unwrap().unwrap();
         assert_eq!(msg.as_ref(), MESSAGE_2);
     };
 
-    rt.spawn(f_network_provider.boxed().unit_error().compat());
-    rt.block_on(f_substream.boxed().unit_error().compat())
-        .unwrap();
+    rt.spawn(f_network_provider);
+    rt.block_on(f_substream);
 }
 
 #[test]
@@ -251,7 +242,7 @@ fn test_outbound_multiple_protocols() {
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream_1, listener_substream_1) = MemorySocket::new_pair();
@@ -300,28 +291,31 @@ fn test_outbound_multiple_protocols() {
 
     // The listener should receive 1 message on each substream.
     let f_substream = async move {
-        let mut listener_substream_1 =
-            Framed::new(listener_substream_1.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut listener_substream_1 = Framed::new(
+            IoCompat::new(listener_substream_1),
+            LengthDelimitedCodec::new(),
+        );
         let msg = listener_substream_1.next().await.unwrap().unwrap();
         assert_eq!(msg.as_ref(), MESSAGE_1);
-        let mut listener_substream_2 =
-            Framed::new(listener_substream_2.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut listener_substream_2 = Framed::new(
+            IoCompat::new(listener_substream_2),
+            LengthDelimitedCodec::new(),
+        );
         let msg = listener_substream_2.next().await.unwrap().unwrap();
         assert_eq!(msg.as_ref(), MESSAGE_2);
     };
 
-    rt.spawn(f_network_provider.boxed().unit_error().compat());
-    rt.block_on(f_substream.boxed().unit_error().compat())
-        .unwrap();
+    rt.spawn(f_network_provider);
+    rt.block_on(f_substream);
 }
 
 #[test]
 fn test_outbound_not_connected() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -373,26 +367,27 @@ fn test_outbound_not_connected() {
 
     // The listener should receive the message.
     let f_substream = async move {
-        let mut listener_substream =
-            Framed::new(listener_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut listener_substream = Framed::new(
+            IoCompat::new(listener_substream),
+            LengthDelimitedCodec::new(),
+        );
         let msg = listener_substream.next().await.unwrap().unwrap();
         // Only the second message should be received, because when the first message is sent,
         // the peer isn't connected.
         assert_eq!(msg.as_ref(), MESSAGE_2);
     };
 
-    rt.spawn(f_network_provider.boxed().unit_error().compat());
-    rt.block_on(f_substream.boxed().unit_error().compat())
-        .unwrap();
+    rt.spawn(f_network_provider);
+    rt.block_on(f_substream);
 }
 
 #[test]
 fn test_outbound_connection_closed() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream_1, listener_substream_1) = MemorySocket::new_pair();
@@ -423,22 +418,21 @@ fn test_outbound_connection_closed() {
 
         (ds_requests_tx, peer_mgr_reqs_rx)
     };
-    let (mut ds_requests_tx, mut peer_mgr_reqs_rx) = rt
-        .block_on(f_first_message.boxed().unit_error().compat())
-        .unwrap();
+    let (mut ds_requests_tx, mut peer_mgr_reqs_rx) = rt.block_on(f_first_message);
 
     // Receive the first message and close the first substream
     let f_close_first_substream = async move {
-        let mut listener_substream =
-            Framed::new(listener_substream_1.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut listener_substream = Framed::new(
+            IoCompat::new(listener_substream_1),
+            LengthDelimitedCodec::new(),
+        );
         let msg = listener_substream.next().await.unwrap().unwrap();
         // The listener should receive the first message.
         assert_eq!(msg.as_ref(), MESSAGE_1);
         // Close the substream by dropping it on the listener side
         drop(listener_substream);
     };
-    rt.block_on(f_close_first_substream.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_close_first_substream);
 
     // Send the second message while the connection is still lost.
     let f_second_message = async move {
@@ -456,9 +450,7 @@ fn test_outbound_connection_closed() {
 
         ds_requests_tx
     };
-    let mut ds_requests_tx = rt
-        .block_on(f_second_message.boxed().unit_error().compat())
-        .unwrap();
+    let mut ds_requests_tx = rt.block_on(f_second_message);
 
     // Keep sending the third message and open the second substream
     let f_third_message = async move {
@@ -476,7 +468,7 @@ fn test_outbound_connection_closed() {
                 .unwrap();
         }
     };
-    rt.spawn(f_third_message.boxed().unit_error().compat());
+    rt.spawn(f_third_message);
 
     let f_open_second_substream = async move {
         // PeerManager returns the second substream
@@ -490,9 +482,7 @@ fn test_outbound_connection_closed() {
 
         peer_mgr_reqs_rx
     };
-    let mut peer_mgr_reqs_rx = rt
-        .block_on(f_open_second_substream.boxed().unit_error().compat())
-        .unwrap();
+    let mut peer_mgr_reqs_rx = rt.block_on(f_open_second_substream);
 
     // Fake peer manager to keep the PeerManagerRequest receiver
     let f_peer_manager = async move {
@@ -506,15 +496,16 @@ fn test_outbound_connection_closed() {
             .await;
         }
     };
-    rt.spawn(f_peer_manager.boxed().unit_error().compat());
+    rt.spawn(f_peer_manager);
 
     // The listener should only receive the third message through the second substream.
     let f_second_substream = async move {
-        let mut listener_substream =
-            Framed::new(listener_substream_2.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut listener_substream = Framed::new(
+            IoCompat::new(listener_substream_2),
+            LengthDelimitedCodec::new(),
+        );
         let msg = listener_substream.next().await.unwrap().unwrap();
         assert_eq!(msg.as_ref(), MESSAGE_3);
     };
-    rt.block_on(f_second_substream.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_second_substream);
 }

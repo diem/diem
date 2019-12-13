@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/mdot_with_non_address_exp.move:9:11 ───
+   │
+ 9 │         01::X::bar()
+   │           ^^ Unexpected token: '::'
+   ·
+ 9 │         01::X::bar()
+   │           -- Expected: ';'
+   │
+

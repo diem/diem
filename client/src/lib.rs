@@ -1,19 +1,22 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
 //! Libra Client
 //!
 //! Client (binary) is the CLI tool to interact with Libra validator.
 //! It supposes all public APIs.
-pub use crypto::{ed25519::*, test_utils::KeyPair, traits::ValidKeyStringExt};
-pub use libra_wallet::wallet_library::CryptoHash;
-pub use proto_conv::{FromProtoBytes, IntoProtoBytes};
-use serde::{Deserialize, Serialize};
-pub use types::{
+
+pub use libra_crypto::{ed25519::*, test_utils::KeyPair, traits::ValidKeyStringExt};
+pub use libra_types::{
     account_address::AccountAddress,
+    account_config::association_address,
     transaction::{RawTransaction, TransactionArgument, TransactionPayload},
 };
+pub use libra_wallet::wallet_library::CryptoHash;
+use serde::{Deserialize, Serialize};
 pub(crate) mod account_commands;
 /// Main instance of client holding corresponding information, e.g. account address.
 pub mod client_proxy;
@@ -28,7 +31,7 @@ pub(crate) mod transfer_commands;
 /// Struct used to store data for each created account.  We track the sequence number
 /// so we can create new transactions easily
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 pub struct AccountData {
     /// Address of the account.
     pub address: AccountAddress,

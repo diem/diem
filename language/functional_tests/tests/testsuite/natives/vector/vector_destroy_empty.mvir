@@ -1,5 +1,5 @@
 module M {
-    resource R {}
+    resource R { b: bool }
 }
 
 

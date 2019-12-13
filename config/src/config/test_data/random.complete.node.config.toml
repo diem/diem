@@ -1,0 +1,100 @@
+[admission_control]
+address = "0.0.0.0"
+admission_control_service_port = 8000
+need_to_check_mempool_before_validation = false
+max_concurrent_inbound_syncs = 100
+
+[admission_control.upstream_proxy_timeout]
+secs = 1
+nanos = 0
+
+[base]
+data_dir = "/opt/libra/data/common"
+role = "validator"
+
+[consensus]
+max_block_size = 100
+proposer_type = "multiple_ordered_proposers"
+contiguous_rounds = 2
+consensus_keypair_file = "consensus.keys.toml"
+consensus_peers_file = "consensus_peers.config.toml"
+
+[consensus.safety_rules.backend]
+type = "in_memory_storage"
+
+[debug_interface]
+admission_control_node_debug_port = 6191
+storage_node_debug_port = 6194
+metrics_server_port = 9101
+public_metrics_server_port = 9102
+address = "0.0.0.0"
+
+[execution]
+address = "localhost"
+port = 6183
+genesis_file_location = ""
+
+[logger]
+is_async = true
+chan_size = 256
+
+[metrics]
+collection_interval_ms = 1000
+dir = "metrics"
+enabled = false
+
+[mempool]
+broadcast_transactions = true
+shared_mempool_tick_interval_ms = 50
+shared_mempool_batch_size = 100
+shared_mempool_max_concurrent_inbound_syncs = 100
+capacity = 1000000
+capacity_per_user = 100
+system_transaction_timeout_secs = 86400
+system_transaction_gc_interval_ms = 180000
+mempool_service_port = 6182
+address = "localhost"
+
+[state_sync]
+chunk_limit = 250
+tick_interval_ms = 100
+long_poll_timeout_ms = 30000
+max_chunk_limit = 1000
+max_timeout_ms = 120000
+upstream_peers = []
+
+[storage]
+address = "localhost"
+port = 6184
+dir = "libradb/db"
+grpc_max_receive_len = 100000000
+
+[test.account_keypair]
+private_key = "a9ccbb14534fa25b8e2c8062f82592ca4a6ecd228895ef48a21faf480f4fdb9f"
+public_key = "8a09af25da4e547c7192a0f7f05c2b8db94af316a5b599bd2cff8797c28ae68b"
+
+[validator_network]
+peer_id = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654"
+listen_address = "/ip4/0.0.0.0/tcp/6180"
+advertised_address = "/ip4/127.0.0.1/tcp/6180"
+discovery_interval_ms = 1000
+connectivity_check_interval_ms = 5000
+enable_encryption_and_authentication = true
+is_permissioned = true
+network_keypairs_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654.network.keys.toml"
+network_peers_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654.network_peers.config.toml"
+seed_peers_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654.seed_peers.toml"
+
+[vm_config.publishing_options]
+type = "Locked"
+whitelist = [
+    "1cf66b5f5c911e80dad222b8ee8dfe3ad4830f75bb412ba12ea8e429203d9c83",
+    "4160344b9d9cf5c5da277014a24bb187d40a8d64a44291aa8d3eefa51b0b9488",
+    "5ee07d4ac1ecf88f1b41c2c458f15699fe9d811c61563338253b3807b75c04c1",
+    "6aabc87f543f85e10216432d02b0251297d4c7723e906de481dfa04b057c2371",
+    "a2180395d1632a0793f34e8a8a6be20b3b03bdceee35affe8c751fc8467b73a4",
+    "d4ed6341aada016d9d675f48445f720c61d1d66b808ec5a95bdab04db9b7856e",
+    "e4de36a91d0c0cd495d340337d3023102161425cab9aafa80aca59a763365671",
+    "f37517131a78bab737c090037671975557b9d810f45bfbba24526c0cdfbadb09",
+    "ff47e2dcb1884af7d608eb3063dcb78f33b1af864d0e160cb3b76ba6b368b928",
+]

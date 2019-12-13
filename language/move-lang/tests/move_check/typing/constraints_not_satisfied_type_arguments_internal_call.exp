@@ -1,0 +1,17 @@
+error: 
+
+   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_call.move:2:20 ───
+   │
+ 9 │         box<CupC<R>>();
+   │             ^^^^^^^ Constraint not satisfied.
+   ·
+ 9 │         box<CupC<R>>();
+   │                  - The resource type '0x8675309::M::R' does not satisfy the constraint 'copyable'
+   ·
+ 3 │     resource struct R {}
+   │     -------- The type's constraint information was declared here
+   ·
+ 2 │     struct CupC<T: copyable> {}
+   │                    -------- 'copyable' constraint declared here
+   │
+

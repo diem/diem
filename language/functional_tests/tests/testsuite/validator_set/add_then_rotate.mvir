@@ -1,0 +1,67 @@
+// Check that rotating keys between addition and reconfiguration works
+
+//! account: alice
+//! account: vivian, 1000000, 0, validator
+
+//! sender: alice
+// register Alice as a validator candidate
+import 0x0.ValidatorConfig;
+main() {
+    let config: ValidatorConfig.Config;
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
+
+    return;
+}
+
+//! new-transaction
+//! sender: association
+// run a tx from the association that adds Alice as a validator
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.add_validator({{alice}});
+
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+// rotate alice's key
+import 0x0.ValidatorConfig;
+main() {
+    ValidatorConfig.rotate_consensus_pubkey(h"beefbeef");
+
+    return;
+}
+
+//! new-transaction
+//! sender: vivian
+// Run the block prologue. Reconfiguration should be triggered, which should add Alice and pick up
+// her key rotation as well
+// TODO: trigger a BlockMetadata transaction here instead
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
+    return;
+}
+
+// check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
+// check: EXECUTED
+
+//! new-transaction
+// check that Alice is a validator AND that her key is as expected (i.e., it's the key after
+// rotation, not the key before)
+import 0x0.LibraSystem;
+main() {
+    let info: LibraSystem.ValidatorInfo;
+
+    assert(LibraSystem.is_validator({{alice}}), 70);
+
+    info = LibraSystem.get_ith_validator_info(1);
+    assert(*LibraSystem.get_validator_address(&info) == {{alice}}, 71);
+    assert(*LibraSystem.get_consensus_pubkey(&info) == h"beefbeef", 72);
+
+    return;
+}
+
+// check: EXECUTED

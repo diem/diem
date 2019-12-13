@@ -7,6 +7,9 @@
 // </Black magic>
 
 // Public exports
+#[macro_use]
+extern crate prometheus;
+
 pub use common::NetworkPublicKeys;
 pub use interface::NetworkProvider;
 
@@ -25,4 +28,4 @@ mod transport;
 mod utils;
 
 /// Type for unique identifier associated with each network protocol
-pub type ProtocolId = bytes::Bytes;
+pub type ProtocolId = bytes05::Bytes;

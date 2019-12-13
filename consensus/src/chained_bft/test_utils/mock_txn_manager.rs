@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::state_replication::TxnManager;
+use anyhow::Result;
 use executor::StateComputeResult;
-use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt, SinkExt};
 use std::{
     pin::Pin,

@@ -11,14 +11,14 @@
 //! ```
 
 use crate::schema::{ensure_slice_len_eq, EVENT_BY_KEY_CF_NAME};
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::prelude::*;
+use libra_types::{event::EventKey, transaction::Version};
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
 use std::{convert::TryFrom, mem::size_of};
-use types::{event::EventKey, transaction::Version};
 
 define_schema!(EventByKeySchema, Key, Value, EVENT_BY_KEY_CF_NAME);
 

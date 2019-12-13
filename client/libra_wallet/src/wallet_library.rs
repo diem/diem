@@ -3,7 +3,7 @@
 
 //! The following document is a minimalist version of Libra Wallet. Note that this Wallet does
 //! not promote security as the mnemonic is stored in unencrypted form. In future iterations,
-//! we will be realesing more robust Wallet implementations. It is our intention to present a
+//! we will be releasing more robust Wallet implementations. It is our intention to present a
 //! foundation that is simple to understand and incrementally improve the LibraWallet
 //! implementation and it's security guarantees throughout testnet. For a more robust wallet
 //! reference, the authors suggest to audit the file of the same name in the rust-wallet crate.
@@ -21,13 +21,12 @@ pub use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
 };
+use libra_types::{
+    account_address::AccountAddress,
+    transaction::{helpers::TransactionSigner, RawTransaction, SignedTransaction},
+};
 use rand::{rngs::EntropyRng, Rng};
 use std::{collections::HashMap, path::Path};
-use types::{
-    account_address::AccountAddress,
-    transaction::{RawTransaction, SignedTransaction},
-    transaction_helpers::TransactionSigner,
-};
 
 /// WalletLibrary contains all the information needed to recreate a particular wallet
 pub struct WalletLibrary {
@@ -59,7 +58,7 @@ impl WalletLibrary {
         }
     }
 
-    /// Function that returns the string representation of the WalletLibrary Menmonic
+    /// Function that returns the string representation of the WalletLibrary Mnemonic
     /// NOTE: This is not secure, and in general the mnemonic should be stored in encrypted format
     pub fn mnemonic(&self) -> String {
         self.mnemonic.to_string()
@@ -171,7 +170,7 @@ impl WalletLibrary {
 
 /// WalletLibrary naturally support TransactionSigner trait.
 impl TransactionSigner for WalletLibrary {
-    fn sign_txn(&self, raw_txn: RawTransaction) -> failure::prelude::Result<SignedTransaction> {
+    fn sign_txn(&self, raw_txn: RawTransaction) -> Result<SignedTransaction, anyhow::Error> {
         Ok(self.sign_txn(raw_txn)?)
     }
 }

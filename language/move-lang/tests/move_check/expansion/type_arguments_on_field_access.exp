@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/type_arguments_on_field_access.move:6:11 ───
+   │
+ 6 │         x.f<u64>;
+   │           ^^ Unexpected token: 'f<'
+   ·
+ 6 │         x.f<u64>;
+   │           -- Expected: a name value
+   │
+

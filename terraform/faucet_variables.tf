@@ -10,5 +10,5 @@ variable "faucet_log_level" {
 
 variable "faucet_image_tag" {
   description = "Docker image tag to use for faucet server"
-  default     = "latest"
+  default     = "latest_dynamic"
 }

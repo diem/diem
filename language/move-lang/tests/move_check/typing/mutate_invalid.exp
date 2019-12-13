@@ -1,0 +1,131 @@
+error: 
+
+   ┌── tests/move_check/typing/mutate_invalid.move:6:10 ───
+   │
+ 6 │         *&mut 0 = false;
+   │          ^^^^^^ Invalid mutation. New value is not valid for the reference
+   ·
+ 6 │         *&mut 0 = false;
+   │               - The type: 'u64'
+   ·
+ 6 │         *&mut 0 = false;
+   │                   ----- Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/mutate_invalid.move:7:10 ───
+   │
+ 7 │         *&mut S{f:0}.f = &1;
+   │          ^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
+   ·
+ 7 │         *&mut S{f:0}.f = &1;
+   │                          -- The type: '&u64'
+   ·
+ 7 │         *&mut S{f:0}.f = &1;
+   │          ------------- Is not compatible with: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/mutate_invalid.move:8:9 ───
+   │
+ 8 │         *foo(&mut 0) = (1, 0);
+   │         ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation. The mutation expected 1 argument(s) but got 2
+   ·
+ 8 │         *foo(&mut 0) = (1, 0);
+   │                        ------ Found 2 arguments here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/mutate_invalid.move:9:9 ───
+   │
+ 9 │         bar(&mut S{f:0}).f = ();
+   │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid mutation. The mutation expected 1 argument(s) but got 0
+   ·
+ 9 │         bar(&mut S{f:0}).f = ();
+   │                              -- Found 0 arguments here
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_invalid.move:10:10 ───
+    │
+ 10 │         *&mut bar(&mut S{f:0}).f = &0;
+    │          ^^^^^^^^^^^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
+    ·
+ 10 │         *&mut bar(&mut S{f:0}).f = &0;
+    │                                    -- The type: '&u64'
+    ·
+ 10 │         *&mut bar(&mut S{f:0}).f = &0;
+    │          ----------------------- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
+    │
+ 11 │         baz().f = false;
+    │         ^^^^^^^ Invalid mutation. New value is not valid for the reference
+    ·
+ 2 │     struct S { f: u64 }
+    │                   --- The type: 'u64'
+    ·
+ 11 │         baz().f = false;
+    │                   ----- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
+    │
+ 12 │         *&mut baz().f = false;
+    │          ^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
+    ·
+ 2 │     struct S { f: u64 }
+    │                   --- The type: 'u64'
+    ·
+ 12 │         *&mut baz().f = false;
+    │                         ----- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_invalid.move:16:22 ───
+    │
+ 17 │         *r = X { f: 1 };
+    │          ^ Invalid mutation. New value is not valid for the reference
+    ·
+ 16 │         let r = &mut S{ f: 0 };
+    │                      --------- The type: '0x8675309::M::S'
+    ·
+ 17 │         *r = X { f: 1 };
+    │              ---------- Is not compatible with: '0x8675309::M::X'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_invalid.move:19:9 ───
+    │
+ 19 │         r.f = &0;
+    │         ^^^ Invalid mutation. New value is not valid for the reference
+    ·
+ 19 │         r.f = &0;
+    │               -- The type: '&u64'
+    ·
+ 19 │         r.f = &0;
+    │         --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_invalid.move:20:9 ───
+    │
+ 20 │         *&mut r.f = ();
+    │         ^^^^^^^^^^^^^^ Invalid mutation. The mutation expected 1 argument(s) but got 0
+    ·
+ 20 │         *&mut r.f = ();
+    │                     -- Found 0 arguments here
+    │
+

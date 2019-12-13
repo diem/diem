@@ -14,6 +14,7 @@ use byteorder::{BigEndian, ByteOrder};
 use ed25519_dalek::{PublicKey, SecretKey};
 use hmac::{Hmac, Mac};
 use sha2::Sha512;
+use thiserror::Error;
 
 /// Extended private key that includes additional child_path and chain-code.
 pub struct ExtendedPrivKey {
@@ -180,15 +181,15 @@ impl Slip0010 {
 /// a) invalid key-path.
 /// b) secret_key generation errors.
 /// c) hmac related errors.
-#[derive(Clone, Debug, PartialEq, Eq, failure::prelude::Fail)]
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum Slip0010Error {
     /// Invalid key path.
-    #[fail(display = "SLIP-0010 invalid key path")]
+    #[error("SLIP-0010 invalid key path")]
     KeyPathError,
     /// Any error related to key derivation.
-    #[fail(display = "SLIP-0010 - cannot generate key")]
+    #[error("SLIP-0010 - cannot generate key")]
     SecretKeyError,
     /// HMAC key related error; unlikely to happen because every key size is accepted in HMAC.
-    #[fail(display = "SLIP-0010 - HMAC key error")]
+    #[error("SLIP-0010 - HMAC key error")]
     MACKeyError,
 }

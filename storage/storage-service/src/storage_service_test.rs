@@ -2,37 +2,30 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use config::config::NodeConfigHelpers;
+use futures::{executor::block_on, stream::StreamExt};
 use grpcio::EnvBuilder;
 use itertools::zip_eq;
-use libradb::mock_genesis::db_with_mock_genesis;
-#[cfg(any(test, feature = "testing"))]
+use libra_config::config::NodeConfig;
+use libra_crypto::hash::CryptoHash;
+use libra_types::get_with_proof::{RequestItem, ResponseItem};
+#[cfg(test)]
 use libradb::test_helper::arb_blocks_to_commit;
 use proptest::prelude::*;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use storage_client::{
     StorageRead, StorageReadServiceClient, StorageWrite, StorageWriteServiceClient,
 };
-use types::get_with_proof::{RequestItem, ResponseItem};
 
-fn start_test_storage_with_read_write_client(
-    need_to_use_genesis: bool,
-) -> (
-    tools::tempdir::TempPath,
+fn start_test_storage_with_read_write_client() -> (
+    libra_tools::tempdir::TempPath,
     ServerHandle,
     StorageReadServiceClient,
     StorageWriteServiceClient,
 ) {
-    let mut config = NodeConfigHelpers::get_single_node_test_config(/* random_ports = */ true);
-    let tmp_dir = tools::tempdir::TempPath::new();
+    let mut config = NodeConfig::random();
+    let tmp_dir = libra_tools::tempdir::TempPath::new();
     config.storage.dir = tmp_dir.path().to_path_buf();
 
-    // initialize db with genesis info.
-    if need_to_use_genesis {
-        db_with_mock_genesis(&tmp_dir).unwrap();
-    } else {
-        LibraDB::new(&tmp_dir);
-    }
     let storage_server_handle = start_storage_service(&config);
 
     let read_client = StorageReadServiceClient::new(
@@ -55,13 +48,15 @@ proptest! {
     #[test]
     fn test_storage_service_basic(blocks in arb_blocks_to_commit().no_shrink()) {
         let(_tmp_dir, _server_handler, read_client, write_client) =
-            start_test_storage_with_read_write_client(/* need_to_use_genesis = */ true);
+            start_test_storage_with_read_write_client();
 
         let mut version = 0;
+        let mut all_accounts = BTreeMap::new();
+
         for (txns_to_commit, ledger_info_with_sigs) in &blocks {
             write_client
                 .save_transactions(txns_to_commit.clone(),
-                                   version + 1, /* first_version */
+                                   version, /* first_version */
                                    Some(ledger_info_with_sigs.clone()),
                 ).unwrap();
             version += txns_to_commit.len() as u64;
@@ -74,6 +69,11 @@ proptest! {
                                                 .account_states()
                                                 .clone())
                 );
+
+            // Record all account states.
+            for (address, blob) in account_states.iter() {
+                all_accounts.insert(address.hash(), blob.clone());
+            }
 
             let account_state_request_items = account_states
                 .keys()
@@ -95,7 +95,7 @@ proptest! {
                             prop_assert_eq!(&Some(blob), &account_state_with_proof.blob);
                             prop_assert!(account_state_with_proof.verify(
                                 response_ledger_info_with_sigs.ledger_info(),
-                                version,
+                                version - 1,
                                 address,
                             ).is_ok())
                         }
@@ -105,6 +105,15 @@ proptest! {
 
             // Assert ledger info.
             prop_assert_eq!(ledger_info_with_sigs, &response_ledger_info_with_sigs);
-         }
+        }
+
+        // Check state backup for all account states.
+        let backup_responses = block_on(read_client.backup_account_state_async(version - 1).unwrap().collect::<Vec<_>>());
+        for ((hash, blob), response) in zip_eq(all_accounts, backup_responses) {
+            let resp = response.unwrap();
+            prop_assert_eq!(&hash, &resp.account_key);
+            prop_assert_eq!(&blob, &resp.account_state_blob);
+        }
+
     }
 }

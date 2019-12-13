@@ -1,0 +1,14 @@
+error: 
+
+   ┌── tests/move_check/expansion/duplicate_field_assign.move:5:9 ───
+   │
+ 5 │         S { f, f } = S { f: 0 };
+   │         ^^^^^^^^^^ Invalid deconstructing assignment
+   ·
+ 5 │         S { f, f } = S { f: 0 };
+   │                - Duplicate assignment binding given for field 'f'
+   ·
+ 5 │         S { f, f } = S { f: 0 };
+   │             - Previously defined here
+   │
+

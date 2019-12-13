@@ -1,0 +1,70 @@
+error: 
+
+   ┌── tests/move_check/typing/loop_body_invalid.move:3:14 ───
+   │
+ 3 │         loop 0
+   │              ^ Invalid loop body
+   ·
+ 3 │         loop 0
+   │              - The type: 'u64'
+   ·
+ 3 │         loop 0
+   │              - Is not compatible with: '()'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/loop_body_invalid.move:7:14 ───
+   │
+ 7 │         loop false
+   │              ^^^^^ Invalid loop body
+   ·
+ 7 │         loop false
+   │              ----- The type: 'bool'
+   ·
+ 7 │         loop false
+   │              ----- Is not compatible with: '()'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/loop_body_invalid.move:11:14 ───
+    │
+ 11 │         loop { 0x0 }
+    │              ^^^^^^^ Invalid loop body
+    ·
+ 11 │         loop { 0x0 }
+    │                --- The type: 'address'
+    ·
+ 11 │         loop { 0x0 }
+    │              ------- Is not compatible with: '()'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/loop_body_invalid.move:15:14 ───
+    │
+ 15 │         loop { let x = 0; x }
+    │              ^^^^^^^^^^^^^^^^ Invalid loop body
+    ·
+ 15 │         loop { let x = 0; x }
+    │                        - The type: 'u64'
+    ·
+ 15 │         loop { let x = 0; x }
+    │              ---------------- Is not compatible with: '()'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/loop_body_invalid.move:19:14 ───
+    │
+ 19 │         loop { if (true) 1 else 0 }
+    │              ^^^^^^^^^^^^^^^^^^^^^^ Invalid loop body
+    ·
+ 19 │         loop { if (true) 1 else 0 }
+    │                          - The type: 'u64'
+    ·
+ 19 │         loop { if (true) 1 else 0 }
+    │              ---------------------- Is not compatible with: '()'
+    │
+

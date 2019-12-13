@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/struct_native_missing_semicolon.move:3:1 ───
+   │
+ 3 │ }
+   │ ^ Unexpected token: '}'
+   ·
+ 3 │ }
+   │ - Expected: ';'
+   │
+

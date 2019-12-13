@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/module_missing_rbrace.move:4:1 ───
+   │
+ 4 │ 
+   │ ^ Unexpected token: ''
+   ·
+ 4 │ 
+   │ - Expected: a name value
+   │
+

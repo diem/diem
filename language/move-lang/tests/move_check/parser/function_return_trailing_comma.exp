@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/function_return_trailing_comma.move:3:20 ───
+   │
+ 3 │     f(): (u64, u64,) { (1, 2) }
+   │                    ^ Unexpected token: ')'
+   ·
+ 3 │     f(): (u64, u64,) { (1, 2) }
+   │                    - Expected: '[Name]', '[Name<Types>]', '[Address]'
+   │
+

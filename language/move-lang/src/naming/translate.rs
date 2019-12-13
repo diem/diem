@@ -1,0 +1,953 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::shared::unique_map::UniqueMap;
+use crate::{
+    errors::*,
+    expansion::ast as E,
+    naming::ast as N,
+    parser::ast::{Field, FunctionName, Kind, Kind_, ModuleIdent, StructName, Var},
+    shared::*,
+};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+
+//**************************************************************************************************
+// Context
+//**************************************************************************************************
+
+#[derive(Debug, Clone)]
+enum ResolvedType {
+    Struct(Loc, ModuleIdent, Option<Kind>),
+    TParam(Loc, N::TParam),
+    BuiltinType,
+}
+
+#[derive(Debug, Clone)]
+enum ResolvedFunction {
+    Function(Loc, ModuleIdent),
+    BuiltinFunction,
+}
+
+impl ResolvedType {
+    fn error_msg(&self, n: &Name) -> (Loc, String) {
+        match self {
+            ResolvedType::Struct(loc, m, _) => (
+                *loc,
+                format!("But '{}::{}' was declared as a struct here", m, n),
+            ),
+            ResolvedType::TParam(loc, _) => (
+                *loc,
+                format!("But '{}' was declared as a type parameter here", n),
+            ),
+            ResolvedType::BuiltinType => (n.loc, format!("But '{}' is a builtin type", n)),
+        }
+    }
+}
+
+impl ResolvedFunction {
+    #[allow(dead_code)]
+    fn error_msg(&self, n: &Name) -> (Loc, String) {
+        match self {
+            ResolvedFunction::Function(loc, m) => (
+                *loc,
+                format!("But '{}::{}' was declared as a function here", m, n),
+            ),
+            ResolvedFunction::BuiltinFunction => {
+                (n.loc, format!("But '{}' is a builtin function", n))
+            }
+        }
+    }
+}
+
+struct Context {
+    errors: Errors,
+    modules: BTreeSet<ModuleIdent>,
+    current_module: Option<ModuleIdent>,
+    scoped_types: BTreeMap<ModuleIdent, BTreeMap<String, (Loc, ModuleIdent, Option<Kind>)>>,
+    unscoped_types: BTreeMap<String, ResolvedType>,
+    scoped_functions: BTreeMap<ModuleIdent, BTreeMap<String, Loc>>,
+    unscoped_functions: BTreeMap<String, ResolvedFunction>,
+}
+
+impl Context {
+    fn new(prog: &E::Program, errors: Errors) -> Self {
+        use ResolvedFunction as RF;
+        use ResolvedType as RT;
+        let modules = prog.modules.iter().map(|(mident, _)| mident).collect();
+        let scoped_types = prog
+            .modules
+            .iter()
+            .map(|(mident, mdef)| {
+                let mems = mdef
+                    .structs
+                    .iter()
+                    .map(|(s, sdef)| {
+                        let kopt = sdef.resource_opt.map(|l| sp(l, Kind_::Resource));
+                        (s.value().to_string(), (s.loc(), mident.clone(), kopt))
+                    })
+                    .collect();
+                (mident, mems)
+            })
+            .collect();
+        let scoped_functions = prog
+            .modules
+            .iter()
+            .map(|(mident, mdef)| {
+                let mems = mdef
+                    .functions
+                    .iter()
+                    .map(|(n, _)| (n.value().to_string(), n.loc()))
+                    .collect();
+                (mident, mems)
+            })
+            .collect();
+        let unscoped_types = N::BuiltinTypeName_::all_names()
+            .into_iter()
+            .map(|s| (s.to_string(), RT::BuiltinType))
+            .collect();
+        let unscoped_functions = N::BuiltinFunction_::all_names()
+            .into_iter()
+            .map(|s| (s.to_string(), RF::BuiltinFunction))
+            .collect();
+        Self {
+            errors,
+            modules,
+            current_module: None,
+            scoped_types,
+            scoped_functions,
+            unscoped_types,
+            unscoped_functions,
+        }
+    }
+
+    fn error(&mut self, e: Vec<(Loc, impl Into<String>)>) {
+        self.errors
+            .push(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
+    }
+
+    fn get_errors(self) -> Errors {
+        self.errors
+    }
+
+    fn has_errors(&self) -> bool {
+        !self.errors.is_empty()
+    }
+
+    fn resolve_module_type(
+        &mut self,
+        loc: Loc,
+        m: &ModuleIdent,
+        n: &Name,
+    ) -> Option<(StructName, Option<Kind>)> {
+        let types = match self.scoped_types.get(m) {
+            None => {
+                self.error(vec![(loc, format!("Unbound module '{}'", m,))]);
+                return None;
+            }
+            Some(members) => members,
+        };
+        match types.get(&n.value).cloned() {
+            None => {
+                self.error(vec![(
+                    loc,
+                    format!(
+                        "Invalid module access. Unbound struct '{}' in module '{}'",
+                        n, m
+                    ),
+                )]);
+                None
+            }
+            Some((_, _, rloc)) => Some((StructName(n.clone()), rloc)),
+        }
+    }
+
+    fn resolve_module_function(
+        &mut self,
+        loc: Loc,
+        m: &ModuleIdent,
+        n: &Name,
+    ) -> Option<FunctionName> {
+        let types = match self.scoped_functions.get(m) {
+            None => {
+                self.error(vec![(loc, format!("Unbound module '{}'", m,))]);
+                return None;
+            }
+            Some(members) => members,
+        };
+        match types.get(&n.value).cloned() {
+            None => {
+                self.error(vec![(
+                    loc,
+                    format!(
+                        "Invalid module access. Unbound function '{}' in module '{}'",
+                        n, m
+                    ),
+                )]);
+                None
+            }
+            Some(_) => Some(FunctionName(n.clone())),
+        }
+    }
+
+    fn resolve_unscoped_type(&mut self, n: &Name) -> Option<ResolvedType> {
+        match self.unscoped_types.get(&n.value) {
+            None => {
+                self.error(vec![(
+                    n.loc,
+                    format!("Unbound type '{}' in current scope", n),
+                )]);
+                None
+            }
+            Some(rn) => Some(rn.clone()),
+        }
+    }
+
+    fn resolve_unscoped_function(&mut self, n: &Name) -> Option<ResolvedFunction> {
+        match self.unscoped_functions.get(&n.value) {
+            None => {
+                self.error(vec![(
+                    n.loc,
+                    format!("Unbound function '{}' in current scope", n),
+                )]);
+                None
+            }
+            Some(rn) => Some(rn.clone()),
+        }
+    }
+
+    fn resolve_struct_name(
+        &mut self,
+        verb: &str,
+        sp!(loc, ma_): E::ModuleAccess,
+    ) -> Option<(ModuleIdent, StructName)> {
+        use ResolvedType as RT;
+        use E::ModuleAccess_ as EA;
+        match ma_ {
+            EA::Name(n) => match self.resolve_unscoped_type(&n) {
+                None => {
+                    assert!(self.has_errors());
+                    None
+                }
+                Some(RT::Struct(_, m, _)) => Some((m, StructName(n))),
+                Some(rt) => {
+                    self.error(vec![
+                        (loc, format!("Invalid {}. Expected a struct name", verb)),
+                        rt.error_msg(&n),
+                    ]);
+                    None
+                }
+            },
+            EA::ModuleAccess(m, n) => match self.resolve_module_type(loc, &m, &n) {
+                None => {
+                    assert!(self.has_errors());
+                    None
+                }
+                Some(_) => Some((m, StructName(n))),
+            },
+        }
+    }
+
+    fn bind_type(&mut self, s: String, rt: ResolvedType) {
+        self.unscoped_types.insert(s, rt);
+    }
+
+    fn bind_function(&mut self, s: String, rf: ResolvedFunction) {
+        self.unscoped_functions.insert(s, rf);
+    }
+
+    fn save_unscoped(
+        &self,
+    ) -> (
+        BTreeMap<String, ResolvedType>,
+        BTreeMap<String, ResolvedFunction>,
+    ) {
+        (self.unscoped_types.clone(), self.unscoped_functions.clone())
+    }
+
+    fn restore_unscoped(
+        &mut self,
+        (types, functions): (
+            BTreeMap<String, ResolvedType>,
+            BTreeMap<String, ResolvedFunction>,
+        ),
+    ) {
+        self.unscoped_types = types;
+        self.unscoped_functions = functions;
+    }
+}
+
+//**************************************************************************************************
+// Entry
+//**************************************************************************************************
+
+pub fn program(prog: E::Program, errors: Errors) -> (N::Program, Errors) {
+    let mut context = Context::new(&prog, errors);
+    let mut modules = modules(&mut context, prog.modules);
+    let main = main_function(&mut context, prog.main);
+    super::uses::verify(&mut context.errors, &mut modules);
+    (N::Program { modules, main }, context.get_errors())
+}
+
+fn modules(
+    context: &mut Context,
+    modules: UniqueMap<ModuleIdent, E::ModuleDefinition>,
+) -> UniqueMap<ModuleIdent, N::ModuleDefinition> {
+    modules.map(|ident, mdef| module(context, ident, mdef))
+}
+
+fn module(
+    context: &mut Context,
+    ident: ModuleIdent,
+    mdef: E::ModuleDefinition,
+) -> N::ModuleDefinition {
+    context.current_module = Some(ident.clone());
+    let outer_unscoped = context.save_unscoped();
+    let is_source_module = mdef.is_source_module;
+    let uses = mdef.uses;
+    check_unused_aliases(context, mdef.unused_aliases);
+    for (s, sdef) in &mdef.structs {
+        let kopt = sdef.resource_opt.map(|l| sp(l, Kind_::Resource));
+        let rt = ResolvedType::Struct(s.loc(), ident.clone(), kopt);
+        context.bind_type(s.value().to_string(), rt)
+    }
+    for (f, _) in &mdef.functions {
+        let rf = ResolvedFunction::Function(f.loc(), ident.clone());
+        context.bind_function(f.value().to_string(), rf)
+    }
+    let unscoped = context.save_unscoped();
+    let structs = mdef.structs.map(|name, s| {
+        context.restore_unscoped(unscoped.clone());
+        struct_def(context, name, s)
+    });
+    let functions = mdef.functions.map(|name, f| {
+        context.restore_unscoped(unscoped.clone());
+        function(context, name, f)
+    });
+    context.restore_unscoped(outer_unscoped);
+    N::ModuleDefinition {
+        uses,
+        is_source_module: if is_source_module { Some(0) } else { None },
+        structs,
+        functions,
+    }
+}
+
+fn check_unused_aliases(context: &mut Context, unused_aliases: Vec<ModuleIdent>) {
+    for mident in unused_aliases {
+        if !context.modules.contains(&mident) {
+            context.error(vec![(
+                mident.loc(),
+                format!("Invalid 'use'. Unbound module: '{}'", mident),
+            )]);
+        }
+    }
+}
+
+fn main_function(
+    context: &mut Context,
+    main: Option<(Vec<ModuleIdent>, Address, FunctionName, E::Function)>,
+) -> Option<(Address, FunctionName, N::Function)> {
+    match main {
+        None => None,
+        Some((unused_aliases, addr, name, f)) => {
+            check_unused_aliases(context, unused_aliases);
+            if let Some((tparam, _)) = f.signature.type_parameters.get(0) {
+                context.error(
+                    vec![(tparam.loc, format!("Invalid '{}' declaration. Found type parameter '{}'. The main function cannot have type parameters", &name, tparam))]
+                );
+            }
+            Some((addr, name.clone(), function(context, name, f)))
+        }
+    }
+}
+
+//**************************************************************************************************
+// Functions
+//**************************************************************************************************
+
+fn function(context: &mut Context, _name: FunctionName, f: E::Function) -> N::Function {
+    let visibility = f.visibility;
+    let signature = function_signature(context, f.signature);
+    let acquires = function_acquires(context, f.acquires);
+    let body = function_body(context, f.body);
+    N::Function {
+        visibility,
+        signature,
+        acquires,
+        body,
+    }
+}
+
+fn function_signature(context: &mut Context, sig: E::FunctionSignature) -> N::FunctionSignature {
+    let type_parameters = type_parameters(context, sig.type_parameters);
+    let parameters = sig
+        .parameters
+        .into_iter()
+        .map(|(v, ty)| (v, single_type(context, ty)))
+        .collect();
+    let return_type = type_(context, sig.return_type);
+    N::FunctionSignature {
+        type_parameters,
+        parameters,
+        return_type,
+    }
+}
+
+fn function_body(context: &mut Context, sp!(loc, b_): E::FunctionBody) -> N::FunctionBody {
+    match b_ {
+        E::FunctionBody_::Native => sp(loc, N::FunctionBody_::Native),
+        E::FunctionBody_::Defined(es) => sp(loc, N::FunctionBody_::Defined(sequence(context, es))),
+    }
+}
+
+fn function_acquires(
+    context: &mut Context,
+    eacquires: Vec<E::SingleType>,
+) -> BTreeSet<N::BaseType> {
+    let mut acquires = BTreeMap::new();
+    for eacquire in eacquires {
+        let bt = base_type(context, eacquire);
+        let new_loc = bt.loc;
+        if let Some(old_loc) = acquires.insert(bt, new_loc) {
+            context.error(vec![
+                (new_loc, "Duplicate acquires item"),
+                (old_loc, "Previously listed here"),
+            ])
+        }
+    }
+
+    acquires.into_iter().map(|(b, _)| b).collect()
+}
+
+//**************************************************************************************************
+// Structs
+//**************************************************************************************************
+
+fn struct_def(
+    context: &mut Context,
+    name: StructName,
+    sdef: E::StructDefinition,
+) -> N::StructDefinition {
+    let resource_opt = sdef.resource_opt;
+    let type_parameters = type_parameters(context, sdef.type_parameters);
+    let fields = struct_fields(context, sdef.fields);
+    match (&resource_opt, &fields) {
+        (Some(_), _) | (_, N::StructFields::Native(_)) => (),
+        (None, N::StructFields::Defined(fields)) => {
+            for (field, idx_ty) in fields.iter() {
+                check_no_nominal_resources(context, &name, &field, &idx_ty.1);
+            }
+        }
+    }
+    N::StructDefinition {
+        resource_opt,
+        type_parameters,
+        fields,
+    }
+}
+
+fn struct_fields(context: &mut Context, efields: E::StructFields) -> N::StructFields {
+    match efields {
+        E::StructFields::Native(loc) => N::StructFields::Native(loc),
+        E::StructFields::Defined(em) => {
+            N::StructFields::Defined(em.map(|_f, (idx, t)| (idx, base_type(context, t))))
+        }
+    }
+}
+
+fn check_no_nominal_resources(
+    context: &mut Context,
+    s: &StructName,
+    field: &Field,
+    ty: &N::BaseType,
+) {
+    use N::BaseType_ as T;
+    match ty {
+        sp!(tloc, T::Apply(Some(sp!(kloc, Kind_::Resource)), _, _)) => {
+            context.error(vec![
+                (field.loc(), format!("Invalid resource field '{}' for struct '{}'. Structs cannot contain resource types, except through type parameters", field, s)),
+                (*tloc, format!("Field '{}' is a resource due to the type: '{}'", field, ty.value.subst_format(&HashMap::new()))),
+                (*kloc, format!("Type '{}' was declared as a resource here", ty.value.subst_format(&HashMap::new()))),
+                (s.loc(), format!("'{}' declared as a `struct` here", s)),
+            ])
+        }
+        sp!(_, T::Apply(None, _, tyl)) => {
+            tyl.iter().for_each(|t| check_no_nominal_resources(context, s, field, t))
+        }
+        _ => ()
+    }
+}
+
+//**************************************************************************************************
+// Types
+//**************************************************************************************************
+
+fn type_parameters(context: &mut Context, type_parameters: Vec<(Name, Kind)>) -> Vec<N::TParam> {
+    let mut unique_tparams = UniqueMap::new();
+    type_parameters
+        .into_iter()
+        .map(|(name, kind)| {
+            let id = N::TParamID::next();
+            let debug = name.clone();
+            let tp = N::TParam { id, debug, kind };
+            let loc = name.loc;
+            context.bind_type(
+                name.value.to_string(),
+                ResolvedType::TParam(loc, tp.clone()),
+            );
+            if let Err(old_loc) = unique_tparams.add(name.clone(), ()) {
+                let msg = format!("Duplicate type parameter declared with name '{}'", name);
+                context.error(vec![
+                    (loc, msg),
+                    (old_loc, "Previously defined here".to_string()),
+                ])
+            }
+            tp
+        })
+        .collect()
+}
+
+fn base_types(context: &mut Context, tys: Vec<E::SingleType>) -> Vec<N::BaseType> {
+    tys.into_iter().map(|t| base_type(context, t)).collect()
+}
+
+fn base_type(context: &mut Context, ty: E::SingleType) -> N::BaseType {
+    use ResolvedType as RT;
+    use E::{ModuleAccess_ as EN, SingleType_ as ES};
+    use N::{BaseType_ as NB, TypeName_ as NN};
+    let tyloc = ty.loc;
+    let n_ty_ = match ty.value {
+        ES::UnresolvedError => {
+            assert!(context.has_errors());
+            NB::Anything
+        }
+        ES::Apply(sp!(loc, EN::Name(n)), tys) => match context.resolve_unscoped_type(&n) {
+            None => {
+                assert!(context.has_errors());
+                NB::Anything
+            }
+            Some(RT::Struct(_, m, resource_opt)) => {
+                let tn = sp(loc, NN::ModuleType(m, StructName(n)));
+                NB::Apply(resource_opt, tn, base_types(context, tys))
+            }
+            Some(RT::BuiltinType) => {
+                let bn_ = N::BuiltinTypeName_::resolve(&n.value).unwrap();
+                let kind_ = bn_.kind();
+                let tn = sp(loc, NN::Builtin(sp(loc, bn_)));
+                NB::Apply(Some(sp(loc, kind_)), tn, base_types(context, tys))
+            }
+            Some(RT::TParam(_, tp)) => {
+                if !tys.is_empty() {
+                    context.error(vec![(
+                        tyloc,
+                        "Generic type parameters cannot take type arguments",
+                    )]);
+                    NB::Anything
+                } else {
+                    NB::Param(tp)
+                }
+            }
+        },
+        ES::Apply(sp!(loc, EN::ModuleAccess(m, n)), tys) => {
+            match context.resolve_module_type(loc, &m, &n) {
+                None => {
+                    assert!(context.has_errors());
+                    NB::Anything
+                }
+                Some((_, resource_opt)) => {
+                    let tn = sp(loc, NN::ModuleType(m, StructName(n)));
+                    NB::Apply(resource_opt, tn, base_types(context, tys))
+                }
+            }
+        }
+        t @ ES::Ref(_, _) => {
+            context
+                    .error(vec![(tyloc, format!("Invalid usage of reference type: '{}'. Reference types cannot be used as type arguments.", t))]);
+            NB::Anything
+        }
+    };
+    sp(tyloc, n_ty_)
+}
+
+fn single_type(context: &mut Context, ty: E::SingleType) -> N::SingleType {
+    use E::SingleType_ as ES;
+    use N::SingleType_ as NS;
+    let tyloc = ty.loc;
+    let n_ty_ = match ty.value {
+        ES::Ref(mut_, inner) => NS::Ref(mut_, base_type(context, *inner)),
+        _ => NS::Base(base_type(context, ty)),
+    };
+    sp(tyloc, n_ty_)
+}
+
+fn type_(context: &mut Context, sp!(loc, ty_): E::Type) -> N::Type {
+    use E::Type_ as ET;
+    use N::Type_ as NT;
+    match ty_ {
+        ET::Unit => sp(loc, NT::Unit),
+        ET::Single(t) => sp(loc, NT::Single(single_type(context, t))),
+        ET::Multiple(tys) => sp(
+            loc,
+            NT::Multiple(tys.into_iter().map(|t| single_type(context, t)).collect()),
+        ),
+    }
+}
+
+//**************************************************************************************************
+// Exp
+//**************************************************************************************************
+
+fn sequence(context: &mut Context, seq: E::Sequence) -> N::Sequence {
+    seq.into_iter().map(|s| sequence_item(context, s)).collect()
+}
+
+fn sequence_item(context: &mut Context, sp!(loc, ns_): E::SequenceItem) -> N::SequenceItem {
+    use E::SequenceItem_ as ES;
+    use N::SequenceItem_ as NS;
+
+    let s_ = match ns_ {
+        ES::Seq(e) => NS::Seq(exp_(context, e)),
+        ES::Declare(b, ty_opt) => {
+            let bind_opt = bind_list(context, b);
+            let tys = ty_opt.map(|t| type_(context, t));
+            match bind_opt {
+                None => {
+                    assert!(context.has_errors());
+                    NS::Seq(sp(loc, N::Exp_::UnresolvedError))
+                }
+                Some(bind) => NS::Declare(bind, tys),
+            }
+        }
+        ES::Bind(b, e) => {
+            let bind_opt = bind_list(context, b);
+            let e = exp_(context, e);
+            match bind_opt {
+                None => {
+                    assert!(context.has_errors());
+                    NS::Seq(sp(loc, N::Exp_::UnresolvedError))
+                }
+                Some(bind) => NS::Bind(bind, e),
+            }
+        }
+    };
+    sp(loc, s_)
+}
+
+fn call_args(context: &mut Context, sp!(loc, mut es): Spanned<Vec<E::Exp>>) -> Box<N::Exp> {
+    match es.len() {
+        0 => Box::new(sp(loc, N::Exp_::Unit)),
+        1 => exp(context, es.pop().unwrap()),
+        _ => Box::new(sp(loc, N::Exp_::ExpList(exps(context, es)))),
+    }
+}
+
+fn exps(context: &mut Context, es: Vec<E::Exp>) -> Vec<N::Exp> {
+    es.into_iter().map(|e| exp_(context, e)).collect()
+}
+
+fn exp(context: &mut Context, e: E::Exp) -> Box<N::Exp> {
+    Box::new(exp_(context, e))
+}
+
+fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
+    use E::Exp_ as EE;
+    use N::Exp_ as NE;
+    let sp!(eloc, e_) = e;
+    let ne_ = match e_ {
+        EE::Unit => NE::Unit,
+        EE::Value(val) => NE::Value(val),
+        EE::Move(v) => NE::Move(v),
+        EE::Copy(v) => NE::Copy(v),
+        EE::Name(v) => NE::Use(Var(v)),
+
+        EE::IfElse(eb, et, ef) => {
+            NE::IfElse(exp(context, *eb), exp(context, *et), exp(context, *ef))
+        }
+        EE::While(eb, el) => NE::While(exp(context, *eb), exp(context, *el)),
+        EE::Loop(el) => NE::Loop(exp(context, *el)),
+        EE::Block(seq) => NE::Block(sequence(context, seq)),
+
+        EE::Assign(a, e) => {
+            let na_opt = assign_list(context, a);
+            let ne = exp(context, *e);
+            match na_opt {
+                None => {
+                    assert!(context.has_errors());
+                    NE::UnresolvedError
+                }
+                Some(na) => NE::Assign(na, ne),
+            }
+        }
+        EE::FieldMutate(edotted, er) => {
+            let ndot_opt = dotted(context, *edotted);
+            let ner = exp(context, *er);
+            match ndot_opt {
+                None => {
+                    assert!(context.has_errors());
+                    NE::UnresolvedError
+                }
+                Some(ndot) => NE::FieldMutate(ndot, ner),
+            }
+        }
+        EE::Mutate(el, er) => {
+            let nel = exp(context, *el);
+            let ner = exp(context, *er);
+            NE::Mutate(nel, ner)
+        }
+
+        EE::Return(es) => NE::Return(exp(context, *es)),
+        EE::Abort(es) => NE::Abort(exp(context, *es)),
+        EE::Break => NE::Break,
+        EE::Continue => NE::Continue,
+
+        EE::Dereference(e) => NE::Dereference(exp(context, *e)),
+        EE::UnaryExp(uop, e) => NE::UnaryExp(uop, exp(context, *e)),
+        EE::BinopExp(e1, bop, e2) => NE::BinopExp(exp(context, *e1), bop, exp(context, *e2)),
+
+        EE::Pack(tn, tys_opt, efields) => match context.resolve_struct_name("construction", tn) {
+            None => {
+                assert!(context.has_errors());
+                NE::UnresolvedError
+            }
+            Some((m, sn)) => NE::Pack(
+                m,
+                sn,
+                tys_opt.map(|tys| base_types(context, tys)),
+                efields.map(|_, (idx, e)| (idx, exp_(context, e))),
+            ),
+        },
+        EE::ExpList(es) => {
+            assert!(es.len() > 1);
+            NE::ExpList(exps(context, es))
+        }
+
+        EE::Borrow(mut_, inner) => match *inner {
+            sp!(_, EE::ExpDotted(edot)) => match dotted(context, *edot) {
+                None => {
+                    assert!(context.has_errors());
+                    NE::UnresolvedError
+                }
+                Some(d) => NE::Borrow(mut_, d),
+            },
+            e => {
+                let ne = exp(context, e);
+                NE::Borrow(mut_, sp(ne.loc, N::ExpDotted_::Exp(ne)))
+            }
+        },
+
+        EE::ExpDotted(edot) => match dotted(context, *edot) {
+            None => {
+                assert!(context.has_errors());
+                NE::UnresolvedError
+            }
+            Some(d) => NE::DerefBorrow(d),
+        },
+
+        EE::Annotate(e, t) => NE::Annotate(exp(context, *e), type_(context, t)),
+
+        EE::GlobalCall(n, tys_opt, rhs) => {
+            let ty_args = tys_opt.map(|tys| base_types(context, tys));
+            let nes = call_args(context, rhs);
+            match resolve_builtin_function(context, eloc, &n, ty_args) {
+                None => {
+                    assert!(context.has_errors());
+                    NE::UnresolvedError
+                }
+                Some(b) => NE::Builtin(sp(n.loc, b), nes),
+            }
+        }
+        EE::Call(sp!(mloc, ma_), tys_opt, rhs) => {
+            use ResolvedFunction as RF;
+            use E::ModuleAccess_ as EA;
+            let ty_args = tys_opt.map(|tys| base_types(context, tys));
+            let nes = call_args(context, rhs);
+            match ma_ {
+                EA::Name(n) => match context.resolve_unscoped_function(&n) {
+                    None => {
+                        assert!(context.has_errors());
+                        NE::UnresolvedError
+                    }
+                    Some(RF::BuiltinFunction) => {
+                        match resolve_builtin_function(context, eloc, &n, ty_args) {
+                            None => {
+                                assert!(context.has_errors());
+                                NE::UnresolvedError
+                            }
+                            Some(f) => NE::Builtin(sp(mloc, f), nes),
+                        }
+                    }
+                    Some(RF::Function(_, m)) => NE::ModuleCall(m, FunctionName(n), ty_args, nes),
+                },
+                EA::ModuleAccess(m, n) => match context.resolve_module_function(mloc, &m, &n) {
+                    None => {
+                        assert!(context.has_errors());
+                        NE::UnresolvedError
+                    }
+                    Some(_) => NE::ModuleCall(m, FunctionName(n), ty_args, nes),
+                },
+            }
+        }
+
+        EE::UnresolvedError => {
+            assert!(context.has_errors());
+            NE::UnresolvedError
+        }
+    };
+    sp(eloc, ne_)
+}
+
+fn dotted(context: &mut Context, edot: E::ExpDotted) -> Option<N::ExpDotted> {
+    let sp!(loc, edot_) = edot;
+    let nedot_ = match edot_ {
+        E::ExpDotted_::Exp(e) => {
+            let ne = exp(context, e);
+            match &ne.value {
+                N::Exp_::UnresolvedError => return None,
+                _ => N::ExpDotted_::Exp(ne),
+            }
+        }
+        E::ExpDotted_::Dot(d, f) => N::ExpDotted_::Dot(Box::new(dotted(context, *d)?), Field(f)),
+    };
+    Some(sp(loc, nedot_))
+}
+
+fn bind(context: &mut Context, sp!(loc, b_): E::Bind) -> Option<N::Bind> {
+    use E::Bind_ as EB;
+    use N::Bind_ as NB;
+    let nb_ = match b_ {
+        EB::Var(v) => {
+            if v.starts_with_underscore() {
+                NB::Ignore
+            } else {
+                NB::Var(v)
+            }
+        }
+        EB::Unpack(tn, tys_opt, efields) => {
+            let (m, sn) = context.resolve_struct_name("deconstructing binding", tn)?;
+            let nfields = UniqueMap::maybe_from_opt_iter(
+                efields
+                    .into_iter()
+                    .map(|(k, (idx, inner))| Some((k, (idx, bind(context, inner)?)))),
+            )?;
+            NB::Unpack(
+                m,
+                sn,
+                tys_opt.map(|tys| base_types(context, tys)),
+                nfields.expect("ICE fields were already unique"),
+            )
+        }
+    };
+    Some(sp(loc, nb_))
+}
+
+fn bind_list(context: &mut Context, sp!(loc, b_): E::BindList) -> Option<N::BindList> {
+    Some(sp(
+        loc,
+        b_.into_iter()
+            .map(|inner| bind(context, inner))
+            .collect::<Option<_>>()?,
+    ))
+}
+
+fn assign(context: &mut Context, sp!(loc, a_): E::Assign) -> Option<N::Assign> {
+    use E::Assign_ as EA;
+    use N::Assign_ as NA;
+    let na_ = match a_ {
+        EA::Var(v) => {
+            if v.starts_with_underscore() {
+                NA::Ignore
+            } else {
+                NA::Var(v)
+            }
+        }
+        EA::Unpack(tn, tys_opt, efields) => {
+            let (m, sn) = context.resolve_struct_name("deconstructing assignment", tn)?;
+            let nfields = UniqueMap::maybe_from_opt_iter(
+                efields
+                    .into_iter()
+                    .map(|(k, (idx, inner))| Some((k, (idx, assign(context, inner)?)))),
+            )?;
+            NA::Unpack(
+                m,
+                sn,
+                tys_opt.map(|tys| base_types(context, tys)),
+                nfields.expect("ICE fields were already unique"),
+            )
+        }
+    };
+    Some(sp(loc, na_))
+}
+
+fn assign_list(context: &mut Context, sp!(loc, a_): E::AssignList) -> Option<N::AssignList> {
+    Some(sp(
+        loc,
+        a_.into_iter()
+            .map(|inner| assign(context, inner))
+            .collect::<Option<_>>()?,
+    ))
+}
+
+fn resolve_builtin_function(
+    context: &mut Context,
+    loc: Loc,
+    b: &Name,
+    ty_args: Option<Vec<N::BaseType>>,
+) -> Option<N::BuiltinFunction_> {
+    use N::{BuiltinFunction_ as B, BuiltinFunction_::*};
+    Some(match b.value.as_str() {
+        B::MOVE_TO_SENDER => MoveToSender(check_builtin_ty_arg(context, loc, b, ty_args)),
+        B::MOVE_FROM => MoveFrom(check_builtin_ty_arg(context, loc, b, ty_args)),
+        B::BORROW_GLOBAL => BorrowGlobal(false, check_builtin_ty_arg(context, loc, b, ty_args)),
+        B::BORROW_GLOBAL_MUT => BorrowGlobal(true, check_builtin_ty_arg(context, loc, b, ty_args)),
+        B::EXISTS => Exists(check_builtin_ty_arg(context, loc, b, ty_args)),
+        B::FREEZE => Freeze(check_builtin_ty_arg(context, loc, b, ty_args)),
+        _ => {
+            context.error(vec![(b.loc, format!("Unbound function: '{}'", b))]);
+            return None;
+        }
+    })
+}
+
+fn check_builtin_ty_arg(
+    context: &mut Context,
+    loc: Loc,
+    b: &Name,
+    ty_args: Option<Vec<N::BaseType>>,
+) -> Option<N::BaseType> {
+    let res = check_builtin_ty_args(context, loc, b, 1, ty_args);
+    res.map(|mut v| {
+        assert!(v.len() == 1);
+        v.pop().unwrap()
+    })
+}
+
+fn check_builtin_ty_args(
+    context: &mut Context,
+    loc: Loc,
+    b: &Name,
+    arity: usize,
+    ty_args: Option<Vec<N::BaseType>>,
+) -> Option<Vec<N::BaseType>> {
+    ty_args.map(|mut args| {
+        let len = args.len();
+        if len != arity {
+            context.error(vec![
+                (b.loc, format!("Invalid call to builtin function: '{}'", b)),
+                (
+                    loc,
+                    format!("Expected {} type arguments but got {}", arity, len),
+                ),
+            ]);
+        }
+
+        while args.len() > arity {
+            args.pop();
+        }
+
+        while args.len() < arity {
+            args.push(N::BaseType_::anything(loc));
+        }
+
+        args
+    })
+}

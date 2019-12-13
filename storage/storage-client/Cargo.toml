@@ -1,0 +1,26 @@
+[package]
+name = "storage-client"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra storage client"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+futures = { version = "0.3.0", features = ["compat"] }
+futures_01 = { version = "0.1.28", package = "futures" }
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
+rand = "0.6.5"
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+scratchpad = { path = "../scratchpad", version = "0.1.0" }
+libra-state-view = { path = "../state-view", version = "0.1.0" }
+storage-proto = { path = "../storage-proto", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

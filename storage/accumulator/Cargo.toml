@@ -2,17 +2,23 @@
 name = "accumulator"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra accumulator"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-proptest = "0.9.1"
-
-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-types = { path = "../../types" }
+anyhow = "1.0"
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+mirai-annotations = "1.5.0"
+libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]
 rand = "0.6.5"
-types = { path = "../../types", features = ["testing"] }
+proptest = "0.9.1"
+
+[features]
+default = []
+fuzzing = ["libra-crypto/fuzzing", "libra-types/fuzzing"]

@@ -52,7 +52,7 @@ async fn mock_peer_manager<TSubstream: Debug>(
 // Test the rpc substream upgrades.
 #[test]
 fn upgrades() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let dialer_peer_id = PeerId::random();
@@ -116,17 +116,14 @@ fn upgrades() {
         f_listener_network,
         f_listener_upgrade,
     );
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // An outbound rpc request should fail if the listener drops the connection after
 // receiving the request.
 #[test]
 fn listener_close_before_response() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -161,8 +158,11 @@ fn listener_close_before_response() {
     // Listener reads the request but then drops the connection
     let f_listener = async move {
         // rpc messages are length-prefixed
-        let mut substream =
-            Framed::new(listener_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut substream = Framed::new(
+            IoCompat::new(listener_substream),
+            LengthDelimitedCodec::new(),
+        );
+
         // read the rpc request data
         let data = match substream.next().await {
             Some(data) => data.unwrap().freeze(),
@@ -175,17 +175,14 @@ fn listener_close_before_response() {
     };
 
     let f = join3(f_dialer_peer_mgr, f_dialer_upgrade, f_listener);
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // An outbound rpc request should fail if the listener drops the connection after
 // negotiation but before the dialer sends their request.
 #[test]
 fn listener_close_before_dialer_send() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -221,17 +218,14 @@ fn listener_close_before_dialer_send() {
     };
 
     let f = join(f_dialer_peer_mgr, f_dialer_upgrade);
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // An inbound rpc request should fail if the dialer drops the connection after
 // negotiation but before sending their request.
 #[test]
 fn dialer_close_before_listener_recv() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let dialer_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -261,17 +255,14 @@ fn dialer_close_before_listener_recv() {
         };
     };
 
-    Runtime::new()
-        .unwrap()
-        .block_on(f_listener_upgrade.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f_listener_upgrade);
 }
 
 // An inbound rpc request should fail if the dialer drops the connection before
 // reading out the response.
 #[test]
 fn dialer_close_before_listener_send() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let dialer_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -316,10 +307,10 @@ fn dialer_close_before_listener_send() {
     let f_dialer_upgrade = async move {
         // Rpc messages are length-prefixed.
         let mut substream =
-            Framed::new(dialer_substream.compat(), UviBytes::default()).sink_compat();
+            Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         // Send the rpc request data.
         substream
-            .buffered_send(Bytes::from_static(req_data))
+            .buffered_send(bytes05::Bytes::from_static(req_data))
             .await
             .unwrap();
         // Dialer then suddenly drops the connection
@@ -327,16 +318,13 @@ fn dialer_close_before_listener_send() {
     };
 
     let f = join3(f_listener_network, f_listener_upgrade, f_dialer_upgrade);
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // Sending two requests should fail
 #[test]
 fn dialer_sends_two_requests_err() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let dialer_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -367,15 +355,15 @@ fn dialer_sends_two_requests_err() {
     let f_dialer_upgrade = async move {
         // Rpc messages are length-prefixed.
         let mut substream =
-            Framed::new(dialer_substream.compat(), UviBytes::default()).sink_compat();
+            Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         // Send the rpc request data.
         substream
-            .buffered_send(Bytes::from_static(req_data))
+            .buffered_send(bytes05::Bytes::from_static(req_data))
             .await
             .unwrap();
         // ERROR: Send _another_ rpc request data in the same substream.
         substream
-            .buffered_send(Bytes::from_static(req_data))
+            .buffered_send(bytes05::Bytes::from_static(req_data))
             .await
             .unwrap();
         // Dialer half-closes
@@ -388,16 +376,13 @@ fn dialer_sends_two_requests_err() {
 
     let f = join(f_listener_upgrade, f_dialer_upgrade);
 
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // Test that outbound rpc calls will timeout.
 #[test]
 fn outbound_rpc_timeout() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -431,16 +416,13 @@ fn outbound_rpc_timeout() {
     };
 
     let f = join(f_dialer_peer_mgr, f_dialer_upgrade);
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // Test that inbound rpc calls will timeout.
 #[test]
 fn inbound_rpc_timeout() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let dialer_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -463,16 +445,13 @@ fn inbound_rpc_timeout() {
 
     // The listener future should complete (with a timeout) despite the dialer
     // hanging.
-    Runtime::new()
-        .unwrap()
-        .block_on(f_listener_upgrade.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f_listener_upgrade);
 }
 
 // Test that outbound rpcs can be canceled before sending
 #[test]
 fn outbound_cancellation_before_send() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -499,19 +478,16 @@ fn outbound_cancellation_before_send() {
 
     // the rpc request should finish (from the cancellation) even though there is
     // no remote peer
-    Runtime::new()
-        .unwrap()
-        .block_on(f_rpc.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f_rpc);
 }
 
 // Test that outbound rpcs can be canceled while receiving response data.
 #[test]
 fn outbound_cancellation_recv() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let executor = rt.executor();
+    let executor = rt.handle().clone();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -545,7 +521,7 @@ fn outbound_cancellation_recv() {
         let rpc_req = RpcRequest::SendRpc(listener_peer_id, outbound_req);
         let (f_rpc, f_rpc_done) =
             handle_outbound_rpc(dialer_peer_mgr_reqs_tx, rpc_req).remote_handle();
-        executor.spawn(f_rpc.unit_error().boxed().compat());
+        executor.spawn(f_rpc);
 
         futures::select! {
             res = res_rx => panic!("dialer: expected cancellation signal, rpc call finished unexpectedly: {:?}", res),
@@ -565,8 +541,10 @@ fn outbound_cancellation_recv() {
     // Listener reads the request but then fails to send because the dialer canceled
     let f_listener = async move {
         // rpc messages are length-prefixed
-        let mut substream =
-            Framed::new(listener_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut substream = Framed::new(
+            IoCompat::new(listener_substream),
+            LengthDelimitedCodec::new(),
+        );
         // read the rpc request data
         let data = match substream.next().await {
             Some(data) => data.unwrap().freeze(),
@@ -586,20 +564,20 @@ fn outbound_cancellation_recv() {
         cancel_done_rx.await.unwrap();
 
         // should get an error when trying to send
-        match substream.send(Bytes::from_static(res_data)).await {
+        match substream.send(bytes05::Bytes::from_static(res_data)).await {
             Err(err) => assert_eq!(io::ErrorKind::BrokenPipe, err.kind()),
             res => panic!("listener: Unexpected result: {:?}", res),
         }
     };
 
     let f = join3(f_dialer_peer_mgr, f_dialer_upgrade, f_listener);
-    rt.block_on(f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(f);
 }
 
 // Test the full rpc protocol actor.
 #[test]
 fn rpc_protocol() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let dialer_peer_id = PeerId::random();
@@ -618,7 +596,7 @@ fn rpc_protocol() {
     let dialer_peer_mgr_reqs_tx = PeerManagerRequestSender::new(dialer_peer_mgr_reqs_tx);
     let (rpc_handler_tx, _) = channel::new_test(8);
     let dialer_rpc = Rpc::new(
-        rt.executor(),
+        rt.handle().clone(),
         dialer_rpc_rx,
         dialer_peer_mgr_notifs_rx,
         dialer_peer_mgr_reqs_tx,
@@ -669,7 +647,7 @@ fn rpc_protocol() {
     let listener_peer_mgr_reqs_tx = PeerManagerRequestSender::new(listener_peer_mgr_reqs_tx);
     let (listener_rpc_notifs_tx, mut listener_rpc_notifs_rx) = channel::new_test(8);
     let listener_rpc = Rpc::new(
-        rt.executor(),
+        rt.handle().clone(),
         listener_rpc_reqs_rx,
         listener_peer_mgr_notifs_rx,
         listener_peer_mgr_reqs_tx,
@@ -711,5 +689,5 @@ fn rpc_protocol() {
         f_dialer_network,
         dialer_rpc.start(),
     );
-    rt.block_on(f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(f);
 }

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/standalone_fields.move:3:11 ───
+   │
+ 3 │         {f: 1, g: 0};
+   │           ^ Unexpected token: ':'
+   ·
+ 3 │         {f: 1, g: 0};
+   │           - Expected: ';'
+   │
+

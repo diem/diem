@@ -2,43 +2,40 @@
 name = "libra-fuzzer"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra fuzzer"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 edition = "2018"
 
 # common dependencies
 [dependencies]
+anyhow = "1.0"
 byteorder = { version = "1.3.2", default-features = false }
-canonical_serialization = { path = "../../common/canonical_serialization" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 hex = { version = "0.3.2", default-features = false }
 lazy_static = { version = "1.3.0", default-features = false }
 proptest = { version = "0.9.4", default-features = false }
-proptest_helpers = { path = "../../common/proptest_helpers" }
-proto_conv = { path = "../../common/proto_conv" }
+libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
+libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
+prost = "0.5.0"
 rusty-fork = { version = "0.2.2", default-features = false }
 sha-1 = { version = "0.8.1", default-features = false }
 structopt = "0.3.2"
 
 # List out modules with data structures being fuzzed here.
-types = { path = "../../types" }
-vm = { path = "../../language/vm" }
-vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
-consensus = { path = "../../consensus" }
-admission-control-service = { path = "../../admission_control/admission-control-service" }
+admission-control-service = { path = "../../admission_control/admission-control-service", version = "0.1.0", features = ["fuzzing"] }
+consensus = { path = "../../consensus", version = "0.1.0", features = ["fuzzing"] }
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+network = { path = "../../network", version = "0.1.0", features = ["fuzzing"] }
+vm = { path = "../../language/vm", version = "0.1.0", features = ["fuzzing"] }
+vm-runtime-types = { path = "../../language/vm/vm-runtime/vm-runtime-types", version = "0.1.0", features = ["fuzzing"] }
+consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", features = ["fuzzing"] }
 
 [dev-dependencies]
-datatest-stable = { path = "../../common/datatest-stable" }
-stats_alloc = "0.1.8"
+datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 rusty-fork = "0.2.2"
-
-types = { path = "../../types", features = ["testing"] }
-vm = { path = "../../language/vm", features = ["testing"] }
-vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", features = ["testing"] }
-
-[features]
-default = ["testing", "fuzzing"]
-testing = ["types/testing", "vm/testing", "vm_runtime_types/testing"]
-fuzzing = ["consensus/fuzzing", "admission-control-service/fuzzing"]
+stats_alloc = "0.1.8"
 
 [[test]]
 name = "artifacts"

@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Result;
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use failure::prelude::*;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_program},
     parser::{parse_module, parse_program},
 };
+use libra_types::{account_address::AccountAddress, vm_error::VMStatus};
 use stdlib::stdlib_modules;
-use types::{account_address::AccountAddress, vm_error::VMStatus};
 use vm::{
     access::ScriptAccess,
     file_format::{CompiledModule, CompiledScript},
@@ -36,7 +36,7 @@ fn compile_script_string_impl(
     deps: Vec<CompiledModule>,
 ) -> Result<(CompiledScript, Vec<VMStatus>)> {
     let parsed_program = parse_program(code).unwrap();
-    let compiled_program = compile_program(AccountAddress::default(), parsed_program, &deps)?;
+    let compiled_program = compile_program(AccountAddress::default(), parsed_program, &deps)?.0;
 
     let mut serialized_script = Vec::<u8>::new();
     compiled_program.script.serialize(&mut serialized_script)?;
@@ -89,7 +89,7 @@ fn compile_module_string_impl(
 ) -> Result<(CompiledModule, Vec<VMStatus>)> {
     let address = AccountAddress::default();
     let module = parse_module(code).unwrap();
-    let compiled_module = compile_module(address, module, &deps)?;
+    let compiled_module = compile_module(address, module, &deps)?.0;
 
     let mut serialized_module = Vec::<u8>::new();
     compiled_module.serialize(&mut serialized_module)?;

@@ -1,0 +1,79 @@
+//! account: alice
+//! account: vivian, 1000000, 0, validator
+
+// add_validator cannot be called on an account without a ValidatorConfig resource
+//! sender: association
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+main() {
+    assert(!ValidatorConfig.has({{alice}}), 70);
+    LibraSystem.add_validator({{alice}});
+
+    return;
+}
+
+// check: ABORTED
+// check: 17
+
+//! new-transaction
+//! sender: association
+// add_validator cannot be called on an existing validator
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.add_validator({{vivian}});
+
+    return;
+}
+
+// check: ABORTED
+// check: 18
+
+//! new-transaction
+//! sender: alice
+import 0x0.ValidatorConfig;
+main() {
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
+
+    return;
+}
+
+// check: EXECUTED
+
+// add_validator can only be called by the Association
+//! new-transaction
+//! sender: alice
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+main() {
+    LibraSystem.add_validator({{alice}});
+
+    return;
+}
+
+// check: ABORTED
+// check: 1
+
+//! new-transaction
+//! sender: association
+// should work now that Alice has executed
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.add_validator({{alice}});
+
+    return;
+}
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: association
+// double-adding Alice should fail
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.add_validator({{alice}});
+
+    return;
+}
+
+// check: ABORTED
+// check: 19

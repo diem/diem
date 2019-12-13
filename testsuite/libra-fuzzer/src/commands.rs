@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTarget;
-use failure::prelude::*;
-use proptest_helpers::ValueGenerator;
+use anyhow::{bail, format_err, Context, Result};
+use libra_proptest_helpers::ValueGenerator;
 use sha1::{Digest, Sha1};
 use std::{
     env,
@@ -45,13 +45,13 @@ pub fn make_corpus(
         let name = hex::encode(hash.as_slice());
         let path = corpus_dir.join(name);
         let mut f = fs::File::create(&path)
-            .with_context(|_| format!("Failed to create file: {:?}", path))?;
+            .with_context(|| format!("Failed to create file: {:?}", path))?;
         if debug {
             println!("Writing {} bytes to file: {:?}", result.len(), path);
         }
 
         f.write_all(&result)
-            .with_context(|_| format!("Failed to write to file: {:?}", path))?;
+            .with_context(|| format!("Failed to write to file: {:?}", path))?;
         idx += 1;
     }
     Ok(idx)
@@ -87,10 +87,9 @@ pub fn fuzz_target(
 
     // Pass the target name in as an environment variable.
     // Use the manifest directory as the current one.
-    let manifest_dir = match env::var_os("CARGO_MANIFEST_DIR") {
-        Some(dir) => dir,
-        None => bail!("Fuzzing requires CARGO_MANIFEST_DIR to be set (are you using `cargo run`?)"),
-    };
+    let manifest_dir = env::var_os("CARGO_MANIFEST_DIR").ok_or_else(|| {
+        format_err!("Fuzzing requires CARGO_MANIFEST_DIR to be set (are you using `cargo run`?)")
+    })?;
 
     let status = Command::new("cargo")
         .arg("fuzz")
@@ -98,6 +97,10 @@ pub fn fuzz_target(
         .args(args)
         .current_dir(manifest_dir)
         .env(FuzzTarget::ENV_VAR, target.name())
+        // We want to fuzz with the same version of the compiler as production, but cargo-fuzz only
+        // runs on nightly. This is a test-only environment so this use of RUSTC_BOOTSTRAP seems
+        // appropriate.
+        .env("RUSTC_BOOTSTRAP", "1")
         .status()
         .context("cargo fuzz run errored")?;
     if !status.success() {

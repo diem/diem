@@ -1,0 +1,357 @@
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:2:12 ───
+    │
+ 21 │         both(S{}, Coin{});
+    │         ^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 21 │         both(S{}, Coin{});
+    │              --- The copyable type '0x8675309::M::S' does not satisfy the constraint 'resource'
+    ·
+ 2 │     struct S {}
+    │            - The type's constraint information was declared here
+    ·
+ 7 │     both<R: resource, C: copyable>(r: R, c: C) {
+    │             -------- 'resource' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:3:5 ───
+    │
+ 21 │         both(S{}, Coin{});
+    │         ^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 21 │         both(S{}, Coin{});
+    │                   ------ The resource type '0x8675309::M::Coin' does not satisfy the constraint 'copyable'
+    ·
+ 3 │     resource struct Coin {}
+    │     -------- The type's constraint information was declared here
+    ·
+ 7 │     both<R: resource, C: copyable>(r: R, c: C) {
+    │                          -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:7:13 ───
+    │
+ 22 │         both(0, Coin{})
+    │         ^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 22 │         both(0, Coin{})
+    │              - The copyable type 'u64' does not satisfy the constraint 'resource'
+    ·
+ 22 │         both(0, Coin{})
+    │              - The type's constraint information was declared here
+    ·
+ 7 │     both<R: resource, C: copyable>(r: R, c: C) {
+    │             -------- 'resource' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:3:5 ───
+    │
+ 22 │         both(0, Coin{})
+    │         ^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 22 │         both(0, Coin{})
+    │                 ------ The resource type '0x8675309::M::Coin' does not satisfy the constraint 'copyable'
+    ·
+ 3 │     resource struct Coin {}
+    │     -------- The type's constraint information was declared here
+    ·
+ 7 │     both<R: resource, C: copyable>(r: R, c: C) {
+    │                          -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:7:13 ───
+    │
+ 26 │         both(Box<C> {}, Box<R> {})
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 26 │         both(Box<C> {}, Box<R> {})
+    │              --------- The copyable type '0x8675309::M::Box<C>' does not satisfy the constraint 'resource'
+    ·
+ 25 │     t1<R: resource, C: copyable>() {
+    │                        -------- The type's constraint information was declared here
+    ·
+ 7 │     both<R: resource, C: copyable>(r: R, c: C) {
+    │             -------- 'resource' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:7:26 ───
+    │
+ 26 │         both(Box<C> {}, Box<R> {})
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 26 │         both(Box<C> {}, Box<R> {})
+    │                         --------- The resource type '0x8675309::M::Box<R>' does not satisfy the constraint 'copyable'
+    ·
+ 25 │     t1<R: resource, C: copyable>() {
+    │           -------- The type's constraint information was declared here
+    ·
+ 7 │     both<R: resource, C: copyable>(r: R, c: C) {
+    │                          -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:15:13 ───
+    │
+ 30 │         rsrc(Box3<C, C, C> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 30 │         rsrc(Box3<C, C, C> {});
+    │              ---------------- The copyable type '0x8675309::M::Box3<C,C,C>' does not satisfy the constraint 'resource'
+    ·
+ 29 │     t2<R: resource, C: copyable>() {
+    │                        -------- The type's constraint information was declared here
+    ·
+ 15 │     rsrc<R: resource>(r: R) {
+    │             -------- 'resource' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 32 │         cpy(Box3<R, C, C> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 32 │         cpy(Box3<R, C, C> {});
+    │             ---------------- The resource type '0x8675309::M::Box3<R,C,C>' does not satisfy the constraint 'copyable'
+    ·
+ 29 │     t2<R: resource, C: copyable>() {
+    │           -------- The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 33 │         cpy(Box3<C, R, C> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 33 │         cpy(Box3<C, R, C> {});
+    │             ---------------- The resource type '0x8675309::M::Box3<C,R,C>' does not satisfy the constraint 'copyable'
+    ·
+ 29 │     t2<R: resource, C: copyable>() {
+    │           -------- The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 34 │         cpy(Box3<C, C, R> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 34 │         cpy(Box3<C, C, R> {});
+    │             ---------------- The resource type '0x8675309::M::Box3<C,C,R>' does not satisfy the constraint 'copyable'
+    ·
+ 29 │     t2<R: resource, C: copyable>() {
+    │           -------- The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 36 │         cpy(Box3<C, R, R> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 36 │         cpy(Box3<C, R, R> {});
+    │             ---------------- The resource type '0x8675309::M::Box3<C,R,R>' does not satisfy the constraint 'copyable'
+    ·
+ 29 │     t2<R: resource, C: copyable>() {
+    │           -------- The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 37 │         cpy(Box3<R, C, R> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 37 │         cpy(Box3<R, C, R> {});
+    │             ---------------- The resource type '0x8675309::M::Box3<R,C,R>' does not satisfy the constraint 'copyable'
+    ·
+ 29 │     t2<R: resource, C: copyable>() {
+    │           -------- The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 38 │         cpy(Box3<R, R, C> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 38 │         cpy(Box3<R, R, C> {});
+    │             ---------------- The resource type '0x8675309::M::Box3<R,R,C>' does not satisfy the constraint 'copyable'
+    ·
+ 29 │     t2<R: resource, C: copyable>() {
+    │           -------- The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 40 │         cpy(Box3<R, R, R> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 40 │         cpy(Box3<R, R, R> {});
+    │             ---------------- The resource type '0x8675309::M::Box3<R,R,R>' does not satisfy the constraint 'copyable'
+    ·
+ 29 │     t2<R: resource, C: copyable>() {
+    │           -------- The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 44 │         cpy(Box3<U, C, C> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 44 │         cpy(Box3<U, C, C> {});
+    │             ---------------- The type '0x8675309::M::Box3<U,C,C>' does not satisfy the constraint 'copyable'
+    ·
+ 43 │     t3<U, C: copyable>() {
+    │        - The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 45 │         cpy(Box3<C, U, C> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 45 │         cpy(Box3<C, U, C> {});
+    │             ---------------- The type '0x8675309::M::Box3<C,U,C>' does not satisfy the constraint 'copyable'
+    ·
+ 43 │     t3<U, C: copyable>() {
+    │        - The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 46 │         cpy(Box3<C, C, U> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 46 │         cpy(Box3<C, C, U> {});
+    │             ---------------- The type '0x8675309::M::Box3<C,C,U>' does not satisfy the constraint 'copyable'
+    ·
+ 43 │     t3<U, C: copyable>() {
+    │        - The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 48 │         cpy(Box3<C, U, U> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 48 │         cpy(Box3<C, U, U> {});
+    │             ---------------- The type '0x8675309::M::Box3<C,U,U>' does not satisfy the constraint 'copyable'
+    ·
+ 43 │     t3<U, C: copyable>() {
+    │        - The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 49 │         cpy(Box3<U, C, U> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 49 │         cpy(Box3<U, C, U> {});
+    │             ---------------- The type '0x8675309::M::Box3<U,C,U>' does not satisfy the constraint 'copyable'
+    ·
+ 43 │     t3<U, C: copyable>() {
+    │        - The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 50 │         cpy(Box3<U, U, C> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 50 │         cpy(Box3<U, U, C> {});
+    │             ---------------- The type '0x8675309::M::Box3<U,U,C>' does not satisfy the constraint 'copyable'
+    ·
+ 43 │     t3<U, C: copyable>() {
+    │        - The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:11:12 ───
+    │
+ 52 │         cpy(Box3<U, U, U> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 52 │         cpy(Box3<U, U, U> {});
+    │             ---------------- The type '0x8675309::M::Box3<U,U,U>' does not satisfy the constraint 'copyable'
+    ·
+ 43 │     t3<U, C: copyable>() {
+    │        - The type's constraint information was declared here
+    ·
+ 11 │     cpy<C: copyable>(c: C) {
+    │            -------- 'copyable' constraint declared here
+    │
+
