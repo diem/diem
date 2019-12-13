@@ -33,3 +33,4 @@ libra-config =  { path = "../../config", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }
 walkdir = "2.2.9"
+itertools = "0.8.0"
