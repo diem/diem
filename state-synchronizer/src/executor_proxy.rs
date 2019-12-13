@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::SynchronizerState;
-use anyhow::{format_err, Result};
+use anyhow::{ensure, format_err, Result};
 use executor::{ExecutedTrees, Executor};
 use futures::{Future, FutureExt};
 use grpcio::EnvBuilder;
@@ -47,7 +47,7 @@ pub trait ExecutorProxyTrait: Sync + Send {
     ) -> Result<ValidatorChangeEventWithProof>;
 
     /// Tries to find a LedgerInfo for a given version.
-    fn get_ledger_info(&self, version: u64) -> Option<LedgerInfoWithSignatures>;
+    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
 }
 
 pub(crate) struct ExecutorProxy {
@@ -139,7 +139,20 @@ impl ExecutorProxyTrait for ExecutorProxy {
         Ok(ValidatorChangeEventWithProof::new(ledger_info_per_epoch))
     }
 
-    fn get_ledger_info(&self, _version: u64) -> Option<LedgerInfoWithSignatures> {
-        panic!("Not implemented");
+    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+        let (_, _, li_chain, _) = self
+            .storage_read_client
+            .update_to_latest_ledger(version, vec![])?;
+        let waypoint_li = li_chain
+            .ledger_info_with_sigs
+            .first()
+            .ok_or_else(|| format_err!("No waypoint found for version {}", version))?;
+        ensure!(
+            waypoint_li.ledger_info().version() == version,
+            "Version of Waypoint LI {} is different from requested waypoint version {}",
+            waypoint_li.ledger_info().version(),
+            version
+        );
+        Ok(waypoint_li.clone())
     }
 }
