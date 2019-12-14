@@ -1,30 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, InMemoryStorage, SafetyRules};
+use crate::{test_utils, Error, InMemoryStorage, SafetyRules};
 use consensus_types::{
-    accumulator_extension_proof::AccumulatorExtensionProof,
-    block::block_test_utils::certificate_for_genesis, block::Block, common::Round,
-    quorum_cert::QuorumCert, timeout::Timeout, vote::Vote, vote_data::VoteData,
-    vote_proposal::VoteProposal,
+    block::block_test_utils, block::Block, common::Round, quorum_cert::QuorumCert,
+    timeout::Timeout, vote_proposal::VoteProposal,
 };
-use libra_crypto::hash::{CryptoHash, HashValue, TransactionAccumulatorHasher};
-use libra_types::{
-    block_info::BlockInfo,
-    crypto_proxies::ValidatorSigner,
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-};
+use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_types::crypto_proxies::ValidatorSigner;
 use std::sync::Arc;
-use std::{
-    collections::BTreeMap,
-    time::{SystemTime, UNIX_EPOCH},
-};
 
-type Proof = AccumulatorExtensionProof<TransactionAccumulatorHasher>;
-
-fn empty_proof() -> Proof {
-    Proof::new(vec![], 0, vec![])
-}
+type Proof = test_utils::Proof;
 
 fn make_proposal_with_qc_and_proof(
     round: Round,
@@ -32,28 +18,7 @@ fn make_proposal_with_qc_and_proof(
     qc: QuorumCert,
     validator_signer: &ValidatorSigner,
 ) -> VoteProposal<Round> {
-    VoteProposal::<Round>::new(
-        proof,
-        Block::<Round>::new_proposal(
-            round,
-            round,
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            qc,
-            validator_signer,
-        ),
-        None,
-    )
-}
-
-fn make_proposal_with_qc(
-    round: Round,
-    qc: QuorumCert,
-    validator_signer: &ValidatorSigner,
-) -> VoteProposal<Round> {
-    make_proposal_with_qc_and_proof(round, empty_proof(), qc, validator_signer)
+    test_utils::make_proposal_with_qc_and_proof(round, round, proof, qc, validator_signer)
 }
 
 fn make_proposal_with_parent(
@@ -62,73 +27,7 @@ fn make_proposal_with_parent(
     committed: Option<&VoteProposal<Round>>,
     validator_signer: &ValidatorSigner,
 ) -> VoteProposal<Round> {
-    let parent_output = parent
-        .accumulator_extension_proof()
-        .verify(
-            parent
-                .block()
-                .quorum_cert()
-                .certified_block()
-                .executed_state_id(),
-        )
-        .unwrap();
-
-    let proof = Proof::new(
-        parent_output.frozen_subtree_roots().clone(),
-        parent_output.num_leaves(),
-        vec![Timeout::new(0, round).hash()],
-    );
-
-    let vote_data = VoteData::new(
-        parent
-            .block()
-            .gen_block_info(parent_output.root_hash(), parent_output.version(), None),
-        parent.block().quorum_cert().certified_block().clone(),
-    );
-
-    let ledger_info = match committed {
-        Some(committed) => {
-            let tree = committed
-                .accumulator_extension_proof()
-                .verify(
-                    committed
-                        .block()
-                        .quorum_cert()
-                        .certified_block()
-                        .executed_state_id(),
-                )
-                .unwrap();
-            let commit_block_info = BlockInfo::new(
-                committed.block().epoch(),
-                committed.block().round(),
-                committed.block().id(),
-                tree.root_hash(),
-                tree.version(),
-                committed.block().timestamp_usecs(),
-                None,
-            );
-            LedgerInfo::new(commit_block_info, vote_data.hash())
-        }
-        None => LedgerInfo::new(BlockInfo::empty(), vote_data.hash()),
-    };
-
-    let vote = Vote::new(
-        vote_data.clone(),
-        validator_signer.author(),
-        ledger_info,
-        validator_signer,
-    );
-
-    let mut ledger_info_with_signatures =
-        LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new());
-
-    vote.signature()
-        .clone()
-        .add_to_li(vote.author(), &mut ledger_info_with_signatures);
-
-    let qc = QuorumCert::new(vote_data, ledger_info_with_signatures);
-
-    make_proposal_with_qc_and_proof(round, proof, qc, validator_signer)
+    test_utils::make_proposal_with_parent(round, round, parent, committed, validator_signer)
 }
 
 #[test]
@@ -162,11 +61,11 @@ fn test_preferred_block_rule() {
     //
     // PB should change from genesis to b1 and then a2.
     let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = certificate_for_genesis();
+    let genesis_qc = block_test_utils::certificate_for_genesis();
     let round = genesis_block.round();
 
-    let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
-    let b1 = make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
+    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
     let b2 = make_proposal_with_parent(round + 3, &a1, None, &validator_signer);
     let a2 = make_proposal_with_parent(round + 4, &b1, None, &validator_signer);
     let b3 = make_proposal_with_parent(round + 5, &b2, None, &validator_signer);
@@ -234,11 +133,11 @@ fn test_voting_potential_commit_id() {
     // All the votes before a4 cannot produce any potential commits.
     // A potential commit for proposal a4 is a2, a potential commit for proposal a5 is a3.
     let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = certificate_for_genesis();
+    let genesis_qc = block_test_utils::certificate_for_genesis();
     let round = genesis_block.round();
 
-    let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
-    let b1 = make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
+    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
     let a2 = make_proposal_with_parent(round + 3, &a1, None, &validator_signer);
     let a3 = make_proposal_with_parent(round + 4, &a2, None, &validator_signer);
     let a4 = make_proposal_with_parent(round + 5, &a3, Some(&a2), &validator_signer);
@@ -298,11 +197,11 @@ fn test_voting() {
     // a4 (old proposal)
     // b4 (round lower then round of pb. PB: a2, parent(b4)=b2)
     let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = certificate_for_genesis();
+    let genesis_qc = block_test_utils::certificate_for_genesis();
     let round = genesis_block.round();
 
-    let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
-    let b1 = make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
+    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
     let b2 = make_proposal_with_parent(round + 3, &a1, None, &validator_signer);
     let a2 = make_proposal_with_parent(round + 4, &b1, None, &validator_signer);
     let a3 = make_proposal_with_parent(round + 5, &a2, None, &validator_signer);
@@ -323,6 +222,7 @@ fn test_voting() {
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
     safety_rules.update(b2.block().quorum_cert()).unwrap();
+
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b2),
         Err(Error::OldProposal {
@@ -343,7 +243,6 @@ fn test_voting() {
     vote = safety_rules.construct_and_sign_vote(&a4).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(a4.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.construct_and_sign_vote(&a4),
         Err(Error::OldProposal {
@@ -351,6 +250,7 @@ fn test_voting() {
             proposal_round: 7,
         })
     );
+
     safety_rules.update(b4.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b4),
@@ -375,11 +275,11 @@ fn test_commit_rule_consecutive_rounds() {
     // a1 cannot be committed after a3 gathers QC because a1 and a2 are not consecutive
     // a2 can be committed after a4 gathers QC
     let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = certificate_for_genesis();
+    let genesis_qc = block_test_utils::certificate_for_genesis();
     let round = genesis_block.round();
 
-    let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
-    let b1 = make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
+    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
     let b2 = make_proposal_with_parent(round + 3, &b1, None, &validator_signer);
     let a2 = make_proposal_with_parent(round + 4, &a1, None, &validator_signer);
     let a3 = make_proposal_with_parent(round + 5, &a2, None, &validator_signer);
@@ -437,10 +337,10 @@ fn test_bad_execution_output() {
     // evil_a3 attempts to append to a1 but fails append only check
     // a3 works as it properly extends a2
     let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = certificate_for_genesis();
+    let genesis_qc = block_test_utils::certificate_for_genesis();
     let round = genesis_block.round();
 
-    let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
     let a2 = make_proposal_with_parent(round + 2, &a1, None, &validator_signer);
     let a3 = make_proposal_with_parent(round + 3, &a2, None, &validator_signer);
 
