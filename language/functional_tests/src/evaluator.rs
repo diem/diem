@@ -309,9 +309,23 @@ fn make_channel_transaction(
     let channel_txn_config = config.channel.as_ref().ok_or(ErrorKind::Other(
         "channel txn config must exist.".to_string(),
     ))?;
-    let witness = exec
-        .get_latest_witness(channel_txn_config.proposer.address())
-        .unwrap_or(Witness::default());
+    let witness = match channel_txn_config.channel_sequence_number {
+        None => exec
+            .get_latest_witness(channel_txn_config.proposer.address())
+            .unwrap_or(Witness::default()),
+        Some(channel_sequence_number) => exec
+            .get_witness(
+                channel_txn_config.proposer.address(),
+                channel_sequence_number,
+            )
+            .expect(
+                format!(
+                    "witness with channel_sequence_number {} must exist",
+                    channel_sequence_number
+                )
+                .as_str(),
+            ),
+    };
 
     let body = ChannelTransactionPayloadBody::new(
         channel_txn_config.channel.channel_address,

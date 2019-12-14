@@ -1,0 +1,98 @@
+//! account: vivian, 1000000, 0, validator
+//! account: alice, 10000000
+//! account: bob, 10000000
+//! channel: ch1, alice|bob
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1, alice
+//! args: {{bob}},50000,40000
+
+0x0.ChannelScript.open
+
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+import 0x0.Hash;
+main() {
+   let hash_lock: bytearray;
+
+   assert(LibraAccount.channel_sequence_number() == 1, 105);
+   hash_lock = Hash.sha3_256(h"aa");
+   ChannelScript.send_payment({{bob}}, 10000, move(hash_lock), 2);
+   return;
+}
+
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+import 0x0.Hash;
+main() {
+
+   assert(LibraAccount.channel_sequence_number() == 2, 105);
+   ChannelScript.receive_payment(h"aa");
+   return;
+}
+
+//! new-transaction
+import 0x0.LibraSystem;
+
+main() {
+    // TODO: this will stop working once we make the Block prologue private. We should delete this
+    // part (which will be done by the executor) and leave the second assert
+    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
+    LibraSystem.block_prologue(2, h"aa", h"bb", {{vivian}});
+    LibraSystem.block_prologue(3, h"aa", h"bb", {{vivian}});
+    return;
+}
+
+// alice try to cancel payment on chain with a old witness data.
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice,false,2
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+import 0x0.Hash;
+main() {
+   ChannelScript.cancel_payment_after_timeout();
+   return;
+}
+
+// bob do challenge and close channel.
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob,false
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+import 0x0.Hash;
+main() {
+   assert(LibraAccount.channel_is_locked(), 108);
+   LibraAccount.challenge();
+   assert(LibraAccount.channel_is_closed(), 109);
+   return;
+}
