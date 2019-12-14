@@ -888,6 +888,13 @@ module LibraAccount {
         return *&copy(channel).stage == 1;
     }
 
+    // Check current channel is locked
+    public channel_is_closed():bool acquires Channel {
+        let channel: &Self.Channel;
+        channel = borrow_global<Channel>(ChannelTransaction.get_channel_address());
+        return *&copy(channel).stage == 2;
+    }
+
     public challenge() acquires Channel,ChannelLockedBy,ChannelGlobalEvents {
         let channel: &mut Self.Channel;
         let channel_address: address;
