@@ -15,7 +15,7 @@ use std::marker::PhantomData;
 /// returns the new tree to acquire a new root and version. Note: this is used internally by
 /// VoteProposal hence why it exists within consensus-types andd not libra-types.
 /// @TODO This should contain AccumulatorConsistencyProof once that is code complete
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct AccumulatorExtensionProof<H> {
     /// Represents the roots of all the full subtrees from left to right in the original accumulator.
     frozen_subtree_roots: Vec<HashValue>,
