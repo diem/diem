@@ -13,7 +13,7 @@ use std::{
 
 /// This structure contains all the information needed by safety rules to
 /// evaluate a proposal / block for correctness / safety and to produce a Vote.
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct VoteProposal<T> {
     /// Contains the data necessary to construct the parent's execution output state
     /// and the childs in a verifiable way
