@@ -219,10 +219,7 @@ impl StorageRead for StorageReadServiceClient {
             self.client()
                 .get_epoch_change_ledger_infos_async(&proto_req.into()),
         )
-        .map(|resp| {
-            let resp = ValidatorChangeProof::try_from(resp?)?;
-            Ok(resp.into())
-        })
+        .map(|resp| ValidatorChangeProof::try_from(resp?))
         .boxed()
     }
 
