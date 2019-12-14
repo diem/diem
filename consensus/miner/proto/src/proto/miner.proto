@@ -3,24 +3,28 @@ syntax = "proto3";
 package miner;
 
 service MinerProxy{
-  rpc GetMineCtx(MineCtxRequest) returns (MineCtxResponse) {};
-  rpc Mined(MinedBlockRequest) returns (MinedBlockResponse) {}
+    rpc GetMineCtx(MineCtxRequest) returns (MineCtxResponse) {};
+    rpc Mined(MinedBlockRequest) returns (MinedBlockResponse) {}
 }
 
-message MineCtxRequest{}
+message MineCtxRequest{
+    uint32 algo=1;
+}
 
 message MineCtxResponse{
-  MineCtx mine_ctx=1;
+    MineCtx mine_ctx=1;
 }
 
 message MineCtx{
     bytes header=1;
-    uint64 nonce=2;
+    bytes target=3;
+    uint32 algo=4;
 }
 
 message MinedBlockRequest{
     MineCtx mine_ctx=1;
-    bytes proof=2;
+    uint64 nonce=2;
+    bytes solution=3;
 }
 
 message MinedBlockResponse{

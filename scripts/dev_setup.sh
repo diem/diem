@@ -84,7 +84,7 @@ rustup component add clippy
 
 if [[ $"$PACKAGE_MANAGER" == "apt-get" ]]; then
 	echo "Updating apt-get......"
-	sudo apt-get update
+	sudo apt-get update || exit 0
 fi
 
 echo "Installing CMake......"

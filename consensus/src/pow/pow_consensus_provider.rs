@@ -1,4 +1,8 @@
-use crate::pow::event_processor::EventProcessor;
+use crate::chained_bft::consensusdb::ConsensusDB;
+use crate::pow::{
+    event_processor::EventProcessor,
+    mine_state::{BlockIndex, MineStateManager},
+};
 use crate::{
     consensus_provider::ConsensusProvider, state_computer::ExecutionProxy,
     txn_manager::MempoolProxy, MineClient,
@@ -11,7 +15,7 @@ use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::account_address::AccountAddress;
-use miner::{server::setup_minerproxy_service, types::MineStateManager};
+use miner::server::setup_minerproxy_service;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::convert::TryFrom;
@@ -55,8 +59,11 @@ impl PowConsensusProvider {
             .clone();
         let author = AccountAddress::try_from(peer_id_str.clone())
             .expect("Failed to parse peer id of a validator");
+        // block store
+        let block_store = Arc::new(ConsensusDB::new(&node_config.storage.dir()));
+
         //Start miner proxy server
-        let mine_state = MineStateManager::new();
+        let mine_state = MineStateManager::new(BlockIndex::new(block_store.clone()));
         let miner_rpc_addr = String::from(&node_config.consensus.miner_rpc_address);
         let mut miner_proxy = setup_minerproxy_service(mine_state.clone(), miner_rpc_addr.clone());
         miner_proxy.start();
@@ -82,7 +89,7 @@ impl PowConsensusProvider {
             txn_manager,
             state_computer,
             author,
-            node_config.storage.dir(),
+            block_store,
             rollback_flag,
             mine_state,
             read_storage,

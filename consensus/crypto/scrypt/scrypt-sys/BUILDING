@@ -1,0 +1,63 @@
+Installing
+----------
+
+We strongly recommend that people use the latest official release tarball on
+https://www.tarsnap.com/scrypt.html, and build with:
+
+    ./configure
+    make
+    make install
+
+Official scrypt tarball releases should build and run on any IEEE Std 1003.1
+(POSIX) compliant system which
+  1. Includes the Software Development Utilities option,
+  2. Has OpenSSL available via -lcrypto and #include <openssl/foo>, and
+  3. Provides /dev/urandom.
+
+
+libscrypt-kdf
+-------------
+
+To install the development library, run:
+
+    ./configure --enable-libscrypt-kdf
+    make install
+
+
+Platform-specific notes
+-----------------------
+
+- On OS X, the version of OpenSSL included with the operating
+  system is outdated (0.9.8) and deprecated, and it is recommended
+  that scrypt be built with an updated version of OpenSSL.  On OS X
+  10.11 "El Capitan" and higher, OpenSSL was removed entirely.  After
+  installing a newer version of OpenSSL, use
+      CPPFLAGS="-I /path/to/openssl/headers"
+      LDFLAGS="-L /path/to/openssl/lib"
+  to build scrypt.
+
+  In particular, if you installed OpenSSL using homebrew, you may
+  pass the relevant directories directly to ./configure:
+      ./configure CPPFLAGS="-I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/opt/openssl/lib"
+
+  Alternatively, you may with to add these lines to your $HOME/.profile file:
+      export CPPFLAGS="-I/usr/local/opt/openssl/include $CPPFLAGS"
+      export LDFLAGS="-L/usr/local/opt/openssl/lib $LDFLAGS"
+  and then close & re-open your terminal window.
+
+
+Building from git
+-----------------
+
+For experimental development from git, build with:
+
+    autoreconf -i
+    ./configure
+    make
+
+- You must have automake 1.11.2 or higher, and libtool.
+- In order to support the `AX_CFLAGS_WARN_ALL` autoconf directive, you will
+  need to install the autoconf archive.  On Debian systems, use the
+  `autoconf-archive` package; on FreeBSD, use `devel/autoconf-archive`.
+- Ignore this message if it appears:
+  aclocal: warning: couldn't open directory 'm4': No such file or directory
