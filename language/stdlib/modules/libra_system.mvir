@@ -671,6 +671,10 @@ module LibraSystem {
        num_validators = Self.validator_set_size();
        amount_collected = LibraAccount.balance(0xFEE);
 
+       if (copy(amount_collected) < copy(num_validators)) {
+           return;
+       }
+
        lib_coin_to_distribute = LibraAccount.withdraw_with_capability(
            &move(distribution_resource).fee_withdrawal_capability,
            copy(amount_collected)
