@@ -47,7 +47,7 @@ use crate::chained_bft::network::IncomingBlockRetrievalRequest;
 use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
 #[cfg(test)]
 use safety_rules::ConsensusState;
-use safety_rules::SafetyRules;
+use safety_rules::{SafetyRules, TSafetyRules};
 use std::convert::TryInto;
 use std::time::Instant;
 use std::{sync::Arc, time::Duration};

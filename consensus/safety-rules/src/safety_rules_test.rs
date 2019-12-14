@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_utils, Error, InMemoryStorage, SafetyRules};
+use crate::{test_utils, Error, InMemoryStorage, SafetyRules, TSafetyRules};
 use consensus_types::{
     block::block_test_utils, block::Block, common::Round, quorum_cert::QuorumCert,
     timeout::Timeout, vote_proposal::VoteProposal,
@@ -35,7 +35,7 @@ fn test_initial_state() {
     // Start from scratch, verify the state
     let block = Block::<Round>::make_genesis_block();
 
-    let safety_rules = SafetyRules::new(
+    let safety_rules = SafetyRules::<Round>::new(
         InMemoryStorage::default_storage(),
         Arc::new(ValidatorSigner::from_int(0)),
     );
@@ -48,7 +48,7 @@ fn test_initial_state() {
 fn test_preferred_block_rule() {
     // Preferred block is the highest 2-chain head.
     let validator_signer = ValidatorSigner::from_int(0);
-    let mut safety_rules = SafetyRules::new(
+    let mut safety_rules = SafetyRules::<Round>::new(
         InMemoryStorage::default_storage(),
         Arc::new(validator_signer.clone()),
     );
@@ -119,7 +119,7 @@ fn test_preferred_block_rule() {
 /// Test the potential ledger info that we're going to use in case of voting
 fn test_voting_potential_commit_id() {
     let validator_signer = ValidatorSigner::from_int(0);
-    let mut safety_rules = SafetyRules::new(
+    let mut safety_rules = SafetyRules::<Round>::new(
         InMemoryStorage::default_storage(),
         Arc::new(validator_signer.clone()),
     );
@@ -173,7 +173,7 @@ fn test_voting_potential_commit_id() {
 #[test]
 fn test_voting() {
     let validator_signer = ValidatorSigner::from_int(0);
-    let mut safety_rules = SafetyRules::new(
+    let mut safety_rules = SafetyRules::<Round>::new(
         InMemoryStorage::default_storage(),
         Arc::new(validator_signer.clone()),
     );
@@ -261,7 +261,7 @@ fn test_voting() {
 #[test]
 fn test_commit_rule_consecutive_rounds() {
     let validator_signer = ValidatorSigner::from_int(0);
-    let safety_rules = SafetyRules::new(
+    let safety_rules = SafetyRules::<Round>::new(
         InMemoryStorage::default_storage(),
         Arc::new(validator_signer.clone()),
     );
@@ -327,7 +327,7 @@ fn test_commit_rule_consecutive_rounds() {
 fn test_bad_execution_output() {
     let validator_signer = Arc::new(ValidatorSigner::from_int(0));
     let mut safety_rules =
-        SafetyRules::new(InMemoryStorage::default_storage(), validator_signer.clone());
+        SafetyRules::<Round>::new(InMemoryStorage::default_storage(), validator_signer.clone());
 
     // build a tree of the following form:
     //                 _____

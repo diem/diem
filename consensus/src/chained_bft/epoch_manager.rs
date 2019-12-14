@@ -26,7 +26,7 @@ use libra_types::crypto_proxies::{
 use network::proto::ConsensusMsg;
 use network::proto::ConsensusMsg_oneof;
 use network::validator_network::{ConsensusNetworkSender, Event};
-use safety_rules::{InMemoryStorage, OnDiskStorage, SafetyRules};
+use safety_rules::{InMemoryStorage, OnDiskStorage, SafetyRules, TSafetyRules};
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
@@ -255,7 +255,7 @@ where
         ));
 
         safety_rules
-            .start_new_epoch(block_store.highest_quorum_cert().as_ref())
+            .start_new_epoch(&block_store.highest_quorum_cert())
             .expect("Unable to transition SafetyRules to the new epoch");
 
         // txn manager is required both by proposal generator (to pull the proposers)
