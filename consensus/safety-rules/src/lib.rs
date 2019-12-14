@@ -15,6 +15,10 @@ pub use crate::{
     safety_rules::SafetyRules,
 };
 
+#[cfg(any(test, feature = "testing"))]
+#[path = "test_utils.rs"]
+pub mod test_utils;
+
 #[cfg(test)]
 #[path = "safety_rules_test.rs"]
 mod safety_rules_test;

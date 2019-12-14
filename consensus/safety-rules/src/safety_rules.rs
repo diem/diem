@@ -1,20 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    consensus_state::ConsensusState,
-    error::Error,
-    persistent_storage::PersistentStorage,
-};
+use crate::{consensus_state::ConsensusState, error::Error, persistent_storage::PersistentStorage};
 use consensus_types::{
-    block::Block,
-    block_data::BlockData,
-    common::Payload,
-    quorum_cert::QuorumCert,
-    timeout::Timeout,
-    vote::Vote,
-    vote_data::VoteData,
-    vote_proposal::VoteProposal,
+    block::Block, block_data::BlockData, common::Payload, quorum_cert::QuorumCert,
+    timeout::Timeout, vote::Vote, vote_data::VoteData, vote_proposal::VoteProposal,
 };
 use libra_crypto::hash::HashValue;
 use libra_types::{
@@ -116,7 +106,7 @@ impl SafetyRules {
         ConsensusState::new(
             self.persistent_storage.epoch(),
             self.persistent_storage.last_voted_round(),
-             self.persistent_storage.preferred_round(),
+            self.persistent_storage.preferred_round(),
         )
     }
 
