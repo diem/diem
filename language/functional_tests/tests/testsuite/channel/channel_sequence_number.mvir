@@ -40,7 +40,7 @@ main(){
 //! txn-channel: ch1, bob
 import 0x0.LibraAccount;
 main(){
-    assert(LibraAccount.channel_sequence_number() == 1, 1024);
+    assert(LibraAccount.channel_sequence_number() == 2, 1024);
     return;
 }
 

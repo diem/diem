@@ -873,10 +873,12 @@ module LibraAccount {
     }
 
     // Get current channel's sequence number.
-    public channel_sequence_number(): u64 acquires Channel {
-        let channel: &Self.Channel;
-        channel = borrow_global<Channel>(ChannelTransaction.get_channel_address());
-        return *&move(channel).channel_sequence_number;
+    public channel_sequence_number(): u64{
+        // get channel sequence number with ChannelMirror,
+        // because Channel's channel sequence number may be old.
+        let channel_mirror: &Self.ChannelMirror;
+        channel_mirror = ChannelUtil.borrow_from_shared<Self.ChannelMirror>();
+        return *&move(channel_mirror).channel_sequence_number;
     }
 
     // Check current channel is locked
