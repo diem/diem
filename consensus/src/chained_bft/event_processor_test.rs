@@ -56,7 +56,7 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use prost::Message as _;
-use safety_rules::{ConsensusState, OnDiskStorage, SafetyRules};
+use safety_rules::{ConsensusState, OnDiskStorage, SafetyRules, TSafetyRules};
 use std::sync::RwLock;
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, sync::Arc, time::Duration};
 use tempfile::NamedTempFile;

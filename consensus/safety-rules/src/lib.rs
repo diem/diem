@@ -7,12 +7,14 @@ mod consensus_state;
 mod error;
 mod persistent_storage;
 mod safety_rules;
+mod t_safety_rules;
 
 pub use crate::{
     consensus_state::ConsensusState,
     error::Error,
     persistent_storage::{InMemoryStorage, OnDiskStorage},
     safety_rules::SafetyRules,
+    t_safety_rules::TSafetyRules,
 };
 
 #[cfg(any(test, feature = "testing"))]
