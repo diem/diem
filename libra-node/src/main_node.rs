@@ -5,6 +5,7 @@ use admission_control_service::runtime::AdmissionControlRuntime;
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use executor::Executor;
+use futures::executor::block_on;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
@@ -280,6 +281,15 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         runtime.handle().spawn(network_provider.start());
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);
+
+        // Make sure that state synchronizer is caught up at least to its waypoint
+        // (in case it's present). There is no sense to start consensus prior to that.
+        // TODO: Note that we need the networking layer to be able to discover & connect to the
+        // peers with potentially outdated network identity public keys.
+        debug!("Wait until state synchronizer is initialized");
+        block_on(state_synchronizer.wait_until_initialized())
+            .expect("State synchronizer initialization failure");
+        debug!("State synchronizer initialization complete.");
 
         // Initialize and start mempool.
         instant = Instant::now();
