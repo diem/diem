@@ -5,8 +5,10 @@
 
 mod consensus_state;
 mod error;
+mod local_client;
 mod persistent_storage;
 mod safety_rules;
+mod safety_rules_manager;
 mod t_safety_rules;
 
 pub use crate::{
@@ -14,6 +16,7 @@ pub use crate::{
     error::Error,
     persistent_storage::{InMemoryStorage, OnDiskStorage},
     safety_rules::SafetyRules,
+    safety_rules_manager::{SafetyRulesManager, SafetyRulesManagerConfig},
     t_safety_rules::TSafetyRules,
 };
 
