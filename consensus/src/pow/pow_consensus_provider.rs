@@ -80,9 +80,7 @@ impl PowConsensusProvider {
 
         let self_pri_key = node_config
             .consensus
-            .consensus_keypair
-            .take_private()
-            .expect("private key is none.");
+            .take_and_set_key();
         let event_handle = EventProcessor::new(
             network_sender,
             network_events,

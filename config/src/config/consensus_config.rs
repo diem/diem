@@ -21,6 +21,11 @@ use libra_types::{
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::path::Path;
+use std::fs::File;
+use std::io::Write;
+use base64::encode;
+use std::convert::TryFrom;
 
 pub type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 
@@ -168,6 +173,23 @@ impl ConsensusConfig {
         }
         self.consensus_peers
             .save_config(self.consensus_peers_file());
+    }
+
+    pub fn take_and_set_key(&mut self) -> Ed25519PrivateKey {
+        let pri_key = self.consensus_keypair.take_private().expect("pri key is none.");
+        let key_bytes = pri_key.to_bytes();
+        let pri = Ed25519PrivateKey::try_from(key_bytes.to_vec().as_ref()).expect("Ed25519PrivateKey parse err.");
+        self.consensus_keypair = ConsensusKeyPair::load(pri);
+        Ed25519PrivateKey::try_from(key_bytes.to_vec().as_ref()).expect("Ed25519PrivateKey parse err.")
+    }
+
+    pub fn save_key<P: AsRef<Path>>(&mut self, output_file: P) {
+        let pri_key = self.take_and_set_key();
+        let key_bytes = pri_key.to_bytes();
+        let key_base64 = encode(&key_bytes);
+        //let contents = toml::to_vec(&key_base64).expect("Error serializing");
+        let mut file = File::create(output_file).expect("Error opening file");
+        file.write_all(key_base64.as_bytes()).expect("Error writing file");
     }
 
     pub fn consensus_keypair_file(&self) -> PathBuf {
