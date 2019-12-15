@@ -47,7 +47,7 @@ use crate::chained_bft::network::IncomingBlockRetrievalRequest;
 use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
 #[cfg(test)]
 use safety_rules::ConsensusState;
-use safety_rules::{SafetyRules, TSafetyRules};
+use safety_rules::TSafetyRules;
 use std::convert::TryInto;
 use std::time::Instant;
 use std::{sync::Arc, time::Duration};
@@ -71,7 +71,7 @@ pub struct EventProcessor<TM, T> {
     pacemaker: Pacemaker,
     proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
     proposal_generator: ProposalGenerator<TM, T>,
-    safety_rules: SafetyRules,
+    safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
     txn_manager: TM,
     network: NetworkSender,
     storage: Arc<dyn PersistentStorage<T>>,
@@ -92,7 +92,7 @@ where
         pacemaker: Pacemaker,
         proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<TM, T>,
-        safety_rules: SafetyRules,
+        safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
         txn_manager: TM,
         network: NetworkSender,
         storage: Arc<dyn PersistentStorage<T>>,

@@ -17,16 +17,14 @@ use crate::util::time_service::{ClockTimeService, TimeService};
 use consensus_types::common::{Payload, Round};
 use consensus_types::epoch_retrieval::EpochRetrievalRequest;
 use futures::executor::block_on;
-use libra_config::config::{ConsensusProposerType, SafetyRulesBackend};
+use libra_config::config::ConsensusProposerType;
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
-use libra_types::crypto_proxies::{
-    EpochInfo, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
-};
+use libra_types::crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorVerifier};
 use network::proto::ConsensusMsg;
 use network::proto::ConsensusMsg_oneof;
 use network::validator_network::{ConsensusNetworkSender, Event};
-use safety_rules::{InMemoryStorage, OnDiskStorage, SafetyRules, TSafetyRules};
+use safety_rules::SafetyRulesManager;
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
@@ -43,9 +41,7 @@ pub struct EpochManager<TM, T> {
     txn_manager: TM,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     storage: Arc<dyn PersistentStorage<T>>,
-    // TODO: remove once we have separate key management structure, and we'll share a slim client
-    // across epoch
-    signer: Arc<ValidatorSigner>,
+    safety_rules_manager: SafetyRulesManager<T>,
 }
 
 impl<TM, T> EpochManager<TM, T>
@@ -63,7 +59,7 @@ where
         txn_manager: TM,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         storage: Arc<dyn PersistentStorage<T>>,
-        signer: Arc<ValidatorSigner>,
+        safety_rules_manager: SafetyRulesManager<T>,
     ) -> Self {
         Self {
             epoch_info,
@@ -75,7 +71,7 @@ where
             txn_manager,
             state_computer,
             storage,
-            signer,
+            safety_rules_manager,
         }
     }
 
@@ -207,14 +203,10 @@ where
             epoch: initial_data.epoch(),
             verifier: initial_data.validators(),
         };
-        self.start_epoch(self.signer.clone(), initial_data)
+        self.start_epoch(initial_data)
     }
 
-    pub fn start_epoch(
-        &mut self,
-        signer: Arc<ValidatorSigner>,
-        initial_data: RecoveryData<T>,
-    ) -> EventProcessor<TM, T> {
+    pub fn start_epoch(&mut self, initial_data: RecoveryData<T>) -> EventProcessor<TM, T> {
         let validators = initial_data.validators();
         let epoch = self.epoch();
         counters::EPOCH.set(epoch as i64);
@@ -232,20 +224,6 @@ where
         )
         .expect("Unable to update network's eligible peers");
         let last_vote = initial_data.last_vote();
-        let author = signer.author();
-        let safety_rules_storage = match &self.config.safety_rules.backend {
-            SafetyRulesBackend::InMemoryStorage => InMemoryStorage::default_storage(),
-            SafetyRulesBackend::OnDiskStorage(config) => {
-                if config.default {
-                    OnDiskStorage::default_storage(config.path().clone())
-                        .expect("Unable to allocate SafetyRules storage")
-                } else {
-                    OnDiskStorage::new_storage(config.path().clone())
-                        .expect("Unable to instantiate SafetyRules storage")
-                }
-            }
-        };
-        let mut safety_rules = SafetyRules::new(safety_rules_storage, signer);
 
         let block_store = Arc::new(BlockStore::new(
             Arc::clone(&self.storage),
@@ -254,14 +232,15 @@ where
             self.config.max_pruned_blocks_in_mem,
         ));
 
+        let mut safety_rules = self.safety_rules_manager.client();
         safety_rules
-            .start_new_epoch(&block_store.highest_quorum_cert())
+            .start_new_epoch(block_store.highest_quorum_cert().as_ref())
             .expect("Unable to transition SafetyRules to the new epoch");
 
         // txn manager is required both by proposal generator (to pull the proposers)
         // and by event processor (to update their status).
         let proposal_generator = ProposalGenerator::new(
-            author,
+            self.config.author,
             block_store.clone(),
             self.txn_manager.clone(),
             self.time_service.clone(),
@@ -273,7 +252,7 @@ where
 
         let proposer_election = self.create_proposer_election(epoch, &validators);
         let network_sender = NetworkSender::new(
-            author,
+            self.config.author,
             self.network_sender.clone(),
             self.self_sender.clone(),
             validators.clone(),

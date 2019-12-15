@@ -56,7 +56,7 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use prost::Message as _;
-use safety_rules::{ConsensusState, OnDiskStorage, SafetyRules, TSafetyRules};
+use safety_rules::{ConsensusState, OnDiskStorage, SafetyRules};
 use std::sync::RwLock;
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, sync::Arc, time::Duration};
 use tempfile::NamedTempFile;
@@ -191,7 +191,7 @@ impl NodeSetup {
             pacemaker,
             proposer_election,
             proposal_generator,
-            safety_rules,
+            Box::new(safety_rules),
             MockTransactionManager::new().0,
             network,
             storage.clone(),
