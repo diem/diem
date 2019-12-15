@@ -23,7 +23,7 @@ use consensus_types::{
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use libra_config::config::{
     ConsensusProposerType::{self, FixedProposer, MultipleOrderedProposers, RotatingProposer},
-    {OnDiskStorageConfig, SafetyRulesBackend, SafetyRulesConfig},
+    SafetyRulesConfig,
 };
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
@@ -37,7 +37,7 @@ use network::{
     proto::ConsensusMsg_oneof,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use safety_rules::OnDiskStorage;
+use safety_rules::SafetyRulesManagerConfig;
 use std::{convert::TryFrom, path::PathBuf, sync::Arc, time::Duration};
 use tempfile::NamedTempFile;
 use tokio::runtime;
@@ -83,24 +83,23 @@ impl SMRNode {
             .build()
             .expect("Failed to create Tokio runtime!");
 
-        let mut safety_rules_config = SafetyRulesConfig::default();
-        let mut safety_rules_storage = OnDiskStorageConfig::default();
-        safety_rules_storage.path = safety_rules_path.clone();
-        safety_rules_config.backend = SafetyRulesBackend::OnDiskStorage(safety_rules_storage);
-
         let config = ChainedBftSMRConfig {
             max_pruned_blocks_in_mem: 10000,
             pacemaker_initial_timeout: Duration::from_secs(3),
             proposer_type,
             contiguous_rounds: 2,
             max_block_size: 50,
-            safety_rules: safety_rules_config,
+            author: signer.author(),
         };
+
+        let safety_rules_manager_config = SafetyRulesManagerConfig::new_with_signer(
+            signer.clone(),
+            &SafetyRulesConfig::default(),
+        );
         let initial_setup = InitialSetup {
-            author,
-            signer: signer.clone(),
             network_sender,
             network_events,
+            safety_rules_manager_config: Some(safety_rules_manager_config),
         };
         let mut smr = ChainedBftSMR::new(
             initial_setup,
@@ -170,8 +169,6 @@ impl SMRNode {
         for smr_id in 0..num_nodes {
             let (initial_data, storage) = MockStorage::start_for_testing(validator_set.clone());
             let safety_rules_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
-            OnDiskStorage::default_storage(safety_rules_path.clone())
-                .expect("Unable to allocate SafetyRules storage");
             nodes.push(Self::start(
                 playground,
                 signers.remove(0),

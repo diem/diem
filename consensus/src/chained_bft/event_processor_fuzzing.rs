@@ -136,7 +136,7 @@ fn create_node_for_fuzzing() -> EventProcessor<MockTransactionManager, TestPaylo
         pacemaker,
         proposer_election,
         proposal_generator,
-        safety_rules,
+        Box::new(safety_rules),
         MockTransactionManager::new().0,
         network,
         storage.clone(),

@@ -13,13 +13,13 @@ use crate::{
     txn_manager::MempoolProxy,
 };
 use anyhow::Result;
-use consensus_types::common::Author;
 use executor::Executor;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool_client::MempoolClientWrapper;
-use libra_types::{crypto_proxies::ValidatorSigner, transaction::SignedTransaction};
+use libra_types::transaction::SignedTransaction;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use safety_rules::SafetyRulesManagerConfig;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use tokio::runtime;
@@ -27,10 +27,9 @@ use vm_runtime::LibraVM;
 
 ///  The state necessary to begin state machine replication including ValidatorSet, networking etc.
 pub struct InitialSetup {
-    pub author: Author,
-    pub signer: ValidatorSigner,
     pub network_sender: ConsensusNetworkSender,
     pub network_events: ConsensusNetworkEvents,
+    pub safety_rules_manager_config: Option<SafetyRulesManagerConfig>,
 }
 
 /// Supports the implementation of ConsensusProvider using LibraBFT.
@@ -56,8 +55,8 @@ impl ChainedBftProvider {
             .expect("Failed to create Tokio runtime!");
 
         let initial_setup = Self::initialize_setup(network_sender, network_events, node_config);
-        debug!("[Consensus] My peer: {:?}", initial_setup.author);
-        let config = ChainedBftSMRConfig::from_node_config(&node_config.consensus);
+        let config = ChainedBftSMRConfig::from_node_config(&node_config);
+        debug!("[Consensus] My peer: {:?}", config.author);
         let storage = Arc::new(StorageWriteProxy::new(node_config));
         let initial_data = storage.start();
 
@@ -81,18 +80,10 @@ impl ChainedBftProvider {
         network_events: ConsensusNetworkEvents,
         node_config: &mut NodeConfig,
     ) -> InitialSetup {
-        let author = node_config.validator_network.as_ref().unwrap().peer_id;
-        let private_key = node_config
-            .consensus
-            .consensus_keypair
-            .take_private()
-            .expect("Failed to take Consensus private key, key absent or already read");
-        let signer = ValidatorSigner::new(author, private_key);
         InitialSetup {
-            author,
-            signer,
             network_sender,
             network_events,
+            safety_rules_manager_config: Some(SafetyRulesManagerConfig::new(node_config)),
         }
     }
 }
