@@ -7,6 +7,7 @@ use crate::{
     utils,
 };
 use anyhow::Result;
+use base64::encode;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     Uniform,
@@ -20,12 +21,11 @@ use libra_types::{
 };
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
-use std::path::Path;
+use std::convert::TryFrom;
 use std::fs::File;
 use std::io::Write;
-use base64::encode;
-use std::convert::TryFrom;
+use std::path::Path;
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 pub type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 
@@ -176,11 +176,16 @@ impl ConsensusConfig {
     }
 
     pub fn take_and_set_key(&mut self) -> Ed25519PrivateKey {
-        let pri_key = self.consensus_keypair.take_private().expect("pri key is none.");
+        let pri_key = self
+            .consensus_keypair
+            .take_private()
+            .expect("pri key is none.");
         let key_bytes = pri_key.to_bytes();
-        let pri = Ed25519PrivateKey::try_from(key_bytes.to_vec().as_ref()).expect("Ed25519PrivateKey parse err.");
+        let pri = Ed25519PrivateKey::try_from(key_bytes.to_vec().as_ref())
+            .expect("Ed25519PrivateKey parse err.");
         self.consensus_keypair = ConsensusKeyPair::load(pri);
-        Ed25519PrivateKey::try_from(key_bytes.to_vec().as_ref()).expect("Ed25519PrivateKey parse err.")
+        Ed25519PrivateKey::try_from(key_bytes.to_vec().as_ref())
+            .expect("Ed25519PrivateKey parse err.")
     }
 
     pub fn save_key<P: AsRef<Path>>(&mut self, output_file: P) {
@@ -189,7 +194,8 @@ impl ConsensusConfig {
         let key_base64 = encode(&key_bytes);
         //let contents = toml::to_vec(&key_base64).expect("Error serializing");
         let mut file = File::create(output_file).expect("Error opening file");
-        file.write_all(key_base64.as_bytes()).expect("Error writing file");
+        file.write_all(key_base64.as_bytes())
+            .expect("Error writing file");
     }
 
     pub fn consensus_keypair_file(&self) -> PathBuf {

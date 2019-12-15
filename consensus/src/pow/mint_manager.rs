@@ -196,8 +196,9 @@ impl MintManager {
                                 );
 
                                 info!(
-                                    "Minter : {:?} find a new block : {:?}",
+                                    "Peer : {:?}, Minter : {:?} find a new block : {:?}",
                                     mint_author,
+                                    self_signer_address,
                                     block.id()
                                 );
                                 let block_pb = TryInto::<BlockProto>::try_into(block)

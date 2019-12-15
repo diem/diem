@@ -78,9 +78,7 @@ impl PowConsensusProvider {
             });
         }
 
-        let self_pri_key = node_config
-            .consensus
-            .take_and_set_key();
+        let self_pri_key = node_config.consensus.take_and_set_key();
         let event_handle = EventProcessor::new(
             network_sender,
             network_events,
