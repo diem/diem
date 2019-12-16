@@ -137,7 +137,7 @@ where
     /// Replica:
     ///
     /// Do nothing
-    async fn process_new_round_event(&self, new_round_event: NewRoundEvent) {
+    async fn process_new_round_event(&mut self, new_round_event: NewRoundEvent) {
         debug!("Processing {}", new_round_event);
         counters::CURRENT_ROUND.set(new_round_event.round as i64);
         counters::ROUND_TIMEOUT_MS.set(new_round_event.timeout.as_millis() as i64);
@@ -169,7 +169,7 @@ where
     }
 
     async fn generate_proposal(
-        &self,
+        &mut self,
         new_round_event: NewRoundEvent,
     ) -> anyhow::Result<ProposalMsg<T>> {
         // Proposal generator will ensure that at most one proposal is generated per round

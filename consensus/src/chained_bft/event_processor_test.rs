@@ -232,8 +232,8 @@ impl NodeSetup {
 fn basic_new_rank_event_test() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
-    let nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
-    let node = &nodes[0];
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
+    let node = &mut nodes[0];
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);

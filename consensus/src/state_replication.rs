@@ -18,7 +18,7 @@ pub trait TxnManager: Send + Sync + Clone + 'static {
     /// The `exclude_txns` list includes the transactions that are already pending in the
     /// branch of blocks consensus is trying to extend.
     async fn pull_txns(
-        &self,
+        &mut self,
         max_size: u64,
         exclude_txns: Vec<&Self::Payload>,
     ) -> Result<Self::Payload>;
@@ -26,7 +26,7 @@ pub trait TxnManager: Send + Sync + Clone + 'static {
     /// Notifies TxnManager about the payload of the committed block including the state compute
     /// result, which includes the specifics of what transactions succeeded and failed.
     async fn commit_txns(
-        &self,
+        &mut self,
         txns: &Self::Payload,
         compute_result: &StateComputeResult,
         // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.

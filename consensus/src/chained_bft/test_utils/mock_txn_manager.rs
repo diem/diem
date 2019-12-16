@@ -44,7 +44,7 @@ impl TxnManager for MockTransactionManager {
 
     /// The returned future is fulfilled with the vector of SignedTransactions
     async fn pull_txns(
-        &self,
+        &mut self,
         max_size: u64,
         _exclude_txns: Vec<&Self::Payload>,
     ) -> Result<Self::Payload> {
@@ -56,18 +56,17 @@ impl TxnManager for MockTransactionManager {
     }
 
     async fn commit_txns(
-        &self,
+        &mut self,
         txns: &Self::Payload,
         _compute_result: &StateComputeResult,
         _timestamp_usecs: u64,
     ) -> Result<()> {
         let committed_tns = txns.clone();
-        let mut commit_sender = self.commit_sender.clone();
         for txn in committed_tns {
             self.committed_txns.write().unwrap().push(txn);
         }
         let len = self.committed_txns.read().unwrap().len();
-        commit_sender
+        self.commit_sender
             .send(len)
             .await
             .expect("Failed to notify about mempool commit");

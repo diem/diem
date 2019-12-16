@@ -105,7 +105,7 @@ where
     /// 3. In case a given round is not greater than the calculated parent, return an OldRound
     /// error.
     pub async fn generate_proposal(
-        &self,
+        &mut self,
         round: Round,
         round_deadline: Instant,
     ) -> anyhow::Result<BlockData<T>> {

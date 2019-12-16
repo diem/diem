@@ -30,7 +30,7 @@ use tokio::runtime::Runtime;
 
 // This generates a proposal for round 1
 pub fn generate_corpus_proposal() -> Vec<u8> {
-    let event_processor = create_node_for_fuzzing();
+    let mut event_processor = create_node_for_fuzzing();
     block_on(async {
         let proposal = event_processor
             .generate_proposal(NewRoundEvent {

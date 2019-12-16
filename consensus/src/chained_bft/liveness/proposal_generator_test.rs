@@ -26,7 +26,7 @@ fn minute_from_now() -> Instant {
 fn test_proposal_generation_empty_tree() {
     let signer = ValidatorSigner::random(None);
     let block_store = build_empty_tree();
-    let proposal_generator = ProposalGenerator::new(
+    let mut proposal_generator = ProposalGenerator::new(
         signer.author(),
         block_store.clone(),
         MockTransactionManager::new().0,
@@ -52,7 +52,7 @@ fn test_proposal_generation_empty_tree() {
 fn test_proposal_generation_parent() {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();
-    let proposal_generator = ProposalGenerator::new(
+    let mut proposal_generator = ProposalGenerator::new(
         inserter.signer().author(),
         block_store.clone(),
         MockTransactionManager::new().0,
@@ -93,7 +93,7 @@ fn test_proposal_generation_parent() {
 fn test_old_proposal_generation() {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();
-    let proposal_generator = ProposalGenerator::new(
+    let mut proposal_generator = ProposalGenerator::new(
         inserter.signer().author(),
         block_store.clone(),
         MockTransactionManager::new().0,
@@ -112,7 +112,7 @@ fn test_old_proposal_generation() {
 fn test_empty_proposal_after_reconfiguration() {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();
-    let proposal_generator = ProposalGenerator::new(
+    let mut proposal_generator = ProposalGenerator::new(
         inserter.signer().author(),
         block_store.clone(),
         MockTransactionManager::new().0,
