@@ -61,10 +61,10 @@ impl MempoolProxy {
 
     /// Submit the request and return the future, which is fulfilled when the response is received.
     async fn submit_commit_transactions_request(
-        &self,
+        &mut self,
         request: CommitTransactionsRequest,
     ) -> Result<()> {
-        self.mempool.clone().commit_transactions(request).await?;
+        self.mempool.commit_transactions(request).await?;
         Ok(())
     }
 }
@@ -75,7 +75,7 @@ impl TxnManager for MempoolProxy {
 
     /// The returned future is fulfilled with the vector of SignedTransactions
     async fn pull_txns(
-        &self,
+        &mut self,
         max_size: u64,
         exclude_payloads: Vec<&Self::Payload>,
     ) -> Result<Self::Payload> {
@@ -91,7 +91,7 @@ impl TxnManager for MempoolProxy {
         let mut get_block_request = GetBlockRequest::default();
         get_block_request.max_block_size = max_size;
         get_block_request.transactions = exclude_txns;
-        let response = self.mempool.clone().get_block(get_block_request).await?;
+        let response = self.mempool.get_block(get_block_request).await?;
         Ok(response
             .block
             .unwrap_or_else(Default::default)
@@ -113,7 +113,7 @@ impl TxnManager for MempoolProxy {
     }
 
     async fn commit_txns(
-        &self,
+        &mut self,
         txns: &Self::Payload,
         compute_result: &StateComputeResult,
         // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
