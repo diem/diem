@@ -1068,13 +1068,21 @@ module LibraAccount {
         if(!ChannelTransaction.is_offchain()){
             *(&mut copy(channel).channel_sequence_number) = copy(new_channel_sequence_number);
             if(!Self.has_authorized_by_participants()){
-                // set channel stage to locked
-                *(&mut copy(channel).stage) = 1;
-                Self.do_emit_channel_event(copy(channel_address), copy(channel));
-                locked_by = ChannelLockedBy{
-                    participant: copy(proposer),
-                };
-                Self.move_to_channel<Self.ChannelLockedBy>(move(locked_by));
+                if (*&copy(channel).stage == 0){
+                    // set channel stage to locked
+                    *(&mut copy(channel).stage) = 1;
+                    Self.do_emit_channel_event(copy(channel_address), copy(channel));
+                    locked_by = ChannelLockedBy{
+                        participant: copy(proposer),
+                    };
+                    Self.move_to_channel<Self.ChannelLockedBy>(move(locked_by));
+                } else {
+                    if(*&copy(channel).stage == 2){
+                        // if channel is locked at prologue, it must become closed at epilogue.
+                    } else{
+                        abort(1016);
+                    }
+                }
             }
         }
         return;
