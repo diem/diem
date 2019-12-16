@@ -467,7 +467,7 @@ module LibraAccount {
     // - The account's auth key matches the transaction's public key
     // - That the account has enough balance to pay for all of the gas
     // - That the sequence number matches the transaction's sequence key
-    prologue() acquires T,Channel {
+    prologue() acquires T,ChannelLockedBy,Channel {
         let transaction_sender: address;
         let transaction_sender_exists: bool;
         let sender_account: &mut Self.T;
@@ -929,6 +929,7 @@ module LibraAccount {
 
         // channel stage must is locked
         assert(*&copy(channel).stage == 1, 1007);
+        //TODO locked_by is checked at channel_prologue, should check again?
         assert(*&copy(locked_by).participant != copy(proposer), 1008);
         assert(move(txn_channel_sequence_number) >= *(&copy(channel).channel_sequence_number), 1009);
 
@@ -1015,8 +1016,15 @@ module LibraAccount {
         return;
     }
 
+    check_channel_locked_by() acquires ChannelLockedBy{
+        let locked_by: & Self.ChannelLockedBy;
+        locked_by = borrow_global<ChannelLockedBy>(ChannelTransaction.get_channel_address());
+        assert(*&copy(locked_by).participant != ChannelTransaction.get_proposer(), 1008);
+        return;
+    }
+
     // The prologue is invoked at the beginning of every channel transaction
-    channel_prologue() acquires T,Channel {
+    channel_prologue() acquires T,ChannelLockedBy,Channel {
         let txn_channel_sequence_number: u64;
         let channel_sequence_number: u64;
         let mirror_channel_sequence_number: u64;
@@ -1069,7 +1077,9 @@ module LibraAccount {
                 assert(move(public_key_hash) == *(&move(participant_account).authentication_key), 1015);
                 index = copy(index) + 1;
             }
-
+            if (*&copy(channel).stage == 1 && !Self.has_authorized_by_participants()) {
+                Self.check_channel_locked_by();
+            }
             return;
         }
     }
