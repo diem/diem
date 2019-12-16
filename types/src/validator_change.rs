@@ -3,9 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use crate::crypto_proxies::LedgerInfoWithSignatures;
-use crate::crypto_proxies::ValidatorVerifier;
+use crate::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 use anyhow::{ensure, format_err, Error, Result};
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::{collection::vec, prelude::*};
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -29,8 +30,7 @@ impl ValidatorChangeProof {
             .map(|li| li.ledger_info().epoch())
             .ok_or_else(|| format_err!("Empty ValidatorChangeProof"))
     }
-}
-impl ValidatorChangeProof {
+
     /// Verify the proof is correctly chained with known epoch and validator verifier
     /// and return the LedgerInfo to start target epoch
     pub fn verify(
@@ -61,83 +61,6 @@ impl ValidatorChangeProof {
     }
 }
 
-#[test]
-fn verify_validator_set_change_proof() {
-    use crate::crypto_proxies::random_validator_verifier;
-    use crate::ledger_info::LedgerInfo;
-    use libra_crypto::hash::{CryptoHash, HashValue};
-    use std::collections::BTreeMap;
-
-    let all_epoch: Vec<u64> = (1..=10).collect();
-    let mut valid_ledger_info = vec![];
-    let mut validator_verifier = vec![];
-    // We generate end-epoch ledger info for epoch 1 to 10, each signed by the current validator set and carries next validator set.
-    let (mut current_signers, mut current_verifier) = random_validator_verifier(1, None, true);
-    for epoch in &all_epoch {
-        validator_verifier.push(current_verifier.clone());
-        let (next_signers, next_verifier) =
-            random_validator_verifier((*epoch + 1) as usize, None, true);
-        let validator_set = Some((&next_verifier).into());
-        let ledger_info = LedgerInfo::new(
-            BlockInfo::new(
-                *epoch,
-                0,
-                HashValue::zero(),
-                HashValue::zero(),
-                42,
-                0,
-                validator_set,
-            ),
-            HashValue::zero(),
-        );
-        let signatures = current_signers
-            .iter()
-            .map(|s| (s.author(), s.sign_message(ledger_info.hash()).unwrap()))
-            .collect();
-        valid_ledger_info.push(LedgerInfoWithSignatures::new(ledger_info, signatures));
-        current_signers = next_signers;
-        current_verifier = next_verifier;
-    }
-
-    // Test well-formed proof will succeed
-    let proof_1 = ValidatorChangeProof::new(valid_ledger_info.clone());
-    assert!(proof_1.verify(all_epoch[0], &validator_verifier[0]).is_ok());
-
-    let proof_2 = ValidatorChangeProof::new(valid_ledger_info[2..5].to_vec());
-    assert!(proof_2.verify(all_epoch[2], &validator_verifier[2]).is_ok());
-
-    // Test empty proof will fail verification
-    let proof_3 = ValidatorChangeProof::new(vec![]);
-    assert!(proof_3
-        .verify(all_epoch[0], &validator_verifier[0])
-        .is_err());
-
-    // Test non contiguous proof will fail
-    let mut list = valid_ledger_info[3..5].to_vec();
-    list.extend_from_slice(&valid_ledger_info[8..9]);
-    let proof_4 = ValidatorChangeProof::new(list);
-    assert!(proof_4
-        .verify(all_epoch[3], &validator_verifier[3])
-        .is_err());
-
-    // Test non increasing proof will fail
-    let mut list = valid_ledger_info.clone();
-    list.reverse();
-    let proof_5 = ValidatorChangeProof::new(list);
-    assert!(proof_5
-        .verify(all_epoch[9], &validator_verifier[9])
-        .is_err());
-
-    // Test proof with invalid signatures will fail
-    let proof_6 = ValidatorChangeProof::new(vec![LedgerInfoWithSignatures::new(
-        valid_ledger_info[0].ledger_info().clone(),
-        BTreeMap::new(),
-    )]);
-    assert!(proof_6
-        .verify(all_epoch[0], &validator_verifier[0])
-        .is_err());
-}
-
 impl TryFrom<crate::proto::types::ValidatorChangeProof> for ValidatorChangeProof {
     type Error = Error;
 
@@ -165,29 +88,98 @@ impl From<ValidatorChangeProof> for crate::proto::types::ValidatorChangeProof {
     }
 }
 
-#[allow(unused_imports)]
-use crate::block_info::BlockInfo;
-#[cfg(any(test, feature = "fuzzing"))]
-use proptest::collection::vec;
-#[cfg(any(test, feature = "fuzzing"))]
-use proptest::prelude::*;
-#[cfg(any(test, feature = "fuzzing"))]
-prop_compose! {
-    fn arb_validator_change_proof()(
-        ledger_info_with_sigs in vec(any::<LedgerInfoWithSignatures>(), 0..10),
-    ) -> ValidatorChangeProof {
-        ValidatorChangeProof{
-            ledger_info_with_sigs
-        }
-    }
-}
-
 #[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for ValidatorChangeProof {
     type Parameters = ();
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        arb_validator_change_proof().boxed()
-    }
-
     type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        vec(any::<LedgerInfoWithSignatures>(), 0..10)
+            .prop_map(Self::new)
+            .boxed()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::block_info::BlockInfo;
+
+    #[test]
+    fn verify_validator_set_change_proof() {
+        use crate::crypto_proxies::random_validator_verifier;
+        use crate::ledger_info::LedgerInfo;
+        use libra_crypto::hash::{CryptoHash, HashValue};
+        use std::collections::BTreeMap;
+
+        let all_epoch: Vec<u64> = (1..=10).collect();
+        let mut valid_ledger_info = vec![];
+        let mut validator_verifier = vec![];
+        // We generate end-epoch ledger info for epoch 1 to 10, each signed by the current
+        // validator set and carries next validator set.
+        let (mut current_signers, mut current_verifier) = random_validator_verifier(1, None, true);
+        for epoch in &all_epoch {
+            validator_verifier.push(current_verifier.clone());
+            let (next_signers, next_verifier) =
+                random_validator_verifier((*epoch + 1) as usize, None, true);
+            let validator_set = Some((&next_verifier).into());
+            let ledger_info = LedgerInfo::new(
+                BlockInfo::new(
+                    *epoch,
+                    0,
+                    HashValue::zero(),
+                    HashValue::zero(),
+                    42,
+                    0,
+                    validator_set,
+                ),
+                HashValue::zero(),
+            );
+            let signatures = current_signers
+                .iter()
+                .map(|s| (s.author(), s.sign_message(ledger_info.hash()).unwrap()))
+                .collect();
+            valid_ledger_info.push(LedgerInfoWithSignatures::new(ledger_info, signatures));
+            current_signers = next_signers;
+            current_verifier = next_verifier;
+        }
+
+        // Test well-formed proof will succeed
+        let proof_1 = ValidatorChangeProof::new(valid_ledger_info.clone());
+        assert!(proof_1.verify(all_epoch[0], &validator_verifier[0]).is_ok());
+
+        let proof_2 = ValidatorChangeProof::new(valid_ledger_info[2..5].to_vec());
+        assert!(proof_2.verify(all_epoch[2], &validator_verifier[2]).is_ok());
+
+        // Test empty proof will fail verification
+        let proof_3 = ValidatorChangeProof::new(vec![]);
+        assert!(proof_3
+            .verify(all_epoch[0], &validator_verifier[0])
+            .is_err());
+
+        // Test non contiguous proof will fail
+        let mut list = valid_ledger_info[3..5].to_vec();
+        list.extend_from_slice(&valid_ledger_info[8..9]);
+        let proof_4 = ValidatorChangeProof::new(list);
+        assert!(proof_4
+            .verify(all_epoch[3], &validator_verifier[3])
+            .is_err());
+
+        // Test non increasing proof will fail
+        let mut list = valid_ledger_info.clone();
+        list.reverse();
+        let proof_5 = ValidatorChangeProof::new(list);
+        assert!(proof_5
+            .verify(all_epoch[9], &validator_verifier[9])
+            .is_err());
+
+        // Test proof with invalid signatures will fail
+        let proof_6 = ValidatorChangeProof::new(vec![LedgerInfoWithSignatures::new(
+            valid_ledger_info[0].ledger_info().clone(),
+            BTreeMap::new(),
+        )]);
+        assert!(proof_6
+            .verify(all_epoch[0], &validator_verifier[0])
+            .is_err());
+    }
 }
