@@ -19,7 +19,7 @@ use libra_config::config::RoleType;
 use libra_config::config::StateSyncConfig;
 use libra_config::waypoint::Waypoint;
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
+use libra_types::crypto_proxies::ValidatorChangeProof;
 use libra_types::transaction::Version;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
@@ -45,7 +45,7 @@ pub(crate) struct SyncRequest {
 pub(crate) struct EpochRetrievalRequest {
     pub start_epoch: u64,
     pub end_epoch: u64,
-    pub callback: oneshot::Sender<Result<ValidatorChangeEventWithProof>>,
+    pub callback: oneshot::Sender<Result<ValidatorChangeProof>>,
 }
 
 /// message used by StateSyncClient for communication with Coordinator

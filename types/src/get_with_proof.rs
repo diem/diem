@@ -11,7 +11,7 @@ use crate::{
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
     crypto_proxies::LedgerInfoWithSignatures,
-    crypto_proxies::ValidatorChangeEventWithProof,
+    crypto_proxies::ValidatorChangeProof,
     ledger_info::LedgerInfo,
     proof::AccumulatorConsistencyProof,
     proto::types::{
@@ -80,7 +80,7 @@ impl From<UpdateToLatestLedgerRequest> for crate::proto::types::UpdateToLatestLe
 pub struct UpdateToLatestLedgerResponse {
     pub response_items: Vec<ResponseItem>,
     pub ledger_info_with_sigs: LedgerInfoWithSignatures,
-    pub validator_change_events: ValidatorChangeEventWithProof,
+    pub validator_change_proof: ValidatorChangeProof,
     pub ledger_consistency_proof: AccumulatorConsistencyProof,
 }
 
@@ -97,8 +97,8 @@ impl TryFrom<crate::proto::types::UpdateToLatestLedgerResponse> for UpdateToLate
             .ledger_info_with_sigs
             .unwrap_or_else(Default::default)
             .try_into()?;
-        let validator_change_events = proto
-            .validator_change_events
+        let validator_change_proof = proto
+            .validator_change_proof
             .unwrap_or_else(Default::default)
             .try_into()?;
         let ledger_consistency_proof = proto
@@ -109,7 +109,7 @@ impl TryFrom<crate::proto::types::UpdateToLatestLedgerResponse> for UpdateToLate
         Ok(Self {
             response_items,
             ledger_info_with_sigs,
-            validator_change_events,
+            validator_change_proof,
             ledger_consistency_proof,
         })
     }
@@ -123,13 +123,13 @@ impl From<UpdateToLatestLedgerResponse> for crate::proto::types::UpdateToLatestL
             .map(Into::into)
             .collect();
         let ledger_info_with_sigs = Some(response.ledger_info_with_sigs.into());
-        let validator_change_events = Some(response.validator_change_events.into());
+        let validator_change_proof = Some(response.validator_change_proof.into());
         let ledger_consistency_proof = Some(response.ledger_consistency_proof.into());
 
         Self {
             response_items,
             ledger_info_with_sigs,
-            validator_change_events,
+            validator_change_proof,
             ledger_consistency_proof,
         }
     }
@@ -140,13 +140,13 @@ impl UpdateToLatestLedgerResponse {
     pub fn new(
         response_items: Vec<ResponseItem>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-        validator_change_events: ValidatorChangeEventWithProof,
+        validator_change_proof: ValidatorChangeProof,
         ledger_consistency_proof: AccumulatorConsistencyProof,
     ) -> Self {
         UpdateToLatestLedgerResponse {
             response_items,
             ledger_info_with_sigs,
-            validator_change_events,
+            validator_change_proof,
             ledger_consistency_proof,
         }
     }
@@ -167,7 +167,7 @@ impl UpdateToLatestLedgerResponse {
             &request.requested_items,
             &self.response_items,
             &self.ledger_info_with_sigs,
-            &self.validator_change_events,
+            &self.validator_change_proof,
         )
     }
 }
@@ -181,7 +181,7 @@ pub fn verify_update_to_latest_ledger_response(
     req_request_items: &[RequestItem],
     response_items: &[ResponseItem],
     ledger_info_with_sigs: &LedgerInfoWithSignatures,
-    validator_change_events: &ValidatorChangeEventWithProof,
+    validator_change_proof: &ValidatorChangeProof,
 ) -> Result<Option<EpochInfo>> {
     let ledger_info = ledger_info_with_sigs.ledger_info();
 
@@ -206,7 +206,7 @@ pub fn verify_update_to_latest_ledger_response(
 
     // Verify ledger info signatures and potential epoch changes
     if ledger_info.epoch() > current_epoch_info.epoch {
-        let epoch_change_li = validator_change_events
+        let epoch_change_li = validator_change_proof
             .verify(current_epoch_info.epoch, &current_epoch_info.verifier)?;
         let new_epoch_info = EpochInfo {
             epoch: epoch_change_li.ledger_info().epoch() + 1,

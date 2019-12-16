@@ -10,7 +10,7 @@ use crate::{
     block_metadata::BlockMetadata,
     byte_array::ByteArray,
     contract_event::ContractEvent,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof, ValidatorSet},
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorSet},
     discovery_info::DiscoveryInfo,
     event::{EventHandle, EventKey, EVENT_KEY_LENGTH},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
@@ -578,13 +578,13 @@ prop_compose! {
     fn arb_update_to_latest_ledger_response()(
         response_items in vec(any::<ResponseItem>(), 0..10),
         ledger_info_with_sigs in any::<LedgerInfoWithSignatures>(),
-        validator_change_events in any::<ValidatorChangeEventWithProof>(),
+        validator_change_proof in any::<ValidatorChangeProof>(),
         ledger_consistency_proof in any::<AccumulatorConsistencyProof>(),
     ) -> UpdateToLatestLedgerResponse {
         UpdateToLatestLedgerResponse::new(
             response_items,
             ledger_info_with_sigs,
-            validator_change_events,
+            validator_change_proof,
             ledger_consistency_proof,
         )
     }

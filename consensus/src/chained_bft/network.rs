@@ -16,9 +16,9 @@ use consensus_types::{
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
-use libra_types::crypto_proxies::{EpochInfo, ValidatorChangeEventWithProof};
+use libra_types::crypto_proxies::{EpochInfo, ValidatorChangeProof};
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
-use libra_types::proto::types::ValidatorChangeEventWithProof as ValidatorChangeEventWithProofProto;
+use libra_types::proto::types::ValidatorChangeProof as ValidatorChangeProofProto;
 use network::{
     proto::{
         ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RequestEpoch,
@@ -253,14 +253,14 @@ impl NetworkSender {
 
     /// Broadcast about epoch changes with proof to the current validator set (including self)
     /// when we commit the reconfiguration block
-    pub async fn broadcast_epoch_change(&mut self, proof: ValidatorChangeEventWithProof) {
+    pub async fn broadcast_epoch_change(&mut self, proof: ValidatorChangeProof) {
         let msg = ConsensusMsg {
             message: Some(ConsensusMsg_oneof::EpochChange(proof.into())),
         };
         self.broadcast(msg).await
     }
 
-    pub async fn notify_epoch_change(&mut self, proof: ValidatorChangeEventWithProof) {
+    pub async fn notify_epoch_change(&mut self, proof: ValidatorChangeProof) {
         let msg = ConsensusMsg {
             message: Some(ConsensusMsg_oneof::EpochChange(proof.into())),
         };
@@ -490,9 +490,9 @@ impl<T: Payload> NetworkTask<T> {
     async fn process_epoch_change(
         &mut self,
         peer_id: AccountAddress,
-        proof: ValidatorChangeEventWithProofProto,
+        proof: ValidatorChangeProofProto,
     ) -> anyhow::Result<()> {
-        let proof = ValidatorChangeEventWithProof::try_from(proof)?;
+        let proof = ValidatorChangeProof::try_from(proof)?;
         let msg_epoch = proof.epoch()?;
         match msg_epoch.cmp(&self.epoch()) {
             Ordering::Equal => {

@@ -8,7 +8,7 @@ use consensus_types::executed_block::ExecutedBlock;
 use executor::{ExecutedTrees, Executor, ProcessedVMOutput};
 use futures::{Future, FutureExt};
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
+use libra_types::crypto_proxies::ValidatorChangeProof;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Transaction},
@@ -144,7 +144,7 @@ impl StateComputer for ExecutionProxy {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeProof>> + Send>> {
         self.synchronizer
             .get_epoch_proof(start_epoch, end_epoch)
             .boxed()

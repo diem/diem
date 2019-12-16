@@ -12,7 +12,7 @@ use executor::{ExecutedTrees, ProcessedVMOutput};
 use futures::{channel::mpsc, future, Future, FutureExt};
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::ValidatorSet;
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof};
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof};
 use std::{pin::Pin, sync::Arc};
 use termion::color::*;
 
@@ -88,7 +88,7 @@ impl StateComputer for MockStateComputer {
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeProof>> + Send>> {
         future::err(format_err!(
             "epoch proof not supported in mock state computer"
         ))
@@ -133,7 +133,7 @@ impl StateComputer for EmptyStateComputer {
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeProof>> + Send>> {
         future::err(format_err!(
             "epoch proof not supported in empty state computer"
         ))

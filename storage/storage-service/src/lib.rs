@@ -151,7 +151,7 @@ impl StorageService {
         let (
             response_items,
             ledger_info_with_sigs,
-            validator_change_events,
+            validator_change_proof,
             ledger_consistency_proof,
         ) = self
             .db
@@ -160,7 +160,7 @@ impl StorageService {
         let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse {
             response_items,
             ledger_info_with_sigs,
-            validator_change_events,
+            validator_change_proof,
             ledger_consistency_proof,
         };
 

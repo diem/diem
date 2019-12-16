@@ -18,7 +18,7 @@ use consensus_types::{
 };
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
-use libra_types::validator_change::ValidatorChangeEventWithProof;
+use libra_types::validator_change::ValidatorChangeProof;
 use mirai_annotations::checked_precondition;
 use rand::{prelude::*, Rng};
 use std::{
@@ -174,9 +174,9 @@ impl<T: Payload> BlockStore<T> {
         if highest_commit_cert.ends_epoch() {
             retriever
                 .network
-                .notify_epoch_change(ValidatorChangeEventWithProof::new(vec![
-                    highest_commit_cert.ledger_info().clone(),
-                ]))
+                .notify_epoch_change(ValidatorChangeProof::new(vec![highest_commit_cert
+                    .ledger_info()
+                    .clone()]))
                 .await;
         }
         Ok(())

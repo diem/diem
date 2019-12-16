@@ -10,7 +10,7 @@ use libra_crypto::{ed25519::*, HashValue};
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
     proof::AccumulatorConsistencyProof,
@@ -52,7 +52,7 @@ impl StorageRead for MockStorageReadClient {
                     Output = Result<(
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
-                        ValidatorChangeEventWithProof,
+                        ValidatorChangeProof,
                         AccumulatorConsistencyProof,
                     )>,
                 > + Send,
@@ -70,7 +70,7 @@ impl StorageRead for MockStorageReadClient {
         let ret = (
             response.response_items,
             response.ledger_info_with_sigs,
-            response.validator_change_events,
+            response.validator_change_proof,
             response.ledger_consistency_proof,
         );
         futures::future::ok(ret).boxed()

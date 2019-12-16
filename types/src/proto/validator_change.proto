@@ -18,6 +18,6 @@ import "ledger_info.proto";
 // proof.  The client can then verify that these events were under the current
 // tree and that the changes were signed by the old validators (and that the
 // events correctly show which validators are the new validators).
-message ValidatorChangeEventWithProof {
+message ValidatorChangeProof {
   repeated LedgerInfoWithSignatures ledger_info_with_sigs = 1;
 }

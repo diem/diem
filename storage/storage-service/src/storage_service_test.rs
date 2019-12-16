@@ -83,7 +83,7 @@ proptest! {
             let (
                 response_items,
                 response_ledger_info_with_sigs,
-                _validator_change_events,
+                _validator_change_proof,
                 _ledger_consistency_proof,
             ) = read_client
                 .update_to_latest_ledger(0, account_state_request_items).unwrap();

@@ -29,8 +29,8 @@ use libra_crypto::hash::CryptoHash;
 use libra_types::{
     crypto_proxies::ValidatorSet,
     crypto_proxies::{
-        random_validator_verifier, LedgerInfoWithSignatures, ValidatorChangeEventWithProof,
-        ValidatorSigner, ValidatorVerifier,
+        random_validator_verifier, LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorSigner,
+        ValidatorVerifier,
     },
 };
 use network::{
@@ -898,7 +898,7 @@ fn reconfiguration_test() {
                 .wait_for_messages(1, NetworkPlayground::take_all)
                 .await;
             if let Some(ConsensusMsg_oneof::EpochChange(proof)) = msg.pop().unwrap().1.message {
-                let proof = ValidatorChangeEventWithProof::try_from(proof).unwrap();
+                let proof = ValidatorChangeProof::try_from(proof).unwrap();
                 if proof.epoch().unwrap() == target_epoch {
                     break;
                 }

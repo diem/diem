@@ -11,11 +11,11 @@ use std::convert::{TryFrom, TryInto};
 #[derive(Clone, Debug, Eq, PartialEq)]
 /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
 /// validator changes from the first LedgerInfo's epoch.
-pub struct ValidatorChangeEventWithProof {
+pub struct ValidatorChangeProof {
     pub ledger_info_with_sigs: Vec<LedgerInfoWithSignatures>,
 }
 
-impl ValidatorChangeEventWithProof {
+impl ValidatorChangeProof {
     pub fn new(ledger_info_with_sigs: Vec<LedgerInfoWithSignatures>) -> Self {
         Self {
             ledger_info_with_sigs,
@@ -27,10 +27,10 @@ impl ValidatorChangeEventWithProof {
         self.ledger_info_with_sigs
             .first()
             .map(|li| li.ledger_info().epoch())
-            .ok_or_else(|| format_err!("Empty ValidatorChangeEventWithProof"))
+            .ok_or_else(|| format_err!("Empty ValidatorChangeProof"))
     }
 }
-impl ValidatorChangeEventWithProof {
+impl ValidatorChangeProof {
     /// Verify the proof is correctly chained with known epoch and validator verifier
     /// and return the LedgerInfo to start target epoch
     pub fn verify(
@@ -40,7 +40,7 @@ impl ValidatorChangeEventWithProof {
     ) -> Result<LedgerInfoWithSignatures> {
         ensure!(
             !self.ledger_info_with_sigs.is_empty(),
-            "Empty ValidatorChangeEventWithProof"
+            "Empty ValidatorChangeProof"
         );
         self.ledger_info_with_sigs.iter().try_fold(
             (epoch, validator_verifier.clone()),
@@ -100,14 +100,14 @@ fn verify_validator_set_change_proof() {
     }
 
     // Test well-formed proof will succeed
-    let proof_1 = ValidatorChangeEventWithProof::new(valid_ledger_info.clone());
+    let proof_1 = ValidatorChangeProof::new(valid_ledger_info.clone());
     assert!(proof_1.verify(all_epoch[0], &validator_verifier[0]).is_ok());
 
-    let proof_2 = ValidatorChangeEventWithProof::new(valid_ledger_info[2..5].to_vec());
+    let proof_2 = ValidatorChangeProof::new(valid_ledger_info[2..5].to_vec());
     assert!(proof_2.verify(all_epoch[2], &validator_verifier[2]).is_ok());
 
     // Test empty proof will fail verification
-    let proof_3 = ValidatorChangeEventWithProof::new(vec![]);
+    let proof_3 = ValidatorChangeProof::new(vec![]);
     assert!(proof_3
         .verify(all_epoch[0], &validator_verifier[0])
         .is_err());
@@ -115,7 +115,7 @@ fn verify_validator_set_change_proof() {
     // Test non contiguous proof will fail
     let mut list = valid_ledger_info[3..5].to_vec();
     list.extend_from_slice(&valid_ledger_info[8..9]);
-    let proof_4 = ValidatorChangeEventWithProof::new(list);
+    let proof_4 = ValidatorChangeProof::new(list);
     assert!(proof_4
         .verify(all_epoch[3], &validator_verifier[3])
         .is_err());
@@ -123,13 +123,13 @@ fn verify_validator_set_change_proof() {
     // Test non increasing proof will fail
     let mut list = valid_ledger_info.clone();
     list.reverse();
-    let proof_5 = ValidatorChangeEventWithProof::new(list);
+    let proof_5 = ValidatorChangeProof::new(list);
     assert!(proof_5
         .verify(all_epoch[9], &validator_verifier[9])
         .is_err());
 
     // Test proof with invalid signatures will fail
-    let proof_6 = ValidatorChangeEventWithProof::new(vec![LedgerInfoWithSignatures::new(
+    let proof_6 = ValidatorChangeProof::new(vec![LedgerInfoWithSignatures::new(
         valid_ledger_info[0].ledger_info().clone(),
         BTreeMap::new(),
     )]);
@@ -138,23 +138,23 @@ fn verify_validator_set_change_proof() {
         .is_err());
 }
 
-impl TryFrom<crate::proto::types::ValidatorChangeEventWithProof> for ValidatorChangeEventWithProof {
+impl TryFrom<crate::proto::types::ValidatorChangeProof> for ValidatorChangeProof {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::ValidatorChangeEventWithProof) -> Result<Self> {
+    fn try_from(proto: crate::proto::types::ValidatorChangeProof) -> Result<Self> {
         let ledger_info_with_sigs = proto
             .ledger_info_with_sigs
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<Vec<_>>>()?;
-        Ok(ValidatorChangeEventWithProof {
+        Ok(ValidatorChangeProof {
             ledger_info_with_sigs,
         })
     }
 }
 
-impl From<ValidatorChangeEventWithProof> for crate::proto::types::ValidatorChangeEventWithProof {
-    fn from(change: ValidatorChangeEventWithProof) -> Self {
+impl From<ValidatorChangeProof> for crate::proto::types::ValidatorChangeProof {
+    fn from(change: ValidatorChangeProof) -> Self {
         Self {
             ledger_info_with_sigs: change
                 .ledger_info_with_sigs
@@ -173,20 +173,20 @@ use proptest::collection::vec;
 use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
-    fn arb_validator_change_event_with_proof()(
+    fn arb_validator_change_proof()(
         ledger_info_with_sigs in vec(any::<LedgerInfoWithSignatures>(), 0..10),
-    ) -> ValidatorChangeEventWithProof {
-        ValidatorChangeEventWithProof{
+    ) -> ValidatorChangeProof {
+        ValidatorChangeProof{
             ledger_info_with_sigs
         }
     }
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl Arbitrary for ValidatorChangeEventWithProof {
+impl Arbitrary for ValidatorChangeProof {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        arb_validator_change_event_with_proof().boxed()
+        arb_validator_change_proof().boxed()
     }
 
     type Strategy = BoxedStrategy<Self>;
