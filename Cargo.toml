@@ -12,7 +12,6 @@ members = [
     "common/debug-interface",
     "common/executable-helpers",
     "common/futures-semaphore",
-    "common/grpc-helpers",
     "common/lcs",
     "common/logger",
     "common/metrics",
