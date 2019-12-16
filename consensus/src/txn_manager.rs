@@ -13,6 +13,7 @@ use libra_types::transaction::{SignedTransaction, TransactionStatus};
 use std::convert::TryFrom;
 
 /// Proxy interface to mempool
+#[derive(Clone)]
 pub struct MempoolProxy {
     mempool: MempoolClientWrapper,
 }

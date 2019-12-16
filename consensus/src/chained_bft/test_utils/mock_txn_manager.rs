@@ -13,34 +13,28 @@ use std::sync::{
 pub type MockTransaction = usize;
 
 /// Trivial mock: generates MockTransactions on the fly. Each next transaction is the next value.
+#[derive(Clone)]
 pub struct MockTransactionManager {
-    next_val: AtomicUsize,
+    next_val: Arc<AtomicUsize>,
     committed_txns: Arc<RwLock<Vec<MockTransaction>>>,
-    commit_receiver: Option<mpsc::Receiver<usize>>,
     commit_sender: mpsc::Sender<usize>,
 }
 
 impl MockTransactionManager {
-    pub fn new() -> Self {
+    pub fn new() -> (Self, mpsc::Receiver<usize>) {
         let (commit_sender, commit_receiver) = mpsc::channel(1024);
-        Self {
-            next_val: AtomicUsize::new(0),
-            committed_txns: Arc::new(RwLock::new(vec![])),
-            commit_receiver: Some(commit_receiver),
-            commit_sender,
-        }
+        (
+            Self {
+                next_val: Arc::new(AtomicUsize::new(0)),
+                committed_txns: Arc::new(RwLock::new(vec![])),
+                commit_sender,
+            },
+            commit_receiver,
+        )
     }
 
     pub fn get_committed_txns(&self) -> Vec<usize> {
         self.committed_txns.read().unwrap().clone()
-    }
-
-    /// Pulls the receiver out of the manager to let the clients receive notifications about the
-    /// commits.
-    pub fn take_commit_receiver(&mut self) -> mpsc::Receiver<usize> {
-        self.commit_receiver
-            .take()
-            .expect("The receiver has been already pulled out.")
     }
 }
 

@@ -66,13 +66,13 @@ pub mod event_processor_fuzzing;
 /// etc.). It is exposing the async processing functions for each event type.
 /// The caller is responsible for running the event loops and driving the execution via some
 /// executors.
-pub struct EventProcessor<T> {
+pub struct EventProcessor<TM, T> {
     block_store: Arc<BlockStore<T>>,
     pacemaker: Pacemaker,
     proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
-    proposal_generator: ProposalGenerator<T>,
+    proposal_generator: ProposalGenerator<TM, T>,
     safety_rules: SafetyRules,
-    txn_manager: Arc<dyn TxnManager<Payload = T>>,
+    txn_manager: TM,
     network: NetworkSender,
     storage: Arc<dyn PersistentStorage<T>>,
     time_service: Arc<dyn TimeService>,
@@ -81,15 +81,19 @@ pub struct EventProcessor<T> {
     validators: Arc<ValidatorVerifier>,
 }
 
-impl<T: Payload> EventProcessor<T> {
+impl<TM, T> EventProcessor<TM, T>
+where
+    TM: TxnManager<Payload = T>,
+    T: Payload,
+{
     pub fn new(
         block_store: Arc<BlockStore<T>>,
         last_vote: Option<Vote>,
         pacemaker: Pacemaker,
         proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
-        proposal_generator: ProposalGenerator<T>,
+        proposal_generator: ProposalGenerator<TM, T>,
         safety_rules: SafetyRules,
-        txn_manager: Arc<dyn TxnManager<Payload = T>>,
+        txn_manager: TM,
         network: NetworkSender,
         storage: Arc<dyn PersistentStorage<T>>,
         time_service: Arc<dyn TimeService>,

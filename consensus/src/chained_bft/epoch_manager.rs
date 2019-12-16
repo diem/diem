@@ -33,14 +33,14 @@ use std::sync::{Arc, RwLock};
 
 // Manager the components that shared across epoch and spawn per-epoch EventProcessor with
 // epoch-specific input.
-pub struct EpochManager<T> {
+pub struct EpochManager<TM, T> {
     epoch_info: Arc<RwLock<EpochInfo>>,
     config: ChainedBftSMRConfig,
     time_service: Arc<ClockTimeService>,
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
     network_sender: ConsensusNetworkSender,
     timeout_sender: channel::Sender<Round>,
-    txn_manager: Arc<dyn TxnManager<Payload = T>>,
+    txn_manager: TM,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     storage: Arc<dyn PersistentStorage<T>>,
     // TODO: remove once we have separate key management structure, and we'll share a slim client
@@ -48,7 +48,11 @@ pub struct EpochManager<T> {
     signer: Arc<ValidatorSigner>,
 }
 
-impl<T: Payload> EpochManager<T> {
+impl<TM, T> EpochManager<TM, T>
+where
+    TM: TxnManager<Payload = T>,
+    T: Payload,
+{
     pub fn new(
         epoch_info: Arc<RwLock<EpochInfo>>,
         config: ChainedBftSMRConfig,
@@ -56,7 +60,7 @@ impl<T: Payload> EpochManager<T> {
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
         network_sender: ConsensusNetworkSender,
         timeout_sender: channel::Sender<Round>,
-        txn_manager: Arc<dyn TxnManager<Payload = T>>,
+        txn_manager: TM,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         storage: Arc<dyn PersistentStorage<T>>,
         signer: Arc<ValidatorSigner>,
@@ -190,7 +194,10 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    pub fn start_new_epoch(&mut self, ledger_info: LedgerInfoWithSignatures) -> EventProcessor<T> {
+    pub fn start_new_epoch(
+        &mut self,
+        ledger_info: LedgerInfoWithSignatures,
+    ) -> EventProcessor<TM, T> {
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
         if let Err(e) = block_on(self.state_computer.sync_to(ledger_info.clone())) {
             error!("State sync to new epoch {} failed with {:?}, we'll try to start from current libradb", ledger_info, e);
@@ -207,7 +214,7 @@ impl<T: Payload> EpochManager<T> {
         &mut self,
         signer: Arc<ValidatorSigner>,
         initial_data: RecoveryData<T>,
-    ) -> EventProcessor<T> {
+    ) -> EventProcessor<TM, T> {
         let validators = initial_data.validators();
         let epoch = self.epoch();
         counters::EPOCH.set(epoch as i64);
@@ -256,7 +263,7 @@ impl<T: Payload> EpochManager<T> {
         let proposal_generator = ProposalGenerator::new(
             author,
             block_store.clone(),
-            Arc::clone(&self.txn_manager),
+            self.txn_manager.clone(),
             self.time_service.clone(),
             self.config.max_block_size,
         );

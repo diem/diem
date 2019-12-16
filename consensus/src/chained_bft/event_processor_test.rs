@@ -66,7 +66,7 @@ use tokio::runtime::Handle;
 pub struct NodeSetup {
     author: Author,
     block_store: Arc<BlockStore<TestPayload>>,
-    event_processor: EventProcessor<TestPayload>,
+    event_processor: EventProcessor<MockTransactionManager, TestPayload>,
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner,
     proposer_author: Author,
@@ -171,7 +171,7 @@ impl NodeSetup {
         let proposal_generator = ProposalGenerator::new(
             signer.author(),
             block_store.clone(),
-            Arc::new(MockTransactionManager::new()),
+            MockTransactionManager::new().0,
             time_service.clone(),
             1,
         );
@@ -192,7 +192,7 @@ impl NodeSetup {
             proposer_election,
             proposal_generator,
             safety_rules,
-            Arc::new(MockTransactionManager::new()),
+            MockTransactionManager::new().0,
             network,
             storage.clone(),
             time_service,

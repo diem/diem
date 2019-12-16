@@ -80,7 +80,7 @@ fn create_pacemaker() -> Pacemaker {
 }
 
 // Creates an EventProcessor for fuzzing
-fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
+fn create_node_for_fuzzing() -> EventProcessor<MockTransactionManager, TestPayload> {
     // signer is re-used accross fuzzing runs
     let signer = FUZZING_SIGNER.clone();
 
@@ -118,7 +118,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let proposal_generator = ProposalGenerator::new(
         signer.author(),
         block_store.clone(),
-        Arc::new(MockTransactionManager::new()),
+        MockTransactionManager::new().0,
         time_service.clone(),
         1,
     );
@@ -137,7 +137,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         proposer_election,
         proposal_generator,
         safety_rules,
-        Arc::new(MockTransactionManager::new()),
+        MockTransactionManager::new().0,
         network,
         storage.clone(),
         time_service,
