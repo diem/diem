@@ -1,6 +1,10 @@
 
 
-// everything below is auto generated
+// ** structs of module TestArithmetic
+
+
+
+// ** stratified functions
 
 procedure {:inline 1} ReadValue0(p: Path, i: int, v: Value) returns (v': Value)
 {
@@ -9,32 +13,6 @@ procedure {:inline 1} ReadValue0(p: Path, i: int, v: Value) returns (v': Value)
         v' := v;
     } else {
         assert false;
-    }
-}
-
-procedure {:inline 1} ReadValue1(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue0(p, i+1, v');
-    }
-}
-
-procedure {:inline 1} ReadValue2(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue1(p, i+1, v');
     }
 }
 
@@ -47,7 +25,7 @@ procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value
         e := p#Path(p)[i];
         if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
         if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue2(p, i+1, v');
+        call v' := ReadValue0(p, i+1, v');
     }
 }
 
@@ -61,7 +39,7 @@ procedure {:inline 1} UpdateValue0(p: Path, i: int, v: Value, new_v: Value) retu
     }
 }
 
-procedure {:inline 1} UpdateValue1(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
+procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
 {
     var e: Edge;
     if (i == size#Path(p)) {
@@ -76,37 +54,12 @@ procedure {:inline 1} UpdateValue1(p: Path, i: int, v: Value, new_v: Value) retu
     }
 }
 
-procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue1(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
 
-procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue2(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
+
+// ** functions of module TestArithmetic
 
 procedure {:inline 1} TestArithmetic_add_two_number (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -170,6 +123,7 @@ procedure TestArithmetic_add_two_number_verify (arg0: Value, arg1: Value) return
 }
 
 procedure {:inline 1} TestArithmetic_multiple_ops (arg0: Value, arg1: Value, arg2: Value) returns (ret0: Value)
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -231,6 +185,7 @@ procedure TestArithmetic_multiple_ops_verify (arg0: Value, arg1: Value, arg2: Va
 }
 
 procedure {:inline 1} TestArithmetic_bool_ops (arg0: Value, arg1: Value) returns ()
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -350,6 +305,7 @@ procedure TestArithmetic_bool_ops_verify (arg0: Value, arg1: Value) returns ()
 }
 
 procedure {:inline 1} TestArithmetic_arithmetic_ops (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -463,6 +419,7 @@ procedure TestArithmetic_arithmetic_ops_verify (arg0: Value, arg1: Value) return
 }
 
 procedure {:inline 1} TestArithmetic_overflow () returns ()
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -510,6 +467,7 @@ procedure TestArithmetic_overflow_verify () returns ()
 }
 
 procedure {:inline 1} TestArithmetic_underflow () returns ()
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -557,6 +515,7 @@ procedure TestArithmetic_underflow_verify () returns ()
 }
 
 procedure {:inline 1} TestArithmetic_div_by_zero () returns ()
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // IntegerType()

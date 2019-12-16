@@ -1,129 +1,73 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
-use bytecode_to_boogie::translator::BoogieTranslator;
-use bytecode_verifier::VerifiedModule;
+use bytecode_to_boogie::cli::Options;
+use bytecode_to_boogie::driver::Driver;
 use goldenfile;
-use ir_to_bytecode::{compiler::compile_module, parser::ast::Loc, parser::parse_module};
+use itertools::Itertools;
 use libra_tools::tempdir::TempPath;
-use libra_types::account_address::AccountAddress;
 use prettydiff::{basic::DiffOp, diff_lines};
-use std::{env, fs, fs::File, io::Error, io::Read, io::Write, path::Path, process::Command};
-use stdlib::{stdlib_modules, stdlib_source_map};
+use std::{env, fs, fs::File, io::Error, io::Read, io::Write, path::Path};
 
-fn compile_files(file_names: Vec<&str>) -> (Vec<VerifiedModule>, SourceMap<Loc>) {
-    let mut verified_modules = stdlib_modules().to_vec();
-    let mut source_maps = stdlib_source_map().to_vec();
-    let files_len = file_names.len();
-    let dep_files = &file_names[0..files_len];
+pub fn test(sources: &[&str]) {
+    // Configure options.
+    let mut args: Vec<&str> = vec![
+        "-v=debug",
+        // Right now we configure boogie to only do type check.
+        "-B=-noinfer",
+        "-B=-noVerify",
+    ];
+    args.extend(sources.iter());
+    let mut options = Options::default();
+    options.initialize_from_args(&args.iter().map(|s| s.to_string()).collect_vec());
+    options.setup_logging_for_test();
 
-    // assuming the last file is a program that might contain a script
-    let address = AccountAddress::default();
-    for file_name in dep_files {
-        let code = fs::read_to_string(file_name).unwrap();
-        let module = parse_module(&code).unwrap();
-        let (compiled_module, source_map) =
-            compile_module(address, module, &verified_modules).expect("module failed to compile");
-        let verified_module_res = VerifiedModule::new(compiled_module);
+    // Run the translator.
+    let mut driver = Driver::new(&options);
+    let (prelude, generated) = driver.run_for_test();
 
-        match verified_module_res {
-            Err(e) => {
-                println!("vm verification errors!");
-                for s in &e.1 {
-                    println!("status: {:?}", s);
-                }
-                panic!("{:?}", e.0);
-            }
-            Ok(verified_module) => {
-                verified_modules.push(verified_module);
-                source_maps.push(source_map);
-            }
-        }
-    }
-    (verified_modules, source_maps)
-}
-
-#[allow(unused_variables)]
-pub fn generate_boogie(file_name: &str, target_modules: &[&str]) -> String {
-    let mut file_names = vec![];
-    file_names.push(file_name);
-    let (modules, source_maps) = compile_files(file_names.to_vec());
-
-    if option_env!("VERIFY_BPL_GOLDEN").unwrap_or("0") == "1" {
-        // Verify or update golden files. This will run its own translate focused to the target
-        // test, so no need to pass in generated content.
-        verify_or_update_golden(&modules, &source_maps, file_name, target_modules);
+    if env::var("VERIFY_BPL_GOLDEN").is_ok() {
+        // Verify or update golden files. We use the last name in the sources file name list
+        // for the golden file base. Note we do not pass in the prelude below, but only
+        // put the proper generated code into the golden file.
+        verify_or_update_golden(sources[sources.len() - 1], &generated);
     }
 
-    // Run regular translation producing output for execution with boogie.
-    let mut ts = BoogieTranslator::new(&modules, &source_maps);
-    let mut res = String::new();
-
-    // handwritten boogie code
-    let written_code = fs::read_to_string("src/bytecode_instrs.bpl").unwrap();
-    res.push_str(&written_code);
-    res.push_str(&ts.translate());
-
-    res
-}
-
-pub fn run_boogie(boogie_str: &str) {
+    // Run boogie on the result.
+    let mut boogie_str = prelude;
+    boogie_str.push_str(&generated);
     let temp_path = TempPath::new();
     temp_path.create_as_dir().unwrap();
-    let boogie_file_path = temp_path.path().join("output.bpl");
+    let base_name = format!(
+        "{}.bpl",
+        Path::new(sources[sources.len() - 1])
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap()
+    );
+    let boogie_file_path = temp_path
+        .path()
+        .join(base_name)
+        .to_str()
+        .unwrap()
+        .to_string();
+
     // In order to debug errors in the output, one may uncomment below to find the output
-    // file at a stable location.
+    // file at a stable, persistent location.
     //    let mut boogie_file_path = std::path::PathBuf::new();
-    //    boogie_file_path.push("/tmp/output.bpl");
-    fs::write(&boogie_file_path, boogie_str).unwrap();
-    if let Ok(boogie_path) = env::var("BOOGIE_EXE") {
-        if let Ok(cvc4_path) = env::var("CVC4_EXE") {
-            let status = Command::new(boogie_path)
-                .args(&[
-                    &format!("{}{}", "-cvc4exe:", cvc4_path).as_str(),
-                    "-proverOpt:SOLVER=CVC4",
-                    "-doModSetAnalysis",
-                    "-useArrayTheory",
-                    "-noinfer",
-                    "-noVerify",
-                    boogie_file_path.to_str().unwrap(),
-                ])
-                .status()
-                .expect("failed to execute Boogie");
-            assert!(status.success());
-        } else if let Ok(z3_path) = env::var("Z3_EXE") {
-            let status = Command::new(boogie_path)
-                .args(&[
-                    &format!("{}{}", "-z3exe:", z3_path).as_str(),
-                    "-doModSetAnalysis",
-                    "-noinfer",
-                    "-noVerify",
-                    boogie_file_path.to_str().unwrap(),
-                ])
-                .status()
-                .expect("failed to execute Boogie");
-            assert!(status.success());
-        }
+    //    boogie_file_path.push("/tmp/output.bpl").to_string();
+
+    fs::write(&boogie_file_path, boogie_str).expect("cannot write boogie file");
+
+    if env::var("BOOGIE_EXE").is_ok() {
+        // Call boogie to verify results. Right now, we call boogie for type checking only.
+        assert!(driver.call_boogie(&boogie_file_path));
     }
 }
 
 /// Verifies or updates golden file for the given generated boogie source.
-///
-/// This re-generates the source based on the module targeted by this test.
-fn verify_or_update_golden(
-    modules: &[VerifiedModule],
-    source_maps: &[ModuleSourceMap<Loc>],
-    file_name: &str,
-    target_modules: &[&str],
-) {
-    // Translate targeted to the given set of modules, if not empty.
-    let mut ts = BoogieTranslator::new(&modules, &source_maps);
-    if !target_modules.is_empty() {
-        ts = ts.set_target_modules(target_modules);
-    }
-    let source = ts.translate();
-
+fn verify_or_update_golden(file_name: &str, boogie_str: &str) {
     // The mint created here will automatically verify/update the
     // file once it is dropped.
     let mut mint = goldenfile::Mint::new("tests/goldenfiles");
@@ -133,8 +77,8 @@ fn verify_or_update_golden(
     );
     let mut goldenfile = mint
         .new_goldenfile_with_differ(goldenfile_name, Box::new(file_diff))
-        .unwrap();
-    write!(goldenfile, "{}", clean_for_golden(&source)).unwrap();
+        .expect("failed creating golden file");
+    write!(goldenfile, "{}", clean_for_golden(&boogie_str)).expect("failed writing golden file");
 }
 
 /// Clean a content to be usable as a golden file. Currently, we ensure there are no

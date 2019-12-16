@@ -1,6 +1,6 @@
 
 
-// everything below is auto generated
+// ** structs of module TestGenerics
 
 const unique TestGenerics_R: TypeName;
 const TestGenerics_R_v: FieldName;
@@ -42,6 +42,10 @@ procedure {:inline 1} Unpack_TestGenerics_T(v: Value) returns (v0: Value)
     v0 := smap(v)[TestGenerics_T_v];
 }
 
+
+
+// ** stratified functions
+
 procedure {:inline 1} ReadValue0(p: Path, i: int, v: Value) returns (v': Value)
 {
     var e: Edge;
@@ -65,19 +69,6 @@ procedure {:inline 1} ReadValue1(p: Path, i: int, v: Value) returns (v': Value)
     }
 }
 
-procedure {:inline 1} ReadValue2(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue1(p, i+1, v');
-    }
-}
-
 procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value)
 {
     var e: Edge;
@@ -87,7 +78,7 @@ procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value
         e := p#Path(p)[i];
         if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
         if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue2(p, i+1, v');
+        call v' := ReadValue1(p, i+1, v');
     }
 }
 
@@ -116,7 +107,7 @@ procedure {:inline 1} UpdateValue1(p: Path, i: int, v: Value, new_v: Value) retu
     }
 }
 
-procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
+procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
 {
     var e: Edge;
     if (i == size#Path(p)) {
@@ -131,22 +122,12 @@ procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) retu
     }
 }
 
-procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue2(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
+
+
+// ** functions of module TestGenerics
 
 procedure {:inline 1} TestGenerics_move2 (arg0: Value, arg1: Value) returns ()
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -224,6 +205,7 @@ procedure TestGenerics_move2_verify (arg0: Value, arg1: Value) returns ()
 }
 
 procedure {:inline 1} TestGenerics_create (tv0: TypeValue, arg0: Value) returns (ret0: Value)
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // tv0
@@ -280,6 +262,7 @@ procedure TestGenerics_create_verify (tv0: TypeValue, arg0: Value) returns (ret0
 }
 
 procedure {:inline 1} TestGenerics_overcomplicated_equals (tv0: TypeValue, arg0: Value, arg1: Value) returns (ret0: Value)
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // tv0
@@ -358,6 +341,7 @@ procedure TestGenerics_overcomplicated_equals_verify (tv0: TypeValue, arg0: Valu
 }
 
 procedure {:inline 1} TestGenerics_test () returns (ret0: Value)
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // BooleanType()

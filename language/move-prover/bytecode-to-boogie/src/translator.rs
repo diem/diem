@@ -3,11 +3,14 @@
 
 //! This module translates the bytecode of a module to Boogie code.
 
-use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
+use crate::spec_translator::SpecTranslator;
+use bytecode_source_map::source_map::ModuleSourceMap;
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::parser::ast::Loc;
+use ir_to_bytecode_syntax::spec_language_ast::Condition;
 use itertools::Itertools;
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
+use log::info;
 use num::{BigInt, Num};
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
@@ -28,9 +31,36 @@ use vm::{
     },
 };
 
-pub struct BoogieTranslator {
-    pub modules: Vec<VerifiedModule>,
-    pub source_maps: SourceMap<Loc>,
+/// Represents information about a module.
+#[derive(Debug)]
+pub struct ModuleInfo {
+    /// The index of this module in the module handle table.
+    pub index: usize,
+    /// The name of this module.
+    pub name: String,
+    /// List of function specifications, in function declaration order.
+    pub function_infos: Vec<FunctionInfo>,
+}
+
+/// Represents information about a function.
+#[derive(Debug)]
+pub struct FunctionInfo {
+    // Index of this function in the module vector.
+    pub index: usize,
+    // Name of this function.
+    pub name: String,
+    // List of type argument names.
+    pub type_arg_names: Vec<String>,
+    // List of argument names.
+    pub arg_names: Vec<String>,
+    /// List of specification conditions.
+    pub specification: Vec<Condition>,
+}
+
+pub struct BoogieTranslator<'a> {
+    pub modules: &'a [VerifiedModule],
+    pub module_infos: &'a [ModuleInfo],
+    pub source_maps: &'a [ModuleSourceMap<Loc>],
     pub struct_defs: BTreeMap<String, usize>,
     pub max_struct_depth: usize,
     pub module_name_to_idx: BTreeMap<Identifier, usize>,
@@ -40,24 +70,29 @@ pub struct BoogieTranslator {
 
 pub struct ModuleTranslator<'a> {
     pub module: &'a VerifiedModule,
+    pub module_info: &'a ModuleInfo,
     pub source_map: &'a ModuleSourceMap<Loc>,
     pub stackless_bytecode: Vec<StacklessFunction>,
     pub all_type_strs: BTreeSet<String>,
     pub ignore: bool,
 }
 
-impl BoogieTranslator {
-    pub fn new(modules: &[VerifiedModule], source_maps: &[ModuleSourceMap<Loc>]) -> Self {
+impl<'a> BoogieTranslator<'a> {
+    pub fn new(
+        modules: &'a [VerifiedModule],
+        module_infos: &'a [ModuleInfo],
+        source_maps: &'a [ModuleSourceMap<Loc>],
+    ) -> Self {
         let mut struct_defs: BTreeMap<String, usize> = BTreeMap::new();
         let mut module_name_to_idx: BTreeMap<Identifier, usize> = BTreeMap::new();
         for (module_idx, module) in modules.iter().enumerate() {
-            let module_name =
-                module.identifier_at(module.module_handle_at(ModuleHandleIndex::new(0)).name);
-            module_name_to_idx.insert(module_name.into(), module_idx);
+            let module_name = module_name(module);
+            let module_str = module_name.to_string();
+            module_name_to_idx.insert(module_name, module_idx);
             for (idx, struct_def) in module.struct_defs().iter().enumerate() {
                 let struct_name = format!(
                     "{}_{}",
-                    module_name,
+                    module_str,
                     module
                         .identifier_at(module.struct_handle_at(struct_def.struct_handle).name)
                         .to_string()
@@ -66,8 +101,9 @@ impl BoogieTranslator {
             }
         }
         Self {
-            modules: modules.to_vec(),
-            source_maps: source_maps.to_vec(),
+            modules,
+            module_infos,
+            source_maps,
             struct_defs,
             max_struct_depth: 0,
             module_name_to_idx,
@@ -96,7 +132,7 @@ impl BoogieTranslator {
     }
 
     pub fn translate(&mut self) -> String {
-        let mut res = String::from("\n\n// everything below is auto generated\n\n");
+        let mut res = String::new();
         // generate names and struct specific functions for all structs
         res.push_str(&self.emit_struct_code());
 
@@ -104,7 +140,12 @@ impl BoogieTranslator {
         res.push_str(&self.emit_stratified_functions());
 
         for (module_idx, module) in self.modules.iter().enumerate() {
-            let mut mt = ModuleTranslator::new(self, &module, &self.source_maps[module_idx]);
+            let mut mt = ModuleTranslator::new(
+                self,
+                &module,
+                &self.module_infos[module_idx],
+                &self.source_maps[module_idx],
+            );
             res.push_str(&mt.translate());
         }
         res
@@ -119,6 +160,10 @@ impl BoogieTranslator {
                     res.push_str(s);
                 }
             };
+            emit_str(&format!(
+                "\n\n// ** structs of module {}\n\n",
+                module_name(module)
+            ));
             for (def_idx, struct_def) in module.struct_defs().iter().enumerate() {
                 // Emit TypeName
                 let struct_name = struct_name_from_handle_index(module, struct_def.struct_handle);
@@ -220,6 +265,7 @@ impl<'a> ModuleTranslator<'a> {
     pub fn new(
         parent: &BoogieTranslator,
         module: &'a VerifiedModule,
+        module_info: &'a ModuleInfo,
         source_map: &'a ModuleSourceMap<Loc>,
     ) -> Self {
         let stackless_bytecode = StacklessModuleGenerator::new(module.as_inner()).generate_module();
@@ -230,6 +276,7 @@ impl<'a> ModuleTranslator<'a> {
         }
         Self {
             module,
+            module_info,
             source_map,
             stackless_bytecode,
             all_type_strs,
@@ -242,11 +289,16 @@ impl<'a> ModuleTranslator<'a> {
         if self.ignore {
             return res;
         }
+        info!("translating module {}", module_name(self.module));
+        res.push_str(&format!(
+            "\n\n// ** functions of module {}\n\n",
+            module_name(self.module)
+        ));
         // translation of stackless bytecode
         for (idx, function_def) in self.module.function_defs().iter().enumerate() {
             if function_def.is_native() {
                 res.push_str(&self.generate_function_sig(idx, true, &None));
-                res.push_str(";\n");
+                res.push_str(";");
                 continue;
             }
             res.push_str(&self.translate_function(idx));
@@ -258,6 +310,7 @@ impl<'a> ModuleTranslator<'a> {
         let mut res = String::new();
         // generate inline function with function body
         res.push_str(&self.generate_function_sig(idx, true, &None)); // inlined version of function
+        res.push_str(&self.generate_function_spec(idx, &None));
         res.push_str(&self.generate_inline_function_body(idx, &None)); // generate function body
         res.push_str("\n");
 
@@ -683,8 +736,8 @@ impl<'a> ModuleTranslator<'a> {
 
     // return a string for a boogie procedure header.
     // if inline = true, add the inline attribute and use the plain function name
-    // for the procedure name.
-    // else, generate the function signature without the ":inlne" attribute, and
+    // for the procedure name. Also inject pre/post conditions if defined.
+    // Else, generate the function signature without the ":inline" attribute, and
     // append _verify to the function name.
     pub fn generate_function_sig(
         &self,
@@ -730,7 +783,7 @@ impl<'a> ModuleTranslator<'a> {
         if inline {
             format!(
                 "procedure {{:inline 1}} {} ({}) returns ({})",
-                fun_name, args, rets
+                fun_name, args, rets,
             )
         } else {
             format!(
@@ -738,6 +791,15 @@ impl<'a> ModuleTranslator<'a> {
                 fun_name, args, rets
             )
         }
+    }
+
+    // Return string for the function specification.
+    pub fn generate_function_spec(&self, idx: usize, _arg_names: &Option<Vec<String>>) -> String {
+        let function_info = &self.module_info.function_infos[idx];
+        format!(
+            "\n{}",
+            &SpecTranslator::new(self.module, function_info).translate()
+        )
     }
 
     // return string for body of verify function, which is just a call to the
@@ -803,7 +865,7 @@ impl<'a> ModuleTranslator<'a> {
         let function_def = &self.module.function_defs()[idx];
         let code = &self.stackless_bytecode[idx];
 
-        var_decls.push_str("\n{\n");
+        var_decls.push_str("{\n");
         var_decls.push_str("    // declare local variables\n");
 
         let fun_name = self.function_name_from_definition_index(idx);
@@ -1032,6 +1094,12 @@ pub fn struct_name_from_handle_index(module: &VerifiedModule, idx: StructHandleI
     let module_name = module.identifier_at(struct_handle_view.module_handle().name);
     let struct_name = struct_handle_view.name();
     format!("{}_{}", module_name, struct_name)
+}
+
+pub fn module_name(module: &VerifiedModule) -> Identifier {
+    module
+        .identifier_at(module.module_handle_at(ModuleHandleIndex::new(0)).name)
+        .into()
 }
 
 pub fn struct_type_arity_from_handle_index(

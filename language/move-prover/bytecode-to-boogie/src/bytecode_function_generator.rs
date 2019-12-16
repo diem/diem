@@ -8,9 +8,10 @@ use bytecode_verifier::VerifiedModule;
 use itertools::Itertools;
 use vm::access::ModuleAccess;
 
-impl BoogieTranslator {
+impl<'a> BoogieTranslator<'a> {
     pub fn emit_stratified_functions(&self) -> String {
         let mut res = String::new();
+        res.push_str("\n\n// ** stratified functions\n\n");
         let mut update_value_str = String::new();
         for i in 0..=self.max_struct_depth {
             if i == self.max_struct_depth {

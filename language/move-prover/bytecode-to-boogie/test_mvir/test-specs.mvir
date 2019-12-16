@@ -1,0 +1,30 @@
+module TestSpecs {
+
+    // Note the specs below maybe wrong because we do not provide an implementation. Once things are
+    // more stable, we need to add them.
+
+    resource R {
+      x: u64
+    }
+
+    public div(x1: u64, x2: u64): u64
+      requires x2 > 0
+      succeeds_if x1 > 1
+      aborts_if x1 <= 0
+      ensures return == x1 * x2
+    {
+        let r: u64;
+        r = move(x1) / move(x2);
+        return move(r);
+    }
+
+    public create_resource()
+      aborts_if global_exists<R>(0x1)
+      ensures global_exists<R>(0x1)
+    {
+      return;
+    }
+
+    // TODO: add more tests once fields are working. We can't effectively test `global` and the likes without
+    // fields ready,
+}
