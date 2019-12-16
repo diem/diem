@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::state_replication::{StateComputer, TxnManager};
+use crate::state_replication::StateComputer;
 use crate::{
     chained_bft::{
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
@@ -36,7 +36,7 @@ pub struct InitialSetup {
 /// Supports the implementation of ConsensusProvider using LibraBFT.
 pub struct ChainedBftProvider {
     smr: ChainedBftSMR<Vec<SignedTransaction>>,
-    txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
+    txn_manager: MempoolProxy,
     state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
 }
 
@@ -63,7 +63,7 @@ impl ChainedBftProvider {
 
         let mempool_client =
             MempoolClientWrapper::new("localhost", node_config.mempool.mempool_service_port);
-        let txn_manager = Arc::new(MempoolProxy::new(mempool_client));
+        let txn_manager = MempoolProxy::new(mempool_client);
 
         let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
         let smr = ChainedBftSMR::new(initial_setup, runtime, config, storage, initial_data);
@@ -100,10 +100,8 @@ impl ChainedBftProvider {
 impl ConsensusProvider for ChainedBftProvider {
     fn start(&mut self) -> Result<()> {
         debug!("Starting consensus provider.");
-        self.smr.start(
-            Arc::clone(&self.txn_manager),
-            Arc::clone(&self.state_computer),
-        )
+        self.smr
+            .start(self.txn_manager.clone(), Arc::clone(&self.state_computer))
     }
 
     fn stop(&mut self) {

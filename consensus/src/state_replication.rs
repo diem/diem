@@ -11,7 +11,7 @@ use std::{pin::Pin, sync::Arc};
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 #[tonic::async_trait]
-pub trait TxnManager: Send + Sync {
+pub trait TxnManager: Send + Sync + Clone + 'static {
     type Payload;
 
     /// Brings new transactions to be applied.
@@ -82,9 +82,9 @@ pub trait StateMachineReplication {
     type Payload;
     /// The function is synchronous: it returns when the state is initialized / recovered from
     /// persisted storage and all the threads have been started.
-    fn start(
+    fn start<TM: TxnManager<Payload = Self::Payload>>(
         &mut self,
-        txn_manager: Arc<dyn TxnManager<Payload = Self::Payload>>,
+        txn_manager: TM,
         state_computer: Arc<dyn StateComputer<Payload = Self::Payload>>,
     ) -> Result<()>;
 

@@ -50,7 +50,7 @@ struct SMRNode {
     smr_id: usize,
     smr: ChainedBftSMR<TestPayload>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
-    mempool: Arc<MockTransactionManager>,
+    mempool: MockTransactionManager,
     mempool_notif_receiver: mpsc::Receiver<usize>,
     storage: Arc<MockStorage<TestPayload>>,
     safety_rules_path: PathBuf,
@@ -110,9 +110,8 @@ impl SMRNode {
             initial_data,
         );
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
-        let mut mp = MockTransactionManager::new();
-        let commit_receiver = mp.take_commit_receiver();
-        let mempool = Arc::new(mp);
+        let (mp, commit_receiver) = MockTransactionManager::new();
+        let mempool = mp;
         smr.start(
             mempool.clone(),
             Arc::new(MockStateComputer::new(
