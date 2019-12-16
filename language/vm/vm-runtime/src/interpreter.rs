@@ -78,8 +78,10 @@ lazy_static! {
     static ref SAVE_ACCOUNT_NAME: Identifier = Identifier::new("save_account").unwrap();
     static ref DESTRUCT_FUNC_NAME: Identifier = Identifier::new("challenge_succeed").unwrap();
     static ref CHALLENGE_STRUCT_NAME: Identifier = Identifier::new("ChannelChallengedBy").unwrap();
-    static ref GET_BLOCK_HEIGHT_FUNC_NAME: Identifier = Identifier::new("get_current_block_height").unwrap();
-    static ref CHANNELLOCKEDBY_STRUCT_NAME: Identifier = Identifier::new("ChannelLockedBy").unwrap();
+    static ref GET_BLOCK_HEIGHT_FUNC_NAME: Identifier =
+        Identifier::new("get_current_block_height").unwrap();
+    static ref CHANNELLOCKEDBY_STRUCT_NAME: Identifier =
+        Identifier::new("ChannelLockedBy").unwrap();
 }
 
 fn derive_type_tag(
@@ -881,7 +883,8 @@ where
             || participant == proposer
             || *authorized
             || self.is_challenge_succeed(context)?
-            || self.is_channel_locked(context)?  // lock timeout
+            || self.is_channel_locked(context)?
+        // lock timeout
         {
             return Ok(true);
         }
@@ -1189,13 +1192,11 @@ where
     }
 
     /// call `get_current_block_height`.
-    fn call_get_current_block_height(&mut self, context: &mut dyn InterpreterContext) -> VMResult<()> {
-        self.execute_function_call(
-            context,
-            &SYSTEM_MODULE,
-            &GET_BLOCK_HEIGHT_FUNC_NAME,
-            vec![],
-        )
+    fn call_get_current_block_height(
+        &mut self,
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<()> {
+        self.execute_function_call(context, &SYSTEM_MODULE, &GET_BLOCK_HEIGHT_FUNC_NAME, vec![])
     }
 
     /// call `do_move_to_channel`.
