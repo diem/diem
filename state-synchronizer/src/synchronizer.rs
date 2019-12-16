@@ -17,7 +17,7 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_config::waypoint::Waypoint;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
-use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
+use libra_types::crypto_proxies::ValidatorChangeProof;
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
@@ -143,7 +143,7 @@ impl StateSyncClient {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> impl Future<Output = Result<ValidatorChangeEventWithProof>> {
+    ) -> impl Future<Output = Result<ValidatorChangeProof>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         let request = EpochRetrievalRequest {

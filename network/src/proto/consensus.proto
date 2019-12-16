@@ -14,7 +14,7 @@ message ConsensusMsg {
     RequestBlock request_block = 3;
     RespondBlock respond_block = 4;
     SyncInfo sync_info = 5;
-    types.ValidatorChangeEventWithProof epoch_change = 6;
+    types.ValidatorChangeProof epoch_change = 6;
     RequestEpoch request_epoch = 7;
   }
 }

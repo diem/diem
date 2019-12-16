@@ -57,7 +57,7 @@ impl AdmissionControlService {
         let (
             response_items,
             ledger_info_with_sigs,
-            validator_change_events,
+            validator_change_proof,
             ledger_consistency_proof,
         ) = self
             .storage_read_client
@@ -65,7 +65,7 @@ impl AdmissionControlService {
         let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse::new(
             response_items,
             ledger_info_with_sigs,
-            validator_change_events,
+            validator_change_proof,
             ledger_consistency_proof,
         );
         Ok(rust_resp.into())

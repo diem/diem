@@ -55,7 +55,7 @@ use libra_types::{
     account_config::AccountResource,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::EventWithProof,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     get_with_proof::{RequestItem, ResponseItem},
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
@@ -486,7 +486,7 @@ impl LibraDB {
     ) -> Result<(
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
-        ValidatorChangeEventWithProof,
+        ValidatorChangeProof,
         AccumulatorConsistencyProof,
     )> {
         error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
@@ -519,7 +519,7 @@ impl LibraDB {
         Ok((
             response_items,
             ledger_info_with_sigs,
-            ValidatorChangeEventWithProof::new(validator_change_proof),
+            ValidatorChangeProof::new(validator_change_proof),
             ledger_consistency_proof,
         ))
     }

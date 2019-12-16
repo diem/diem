@@ -404,7 +404,7 @@ fn test_execution_with_storage() {
     let (
         mut response_items,
         ledger_info_with_sigs,
-        validator_change_events,
+        validator_change_proof,
         _ledger_consistency_proof,
     ) = storage_read_client
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
@@ -418,7 +418,7 @@ fn test_execution_with_storage() {
         &request_items,
         &response_items,
         &ledger_info_with_sigs,
-        &validator_change_events,
+        &validator_change_proof,
     )
     .unwrap();
     response_items.reverse();
@@ -614,7 +614,7 @@ fn test_execution_with_storage() {
     let (
         mut response_items,
         ledger_info_with_sigs,
-        validator_change_events,
+        validator_change_proof,
         _ledger_consistency_proof,
     ) = storage_read_client
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
@@ -628,7 +628,7 @@ fn test_execution_with_storage() {
         &request_items,
         &response_items,
         &ledger_info_with_sigs,
-        &validator_change_events,
+        &validator_change_proof,
     )
     .unwrap();
     response_items.reverse();

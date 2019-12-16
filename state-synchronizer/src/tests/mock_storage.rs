@@ -8,9 +8,7 @@ use libra_crypto::hash::CryptoHash;
 use libra_crypto::HashValue;
 use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::ValidatorSet;
-use libra_types::crypto_proxies::{
-    ValidatorChangeEventWithProof, ValidatorSigner, ValidatorVerifier,
-};
+use libra_types::crypto_proxies::{ValidatorChangeProof, ValidatorSigner, ValidatorVerifier};
 use libra_types::{
     account_address::AccountAddress, crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo, test_helpers::transaction_test_helpers::get_test_signed_txn,
@@ -97,12 +95,12 @@ impl MockStorage {
         )
     }
 
-    pub fn get_epoch_changes(&self, known_epoch: u64) -> ValidatorChangeEventWithProof {
+    pub fn get_epoch_changes(&self, known_epoch: u64) -> ValidatorChangeProof {
         let mut epoch_change_lis = vec![];
         for epoch_num in known_epoch..self.epoch_num() {
             epoch_change_lis.push(self.ledger_infos.get(&epoch_num).unwrap().clone());
         }
-        ValidatorChangeEventWithProof::new(epoch_change_lis)
+        ValidatorChangeProof::new(epoch_change_lis)
     }
 
     pub fn get_chunk(

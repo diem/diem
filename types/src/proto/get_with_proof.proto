@@ -168,10 +168,10 @@ message UpdateToLatestLedgerResponse {
     // extends the old ledger the client had.
     LedgerInfoWithSignatures ledger_info_with_sigs = 2;
 
-    // Validator change events from what the client last knew.  This is used to
-    // inform the client of validator changes from the client's last known version
-    // until the current version
-    ValidatorChangeEventWithProof validator_change_events = 3;
+    // A proof for Validator changes from what the client last knew. This is
+    // used to inform the client of validator changes from the client's last
+    // known version until the current version.
+    ValidatorChangeProof validator_change_proof = 3;
 
     // A proof that shows the latest ledger accumulator is consistent with the
     // old accumulator at "client_known_version".

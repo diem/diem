@@ -8,7 +8,7 @@ use futures::{Future, FutureExt};
 use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::TransactionListWithProof,
 };
 use std::{pin::Pin, sync::Arc};
@@ -40,11 +40,7 @@ pub trait ExecutorProxyTrait: Sync + Send {
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
 
     /// Get the epoch change ledger info for [start_epoch, end_epoch) so that we can move to end_epoch.
-    fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-    ) -> Result<ValidatorChangeEventWithProof>;
+    fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof>;
 
     /// Tries to find a LedgerInfo for a given version.
     fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
@@ -128,17 +124,13 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .boxed()
     }
 
-    fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-    ) -> Result<ValidatorChangeEventWithProof> {
+    fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof> {
         let (ledger_info_per_epoch, more) = self
             .storage_read_client
             .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
         // TODO(zekun000): change this to query storage for more epoch changes.
         ensure!(!more, "Exceeded max response length.");
-        Ok(ValidatorChangeEventWithProof::new(ledger_info_per_epoch))
+        Ok(ValidatorChangeProof::new(ledger_info_per_epoch))
     }
 
     fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {

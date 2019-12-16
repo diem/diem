@@ -94,12 +94,12 @@ pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub type ValidatorSigner = RawValidatorSigner<Ed25519PrivateKey>;
 pub type ValidatorPublicKeys = RawValidatorPublicKeys<Ed25519PublicKey>;
 pub type ValidatorSet = RawValidatorSet<Ed25519PublicKey>;
-pub use crate::validator_change::ValidatorChangeEventWithProof;
+pub use crate::validator_change::ValidatorChangeProof;
 use std::sync::Arc;
 
 #[derive(Clone)]
 /// EpochInfo represents a trusted validator set to validate messages from the specific epoch,
-/// it could be updated with ValidatorChangeEventWithProof.
+/// it could be updated with ValidatorChangeProof.
 pub struct EpochInfo {
     pub epoch: u64,
     pub verifier: Arc<ValidatorVerifier>,

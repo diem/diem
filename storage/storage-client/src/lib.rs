@@ -22,7 +22,7 @@ use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
@@ -115,7 +115,7 @@ impl StorageRead for StorageReadServiceClient {
                     Output = Result<(
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
-                        ValidatorChangeEventWithProof,
+                        ValidatorChangeProof,
                         AccumulatorConsistencyProof,
                     )>,
                 > + Send,
@@ -131,7 +131,7 @@ impl StorageRead for StorageReadServiceClient {
                 Ok((
                     rust_resp.response_items,
                     rust_resp.ledger_info_with_sigs,
-                    rust_resp.validator_change_events,
+                    rust_resp.validator_change_proof,
                     rust_resp.ledger_consistency_proof,
                 ))
             })
@@ -298,7 +298,7 @@ pub trait StorageRead: Send + Sync {
     ) -> Result<(
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
-        ValidatorChangeEventWithProof,
+        ValidatorChangeProof,
         AccumulatorConsistencyProof,
     )> {
         block_on(self.update_to_latest_ledger_async(client_known_version, request_items))
@@ -318,7 +318,7 @@ pub trait StorageRead: Send + Sync {
                     Output = Result<(
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
-                        ValidatorChangeEventWithProof,
+                        ValidatorChangeProof,
                         AccumulatorConsistencyProof,
                     )>,
                 > + Send,

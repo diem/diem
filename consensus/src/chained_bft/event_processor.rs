@@ -35,7 +35,7 @@ use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::{
-    LedgerInfoWithSignatures, ValidatorChangeEventWithProof, ValidatorVerifier,
+    LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier,
 };
 use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
@@ -811,7 +811,7 @@ impl<T: Payload> EventProcessor<T> {
         }
         if finality_proof.ledger_info().next_validator_set().is_some() {
             self.network
-                .broadcast_epoch_change(ValidatorChangeEventWithProof::new(vec![finality_proof]))
+                .broadcast_epoch_change(ValidatorChangeProof::new(vec![finality_proof]))
                 .await
         }
     }

@@ -19,7 +19,7 @@ use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::ValidatorPublicKeys;
 use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::crypto_proxies::{
-    random_validator_verifier, ValidatorChangeEventWithProof, ValidatorSigner,
+    random_validator_verifier, ValidatorChangeProof, ValidatorSigner,
 };
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures, ledger_info::LedgerInfo, proof::TransactionListProof,
@@ -105,11 +105,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         async move { response }.boxed()
     }
 
-    fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        _end_epoch: u64,
-    ) -> Result<ValidatorChangeEventWithProof> {
+    fn get_epoch_proof(&self, start_epoch: u64, _end_epoch: u64) -> Result<ValidatorChangeProof> {
         Ok(self.storage.read().unwrap().get_epoch_changes(start_epoch))
     }
 
