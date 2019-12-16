@@ -47,6 +47,8 @@ impl VMVerifier for LibraVM {
     ) -> Option<VMStatus> {
         // TODO: This should be implemented as an async function.
         record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
+            // XXX: This is different from invoking bytecode verifier. Will clean the code up after
+            // refactor.
             self.move_vm
                 .execute_runtime(move |runtime| verify_transaction(runtime, transaction, state_view))
             }
@@ -66,8 +68,6 @@ impl VMExecutor for LibraVM {
         config: &VMConfig,
         state_view: &dyn StateView,
     ) -> VMResult<Vec<TransactionOutput>> {
-        // XXX This means that scripts and modules are NOT tested against the whitelist! This
-        // needs to be fixed.
         let vm = MoveVM::new(config);
 
         let mut result = vec![];

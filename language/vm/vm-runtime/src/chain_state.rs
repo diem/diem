@@ -12,14 +12,27 @@ use vm::{
 };
 use vm_runtime_types::{loaded_data::struct_def::StructDef, value::GlobalRef};
 
+/// Trait that describes what Move bytecode runtime expects from the Libra blockchain.
 pub trait ChainState {
+    // Gas operations
     fn deduct_gas(&mut self, amount: GasUnits<GasCarrier>) -> VMResult<()>;
     fn remaining_gas(&self) -> GasUnits<GasCarrier>;
 
+    // StateStore operations. Ideally the api should look like:
+    // fn read_data(&self, ap: &AccessPath) -> VMResult<Vec<u8>>;
+    // fn write_data(&mut self, ap: &AccessPath, data: Vec<u8>) -> VMResult<()>;
+    // However this is not implementable due to the current implementation of MoveVM: data are
+    // organized as a tree of GlobalRefs.
+    /// Get a mutable reference to a resource stored on chain.
     fn load_data(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalRef>;
+    /// Publish a resource to be stored on chain.
     fn publish_resource(&mut self, ap: &AccessPath, root: GlobalRef) -> VMResult<()>;
 
+    /// Check if this module exists on chain.
+    // TODO: Can we get rid of this api with the loader refactor?
     fn exists_module(&self, key: &ModuleId) -> bool;
+
+    /// Emit an event to the EventStore
     fn emit_event(&mut self, event: ContractEvent);
 }
 
