@@ -8,7 +8,7 @@ use crate::{
         module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
     },
     data_cache::BlockDataCache,
-    execution_context::TransactionExecutionContext,
+    chain_state::TransactionExecutionContext,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,

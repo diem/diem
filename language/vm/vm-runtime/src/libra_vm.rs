@@ -205,6 +205,6 @@ fn vm_thread_safe() {
 
     assert_send::<LibraVM>();
     assert_sync::<LibraVM>();
-    assert_send::<MoveVMImpl>();
-    assert_sync::<MoveVMImpl>();
+    assert_send::<MoveVM>();
+    assert_sync::<MoveVM>();
 }

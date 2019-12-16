@@ -115,7 +115,6 @@ mod counters;
 pub mod foreign_contracts;
 
 mod block_processor;
-mod chain_state;
 #[macro_use]
 pub mod gas_meter;
 mod libra_vm;
@@ -125,6 +124,7 @@ mod system_txn;
 #[cfg(test)]
 mod unit_tests;
 
+pub mod chain_state;
 pub mod code_cache;
 pub mod data_cache;
 pub mod execution_context;

@@ -4,7 +4,7 @@
 #[cfg(any(test, feature = "instruction_synthesis"))]
 use crate::data_cache::RemoteCache;
 #[cfg(any(test, feature = "instruction_synthesis"))]
-use crate::execution_context::TransactionExecutionContext;
+use crate::chain_state::TransactionExecutionContext;
 use crate::{
     code_cache::module_cache::ModuleCache,
     counters::*,
