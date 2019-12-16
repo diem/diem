@@ -69,6 +69,13 @@ impl<T: Payload> SafetyRulesManager<T> {
             .validator_signer
             .take()
             .expect("validator_signer missing");
+        Self::new_direct(storage, validator_signer)
+    }
+
+    pub fn new_direct(
+        storage: Box<dyn PersistentStorage>,
+        validator_signer: ValidatorSigner,
+    ) -> Self {
         let safety_rules = SafetyRules::new(storage, Arc::new(validator_signer));
 
         Self {
