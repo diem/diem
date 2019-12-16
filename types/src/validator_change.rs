@@ -95,7 +95,7 @@ impl Arbitrary for ValidatorChangeProof {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         vec(any::<LedgerInfoWithSignatures>(), 0..10)
-            .prop_map(|ledger_infos_with_sigs| Self::new(ledger_infos_with_sigs))
+            .prop_map(Self::new)
             .boxed()
     }
 }
