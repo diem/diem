@@ -50,6 +50,12 @@ variable "num_validators" {
   description = "Number of validator nodes to run on this network"
 }
 
+# This allows you to use a override number of validators for config generation
+variable "cfg_num_validators_override" {
+  default     = 0
+  description = "Number of validators to use when generating configs, 0 will default to using num_validators"
+}
+
 variable "num_fullnodes" {
   default     = 1
   description = "Number of full nodes to run on validators"

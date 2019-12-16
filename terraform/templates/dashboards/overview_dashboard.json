@@ -16,8 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 13,
-  "iteration": 1560824948631,
+  "iteration": 1576441758834,
   "links": [
     {
       "icon": "external link",
@@ -28,6 +27,7 @@
   "panels": [
     {
       "content": "# Workspace: $workspace",
+      "datasource": null,
       "gridPos": {
         "h": 2,
         "w": 9,
@@ -53,6 +53,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -136,6 +137,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -220,6 +222,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -297,6 +300,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -313,14 +317,17 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Rate of submit_transaction requests accepted by AdmissionControl, per-instance view.",
       "fill": 5,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 4,
         "x": 0,
         "y": 3
       },
+      "hiddenSeries": false,
       "id": 275,
       "legend": {
         "alignAsTable": false,
@@ -336,7 +343,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -402,14 +411,17 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Rate of block commits by consensus, including empty blocks.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 4,
         "x": 4,
         "y": 3
       },
+      "hiddenSeries": false,
       "id": 118,
       "legend": {
         "alignAsTable": false,
@@ -425,7 +437,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -491,14 +505,17 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Rate of transactions commits: can be zero if there are no new transactions.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 4,
         "x": 8,
         "y": 3
       },
+      "hiddenSeries": false,
       "id": 119,
       "legend": {
         "avg": false,
@@ -513,7 +530,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -579,14 +598,17 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Average time it takes for a transaction to commit since it's received by Mempool.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 4,
         "x": 12,
         "y": 3
       },
+      "hiddenSeries": false,
       "id": 120,
       "legend": {
         "avg": false,
@@ -601,7 +623,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -667,14 +691,17 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Among all the transactions of the committed blocks, calculates the percentage of the transactions that failed the execution.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 4,
         "x": 16,
         "y": 3
       },
+      "hiddenSeries": false,
       "id": 121,
       "legend": {
         "avg": false,
@@ -689,7 +716,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -756,14 +785,17 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Count the number of active transactions that timeout in mempool",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 4,
         "x": 20,
         "y": 3
       },
+      "hiddenSeries": false,
       "id": 122,
       "legend": {
         "avg": false,
@@ -778,7 +810,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -842,6 +876,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -856,6 +891,7 @@
     {
       "cacheTimeout": null,
       "content": "### Faucet",
+      "datasource": null,
       "gridPos": {
         "h": 2,
         "w": 2,
@@ -880,6 +916,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -960,6 +997,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
@@ -1045,6 +1083,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -1134,6 +1173,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -1216,6 +1256,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -1291,6 +1332,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1303,8 +1345,8 @@
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "19f93314",
-          "value": "19f93314"
+          "text": "3",
+          "value": "3"
         }
       },
       "title": "Validators",
@@ -1319,6 +1361,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1365,8 +1408,8 @@
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "19f93314",
-          "value": "19f93314"
+          "text": "3",
+          "value": "3"
         }
       },
       "sparkline": {
@@ -1410,6 +1453,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1458,8 +1502,8 @@
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "19f93314",
-          "value": "19f93314"
+          "text": "3",
+          "value": "3"
         }
       },
       "sparkline": {
@@ -1497,6 +1541,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
@@ -1544,8 +1589,8 @@
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "19f93314",
-          "value": "19f93314"
+          "text": "3",
+          "value": "3"
         }
       },
       "sparkline": {
@@ -1589,6 +1634,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -1635,8 +1681,8 @@
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "19f93314",
-          "value": "19f93314"
+          "text": "3",
+          "value": "3"
         }
       },
       "sparkline": {
@@ -1685,6 +1731,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -1731,8 +1778,8 @@
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "19f93314",
-          "value": "19f93314"
+          "text": "3",
+          "value": "3"
         }
       },
       "sparkline": {
@@ -1774,6 +1821,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -1820,8 +1868,8 @@
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "19f93314",
-          "value": "19f93314"
+          "text": "3",
+          "value": "3"
         }
       },
       "sparkline": {
@@ -1833,7 +1881,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances',mountpoint='/data'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -1842,7 +1890,97 @@
       "thresholds": "70, 90",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Disk Util",
+      "title": "/data Util",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": true,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "format": "percent",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 12,
+        "y": 14
+      },
+      "id": 300,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "scopedVars": {
+        "peer_id": {
+          "selected": false,
+          "text": "3",
+          "value": "3"
+        }
+      },
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_instances', mountpoint='/'} * 100) by (peer_id)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "70, 90",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "/ Util",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -1863,6 +2001,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#299c46"
       ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1874,7 +2013,7 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 12,
+        "x": 14,
         "y": 14
       },
       "id": 56,
@@ -1909,8 +2048,8 @@
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "19f93314",
-          "value": "19f93314"
+          "text": "3",
+          "value": "3"
         }
       },
       "sparkline": {
@@ -1946,2164 +2085,38 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 16
       },
-      "id": 276,
-      "panels": [],
-      "repeat": null,
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 2,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "6687e9a6",
-          "value": "6687e9a6"
-        }
-      },
-      "title": "Validators",
-      "type": "row"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 0,
-        "y": 17
-      },
-      "id": 277,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 44,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "6687e9a6",
-          "value": "6687e9a6"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "build_info{peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "peer_id",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 2,
-        "y": 17
-      },
-      "id": 278,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatDirection": "v",
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 59,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "6687e9a6",
-          "value": "6687e9a6"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{short_rev}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Revision",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "dtdurations",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 4,
-        "y": 17
-      },
-      "id": 279,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 45,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "6687e9a6",
-          "value": "6687e9a6"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "time() - ecs_start_time_seconds{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "86400",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Uptime",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 6,
-        "y": 17
-      },
-      "id": 280,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 48,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "6687e9a6",
-          "value": "6687e9a6"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        },
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "refId": "B"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "CPU Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 8,
-        "y": 17
-      },
-      "id": 281,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 58,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "6687e9a6",
-          "value": "6687e9a6"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Mem Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 10,
-        "y": 17
-      },
-      "id": 282,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 57,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "6687e9a6",
-          "value": "6687e9a6"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Disk Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#d44a3a",
-        "rgba(237, 129, 40, 0.89)",
-        "#299c46"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 12,
-        "y": 17
-      },
-      "id": 283,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 56,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "6687e9a6",
-          "value": "6687e9a6"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "3,2",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Connected Peers",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 19
-      },
-      "id": 284,
-      "panels": [],
-      "repeat": null,
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 2,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "3b7c756c",
-          "value": "3b7c756c"
-        }
-      },
-      "title": "Validators",
-      "type": "row"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 0,
-        "y": 20
-      },
-      "id": 285,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 44,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "3b7c756c",
-          "value": "3b7c756c"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "build_info{peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "peer_id",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 2,
-        "y": 20
-      },
-      "id": 286,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatDirection": "v",
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 59,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "3b7c756c",
-          "value": "3b7c756c"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{short_rev}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Revision",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "dtdurations",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 4,
-        "y": 20
-      },
-      "id": 287,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 45,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "3b7c756c",
-          "value": "3b7c756c"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "time() - ecs_start_time_seconds{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "86400",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Uptime",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 6,
-        "y": 20
-      },
-      "id": 288,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 48,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "3b7c756c",
-          "value": "3b7c756c"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        },
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "refId": "B"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "CPU Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 8,
-        "y": 20
-      },
-      "id": 289,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 58,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "3b7c756c",
-          "value": "3b7c756c"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Mem Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 10,
-        "y": 20
-      },
-      "id": 290,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 57,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "3b7c756c",
-          "value": "3b7c756c"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Disk Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#d44a3a",
-        "rgba(237, 129, 40, 0.89)",
-        "#299c46"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 12,
-        "y": 20
-      },
-      "id": 291,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 56,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "3b7c756c",
-          "value": "3b7c756c"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "3,2",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Connected Peers",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 22
-      },
-      "id": 292,
-      "panels": [],
-      "repeat": null,
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 2,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "dfb9c683",
-          "value": "dfb9c683"
-        }
-      },
-      "title": "Validators",
-      "type": "row"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 0,
-        "y": 23
-      },
-      "id": 293,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 44,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "dfb9c683",
-          "value": "dfb9c683"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "build_info{peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "peer_id",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 2,
-        "y": 23
-      },
-      "id": 294,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatDirection": "v",
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 59,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "dfb9c683",
-          "value": "dfb9c683"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{short_rev}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Revision",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "dtdurations",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 4,
-        "y": 23
-      },
-      "id": 295,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 45,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "dfb9c683",
-          "value": "dfb9c683"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "time() - ecs_start_time_seconds{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "86400",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Uptime",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 6,
-        "y": 23
-      },
-      "id": 296,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 48,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "dfb9c683",
-          "value": "dfb9c683"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        },
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "refId": "B"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "CPU Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 8,
-        "y": 23
-      },
-      "id": 297,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 58,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "dfb9c683",
-          "value": "dfb9c683"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Mem Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 10,
-        "y": 23
-      },
-      "id": 298,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 57,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "dfb9c683",
-          "value": "dfb9c683"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Disk Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#d44a3a",
-        "rgba(237, 129, 40, 0.89)",
-        "#299c46"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 12,
-        "y": 23
-      },
-      "id": 299,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 56,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "dfb9c683",
-          "value": "dfb9c683"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "3,2",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Connected Peers",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 25
-      },
-      "id": 300,
-      "panels": [],
-      "repeat": null,
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 2,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "4995559c",
-          "value": "4995559c"
-        }
-      },
-      "title": "Validators",
-      "type": "row"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 0,
-        "y": 26
-      },
       "id": 301,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 44,
-      "repeatedByRow": true,
+      "panels": [],
+      "repeat": null,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 2,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4995559c",
-          "value": "4995559c"
+          "text": "2",
+          "value": "2"
         }
       },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "build_info{peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "peer_id",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "name"
+      "title": "Validators",
+      "type": "row"
     },
     {
       "cacheTimeout": null,
       "colorBackground": false,
-      "colorValue": false,
+      "colorValue": true,
       "colors": [
         "#299c46",
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -4115,8 +2128,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 2,
-        "y": 26
+        "x": 0,
+        "y": 17
       },
       "id": 302,
       "interval": null,
@@ -4136,7 +2149,6 @@
       "nullPointMode": "connected",
       "nullText": null,
       "options": {},
-      "pluginVersion": "6.2.2",
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -4148,15 +2160,14 @@
           "to": "null"
         }
       ],
-      "repeatDirection": "v",
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 59,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 44,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4995559c",
-          "value": "4995559c"
+          "text": "2",
+          "value": "2"
         }
       },
       "sparkline": {
@@ -4168,33 +2179,40 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
+          "expr": "build_info{peer_id=\"$peer_id\"}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "{{short_rev}}",
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Revision",
+      "title": "peer_id",
       "type": "singlestat",
       "valueFontSize": "50%",
-      "valueMaps": [],
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
       "valueName": "name"
     },
     {
       "cacheTimeout": null,
       "colorBackground": false,
-      "colorValue": true,
+      "colorValue": false,
       "colors": [
         "#299c46",
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "format": "dtdurations",
+      "datasource": null,
+      "format": "none",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -4205,8 +2223,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 4,
-        "y": 26
+        "x": 2,
+        "y": 17
       },
       "id": 303,
       "interval": null,
@@ -4238,14 +2256,105 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
+      "repeatDirection": "v",
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 59,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "peer_id": {
+          "selected": false,
+          "text": "2",
+          "value": "2"
+        }
+      },
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "{{short_rev}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Revision",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [],
+      "valueName": "name"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": true,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "format": "dtdurations",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 4,
+        "y": 17
+      },
+      "id": 304,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "pluginVersion": "6.2.2",
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "repeatIteration": 1576441758834,
       "repeatPanelId": 45,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4995559c",
-          "value": "4995559c"
+          "text": "2",
+          "value": "2"
         }
       },
       "sparkline": {
@@ -4289,6 +2398,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -4301,106 +2411,7 @@
         "h": 2,
         "w": 2,
         "x": 6,
-        "y": 26
-      },
-      "id": 304,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 48,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "4995559c",
-          "value": "4995559c"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        },
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "refId": "B"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "CPU Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 8,
-        "y": 26
+        "y": 17
       },
       "id": 305,
       "interval": null,
@@ -4431,14 +2442,14 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 58,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 48,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4995559c",
-          "value": "4995559c"
+          "text": "2",
+          "value": "2"
         }
       },
       "sparkline": {
@@ -4450,16 +2461,23 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
+        },
+        {
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "format": "time_series",
+          "hide": true,
+          "intervalFactor": 1,
+          "refId": "B"
         }
       ],
       "thresholds": "70, 90",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Mem Util",
+      "title": "CPU Util",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -4480,6 +2498,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -4491,8 +2510,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 10,
-        "y": 26
+        "x": 8,
+        "y": 17
       },
       "id": 306,
       "interval": null,
@@ -4523,14 +2542,14 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 57,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 58,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4995559c",
-          "value": "4995559c"
+          "text": "2",
+          "value": "2"
         }
       },
       "sparkline": {
@@ -4542,7 +2561,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
+          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -4551,7 +2570,7 @@
       "thresholds": "70, 90",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Disk Util",
+      "title": "Mem Util",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -4568,11 +2587,12 @@
       "colorBackground": false,
       "colorValue": true,
       "colors": [
-        "#d44a3a",
+        "#299c46",
         "rgba(237, 129, 40, 0.89)",
-        "#299c46"
+        "#d44a3a"
       ],
-      "format": "none",
+      "datasource": null,
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -4583,8 +2603,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 12,
-        "y": 26
+        "x": 10,
+        "y": 17
       },
       "id": 307,
       "interval": null,
@@ -4615,14 +2635,14 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 56,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 57,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4995559c",
-          "value": "4995559c"
+          "text": "2",
+          "value": "2"
         }
       },
       "sparkline": {
@@ -4634,17 +2654,16 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
-          "instant": true,
           "intervalFactor": 1,
           "refId": "A"
         }
       ],
-      "thresholds": "3,2",
+      "thresholds": "70, 90",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Connected Peers",
+      "title": "/data Util",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -4657,29 +2676,6 @@
       "valueName": "current"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 28
-      },
-      "id": 308,
-      "panels": [],
-      "repeat": null,
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 2,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "4d78ab90",
-          "value": "4d78ab90"
-        }
-      },
-      "title": "Validators",
-      "type": "row"
-    },
-    {
       "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": true,
@@ -4688,6 +2684,100 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
+      "format": "percent",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 12,
+        "y": 17
+      },
+      "id": 308,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 300,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "peer_id": {
+          "selected": false,
+          "text": "2",
+          "value": "2"
+        }
+      },
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_instances', mountpoint='/'} * 100) by (peer_id)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "70, 90",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "/ Util",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": true,
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -4699,8 +2789,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 0,
-        "y": 29
+        "x": 14,
+        "y": 17
       },
       "id": 309,
       "interval": null,
@@ -4731,14 +2821,132 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 56,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "peer_id": {
+          "selected": false,
+          "text": "2",
+          "value": "2"
+        }
+      },
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "3,2",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Connected Peers",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
+      "id": 310,
+      "panels": [],
+      "repeat": null,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 2,
+      "scopedVars": {
+        "peer_id": {
+          "selected": false,
+          "text": "0",
+          "value": "0"
+        }
+      },
+      "title": "Validators",
+      "type": "row"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": true,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 0,
+        "y": 20
+      },
+      "id": 311,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "repeatIteration": 1576441758834,
       "repeatPanelId": 44,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4d78ab90",
-          "value": "4d78ab90"
+          "text": "0",
+          "value": "0"
         }
       },
       "sparkline": {
@@ -4782,6 +2990,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -4794,9 +3003,9 @@
         "h": 2,
         "w": 2,
         "x": 2,
-        "y": 29
+        "y": 20
       },
-      "id": 310,
+      "id": 312,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -4827,14 +3036,14 @@
         }
       ],
       "repeatDirection": "v",
-      "repeatIteration": 1560824948631,
+      "repeatIteration": 1576441758834,
       "repeatPanelId": 59,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4d78ab90",
-          "value": "4d78ab90"
+          "text": "0",
+          "value": "0"
         }
       },
       "sparkline": {
@@ -4872,6 +3081,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
@@ -4884,9 +3094,9 @@
         "h": 2,
         "w": 2,
         "x": 4,
-        "y": 29
+        "y": 20
       },
-      "id": 311,
+      "id": 313,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -4916,14 +3126,14 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
+      "repeatIteration": 1576441758834,
       "repeatPanelId": 45,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4d78ab90",
-          "value": "4d78ab90"
+          "text": "0",
+          "value": "0"
         }
       },
       "sparkline": {
@@ -4967,6 +3177,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -4979,198 +3190,7 @@
         "h": 2,
         "w": 2,
         "x": 6,
-        "y": 29
-      },
-      "id": 312,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 48,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "4d78ab90",
-          "value": "4d78ab90"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        },
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "refId": "B"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "CPU Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 8,
-        "y": 29
-      },
-      "id": 313,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 58,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "4d78ab90",
-          "value": "4d78ab90"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Mem Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 10,
-        "y": 29
+        "y": 20
       },
       "id": 314,
       "interval": null,
@@ -5201,14 +3221,14 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 57,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 48,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4d78ab90",
-          "value": "4d78ab90"
+          "text": "0",
+          "value": "0"
         }
       },
       "sparkline": {
@@ -5220,16 +3240,23 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
+        },
+        {
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "format": "time_series",
+          "hide": true,
+          "intervalFactor": 1,
+          "refId": "B"
         }
       ],
       "thresholds": "70, 90",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Disk Util",
+      "title": "CPU Util",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -5246,11 +3273,12 @@
       "colorBackground": false,
       "colorValue": true,
       "colors": [
-        "#d44a3a",
+        "#299c46",
         "rgba(237, 129, 40, 0.89)",
-        "#299c46"
+        "#d44a3a"
       ],
-      "format": "none",
+      "datasource": null,
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -5261,8 +3289,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 12,
-        "y": 29
+        "x": 8,
+        "y": 20
       },
       "id": 315,
       "interval": null,
@@ -5293,14 +3321,14 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 56,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 58,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "4d78ab90",
-          "value": "4d78ab90"
+          "text": "0",
+          "value": "0"
         }
       },
       "sparkline": {
@@ -5312,17 +3340,16 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
+          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
           "format": "time_series",
-          "instant": true,
           "intervalFactor": 1,
           "refId": "A"
         }
       ],
-      "thresholds": "3,2",
+      "thresholds": "70, 90",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Connected Peers",
+      "title": "Mem Util",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -5335,29 +3362,6 @@
       "valueName": "current"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 31
-      },
-      "id": 316,
-      "panels": [],
-      "repeat": null,
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 2,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "f9770caa",
-          "value": "f9770caa"
-        }
-      },
-      "title": "Validators",
-      "type": "row"
-    },
-    {
       "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": true,
@@ -5366,7 +3370,8 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "format": "none",
+      "datasource": null,
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -5377,8 +3382,101 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 0,
-        "y": 32
+        "x": 10,
+        "y": 20
+      },
+      "id": 316,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 57,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "peer_id": {
+          "selected": false,
+          "text": "0",
+          "value": "0"
+        }
+      },
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "70, 90",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "/data Util",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": true,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "format": "percent",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 12,
+        "y": 20
       },
       "id": 317,
       "interval": null,
@@ -5409,37 +3507,35 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 44,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 300,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "f9770caa",
-          "value": "f9770caa"
+          "text": "0",
+          "value": "0"
         }
       },
       "sparkline": {
         "fillColor": "rgba(31, 118, 189, 0.18)",
         "full": false,
         "lineColor": "rgb(31, 120, 193)",
-        "show": false
+        "show": true
       },
       "tableColumn": "",
       "targets": [
         {
-          "expr": "build_info{peer_id=\"$peer_id\"}",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_instances', mountpoint='/'} * 100) by (peer_id)",
           "format": "time_series",
-          "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
-      "thresholds": "",
+      "thresholds": "70, 90",
       "timeFrom": null,
       "timeShift": null,
-      "title": "peer_id",
+      "title": "/ Util",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -5449,17 +3545,18 @@
           "value": "null"
         }
       ],
-      "valueName": "name"
+      "valueName": "current"
     },
     {
       "cacheTimeout": null,
       "colorBackground": false,
-      "colorValue": false,
+      "colorValue": true,
       "colors": [
-        "#299c46",
+        "#d44a3a",
         "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
+        "#299c46"
       ],
+      "datasource": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -5471,8 +3568,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 2,
-        "y": 32
+        "x": 14,
+        "y": 20
       },
       "id": 318,
       "interval": null,
@@ -5492,7 +3589,6 @@
       "nullPointMode": "connected",
       "nullText": null,
       "options": {},
-      "pluginVersion": "6.2.2",
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -5504,127 +3600,36 @@
           "to": "null"
         }
       ],
-      "repeatDirection": "v",
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 59,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 56,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "f9770caa",
-          "value": "f9770caa"
+          "text": "0",
+          "value": "0"
         }
       },
       "sparkline": {
         "fillColor": "rgba(31, 118, 189, 0.18)",
         "full": false,
         "lineColor": "rgb(31, 120, 193)",
-        "show": false
+        "show": true
       },
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "{{short_rev}}",
           "refId": "A"
         }
       ],
-      "thresholds": "",
+      "thresholds": "3,2",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Revision",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "dtdurations",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 4,
-        "y": 32
-      },
-      "id": 319,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 45,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "f9770caa",
-          "value": "f9770caa"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "time() - ecs_start_time_seconds{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "86400",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Uptime",
+      "title": "Connected Peers",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -5637,6 +3642,30 @@
       "valueName": "current"
     },
     {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 319,
+      "panels": [],
+      "repeat": null,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 2,
+      "scopedVars": {
+        "peer_id": {
+          "selected": false,
+          "text": "1",
+          "value": "1"
+        }
+      },
+      "title": "Validators",
+      "type": "row"
+    },
+    {
       "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": true,
@@ -5645,7 +3674,8 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "format": "percent",
+      "datasource": null,
+      "format": "none",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -5656,8 +3686,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 6,
-        "y": 32
+        "x": 0,
+        "y": 23
       },
       "id": 320,
       "interval": null,
@@ -5688,42 +3718,37 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 48,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 44,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "f9770caa",
-          "value": "f9770caa"
+          "text": "1",
+          "value": "1"
         }
       },
       "sparkline": {
         "fillColor": "rgba(31, 118, 189, 0.18)",
         "full": false,
         "lineColor": "rgb(31, 120, 193)",
-        "show": true
+        "show": false
       },
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "build_info{peer_id=\"$peer_id\"}",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
-        },
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "refId": "B"
         }
       ],
-      "thresholds": "70, 90",
+      "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "CPU Util",
+      "title": "peer_id",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -5733,18 +3758,19 @@
           "value": "null"
         }
       ],
-      "valueName": "current"
+      "valueName": "name"
     },
     {
       "cacheTimeout": null,
       "colorBackground": false,
-      "colorValue": true,
+      "colorValue": false,
       "colors": [
         "#299c46",
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "format": "percent",
+      "datasource": null,
+      "format": "none",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -5755,8 +3781,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 8,
-        "y": 32
+        "x": 2,
+        "y": 23
       },
       "id": 321,
       "interval": null,
@@ -5776,6 +3802,7 @@
       "nullPointMode": "connected",
       "nullText": null,
       "options": {},
+      "pluginVersion": "6.2.2",
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -5787,35 +3814,128 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 58,
+      "repeatDirection": "v",
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 59,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "f9770caa",
-          "value": "f9770caa"
+          "text": "1",
+          "value": "1"
         }
       },
       "sparkline": {
         "fillColor": "rgba(31, 118, 189, 0.18)",
         "full": false,
         "lineColor": "rgb(31, 120, 193)",
-        "show": true
+        "show": false
       },
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
+          "legendFormat": "{{short_rev}}",
           "refId": "A"
         }
       ],
-      "thresholds": "70, 90",
+      "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Mem Util",
+      "title": "Revision",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [],
+      "valueName": "name"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": true,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "format": "dtdurations",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 4,
+        "y": 23
+      },
+      "id": 322,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "pluginVersion": "6.2.2",
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 45,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "peer_id": {
+          "selected": false,
+          "text": "1",
+          "value": "1"
+        }
+      },
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "time() - ecs_start_time_seconds{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": "86400",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Uptime",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -5836,6 +3956,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -5847,100 +3968,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 10,
-        "y": 32
-      },
-      "id": 322,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 57,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "f9770caa",
-          "value": "f9770caa"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Disk Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#d44a3a",
-        "rgba(237, 129, 40, 0.89)",
-        "#299c46"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 12,
-        "y": 32
+        "x": 6,
+        "y": 23
       },
       "id": 323,
       "interval": null,
@@ -5971,14 +4000,14 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 56,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 48,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "f9770caa",
-          "value": "f9770caa"
+          "text": "1",
+          "value": "1"
         }
       },
       "sparkline": {
@@ -5990,17 +4019,23 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
-          "instant": true,
           "intervalFactor": 1,
           "refId": "A"
+        },
+        {
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "format": "time_series",
+          "hide": true,
+          "intervalFactor": 1,
+          "refId": "B"
         }
       ],
-      "thresholds": "3,2",
+      "thresholds": "70, 90",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Connected Peers",
+      "title": "CPU Util",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -6013,29 +4048,6 @@
       "valueName": "current"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 34
-      },
-      "id": 324,
-      "panels": [],
-      "repeat": null,
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 2,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "9102bd7b",
-          "value": "9102bd7b"
-        }
-      },
-      "title": "Validators",
-      "type": "row"
-    },
-    {
       "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": true,
@@ -6044,7 +4056,8 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "format": "none",
+      "datasource": null,
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -6055,8 +4068,101 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 0,
-        "y": 35
+        "x": 8,
+        "y": 23
+      },
+      "id": 324,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 58,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "peer_id": {
+          "selected": false,
+          "text": "1",
+          "value": "1"
+        }
+      },
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "70, 90",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Mem Util",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": true,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "format": "percent",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 10,
+        "y": 23
       },
       "id": 325,
       "interval": null,
@@ -6087,37 +4193,35 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 44,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 57,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "9102bd7b",
-          "value": "9102bd7b"
+          "text": "1",
+          "value": "1"
         }
       },
       "sparkline": {
         "fillColor": "rgba(31, 118, 189, 0.18)",
         "full": false,
         "lineColor": "rgb(31, 120, 193)",
-        "show": false
+        "show": true
       },
       "tableColumn": "",
       "targets": [
         {
-          "expr": "build_info{peer_id=\"$peer_id\"}",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
-          "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
-      "thresholds": "",
+      "thresholds": "70, 90",
       "timeFrom": null,
       "timeShift": null,
-      "title": "peer_id",
+      "title": "/data Util",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -6127,18 +4231,19 @@
           "value": "null"
         }
       ],
-      "valueName": "name"
+      "valueName": "current"
     },
     {
       "cacheTimeout": null,
       "colorBackground": false,
-      "colorValue": false,
+      "colorValue": true,
       "colors": [
         "#299c46",
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "format": "none",
+      "datasource": null,
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -6149,8 +4254,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 2,
-        "y": 35
+        "x": 12,
+        "y": 23
       },
       "id": 326,
       "interval": null,
@@ -6170,7 +4275,6 @@
       "nullPointMode": "connected",
       "nullText": null,
       "options": {},
-      "pluginVersion": "6.2.2",
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -6182,53 +4286,57 @@
           "to": "null"
         }
       ],
-      "repeatDirection": "v",
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 59,
+      "repeatIteration": 1576441758834,
+      "repeatPanelId": 300,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "9102bd7b",
-          "value": "9102bd7b"
+          "text": "1",
+          "value": "1"
         }
       },
       "sparkline": {
         "fillColor": "rgba(31, 118, 189, 0.18)",
         "full": false,
         "lineColor": "rgb(31, 120, 193)",
-        "show": false
+        "show": true
       },
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_instances', mountpoint='/'} * 100) by (peer_id)",
           "format": "time_series",
-          "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "{{short_rev}}",
           "refId": "A"
         }
       ],
-      "thresholds": "",
+      "thresholds": "70, 90",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Revision",
+      "title": "/ Util",
       "type": "singlestat",
       "valueFontSize": "50%",
-      "valueMaps": [],
-      "valueName": "name"
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
     },
     {
       "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": true,
       "colors": [
-        "#299c46",
+        "#d44a3a",
         "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
+        "#299c46"
       ],
-      "format": "dtdurations",
+      "datasource": null,
+      "format": "none",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -6239,8 +4347,8 @@
       "gridPos": {
         "h": 2,
         "w": 2,
-        "x": 4,
-        "y": 35
+        "x": 14,
+        "y": 23
       },
       "id": 327,
       "interval": null,
@@ -6260,7 +4368,6 @@
       "nullPointMode": "connected",
       "nullText": null,
       "options": {},
-      "pluginVersion": "6.2.2",
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -6272,1747 +4379,14 @@
           "to": "null"
         }
       ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 45,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "9102bd7b",
-          "value": "9102bd7b"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "time() - ecs_start_time_seconds{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "86400",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Uptime",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 6,
-        "y": 35
-      },
-      "id": 328,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 48,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "9102bd7b",
-          "value": "9102bd7b"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        },
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "refId": "B"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "CPU Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 8,
-        "y": 35
-      },
-      "id": 329,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 58,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "9102bd7b",
-          "value": "9102bd7b"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Mem Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 10,
-        "y": 35
-      },
-      "id": 330,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 57,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "9102bd7b",
-          "value": "9102bd7b"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Disk Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#d44a3a",
-        "rgba(237, 129, 40, 0.89)",
-        "#299c46"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 12,
-        "y": 35
-      },
-      "id": 331,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
+      "repeatIteration": 1576441758834,
       "repeatPanelId": 56,
       "repeatedByRow": true,
       "scopedVars": {
         "peer_id": {
           "selected": false,
-          "text": "9102bd7b",
-          "value": "9102bd7b"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "3,2",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Connected Peers",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 37
-      },
-      "id": 332,
-      "panels": [],
-      "repeat": null,
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 2,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "26873dec",
-          "value": "26873dec"
-        }
-      },
-      "title": "Validators",
-      "type": "row"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 0,
-        "y": 38
-      },
-      "id": 333,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 44,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "26873dec",
-          "value": "26873dec"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "build_info{peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "peer_id",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 2,
-        "y": 38
-      },
-      "id": 334,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatDirection": "v",
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 59,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "26873dec",
-          "value": "26873dec"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{short_rev}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Revision",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "dtdurations",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 4,
-        "y": 38
-      },
-      "id": 335,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 45,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "26873dec",
-          "value": "26873dec"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "time() - ecs_start_time_seconds{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "86400",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Uptime",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 6,
-        "y": 38
-      },
-      "id": 336,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 48,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "26873dec",
-          "value": "26873dec"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        },
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "refId": "B"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "CPU Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 8,
-        "y": 38
-      },
-      "id": 337,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 58,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "26873dec",
-          "value": "26873dec"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Mem Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 10,
-        "y": 38
-      },
-      "id": 338,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 57,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "26873dec",
-          "value": "26873dec"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Disk Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#d44a3a",
-        "rgba(237, 129, 40, 0.89)",
-        "#299c46"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 12,
-        "y": 38
-      },
-      "id": 339,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 56,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "26873dec",
-          "value": "26873dec"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "3,2",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Connected Peers",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 40
-      },
-      "id": 340,
-      "panels": [],
-      "repeat": null,
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 2,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "c28b9535",
-          "value": "c28b9535"
-        }
-      },
-      "title": "Validators",
-      "type": "row"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 0,
-        "y": 41
-      },
-      "id": 341,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 44,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "c28b9535",
-          "value": "c28b9535"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "build_info{peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "peer_id",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 2,
-        "y": 41
-      },
-      "id": 342,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatDirection": "v",
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 59,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "c28b9535",
-          "value": "c28b9535"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{short_rev}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Revision",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [],
-      "valueName": "name"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "dtdurations",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 4,
-        "y": 41
-      },
-      "id": 343,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.2.2",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 45,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "c28b9535",
-          "value": "c28b9535"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "time() - ecs_start_time_seconds{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "86400",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Uptime",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 6,
-        "y": 41
-      },
-      "id": 344,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 48,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "c28b9535",
-          "value": "c28b9535"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        },
-        {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "refId": "B"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "CPU Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 8,
-        "y": 41
-      },
-      "id": 345,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 58,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "c28b9535",
-          "value": "c28b9535"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - (node_memory_MemFree_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Cached_bytes{workspace='$workspace',peer_id='$peer_id'} + node_memory_Buffers_bytes{workspace='$workspace',peer_id='$peer_id'}) / node_memory_MemTotal_bytes{workspace='$workspace',peer_id='$peer_id'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Mem Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 10,
-        "y": 41
-      },
-      "id": 346,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 57,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "c28b9535",
-          "value": "c28b9535"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "70, 90",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Disk Util",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#d44a3a",
-        "rgba(237, 129, 40, 0.89)",
-        "#299c46"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 2,
-        "x": 12,
-        "y": 41
-      },
-      "id": 347,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeatIteration": 1560824948631,
-      "repeatPanelId": 56,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "peer_id": {
-          "selected": false,
-          "text": "c28b9535",
-          "value": "c28b9535"
+          "text": "1",
+          "value": "1"
         }
       },
       "sparkline": {
@@ -8047,7 +4421,7 @@
       "valueName": "current"
     }
   ],
-  "schemaVersion": 18,
+  "schemaVersion": 21,
   "style": "dark",
   "tags": [
     "overview",
@@ -8083,6 +4457,7 @@
       {
         "allValue": null,
         "current": {
+          "tags": [],
           "text": "All",
           "value": [
             "$__all"
@@ -8142,5 +4517,5 @@
   "timezone": "",
   "title": "Overview",
   "uid": "overview10",
-  "version": 1
+  "version": 2
 }
