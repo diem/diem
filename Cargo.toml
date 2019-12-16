@@ -28,6 +28,7 @@ members = [
     "consensus",
     "consensus/consensus-types",
     "consensus/safety-rules",
+    "consensus/block-storage-proto",
     "crypto/crypto",
     "crypto/crypto-derive",
     "executor",

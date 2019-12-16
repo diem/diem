@@ -61,6 +61,7 @@ itertools = { version = "0.8.0", default-features = false }
 cuckoo = { path = "crypto/cuckoo" }
 scrypt = { path = "crypto/scrypt" }
 miner = { path = "miner" }
+block-storage-proto = { path = "block-storage-proto" }
 
 [dev-dependencies]
 cached = "0.9.0"
