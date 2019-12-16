@@ -1,6 +1,6 @@
 
 
-// everything below is auto generated
+// ** structs of module Test3
 
 const unique Test3_T: TypeName;
 const Test3_T_f: FieldName;
@@ -26,6 +26,10 @@ procedure {:inline 1} Unpack_Test3_T(v: Value) returns (v0: Value, v1: Value)
     v1 := smap(v)[Test3_T_g];
 }
 
+
+
+// ** stratified functions
+
 procedure {:inline 1} ReadValue0(p: Path, i: int, v: Value) returns (v': Value)
 {
     var e: Edge;
@@ -49,19 +53,6 @@ procedure {:inline 1} ReadValue1(p: Path, i: int, v: Value) returns (v': Value)
     }
 }
 
-procedure {:inline 1} ReadValue2(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue1(p, i+1, v');
-    }
-}
-
 procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value)
 {
     var e: Edge;
@@ -71,7 +62,7 @@ procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value
         e := p#Path(p)[i];
         if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
         if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue2(p, i+1, v');
+        call v' := ReadValue1(p, i+1, v');
     }
 }
 
@@ -100,7 +91,7 @@ procedure {:inline 1} UpdateValue1(p: Path, i: int, v: Value, new_v: Value) retu
     }
 }
 
-procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
+procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
 {
     var e: Edge;
     if (i == size#Path(p)) {
@@ -115,22 +106,12 @@ procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) retu
     }
 }
 
-procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue2(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
+
+
+// ** functions of module Test3
 
 procedure {:inline 1} Test3_test3 (arg0: Value) returns ()
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // BooleanType()

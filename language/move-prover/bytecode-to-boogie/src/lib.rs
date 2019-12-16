@@ -3,7 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-//! Translates bytecode to Boogie.
+//! Move prover modules
 
 pub mod bytecode_function_generator;
+pub mod cli;
+pub mod driver;
+pub mod spec_translator;
 pub mod translator;

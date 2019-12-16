@@ -4,63 +4,66 @@
 mod driver;
 use driver::*;
 
+fn std_mvir(b: &str) -> String {
+    format!("../../stdlib/modules/{}.mvir", b)
+}
+
 #[test]
 fn test3() {
-    run_boogie(&generate_boogie("test_mvir/test3.mvir", &["Test3"]));
+    test(&["test_mvir/test3.mvir"]);
 }
 
 #[test]
 fn test_arithmetic() {
-    run_boogie(&generate_boogie(
-        "test_mvir/test-arithmetic.mvir",
-        &["TestArithmetic"],
-    ));
+    test(&["test_mvir/test-arithmetic.mvir"]);
 }
 
 #[test]
 fn test_control_flow() {
-    run_boogie(&generate_boogie(
-        "test_mvir/test-control-flow.mvir",
-        &["TestControlFlow"],
-    ));
+    test(&["test_mvir/test-control-flow.mvir"]);
 }
 
 #[test]
 fn test_func_call() {
-    run_boogie(&generate_boogie(
-        "test_mvir/test-func-call.mvir",
-        &["TestFuncCall"],
-    ));
+    test(&["test_mvir/test-func-call.mvir"]);
 }
 
 #[test]
 fn test_reference() {
-    run_boogie(&generate_boogie(
-        "test_mvir/test-reference.mvir",
-        &["TestReference"],
-    ));
+    test(&["test_mvir/test-reference.mvir"]);
 }
 
 #[test]
 fn test_struct() {
-    run_boogie(&generate_boogie(
-        "test_mvir/test-struct.mvir",
-        &["TestStruct"],
-    ));
+    test(&["test_mvir/test-struct.mvir"]);
 }
 
 #[test]
 fn test_lib() {
-    run_boogie(&generate_boogie(
+    test(&[
+        &std_mvir("vector"),
+        &std_mvir("u64_util"),
+        &std_mvir("address_util"),
+        &std_mvir("bytearray_util"),
+        &std_mvir("hash"),
+        &std_mvir("signature"),
+        &std_mvir("gas_schedule"),
+        &std_mvir("validator_config"),
+        &std_mvir("libra_coin"),
+        &std_mvir("libra_account"),
+        // TODO(wrwg): this currently fails with boogie compilation errors
+        //   call to undeclared procedure: Vector_contains (etc)
+        // &std_mvir("libra_system"),
         "test_mvir/test-lib.mvir",
-        &[], // empty here means include all deps in output
-    ));
+    ]);
 }
 
 #[test]
 fn test_generics() {
-    run_boogie(&generate_boogie(
-        "test_mvir/test-generics.mvir",
-        &["TestGenerics"],
-    ));
+    test(&[&std_mvir("vector"), "test_mvir/test-generics.mvir"]);
+}
+
+#[test]
+fn test_specs() {
+    test(&["test_mvir/test-specs.mvir"]);
 }

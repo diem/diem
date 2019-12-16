@@ -119,6 +119,52 @@ var gs : GlobalStore;
 var m : Memory;
 var m_size : int;
 
+
+// ============================================================================================
+// Spec support
+
+// TODO: fill this in
+function ExistsTxnSenderAccount(): bool;
+
+// Tests whether resource exists.
+function {:inline 1} ExistsResource(gs: GlobalStore, addr: Address, resource: TypeName): Value {
+  Boolean(domain#TypeStore(contents#GlobalStore(gs)[addr])[resource])
+}
+
+// Obtains reference to the given resource.
+function {:inline 1} GetResourceReference(gs: GlobalStore, addr: Address, resource: TypeName): Reference {
+  Reference(
+    Global(addr, resource),
+    Path(DefaultPath, 0),
+    contents#TypeStore(contents#GlobalStore(gs)[addr])[resource]
+  )
+}
+
+// Obtains reference to local.
+function {:inline 1} GetLocalReference(frame_idx: int, idx: int): Reference {
+  Reference(
+    Local(),
+    Path(DefaultPath, 0),
+    frame_idx + idx
+  )
+}
+
+// Applies a field selection to the reference.
+function {:inline 1} SelectField(ref: Reference, field: FieldName): Reference {
+  Reference(
+    rt#Reference(ref),
+    Path(p#Path(p#Reference(ref))[size#Path(p#Reference(ref)) := Field(field)], size#Path(p#Reference(ref)) + 1),
+    l#Reference(ref)
+  )
+}
+
+// Dereferences a reference.
+// TODO: this is currently not implemented, it would require the stratified functions to deal with
+//   going through the Path. As we are refactoring this right now, it is kept open.
+function {:inline 1} Dereference(m: Memory, ref: Reference): Value;
+
+
+
 // ============================================================================================
 // Instructions
 

@@ -1,6 +1,6 @@
 
 
-// everything below is auto generated
+// ** structs of module TestReference
 
 const unique TestReference_T: TypeName;
 const TestReference_T_value: FieldName;
@@ -21,6 +21,10 @@ procedure {:inline 1} Unpack_TestReference_T(v: Value) returns (v0: Value)
     assert is#Struct(v);
     v0 := smap(v)[TestReference_T_value];
 }
+
+
+
+// ** stratified functions
 
 procedure {:inline 1} ReadValue0(p: Path, i: int, v: Value) returns (v': Value)
 {
@@ -45,19 +49,6 @@ procedure {:inline 1} ReadValue1(p: Path, i: int, v: Value) returns (v': Value)
     }
 }
 
-procedure {:inline 1} ReadValue2(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue1(p, i+1, v');
-    }
-}
-
 procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value)
 {
     var e: Edge;
@@ -67,7 +58,7 @@ procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value
         e := p#Path(p)[i];
         if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
         if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue2(p, i+1, v');
+        call v' := ReadValue1(p, i+1, v');
     }
 }
 
@@ -96,7 +87,7 @@ procedure {:inline 1} UpdateValue1(p: Path, i: int, v: Value, new_v: Value) retu
     }
 }
 
-procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
+procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
 {
     var e: Edge;
     if (i == size#Path(p)) {
@@ -111,22 +102,12 @@ procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) retu
     }
 }
 
-procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue2(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
+
+
+// ** functions of module TestReference
 
 procedure {:inline 1} TestReference_mut_b (arg0: Reference) returns ()
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Reference; // ReferenceType(IntegerType())
@@ -161,6 +142,7 @@ procedure TestReference_mut_b_verify (arg0: Reference) returns ()
 }
 
 procedure {:inline 1} TestReference_mut_ref () returns ()
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // IntegerType()

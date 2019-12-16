@@ -1,6 +1,6 @@
 
 
-// everything below is auto generated
+// ** structs of module TestStruct
 
 const unique TestStruct_B: TypeName;
 const TestStruct_B_addr: FieldName;
@@ -93,6 +93,10 @@ procedure {:inline 1} Unpack_TestStruct_T(v: Value) returns (v0: Value)
     assert is#Struct(v);
     v0 := smap(v)[TestStruct_T_x];
 }
+
+
+
+// ** stratified functions
 
 procedure {:inline 1} ReadValue0(p: Path, i: int, v: Value) returns (v': Value)
 {
@@ -226,7 +230,12 @@ procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) re
     }
 }
 
+
+
+// ** functions of module TestStruct
+
 procedure {:inline 1} TestStruct_identity (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // TestStruct_A_type_value()
@@ -266,6 +275,7 @@ procedure TestStruct_identity_verify (arg0: Value, arg1: Value) returns (ret0: V
 }
 
 procedure {:inline 1} TestStruct_module_builtins (arg0: Value) returns (ret0: Value)
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -377,6 +387,7 @@ procedure TestStruct_module_builtins_verify (arg0: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} TestStruct_nested_struct (arg0: Value) returns (ret0: Value)
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -513,6 +524,7 @@ procedure TestStruct_nested_struct_verify (arg0: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} TestStruct_try_unpack (arg0: Value) returns (ret0: Value)
+requires ExistsTxnSenderAccount();
 {
     // declare local variables
     var t0: Value; // AddressType()
