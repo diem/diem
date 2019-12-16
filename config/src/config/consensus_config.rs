@@ -45,6 +45,8 @@ pub struct ConsensusConfig {
     pub miner_client_enable: bool,
     pub consensus_type: ConsensusType,
     pub miner_rpc_address: String,
+    pub consensus_rpc_address: String,
+    pub consensus_rpc_port: u16,
 
     // consensus_keypair contains the node's consensus keypair.
     // it is filled later on from consensus_keypair_file.
@@ -79,6 +81,8 @@ impl Default for ConsensusConfig {
             consensus_type: ConsensusType::POW,
             miner_rpc_address: "127.0.0.1:4251".to_string(),
             miner_client_enable: true,
+            consensus_rpc_address: "0.0.0.0".to_string(),
+            consensus_rpc_port: 8008,
         }
     }
 }
@@ -120,6 +124,8 @@ impl ConsensusConfig {
             consensus_type: self.consensus_type.clone(),
             miner_rpc_address: self.miner_rpc_address.clone(),
             miner_client_enable: self.miner_client_enable,
+            consensus_rpc_address: self.consensus_rpc_address.clone(),
+            consensus_rpc_port: self.consensus_rpc_port.clone(),
         }
     }
 
@@ -208,6 +214,7 @@ impl ConsensusConfig {
 
     pub fn randomize_ports(&mut self) {
         self.miner_rpc_address = format!("127.0.0.1:{}", utils::get_available_port());
+        self.consensus_rpc_port = utils::get_available_port();
     }
 
     fn default_peers(keypair: &ConsensusKeyPair, peer_id: PeerId) -> ConsensusPeersConfig {
