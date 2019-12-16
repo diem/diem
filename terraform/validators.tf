@@ -188,7 +188,7 @@ data "template_file" "ecs_task_definition" {
     mem              = local.mem_by_instance[var.validator_type]
     cfg_listen_addr  = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
     cfg_node_index   = count.index
-    cfg_num_validators = var.num_validators
+    cfg_num_validators = var.cfg_num_validators_override == 0 ? var.num_validators : var.cfg_num_validators_override
     cfg_seed         = var.config_seed
     cfg_seed_peer_ip = local.seed_peer_ip
     cfg_upstream_node_index = ""
