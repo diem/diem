@@ -156,7 +156,7 @@ impl Iterator for BlockIndex {
             .block_store
             .get_block_by_hash::<BlockPayloadExt>(&next_hash)
         {
-            let payload = match block.payload() {
+            let _ = match block.payload() {
                 Some(payload) => {
                     let target: H256 = from_slice(&payload.target).into();
                     let algo: Algo = payload.algo.clone().into();
