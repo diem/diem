@@ -4,8 +4,6 @@
 use anyhow::{ensure, format_err, Result};
 use config_builder;
 use executor::{ExecutedTrees, Executor};
-use grpc_helpers::ServerHandle;
-use grpcio::EnvBuilder;
 use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
 use libra_crypto::{
     ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue, PrivateKey,
@@ -58,21 +56,16 @@ fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
 
 fn create_storage_service_and_executor(
     config: &NodeConfig,
-) -> (ServerHandle, Executor<LibraVM>, ExecutedTrees) {
-    let mut rt = Runtime::new().unwrap();
-    let storage_server_handle = start_storage_service(config);
+) -> (Runtime, Executor<LibraVM>, ExecutedTrees) {
+    let mut rt = start_storage_service(config);
 
-    let client_env = Arc::new(EnvBuilder::new().build());
     let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        Arc::clone(&client_env),
         &config.storage.address,
         config.storage.port,
     ));
     let storage_write_client = Arc::new(StorageWriteServiceClient::new(
-        Arc::clone(&client_env),
         &config.storage.address,
         config.storage.port,
-        None,
     ));
 
     let executor = Executor::new(
@@ -86,7 +79,7 @@ fn create_storage_service_and_executor(
         .expect("unable to read ledger info from storage")
         .expect("startup info is None");
     let committed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
-    (storage_server_handle, executor, committed_trees)
+    (rt, executor, committed_trees)
 }
 
 fn get_test_signed_transaction(
@@ -210,7 +203,6 @@ fn test_execution_with_storage() {
         create_storage_service_and_executor(&config);
 
     let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        Arc::new(EnvBuilder::new().build()),
         &config.storage.address,
         config.storage.port,
     ));

@@ -7,7 +7,6 @@ use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender}
 
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
 use executor::Executor;
-use grpcio::EnvBuilder;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
@@ -45,9 +44,7 @@ pub fn make_consensus_provider(
 
 /// Create a storage read client based on the config
 pub fn create_storage_read_client(config: &NodeConfig) -> Arc<dyn StorageRead> {
-    let env = Arc::new(EnvBuilder::new().name_prefix("grpc-con-sto-").build());
     Arc::new(StorageReadServiceClient::new(
-        env,
         &config.storage.address,
         config.storage.port,
     ))

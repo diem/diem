@@ -13,7 +13,6 @@ edition = "2018"
 anyhow = "1.0"
 chrono = "0.4.7"
 futures = "0.1.28"
-grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 tonic = { git = "https://github.com/hyperium/tonic.git" }
 hex = "0.3.2"
 itertools = "0.8.0"
