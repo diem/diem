@@ -8,7 +8,8 @@ use admission_control_proto::{
 };
 use anyhow::{bail, Result};
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::EpochInfo;
+use libra_types::crypto_proxies::{EpochInfo, LedgerInfoWithSignatures};
+use libra_types::validator_change::VerifierType;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -20,27 +21,44 @@ use libra_types::{
     },
     transaction::{Transaction, Version},
     vm_error::StatusCode,
+    waypoint::Waypoint,
 };
 use std::convert::TryFrom;
 use std::sync::{Arc, Mutex};
 
 const MAX_GRPC_RETRY_COUNT: u64 = 1;
 
+struct TrustedState {
+    version: Version,
+    verifier: VerifierType,
+    latest_epoch_change_li: Option<LedgerInfoWithSignatures>,
+}
+
 /// Struct holding dependencies of client, known_version_and_epoch is updated when learning about
 /// new LedgerInfo
 pub struct GRPCClient {
     client: AdmissionControlClientBlocking,
-    known_version_and_epoch: Arc<Mutex<(Version, EpochInfo)>>,
+    state: Arc<Mutex<TrustedState>>,
 }
 
 impl GRPCClient {
     /// Construct a new Client instance.
-    pub fn new(host: &str, port: u16, initial_epoch_info: EpochInfo) -> Result<Self> {
+    pub fn new(host: &str, port: u16, waypoint: Option<Waypoint>) -> Result<Self> {
         let client = AdmissionControlClientBlocking::new(host, port);
-
+        // If waypoint is present, use it for initial verification, otherwise the initial
+        // verification is essentially empty.
+        let (initial_version, initial_verifier) = waypoint.map_or(
+            (0, VerifierType::TrustedVerifier(EpochInfo::empty())),
+            |w| (w.version(), VerifierType::Waypoint(w)),
+        );
+        let initial_state = TrustedState {
+            version: initial_version,
+            verifier: initial_verifier,
+            latest_epoch_change_li: None,
+        };
         Ok(GRPCClient {
             client,
-            known_version_and_epoch: Arc::new(Mutex::new((0, initial_epoch_info))),
+            state: Arc::new(Mutex::new(initial_state)),
         })
     }
 
@@ -105,21 +123,26 @@ impl GRPCClient {
         &mut self,
         requested_items: Vec<RequestItem>,
     ) -> Result<UpdateToLatestLedgerResponse> {
-        let known_version_and_epoch = Arc::clone(&self.known_version_and_epoch);
+        let current_state = Arc::clone(&self.state);
         let req = UpdateToLatestLedgerRequest::new(
-            known_version_and_epoch.lock().unwrap().0,
+            current_state.lock().unwrap().version,
             requested_items.clone(),
         );
         debug!("get_with_proof with request: {:?}", req);
         let proto_req = req.clone().into();
         let resp = self.client.update_to_latest_ledger(proto_req)?;
         let resp = UpdateToLatestLedgerResponse::try_from(resp)?;
-        let mut wlock = known_version_and_epoch.lock().unwrap();
-        if let Some(new_epoch_info) = resp.verify(&wlock.1, &req)? {
+        let mut state = current_state.lock().unwrap();
+        if let Some(new_epoch_info) = resp.verify(&state.verifier, &req)? {
             info!("Trusted epoch change to :{}", new_epoch_info);
-            wlock.1 = new_epoch_info;
+            state.verifier = VerifierType::TrustedVerifier(new_epoch_info);
+            state.latest_epoch_change_li = resp
+                .validator_change_proof
+                .ledger_info_with_sigs
+                .last()
+                .cloned();
         }
-        wlock.0 = resp.ledger_info_with_sigs.ledger_info().version();
+        state.version = resp.ledger_info_with_sigs.ledger_info().version();
         Ok(resp)
     }
 
@@ -136,6 +159,11 @@ impl GRPCClient {
             }
         }
         false
+    }
+
+    /// LedgerInfo corresponding to the latest epoch change.
+    pub(crate) fn latest_epoch_change_li(&self) -> Option<LedgerInfoWithSignatures> {
+        self.state.lock().unwrap().latest_epoch_change_li.clone()
     }
 
     /// Sync version of get_with_proof

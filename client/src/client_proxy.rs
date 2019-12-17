@@ -7,7 +7,8 @@ use anyhow::{bail, ensure, format_err, Error, Result};
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
-use libra_types::crypto_proxies::{EpochInfo, ValidatorVerifier};
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
+use libra_types::waypoint::Waypoint;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -31,7 +32,6 @@ use num_traits::{
 use reqwest;
 use rust_decimal::Decimal;
 use serde_json;
-use std::sync::Arc;
 use std::{
     collections::{BTreeMap, HashMap},
     convert::TryFrom,
@@ -111,15 +111,9 @@ impl ClientProxy {
         sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
+        waypoint: Option<Waypoint>,
     ) -> Result<Self> {
-        let mut client = GRPCClient::new(
-            host,
-            ac_port,
-            EpochInfo {
-                epoch: 0,
-                verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
-            },
-        )?;
+        let mut client = GRPCClient::new(host, ac_port, waypoint)?;
 
         let accounts = vec![];
 
@@ -189,6 +183,12 @@ impl ClientProxy {
         )?;
 
         Ok(self.insert_account_data(account_data))
+    }
+
+    /// Returns the ledger info corresonding to the latest epoch change
+    /// (could further be used for e.g., generating a waypoint)
+    pub fn latest_epoch_change_li(&self) -> Option<LedgerInfoWithSignatures> {
+        self.client.latest_epoch_change_li()
     }
 
     /// Print index and address of all accounts.
@@ -841,9 +841,10 @@ impl ClientProxy {
     }
 
     /// Test gRPC client connection with validator.
-    pub fn test_validator_connection(&mut self) -> Result<()> {
-        self.client.get_with_proof_sync(vec![])?;
-        Ok(())
+    pub fn test_validator_connection(&mut self) -> Result<LedgerInfoWithSignatures> {
+        self.client
+            .get_with_proof_sync(vec![])
+            .map(|res| res.ledger_info_with_sigs)
     }
 
     /// Get account state from validator and update status of account if it is cached locally.
@@ -1159,6 +1160,7 @@ mod tests {
             false,
             None,
             Some(mnemonic_path),
+            None,
         )
         .unwrap();
         for _ in 0..count {

@@ -3,11 +3,13 @@
 
 #![forbid(unsafe_code)]
 
-use crate::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
+use crate::crypto_proxies::{EpochInfo, LedgerInfoWithSignatures};
+use crate::waypoint::Waypoint;
 use anyhow::{ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*};
 use std::convert::{TryFrom, TryInto};
+use std::sync::Arc;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
@@ -15,6 +17,39 @@ use std::convert::{TryFrom, TryInto};
 pub struct ValidatorChangeProof {
     pub ledger_info_with_sigs: Vec<LedgerInfoWithSignatures>,
     pub more: bool,
+}
+
+#[derive(Clone)]
+/// The verification of the validator change proof starts with some verifier that is trusted by the
+/// client: could be either a waypoint (upon startup) or a known validator verifier.
+pub enum VerifierType {
+    Waypoint(Waypoint),
+    TrustedVerifier(EpochInfo),
+}
+
+impl VerifierType {
+    pub fn verify(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<()> {
+        match self {
+            VerifierType::Waypoint(w) => w.verify(ledger_info.ledger_info()),
+            VerifierType::TrustedVerifier(epoch_info) => {
+                ensure!(
+                    epoch_info.epoch == ledger_info.ledger_info().epoch(),
+                    "LedgerInfo has unexpected epoch"
+                );
+                ledger_info.verify(epoch_info.verifier.as_ref())?;
+                Ok(())
+            }
+        }
+    }
+
+    /// Returns true in case the given epoch is larger than the existing verifier can support.
+    /// In this case the ValidatorChangeProof should be verified and the verifier updated.
+    pub fn epoch_change_verification_required(&self, epoch: u64) -> bool {
+        match self {
+            VerifierType::Waypoint(_) => true,
+            VerifierType::TrustedVerifier(epoch_info) => epoch_info.epoch < epoch,
+        }
+    }
 }
 
 impl ValidatorChangeProof {
@@ -35,30 +70,30 @@ impl ValidatorChangeProof {
 
     /// Verify the proof is correctly chained with known epoch and validator verifier
     /// and return the LedgerInfo to start target epoch
-    pub fn verify(
-        &self,
-        epoch: u64,
-        validator_verifier: &ValidatorVerifier,
-    ) -> Result<LedgerInfoWithSignatures> {
+    /// In case waypoint is present it's going to be used for verifying the very first epoch change
+    /// (it's the responsibility of the caller to not pass waypoint in case it's not needed).
+    pub fn verify(&self, verifier: &VerifierType) -> Result<LedgerInfoWithSignatures> {
         ensure!(
             !self.ledger_info_with_sigs.is_empty(),
             "Empty ValidatorChangeProof"
         );
-        self.ledger_info_with_sigs.iter().try_fold(
-            (epoch, validator_verifier.clone()),
-            |(epoch, validator_verifier), ledger_info| {
-                ensure!(
-                    epoch == ledger_info.ledger_info().epoch(),
-                    "LedgerInfo has unexpected epoch"
-                );
-                ledger_info.verify(&validator_verifier)?;
+        self.ledger_info_with_sigs
+            .iter()
+            .try_fold(verifier.clone(), |verifier, ledger_info| {
+                verifier.verify(ledger_info)?;
+                // While the original verification could've been via waypoints, all the next epoch
+                // changes are verified using the (already trusted) validator sets.
                 ledger_info
                     .ledger_info()
                     .next_validator_set()
-                    .map(|v| (epoch + 1, v.into()))
+                    .map(|v| {
+                        VerifierType::TrustedVerifier(EpochInfo {
+                            epoch: ledger_info.ledger_info().epoch() + 1,
+                            verifier: Arc::new(v.into()),
+                        })
+                    })
                     .ok_or_else(|| format_err!("LedgerInfo doesn't carry ValidatorSet"))
-            },
-        )?;
+            })?;
         Ok(self.ledger_info_with_sigs.last().unwrap().clone())
     }
 }
@@ -152,16 +187,29 @@ mod tests {
 
         // Test well-formed proof will succeed
         let proof_1 = ValidatorChangeProof::new(valid_ledger_info.clone(), /* more = */ false);
-        assert!(proof_1.verify(all_epoch[0], &validator_verifier[0]).is_ok());
+        assert!(proof_1
+            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+                epoch: all_epoch[0],
+                verifier: Arc::new(validator_verifier[0].clone())
+            }))
+            .is_ok());
 
         let proof_2 =
             ValidatorChangeProof::new(valid_ledger_info[2..5].to_vec(), /* more = */ false);
-        assert!(proof_2.verify(all_epoch[2], &validator_verifier[2]).is_ok());
+        assert!(proof_2
+            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+                epoch: all_epoch[2],
+                verifier: Arc::new(validator_verifier[2].clone())
+            }))
+            .is_ok());
 
         // Test empty proof will fail verification
         let proof_3 = ValidatorChangeProof::new(vec![], /* more = */ false);
         assert!(proof_3
-            .verify(all_epoch[0], &validator_verifier[0])
+            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+                epoch: all_epoch[0],
+                verifier: Arc::new(validator_verifier[0].clone())
+            }))
             .is_err());
 
         // Test non contiguous proof will fail
@@ -169,7 +217,10 @@ mod tests {
         list.extend_from_slice(&valid_ledger_info[8..9]);
         let proof_4 = ValidatorChangeProof::new(list, /* more = */ false);
         assert!(proof_4
-            .verify(all_epoch[3], &validator_verifier[3])
+            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+                epoch: all_epoch[3],
+                verifier: Arc::new(validator_verifier[3].clone())
+            }))
             .is_err());
 
         // Test non increasing proof will fail
@@ -177,7 +228,10 @@ mod tests {
         list.reverse();
         let proof_5 = ValidatorChangeProof::new(list, /* more = */ false);
         assert!(proof_5
-            .verify(all_epoch[9], &validator_verifier[9])
+            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+                epoch: all_epoch[9],
+                verifier: Arc::new(validator_verifier[9].clone())
+            }))
             .is_err());
 
         // Test proof with invalid signatures will fail
@@ -189,7 +243,22 @@ mod tests {
             /* more = */ false,
         );
         assert!(proof_6
-            .verify(all_epoch[0], &validator_verifier[0])
+            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+                epoch: all_epoch[0],
+                verifier: Arc::new(validator_verifier[0].clone())
+            }))
+            .is_err());
+
+        // Test proof with waypoint corresponding to the first epoch change succeeds.
+        let waypoint_for_1_to_2 = Waypoint::new(valid_ledger_info[0].ledger_info()).unwrap();
+        assert!(proof_1
+            .verify(&VerifierType::Waypoint(waypoint_for_1_to_2))
+            .is_ok());
+
+        // Waypoint to wrong epoch change fails verification.
+        let waypoint_for_2_to_3 = Waypoint::new(valid_ledger_info[1].ledger_info()).unwrap();
+        assert!(proof_1
+            .verify(&VerifierType::Waypoint(waypoint_for_2_to_3))
             .is_err());
     }
 }

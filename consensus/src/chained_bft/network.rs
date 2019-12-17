@@ -19,6 +19,7 @@ use libra_types::account_address::AccountAddress;
 use libra_types::crypto_proxies::{EpochInfo, ValidatorChangeProof};
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 use libra_types::proto::types::ValidatorChangeProof as ValidatorChangeProofProto;
+use libra_types::validator_change::VerifierType;
 use network::{
     proto::{
         ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RequestEpoch,
@@ -496,8 +497,9 @@ impl<T: Payload> NetworkTask<T> {
         let msg_epoch = proof.epoch()?;
         match msg_epoch.cmp(&self.epoch()) {
             Ordering::Equal => {
-                let rlock = self.epoch_info.read().unwrap();
-                let target_ledger_info = proof.verify(rlock.epoch, &rlock.verifier)?;
+                let verifier =
+                    VerifierType::TrustedVerifier(self.epoch_info.read().unwrap().clone());
+                let target_ledger_info = proof.verify(&verifier)?;
                 debug!(
                     "Received epoch change to {}",
                     target_ledger_info.ledger_info().epoch() + 1
