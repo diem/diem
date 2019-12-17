@@ -39,7 +39,7 @@ pub use safety_rules_config::*;
 mod test_config;
 pub use test_config::*;
 mod vm_config;
-use crate::waypoint::Waypoint;
+use libra_types::waypoint::Waypoint;
 pub use vm_config::*;
 
 /// Config pulls in configuration information from the config file.

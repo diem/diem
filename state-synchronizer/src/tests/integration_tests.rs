@@ -11,19 +11,19 @@ use config_builder;
 use executor::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
-use libra_config::waypoint::Waypoint;
 use libra_crypto::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue};
 use libra_logger::set_simple_logger;
-use libra_types::block_info::BlockInfo;
-use libra_types::crypto_proxies::ValidatorPublicKeys;
-use libra_types::crypto_proxies::ValidatorSet;
-use libra_types::crypto_proxies::{
-    random_validator_verifier, ValidatorChangeProof, ValidatorSigner,
-};
 use libra_types::{
-    crypto_proxies::LedgerInfoWithSignatures, ledger_info::LedgerInfo, proof::TransactionListProof,
+    block_info::BlockInfo,
+    crypto_proxies::{
+        random_validator_verifier, LedgerInfoWithSignatures, ValidatorChangeProof,
+        ValidatorPublicKeys, ValidatorSet, ValidatorSigner,
+    },
+    ledger_info::LedgerInfo,
+    proof::TransactionListProof,
     transaction::TransactionListWithProof,
+    waypoint::Waypoint,
 };
 use network::{
     validator_network::{
