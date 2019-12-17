@@ -25,5 +25,4 @@ pub use crate::{
 pub mod test_utils;
 
 #[cfg(test)]
-#[path = "safety_rules_test.rs"]
-mod safety_rules_test;
+mod tests;

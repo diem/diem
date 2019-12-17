@@ -39,7 +39,7 @@ fn test_initial_state() {
         InMemoryStorage::default_storage(),
         Arc::new(ValidatorSigner::from_int(0)),
     );
-    let state = safety_rules.consensus_state();
+    let state = safety_rules.consensus_state().unwrap();
     assert_eq!(state.last_voted_round(), block.round());
     assert_eq!(state.preferred_round(), block.round());
 }
@@ -74,43 +74,43 @@ fn test_preferred_block_rule() {
 
     safety_rules.update(a1.block().quorum_cert()).unwrap();
     assert_eq!(
-        safety_rules.consensus_state().preferred_round(),
+        safety_rules.consensus_state().unwrap().preferred_round(),
         genesis_block.round()
     );
 
     safety_rules.update(b1.block().quorum_cert()).unwrap();
     assert_eq!(
-        safety_rules.consensus_state().preferred_round(),
+        safety_rules.consensus_state().unwrap().preferred_round(),
         genesis_block.round()
     );
 
     safety_rules.update(a2.block().quorum_cert()).unwrap();
     assert_eq!(
-        safety_rules.consensus_state().preferred_round(),
+        safety_rules.consensus_state().unwrap().preferred_round(),
         genesis_block.round()
     );
 
     safety_rules.update(b2.block().quorum_cert()).unwrap();
     assert_eq!(
-        safety_rules.consensus_state().preferred_round(),
+        safety_rules.consensus_state().unwrap().preferred_round(),
         genesis_block.round()
     );
 
     safety_rules.update(a3.block().quorum_cert()).unwrap();
     assert_eq!(
-        safety_rules.consensus_state().preferred_round(),
+        safety_rules.consensus_state().unwrap().preferred_round(),
         b1.block().round()
     );
 
     safety_rules.update(b3.block().quorum_cert()).unwrap();
     assert_eq!(
-        safety_rules.consensus_state().preferred_round(),
+        safety_rules.consensus_state().unwrap().preferred_round(),
         b1.block().round()
     );
 
     safety_rules.update(a4.block().quorum_cert()).unwrap();
     assert_eq!(
-        safety_rules.consensus_state().preferred_round(),
+        safety_rules.consensus_state().unwrap().preferred_round(),
         a2.block().round()
     );
 }
