@@ -6,17 +6,14 @@
 //! next step.
 
 use admission_control_proto::proto::admission_control::{
-    AdmissionControl, SubmitTransactionRequest, SubmitTransactionResponse,
+    admission_control_server::AdmissionControl, SubmitTransactionRequest, SubmitTransactionResponse,
 };
-use anyhow::{format_err, Result};
+use anyhow::Result;
 use futures::{
     channel::{mpsc, oneshot},
-    executor::block_on,
     SinkExt,
 };
-use grpc_helpers::provide_grpc_response;
 use libra_logger::prelude::*;
-use libra_metrics::counters::SVC_COUNTERS;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -49,7 +46,7 @@ impl AdmissionControlService {
     }
 
     /// Pass the UpdateToLatestLedgerRequest to Storage for read query.
-    fn update_to_latest_ledger_inner(
+    async fn update_to_latest_ledger_inner(
         &self,
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {
@@ -61,7 +58,8 @@ impl AdmissionControlService {
             ledger_consistency_proof,
         ) = self
             .storage_read_client
-            .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)?;
+            .update_to_latest_ledger_async(rust_req.client_known_version, rust_req.requested_items)
+            .await?;
         let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse::new(
             response_items,
             ledger_info_with_sigs,
@@ -72,38 +70,44 @@ impl AdmissionControlService {
     }
 }
 
+#[tonic::async_trait]
 impl AdmissionControl for AdmissionControlService {
     /// Submit a transaction to the validator this AC instance connecting to.
     /// The specific transaction will be first validated by VM and then passed
     /// to Mempool for further processing.
-    fn submit_transaction(
-        &mut self,
-        ctx: ::grpcio::RpcContext<'_>,
-        req: SubmitTransactionRequest,
-        sink: ::grpcio::UnarySink<SubmitTransactionResponse>,
-    ) {
+    async fn submit_transaction(
+        &self,
+        request: tonic::Request<SubmitTransactionRequest>,
+    ) -> Result<tonic::Response<SubmitTransactionResponse>, tonic::Status> {
         debug!("[GRPC] AdmissionControl::submit_transaction");
-        let _timer = SVC_COUNTERS.req(&ctx);
+        let req = request.into_inner();
 
         let (req_sender, res_receiver) = oneshot::channel();
-        let sent_result = block_on(self.ac_sender.send((req, req_sender)));
-        let resp = match sent_result {
-            Ok(()) => {
-                let result = block_on(res_receiver);
-                result.unwrap_or_else(|e| {
-                    Err(format_err!(
-                        "[admission-control] Submitting transaction failed with error: {:?}",
+        self.ac_sender
+            .clone()
+            .send((req, req_sender))
+            .await
+            .map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Internal,
+                    format!(
+                        "[admission-control] Failed to submit write request with error: {:?}",
                         e
-                    ))
-                })
-            }
-            Err(e) => Err(format_err!(
-                "[admission-control] Failed to submit write request with error: {:?}",
-                e
-            )),
-        };
+                    ),
+                )
+            })?;
 
-        provide_grpc_response(resp, ctx, sink);
+        let resp = res_receiver.await.unwrap().map_err(|e| {
+            tonic::Status::new(
+                tonic::Code::Internal,
+                format!(
+                    "[admission-control] Submitting transaction failed with error: {:?}",
+                    e
+                ),
+            )
+        })?;
+
+        Ok(tonic::Response::new(resp))
     }
 
     /// This API is used to update the client to the latest ledger version and optionally also
@@ -112,15 +116,16 @@ impl AdmissionControl for AdmissionControlService {
     /// Note that if a client only wishes to update to the latest LedgerInfo and receive the proof
     /// of this latest version, they can simply omit the requested_items (or pass an empty list).
     /// AC will not directly process this request but pass it to Storage instead.
-    fn update_to_latest_ledger(
-        &mut self,
-        ctx: grpcio::RpcContext<'_>,
-        req: libra_types::proto::types::UpdateToLatestLedgerRequest,
-        sink: grpcio::UnarySink<libra_types::proto::types::UpdateToLatestLedgerResponse>,
-    ) {
+    async fn update_to_latest_ledger(
+        &self,
+        request: tonic::Request<UpdateToLatestLedgerRequest>,
+    ) -> Result<tonic::Response<UpdateToLatestLedgerResponse>, tonic::Status> {
         debug!("[GRPC] AdmissionControl::update_to_latest_ledger");
-        let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.update_to_latest_ledger_inner(req);
-        provide_grpc_response(resp, ctx, sink);
+        let req = request.into_inner();
+        let resp = self
+            .update_to_latest_ledger_inner(req)
+            .await
+            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
+        Ok(tonic::Response::new(resp))
     }
 }
