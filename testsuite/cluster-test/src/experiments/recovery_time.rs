@@ -37,7 +37,7 @@ pub struct RecoveryTime {
 impl ExperimentParam for RecoveryTimeParams {
     type E = RecoveryTime;
     fn build(self, cluster: &Cluster) -> Self::E {
-        let instance = cluster.random_instance().clone();
+        let instance = cluster.random_validator_instance().clone();
         Self::E {
             params: self,
             instance,
@@ -60,7 +60,7 @@ impl Experiment for RecoveryTime {
                 .tx_emitter
                 .mint_accounts(
                     &EmitJobRequest {
-                        instances: context.cluster.instances().to_vec(),
+                        instances: context.cluster.validator_instances().to_vec(),
                         accounts_per_client: 100,
                         thread_params: EmitThreadParams::default(),
                     },

@@ -28,6 +28,11 @@ pub struct PerformanceBenchmarkNodesDownParams {
         help = "Number of nodes which should be down"
     )]
     pub num_nodes_down: usize,
+    #[structopt(
+        long,
+        help = "Whether cluster test should run against validators or full nodes"
+    )]
+    pub is_fullnode: bool,
 }
 
 pub struct PerformanceBenchmarkNodesDown {
@@ -39,10 +44,10 @@ pub struct PerformanceBenchmarkNodesDown {
 impl ExperimentParam for PerformanceBenchmarkNodesDownParams {
     type E = PerformanceBenchmarkNodesDown;
     fn build(self, cluster: &Cluster) -> Self::E {
-        let (down_instances, up_instances) = cluster.split_n_random(self.num_nodes_down);
+        let (down_instances, up_instances) = cluster.split_n_validators_random(self.num_nodes_down);
         Self::E {
-            down_instances: down_instances.into_instances(),
-            up_instances: up_instances.into_instances(),
+            down_instances: down_instances.into_validator_instances(),
+            up_instances: up_instances.into_validator_instances(),
             num_nodes_down: self.num_nodes_down,
         }
     }

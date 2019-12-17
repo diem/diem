@@ -299,7 +299,7 @@ impl BasicSwarmUtil {
         let mut emitter = TxEmitter::new(&self.cluster);
         emitter
             .start_job(EmitJobRequest {
-                instances: self.cluster.instances().to_vec(),
+                instances: self.cluster.validator_instances().to_vec(),
                 accounts_per_client,
                 thread_params,
             })
@@ -316,7 +316,7 @@ impl ClusterUtil {
         let cluster = if args.peers.is_empty() {
             cluster
         } else {
-            cluster.sub_cluster(args.peers.clone())
+            cluster.validator_sub_cluster(args.peers.clone())
         };
         let prometheus = Prometheus::new(
             cluster
@@ -325,7 +325,7 @@ impl ClusterUtil {
         );
         info!(
             "Discovered {} peers in {} workspace",
-            cluster.instances().len(),
+            cluster.validator_instances().len(),
             aws.workspace()
         );
         Self {
@@ -336,14 +336,14 @@ impl ClusterUtil {
     }
 
     pub fn discovery(&self) {
-        for instance in self.cluster.instances() {
+        for instance in self.cluster.validator_instances() {
             println!("{} {}", instance.peer_name(), instance.ip());
         }
     }
 
     pub fn pssh(&self, cmd: Vec<String>) {
         let mut runtime = Runtime::new().unwrap();
-        let futures = self.cluster.instances().iter().map(|x| {
+        let futures = self.cluster.validator_instances().iter().map(|x| {
             x.run_cmd_tee_err(&cmd).map(move |r| {
                 if let Err(e) = r {
                     warn!("Failed on {}: {}", x, e)
@@ -357,7 +357,7 @@ impl ClusterUtil {
         let mut emitter = TxEmitter::new(&self.cluster);
         emitter
             .start_job(EmitJobRequest {
-                instances: self.cluster.instances().to_vec(),
+                instances: self.cluster.validator_instances().to_vec(),
                 accounts_per_client,
                 thread_params,
             })
@@ -642,7 +642,7 @@ impl ClusterTestRunner {
     }
 
     pub fn stop_experiment(&mut self, max_stopped: usize) {
-        let mut instances = self.cluster.instances().to_vec();
+        let mut instances = self.cluster.validator_instances().to_vec();
         let mut rng = ThreadRng::default();
         let mut stop_effects = vec![];
         let mut stopped_instance_ids = vec![];
@@ -713,7 +713,7 @@ impl ClusterTestRunner {
 
     fn wait_until_all_healthy(&mut self) -> Result<()> {
         let wait_deadline = Instant::now() + Duration::from_secs(20 * 60);
-        for instance in self.cluster.instances() {
+        for instance in self.cluster.validator_instances() {
             self.health_check_runner.invalidate(instance.peer_name());
         }
         loop {
@@ -772,7 +772,7 @@ impl ClusterTestRunner {
         info!("Will use suffix {} for log rotation", suffix);
         let jobs = self
             .cluster
-            .instances()
+            .validator_instances()
             .iter()
             .map(|instance| Self::wipe_instance(log_file, &suffix, instance));
         self.runtime.block_on(join_all(jobs));
@@ -796,7 +796,7 @@ impl ClusterTestRunner {
     }
 
     fn reboot(&mut self) {
-        let futures = self.cluster.instances().iter().map(|instance| {
+        let futures = self.cluster.validator_instances().iter().map(|instance| {
             async move {
                 let reboot = Reboot::new(instance.clone());
                 reboot
@@ -816,7 +816,7 @@ impl ClusterTestRunner {
     }
 
     fn cleanup(&mut self) {
-        let futures = self.cluster.instances().iter().map(|instance| {
+        let futures = self.cluster.validator_instances().iter().map(|instance| {
             async move {
                 RemoveNetworkEffects::new(instance.clone())
                     .apply()
@@ -846,7 +846,7 @@ impl ClusterTestRunner {
 
     fn make_stop_effects(&self) -> Vec<StopContainer> {
         self.cluster
-            .instances()
+            .validator_instances()
             .clone()
             .into_iter()
             .map(StopContainer::new)
