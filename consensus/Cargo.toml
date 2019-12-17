@@ -33,6 +33,7 @@ tokio = { version = "0.2", features = ["full"] }
 prometheus = { version = "0.7.0", default-features = false }
 proptest = { version = "0.9.4", optional = true }
 chrono = "0.4.10"
+grpc-helpers = { path = "../common/grpc-helpers" }
 
 channel = { path = "../common/channel", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }

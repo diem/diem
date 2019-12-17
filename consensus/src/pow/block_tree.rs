@@ -1,4 +1,4 @@
-use crate::pow::payload_ext::genesis_id;
+use crate::pow::payload_ext::{genesis_id};
 use crate::state_replication::TxnManager;
 use anyhow::{Result, *};
 use atomic_refcell::AtomicRefCell;
@@ -13,6 +13,8 @@ use libra_types::PeerId;
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
 use storage_client::StorageWrite;
+use crate::chained_bft::consensusdb::ConsensusDB;
+use consensus_types::{block::Block, common::Payload};
 
 pub type BlockHeight = u64;
 
@@ -35,18 +37,28 @@ pub struct BlockTree {
     tail_height: BlockHeight,
     txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
     rollback_mode: bool,
+    block_store: Arc<ConsensusDB>,
 }
 
 impl BlockTree {
-    pub fn new(
+    pub fn new<T: Payload>(
         write_storage: Arc<dyn StorageWrite>,
         txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
         rollback_mode: bool,
+        block_store: Arc<ConsensusDB>,
     ) -> Self {
-        // genesis block info
-        let genesis_block_info = BlockInfo::genesis_block_info();
-        let genesis_id = genesis_block_info.id();
-        let genesis_height = genesis_block_info.height();
+        let genesis_height = 0;
+        let genesis_block: Block<T> = Block::make_genesis_block();
+        let genesis_id = genesis_block.id();
+        let genesis_block_info = BlockInfo::new_inner(&genesis_id, &PRE_GENESIS_BLOCK_ID, genesis_height, 0, None);
+        let genesis_block_index = genesis_block_info.block_index();
+
+        //init block_store
+        let mut genesis_qcs = Vec::new();
+        genesis_qcs.push(genesis_block.quorum_cert().clone());
+        block_store
+            .save_blocks_and_quorum_certificates(vec![genesis_block], genesis_qcs)
+            .expect("save blocks failed.");
 
         // indexes
         let mut genesis_indexes = LinkedList::new();
@@ -73,7 +85,12 @@ impl BlockTree {
             tail_height: genesis_height,
             txn_manager,
             rollback_mode,
+            block_store,
         }
+    }
+
+    pub fn init(&mut self) {
+        //TODO
     }
 
     //    fn prune(&mut self) {
@@ -94,7 +111,7 @@ impl BlockTree {
     //        }
     //    }
 
-    async fn add_block_info_inner(&mut self, new_block_info: BlockInfo, new_root: bool) {
+    async fn add_block_info_inner<T: Payload>(&mut self, block: Block<T>, new_block_info: BlockInfo, new_root: bool) {
         //4. new root, rollback, commit
         if new_root {
             let old_root = self.root_hash();
@@ -157,6 +174,13 @@ impl BlockTree {
         //5. add new block info
         self.id_to_block
             .insert(new_block_info.id().clone(), new_block_info);
+
+        //6. insert block
+        let mut qcs = Vec::new();
+        qcs.push(block.quorum_cert().clone());
+        let mut blocks: Vec<Block<T>> = Vec::new();
+        blocks.push(block);
+        self.block_store.save_blocks_and_quorum_certificates(blocks, qcs).expect("save_blocks err.");
     }
 
     async fn commit_block(&self, block_info: &BlockInfo) {
@@ -198,19 +222,19 @@ impl BlockTree {
             .expect("save transactions failed.");
 
         // 3. update main chain
+        self.block_store.insert_block_index(&height, &block_index).expect("insert_block_index err.");
         self.main_chain.borrow_mut().insert(height, block_index);
     }
 
-    pub async fn add_block_info(
+    pub async fn add_block_info<T: Payload>(
         &mut self,
-        id: &HashValue,
+        block: Block<T>,
         parent_id: &HashValue,
-        timestamp_usecs: u64,
         vm_output: ProcessedVMOutput,
         commit_data: CommitData,
     ) -> Result<()> {
         //1. new_block_info not exist
-        let id_exist = self.id_to_block.contains_key(id);
+        let id_exist = self.id_to_block.contains_key(&block.id());
         ensure!(!id_exist, "block already exist in block tree.");
 
         //2. parent exist
@@ -229,14 +253,14 @@ impl BlockTree {
         };
 
         let new_block_info = BlockInfo::new(
-            id,
+            &block.id(),
             parent_id,
             height,
-            timestamp_usecs,
+            block.timestamp_usecs(),
             vm_output,
             commit_data,
         );
-        self.add_block_info_inner(new_block_info, new_root).await;
+        self.add_block_info_inner(block, new_block_info, new_root).await;
         Ok(())
     }
 
@@ -395,9 +419,9 @@ impl BlockInfo {
         }
     }
 
-    fn genesis_block_info() -> Self {
-        BlockInfo::new_inner(&genesis_id(), &PRE_GENESIS_BLOCK_ID, 0, 0, None)
-    }
+//    fn genesis_block_info() -> Self {
+//        BlockInfo::new_inner(&genesis_id(), &PRE_GENESIS_BLOCK_ID, 0, 0, None)
+//    }
 
     fn block_index(&self) -> BlockIndex {
         self.block_index

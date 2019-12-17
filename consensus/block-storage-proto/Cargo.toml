@@ -15,6 +15,8 @@ protobuf = "2.7"
 
 libra-types = { path = "../../types", version = "0.1.0" }
 anyhow = "1.0"
+network = { path = "../../network", version = "0.1.0" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 
 [build-dependencies]
 grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }

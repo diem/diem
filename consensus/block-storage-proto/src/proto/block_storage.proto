@@ -2,45 +2,46 @@ syntax = "proto3";
 
 package block_storage;
 
+import "consensus.proto";
+import "google/protobuf/empty.proto";
+
 // --------------------------------------------------------------
 // ----------- Service definition for BlockStorage
 // --------------------------------------------------------------
 service BlockStorage {
-    rpc test(EmptyResponse) returns (EmptyResponse);
-    rpc GetBlockSummaryByBlockId(GetBlockSummaryByBlockIdRequest) returns (GetBlockSummaryByBlockIdResponse);
+    rpc GetBlockByBlockId(BlockId) returns (GetBlockByBlockIdResponse);
     rpc GetBlockSummaryList(GetBlockSummaryListRequest) returns (GetBlockSummaryListResponse);
+    rpc LatestBlockHeight(google.protobuf.Empty) returns (LatestBlockHeightResponse);
 }
 
-message EmptyResponse {}
-
-message GetBlockSummaryByBlockIdRequest {
-    bytes block_id = 1;
+message GetBlockByBlockIdResponse {
+    consensus.Block block = 1;
 }
 
 message BlockSummary {
-    BlockId block_id = 1;
+    bytes block_id = 1;
     uint64 height = 2;
     bytes parent_id = 3;
-    bytes accumulator_hash = 4;
-    bytes accumulator_root_hash = 5;
+    bytes accumulator_root_hash = 4;
+    bytes state_root_hash = 5;
     bytes miner = 6;
     uint64 nonce = 7;
     bytes target = 8;
     uint32 algo = 9;
 }
 
-message GetBlockSummaryByBlockIdResponse {
-    BlockSummary block_summary = 1;
+message GetBlockSummaryListRequest {
+    BlockId block_id = 1;
 }
 
 message BlockId {
     bytes id = 1;
 }
 
-message GetBlockSummaryListRequest {
-    repeated BlockId ids = 1;
-}
-
 message GetBlockSummaryListResponse {
     repeated BlockSummary blocks = 1;
+}
+
+message LatestBlockHeightResponse {
+    uint64 height = 1;
 }
