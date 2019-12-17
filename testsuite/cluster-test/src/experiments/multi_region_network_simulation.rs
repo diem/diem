@@ -72,8 +72,11 @@ impl MultiRegionSimulation {
         cross_region_delay: Duration,
         context: &mut Context,
     ) -> Result<Metrics> {
-        let (cluster1, cluster2) = context.cluster.split_n_random(count);
-        let (region1, region2) = (cluster1.into_instances(), cluster2.into_instances());
+        let (cluster1, cluster2) = context.cluster.split_n_validators_random(count);
+        let (region1, region2) = (
+            cluster1.into_validator_instances(),
+            cluster2.into_validator_instances(),
+        );
         let (smaller_region, larger_region);
         if region1.len() < region2.len() {
             smaller_region = &region1;
@@ -202,7 +205,7 @@ impl Experiment for MultiRegionSimulation {
                 for cross_region_latency in &self.params.cross_region_latencies {
                     let job = emitter
                         .start_job(EmitJobRequest {
-                            instances: context.cluster.instances().clone(),
+                            instances: context.cluster.validator_instances().clone(),
                             accounts_per_client: 10,
                             thread_params: EmitThreadParams::default(),
                         })

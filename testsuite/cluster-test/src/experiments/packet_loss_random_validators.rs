@@ -50,14 +50,14 @@ pub struct PacketLossRandomValidatorsParams {
 impl ExperimentParam for PacketLossRandomValidatorsParams {
     type E = PacketLossRandomValidators;
     fn build(self, cluster: &Cluster) -> Self::E {
-        let total_instances = cluster.instances().len();
+        let total_instances = cluster.validator_instances().len();
         let packet_loss_num_instances: usize = std::cmp::min(
             ((self.percent_instances / 100.0) * total_instances as f32).ceil() as usize,
             total_instances,
         );
-        let (test_cluster, _) = cluster.split_n_random(packet_loss_num_instances);
+        let (test_cluster, _) = cluster.split_n_validators_random(packet_loss_num_instances);
         Self::E {
-            instances: test_cluster.into_instances(),
+            instances: test_cluster.into_validator_instances(),
             percent: self.packet_loss_percent,
             duration: Duration::from_secs(self.duration_secs),
         }

@@ -30,7 +30,7 @@ impl DebugPortLogThread {
     pub fn spawn_new(cluster: &Cluster) -> LogTail {
         let (event_sender, event_receiver) = mpsc::channel();
         let mut started_receivers = vec![];
-        for instance in cluster.instances() {
+        for instance in cluster.validator_instances() {
             let (started_sender, started_receiver) = mpsc::channel();
             started_receivers.push(started_receiver);
             let client = NodeDebugClient::new(instance.ip(), 6191);

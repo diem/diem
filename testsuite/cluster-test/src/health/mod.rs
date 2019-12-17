@@ -111,7 +111,7 @@ impl HealthCheckRunner {
         print_failures: PrintFailures,
     ) -> Result<Vec<String>> {
         let mut node_health = HashMap::new();
-        for instance in self.cluster.instances() {
+        for instance in self.cluster.validator_instances() {
             node_health.insert(instance.peer_name().clone(), true);
         }
         let mut messages = vec![];
