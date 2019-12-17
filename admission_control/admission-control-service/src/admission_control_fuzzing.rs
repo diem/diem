@@ -24,6 +24,7 @@ fn test_fuzzer() {
 }
 
 /// generate_corpus produces an arbitrary SubmitTransactionRequest for admission control
+// LCOV_EXCL_START
 pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
     // use proptest to generate a SignedTransaction
     let signed_txn = gen.generate(proptest::arbitrary::any::<SignedTransaction>());
@@ -33,9 +34,11 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 
     req.to_vec().unwrap()
 }
+// LCOV_EXCL_STOP
 
 /// fuzzer takes a serialized SubmitTransactionRequest an process it with an admission control
 /// service
+// LCOV_EXCL_START
 pub fn fuzzer(data: &[u8]) {
     // parse SubmitTransactionRequest
     let req = match SubmitTransactionRequest::decode(data) {
@@ -70,3 +73,4 @@ pub fn fuzzer(data: &[u8]) {
         panic!();
     }
 }
+// LCOV_EXCL_STOP
