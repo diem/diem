@@ -185,13 +185,21 @@ pub fn main() {
     } else if args.run_ci_suite {
         perf_msg = Some(exit_on_error(runner.run_ci_suite()));
     } else if let Some(experiment_name) = args.run {
-        runner
+        if let Some(result) = runner
             .cleanup_and_run(get_experiment(
                 &experiment_name,
                 &args.last,
                 &runner.cluster,
             ))
-            .unwrap();
+            .unwrap()
+        {
+            info!(
+                "{}Experiment Result: {}{}",
+                style::Bold,
+                result,
+                style::Reset
+            );
+        };
     } else if args.changelog.is_none() && args.deploy.is_none() {
         println!("No action specified");
         process::exit(1);
