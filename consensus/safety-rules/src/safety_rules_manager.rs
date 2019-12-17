@@ -2,15 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    local_client::LocalClient, persistent_storage::PersistentStorage, InMemoryStorage,
-    OnDiskStorage, SafetyRules, TSafetyRules,
+    local_client::LocalClient,
+    persistent_storage::PersistentStorage,
+    remote::{RemoteClient, RemoteService},
+    InMemoryStorage, OnDiskStorage, SafetyRules, TSafetyRules,
 };
 use consensus_types::common::Payload;
-use libra_config::config::{NodeConfig, SafetyRulesBackend, SafetyRulesConfig};
+use libra_config::config::{NodeConfig, SafetyRulesBackend, SafetyRulesConfig, SafetyRulesService};
 use libra_types::crypto_proxies::ValidatorSigner;
 use std::sync::{Arc, RwLock};
 
 pub struct SafetyRulesManagerConfig {
+    service: SafetyRulesService,
     storage: Option<Box<dyn PersistentStorage>>,
     validator_signer: Option<ValidatorSigner>,
 }
@@ -48,6 +51,7 @@ impl SafetyRulesManagerConfig {
         };
 
         Self {
+            service: config.service.clone(),
             storage: Some(storage),
             validator_signer: Some(validator_signer),
         }
@@ -56,6 +60,7 @@ impl SafetyRulesManagerConfig {
 
 enum SafetyRulesWrapper<T> {
     Local(Arc<RwLock<SafetyRules<T>>>),
+    Remote(Arc<RwLock<RemoteService<T>>>),
 }
 
 pub struct SafetyRulesManager<T> {
@@ -69,10 +74,14 @@ impl<T: Payload> SafetyRulesManager<T> {
             .validator_signer
             .take()
             .expect("validator_signer missing");
-        Self::new_direct(storage, validator_signer)
+
+        match config.service {
+            SafetyRulesService::Local => Self::new_local(storage, validator_signer),
+            SafetyRulesService::Remote => Self::new_remote(storage, validator_signer),
+        }
     }
 
-    pub fn new_direct(
+    pub fn new_local(
         storage: Box<dyn PersistentStorage>,
         validator_signer: ValidatorSigner,
     ) -> Self {
@@ -83,10 +92,27 @@ impl<T: Payload> SafetyRulesManager<T> {
         }
     }
 
+    pub fn new_remote(
+        storage: Box<dyn PersistentStorage>,
+        validator_signer: ValidatorSigner,
+    ) -> Self {
+        let safety_rules = SafetyRules::new(storage, Arc::new(validator_signer));
+        let remote_service = RemoteService::new(safety_rules);
+
+        Self {
+            internal_safety_rules: SafetyRulesWrapper::Remote(Arc::new(RwLock::new(
+                remote_service,
+            ))),
+        }
+    }
+
     pub fn client(&self) -> Box<dyn TSafetyRules<T> + Send + Sync> {
         match &self.internal_safety_rules {
             SafetyRulesWrapper::Local(safety_rules) => {
                 Box::new(LocalClient::new(safety_rules.clone()))
+            }
+            SafetyRulesWrapper::Remote(remote_service) => {
+                Box::new(RemoteClient::new(remote_service.clone()))
             }
         }
     }

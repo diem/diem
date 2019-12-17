@@ -98,10 +98,8 @@ impl NodeSetup {
             let (initial_data, storage) =
                 MockStorage::<TestPayload>::start_for_testing((&validators).into());
 
-            let safety_rules_manager = SafetyRulesManager::new_direct(
-                Box::new(InMemoryStorage::default()),
-                signer.clone(),
-            );
+            let safety_rules_manager =
+                SafetyRulesManager::new_local(Box::new(InMemoryStorage::default()), signer.clone());
 
             nodes.push(Self::new(
                 playground,

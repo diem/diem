@@ -8,7 +8,7 @@ use std::fmt::{Display, Formatter};
 /// Public representation of the internal state of SafetyRules for monitoring / debugging purposes.
 /// This does not include sensitive data like private keys.
 /// @TODO add hash of ledger info (waypoint)
-#[derive(Serialize, Default, Deserialize, Debug, Eq, PartialEq, Clone)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ConsensusState {
     epoch: u64,
     last_voted_round: Round,
