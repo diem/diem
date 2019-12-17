@@ -55,7 +55,7 @@ pub fn fuzzer(data: &[u8]) {
         AdmissionControlConfig::default(),
         network_sender,
         RoleType::Validator,
-        Some(Arc::new(LocalMockMempool::new())),
+        Some(LocalMockMempool::new()),
         Arc::new(MockStorageReadClient),
         Arc::new(MockVMValidator),
         false,

@@ -45,10 +45,10 @@ impl AdmissionControlRuntime {
 
         // Create mempool client if the node is validator.
         let mempool_client = if config.base.role == RoleType::Validator {
-            Some(Arc::new(MempoolClientWrapper::new(
+            Some(MempoolClientWrapper::new(
                 "localhost",
                 config.mempool.mempool_service_port,
-            )))
+            ))
         } else {
             None
         };
