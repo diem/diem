@@ -17,12 +17,12 @@ use futures::{
 };
 use libra_config::config::RoleType;
 use libra_config::config::StateSyncConfig;
-use libra_config::waypoint::Waypoint;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::ValidatorChangeProof;
 use libra_types::transaction::Version;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
+    waypoint::Waypoint,
 };
 use network::{
     proto::{StateSynchronizerMsg, StateSynchronizerMsg_oneof},

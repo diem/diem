@@ -15,9 +15,9 @@ use futures::{
     SinkExt,
 };
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
-use libra_config::waypoint::Waypoint;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use libra_types::crypto_proxies::ValidatorChangeProof;
+use libra_types::waypoint::Waypoint;
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
