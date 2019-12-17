@@ -4,7 +4,6 @@
 //! This module provides mock storage clients for tests.
 
 use anyhow::{Error, Result};
-use futures::prelude::*;
 use futures::stream::BoxStream;
 use libra_crypto::{ed25519::*, HashValue};
 use libra_types::{
@@ -30,7 +29,7 @@ use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,
 };
-use std::{collections::BTreeMap, convert::TryFrom, pin::Pin};
+use std::{collections::BTreeMap, convert::TryFrom};
 use storage_client::StorageRead;
 use storage_proto::{BackupAccountStateResponse, StartupInfo};
 
@@ -41,23 +40,18 @@ use storage_proto::{BackupAccountStateResponse, StartupInfo};
 #[derive(Clone)]
 pub struct MockStorageReadClient;
 
+#[async_trait::async_trait]
 impl StorageRead for MockStorageReadClient {
-    fn update_to_latest_ledger_async(
+    async fn update_to_latest_ledger_async(
         &self,
         client_known_version: Version,
         request_items: Vec<RequestItem>,
-    ) -> Pin<
-        Box<
-            dyn Future<
-                    Output = Result<(
-                        Vec<ResponseItem>,
-                        LedgerInfoWithSignatures,
-                        ValidatorChangeProof,
-                        AccumulatorConsistencyProof,
-                    )>,
-                > + Send,
-        >,
-    > {
+    ) -> Result<(
+        Vec<ResponseItem>,
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
         let request = libra_types::get_with_proof::UpdateToLatestLedgerRequest::new(
             client_known_version,
             request_items,
@@ -73,54 +67,47 @@ impl StorageRead for MockStorageReadClient {
             response.validator_change_proof,
             response.ledger_consistency_proof,
         );
-        futures::future::ok(ret).boxed()
+        Ok(ret)
     }
 
-    fn get_transactions_async(
+    async fn get_transactions_async(
         &self,
         _start_version: Version,
         _batch_size: u64,
         _ledger_version: Version,
         _fetch_events: bool,
-    ) -> Pin<
-        Box<dyn Future<Output = Result<libra_types::transaction::TransactionListWithProof>> + Send>,
-    > {
+    ) -> Result<libra_types::transaction::TransactionListWithProof> {
         unimplemented!()
     }
 
-    fn get_latest_state_root_async(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<(Version, HashValue)>> + Send>> {
+    async fn get_latest_state_root_async(&self) -> Result<(Version, HashValue)> {
         unimplemented!()
     }
 
-    fn get_latest_account_state_async(
+    async fn get_latest_account_state_async(
         &self,
         _address: AccountAddress,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountStateBlob>>> + Send>> {
-        futures::future::ok(Some(get_mock_account_state_blob())).boxed()
+    ) -> Result<Option<AccountStateBlob>> {
+        Ok(Some(get_mock_account_state_blob()))
     }
 
-    fn get_account_state_with_proof_by_version_async(
+    async fn get_account_state_with_proof_by_version_async(
         &self,
         _address: AccountAddress,
         _version: Version,
-    ) -> Pin<Box<dyn Future<Output = Result<(Option<AccountStateBlob>, SparseMerkleProof)>> + Send>>
-    {
+    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         unimplemented!();
     }
 
-    fn get_startup_info_async(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>> {
+    async fn get_startup_info_async(&self) -> Result<Option<StartupInfo>> {
         unimplemented!()
     }
 
-    fn get_epoch_change_ledger_infos_async(
+    async fn get_epoch_change_ledger_infos_async(
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeProof>> + Send>> {
+    ) -> Result<ValidatorChangeProof> {
         unimplemented!()
     }
 
