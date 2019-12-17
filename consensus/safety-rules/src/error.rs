@@ -3,9 +3,10 @@
 
 use anyhow;
 use consensus_types::common::Round;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
 /// Different reasons for proposal rejection
 pub enum Error {
     #[error("Internal error: {:?}", error)]
@@ -32,6 +33,9 @@ pub enum Error {
         last_voted_round: Round,
         proposal_round: Round,
     },
+
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
 }
 
 impl From<anyhow::Error> for Error {
@@ -39,5 +43,11 @@ impl From<anyhow::Error> for Error {
         Self::InternalError {
             error: format!("{}", error),
         }
+    }
+}
+
+impl From<lcs::Error> for Error {
+    fn from(error: lcs::Error) -> Self {
+        Self::SerializationError(format!("{}", error))
     }
 }
