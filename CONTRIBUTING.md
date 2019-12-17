@@ -21,7 +21,7 @@ git clone https://github.com/libra/libra.git
 cd libra
 ./scripts/dev_setup.sh
 cargo build
-cargo test
+cargo xtest
 ```
 
 ## Our Development Process

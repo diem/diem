@@ -289,7 +289,7 @@ conditions to perform this conditional compilation:
   as the conditional test-only code.
 - the "fuzzing" custom feature, which is used to enable fuzzing and testing
 related code in downstream crates. Note that this must be passed explicitly to
-`cargo test` and `cargo bench`. Never use this in `[dependencies]` or
+`cargo xtest` and `cargo x bench`. Never use this in `[dependencies]` or
 `[dev-dependencies]` unless the crate is only for testing, otherwise Cargo's
 feature unification may pollute production code with the extra testing/fuzzing code.
 
