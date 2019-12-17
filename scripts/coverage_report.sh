@@ -96,7 +96,12 @@ fi
 
 # Generate lcov report
 echo "Generating lcov report at ${COVERAGE_DIR}/lcov.info..."
-grcov target -t lcov  --llvm --branch --ignore "/*" --ignore "x/*" --ignore "testsuite/*" -o "$COVERAGE_DIR/lcov.info"
+grcov target -t lcov --llvm --branch \
+  --ignore "/*" \
+  --ignore "x/*" \
+  --ignore "testsuite/libra-fuzzer/*" \
+  --ignore "testsuite/cluster-test/*" \
+  -o "$COVERAGE_DIR/lcov.info"
 
 # Generate HTML report
 echo "Generating report at ${COVERAGE_DIR}..."
