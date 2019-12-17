@@ -7,6 +7,7 @@ mod schema;
 
 use crate::chained_bft::consensusdb::schema::{
     block::{BlockSchema, SchemaBlock},
+    block_index::BlockIndexSchema,
     quorum_certificate::QCSchema,
     single_entry::{SingleEntryKey, SingleEntrySchema},
 };
@@ -14,11 +15,12 @@ use anyhow::{ensure, Result};
 use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
+use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME, BLOCK_INDEX_CF_NAME};
 use schemadb::{
     ColumnFamilyOptions, ColumnFamilyOptionsMap, ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME,
 };
 use std::{collections::HashMap, iter::Iterator, path::Path, time::Instant};
+use libra_types::block_index::BlockIndex;
 
 type HighestTimeoutCertificate = Vec<u8>;
 type VoteMsgData = Vec<u8>;
@@ -37,6 +39,7 @@ impl ConsensusDB {
             (BLOCK_CF_NAME, ColumnFamilyOptions::default()),
             (QC_CF_NAME, ColumnFamilyOptions::default()),
             (SINGLE_ENTRY_CF_NAME, ColumnFamilyOptions::default()),
+            (BLOCK_INDEX_CF_NAME, ColumnFamilyOptions::default()),
         ]
         .iter()
         .cloned()
@@ -212,5 +215,64 @@ impl ConsensusDB {
         }
 
         return Some(blocks);
+    }
+
+    /// Insert BlockIndex
+    pub fn insert_block_index(&self, height: &u64, block_index: &BlockIndex) -> Result<()> {
+        let mut batch = SchemaBatch::new();
+        batch.put::<BlockIndexSchema>(&height, &block_index)?;
+        self.commit(batch)
+    }
+
+    /// Load BlockIndex
+    pub fn _load_block_index(&self) -> Result<Vec<BlockIndex>> {
+        unimplemented!()
+    }
+
+    pub fn query_block_index(&self, height: Option<u64>, size: usize) -> Result<Vec<BlockIndex>> {
+        let mut block_index_list = vec![];
+        let mut begin = match height {
+            Some(h) => if h > 0 {h - 1} else {0},
+            None => {
+                let mut iter = self.db.iter::<BlockIndexSchema>(ReadOptions::default())?;
+                iter.seek_to_last();
+                let result = iter.next();
+                match result {
+                    Some(val) => {
+                        let (k, _v) = val.expect("Get value from db err.");
+                        k
+                    }
+                    None => 0, //todo:err
+                }
+            }
+        };
+
+        while block_index_list.len() < size {
+            let block_index: Option<BlockIndex> = self.db.get::<BlockIndexSchema>(&begin)?;
+            match block_index {
+                Some(index) => {
+                    block_index_list.push(index);
+                    begin = begin - 1;
+                }
+                None => {
+                    break;
+                }
+            }
+        }
+        block_index_list.reverse();
+        Ok(block_index_list)
+    }
+
+    pub fn latest_height(&self) -> Option<u64> {
+        let mut iter = self.db.iter::<BlockIndexSchema>(ReadOptions::default()).expect("db err.");
+        iter.seek_to_last();
+        let result = iter.next();
+        match result {
+            Some(val) => {
+                let (k, _v) = val.expect("Get value from db err.");
+                Some(k)
+            }
+            None => None,
+        }
     }
 }

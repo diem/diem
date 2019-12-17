@@ -5,7 +5,7 @@
 #![allow(clippy::large_enum_variant)]
 
 //! Protobuf definitions for data structures sent over the network
-mod consensus {
+pub mod consensus {
     include!(concat!(env!("OUT_DIR"), "/consensus.rs"));
 }
 mod network {
