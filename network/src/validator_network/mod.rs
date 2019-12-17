@@ -53,7 +53,9 @@ pub use health_checker::{
     HealthCheckerNetworkEvents, HealthCheckerNetworkSender, HEALTH_CHECKER_RPC_PROTOCOL,
 };
 use libra_types::PeerId;
-pub use mempool::{MempoolNetworkEvents, MempoolNetworkSender, MEMPOOL_DIRECT_SEND_PROTOCOL};
+pub use mempool::{
+    MempoolNetworkEvents, MempoolNetworkSender, MEMPOOL_DIRECT_SEND_PROTOCOL, MEMPOOL_RPC_PROTOCOL,
+};
 pub use state_synchronizer::{
     StateSynchronizerEvents, StateSynchronizerSender, STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
 };

@@ -25,6 +25,7 @@ use network::{
         CONSENSUS_DIRECT_SEND_PROTOCOL,
         CONSENSUS_RPC_PROTOCOL,
         MEMPOOL_DIRECT_SEND_PROTOCOL,
+        MEMPOOL_RPC_PROTOCOL,
         STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
     },
     ProtocolId,
@@ -123,6 +124,7 @@ pub fn setup_network(
         .rpc_protocols(vec![
             ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
             ProtocolId::from_static(ADMISSION_CONTROL_RPC_PROTOCOL),
+            ProtocolId::from_static(MEMPOOL_RPC_PROTOCOL),
         ]);
     if config.is_permissioned {
         // If the node wants to run in permissioned mode, it should also have authentication and
@@ -279,8 +281,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         // network provider -> consensus -> state synchronizer -> network provider. This deadlock
         // was observed in GitHub Issue #749. A long term fix might be make
         // consensus initialization async instead of blocking on state synchronizer.
-        let (mempool_network_sender, mempool_network_events) = network_provider
-            .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
+        let (mempool_network_sender, mempool_network_events) = network_provider.add_mempool(vec![
+            ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
+            ProtocolId::from_static(MEMPOOL_RPC_PROTOCOL),
+        ]);
         let (consensus_network_sender, consensus_network_events) =
             network_provider.add_consensus(vec![
                 ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),

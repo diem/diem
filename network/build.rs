@@ -15,6 +15,7 @@ fn main() {
         "../types/src/proto",
         "src/proto",
         "../admission_control/admission-control-proto/src/proto",
+        "../mempool/mempool-shared-proto/src/proto",
     ];
 
     prost_build::compile_protos(&proto_files, &includes).unwrap();

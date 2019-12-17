@@ -621,6 +621,13 @@ fn test_full_node_basic_flow() {
     full_node_client.create_next_account(false).unwrap();
     full_node_client_2.create_next_account(false).unwrap();
 
+    let sequence = full_node_client
+        .get_sequence_number(&["sequence", sender_account, "true"])
+        .unwrap();
+    validator_ac_client.wait_for_transaction(
+        validator_ac_client.faucet_account.clone().unwrap().address,
+        sequence,
+    );
     let mint_result = full_node_client.mint_coins(&["mintb", "3", "10"], true);
     assert!(mint_result.is_ok());
     assert_eq!(

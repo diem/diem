@@ -12,8 +12,9 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 bytes = "0.4.12"
+bytes05 = { version = "0.5", package = "bytes" }
 chrono = "0.4.7"
-futures = { version = "0.3.0", package = "futures", features = ["compat"] }
+futures = { version = "0.3.0", package = "futures", features = ["compat", "thread-pool"] }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 lazy_static = "1.3.0"
 lru-cache = "0.1.1"
@@ -27,6 +28,7 @@ bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+libra-prost-ext = { path = "../common/prost-ext", version = "0.1.0" }
 mirai-annotations = "1.5.0"
 network = { path = "../network", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
@@ -35,6 +37,7 @@ libra-types = { path = "../types", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [dev-dependencies]
+assert_matches = "1.3.0"
 rand = "0.6.5"
 channel = { path = "../common/channel", version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }

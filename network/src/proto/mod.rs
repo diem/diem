@@ -31,7 +31,10 @@ pub use self::{
     health_checker::{
         health_checker_msg::Message as HealthCheckerMsg_oneof, HealthCheckerMsg, Ping, Pong,
     },
-    mempool::MempoolSyncMsg,
+    mempool::{
+        mempool_sync_msg::Message as MempoolSyncMsg_oneof, BroadcastTransactionsRequest,
+        BroadcastTransactionsResponse, MempoolSyncMsg,
+    },
     network::{
         identity_msg::Role as IdentityMsg_Role, DiscoveryMsg, FullNodePayload, IdentityMsg, Note,
         PeerInfo, SignedFullNodePayload, SignedPeerInfo,
