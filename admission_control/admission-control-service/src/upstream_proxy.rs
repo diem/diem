@@ -49,7 +49,7 @@ pub struct UpstreamProxyData<M, V> {
     network_sender: AdmissionControlNetworkSender,
     role: RoleType,
     /// gRPC client connecting Mempool.
-    mempool_client: Option<Arc<M>>,
+    mempool_client: Option<M>,
     /// gRPC client to send read requests to Storage.
     storage_read_client: Arc<dyn StorageRead>,
     /// VM validator instance to validate transactions sent from wallets.
@@ -69,7 +69,7 @@ where
         ac_config: AdmissionControlConfig,
         network_sender: AdmissionControlNetworkSender,
         role: RoleType,
-        mempool_client: Option<Arc<M>>,
+        mempool_client: Option<M>,
         storage_read_client: Arc<dyn StorageRead>,
         vm_validator: Arc<V>,
         need_to_check_mempool_before_validation: bool,
@@ -340,7 +340,7 @@ async fn process_submit_transaction_request<M, V>(
 
 /// Validate transaction signature, then via VM, and add it to Mempool if it passes VM check.
 pub(crate) async fn submit_transaction_to_mempool<M, V>(
-    upstream_proxy_data: UpstreamProxyData<M, V>,
+    mut upstream_proxy_data: UpstreamProxyData<M, V>,
     req: SubmitTransactionRequest,
 ) -> Result<SubmitTransactionResponse>
 where
@@ -349,7 +349,7 @@ where
 {
     // Drop requests first if mempool is full (validator is lagging behind) so not to consume
     // unnecessary resources.
-    if !can_send_txn_to_mempool(&upstream_proxy_data).await? {
+    if !can_send_txn_to_mempool(&mut upstream_proxy_data).await? {
         debug!("Mempool is full");
         counters::TRANSACTION_SUBMISSION
             .with_label_values(&["rejected", "mempool_full"])
@@ -420,19 +420,19 @@ where
         add_transaction_request.latest_sequence_number = sequence_number;
     }
 
-    add_txn_to_mempool(&upstream_proxy_data, add_transaction_request).await
+    add_txn_to_mempool(&mut upstream_proxy_data, add_transaction_request).await
 }
 
 async fn can_send_txn_to_mempool<M, V>(
-    upstream_proxy_data: &UpstreamProxyData<M, V>,
+    upstream_proxy_data: &mut UpstreamProxyData<M, V>,
 ) -> Result<bool>
 where
     M: MempoolClientTrait,
 {
     if upstream_proxy_data.need_to_check_mempool_before_validation {
         let req = HealthCheckRequest::default();
-        let is_mempool_healthy = match &upstream_proxy_data.mempool_client {
-            Some(client) => client.as_ref().clone().health_check(req).await?.is_healthy,
+        let is_mempool_healthy = match upstream_proxy_data.mempool_client.as_mut() {
+            Some(client) => client.health_check(req).await?.is_healthy,
             None => false,
         };
         return Ok(is_mempool_healthy);
@@ -442,17 +442,15 @@ where
 
 /// Add signed transaction to mempool once it passes vm check
 async fn add_txn_to_mempool<M, V>(
-    upstream_proxy_data: &UpstreamProxyData<M, V>,
+    upstream_proxy_data: &mut UpstreamProxyData<M, V>,
     add_transaction_request: AddTransactionWithValidationRequest,
 ) -> Result<SubmitTransactionResponse>
 where
     M: MempoolClientTrait,
 {
-    match &upstream_proxy_data.mempool_client {
+    match upstream_proxy_data.mempool_client.as_mut() {
         Some(mempool_client) => {
             let mempool_result = mempool_client
-                .as_ref()
-                .clone()
                 .add_transaction_with_validation(add_transaction_request.clone())
                 .await?;
 
