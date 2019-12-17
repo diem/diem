@@ -162,6 +162,7 @@ impl InProcessTestClient {
                 false,
                 /* faucet server */ None,
                 Some(mnemonic_file_path.to_string()),
+                None,
             )
             .unwrap(),
             alias_to_cmd,

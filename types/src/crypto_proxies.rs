@@ -105,6 +105,15 @@ pub struct EpochInfo {
     pub verifier: Arc<ValidatorVerifier>,
 }
 
+impl EpochInfo {
+    pub fn empty() -> Self {
+        Self {
+            epoch: 0,
+            verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
+        }
+    }
+}
+
 impl fmt::Display for EpochInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(

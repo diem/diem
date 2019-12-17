@@ -22,6 +22,8 @@ use crate::{
     },
     transaction::{TransactionListWithProof, TransactionWithProof, Version},
 };
+
+use crate::validator_change::VerifierType;
 use anyhow::{bail, ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -158,11 +160,11 @@ impl UpdateToLatestLedgerResponse {
     /// verification.
     pub fn verify(
         &self,
-        current_epoch_info: &EpochInfo,
+        verifier: &VerifierType,
         request: &UpdateToLatestLedgerRequest,
     ) -> Result<Option<EpochInfo>> {
         verify_update_to_latest_ledger_response(
-            current_epoch_info,
+            verifier,
             request.client_known_version,
             &request.requested_items,
             &self.response_items,
@@ -176,7 +178,7 @@ impl UpdateToLatestLedgerResponse {
 /// carries and the content of the corresponding [`UpdateToLatestLedgerRequest`]
 /// Return EpochInfo if there're validator change events.
 pub fn verify_update_to_latest_ledger_response(
-    current_epoch_info: &EpochInfo,
+    verifier: &VerifierType,
     req_client_known_version: u64,
     req_request_items: &[RequestItem],
     response_items: &[ResponseItem],
@@ -205,9 +207,8 @@ pub fn verify_update_to_latest_ledger_response(
         .collect::<Result<Vec<_>>>()?;
 
     // Verify ledger info signatures and potential epoch changes
-    if ledger_info.epoch() > current_epoch_info.epoch {
-        let epoch_change_li = validator_change_proof
-            .verify(current_epoch_info.epoch, &current_epoch_info.verifier)?;
+    if verifier.epoch_change_verification_required(ledger_info.epoch()) {
+        let epoch_change_li = validator_change_proof.verify(verifier)?;
         let new_epoch_info = EpochInfo {
             epoch: epoch_change_li.ledger_info().epoch() + 1,
             verifier: Arc::new(
@@ -221,7 +222,7 @@ pub fn verify_update_to_latest_ledger_response(
         ledger_info_with_sigs.verify(&new_epoch_info.verifier)?;
         Ok(Some(new_epoch_info))
     } else {
-        ledger_info_with_sigs.verify(&current_epoch_info.verifier)?;
+        verifier.verify(ledger_info_with_sigs)?;
         Ok(None)
     }
 }

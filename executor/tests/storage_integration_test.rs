@@ -11,6 +11,7 @@ use libra_crypto::{
     ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue, PrivateKey,
 };
 use libra_types::crypto_proxies::EpochInfo;
+use libra_types::validator_change::VerifierType;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -410,10 +411,10 @@ fn test_execution_with_storage() {
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     verify_update_to_latest_ledger_response(
-        &mut EpochInfo {
+        &VerifierType::TrustedVerifier(EpochInfo {
             epoch: 0,
             verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
-        },
+        }),
         0,
         &request_items,
         &response_items,
@@ -620,10 +621,10 @@ fn test_execution_with_storage() {
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     verify_update_to_latest_ledger_response(
-        &mut EpochInfo {
+        &&VerifierType::TrustedVerifier(EpochInfo {
             epoch: 0,
             verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
-        },
+        }),
         0,
         &request_items,
         &response_items,
