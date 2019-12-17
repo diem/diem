@@ -7,10 +7,10 @@ use crate::{
 };
 use channel;
 use futures::{
-    sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
-    Stream,
+    channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
+    executor::block_on,
+    SinkExt, StreamExt,
 };
-use futures_preview::{compat::Stream01CompatExt, executor::block_on, SinkExt, StreamExt};
 use libra_config::config::NodeConfig;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
@@ -60,7 +60,7 @@ impl SharedMempoolNetwork {
                 Arc::new(MockStorageReadClient),
                 Arc::new(MockVMValidator),
                 vec![sender],
-                Some(timer_receiver.compat().map(|_| SyncEvent).boxed()),
+                Some(timer_receiver.map(|_| SyncEvent).boxed()),
             );
 
             smp.mempools.insert(peer, mempool);
@@ -93,7 +93,7 @@ impl SharedMempoolNetwork {
 
     fn wait_for_event(&mut self, peer_id: &PeerId, event: SharedMempoolNotification) {
         let subscriber = self.subscribers.get_mut(peer_id).unwrap();
-        while subscriber.wait().next().unwrap().unwrap() != event {
+        while block_on(subscriber.next()).unwrap() != event {
             continue;
         }
     }
