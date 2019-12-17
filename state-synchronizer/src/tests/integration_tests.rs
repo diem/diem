@@ -9,7 +9,7 @@ use crate::{
 use anyhow::{bail, Result};
 use config_builder;
 use executor::ExecutedTrees;
-use futures::{executor::block_on, future::FutureExt, Future};
+use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_config::waypoint::Waypoint;
 use libra_crypto::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
@@ -37,7 +37,6 @@ use rand::{rngs::StdRng, SeedableRng};
 use std::sync::RwLock;
 use std::{
     collections::{BTreeMap, HashMap},
-    pin::Pin,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -60,12 +59,10 @@ impl MockExecutorProxy {
     }
 }
 
+#[async_trait::async_trait]
 impl ExecutorProxyTrait for MockExecutorProxy {
-    fn get_local_storage_state(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>> {
-        let state = self.storage.read().unwrap().get_local_storage_state();
-        async move { Ok(state) }.boxed()
+    async fn get_local_storage_state(&self) -> Result<SynchronizerState> {
+        Ok(self.storage.read().unwrap().get_local_storage_state())
     }
 
     fn execute_chunk(
@@ -83,12 +80,12 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         Ok(())
     }
 
-    fn get_chunk(
+    async fn get_chunk(
         &self,
         known_version: u64,
         limit: u64,
         target_version: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
+    ) -> Result<TransactionListWithProof> {
         let txns = self
             .storage
             .read()
@@ -101,8 +98,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
             first_txn_version,
             TransactionListProof::new_empty(),
         );
-        let response = (self.handler)(txns_with_proof);
-        async move { response }.boxed()
+        (self.handler)(txns_with_proof)
     }
 
     fn get_epoch_proof(&self, start_epoch: u64, _end_epoch: u64) -> Result<ValidatorChangeProof> {

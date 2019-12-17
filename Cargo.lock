@@ -4309,6 +4309,7 @@ name = "state-synchronizer"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-trait 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "channel 0.1.0",
  "config-builder 0.1.0",

@@ -4,23 +4,21 @@
 use crate::SynchronizerState;
 use anyhow::{ensure, format_err, Result};
 use executor::{ExecutedTrees, Executor};
-use futures::{Future, FutureExt};
 use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::TransactionListWithProof,
 };
-use std::{pin::Pin, sync::Arc};
+use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use vm_runtime::LibraVM;
 
 /// Proxies interactions with execution and storage for state synchronization
+#[async_trait::async_trait]
 pub trait ExecutorProxyTrait: Sync + Send {
     /// Sync the local state with the latest in storage.
-    fn get_local_storage_state(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>>;
+    async fn get_local_storage_state(&self) -> Result<SynchronizerState>;
 
     /// Execute and commit a batch of transactions
     fn execute_chunk(
@@ -32,12 +30,12 @@ pub trait ExecutorProxyTrait: Sync + Send {
     ) -> Result<()>;
 
     /// Gets chunk of transactions given the known version, target version and the max limit.
-    fn get_chunk(
+    async fn get_chunk(
         &self,
         known_version: u64,
         limit: u64,
         target_version: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
+    ) -> Result<TransactionListWithProof>;
 
     /// Get the epoch change ledger info for [start_epoch, end_epoch) so that we can move to end_epoch.
     fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof>;
@@ -66,32 +64,28 @@ impl ExecutorProxy {
     }
 }
 
+#[async_trait::async_trait]
 impl ExecutorProxyTrait for ExecutorProxy {
-    fn get_local_storage_state(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>> {
-        let client = Arc::clone(&self.storage_read_client);
-        async move {
-            let storage_info = client
-                .get_startup_info_async()
-                .await?
-                .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
+    async fn get_local_storage_state(&self) -> Result<SynchronizerState> {
+        let storage_info = self
+            .storage_read_client
+            .get_startup_info_async()
+            .await?
+            .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
 
-            let current_verifier = storage_info.get_validator_set().into();
+        let current_verifier = storage_info.get_validator_set().into();
 
-            let synced_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state {
-                ExecutedTrees::from(synced_tree_state)
-            } else {
-                ExecutedTrees::from(storage_info.committed_tree_state)
-            };
+        let synced_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state {
+            ExecutedTrees::from(synced_tree_state)
+        } else {
+            ExecutedTrees::from(storage_info.committed_tree_state)
+        };
 
-            Ok(SynchronizerState::new(
-                storage_info.latest_ledger_info,
-                synced_trees,
-                current_verifier,
-            ))
-        }
-            .boxed()
+        Ok(SynchronizerState::new(
+            storage_info.latest_ledger_info,
+            synced_trees,
+            current_verifier,
+        ))
     }
 
     fn execute_chunk(
@@ -109,19 +103,15 @@ impl ExecutorProxyTrait for ExecutorProxy {
         )
     }
 
-    fn get_chunk(
+    async fn get_chunk(
         &self,
         known_version: u64,
         limit: u64,
         target_version: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
-        let client = Arc::clone(&self.storage_read_client);
-        async move {
-            client
-                .get_transactions_async(known_version + 1, limit, target_version, false)
-                .await
-        }
-            .boxed()
+    ) -> Result<TransactionListWithProof> {
+        self.storage_read_client
+            .get_transactions_async(known_version + 1, limit, target_version, false)
+            .await
     }
 
     fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof> {
