@@ -12,7 +12,7 @@ use libra_types::crypto_proxies::Signature;
 pub trait TSafetyRules<T> {
     /// Provides the internal state of SafetyRules for monitoring / debugging purposes. This does
     /// not include sensitive data like private keys.
-    fn consensus_state(&self) -> ConsensusState;
+    fn consensus_state(&self) -> Result<ConsensusState, Error>;
 
     /// Learn about a new quorum certificate. In normal state, this updates the preferred round,
     /// if the parent is greater than our current preferred round.

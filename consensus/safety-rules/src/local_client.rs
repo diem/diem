@@ -23,7 +23,7 @@ impl<T: Payload> LocalClient<T> {
 }
 
 impl<T: Payload> TSafetyRules<T> for LocalClient<T> {
-    fn consensus_state(&self) -> ConsensusState {
+    fn consensus_state(&self) -> Result<ConsensusState, Error> {
         self.internal.read().unwrap().consensus_state()
     }
 

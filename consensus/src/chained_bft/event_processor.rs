@@ -377,7 +377,11 @@ where
             // The timeout event is late: the node has already moved to another round.
             return;
         }
-        let last_voted_round = self.safety_rules.consensus_state().last_voted_round();
+        let last_voted_round = self
+            .safety_rules
+            .consensus_state()
+            .unwrap()
+            .last_voted_round();
         warn!(
             "Round {} timed out: {}, expected round proposer was {:?}, broadcasting the vote to all replicas",
             round,
@@ -445,7 +449,7 @@ where
         tc: Option<&TimeoutCertificate>,
     ) -> anyhow::Result<()> {
         self.safety_rules.update(qc)?;
-        let consensus_state = self.safety_rules.consensus_state();
+        let consensus_state = self.safety_rules.consensus_state()?;
         counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
 
         let mut highest_committed_proposal_round = None;
@@ -522,13 +526,20 @@ where
         // Safety invariant: The last voted round is updated to be the same as the proposed block's
         // round. At this point, the replica has decided to vote for the proposed block.
         debug_checked_verify_eq!(
-            self.safety_rules.consensus_state().last_voted_round(),
+            self.safety_rules
+                .consensus_state()
+                .unwrap()
+                .last_voted_round(),
             proposal_round
         );
         // Safety invariant: qc_parent <-- qc
         // the preferred block round must be at least as large as qc_parent's round.
         debug_checked_verify!(
-            self.safety_rules.consensus_state().preferred_round() >= certified_parent_block_round
+            self.safety_rules
+                .consensus_state()
+                .unwrap()
+                .preferred_round()
+                >= certified_parent_block_round
         );
 
         let recipients = self
@@ -680,7 +691,7 @@ where
             .construct_and_sign_vote(&vote_proposal)
             .with_context(|| format!("{}Rejected{} {}", Fg(Red), Fg(Reset), block))?;
 
-        let consensus_state = self.safety_rules.consensus_state();
+        let consensus_state = self.safety_rules.consensus_state()?;
         counters::LAST_VOTE_ROUND.set(consensus_state.last_voted_round() as i64);
 
         self.storage
@@ -888,7 +899,7 @@ where
     /// Inspect the current consensus state.
     #[cfg(test)]
     pub fn consensus_state(&self) -> ConsensusState {
-        self.safety_rules.consensus_state()
+        self.safety_rules.consensus_state().unwrap()
     }
 
     pub fn block_store(&self) -> Arc<BlockStore<T>> {
