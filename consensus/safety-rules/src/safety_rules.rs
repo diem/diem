@@ -76,12 +76,12 @@ impl<T: Payload> SafetyRules<T> {
 }
 
 impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
-    fn consensus_state(&self) -> ConsensusState {
-        ConsensusState::new(
+    fn consensus_state(&self) -> Result<ConsensusState, Error> {
+        Ok(ConsensusState::new(
             self.persistent_storage.epoch(),
             self.persistent_storage.last_voted_round(),
             self.persistent_storage.preferred_round(),
-        )
+        ))
     }
 
     /// @TODO verify signatures of the QC, also the special genesis QC

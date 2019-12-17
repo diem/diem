@@ -367,7 +367,7 @@ fn process_successful_proposal_test() {
             proposal_id
         );
         assert_eq!(
-            node.event_processor.safety_rules.consensus_state(),
+            node.event_processor.safety_rules.consensus_state().unwrap(),
             ConsensusState::new(1, 1, 0),
         );
     });
