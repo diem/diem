@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+async-trait = "0.1"
 tokio = { version = "0.2", features = ["full"] }
 tonic = { git = "https://github.com/hyperium/tonic.git" }
 futures = { version = "0.3.0", features = ["compat"] }

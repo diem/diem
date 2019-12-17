@@ -32,7 +32,7 @@ use libra_types::{
 };
 use rand::Rng;
 use std::convert::TryFrom;
-use std::{pin::Pin, sync::Arc};
+use std::sync::Arc;
 use storage_proto::{
     proto::storage::{GetLatestStateRootRequest, GetStartupInfoRequest, StorageClient},
     BackupAccountStateRequest, BackupAccountStateResponse,
@@ -103,124 +103,100 @@ impl StorageReadServiceClient {
     }
 }
 
+#[async_trait::async_trait]
 impl StorageRead for StorageReadServiceClient {
-    fn update_to_latest_ledger_async(
+    async fn update_to_latest_ledger_async(
         &self,
         client_known_version: Version,
         requested_items: Vec<RequestItem>,
-    ) -> Pin<
-        Box<
-            dyn Future<
-                    Output = Result<(
-                        Vec<ResponseItem>,
-                        LedgerInfoWithSignatures,
-                        ValidatorChangeProof,
-                        AccumulatorConsistencyProof,
-                    )>,
-                > + Send,
-        >,
-    > {
+    ) -> Result<(
+        Vec<ResponseItem>,
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
         let req = UpdateToLatestLedgerRequest {
             client_known_version,
             requested_items,
         };
-        convert_grpc_response(self.client().update_to_latest_ledger_async(&req.into()))
-            .map(|resp| {
-                let rust_resp = UpdateToLatestLedgerResponse::try_from(resp?)?;
-                Ok((
-                    rust_resp.response_items,
-                    rust_resp.ledger_info_with_sigs,
-                    rust_resp.validator_change_proof,
-                    rust_resp.ledger_consistency_proof,
-                ))
-            })
-            .boxed()
+        let resp =
+            convert_grpc_response(self.client().update_to_latest_ledger_async(&req.into())).await?;
+        let rust_resp = UpdateToLatestLedgerResponse::try_from(resp)?;
+        Ok((
+            rust_resp.response_items,
+            rust_resp.ledger_info_with_sigs,
+            rust_resp.validator_change_proof,
+            rust_resp.ledger_consistency_proof,
+        ))
     }
 
-    fn get_transactions_async(
+    async fn get_transactions_async(
         &self,
         start_version: Version,
         batch_size: u64,
         ledger_version: Version,
         fetch_events: bool,
-    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
+    ) -> Result<TransactionListWithProof> {
         let req =
             GetTransactionsRequest::new(start_version, batch_size, ledger_version, fetch_events);
-        convert_grpc_response(self.client().get_transactions_async(&req.into()))
-            .map(|resp| {
-                let rust_resp = GetTransactionsResponse::try_from(resp?)?;
-                Ok(rust_resp.txn_list_with_proof)
-            })
-            .boxed()
+        let resp = convert_grpc_response(self.client().get_transactions_async(&req.into())).await?;
+        let rust_resp = GetTransactionsResponse::try_from(resp)?;
+        Ok(rust_resp.txn_list_with_proof)
     }
 
-    fn get_latest_state_root_async(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<(Version, HashValue)>> + Send>> {
+    async fn get_latest_state_root_async(&self) -> Result<(Version, HashValue)> {
         let req = GetLatestStateRootRequest::default();
-        convert_grpc_response(self.client().get_latest_state_root_async(&req))
-            .map(|resp| {
-                let rust_resp = GetLatestStateRootResponse::try_from(resp?)?;
-                Ok(rust_resp.into())
-            })
-            .boxed()
+        let resp = convert_grpc_response(self.client().get_latest_state_root_async(&req)).await?;
+        let rust_resp = GetLatestStateRootResponse::try_from(resp)?;
+        Ok(rust_resp.into())
     }
 
-    fn get_latest_account_state_async(
+    async fn get_latest_account_state_async(
         &self,
         address: AccountAddress,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountStateBlob>>> + Send>> {
+    ) -> Result<Option<AccountStateBlob>> {
         let req = GetLatestAccountStateRequest::new(address);
-        convert_grpc_response(self.client().get_latest_account_state_async(&req.into()))
-            .map(|resp| {
-                let rust_resp = GetLatestAccountStateResponse::try_from(resp?)?;
-                Ok(rust_resp.account_state_blob)
-            })
-            .boxed()
+        let resp = convert_grpc_response(self.client().get_latest_account_state_async(&req.into()))
+            .await?;
+        let rust_resp = GetLatestAccountStateResponse::try_from(resp)?;
+        Ok(rust_resp.account_state_blob)
     }
 
-    fn get_account_state_with_proof_by_version_async(
+    async fn get_account_state_with_proof_by_version_async(
         &self,
         address: AccountAddress,
         version: Version,
-    ) -> Pin<Box<dyn Future<Output = Result<(Option<AccountStateBlob>, SparseMerkleProof)>> + Send>>
-    {
+    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         let req = GetAccountStateWithProofByVersionRequest::new(address, version);
-        convert_grpc_response(
+        let resp = convert_grpc_response(
             self.client()
                 .get_account_state_with_proof_by_version_async(&req.into()),
         )
-        .map(|resp| {
-            let resp = GetAccountStateWithProofByVersionResponse::try_from(resp?)?;
-            Ok(resp.into())
-        })
-        .boxed()
+        .await?;
+        let resp = GetAccountStateWithProofByVersionResponse::try_from(resp)?;
+        Ok(resp.into())
     }
 
-    fn get_startup_info_async(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>> {
+    async fn get_startup_info_async(&self) -> Result<Option<StartupInfo>> {
         let proto_req = GetStartupInfoRequest::default();
-        convert_grpc_response(self.client().get_startup_info_async(&proto_req))
-            .map(|resp| {
-                let resp = GetStartupInfoResponse::try_from(resp?)?;
-                Ok(resp.info)
-            })
-            .boxed()
+        let resp = convert_grpc_response(self.client().get_startup_info_async(&proto_req)).await?;
+        let resp = GetStartupInfoResponse::try_from(resp)?;
+        Ok(resp.info)
     }
 
-    fn get_epoch_change_ledger_infos_async(
+    async fn get_epoch_change_ledger_infos_async(
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeProof>> + Send>> {
+    ) -> Result<ValidatorChangeProof> {
         let proto_req = GetEpochChangeLedgerInfosRequest::new(start_epoch, end_epoch);
-        convert_grpc_response(
+        let resp = convert_grpc_response(
             self.client()
                 .get_epoch_change_ledger_infos_async(&proto_req.into()),
         )
-        .map(|resp| ValidatorChangeProof::try_from(resp?))
-        .boxed()
+        .await?;
+        let resp = ValidatorChangeProof::try_from(resp)?;
+        Ok(resp)
     }
 
     fn backup_account_state_async(
@@ -262,18 +238,18 @@ impl StorageWriteServiceClient {
     }
 }
 
+#[async_trait::async_trait]
 impl StorageWrite for StorageWriteServiceClient {
-    fn save_transactions_async(
+    async fn save_transactions_async(
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
         ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+    ) -> Result<()> {
         let req =
             SaveTransactionsRequest::new(txns_to_commit, first_version, ledger_info_with_sigs);
-        convert_grpc_response(self.client().save_transactions_async(&req.into()))
-            .map_ok(|_| ())
-            .boxed()
+        convert_grpc_response(self.client().save_transactions_async(&req.into())).await?;
+        Ok(())
     }
 }
 
@@ -282,6 +258,7 @@ impl StorageWrite for StorageWriteServiceClient {
 /// There is a 1-1 mapping between each interface provided here and a LibraDB API. A method call on
 /// this relays the query to the storage backend behind the scene which calls the corresponding
 /// LibraDB API. Both synchronized and asynchronized versions of the APIs are provided.
+#[async_trait::async_trait]
 pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::update_to_latest_ledger`].
     ///
@@ -304,22 +281,16 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::update_to_latest_ledger`]:../libradb/struct.LibraDB.html#method.
     /// update_to_latest_ledger
-    fn update_to_latest_ledger_async(
+    async fn update_to_latest_ledger_async(
         &self,
         client_known_version: Version,
         request_items: Vec<RequestItem>,
-    ) -> Pin<
-        Box<
-            dyn Future<
-                    Output = Result<(
-                        Vec<ResponseItem>,
-                        LedgerInfoWithSignatures,
-                        ValidatorChangeProof,
-                        AccumulatorConsistencyProof,
-                    )>,
-                > + Send,
-        >,
-    >;
+    ) -> Result<(
+        Vec<ResponseItem>,
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )>;
 
     /// See [`LibraDB::get_transactions`].
     ///
@@ -342,13 +313,13 @@ pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::get_transactions`].
     ///
     /// [`LibraDB::get_transactions`]: ../libradb/struct.LibraDB.html#method.get_transactions
-    fn get_transactions_async(
+    async fn get_transactions_async(
         &self,
         start_version: Version,
         batch_size: u64,
         ledger_version: Version,
         fetch_events: bool,
-    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
+    ) -> Result<TransactionListWithProof>;
 
     /// See [`LibraDB::get_latest_state_root`].
     ///
@@ -362,9 +333,7 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_latest_state_root`]:
     /// ../libradb/struct.LibraDB.html#method.get_latest_state_root
-    fn get_latest_state_root_async(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<(Version, HashValue)>> + Send>>;
+    async fn get_latest_state_root_async(&self) -> Result<(Version, HashValue)>;
 
     /// See [`LibraDB::get_latest_account_state`].
     ///
@@ -381,10 +350,10 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_latest_account_state`]:
     /// ../libradb/struct.LibraDB.html#method.get_latest_account_state
-    fn get_latest_account_state_async(
+    async fn get_latest_account_state_async(
         &self,
         address: AccountAddress,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountStateBlob>>> + Send>>;
+    ) -> Result<Option<AccountStateBlob>>;
 
     /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///
@@ -402,11 +371,11 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_account_state_with_proof_by_version`]:
     /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
-    fn get_account_state_with_proof_by_version_async(
+    async fn get_account_state_with_proof_by_version_async(
         &self,
         address: AccountAddress,
         version: Version,
-    ) -> Pin<Box<dyn Future<Output = Result<(Option<AccountStateBlob>, SparseMerkleProof)>> + Send>>;
+    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
 
     /// See [`LibraDB::get_startup_info`].
     ///
@@ -420,9 +389,7 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_startup_info`]:
     /// ../libradb/struct.LibraDB.html#method.get_startup_info
-    fn get_startup_info_async(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>>;
+    async fn get_startup_info_async(&self) -> Result<Option<StartupInfo>>;
 
     /// See [`LibraDB::get_epoch_change_ledger_infos`].
     ///
@@ -440,11 +407,11 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_epoch_change_ledger_infos`]:
     /// ../libradb/struct.LibraDB.html#method.get_epoch_change_ledger_infos
-    fn get_epoch_change_ledger_infos_async(
+    async fn get_epoch_change_ledger_infos_async(
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeProof>> + Send>>;
+    ) -> Result<ValidatorChangeProof>;
 
     /// See [`LibraDB::backup_account_state`].
     ///
@@ -463,6 +430,7 @@ pub trait StorageRead: Send + Sync {
 /// There is a 1-1 mappings between each interface provided here and a LibraDB API. A method call on
 /// this relays the query to the storage backend behind the scene which calls the corresponding
 /// LibraDB API. Both synchronized and asynchronized versions of the APIs are provided.
+#[async_trait::async_trait]
 pub trait StorageWrite: Send + Sync {
     /// See [`LibraDB::save_transactions`].
     ///
@@ -479,12 +447,12 @@ pub trait StorageWrite: Send + Sync {
     /// See [`LibraDB::save_transactions`].
     ///
     /// [`LibraDB::save_transactions`]: ../libradb/struct.LibraDB.html#method.save_transactions
-    fn save_transactions_async(
+    async fn save_transactions_async(
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
         ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+    ) -> Result<()>;
 }
 
 fn convert_grpc_err(e: grpcio::Error) -> Error {
