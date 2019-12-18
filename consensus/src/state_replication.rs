@@ -5,12 +5,11 @@ use anyhow::Result;
 use consensus_types::block::Block;
 use consensus_types::executed_block::ExecutedBlock;
 use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
-use futures::Future;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof};
-use std::{pin::Pin, sync::Arc};
+use std::sync::Arc;
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
-#[tonic::async_trait]
+#[async_trait::async_trait]
 pub trait TxnManager: Send + Sync + Clone + 'static {
     type Payload;
 
@@ -37,6 +36,7 @@ pub trait TxnManager: Send + Sync + Clone + 'static {
 /// While Consensus is managing proposed blocks, `StateComputer` is managing the results of the
 /// (speculative) execution of their payload.
 /// StateComputer is using proposed block ids for identifying the transactions.
+#[async_trait::async_trait]
 pub trait StateComputer: Send + Sync {
     type Payload;
 
@@ -54,28 +54,25 @@ pub trait StateComputer: Send + Sync {
     ) -> Result<ProcessedVMOutput>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
-    fn commit(
+    async fn commit(
         &self,
         blocks: Vec<&ExecutedBlock<Self::Payload>>,
         finality_proof: LedgerInfoWithSignatures,
         synced_trees: &ExecutedTrees,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+    ) -> Result<()>;
 
     /// Best effort state synchronization to the given target LedgerInfo.
     /// In case of success (`Result::Ok`) the LI of storage is at the given target.
     /// In case of failure (`Result::Error`) the LI of storage remains unchanged, and the validator
     /// can assume there were no modifications to the storage made.
-    fn sync_to(
-        &self,
-        target: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+    async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()>;
 
     /// Generate the epoch change proof from start_epoch to the latest epoch.
-    fn get_epoch_proof(
+    async fn get_epoch_proof(
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeProof>> + Send>>;
+    ) -> Result<ValidatorChangeProof>;
 }
 
 pub trait StateMachineReplication {
