@@ -59,6 +59,15 @@ service Storage {
     // Rollback
     rpc RollbackByBlockId(RollbackRequest)
     returns (google.protobuf.Empty);
+
+    // Latest version
+    rpc LatestVersion(google.protobuf.Empty) returns (LatestVersionResponse);
+
+    // Transaction list
+    rpc GetTransactionList(GetTransactionListRequest) returns (GetTransactionListResponse);
+
+    // Get transaction by version
+    rpc GetTransactionByVersion(Version) returns (GetTransactionByVersionResponse);
 }
 
 message SaveTransactionsRequest {
@@ -157,4 +166,24 @@ message GetEpochChangeLedgerInfosResponse {
 
 message RollbackRequest {
     bytes block_id = 1;
+}
+
+message Version {
+    uint64 ver = 1;
+}
+
+message LatestVersionResponse {
+    Version version = 1;
+}
+
+message GetTransactionListRequest {
+    Version version = 1;
+}
+
+message GetTransactionListResponse {
+    repeated types.Transaction transactions = 1;
+}
+
+message GetTransactionByVersionResponse {
+    types.Transaction txn = 1;
 }

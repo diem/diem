@@ -76,6 +76,7 @@ use std::convert::TryFrom;
 use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::StartupInfo;
 use storage_proto::TreeState;
+use libra_types::transaction::Transaction;
 
 lazy_static! {
     static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("storage");
@@ -331,7 +332,7 @@ impl LibraDB {
     }
 
     /// Gets the latest version number available in the ledger.
-    fn get_latest_version(&self) -> Result<Version> {
+    pub fn get_latest_version(&self) -> Result<Version> {
         Ok(self
             .ledger_store
             .get_latest_ledger_info()?
@@ -863,6 +864,16 @@ impl LibraDB {
         self.ledger_store.rollback_by_block_id(block_id, &mut cs)?;
         let sealed_cs = SealedChangeSet { batch: cs.batch };
         self.commit(sealed_cs)
+    }
+
+    pub fn transactions(&self, start_version:u64, end_version :u64) -> Result<Vec<Transaction>> {
+        (start_version..end_version)
+            .map(|version| Ok(self.transaction_store.get_transaction(version)?))
+            .collect::<Result<Vec<_>>>()
+    }
+
+    pub fn get_transaction_by_version(&self, version:u64) -> Result<Transaction> {
+        self.transaction_store.get_transaction(version)
     }
 }
 

@@ -20,10 +20,10 @@ use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_metrics::counters::SVC_COUNTERS;
-use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
+use libra_types::proto::types::{Transaction as TransactionProto, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 use libradb::LibraDB;
 use std::{
-    convert::TryFrom,
+    convert::{TryFrom, From},
     ops::Deref,
     path::Path,
     sync::{mpsc, Arc, Mutex},
@@ -33,8 +33,9 @@ use storage_proto::proto::storage::{
     GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
     GetEpochChangeLedgerInfosResponse, GetHistoryStartupInfoByBlockIdRequest,
     GetStartupInfoRequest, GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    RollbackRequest, SaveTransactionsRequest,
-    SaveTransactionsResponse, Storage,
+    RollbackRequest, SaveTransactionsRequest, Version, LatestVersionResponse,
+    SaveTransactionsResponse, Storage, GetTransactionListRequest, GetTransactionListResponse,
+    GetTransactionByVersionResponse
 };
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
@@ -347,6 +348,63 @@ impl Storage for StorageService {
         )
         .expect("rollback err.");
         provide_grpc_response(Ok(()), ctx, sink);
+    }
+
+    fn latest_version(&mut self, ctx: ::grpcio::RpcContext,
+                      _req: (), sink: ::grpcio::UnarySink<LatestVersionResponse>) {
+        debug!("[GRPC] Storage::latest_version");
+        let ver = self.db.get_latest_version();
+        let mut resp = LatestVersionResponse::default();
+        match ver {
+            Ok(version) => {
+                let mut v = Version::default();
+                v.ver = version;
+                resp.version = Some(v);
+            },
+            Err(e) => {
+                warn!("{:?}", e);
+            },
+        }
+
+        provide_grpc_response(Ok(resp), ctx, sink);
+    }
+
+    fn get_transaction_list(&mut self, ctx: ::grpcio::RpcContext, req: GetTransactionListRequest,
+                            sink: ::grpcio::UnarySink<GetTransactionListResponse>) {
+        debug!("[GRPC] Storage::get_transaction_list");
+        let version = match req.version {
+            Some(v) => {v.ver},
+            None => {self.db.get_latest_version().expect("get latest version err.") + 1},
+        };
+
+        let end_version = if version > 0 {version - 1 } else {version};
+        let start_version = if end_version > 10 {end_version - 10} else {0};
+        let txn_vec = self.db.transactions(start_version, end_version);
+
+        let mut resp = GetTransactionListResponse::default();
+        match txn_vec {
+            Ok(txns) => {
+                let tmp = txns.iter().map(|txn| TransactionProto::from(txn.clone())).collect();
+                resp.transactions = tmp;
+            },
+            Err(e) => {warn!("{:?}", e);}
+        }
+
+        provide_grpc_response(Ok(resp), ctx, sink);
+    }
+
+    fn get_transaction_by_version(&mut self, ctx: ::grpcio::RpcContext, req: Version,
+                                  sink: ::grpcio::UnarySink<GetTransactionByVersionResponse>) {
+        debug!("[GRPC] Storage::get_transaction_by_version");
+        let mut resp = GetTransactionByVersionResponse::default();
+        match self.db.get_transaction_by_version(req.ver) {
+            Ok(txn) => {
+                resp.txn = Some(TransactionProto::from(txn));
+            },
+            Err(e) => {warn!("{:?}", e);}
+        }
+
+        provide_grpc_response(Ok(resp), ctx, sink);
     }
 }
 
