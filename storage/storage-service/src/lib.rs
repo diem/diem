@@ -20,7 +20,6 @@ use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_metrics::counters::SVC_COUNTERS;
-use libra_types::block_index::BlockIndex;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 use libradb::LibraDB;
 use std::{
@@ -30,12 +29,11 @@ use std::{
     sync::{mpsc, Arc, Mutex},
 };
 use storage_proto::proto::storage::{
-    create_storage, EmptyResponse, GetAccountStateWithProofByVersionRequest,
+    create_storage, GetAccountStateWithProofByVersionRequest,
     GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
     GetEpochChangeLedgerInfosResponse, GetHistoryStartupInfoByBlockIdRequest,
     GetStartupInfoRequest, GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    InsertBlockIndexRequest, QueryBlockIndexListByHeightRequest,
-    QueryBlockIndexListByHeightResponse, RollbackRequest, SaveTransactionsRequest,
+    RollbackRequest, SaveTransactionsRequest,
     SaveTransactionsResponse, Storage,
 };
 /// Starts storage service according to config.
@@ -248,19 +246,6 @@ impl StorageService {
     fn rollback_by_block_id_inner(&self, block_id: &HashValue) -> Result<()> {
         self.db.rollback_by_block_id(block_id)
     }
-
-    fn insert_block_index_inner(&self, height: &u64, block_index: &BlockIndex) -> Result<()> {
-        self.db.insert_block_index(height, block_index)
-    }
-
-    fn query_block_index_list_by_height_inner(
-        &self,
-        height: Option<u64>,
-        size: u64,
-    ) -> Result<Vec<BlockIndex>> {
-        self.db
-            .query_block_index_list_by_height(height, size as usize)
-    }
 }
 
 impl Storage for StorageService {
@@ -354,56 +339,14 @@ impl Storage for StorageService {
         &mut self,
         ctx: grpcio::RpcContext,
         req: RollbackRequest,
-        sink: grpcio::UnarySink<EmptyResponse>,
+        sink: grpcio::UnarySink<()>,
     ) {
         debug!("[GRPC] Storage::rollback_by_block_id");
         self.rollback_by_block_id_inner(
             &HashValue::from_slice(req.block_id.as_ref()).expect("parse err."),
         )
         .expect("rollback err.");
-        let resp = EmptyResponse {};
-        provide_grpc_response(Ok(resp), ctx, sink);
-    }
-
-    fn insert_block_index(
-        &mut self,
-        ctx: grpcio::RpcContext,
-        req: InsertBlockIndexRequest,
-        sink: grpcio::UnarySink<EmptyResponse>,
-    ) {
-        debug!("[GRPC] Storage::insert_block_index");
-        let req = storage_proto::InsertBlockIndexRequest::try_from(req)
-            .expect("InsertBlockIndexRequest err.");
-        self.insert_block_index_inner(&req.height, &req.block_index.expect("block index is none."))
-            .expect("rollback err.");
-        let resp = EmptyResponse {};
-        provide_grpc_response(Ok(resp), ctx, sink);
-    }
-
-    // Query Block Index
-    fn query_block_index_list_by_height(
-        &mut self,
-        ctx: grpcio::RpcContext,
-        req: QueryBlockIndexListByHeightRequest,
-        sink: grpcio::UnarySink<QueryBlockIndexListByHeightResponse>,
-    ) {
-        debug!("[GRPC] Storage::query_block_index_list_by_height");
-        let req = storage_proto::QueryBlockIndexListByHeightRequest::try_from(req)
-            .expect("QueryBlockIndexListByHeightRequest err.");
-
-        let size = if req.size > 100 { 100 } else { req.size };
-
-        let height = match req.begin {
-            Some(b) => Some(b.height),
-            None => None,
-        };
-
-        let block_index_list = self
-            .query_block_index_list_by_height_inner(height, size)
-            .expect("query block index err.");
-
-        let resp = storage_proto::QueryBlockIndexListByHeightResponse { block_index_list };
-        provide_grpc_response(Ok(resp.into()), ctx, sink);
+        provide_grpc_response(Ok(()), ctx, sink);
     }
 }
 

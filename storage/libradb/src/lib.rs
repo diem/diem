@@ -18,7 +18,6 @@ pub mod test_helper;
 pub mod errors;
 pub mod schema;
 
-mod block_index_store;
 mod change_set;
 mod event_store;
 mod ledger_counters;
@@ -32,7 +31,6 @@ mod transaction_store;
 mod libradb_test;
 
 use crate::{
-    block_index_store::BlockIndexStore,
     change_set::{ChangeSet, SealedChangeSet},
     errors::LibraDbError,
     event_store::EventStore,
@@ -51,7 +49,6 @@ use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_logger::prelude::*;
 use libra_metrics::OpMetrics;
 use libra_types::account_config::channel_global_events_address;
-use libra_types::block_index::BlockIndex;
 use libra_types::channel::{
     channel_global_events_resource_path, channel_resource_path, ChannelGlobalEventsResource,
     ChannelResource,
@@ -104,7 +101,6 @@ pub struct LibraDB {
     state_store: StateStore,
     event_store: EventStore,
     system_store: SystemStore,
-    block_index_store: BlockIndexStore,
     pruner: Pruner,
 }
 
@@ -140,7 +136,6 @@ impl LibraDB {
                 ColumnFamilyOptions::default(),
             ),
             (TRANSACTION_INFO_CF_NAME, ColumnFamilyOptions::default()),
-            (BLOCK_INDEX_CF_NAME, ColumnFamilyOptions::default()),
         ]
         .iter()
         .cloned()
@@ -163,7 +158,6 @@ impl LibraDB {
             state_store: StateStore::new(Arc::clone(&db)),
             transaction_store: TransactionStore::new(Arc::clone(&db)),
             system_store: SystemStore::new(Arc::clone(&db)),
-            block_index_store: BlockIndexStore::new(Arc::clone(&db)),
             pruner: Pruner::new(Arc::clone(&db), Self::NUM_HISTORICAL_VERSIONS_TO_KEEP),
         }
     }
@@ -869,19 +863,6 @@ impl LibraDB {
         self.ledger_store.rollback_by_block_id(block_id, &mut cs)?;
         let sealed_cs = SealedChangeSet { batch: cs.batch };
         self.commit(sealed_cs)
-    }
-
-    pub fn insert_block_index(&self, height: &u64, block_index: &BlockIndex) -> Result<()> {
-        self.block_index_store
-            .insert_block_index(height, block_index)
-    }
-
-    pub fn query_block_index_list_by_height(
-        &self,
-        height: Option<u64>,
-        size: usize,
-    ) -> Result<Vec<BlockIndex>> {
-        self.block_index_store.query_block_index(height, size)
     }
 }
 
