@@ -6,9 +6,7 @@ use crate::{
     OP_COUNTERS,
 };
 use bounded_executor::BoundedExecutor;
-use futures::{
-    channel::mpsc::UnboundedSender, compat::Future01CompatExt, future::join_all, Stream, StreamExt,
-};
+use futures::{channel::mpsc::UnboundedSender, future::join_all, Stream, StreamExt};
 use libra_config::config::{MempoolConfig, NodeConfig};
 use libra_logger::prelude::*;
 use libra_types::{transaction::SignedTransaction, PeerId};
@@ -207,7 +205,7 @@ async fn process_incoming_transactions<V>(
     let validations = join_all(
         transactions
             .iter()
-            .map(|t| smp.validator.validate_transaction(t.0.clone()).compat()),
+            .map(|t| smp.validator.validate_transaction(t.0.clone())),
     )
     .await;
 

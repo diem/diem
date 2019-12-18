@@ -11,7 +11,6 @@ use admission_control_proto::AdmissionControlStatus;
 use anyhow::{format_err, Result};
 use bounded_executor::BoundedExecutor;
 use bytes::Bytes;
-use futures::compat::Future01CompatExt;
 use futures::{
     channel::{mpsc, oneshot},
     stream::{select_all, StreamExt},
@@ -386,7 +385,6 @@ where
     let validation_status = upstream_proxy_data
         .vm_validator
         .validate_transaction(transaction.clone())
-        .compat()
         .await
         .map_err(|e| {
             security_log(SecurityEvent::InvalidTransactionAC)

@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Error, Result};
-use futures::future::{err, ok, Future};
+use anyhow::Result;
 use libra_config::config::NodeConfig;
 use libra_types::{
     account_address::AccountAddress, account_config::get_account_resource_or_default,
@@ -17,13 +16,11 @@ use vm_runtime::{LibraVM, VMVerifier};
 #[path = "unit_tests/vm_validator_test.rs"]
 mod vm_validator_test;
 
+#[async_trait::async_trait]
 pub trait TransactionValidation: Send + Sync + Clone {
     type ValidationInstance: VMVerifier;
     /// Validate a txn from client
-    fn validate_transaction(
-        &self,
-        _txn: SignedTransaction,
-    ) -> Box<dyn Future<Item = Option<VMStatus>, Error = Error> + Send>;
+    async fn validate_transaction(&self, _txn: SignedTransaction) -> Result<Option<VMStatus>>;
 }
 
 #[derive(Clone)]
@@ -41,26 +38,23 @@ impl VMValidator {
     }
 }
 
+#[async_trait::async_trait]
 impl TransactionValidation for VMValidator {
     type ValidationInstance = LibraVM;
 
-    fn validate_transaction(
-        &self,
-        txn: SignedTransaction,
-    ) -> Box<dyn Future<Item = Option<VMStatus>, Error = Error> + Send> {
-        match self.storage_read_client.get_latest_state_root() {
-            Ok((version, state_root)) => {
-                let smt = SparseMerkleTree::new(state_root);
-                let state_view = VerifiedStateView::new(
-                    Arc::clone(&self.storage_read_client),
-                    Some(version),
-                    state_root,
-                    &smt,
-                );
-                Box::new(ok(self.vm.validate_transaction(txn, &state_view)))
-            }
-            Err(e) => Box::new(err(e)),
-        }
+    async fn validate_transaction(&self, txn: SignedTransaction) -> Result<Option<VMStatus>> {
+        let (version, state_root) = self
+            .storage_read_client
+            .get_latest_state_root_async()
+            .await?;
+        let smt = SparseMerkleTree::new(state_root);
+        let state_view = VerifiedStateView::new(
+            Arc::clone(&self.storage_read_client),
+            Some(version),
+            state_root,
+            &smt,
+        );
+        Ok(self.vm.validate_transaction(txn, &state_view))
     }
 }
 
