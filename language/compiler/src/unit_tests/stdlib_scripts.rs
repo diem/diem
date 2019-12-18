@@ -38,7 +38,8 @@ fn compile_account_module() {
     let coin_module = compile_module_string(coin_code).unwrap();
 
     let vector_module = compile_module_string(vector_code).unwrap();
-    let channel_util_module = compile_module_string(channel_util_code).unwrap();
+    let channel_util_module =
+        compile_module_string_with_deps(channel_util_code, vec![vector_module.clone()]).unwrap();
     let channel_transaction_module =
         compile_module_string_with_deps(channel_transaction_code, vec![vector_module.clone()])
             .unwrap();

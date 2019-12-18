@@ -20,6 +20,7 @@ pub mod data_store;
 pub mod executor;
 pub mod gas_costs;
 mod proptest_types;
+pub mod witness_store;
 
 pub fn assert_status_eq(s1: &VMStatus, s2: &VMStatus) -> bool {
     assert_eq!(s1.major_status, s2.major_status);

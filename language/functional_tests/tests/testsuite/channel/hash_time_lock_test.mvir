@@ -1,0 +1,32 @@
+//! account: alice, 10000000
+//! account: bob, 10000000
+
+//! new-transaction
+//! sender: alice
+//! args: {{bob}}
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+import 0x0.HashTimeLock;
+import 0x0.Hash;
+main(unlocker: address){
+    let coin: LibraCoin.T;
+    let hash_lock: bytearray;
+    hash_lock = Hash.sha3_256(h"aa");
+    coin = LibraAccount.withdraw_from_sender(10000);
+    HashTimeLock.lock(move(unlocker), move(coin), move(hash_lock), 10);
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+//! args: {{alice}}
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+import 0x0.HashTimeLock;
+main(locker: address){
+    let coin: LibraCoin.T;
+    coin = HashTimeLock.unlock(move(locker), h"aa");
+    LibraAccount.deposit(get_txn_sender(), move(coin));
+    return;
+}
+

@@ -42,6 +42,14 @@ module Token {
         return;
     }
 
+    public move_to_channel_shared(value:u64) {
+        let t: Self.T;
+
+        t = Self.new(move(value));
+        ChannelUtil.move_to_shared<Self.T>(move(t));
+        return;
+    }
+
     public exist_channel_sender(): bool {
         let sender: address;
         sender = get_txn_sender();
@@ -50,6 +58,10 @@ module Token {
 
     public exist_channel_receiver(receiver:address): bool {
         return ChannelUtil.exist_channel_participant<Self.T>(move(receiver));
+    }
+
+    public exist_channel_shared(): bool {
+        return ChannelUtil.exist_channel_shared<Self.T>();
     }
 
     public move_from_channel_sender(): Self.T {
@@ -78,6 +90,17 @@ module Token {
         let ref: &mut Self.T;
         ref = ChannelUtil.borrow_from_participant_mut<Self.T>(move(receiver));
         return *&move(ref).value;
+    }
+
+    challenge_succeed(lock_owner: address) {
+        let bob_token: Self.T;
+        let bob_value: u64;
+
+        bob_token = Self.move_from_channel_receiver(copy(lock_owner));
+        bob_value = Self.value(&bob_token);
+
+        Self.destroy(move(bob_token));
+        return;
     }
 
 }
@@ -209,4 +232,39 @@ main(receiver:address) {
 
     return;
 
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}}
+import 0x0.ChannelTransaction;
+import {{default}}.Token;
+main(receiver:address) {
+     assert(Token.exist_channel_shared() == false, 11);
+     Token.move_to_channel_shared(1);
+     assert(Token.exist_channel_shared() == true, 11);
+     return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}}
+import 0x0.LibraAccount;
+import {{default}}.Token;
+main(lock_owner: address) {
+    Token.move_to_channel_receiver(copy(lock_owner), 1);
+    assert(Token.exist_channel_sender() == false, 11);
+    assert(Token.exist_channel_receiver(copy(lock_owner)) == true, 11);
+    assert(LibraAccount.channel_balance({{alice}}) == 50000, 1016);
+    assert(LibraAccount.channel_balance({{bob}}) == 50000, 1016);
+
+    LibraAccount.test(copy(lock_owner));
+
+    assert(Token.exist_channel_sender() == false, 11);
+    assert(Token.exist_channel_receiver(copy(lock_owner)) == false, 11);
+    assert(LibraAccount.channel_balance({{alice}}) == 0, 1016);
+    assert(LibraAccount.channel_balance({{bob}}) == 0, 1016);
+    return;
 }

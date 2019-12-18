@@ -45,7 +45,7 @@ module ChannelScript {
         assert(copy(time_lock) > 0, 1120);
         coin = LibraAccount.withdraw_from_channel(copy(amount));
         //TODO payment timeout
-        HashTimeLock.lock_in_channel(copy(payee), move(coin), move(hash_lock), LibraSystem.get_current_block_height() + move(time_lock));
+        HashTimeLock.lock_in_channel(copy(payee), move(coin), move(hash_lock), move(time_lock));
         return;
     }
 
