@@ -1,0 +1,58 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package types;
+
+import "transaction.proto";
+
+////////////////////////////////////block
+message BlockSummary {
+    bytes block_id = 1;
+    uint64 height = 2;
+    bytes parent_id = 3;
+    bytes accumulator_root_hash = 4;
+    bytes state_root_hash = 5;
+    bytes miner = 6;
+    uint64 nonce = 7;
+    bytes target = 8;
+    uint32 algo = 9;
+}
+
+message GetBlockSummaryListRequest {
+    BlockId block_id = 1;
+}
+
+message BlockId {
+    bytes id = 1;
+}
+
+message GetBlockSummaryListResponse {
+    repeated BlockSummary blocks = 1;
+}
+
+message LatestBlockHeightResponse {
+    uint64 height = 1;
+}
+
+////////////////////////////////////transaction
+message Version {
+    uint64 ver = 1;
+}
+
+message LatestVersionResponse {
+    Version version = 1;
+}
+
+message GetTransactionListRequest {
+    Version version = 1;
+}
+
+message GetTransactionListResponse {
+    repeated types.Transaction transactions = 1;
+}
+
+message GetTransactionByVersionResponse {
+    types.Transaction txn = 1;
+}

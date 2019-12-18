@@ -12,6 +12,7 @@ import "account_state_blob.proto";
 import "proof.proto";
 import "block_index.proto";
 import "google/protobuf/empty.proto";
+import "explorer.proto";
 
 // -----------------------------------------------------------------------------
 // ---------------- Service definition for storage
@@ -61,13 +62,13 @@ service Storage {
     returns (google.protobuf.Empty);
 
     // Latest version
-    rpc LatestVersion(google.protobuf.Empty) returns (LatestVersionResponse);
+    rpc LatestVersion(google.protobuf.Empty) returns (types.LatestVersionResponse);
 
     // Transaction list
-    rpc GetTransactionList(GetTransactionListRequest) returns (GetTransactionListResponse);
+    rpc GetTransactionList(types.GetTransactionListRequest) returns (types.GetTransactionListResponse);
 
     // Get transaction by version
-    rpc GetTransactionByVersion(Version) returns (GetTransactionByVersionResponse);
+    rpc GetTransactionByVersion(types.Version) returns (types.GetTransactionByVersionResponse);
 }
 
 message SaveTransactionsRequest {
@@ -166,24 +167,4 @@ message GetEpochChangeLedgerInfosResponse {
 
 message RollbackRequest {
     bytes block_id = 1;
-}
-
-message Version {
-    uint64 ver = 1;
-}
-
-message LatestVersionResponse {
-    Version version = 1;
-}
-
-message GetTransactionListRequest {
-    Version version = 1;
-}
-
-message GetTransactionListResponse {
-    repeated types.Transaction transactions = 1;
-}
-
-message GetTransactionByVersionResponse {
-    types.Transaction txn = 1;
 }

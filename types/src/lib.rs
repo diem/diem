@@ -32,6 +32,7 @@ pub mod validator_verifier;
 pub mod vm_error;
 pub mod write_set;
 pub mod write_set_ext;
+pub mod explorer;
 
 pub use account_address::AccountAddress as PeerId;
 

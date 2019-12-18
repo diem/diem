@@ -20,7 +20,9 @@ use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_metrics::counters::SVC_COUNTERS;
-use libra_types::proto::types::{Transaction as TransactionProto, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
+use libra_types::proto::types::{Transaction as TransactionProto, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+                                Version, LatestVersionResponse, GetTransactionListRequest, GetTransactionListResponse,
+                                GetTransactionByVersionResponse};
 use libradb::LibraDB;
 use std::{
     convert::{TryFrom, From},
@@ -33,9 +35,8 @@ use storage_proto::proto::storage::{
     GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
     GetEpochChangeLedgerInfosResponse, GetHistoryStartupInfoByBlockIdRequest,
     GetStartupInfoRequest, GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    RollbackRequest, SaveTransactionsRequest, Version, LatestVersionResponse,
-    SaveTransactionsResponse, Storage, GetTransactionListRequest, GetTransactionListResponse,
-    GetTransactionByVersionResponse
+    RollbackRequest, SaveTransactionsRequest,
+    SaveTransactionsResponse, Storage,
 };
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {

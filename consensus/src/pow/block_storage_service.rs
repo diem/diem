@@ -1,18 +1,18 @@
 use std::sync::Arc;
 use crate::chained_bft::consensusdb::ConsensusDB;
-use block_storage_proto::{proto::block_storage::{BlockStorage, create_block_storage,
-                                                BlockId as BlockIdProto, GetBlockByBlockIdResponse as GetBlockByBlockIdResponseProto,
-                                                GetBlockSummaryListRequest as GetBlockSummaryListRequestProto, GetBlockSummaryListResponse as GetBlockSummaryListResponseProto,
-                                                LatestBlockHeightResponse as LatestBlockHeightResponseProto},
-                          BlockId, GetBlockSummaryListRequest, BlockSummary, GetBlockSummaryListResponse};
+use block_storage_proto::{proto::block_storage::{BlockStorage, create_block_storage, GetBlockByBlockIdResponse as GetBlockByBlockIdResponseProto}};
 use grpcio::{EnvBuilder, RpcContext, UnarySink, Server, ServerBuilder};
 use libra_config::config::NodeConfig;
 use std::convert::TryFrom;
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
-use consensus_types::block::Block;
+use consensus_types::{block::Block};
 use crate::pow::payload_ext::BlockPayloadExt;
 use network::proto::Block as BlockBytes;
 use libra_crypto::HashValue;
+use libra_types::explorer::{BlockId, GetBlockSummaryListRequest, BlockSummary, GetBlockSummaryListResponse};
+use libra_types::proto::types::{BlockId as BlockIdProto, GetBlockSummaryListRequest as GetBlockSummaryListRequestProto,
+                                GetBlockSummaryListResponse as GetBlockSummaryListResponseProto,
+                                LatestBlockHeightResponse as LatestBlockHeightResponseProto};
 
 pub fn make_block_storage_service(node_config: &NodeConfig, block_store: &Arc<ConsensusDB>) -> Server {
     let env = Arc::new(
