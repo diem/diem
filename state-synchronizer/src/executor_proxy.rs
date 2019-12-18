@@ -21,7 +21,7 @@ pub trait ExecutorProxyTrait: Sync + Send {
     async fn get_local_storage_state(&self) -> Result<SynchronizerState>;
 
     /// Execute and commit a batch of transactions
-    fn execute_chunk(
+    async fn execute_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
@@ -38,10 +38,14 @@ pub trait ExecutorProxyTrait: Sync + Send {
     ) -> Result<TransactionListWithProof>;
 
     /// Get the epoch change ledger info for [start_epoch, end_epoch) so that we can move to end_epoch.
-    fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof>;
+    async fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+    ) -> Result<ValidatorChangeProof>;
 
     /// Tries to find a LedgerInfo for a given version.
-    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
+    async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
 }
 
 pub(crate) struct ExecutorProxy {
@@ -88,7 +92,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         ))
     }
 
-    fn execute_chunk(
+    async fn execute_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
@@ -114,7 +118,11 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .await
     }
 
-    fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof> {
+    async fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+    ) -> Result<ValidatorChangeProof> {
         let validator_change_proof = self
             .storage_read_client
             .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
@@ -126,7 +134,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         Ok(validator_change_proof)
     }
 
-    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+    async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         let (_, _, li_chain, _) = self
             .storage_read_client
             .update_to_latest_ledger(version, vec![])?;

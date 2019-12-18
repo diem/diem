@@ -416,11 +416,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         target_li: LedgerInfoWithSignatures,
     ) -> Result<()> {
         let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
-        let response_li = self.choose_response_li(
-            request.known_version,
-            request.current_epoch,
-            Some(target_li),
-        )?;
+        let response_li = self
+            .choose_response_li(
+                request.known_version,
+                request.current_epoch,
+                Some(target_li),
+            )
+            .await?;
         // In case known_version is lower than the requested ledger info an empty response might be
         // sent.
         self.deliver_chunk(
@@ -446,8 +448,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
         let timeout = std::cmp::min(timeout_ms, self.config.max_timeout_ms);
 
-        let response_li =
-            self.choose_response_li(request.known_version, request.current_epoch, None)?;
+        let response_li = self
+            .choose_response_li(request.known_version, request.current_epoch, None)
+            .await?;
         // If there is nothing a node can help with, and the request supports long polling,
         // add it to the subscriptions.
         if self.local_state.highest_local_li.ledger_info().version() <= request.known_version
@@ -498,13 +501,17 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         );
 
         // Retrieve the waypoint LI.
-        let waypoint_li = self.executor_proxy.get_ledger_info(waypoint_version)?;
+        let waypoint_li = self
+            .executor_proxy
+            .get_ledger_info(waypoint_version)
+            .await?;
 
         // Txns are up to the end of request epoch with the proofs relative to the waypoint LI.
         let end_of_epoch_li = if waypoint_li.ledger_info().epoch() > request.current_epoch {
             Some(
                 self.executor_proxy
-                    .get_epoch_proof(request.current_epoch, request.current_epoch + 1)?
+                    .get_epoch_proof(request.current_epoch, request.current_epoch + 1)
+                    .await?
                     .ledger_info_with_sigs
                     .first()
                     .ok_or_else(|| {
@@ -567,7 +574,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// * response LI is either the requested target or the highest local LI if target is None.
     /// * if the response LI would not belong to `request_epoch`, change
     /// the response LI to the LI that is terminating `request_epoch`.
-    fn choose_response_li(
+    async fn choose_response_li(
         &self,
         known_version: u64,
         request_epoch: u64,
@@ -577,7 +584,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         if target_li.ledger_info().epoch() > request_epoch {
             let end_of_epoch_li = self
                 .executor_proxy
-                .get_epoch_proof(request_epoch, request_epoch + 1)?
+                .get_epoch_proof(request_epoch, request_epoch + 1)
+                .await?
                 .ledger_info_with_sigs
                 .first()
                 .ok_or_else(|| {
@@ -705,6 +713,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         response_li.verify(self.local_state.verifier())?;
         self.validate_and_store_chunk(txn_list_with_proof, response_li, None)
+            .await
     }
 
     /// Processing chunk responses that carry a LedgerInfo corresponding to the waypoint.
@@ -736,10 +745,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             })
             .and_then(|w| w.verify(waypoint_li.ledger_info()))?;
         self.validate_and_store_chunk(txn_list_with_proof, waypoint_li, end_of_epoch_li)
+            .await
     }
 
     // Assumes that the target LI has been already verified by the caller.
-    fn validate_and_store_chunk(
+    async fn validate_and_store_chunk(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
         target: LedgerInfoWithSignatures,
@@ -758,12 +768,14 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             return Ok(());
         }
 
-        self.executor_proxy.execute_chunk(
-            txn_list_with_proof,
-            target,
-            intermediate_end_of_epoch_li,
-            &mut self.local_state.synced_trees,
-        )?;
+        self.executor_proxy
+            .execute_chunk(
+                txn_list_with_proof,
+                target,
+                intermediate_end_of_epoch_li,
+                &mut self.local_state.synced_trees,
+            )
+            .await?;
         Ok(())
     }
 
@@ -857,8 +869,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         sender: StateSynchronizerSender,
         request_info: PendingRequestInfo,
     ) -> Result<()> {
-        let response_li =
-            self.choose_response_li(request_info.known_version, request_info.request_epoch, None)?;
+        let response_li = self
+            .choose_response_li(request_info.known_version, request_info.request_epoch, None)
+            .await?;
         self.deliver_chunk(
             peer_id,
             request_info.known_version,
@@ -914,7 +927,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .callback
             .send(
                 self.executor_proxy
-                    .get_epoch_proof(request.start_epoch, request.end_epoch),
+                    .get_epoch_proof(request.start_epoch, request.end_epoch)
+                    .await,
             )
             .is_err()
         {

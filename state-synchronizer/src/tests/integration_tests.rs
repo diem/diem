@@ -65,7 +65,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         Ok(self.storage.read().unwrap().get_local_storage_state())
     }
 
-    fn execute_chunk(
+    async fn execute_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
@@ -101,11 +101,15 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         (self.handler)(txns_with_proof)
     }
 
-    fn get_epoch_proof(&self, start_epoch: u64, _end_epoch: u64) -> Result<ValidatorChangeProof> {
+    async fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+        _end_epoch: u64,
+    ) -> Result<ValidatorChangeProof> {
         Ok(self.storage.read().unwrap().get_epoch_changes(start_epoch))
     }
 
-    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+    async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         self.storage.read().unwrap().get_ledger_info(version)
     }
 }
