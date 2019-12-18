@@ -1314,6 +1314,7 @@ dependencies = [
  "storage-client 0.1.0",
  "storage-proto 0.1.0",
  "storage-service 0.1.0",
+ "tokio 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "vm-genesis 0.1.0",
  "vm-runtime 0.1.0",
