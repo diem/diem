@@ -78,8 +78,12 @@ import 0x0.ChannelScript;
 import 0x0.LibraAccount;
 import 0x0.Hash;
 main() {
-   ChannelScript.cancel_payment_after_timeout();
-   return;
+    assert(LibraAccount.channel_balance({{alice}}) == 40000, 1016);
+    assert(LibraAccount.channel_balance({{bob}}) == 40000, 1017);
+    ChannelScript.cancel_payment_after_timeout();
+    assert(LibraAccount.channel_balance({{alice}}) == 50000, 1016);
+    assert(LibraAccount.channel_balance({{bob}}) == 40000, 1017);
+    return;
 }
 
 // bob do challenge and close channel.
@@ -91,8 +95,13 @@ import 0x0.ChannelScript;
 import 0x0.LibraAccount;
 import 0x0.Hash;
 main() {
-   assert(LibraAccount.channel_is_locked(), 108);
-   LibraAccount.challenge();
-   assert(LibraAccount.channel_is_closed(), 109);
-   return;
+    assert(LibraAccount.channel_is_locked(), 108);
+    assert(LibraAccount.channel_balance({{alice}}) == 50000, 1016);
+    assert(LibraAccount.channel_balance({{bob}}) == 40000, 1017);
+    LibraAccount.challenge();
+
+    assert(LibraAccount.channel_balance({{alice}}) == 0, 1016);
+    assert(LibraAccount.channel_balance({{bob}}) == 0, 1017);
+    assert(LibraAccount.channel_is_closed(), 109);
+    return;
 }

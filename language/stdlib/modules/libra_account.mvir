@@ -745,20 +745,6 @@ module LibraAccount {
     native move_to_channel<R:resource>(r: R);
     native move_from_channel<R:resource>():R;
     native destroy_resource(lock_owner: address, module_id: bytearray);
-    close_resources(lock_owner: address) {
-        let len: u64;
-        let i: u64;
-        let module_id: bytearray;
-
-        len = ChannelUtil.channel_modules_len();
-        i = 0;
-        while (copy(i) < copy(len)) {
-            module_id = ChannelUtil.channel_modules_pop();
-            Self.destroy_resource(copy(lock_owner), copy(module_id));
-            i = copy(i) + 1;
-        }
-        return;
-    }
 
     //only support one participant currently.
     public open_channel(participant: address, sender_amount: u64, participant_amount: u64) acquires T,Channel, UserChannels, ChannelGlobalEvents {
@@ -912,7 +898,7 @@ module LibraAccount {
         return *&copy(channel).stage == 2;
     }
 
-    public challenge() acquires Channel,ChannelLockedBy,ChannelGlobalEvents {
+    public challenge() acquires Channel,ChannelLockedBy,ChannelGlobalEvents,T {
         let channel: &mut Self.Channel;
         let channel_address: address;
         let proposer: address;
@@ -990,14 +976,74 @@ module LibraAccount {
         return;
     }
 
-    do_close(channel_address: address, channel: &mut Self.Channel, violator: address) acquires ChannelGlobalEvents{
+    // Withdraw LibraCoin from participant's ChannelParticipantAccount
+    // only used by challenge_succeed()
+    withdraw_from_participant_channel(participant: address, amount: u64): LibraCoin.T {
+        let channel_account: &mut Self.ChannelParticipantAccount;
+        let withdraw_coin: LibraCoin.T;
+
+        channel_account = ChannelUtil.borrow_from_participant_mut<Self.ChannelParticipantAccount>(copy(participant));
+        withdraw_coin = LibraCoin.withdraw(&mut move(channel_account).balance, move(amount));
+        return move(withdraw_coin);
+    }
+
+    do_close_resource(violator: address) acquires T {
+        let channel_account: Self.ChannelParticipantAccount;
+        let balance: u64;
+        let coin: LibraCoin.T;
+        let proposer: address;
+        let participant_balance: u64;
+        let participant_coin: LibraCoin.T;
+
+        proposer = ChannelTransaction.get_proposer();
+        assert(get_txn_sender() == copy(proposer), 1233);
+        balance = Self.channel_balance(copy(proposer));
+        coin = Self.withdraw_from_channel(move(balance));
+        assert(Self.channel_balance(copy(proposer)) == 0, 1234);
+        Self.deposit(copy(proposer), move(coin));
+
+        participant_balance = Self.channel_balance(copy(violator));
+        participant_coin = Self.withdraw_from_participant_channel(copy(violator), move(participant_balance));
+        assert(Self.channel_balance(copy(violator)) == 0, 1235);
+        Self.deposit(move(proposer), move(participant_coin));
+
+//        proposer = ChannelTransaction.get_proposer();
+//        channel_account = ChannelUtil.move_from_participant<Self.ChannelParticipantAccount>(copy(participant));
+//        ChannelParticipantAccount { balance } = move(channel_account);
+//        Self.deposit(copy(proposer), move(balance));
+//
+//        channel_account = ChannelUtil.move_from_participant<Self.ChannelParticipantAccount>(copy(proposer));
+//        ChannelParticipantAccount { balance } = move(channel_account);
+//        Self.deposit(copy(proposer), move(balance));
+
+        return;
+    }
+
+    close_resources(violator: address) acquires T {
+        let len: u64;
+        let i: u64;
+        let module_id: bytearray;
+
+        Self.do_close_resource(copy(violator));
+        len = ChannelUtil.channel_modules_len();
+        i = 0;
+        while (copy(i) < copy(len)) {
+            module_id = ChannelUtil.channel_modules_pop();
+            Self.destroy_resource(copy(violator), copy(module_id));
+            i = copy(i) + 1;
+        }
+
+        return;
+    }
+
+    do_close(channel_address: address, channel: &mut Self.Channel, violator: address) acquires ChannelGlobalEvents, T {
         *(&mut copy(channel).stage) = 2;
         Self.close_resources(move(violator));
         Self.do_emit_channel_event(copy(channel_address), copy(channel));
         return;
     }
 
-    public close(violator: address) acquires Channel, ChannelGlobalEvents, ChannelLockedBy {
+    public close(violator: address) acquires Channel, ChannelGlobalEvents, ChannelLockedBy, T {
         let channel_address: address;
         let channel: &mut Self.Channel;
         let sender: address;
@@ -1129,7 +1175,7 @@ module LibraAccount {
     }
 
     // for test, will be removed after challenge test is ready
-    public test(lock_owner: address) {
+    public test(lock_owner: address) acquires T {
         Self.close_resources(copy(lock_owner));
         return;
     }

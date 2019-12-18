@@ -257,10 +257,14 @@ main(lock_owner: address) {
     Token.move_to_channel_receiver(copy(lock_owner), 1);
     assert(Token.exist_channel_sender() == false, 11);
     assert(Token.exist_channel_receiver(copy(lock_owner)) == true, 11);
+    assert(LibraAccount.channel_balance({{alice}}) == 50000, 1016);
+    assert(LibraAccount.channel_balance({{bob}}) == 50000, 1016);
 
     LibraAccount.test(copy(lock_owner));
 
     assert(Token.exist_channel_sender() == false, 11);
     assert(Token.exist_channel_receiver(copy(lock_owner)) == false, 11);
+    assert(LibraAccount.channel_balance({{alice}}) == 0, 1016);
+    assert(LibraAccount.channel_balance({{bob}}) == 0, 1016);
     return;
 }
