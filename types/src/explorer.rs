@@ -2,6 +2,7 @@ use anyhow::Result;
 use super::account_address::AccountAddress;
 use std::convert::TryFrom;
 use libra_crypto::HashValue;
+use crate::transaction::Transaction;
 
 /// Helper to construct and parse [`proto::types::BlockId`]
 #[derive(PartialEq, Eq, Clone)]
@@ -124,6 +125,158 @@ impl From<GetBlockSummaryListResponse> for crate::proto::types::GetBlockSummaryL
         }
         Self {
             blocks
+        }
+    }
+}
+
+////////////////
+/// Helper to construct and parse [`proto::types::Version`]
+#[derive(PartialEq, Eq, Clone)]
+pub struct Version {
+    pub ver:u64,
+}
+
+impl TryFrom<crate::proto::types::Version> for Version {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::Version) -> Result<Self> {
+        Ok(Self { ver:proto.ver})
+    }
+}
+
+impl From<Version> for crate::proto::types::Version {
+    fn from(req: Version) -> Self {
+        Self {
+            ver:req.ver
+        }
+    }
+}
+
+/// Helper to construct and parse [`proto::types::LatestVersionResponse`]
+#[derive(PartialEq, Eq, Clone)]
+pub struct LatestVersionResponse {
+    pub version:Option<Version>,
+}
+
+impl TryFrom<crate::proto::types::LatestVersionResponse> for LatestVersionResponse {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::LatestVersionResponse) -> Result<Self> {
+        let version = match proto.version {
+            Some(v) => Some(Version::try_from(v).expect("to Version err.")),
+            None => None,
+        };
+        Ok(Self { version})
+    }
+}
+
+impl From<LatestVersionResponse> for crate::proto::types::LatestVersionResponse {
+    fn from(req: LatestVersionResponse) -> Self {
+        let version = match req.version {
+            Some(v) => {
+                Some(v.into())
+            },
+            None => None,
+        };
+        Self {
+            version
+        }
+    }
+}
+
+/// Helper to construct and parse [`proto::types::GetTransactionListRequest`]
+#[derive(PartialEq, Eq, Clone)]
+pub struct GetTransactionListRequest {
+    pub version:Option<Version>,
+}
+
+impl TryFrom<crate::proto::types::GetTransactionListRequest> for GetTransactionListRequest {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::GetTransactionListRequest) -> Result<Self> {
+        let version = match proto.version {
+            Some(v) => Some(Version::try_from(v).expect("to Version err.")),
+            None => None,
+        };
+        Ok(Self { version})
+    }
+}
+
+impl From<GetTransactionListRequest> for crate::proto::types::GetTransactionListRequest {
+    fn from(req: GetTransactionListRequest) -> Self {
+        let version = match req.version {
+            Some(v) => {
+                Some(v.into())
+            },
+            None => None,
+        };
+        Self {
+            version
+        }
+    }
+}
+
+/// Helper to construct and parse [`proto::types::GetTransactionListResponse`]
+#[derive(PartialEq, Eq, Clone)]
+pub struct GetTransactionListResponse {
+    pub transactions:Vec<Transaction>,
+}
+
+impl TryFrom<crate::proto::types::GetTransactionListResponse> for GetTransactionListResponse {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::GetTransactionListResponse) -> Result<Self> {
+        let mut transactions = Vec::new();
+        for txn in proto.transactions {
+            let tmp = Transaction::try_from(txn).expect("to BlockSummary err.");
+            transactions.push(tmp);
+        }
+
+        Ok(Self { transactions})
+    }
+}
+
+impl From<GetTransactionListResponse> for crate::proto::types::GetTransactionListResponse {
+    fn from(req: GetTransactionListResponse) -> Self {
+        let mut transactions= Vec::new();
+        for txn in req.transactions {
+            let tmp = txn.into();
+            transactions.push(tmp);
+        }
+        Self {
+            transactions
+        }
+    }
+}
+
+/// Helper to construct and parse [`proto::types::GetTransactionByVersionResponse`]
+#[derive(PartialEq, Eq, Clone)]
+pub struct GetTransactionByVersionResponse {
+    pub txn: Option<Transaction>,
+}
+
+impl TryFrom<crate::proto::types::GetTransactionByVersionResponse> for GetTransactionByVersionResponse {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::GetTransactionByVersionResponse) -> Result<Self> {
+        let txn = match proto.txn {
+            Some(t) => {Some(Transaction::try_from(t).expect("to BlockSummary err."))},
+            None => None,
+        };
+        Ok(Self { txn})
+    }
+}
+
+impl From<GetTransactionByVersionResponse> for crate::proto::types::GetTransactionByVersionResponse {
+    fn from(req: GetTransactionByVersionResponse) -> Self {
+        let txn = match req.txn {
+            Some(t) => {
+                Some(t.into())
+            },
+            None => None,
+        };
+        Self {
+            txn
         }
     }
 }

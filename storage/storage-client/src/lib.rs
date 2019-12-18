@@ -25,6 +25,10 @@ use libra_types::{
     proof::AccumulatorConsistencyProof,
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
+    explorer::{
+        LatestVersionResponse, GetTransactionListRequest,
+        GetTransactionListResponse, GetTransactionByVersionResponse
+    }
 };
 use rand::Rng;
 use std::convert::TryFrom;
@@ -249,6 +253,20 @@ impl StorageRead for StorageReadServiceClient {
         })
         .boxed()
     }
+
+    fn latest_version(&mut self) -> Result<LatestVersionResponse> {
+        unimplemented!()
+    }
+
+    fn get_transaction_list(&mut self, req: GetTransactionListRequest)
+                            -> Result<GetTransactionListResponse>{
+        unimplemented!()
+    }
+
+    fn get_transaction_by_version(&mut self, req: Version)
+                                  -> Result<GetTransactionByVersionResponse>{
+        unimplemented!()
+    }
 }
 
 /// This provides storage write interfaces backed by real storage service.
@@ -426,6 +444,13 @@ pub trait StorageRead: Send + Sync {
         &self,
         start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>>;
+
+    fn latest_version(&mut self) -> Result<LatestVersionResponse>;
+
+    fn get_transaction_list(&mut self, req: GetTransactionListRequest)
+        -> Result<GetTransactionListResponse>;
+
+    fn get_transaction_by_version(&mut self, req: Version) -> Result<GetTransactionByVersionResponse>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.

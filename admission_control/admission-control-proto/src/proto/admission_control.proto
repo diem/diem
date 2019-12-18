@@ -9,6 +9,7 @@ import "get_with_proof.proto";
 import "mempool_status.proto";
 import "transaction.proto";
 import "vm_errors.proto";
+import "explorer.proto";
 
 // The request for submitting a transaction to an upstream validator or full node.
 message AdmissionControlMsg {
@@ -88,4 +89,8 @@ service AdmissionControl {
   rpc UpdateToLatestLedger(
       types.UpdateToLatestLedgerRequest)
       returns (types.UpdateToLatestLedgerResponse) {}
+
+  rpc BlockExplorer(types.BlockRequestItem) returns(types.BlockResponseItem) {}
+
+  rpc TxnExplorer(types.TxnRequestItem) returns(types.TxnResponseItem) {}
 }

@@ -6,8 +6,27 @@ syntax = "proto3";
 package types;
 
 import "transaction.proto";
+import "google/protobuf/empty.proto";
 
 ////////////////////////////////////block
+
+message BlockRequestItem {
+    oneof requested_items {
+        BlockId block_id = 1;
+        GetBlockSummaryListRequest get_block_summary_list_request = 2;
+        google.protobuf.Empty latest_block_height_request = 3;
+    }
+}
+
+message BlockResponseItem {
+    oneof response_items {
+        //GetBlockByBlockIdResponse get_block_by_block_id_response = 1;
+        GetBlockSummaryListResponse get_block_summary_list_response = 2;
+        LatestBlockHeightResponse latest_block_height_response = 3;
+    }
+}
+
+////////////////////////////////////
 message BlockSummary {
     bytes block_id = 1;
     uint64 height = 2;
@@ -37,6 +56,25 @@ message LatestBlockHeightResponse {
 }
 
 ////////////////////////////////////transaction
+
+message TxnRequestItem {
+    oneof requested_items {
+        google.protobuf.Empty latest_version_request = 1;
+        GetTransactionListRequest get_transaction_list_request = 2;
+        Version get_transaction_by_version_request = 3;
+    }
+}
+
+message TxnResponseItem {
+    oneof response_items {
+        LatestVersionResponse latest_version_response = 1;
+        GetTransactionListResponse get_transaction_list_response = 2;
+        GetTransactionByVersionResponse get_transaction_by_version_response = 3;
+    }
+}
+
+/////////////////////////////////////
+
 message Version {
     uint64 ver = 1;
 }
