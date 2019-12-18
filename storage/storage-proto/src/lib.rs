@@ -29,7 +29,6 @@ pub mod proto;
 
 use anyhow::{format_err, Error, Result};
 use libra_crypto::HashValue;
-use libra_types::block_index::BlockIndex;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -549,10 +548,6 @@ impl From<RollbackRequest> for crate::proto::storage::RollbackRequest {
     }
 }
 
-/// Helper to construct and parse [`proto::storage::EmptyResponse`]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct EmptyResponse {}
-
 /// Helper to construct and parse [`proto::storage::GetHistoryStartupInfoByBlockIdRequest`]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GetHistoryStartupInfoByBlockIdRequest {
@@ -578,124 +573,6 @@ impl From<GetHistoryStartupInfoByBlockIdRequest>
     fn from(request: GetHistoryStartupInfoByBlockIdRequest) -> Self {
         Self {
             block_id: request.block_id.to_vec(),
-        }
-    }
-}
-
-/// Helper to construct and parse [`proto::storage::InsertBlockIndexRequest`]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct InsertBlockIndexRequest {
-    pub height: u64,
-    pub block_index: Option<BlockIndex>,
-}
-
-impl TryFrom<crate::proto::storage::InsertBlockIndexRequest> for InsertBlockIndexRequest {
-    type Error = Error;
-
-    fn try_from(proto: crate::proto::storage::InsertBlockIndexRequest) -> Result<Self> {
-        let height = proto.height;
-        let block_index = proto.block_index.map(BlockIndex::try_from).transpose()?;
-        Ok(Self {
-            height,
-            block_index,
-        })
-    }
-}
-
-impl From<InsertBlockIndexRequest> for crate::proto::storage::InsertBlockIndexRequest {
-    fn from(request: InsertBlockIndexRequest) -> Self {
-        Self {
-            height: request.height,
-            block_index: request.block_index.map(Into::into),
-        }
-    }
-}
-
-/// Helper to construct and parse [`proto::storage::BlockHeight`]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct BlockHeight {
-    pub height: u64,
-}
-
-impl TryFrom<crate::proto::storage::BlockHeight> for BlockHeight {
-    type Error = Error;
-
-    fn try_from(proto: crate::proto::storage::BlockHeight) -> Result<Self> {
-        let height = proto.height;
-        Ok(Self { height })
-    }
-}
-
-impl From<BlockHeight> for crate::proto::storage::BlockHeight {
-    fn from(request: BlockHeight) -> Self {
-        Self {
-            height: request.height,
-        }
-    }
-}
-
-/// Helper to construct and parse [`proto::storage::QueryBlockIndexListByHeightRequest`]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct QueryBlockIndexListByHeightRequest {
-    pub begin: Option<BlockHeight>,
-    pub size: u64,
-}
-
-impl TryFrom<crate::proto::storage::QueryBlockIndexListByHeightRequest>
-    for QueryBlockIndexListByHeightRequest
-{
-    type Error = Error;
-
-    fn try_from(proto: crate::proto::storage::QueryBlockIndexListByHeightRequest) -> Result<Self> {
-        let size = proto.size;
-        let begin = proto.begin.map(BlockHeight::try_from).transpose()?;
-        Ok(Self { begin, size })
-    }
-}
-
-impl From<QueryBlockIndexListByHeightRequest>
-    for crate::proto::storage::QueryBlockIndexListByHeightRequest
-{
-    fn from(request: QueryBlockIndexListByHeightRequest) -> Self {
-        Self {
-            begin: request.begin.map(Into::into),
-            size: request.size,
-        }
-    }
-}
-
-/// Helper to construct and parse [`proto::storage::QueryBlockIndexListByHeightResponse`]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct QueryBlockIndexListByHeightResponse {
-    pub block_index_list: Vec<BlockIndex>,
-}
-
-impl TryFrom<crate::proto::storage::QueryBlockIndexListByHeightResponse>
-    for QueryBlockIndexListByHeightResponse
-{
-    type Error = Error;
-
-    fn try_from(proto: crate::proto::storage::QueryBlockIndexListByHeightResponse) -> Result<Self> {
-        Ok(Self {
-            block_index_list: proto
-                .block_index_list
-                .into_iter()
-                .map(TryFrom::try_from)
-                .collect::<Result<Vec<_>>>()?,
-        })
-    }
-}
-
-impl From<QueryBlockIndexListByHeightResponse>
-    for crate::proto::storage::QueryBlockIndexListByHeightResponse
-{
-    fn from(response: QueryBlockIndexListByHeightResponse) -> Self {
-        Self {
-            block_index_list: response
-                .block_index_list
-                .into_iter()
-                .map(Into::into)
-                .collect(),
         }
     }
 }

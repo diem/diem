@@ -6,7 +6,6 @@
 use anyhow::{Error, Result};
 use futures::prelude::*;
 use libra_crypto::{ed25519::*, HashValue};
-use libra_types::block_index::BlockIndex;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
@@ -158,14 +157,6 @@ impl StorageRead for MockStorageReadClient {
         &self,
         _start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {
-        unimplemented!()
-    }
-
-    fn query_block_index_list_by_height(
-        &self,
-        _height: Option<u64>,
-        _size: u64,
-    ) -> Result<Vec<BlockIndex>, Error> {
         unimplemented!()
     }
 }

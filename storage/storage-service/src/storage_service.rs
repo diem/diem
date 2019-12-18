@@ -4,7 +4,6 @@ use futures::{executor::block_on, prelude::*};
 use grpc_helpers::{spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
-use libra_types::block_index::BlockIndex;
 use libra_types::proof::AccumulatorConsistencyProof;
 use libra_types::{
     account_address::AccountAddress,
@@ -202,14 +201,6 @@ impl StorageRead for StorageService {
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {
         unimplemented!()
     }
-
-    fn query_block_index_list_by_height(
-        &self,
-        height: Option<u64>,
-        size: u64,
-    ) -> Result<Vec<BlockIndex>> {
-        self.query_block_index_list_by_height_inner(height, size)
-    }
 }
 
 impl StorageWrite for StorageService {
@@ -245,11 +236,5 @@ impl StorageWrite for StorageService {
     fn rollback_by_block_id(&self, block_id: HashValue) {
         self.rollback_by_block_id_inner(&block_id)
             .expect("rollback failed.");
-    }
-
-    /// BlockIndex
-    fn insert_block_index(&self, height: u64, block_index: BlockIndex) {
-        self.insert_block_index_inner(&height, &block_index)
-            .expect("insert block index failed.")
     }
 }
