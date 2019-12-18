@@ -47,7 +47,7 @@ impl ChainedBftProvider {
         executor: Arc<Executor<LibraVM>>,
         synchronizer_client: Arc<StateSyncClient>,
     ) -> Self {
-        let runtime = runtime::Builder::new()
+        let mut runtime = runtime::Builder::new()
             .thread_name("consensus-")
             .threaded_scheduler()
             .enable_all()
@@ -58,7 +58,7 @@ impl ChainedBftProvider {
         let config = ChainedBftSMRConfig::from_node_config(&node_config);
         debug!("[Consensus] My peer: {:?}", config.author);
         let storage = Arc::new(StorageWriteProxy::new(node_config));
-        let initial_data = storage.start();
+        let initial_data = runtime.block_on(storage.start());
 
         let mempool_client =
             MempoolClientWrapper::new("localhost", node_config.mempool.mempool_service_port);
