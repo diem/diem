@@ -24,6 +24,10 @@ use libra_types::{
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, Version},
     vm_error::StatusCode,
+    explorer::{
+        LatestVersionResponse, GetTransactionListRequest,
+        GetTransactionListResponse, GetTransactionByVersionResponse
+    }
 };
 use rand::{
     rngs::{OsRng, StdRng},
@@ -157,6 +161,20 @@ impl StorageRead for MockStorageReadClient {
         &self,
         _start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {
+        unimplemented!()
+    }
+
+    fn latest_version(&mut self) -> Result<LatestVersionResponse> {
+        unimplemented!()
+    }
+
+    fn get_transaction_list(&mut self, req: GetTransactionListRequest)
+                            -> Result<GetTransactionListResponse>{
+        unimplemented!()
+    }
+
+    fn get_transaction_by_version(&mut self, req: Version)
+        -> Result<GetTransactionByVersionResponse>{
         unimplemented!()
     }
 }

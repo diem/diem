@@ -14,6 +14,10 @@ use libra_types::{
     },
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
+    explorer::{
+        LatestVersionResponse, GetTransactionListRequest,
+        GetTransactionListResponse, GetTransactionByVersionResponse
+    }
 };
 use std::{
     convert::{TryFrom, TryInto},
@@ -199,6 +203,20 @@ impl StorageRead for StorageService {
         &self,
         _start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {
+        unimplemented!()
+    }
+
+    fn latest_version(&mut self) -> Result<LatestVersionResponse> {
+        unimplemented!()
+    }
+
+    fn get_transaction_list(&mut self, req: GetTransactionListRequest)
+                            -> Result<GetTransactionListResponse>{
+        unimplemented!()
+    }
+
+    fn get_transaction_by_version(&mut self, req: Version)
+                                  -> Result<GetTransactionByVersionResponse>{
         unimplemented!()
     }
 }

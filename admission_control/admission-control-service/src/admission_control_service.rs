@@ -20,7 +20,9 @@ use grpc_helpers::provide_grpc_response;
 use libra_logger::prelude::*;
 use libra_mempool::core_mempool_client::CoreMemPoolClient;
 use libra_metrics::counters::SVC_COUNTERS;
-use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
+use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+                                BlockRequestItem, BlockResponseItem,
+                                TxnRequestItem, TxnResponseItem};
 use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::StorageRead;
@@ -137,12 +139,26 @@ impl AdmissionControl for AdmissionControlService {
     fn update_to_latest_ledger(
         &mut self,
         ctx: grpcio::RpcContext<'_>,
-        req: libra_types::proto::types::UpdateToLatestLedgerRequest,
-        sink: grpcio::UnarySink<libra_types::proto::types::UpdateToLatestLedgerResponse>,
+        req: UpdateToLatestLedgerRequest,
+        sink: grpcio::UnarySink<UpdateToLatestLedgerResponse>,
     ) {
         debug!("[GRPC] AdmissionControl::update_to_latest_ledger");
         let _timer = SVC_COUNTERS.req(&ctx);
         let resp = self.update_to_latest_ledger_inner(req);
         provide_grpc_response(resp, ctx, sink);
+    }
+
+    fn block_explorer(&mut self, ctx: ::grpcio::RpcContext,
+                      req: BlockRequestItem,
+                      sink: ::grpcio::UnarySink<BlockResponseItem>) {
+        debug!("[GRPC] AdmissionControl::block_explorer");
+        unimplemented!()
+    }
+
+    fn txn_explorer(&mut self, ctx: ::grpcio::RpcContext,
+                    req: TxnRequestItem,
+                    sink: ::grpcio::UnarySink<TxnResponseItem>) {
+        debug!("[GRPC] AdmissionControl::txn_explorer");
+        unimplemented!()
     }
 }
