@@ -15,13 +15,16 @@ use std::collections::{BTreeMap, HashMap};
 use storage_client::{
     StorageRead, StorageReadServiceClient, StorageWrite, StorageWriteServiceClient,
 };
+use tokio::runtime::Runtime;
 
 fn start_test_storage_with_read_write_client() -> (
+    Runtime,
     libra_tools::tempdir::TempPath,
     ServerHandle,
     StorageReadServiceClient,
     StorageWriteServiceClient,
 ) {
+    let rt = Runtime::new().unwrap();
     let mut config = NodeConfig::random();
     let tmp_dir = libra_tools::tempdir::TempPath::new();
     config.storage.dir = tmp_dir.path().to_path_buf();
@@ -39,7 +42,13 @@ fn start_test_storage_with_read_write_client() -> (
         config.storage.port,
         None,
     );
-    (tmp_dir, storage_server_handle, read_client, write_client)
+    (
+        rt,
+        tmp_dir,
+        storage_server_handle,
+        read_client,
+        write_client,
+    )
 }
 
 proptest! {
@@ -47,18 +56,18 @@ proptest! {
 
     #[test]
     fn test_storage_service_basic(blocks in arb_blocks_to_commit().no_shrink()) {
-        let(_tmp_dir, _server_handler, read_client, write_client) =
+        let(mut rt, _tmp_dir, _server_handler, read_client, write_client) =
             start_test_storage_with_read_write_client();
 
         let mut version = 0;
         let mut all_accounts = BTreeMap::new();
 
         for (txns_to_commit, ledger_info_with_sigs) in &blocks {
-            write_client
-                .save_transactions(txns_to_commit.clone(),
+            rt.block_on(write_client
+                .save_transactions_async(txns_to_commit.clone(),
                                    version, /* first_version */
                                    Some(ledger_info_with_sigs.clone()),
-                ).unwrap();
+                )).unwrap();
             version += txns_to_commit.len() as u64;
             let mut account_states = HashMap::new();
             // Get the ground truth of account states.

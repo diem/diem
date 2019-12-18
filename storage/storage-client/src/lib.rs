@@ -435,18 +435,6 @@ pub trait StorageWrite: Send + Sync {
     /// See [`LibraDB::save_transactions`].
     ///
     /// [`LibraDB::save_transactions`]: ../libradb/struct.LibraDB.html#method.save_transactions
-    fn save_transactions(
-        &self,
-        txns_to_commit: Vec<TransactionToCommit>,
-        first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
-    ) -> Result<()> {
-        block_on(self.save_transactions_async(txns_to_commit, first_version, ledger_info_with_sigs))
-    }
-
-    /// See [`LibraDB::save_transactions`].
-    ///
-    /// [`LibraDB::save_transactions`]: ../libradb/struct.LibraDB.html#method.save_transactions
     async fn save_transactions_async(
         &self,
         txns_to_commit: Vec<TransactionToCommit>,

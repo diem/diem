@@ -10,6 +10,7 @@ mod executor_test;
 mod mock_vm;
 
 use anyhow::{bail, ensure, format_err, Result};
+use futures::executor::block_on;
 use lazy_static::lazy_static;
 use libra_config::config::NodeConfig;
 use libra_config::config::VMConfig;
@@ -47,6 +48,7 @@ use std::{
 };
 use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
 use storage_proto::TreeState;
+use tokio::runtime::Runtime;
 use vm_runtime::VMExecutor;
 
 lazy_static! {
@@ -289,6 +291,8 @@ impl ProcessedVMOutput {
 
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<V> {
+    rt: Runtime,
+
     /// Client to storage service.
     storage_read_client: Arc<dyn StorageRead>,
     storage_write_client: Arc<dyn StorageWrite>,
@@ -309,17 +313,25 @@ where
         storage_write_client: Arc<dyn StorageWrite>,
         config: &NodeConfig,
     ) -> Self {
+        let rt = Runtime::new().unwrap();
+
         let mut executor = Executor {
+            rt,
             storage_read_client: storage_read_client.clone(),
             storage_write_client,
             vm_config: config.vm_config.clone(),
             phantom: PhantomData,
         };
-        if storage_read_client
-            .get_startup_info()
-            .expect("Shouldn't fail")
-            .is_none()
-        {
+
+        let startup_info = block_on(executor.rt.spawn(async move {
+            storage_read_client
+                .get_startup_info_async()
+                .await
+                .expect("Shouldn't fail")
+        }))
+        .unwrap();
+
+        if startup_info.is_none() {
             let genesis_txn = config
                 .execution
                 .genesis
@@ -522,11 +534,18 @@ where
             let _timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
             OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
             assert_eq!(first_version_to_commit, version + 1 - num_txns_to_commit);
-            self.storage_write_client.save_transactions(
-                txns_to_commit,
-                first_version_to_commit,
-                Some(ledger_info_with_sigs.clone()),
-            )?;
+            let write_client = self.storage_write_client.clone();
+            let ledger_info_with_sigs = ledger_info_with_sigs.clone();
+            block_on(self.rt.spawn(async move {
+                write_client
+                    .save_transactions_async(
+                        txns_to_commit,
+                        first_version_to_commit,
+                        Some(ledger_info_with_sigs),
+                    )
+                    .await
+            }))
+            .unwrap()?;
         }
         // Only bump the counter when the commit succeeds.
         OP_COUNTERS.inc_by("num_accounts", list_num_account_created.into_iter().sum());
@@ -621,11 +640,14 @@ where
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
             return Ok(());
         }
-        self.storage_write_client.save_transactions(
-            txns_to_commit,
-            first_version,
-            ledger_info_to_commit.clone(),
-        )?;
+        let write_client = self.storage_write_client.clone();
+        let ledger_info = ledger_info_to_commit.clone();
+        block_on(self.rt.spawn(async move {
+            write_client
+                .save_transactions_async(txns_to_commit, first_version, ledger_info)
+                .await
+        }))
+        .unwrap()?;
 
         *synced_trees = output.executed_trees().clone();
         info!(
