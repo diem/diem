@@ -262,23 +262,6 @@ impl StorageWrite for StorageWriteServiceClient {
 pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::update_to_latest_ledger`].
     ///
-    /// [`LibraDB::update_to_latest_ledger`]:
-    /// ../libradb/struct.LibraDB.html#method.update_to_latest_ledger
-    fn update_to_latest_ledger(
-        &self,
-        client_known_version: Version,
-        request_items: Vec<RequestItem>,
-    ) -> Result<(
-        Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        ValidatorChangeProof,
-        AccumulatorConsistencyProof,
-    )> {
-        block_on(self.update_to_latest_ledger_async(client_known_version, request_items))
-    }
-
-    /// See [`LibraDB::update_to_latest_ledger`].
-    ///
     /// [`LibraDB::update_to_latest_ledger`]:../libradb/struct.LibraDB.html#method.
     /// update_to_latest_ledger
     async fn update_to_latest_ledger_async(

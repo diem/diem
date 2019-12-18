@@ -132,7 +132,8 @@ impl ExecutorProxyTrait for ExecutorProxy {
     async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         let (_, _, li_chain, _) = self
             .storage_read_client
-            .update_to_latest_ledger(version, vec![])?;
+            .update_to_latest_ledger_async(version, vec![])
+            .await?;
         let waypoint_li = li_chain
             .ledger_info_with_sigs
             .first()

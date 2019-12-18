@@ -421,6 +421,7 @@ fn create_transaction_chunks(
 
 #[test]
 fn test_executor_execute_and_commit_chunk() {
+    let mut rt = Runtime::new().unwrap();
     let first_batch_size = 30;
     let second_batch_size = 40;
     let third_batch_size = 20;
@@ -456,7 +457,9 @@ fn test_executor_execute_and_commit_chunk() {
             &mut committed_trees,
         )
         .unwrap();
-    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = rt
+        .block_on(storage_client.update_to_latest_ledger_async(0, vec![]))
+        .unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
@@ -469,7 +472,9 @@ fn test_executor_execute_and_commit_chunk() {
             &mut committed_trees,
         )
         .unwrap();
-    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = rt
+        .block_on(storage_client.update_to_latest_ledger_async(0, vec![]))
+        .unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
@@ -482,7 +487,9 @@ fn test_executor_execute_and_commit_chunk() {
             &mut committed_trees,
         )
         .unwrap();
-    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = rt
+        .block_on(storage_client.update_to_latest_ledger_async(0, vec![]))
+        .unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
@@ -495,7 +502,9 @@ fn test_executor_execute_and_commit_chunk() {
             &mut committed_trees,
         )
         .unwrap();
-    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = rt
+        .block_on(storage_client.update_to_latest_ledger_async(0, vec![]))
+        .unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
@@ -508,7 +517,9 @@ fn test_executor_execute_and_commit_chunk() {
             &mut committed_trees,
         )
         .unwrap();
-    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = rt
+        .block_on(storage_client.update_to_latest_ledger_async(0, vec![]))
+        .unwrap();
     assert_eq!(li, ledger_info);
 
     drop(storage_server);
@@ -517,6 +528,7 @@ fn test_executor_execute_and_commit_chunk() {
 
 #[test]
 fn test_executor_execute_and_commit_chunk_restart() {
+    let mut rt = Runtime::new().unwrap();
     let first_batch_size = 30;
     let second_batch_size = 40;
 
@@ -551,7 +563,9 @@ fn test_executor_execute_and_commit_chunk_restart() {
             )
             .unwrap();
         synced_trees = committed_trees;
-        let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+        let (_, li, _, _) = rt
+            .block_on(storage_client.update_to_latest_ledger_async(0, vec![]))
+            .unwrap();
         assert_eq!(li.ledger_info().version(), 0);
         assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
     }
@@ -573,7 +587,9 @@ fn test_executor_execute_and_commit_chunk_restart() {
                 &mut synced_trees,
             )
             .unwrap();
-        let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+        let (_, li, _, _) = rt
+            .block_on(storage_client.update_to_latest_ledger_async(0, vec![]))
+            .unwrap();
         assert_eq!(li, ledger_info);
     }
 

@@ -94,8 +94,8 @@ proptest! {
                 response_ledger_info_with_sigs,
                 _validator_change_proof,
                 _ledger_consistency_proof,
-            ) = read_client
-                .update_to_latest_ledger(0, account_state_request_items).unwrap();
+            ) = rt.block_on(read_client
+                .update_to_latest_ledger_async(0, account_state_request_items)).unwrap();
             for ((address, blob), response_item) in zip_eq(account_states, response_items) {
                     match response_item {
                         ResponseItem::GetAccountState {
