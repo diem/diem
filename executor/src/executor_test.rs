@@ -28,6 +28,7 @@ use std::{
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_proto::proto::storage::create_storage;
 use storage_service::StorageService;
+use tokio::runtime::Runtime;
 
 fn create_storage_server(config: &mut NodeConfig) -> (grpcio::Server, mpsc::Receiver<()>) {
     let (service, shutdown_receiver) = StorageService::new(&config.storage.dir());
@@ -51,6 +52,7 @@ fn create_storage_server(config: &mut NodeConfig) -> (grpcio::Server, mpsc::Rece
 }
 
 fn create_executor(config: &NodeConfig) -> (Executor<MockVM>, ExecutedTrees) {
+    let mut rt = Runtime::new().unwrap();
     let client_env = Arc::new(EnvBuilder::new().build());
     let read_client = Arc::new(StorageReadServiceClient::new(
         Arc::clone(&client_env),
@@ -64,8 +66,8 @@ fn create_executor(config: &NodeConfig) -> (Executor<MockVM>, ExecutedTrees) {
         None,
     ));
     let executor = Executor::new(read_client.clone(), write_client, config);
-    let startup_info = read_client
-        .get_startup_info()
+    let startup_info = rt
+        .block_on(read_client.get_startup_info_async())
         .expect("unable to read ledger info from storage")
         .expect("startup info is None");
     let root_executed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
