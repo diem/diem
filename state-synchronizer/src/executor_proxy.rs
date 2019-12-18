@@ -126,11 +126,6 @@ impl ExecutorProxyTrait for ExecutorProxy {
         let validator_change_proof = self
             .storage_read_client
             .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
-        // TODO(zekun000): change this (or caller of this) to query storage for more epoch changes.
-        ensure!(
-            !validator_change_proof.more,
-            "Exceeded max response length."
-        );
         Ok(validator_change_proof)
     }
 
