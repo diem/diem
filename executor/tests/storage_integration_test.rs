@@ -203,6 +203,7 @@ fn test_reconfiguration() {
 
 #[test]
 fn test_execution_with_storage() {
+    let mut rt = Runtime::new().unwrap();
     let (config, genesis_key) = config_builder::test_config();
     let (_storage_server_handle, executor, mut committed_trees) =
         create_storage_service_and_executor(&config);
@@ -408,8 +409,11 @@ fn test_execution_with_storage() {
         ledger_info_with_sigs,
         validator_change_proof,
         _ledger_consistency_proof,
-    ) = storage_read_client
-        .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
+    ) = rt
+        .block_on(storage_read_client.update_to_latest_ledger_async(
+            /* client_known_version = */ 0,
+            request_items.clone(),
+        ))
         .unwrap();
     verify_update_to_latest_ledger_response(
         &mut EpochInfo {
@@ -618,8 +622,11 @@ fn test_execution_with_storage() {
         ledger_info_with_sigs,
         validator_change_proof,
         _ledger_consistency_proof,
-    ) = storage_read_client
-        .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
+    ) = rt
+        .block_on(storage_read_client.update_to_latest_ledger_async(
+            /* client_known_version = */ 0,
+            request_items.clone(),
+        ))
         .unwrap();
     verify_update_to_latest_ledger_response(
         &mut EpochInfo {
