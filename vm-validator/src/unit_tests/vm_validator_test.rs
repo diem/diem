@@ -4,7 +4,6 @@
 use crate::vm_validator::{TransactionValidation, VMValidator};
 use config_builder;
 use executor::Executor;
-use futures::future::Future;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
@@ -19,6 +18,7 @@ use rand::SeedableRng;
 use std::{sync::Arc, u64};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
+use tokio::runtime::Runtime;
 use transaction_builder::encode_transfer_script;
 use vm_runtime::LibraVM;
 
@@ -28,7 +28,8 @@ struct TestValidator {
 }
 
 impl TestValidator {
-    fn new(config: &NodeConfig) -> Self {
+    fn new(config: &NodeConfig) -> (Self, Runtime) {
+        let rt = Runtime::new().unwrap();
         let storage = start_storage_service(&config);
 
         // setup execution
@@ -55,10 +56,13 @@ impl TestValidator {
 
         let vm_validator = VMValidator::new(config, storage_read_client);
 
-        TestValidator {
-            _storage: storage,
-            vm_validator,
-        }
+        (
+            TestValidator {
+                _storage: storage,
+                vm_validator,
+            },
+            rt,
+        )
     }
 }
 
@@ -89,7 +93,7 @@ impl std::ops::Deref for TestValidator {
 #[test]
 fn test_validate_transaction() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let program = encode_transfer_script(&address, 100);
@@ -100,9 +104,8 @@ fn test_validate_transaction() {
         key.public_key(),
         Some(program),
     );
-    let ret = vm_validator
-        .validate_transaction(transaction)
-        .wait()
+    let ret = rt
+        .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(ret, None);
 }
@@ -110,7 +113,7 @@ fn test_validate_transaction() {
 #[test]
 fn test_validate_invalid_signature() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let mut rng = ::rand::rngs::StdRng::from_seed([1u8; 32]);
     let (other_private_key, _) = compat::generate_keypair(&mut rng);
@@ -125,9 +128,8 @@ fn test_validate_invalid_signature() {
         key.public_key(),
         Some(program),
     );
-    let ret = vm_validator
-        .validate_transaction(transaction)
-        .wait()
+    let ret = rt
+        .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_SIGNATURE);
 }
@@ -135,7 +137,7 @@ fn test_validate_invalid_signature() {
 #[test]
 fn test_validate_known_script_too_large_args() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
@@ -151,7 +153,7 @@ fn test_validate_known_script_too_large_args() {
         0, /* max gas price */
         None,
     );
-    let ret = vm_validator.validate_transaction(txn).wait().unwrap();
+    let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
     assert_eq!(
         ret.unwrap().major_status,
         StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE
@@ -161,7 +163,7 @@ fn test_validate_known_script_too_large_args() {
 #[test]
 fn test_validate_max_gas_units_above_max() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
@@ -174,7 +176,7 @@ fn test_validate_max_gas_units_above_max() {
         0,              /* max gas price */
         Some(u64::MAX), // Max gas units
     );
-    let ret = vm_validator.validate_transaction(txn).wait().unwrap();
+    let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
     assert_eq!(
         ret.unwrap().major_status,
         StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND
@@ -184,7 +186,7 @@ fn test_validate_max_gas_units_above_max() {
 #[test]
 fn test_validate_max_gas_units_below_min() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
@@ -197,7 +199,7 @@ fn test_validate_max_gas_units_below_min() {
         0,       /* max gas price */
         Some(1), // Max gas units
     );
-    let ret = vm_validator.validate_transaction(txn).wait().unwrap();
+    let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
     assert_eq!(
         ret.unwrap().major_status,
         StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
@@ -207,7 +209,7 @@ fn test_validate_max_gas_units_below_min() {
 #[test]
 fn test_validate_max_gas_price_above_bounds() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
@@ -220,7 +222,7 @@ fn test_validate_max_gas_price_above_bounds() {
         u64::MAX, /* max gas price */
         None,
     );
-    let ret = vm_validator.validate_transaction(txn).wait().unwrap();
+    let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
     assert_eq!(
         ret.unwrap().major_status,
         StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND
@@ -233,7 +235,7 @@ fn test_validate_max_gas_price_above_bounds() {
 #[test]
 fn test_validate_max_gas_price_below_bounds() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let program = encode_transfer_script(&address, 100);
@@ -247,7 +249,7 @@ fn test_validate_max_gas_price_below_bounds() {
         0, /* max gas price */
         None,
     );
-    let ret = vm_validator.validate_transaction(txn).wait().unwrap();
+    let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
     assert_eq!(ret, None);
     //assert_eq!(
     //    ret.unwrap().major_status,
@@ -259,7 +261,7 @@ fn test_validate_max_gas_price_below_bounds() {
 #[test]
 fn test_validate_unknown_script() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let transaction = transaction_test_helpers::get_test_signed_txn(
@@ -269,9 +271,8 @@ fn test_validate_unknown_script() {
         key.public_key(),
         None,
     );
-    let ret = vm_validator
-        .validate_transaction(transaction)
-        .wait()
+    let ret = rt
+        .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_SCRIPT);
 }
@@ -282,7 +283,7 @@ fn test_validate_unknown_script() {
 #[test]
 fn test_validate_module_publishing() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let transaction = transaction_test_helpers::get_test_signed_module_publishing_transaction(
@@ -292,9 +293,8 @@ fn test_validate_module_publishing() {
         key.public_key(),
         Module::new(vec![]),
     );
-    let ret = vm_validator
-        .validate_transaction(transaction)
-        .wait()
+    let ret = rt
+        .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_MODULE);
 }
@@ -302,7 +302,7 @@ fn test_validate_module_publishing() {
 #[test]
 fn test_validate_invalid_auth_key() {
     let (config, _) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let mut rng = ::rand::rngs::StdRng::from_seed([1u8; 32]);
     let (other_private_key, other_public_key) = compat::generate_keypair(&mut rng);
@@ -317,9 +317,8 @@ fn test_validate_invalid_auth_key() {
         other_public_key,
         Some(program),
     );
-    let ret = vm_validator
-        .validate_transaction(transaction)
-        .wait()
+    let ret = rt
+        .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_AUTH_KEY);
 }
@@ -327,7 +326,7 @@ fn test_validate_invalid_auth_key() {
 #[test]
 fn test_validate_balance_below_gas_fee() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let program = encode_transfer_script(&address, 100);
@@ -343,9 +342,8 @@ fn test_validate_balance_below_gas_fee() {
         10_000, /* max gas price */
         Some(1_000_000),
     );
-    let ret = vm_validator
-        .validate_transaction(transaction)
-        .wait()
+    let ret = rt
+        .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(
         ret.unwrap().major_status,
@@ -356,7 +354,7 @@ fn test_validate_balance_below_gas_fee() {
 #[test]
 fn test_validate_account_doesnt_exist() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let random_account_addr = account_address::AccountAddress::random();
@@ -371,9 +369,8 @@ fn test_validate_account_doesnt_exist() {
         1, /* max gas price */
         None,
     );
-    let ret = vm_validator
-        .validate_transaction(transaction)
-        .wait()
+    let ret = rt
+        .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(
         ret.unwrap().major_status,
@@ -384,7 +381,7 @@ fn test_validate_account_doesnt_exist() {
 #[test]
 fn test_validate_sequence_number_too_new() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let program = encode_transfer_script(&address, 100);
@@ -395,9 +392,8 @@ fn test_validate_sequence_number_too_new() {
         key.public_key(),
         Some(program),
     );
-    let ret = vm_validator
-        .validate_transaction(transaction)
-        .wait()
+    let ret = rt
+        .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(ret, None);
 }
@@ -405,7 +401,7 @@ fn test_validate_sequence_number_too_new() {
 #[test]
 fn test_validate_invalid_arguments() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let (program_script, _) = encode_transfer_script(&address, 100).into_inner();
@@ -417,9 +413,8 @@ fn test_validate_invalid_arguments() {
         key.public_key(),
         Some(program),
     );
-    let ret = vm_validator
-        .validate_transaction(transaction)
-        .wait()
+    let ret = rt
+        .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::TYPE_MISMATCH);
 }
@@ -427,7 +422,7 @@ fn test_validate_invalid_arguments() {
 #[test]
 fn test_validate_non_genesis_write_set() {
     let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
     let transaction = transaction_test_helpers::get_write_set_txn(
@@ -438,9 +433,8 @@ fn test_validate_non_genesis_write_set() {
         None,
     )
     .into_inner();
-    let ret = vm_validator
-        .validate_transaction(transaction)
-        .wait()
+    let ret = rt
+        .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::REJECTED_WRITE_SET);
 }

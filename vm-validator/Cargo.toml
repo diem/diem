@@ -11,8 +11,8 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+async-trait = "0.1"
 libra-config = { path = "../config", version = "0.1.0" }
-futures = "0.1.28"
 scratchpad = { path = "../storage/scratchpad", version = "0.1.0" }
 libra-state-view = { path = "../storage/state-view", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
@@ -20,6 +20,7 @@ libra-types = { path = "../types", version = "0.1.0" }
 vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
 
 [dev-dependencies]
+tokio = { version = "0.2", features = ["full"] }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false }
 rand = "0.6.5"
 

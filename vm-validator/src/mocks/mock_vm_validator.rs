@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::TransactionValidation;
-use futures::future::{ok, Future};
+use anyhow::Result;
 use libra_state_view::StateView;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -25,15 +25,13 @@ impl VMVerifier for MockVMValidator {
     }
 }
 
+#[async_trait::async_trait]
 impl TransactionValidation for MockVMValidator {
     type ValidationInstance = MockVMValidator;
-    fn validate_transaction(
-        &self,
-        txn: SignedTransaction,
-    ) -> Box<dyn Future<Item = Option<VMStatus>, Error = anyhow::Error> + Send> {
+    async fn validate_transaction(&self, txn: SignedTransaction) -> Result<Option<VMStatus>> {
         let txn = match txn.check_signature() {
             Ok(txn) => txn,
-            Err(_) => return Box::new(ok(Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)))),
+            Err(_) => return Ok(Some(VMStatus::new(StatusCode::INVALID_SIGNATURE))),
         };
 
         let sender = txn.sender();
@@ -68,6 +66,6 @@ impl TransactionValidation for MockVMValidator {
         } else {
             None
         };
-        Box::new(ok(ret))
+        Ok(ret)
     }
 }
