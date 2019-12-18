@@ -69,7 +69,7 @@ impl MempoolProxy {
     }
 }
 
-#[tonic::async_trait]
+#[async_trait::async_trait]
 impl TxnManager for MempoolProxy {
     type Payload = Vec<SignedTransaction>;
 

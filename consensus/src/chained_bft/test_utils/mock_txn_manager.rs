@@ -38,7 +38,7 @@ impl MockTransactionManager {
     }
 }
 
-#[tonic::async_trait]
+#[async_trait::async_trait]
 impl TxnManager for MockTransactionManager {
     type Payload = Vec<MockTransaction>;
 
