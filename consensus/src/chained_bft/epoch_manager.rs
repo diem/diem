@@ -190,15 +190,15 @@ where
         }
     }
 
-    pub fn start_new_epoch(
+    pub async fn start_new_epoch(
         &mut self,
         ledger_info: LedgerInfoWithSignatures,
     ) -> EventProcessor<TM, T> {
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
-        if let Err(e) = block_on(self.state_computer.sync_to(ledger_info.clone())) {
+        if let Err(e) = self.state_computer.sync_to(ledger_info.clone()).await {
             error!("State sync to new epoch {} failed with {:?}, we'll try to start from current libradb", ledger_info, e);
         }
-        let initial_data = self.storage.start();
+        let initial_data = self.storage.start().await;
         *self.epoch_info.write().unwrap() = EpochInfo {
             epoch: initial_data.epoch(),
             verifier: initial_data.validators(),

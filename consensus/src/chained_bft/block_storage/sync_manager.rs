@@ -166,7 +166,7 @@ impl<T: Payload> BlockStore<T> {
             .sync_to(highest_commit_cert.ledger_info().clone())
             .await?;
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
-        let (root, root_executed_trees, blocks, quorum_certs) = self.storage.start().take();
+        let (root, root_executed_trees, blocks, quorum_certs) = self.storage.start().await.take();
         debug!("{}Sync to{} {}", Fg(Blue), Fg(Reset), root.0);
         self.rebuild(root, root_executed_trees, blocks, quorum_certs)
             .await;

@@ -9,6 +9,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use executor::ExecutedTrees;
+use futures::executor::block_on;
 use libra_crypto::HashValue;
 use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::ledger_info::LedgerInfo;
@@ -100,11 +101,12 @@ impl<T: Payload> MockStorage<T> {
         });
         let storage = Arc::new(MockStorage::new(Arc::clone(&shared_storage)));
 
-        (storage.start(), storage)
+        (block_on(storage.start()), storage)
     }
 }
 
 // A impl that always start from genesis.
+#[async_trait::async_trait]
 impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
         for block in blocks {
@@ -147,7 +149,7 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    fn start(&self) -> RecoveryData<T> {
+    async fn start(&self) -> RecoveryData<T> {
         self.try_start().unwrap()
     }
 
@@ -170,10 +172,11 @@ pub struct EmptyStorage;
 impl EmptyStorage {
     pub fn start_for_testing<T: Payload>() -> (RecoveryData<T>, Arc<Self>) {
         let storage = Arc::new(EmptyStorage);
-        (storage.start(), storage)
+        (block_on(storage.start()), storage)
     }
 }
 
+#[async_trait::async_trait]
 impl<T: Payload> PersistentStorage<T> for EmptyStorage {
     fn save_tree(&self, _: Vec<Block<T>>, _: Vec<QuorumCert>) -> Result<()> {
         Ok(())
@@ -187,7 +190,7 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
         Ok(())
     }
 
-    fn start(&self) -> RecoveryData<T> {
+    async fn start(&self) -> RecoveryData<T> {
         RecoveryData::new(
             None,
             vec![],
