@@ -28,6 +28,7 @@ use rand::SeedableRng;
 use std::{collections::BTreeMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
+use tokio::runtime::Runtime;
 use transaction_builder::{
     encode_block_prologue_script, encode_create_account_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_script,
@@ -57,6 +58,7 @@ fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
 fn create_storage_service_and_executor(
     config: &NodeConfig,
 ) -> (ServerHandle, Executor<LibraVM>, ExecutedTrees) {
+    let mut rt = Runtime::new().unwrap();
     let storage_server_handle = start_storage_service(config);
 
     let client_env = Arc::new(EnvBuilder::new().build());
@@ -78,8 +80,8 @@ fn create_storage_service_and_executor(
         config,
     );
 
-    let startup_info = storage_read_client
-        .get_startup_info()
+    let startup_info = rt
+        .block_on(storage_read_client.get_startup_info_async())
         .expect("unable to read ledger info from storage")
         .expect("startup info is None");
     let committed_trees = ExecutedTrees::from(startup_info.committed_tree_state);

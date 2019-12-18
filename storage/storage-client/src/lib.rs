@@ -381,14 +381,6 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_startup_info`]:
     /// ../libradb/struct.LibraDB.html#method.get_startup_info
-    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
-        block_on(self.get_startup_info_async())
-    }
-
-    /// See [`LibraDB::get_startup_info`].
-    ///
-    /// [`LibraDB::get_startup_info`]:
-    /// ../libradb/struct.LibraDB.html#method.get_startup_info
     async fn get_startup_info_async(&self) -> Result<Option<StartupInfo>>;
 
     /// See [`LibraDB::get_epoch_change_ledger_infos`].
