@@ -924,6 +924,7 @@ module LibraAccount {
         };
         Self.move_to_channel<Self.ChannelChallengedBy>(move(challenged_by));
         Self.do_close(copy(channel_address), move(channel), *&copy(locked_by).participant);
+        Self.confiscate_resource(*&copy(locked_by).participant);
         return;
     }
 
@@ -956,8 +957,6 @@ module LibraAccount {
         let txn_channel_sequence_number:u64;
         let locked_by: Self.ChannelLockedBy;
 
-        assert(Self.has_authorized_by_participants(), 1010);
-
         channel_address = ChannelTransaction.get_channel_address();
         txn_channel_sequence_number = ChannelTransaction.get_txn_channel_sequence_number();
 
@@ -987,7 +986,7 @@ module LibraAccount {
         return move(withdraw_coin);
     }
 
-    do_close_resource(violator: address) acquires T {
+    confiscate_resource(violator: address) acquires T {
         let channel_account: Self.ChannelParticipantAccount;
         let balance: u64;
         let coin: LibraCoin.T;
@@ -1007,24 +1006,14 @@ module LibraAccount {
         assert(Self.channel_balance(copy(violator)) == 0, 1235);
         Self.deposit(move(proposer), move(participant_coin));
 
-//        proposer = ChannelTransaction.get_proposer();
-//        channel_account = ChannelUtil.move_from_participant<Self.ChannelParticipantAccount>(copy(participant));
-//        ChannelParticipantAccount { balance } = move(channel_account);
-//        Self.deposit(copy(proposer), move(balance));
-//
-//        channel_account = ChannelUtil.move_from_participant<Self.ChannelParticipantAccount>(copy(proposer));
-//        ChannelParticipantAccount { balance } = move(channel_account);
-//        Self.deposit(copy(proposer), move(balance));
-
         return;
     }
 
-    close_resources(violator: address) acquires T {
+    close_resources(violator: address) {
         let len: u64;
         let i: u64;
         let module_id: bytearray;
 
-        Self.do_close_resource(copy(violator));
         len = ChannelUtil.channel_modules_len();
         i = 0;
         while (copy(i) < copy(len)) {
@@ -1036,36 +1025,44 @@ module LibraAccount {
         return;
     }
 
-    do_close(channel_address: address, channel: &mut Self.Channel, violator: address) acquires ChannelGlobalEvents, T {
+    do_close(channel_address: address, channel: &mut Self.Channel, violator: address) acquires ChannelGlobalEvents {
         *(&mut copy(channel).stage) = 2;
         Self.close_resources(move(violator));
         Self.do_emit_channel_event(copy(channel_address), copy(channel));
         return;
     }
 
-    public close(violator: address) acquires Channel, ChannelGlobalEvents, ChannelLockedBy, T {
+    public close(violator: address) acquires Channel, ChannelGlobalEvents, ChannelLockedBy {
         let channel_address: address;
         let channel: &mut Self.Channel;
         let sender: address;
-        let locked_by: & Self.ChannelLockedBy;
+        let locked_by: Self.ChannelLockedBy;
+        let locked_by_ref: &Self.ChannelLockedBy;
 
         sender = get_txn_sender();
         channel_address = ChannelTransaction.get_channel_address();
         channel = borrow_global_mut<Channel>(copy(channel_address));
+        locked_by_ref = borrow_global<ChannelLockedBy>(copy(channel_address));
 
-        locked_by = borrow_global<ChannelLockedBy>(copy(channel_address));
         assert(*&copy(channel).stage == 1, 1007);
-        assert(*&copy(locked_by).participant == copy(sender), 1008);
-        assert(*&copy(locked_by).time_lock <= ChannelTransaction.get_current_block_height(), 1009);
+        assert(*&copy(locked_by_ref).participant == copy(sender), 1008);
+        assert(*&copy(locked_by_ref).time_lock <= ChannelTransaction.get_current_block_height(), 1009);
 
-        Self.do_close(move(channel_address), move(channel), move(violator));
+        locked_by = Self.move_from_channel<Self.ChannelLockedBy>();
+        Self.destroy_locked_by(move(locked_by));
+        Self.do_close(copy(channel_address), copy(channel), move(violator));
+        Self.do_emit_channel_event(move(channel_address), move(channel));
         return;
     }
 
     check_channel_locked_by() acquires ChannelLockedBy{
         let locked_by: & Self.ChannelLockedBy;
         locked_by = borrow_global<ChannelLockedBy>(ChannelTransaction.get_channel_address());
-        assert(*&copy(locked_by).participant != ChannelTransaction.get_proposer(), 1008);
+        // locker cannot propose txn before timeout
+        if (*&copy(locked_by).time_lock > ChannelTransaction.get_current_block_height()) {
+            assert(*&copy(locked_by).participant != ChannelTransaction.get_proposer(), 1008);
+        }
+
         return;
     }
 
@@ -1159,7 +1156,7 @@ module LibraAccount {
                     locked_by = ChannelLockedBy{
                         participant: copy(proposer),
                         // TODO: is 1 block-time long enough? make it configurable?
-                        time_lock: ChannelTransaction.get_current_block_height() + 1,
+                        time_lock: ChannelTransaction.get_current_block_height() + 3,
                     };
                     Self.move_to_channel<Self.ChannelLockedBy>(move(locked_by));
                 } else {
@@ -1177,6 +1174,7 @@ module LibraAccount {
     // for test, will be removed after challenge test is ready
     public test(lock_owner: address) acquires T {
         Self.close_resources(copy(lock_owner));
+        Self.confiscate_resource(copy(lock_owner));
         return;
     }
 
