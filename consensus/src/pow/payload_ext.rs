@@ -12,6 +12,8 @@ pub struct BlockPayloadExt {
     pub txns: Vec<SignedTransaction>,
     pub nonce: u64,
     pub solve: Vec<u8>,
+    pub target: Vec<u8>,
+    pub algo: u32,
 }
 
 impl BlockPayloadExt {
@@ -28,9 +30,11 @@ impl fmt::Debug for BlockPayloadExt {
              {{ txns: {:#?}, \n \
              nonce: {:#?}, \n \
              solve: {:#?}, \n \
+             target:{:#?},\n \
+             algo: {:#?}, \n \
              }} \n \
              }}",
-            self.txns, self.nonce, self.solve,
+            self.txns, self.nonce, self.solve, self.target, self.algo,
         )
     }
 }

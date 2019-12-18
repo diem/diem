@@ -1,0 +1,28 @@
+POSIX compatibility code
+------------------------
+
+This code exists to work around some common POSIX compatibility issues.
+POSIX specifies that if the first line of a Makefile is ".POSIX:" then the
+Makefile should be processed according to POSIX rules, including with CC=c99;
+thus we should see behaviour consistent with a standard-compliant C99
+compiler.
+
+
+- posix-cflags.sh: Detects if ${CC} supports certain POSIX features, and
+  outputs a POSIXFAIL_ define if it is not supported so that we can work around
+  the problem.
+
+  The potential command-line flags are:
+  - DPOSIXFAIL_MSG_NOSIGNAL: <sys/socket.h> not defining MSG_NOSIGNAL.
+  - DPOSIXFAIL_CLOCK_REALTIME: <time.h> not defining CLOCK_REALTIME.
+  - DPOSIXFAIL_CLOCK_GETTIME: <time.h> not declaring clock_gettime(), or
+    clock_gettime() is not linkable.
+  - std=c99: ${CC} does not accept the `restrict` keyword by default, but
+    accepts it when given this flag.
+
+posix-l.sh: Detects whether the linker supports certain POSIX features.
+
+  The potential command-line flags are:
+  - lrt lxnet: c99 is required to understand these options, and ignore them if
+    the routines for which they specify linkage are already in the standard C
+    library

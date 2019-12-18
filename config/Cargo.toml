@@ -24,6 +24,7 @@ lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-se
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-tools = { path = "../common/tools", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
+base64 = "0.11.0"
 
 [features]
 default = []
