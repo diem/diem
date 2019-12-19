@@ -121,21 +121,27 @@ impl AdmissionControlClientAsync {
         &mut self,
         request: SubmitTransactionRequest,
     ) -> Result<SubmitTransactionResponse, tonic::Status> {
-        self.client()
-            .await?
-            .submit_transaction(request)
-            .await
-            .map(tonic::Response::into_inner)
+        let client = self.client().await?;
+        tokio::time::timeout(
+            std::time::Duration::from_millis(5000),
+            client.submit_transaction(request),
+        )
+        .await
+        .map_err(|_| tonic::Status::new(tonic::Code::DeadlineExceeded, ""))?
+        .map(tonic::Response::into_inner)
     }
 
     pub async fn update_to_latest_ledger(
         &mut self,
         request: types::UpdateToLatestLedgerRequest,
     ) -> Result<types::UpdateToLatestLedgerResponse, tonic::Status> {
-        self.client()
-            .await?
-            .update_to_latest_ledger(request)
-            .await
-            .map(tonic::Response::into_inner)
+        let client = self.client().await?;
+        tokio::time::timeout(
+            std::time::Duration::from_millis(5000),
+            client.update_to_latest_ledger(request),
+        )
+        .await
+        .map_err(|_| tonic::Status::new(tonic::Code::DeadlineExceeded, ""))?
+        .map(tonic::Response::into_inner)
     }
 }
