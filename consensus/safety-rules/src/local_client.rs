@@ -23,8 +23,8 @@ impl<T: Payload> LocalClient<T> {
 }
 
 impl<T: Payload> TSafetyRules<T> for LocalClient<T> {
-    fn consensus_state(&self) -> Result<ConsensusState, Error> {
-        self.internal.read().unwrap().consensus_state()
+    fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
+        self.internal.write().unwrap().consensus_state()
     }
 
     fn update(&mut self, qc: &QuorumCert) -> Result<(), Error> {
@@ -42,11 +42,11 @@ impl<T: Payload> TSafetyRules<T> for LocalClient<T> {
             .construct_and_sign_vote(vote_proposal)
     }
 
-    fn sign_proposal(&self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
+    fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
         self.internal.write().unwrap().sign_proposal(block_data)
     }
 
-    fn sign_timeout(&self, timeout: &Timeout) -> Result<Signature, Error> {
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Signature, Error> {
         self.internal.write().unwrap().sign_timeout(timeout)
     }
 }

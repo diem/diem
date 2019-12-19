@@ -76,7 +76,7 @@ impl<T: Payload> SafetyRules<T> {
 }
 
 impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
-    fn consensus_state(&self) -> Result<ConsensusState, Error> {
+    fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         Ok(ConsensusState::new(
             self.persistent_storage.epoch(),
             self.persistent_storage.last_voted_round(),
@@ -167,7 +167,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     /// @TODO only sign blocks that are later than last_voted_round and match the current epoch
     /// @TODO verify QC correctness
     /// @TODO verify QC matches preferred round
-    fn sign_proposal(&self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
+    fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
         Ok(Block::new_proposal_from_block_data(
             block_data,
             &self.validator_signer,
@@ -176,7 +176,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
 
     /// @TODO only sign a timeout if it matches last_voted_round or last_voted_round + 1
     /// @TODO update last_voted_round
-    fn sign_timeout(&self, timeout: &Timeout) -> Result<Signature, Error> {
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Signature, Error> {
         Ok(timeout.sign(&self.validator_signer))
     }
 }

@@ -64,14 +64,14 @@ impl<T: Payload> RemoteClient<T> {
         Self { service }
     }
 
-    pub fn request(&self, input: SafetyRulesInput<T>) -> Result<Vec<u8>, Error> {
+    pub fn request(&mut self, input: SafetyRulesInput<T>) -> Result<Vec<u8>, Error> {
         let input_message = lcs::to_bytes(&input)?;
         self.service.write().unwrap().handle_message(input_message)
     }
 }
 
 impl<T: Payload> TSafetyRules<T> for RemoteClient<T> {
-    fn consensus_state(&self) -> Result<ConsensusState, Error> {
+    fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         let response = self.request(SafetyRulesInput::ConsensusState)?;
         lcs::from_bytes(&response)?
     }
@@ -93,12 +93,12 @@ impl<T: Payload> TSafetyRules<T> for RemoteClient<T> {
         lcs::from_bytes(&response)?
     }
 
-    fn sign_proposal(&self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
+    fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
         let response = self.request(SafetyRulesInput::SignProposal(Box::new(block_data)))?;
         lcs::from_bytes(&response)?
     }
 
-    fn sign_timeout(&self, timeout: &Timeout) -> Result<Signature, Error> {
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Signature, Error> {
         let response = self.request(SafetyRulesInput::SignTimeout(Box::new(timeout.clone())))?;
         lcs::from_bytes(&response)?
     }
