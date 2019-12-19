@@ -13,7 +13,8 @@ source "$HOME/.cargo/env"
 
 SCRIPT_PATH="$(dirname $0)"
 
-RUN_PARAMS="--host ac.testnet.libra.org --port 8000 -s $SCRIPT_PATH/consensus_peers.config.toml"
+#RUN_PARAMS="--host ac.testnet.libra.org --port 8000 -s $SCRIPT_PATH/consensus_peers.config.toml"
+RUN_PARAMS="--host ac.testnet.violas.io --port 40001 -s $SCRIPT_PATH/consensus_peers.config.toml -m $SCRIPT_PATH/faucet_keys"
 RELEASE=""
 
 while [[ ! -z "$1" ]]; do
