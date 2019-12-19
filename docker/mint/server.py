@@ -64,6 +64,7 @@ def send_transaction():
 
         application.client.sendline("a la")
         application.client.expect(r"sequence_number: ([0-9]+)", timeout=1)
+        application.client.terminate(True)
     except pexpect.exceptions.ExceptionPexpect:
         application.client.terminate(True)
         raise
