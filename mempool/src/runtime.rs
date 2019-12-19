@@ -31,6 +31,12 @@ impl MempoolRuntime {
         network_sender: MempoolNetworkSender,
         network_events: MempoolNetworkEvents,
     ) -> Self {
+        let mempool_service_rt = Builder::new()
+            .thread_name("mempool-service-")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .unwrap();
         let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
         let mempool_service = MempoolService {
             core_mempool: Arc::clone(&mempool),
@@ -41,7 +47,11 @@ impl MempoolRuntime {
             "localhost",
             config.storage.port,
         ));
-        let vm_validator = Arc::new(VMValidator::new(&config, Arc::clone(&storage_client)));
+        let vm_validator = Arc::new(VMValidator::new(
+            &config,
+            Arc::clone(&storage_client),
+            mempool_service_rt.handle().clone(),
+        ));
         let shared_mempool = start_shared_mempool(
             config,
             mempool,
@@ -53,12 +63,6 @@ impl MempoolRuntime {
             None,
         );
 
-        let mempool_service_rt = Builder::new()
-            .thread_name("mempool-service-")
-            .threaded_scheduler()
-            .enable_all()
-            .build()
-            .unwrap();
         let addr = format!(
             "{}:{}",
             config.mempool.address, config.mempool.mempool_service_port,

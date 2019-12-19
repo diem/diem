@@ -54,7 +54,7 @@ impl TestValidator {
             config,
         );
 
-        let vm_validator = VMValidator::new(config, storage_read_client);
+        let vm_validator = VMValidator::new(config, storage_read_client, rt.handle().clone());
 
         (
             TestValidator {

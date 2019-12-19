@@ -21,6 +21,7 @@ scratchpad = { path = "../scratchpad", version = "0.1.0" }
 libra-state-view = { path = "../state-view", version = "0.1.0" }
 storage-proto = { path = "../storage-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
+tokio = { version = "0.2", features = ["full"] }
 
 [features]
 default = []

@@ -13,8 +13,7 @@ mod state_view;
 
 use anyhow::{format_err, Error, Result};
 use futures::{
-    compat::Future01CompatExt, compat::Stream01CompatExt, executor::block_on, prelude::*,
-    stream::BoxStream,
+    compat::Future01CompatExt, compat::Stream01CompatExt, prelude::*, stream::BoxStream,
 };
 use futures_01::{future::Future as Future01, stream::Stream as Stream01};
 use grpcio::{ChannelBuilder, Environment};
@@ -300,18 +299,6 @@ pub trait StorageRead: Send + Sync {
         &self,
         address: AccountAddress,
     ) -> Result<Option<AccountStateBlob>>;
-
-    /// See [`LibraDB::get_account_state_with_proof_by_version`].
-    ///
-    /// [`LibraDB::get_account_state_with_proof_by_version`]:
-    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
-    fn get_account_state_with_proof_by_version(
-        &self,
-        address: AccountAddress,
-        version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        block_on(self.get_account_state_with_proof_by_version_async(address, version))
-    }
 
     /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///
