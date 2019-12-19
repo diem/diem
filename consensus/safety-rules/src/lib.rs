@@ -12,6 +12,7 @@ mod remote;
 mod safety_rules;
 mod safety_rules_manager;
 mod t_safety_rules;
+mod thread;
 
 pub use crate::{
     consensus_state::ConsensusState,

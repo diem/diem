@@ -56,17 +56,21 @@ impl<T: Payload> RemoteService<T> {
 }
 
 pub struct RemoteClient<T> {
-    service: Arc<RwLock<RemoteService<T>>>,
+    service: Box<dyn TRemoteClient<T>>,
 }
 
 impl<T: Payload> RemoteClient<T> {
-    pub fn new(service: Arc<RwLock<RemoteService<T>>>) -> Self {
+    pub fn new(remote_service: Arc<RwLock<RemoteService<T>>>) -> Self {
+        let service = Box::new(LocalService { remote_service });
         Self { service }
     }
 
-    pub fn request(&mut self, input: SafetyRulesInput<T>) -> Result<Vec<u8>, Error> {
-        let input_message = lcs::to_bytes(&input)?;
-        self.service.write().unwrap().handle_message(input_message)
+    pub fn new_client(service: Box<dyn TRemoteClient<T>>) -> Self {
+        Self { service }
+    }
+
+    fn request(&mut self, input: SafetyRulesInput<T>) -> Result<Vec<u8>, Error> {
+        self.service.request(input)
     }
 }
 
@@ -101,5 +105,23 @@ impl<T: Payload> TSafetyRules<T> for RemoteClient<T> {
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Signature, Error> {
         let response = self.request(SafetyRulesInput::SignTimeout(Box::new(timeout.clone())))?;
         lcs::from_bytes(&response)?
+    }
+}
+
+pub trait TRemoteClient<T>: Send + Sync {
+    fn request(&mut self, input: SafetyRulesInput<T>) -> Result<Vec<u8>, Error>;
+}
+
+struct LocalService<T> {
+    pub remote_service: Arc<RwLock<RemoteService<T>>>,
+}
+
+impl<T: Payload> TRemoteClient<T> for LocalService<T> {
+    fn request(&mut self, input: SafetyRulesInput<T>) -> Result<Vec<u8>, Error> {
+        let input_message = lcs::to_bytes(&input)?;
+        self.remote_service
+            .write()
+            .unwrap()
+            .handle_message(input_message)
     }
 }
