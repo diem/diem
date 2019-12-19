@@ -198,10 +198,10 @@ impl StorageRead for StorageReadServiceClient {
         Ok(resp)
     }
 
-    fn backup_account_state_async(
+    async fn backup_account_state_async(
         &self,
         version: Version,
-    ) -> Result<BoxStream<Result<BackupAccountStateResponse, Error>>> {
+    ) -> Result<BoxStream<'_, Result<BackupAccountStateResponse, Error>>> {
         let proto_req = BackupAccountStateRequest::new(version);
         Ok(
             convert_grpc_stream(self.client().backup_account_state(&proto_req.into())?)
@@ -332,10 +332,10 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::backup_account_state`]:
     /// ../libradb/struct.LibraDB.html#method.backup_account_state
-    fn backup_account_state_async(
+    async fn backup_account_state_async(
         &self,
         version: u64,
-    ) -> Result<BoxStream<Result<BackupAccountStateResponse, Error>>>;
+    ) -> Result<BoxStream<'_, Result<BackupAccountStateResponse, Error>>>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.
