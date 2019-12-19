@@ -10,7 +10,10 @@ fn main() {
         "../../mempool/mempool-shared-proto/src/proto",
     ];
 
-    tonic_build::configure()
-        .compile(&protos, &includes)
-        .unwrap();
+    grpcio_compiler::prost_codegen::compile_protos(
+        &protos,
+        &includes,
+        &std::env::var("OUT_DIR").unwrap(),
+    )
+    .unwrap();
 }

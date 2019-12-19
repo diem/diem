@@ -6,13 +6,14 @@ use crate::{
     counters,
     upstream_proxy::{process_network_messages, UpstreamProxyData},
 };
-use admission_control_proto::proto::admission_control::admission_control_server::AdmissionControlServer;
+use admission_control_proto::proto::admission_control::create_admission_control;
 use futures::channel::mpsc;
-use grpcio::EnvBuilder;
+use grpc_helpers::ServerHandle;
+use grpcio::{EnvBuilder, ServerBuilder};
 use libra_config::config::{NodeConfig, RoleType};
 use libra_mempool::proto::mempool_client::MempoolClientWrapper;
 use network::validator_network::{AdmissionControlNetworkEvents, AdmissionControlNetworkSender};
-use std::{collections::HashMap, net::ToSocketAddrs, sync::Arc};
+use std::{cmp::min, collections::HashMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::vm_validator::VMValidator;
@@ -20,7 +21,7 @@ use vm_validator::vm_validator::VMValidator;
 /// Handle for AdmissionControl Runtime
 pub struct AdmissionControlRuntime {
     /// gRPC server to serve request between client and AC
-    _ac_service_rt: Runtime,
+    _grpc_server: ServerHandle,
     /// separate AC runtime
     _upstream_proxy: Runtime,
 }
@@ -34,6 +35,12 @@ impl AdmissionControlRuntime {
     ) -> Self {
         let (ac_sender, ac_receiver) = mpsc::channel(1_024);
 
+        let env = Arc::new(
+            EnvBuilder::new()
+                .name_prefix("grpc-ac-")
+                .cq_count(min(num_cpus::get() * 2, 32))
+                .build(),
+        );
         let port = config.admission_control.admission_control_service_port;
 
         // Create mempool client if the node is validator.
@@ -58,22 +65,12 @@ impl AdmissionControlRuntime {
 
         let vm_validator = Arc::new(VMValidator::new(&config, Arc::clone(&storage_client)));
 
-        let ac_service_rt = Builder::new()
-            .thread_name("ac-service-")
-            .threaded_scheduler()
-            .enable_all()
+        let service = create_admission_control(admission_control_service);
+        let server = ServerBuilder::new(Arc::clone(&env))
+            .register_service(service)
+            .bind(config.admission_control.address.clone(), port)
             .build()
-            .expect("[admission control] failed to create runtime");
-        let addr = format!("{}:{}", config.admission_control.address, port)
-            .to_socket_addrs()
-            .unwrap()
-            .next()
-            .unwrap();
-        ac_service_rt.spawn(
-            tonic::transport::Server::builder()
-                .add_service(AdmissionControlServer::new(admission_control_service))
-                .serve(addr),
-        );
+            .expect("Unable to create grpc server");
 
         let upstream_proxy_runtime = Builder::new()
             .thread_name("ac-upstream-proxy-")
@@ -111,7 +108,7 @@ impl AdmissionControlRuntime {
         ));
 
         Self {
-            _ac_service_rt: ac_service_rt,
+            _grpc_server: ServerHandle::setup(server),
             _upstream_proxy: upstream_proxy_runtime,
         }
     }

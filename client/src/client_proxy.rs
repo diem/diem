@@ -112,7 +112,7 @@ impl ClientProxy {
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
     ) -> Result<Self> {
-        let mut client = GRPCClient::new(
+        let client = GRPCClient::new(
             host,
             ac_port,
             EpochInfo {
@@ -130,7 +130,7 @@ impl ClientProxy {
             let faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
                 ClientProxy::load_faucet_account_file(faucet_account_file);
             let faucet_account_data = Self::get_account_data_from_address(
-                &mut client,
+                &client,
                 association_address(),
                 true,
                 Some(KeyPair::<Ed25519PrivateKey, _>::from(
@@ -181,12 +181,8 @@ impl ClientProxy {
     pub fn create_next_account(&mut self, sync_with_validator: bool) -> Result<AddressAndIndex> {
         let (address, _) = self.wallet.new_address()?;
 
-        let account_data = Self::get_account_data_from_address(
-            &mut self.client,
-            address,
-            sync_with_validator,
-            None,
-        )?;
+        let account_data =
+            Self::get_account_data_from_address(&self.client, address, sync_with_validator, None)?;
 
         Ok(self.insert_account_data(account_data))
     }
@@ -815,7 +811,7 @@ impl ClientProxy {
         let mut account_data = Vec::new();
         for address in wallet_addresses {
             account_data.push(Self::get_account_data_from_address(
-                &mut self.client,
+                &self.client,
                 address,
                 self.sync_on_wallet_recovery,
                 None,
@@ -841,7 +837,7 @@ impl ClientProxy {
     }
 
     /// Test gRPC client connection with validator.
-    pub fn test_validator_connection(&mut self) -> Result<()> {
+    pub fn test_validator_connection(&self) -> Result<()> {
         self.client.get_with_proof_sync(vec![])?;
         Ok(())
     }
@@ -880,7 +876,7 @@ impl ClientProxy {
     /// Sync with validator for account sequence number in case it is already created on chain.
     /// This assumes we have a very low probability of mnemonic word conflict.
     fn get_account_data_from_address(
-        client: &mut GRPCClient,
+        client: &GRPCClient,
         address: AccountAddress,
         sync_with_validator: bool,
         key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,

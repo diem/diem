@@ -23,13 +23,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpcio-compiler 0.5.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
  "libra-mempool-shared-proto 0.1.0",
  "libra-types 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "tonic 0.1.0-alpha.6 (git+https://github.com/hyperium/tonic.git)",
- "tonic-build 0.1.0-alpha.6 (git+https://github.com/hyperium/tonic.git)",
+ "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -44,6 +45,7 @@ dependencies = [
  "channel 0.1.0",
  "executable-helpers 0.1.0",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc-helpers 0.1.0",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
@@ -634,7 +636,6 @@ dependencies = [
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "tonic 0.1.0-alpha.6 (git+https://github.com/hyperium/tonic.git)",
  "transaction-builder 0.1.0",
 ]
 
@@ -658,6 +659,7 @@ dependencies = [
  "flate2 1.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "generate-keypair 0.1.0",
+ "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",

@@ -26,6 +26,7 @@ admission-control-proto = { path = "../admission-control-proto", version = "0.1.
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 executable-helpers = { path = "../../common/executable-helpers", version = "0.1.0" }
+grpc-helpers = { path = "../../common/grpc-helpers", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../../mempool", version = "0.1.0" }
 libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto", version = "0.1.0" }

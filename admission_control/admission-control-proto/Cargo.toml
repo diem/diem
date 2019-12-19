@@ -12,8 +12,8 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 bytes = "0.4.12"
-tonic = { git = "https://github.com/hyperium/tonic.git" }
-tokio = { version = "0.2", features = ["full"] }
+futures = "0.1.28"
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 prost = "0.5.0"
 
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
@@ -21,7 +21,8 @@ libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto", vers
 libra-types = { path = "../../types", version = "0.1.0" }
 
 [build-dependencies]
-tonic-build = { git = "https://github.com/hyperium/tonic.git" }
+grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
+prost-build = "0.5.0"
 
 [features]
 default = []

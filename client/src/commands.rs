@@ -17,14 +17,15 @@ pub fn report_error(msg: &str, e: Error) {
 }
 
 fn pretty_format_error(e: Error) -> String {
-    if let Some(grpc_error) = e.downcast_ref::<tonic::Status>() {
-        match grpc_error.code() {
-            tonic::Code::DeadlineExceeded | tonic::Code::Unavailable => {
+    if let Some(grpc_error) = e.downcast_ref::<grpcio::Error>() {
+        if let grpcio::Error::RpcFailure(grpc_rpc_failure) = grpc_error {
+            if grpc_rpc_failure.status == grpcio::RpcStatusCode::UNAVAILABLE
+                || grpc_rpc_failure.status == grpcio::RpcStatusCode::DEADLINE_EXCEEDED
+            {
                 return "Server unavailable, please retry and/or check \
                         if host passed to the client is running"
                     .to_string();
             }
-            _ => {}
         }
     }
 
