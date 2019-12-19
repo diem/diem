@@ -82,6 +82,9 @@ module TestConditions {
 //! no-run: runtime
 module TestSpecExp {
 
+  resource T { b: bool }
+  resource T1<Name> { b: Name }
+
   public ensures_ret()
   ensures return
   {
@@ -106,13 +109,26 @@ module TestSpecExp {
   }
 
   public ensures_global(a: address)
-  ensures global<T>(a)
+  ensures global<Self.T>(a)
+  {
+      return;
+  }
+
+
+  public ensures_generic_global(a: address)
+  ensures global<Self.T1<bool>>(a)
   {
       return;
   }
 
   public ensures_exists(a: address)
-  ensures global_exists<T>(a)
+  ensures global_exists<Self.T>(a)
+  {
+      return;
+  }
+
+  public ensures_exists_generic(a: address)
+  ensures global_exists<Self.T1<bool>>(a)
   {
       return;
   }
@@ -124,7 +140,7 @@ module TestSpecExp {
   }
 
   public ensures_old_global(a: address)
-  ensures old(global<T>(a))
+  ensures old(global<Self.T>(a))
   {
       return;
   }
@@ -166,13 +182,13 @@ module TestEnsuresAccessPath {
   }
 
   public ensures_exists_access_path(t: Self.T): Self.T
-  ensures global_exists<T>(t/a)
+  ensures global_exists<Self.T>(t/a)
   {
       return move(t);
   }
 
   public ensures_global_access_path(t: Self.T): Self.T
-  ensures global<T>(t/a)
+  ensures global<Self.T>(t/a)
   {
       return move(t);
   }

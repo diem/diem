@@ -1264,12 +1264,17 @@ fn parse_storage_location<'input>(
         Tok::AccountAddressValue => StorageLocation::Address(parse_account_address(tokens)?),
         Tok::Global => {
             tokens.advance()?; // this consumes 'global<' due to parser funkiness
-            let type_ = parse_struct_name(tokens)?;
+            let type_ = parse_qualified_struct_ident(tokens)?;
+            let type_actuals = parse_type_actuals(tokens)?;
             consume_token(tokens, Tok::Greater)?;
             consume_token(tokens, Tok::LParen)?;
             let address = Box::new(parse_storage_location(tokens)?);
             consume_token(tokens, Tok::RParen)?;
-            StorageLocation::GlobalResource { type_, address }
+            StorageLocation::GlobalResource {
+                type_,
+                type_actuals,
+                address,
+            }
         }
         Tok::Old => {
             tokens.advance()?;
@@ -1309,12 +1314,17 @@ fn parse_unary_spec_exp<'input>(
         }
         Tok::GlobalExists => {
             tokens.advance()?; // this consumes 'global_exists<' due to parser funkiness
-            let type_ = parse_struct_name(tokens)?;
+            let type_ = parse_qualified_struct_ident(tokens)?;
+            let type_actuals = parse_type_actuals(tokens)?;
             consume_token(tokens, Tok::Greater)?;
             consume_token(tokens, Tok::LParen)?;
             let address = parse_storage_location(tokens)?;
             consume_token(tokens, Tok::RParen)?;
-            SpecExp::GlobalExists { type_, address }
+            SpecExp::GlobalExists {
+                type_,
+                type_actuals,
+                address,
+            }
         }
         Tok::Star => {
             tokens.advance()?;

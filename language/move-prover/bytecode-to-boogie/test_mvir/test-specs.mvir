@@ -19,8 +19,8 @@ module TestSpecs {
     }
 
     public create_resource()
-      aborts_if global_exists<R>(0x1)
-      ensures global_exists<R>(0x1)
+      aborts_if global_exists<Self.R>(0x1)
+      ensures global_exists<Self.R>(0x1)
     {
       return;
     }
