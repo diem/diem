@@ -3,12 +3,16 @@
 
 #![forbid(unsafe_code)]
 
-use chrono::prelude::{SecondsFormat, Utc};
+use chrono::{
+    prelude::{SecondsFormat, Utc},
+    DateTime,
+};
 use client::{client_proxy::ClientProxy, commands::*};
 use libra_logger::set_default_global_logger;
 use libra_types::waypoint::Waypoint;
 use rustyline::{config::CompletionType, error::ReadlineError, Config, Editor};
 use std::num::NonZeroU16;
+use std::time::{Duration, UNIX_EPOCH};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -72,16 +76,27 @@ fn main() -> std::io::Result<()> {
     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, &format!("{}", e)[..]))?;
 
     // Test connection to validator
-    let test_ret = client_proxy.test_validator_connection();
-
-    if let Err(e) = test_ret {
-        println!(
-            "Not able to connect to validator at {}:{}, error {:?}",
-            args.host, args.port, e
-        );
-        return Ok(());
-    }
-    let cli_info = format!("Connected to validator at: {}:{}", args.host, args.port);
+    let latest_li = match client_proxy.test_validator_connection() {
+        Ok(li) => li,
+        Err(e) => {
+            println!(
+                "Not able to connect to validator at {}:{}, error {:?}",
+                args.host, args.port, e
+            );
+            return Ok(());
+        }
+    };
+    let ledger_info_str = format!(
+        "latest version = {}, timestamp = {}",
+        latest_li.ledger_info().version(),
+        DateTime::<Utc>::from(
+            UNIX_EPOCH + Duration::from_micros(latest_li.ledger_info().timestamp_usecs())
+        )
+    );
+    let cli_info = format!(
+        "Connected to validator at: {}:{}, {}",
+        args.host, args.port, ledger_info_str
+    );
     print_help(&cli_info, &commands);
     println!("Please, input commands: \n");
 
