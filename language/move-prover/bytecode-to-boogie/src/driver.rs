@@ -15,11 +15,13 @@ use libra_types::account_address::AccountAddress;
 use log::{debug, error, info};
 use std::fs;
 use std::process::Command;
+use vm::file_format::FunctionDefinitionIndex;
 
 /// Content of the default prelude.
 const DEFAULT_PRELUDE: &[u8] = include_bytes!("bytecode_instrs.bpl");
 
-/// Represents the driver for translation.
+/// Represents the driver for translation. This is the top-level object which owns
+/// all data during the steps of translation. Phases of the translation refer back to it.
 pub struct Driver<'app> {
     /// Options passed via the cli.
     options: &'app Options,
@@ -77,7 +79,7 @@ impl<'app> Driver<'app> {
     pub fn load_modules(&mut self, file_names: &[String]) {
         // TODO: make the address configurable.
         let address = AccountAddress::default();
-        for (index, file_name) in file_names.iter().enumerate() {
+        for file_name in file_names {
             info!("analyzing {}", file_name);
             // Parse module.
             let code = abort_on_error(fs::read_to_string(file_name), "cannot read mvir file");
@@ -104,7 +106,6 @@ impl<'app> Driver<'app> {
             // Store result.
             self.verified_modules.push(verified_module);
             self.module_infos.push(ModuleInfo {
-                index,
                 name,
                 function_infos: specs,
             });
@@ -115,8 +116,7 @@ impl<'app> Driver<'app> {
     /// Extract function infos from the given parsed module.
     fn extract_function_infos(&self, parsed_module: &ModuleDefinition) -> Vec<FunctionInfo> {
         let mut result = vec![];
-        for (index, (name, def)) in parsed_module.functions.iter().enumerate() {
-            let function_name = name.as_inner().as_str().to_string();
+        for (index, (_, def)) in parsed_module.functions.iter().enumerate() {
             let type_arg_names = def
                 .value
                 .signature
@@ -132,8 +132,7 @@ impl<'app> Driver<'app> {
                 .map(|(v, _)| v.value.name().as_str().to_string())
                 .collect();
             result.push(FunctionInfo {
-                index,
-                name: function_name,
+                index: FunctionDefinitionIndex(index as u16),
                 type_arg_names,
                 arg_names,
                 specification: def.value.specifications.clone(),
