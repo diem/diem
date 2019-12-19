@@ -6,3 +6,4 @@ mod network;
 mod remote;
 mod safety_rules;
 mod suite;
+mod thread;
