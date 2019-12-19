@@ -523,6 +523,11 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
     }
 
     #[inline]
+    pub fn signature_token(&self) -> &SignatureToken {
+        self.token
+    }
+
+    #[inline]
     pub fn signature_token_kind(&self) -> SignatureTokenKind {
         self.token.signature_token_kind()
     }

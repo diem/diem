@@ -2,6 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module translates the bytecode of a module to Boogie code.
+//!
+//! TODO: there is several cleanup to do in this module.
+//!
+//! 1. We should generalize the state and various helper functions into an 'environment'/'context'
+//!    abstraction which is shared between phases like bytecode and spec translation. This
+//!    environment should. among other things, allow to collect diagnostics related to the
+//!    translation.
+//! 2. We should factor out basic functions which represent interacting with the boogie model,
+//!    for example, how to construct a TypeValue from a SignatureToken, how to access memory,
+//!    and so on.
 
 use crate::spec_translator::SpecTranslator;
 use bytecode_source_map::source_map::ModuleSourceMap;
@@ -34,8 +44,6 @@ use vm::{
 /// Represents information about a module.
 #[derive(Debug)]
 pub struct ModuleInfo {
-    /// The index of this module in the module handle table.
-    pub index: usize,
     /// The name of this module.
     pub name: String,
     /// List of function specifications, in function declaration order.
@@ -45,14 +53,13 @@ pub struct ModuleInfo {
 /// Represents information about a function.
 #[derive(Debug)]
 pub struct FunctionInfo {
-    // Index of this function in the module vector.
-    pub index: usize,
-    // Name of this function.
-    pub name: String,
-    // List of type argument names.
-    pub type_arg_names: Vec<String>,
-    // List of argument names.
+    /// Index of this function in the function definition table.
+    pub index: FunctionDefinitionIndex,
+    /// List of function argument names. Those aren't present in the bytecode but we obtain them
+    /// from the AST.
     pub arg_names: Vec<String>,
+    /// List of type argument names.
+    pub type_arg_names: Vec<String>,
     /// List of specification conditions.
     pub specification: Vec<Condition>,
 }
@@ -69,6 +76,7 @@ pub struct BoogieTranslator<'a> {
 }
 
 pub struct ModuleTranslator<'a> {
+    pub parent: &'a BoogieTranslator<'a>,
     pub module: &'a VerifiedModule,
     pub module_info: &'a ModuleInfo,
     pub source_map: &'a ModuleSourceMap<Loc>,
@@ -263,7 +271,7 @@ impl<'a> BoogieTranslator<'a> {
 
 impl<'a> ModuleTranslator<'a> {
     pub fn new(
-        parent: &BoogieTranslator,
+        parent: &'a BoogieTranslator,
         module: &'a VerifiedModule,
         module_info: &'a ModuleInfo,
         source_map: &'a ModuleSourceMap<Loc>,
@@ -275,6 +283,7 @@ impl<'a> ModuleTranslator<'a> {
             all_type_strs.insert(struct_name);
         }
         Self {
+            parent,
             module,
             module_info,
             source_map,
@@ -798,7 +807,7 @@ impl<'a> ModuleTranslator<'a> {
         let function_info = &self.module_info.function_infos[idx];
         format!(
             "\n{}",
-            &SpecTranslator::new(self.module, function_info).translate()
+            &SpecTranslator::new(self.parent.modules, self.module, function_info).translate()
         )
     }
 

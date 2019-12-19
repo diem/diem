@@ -3,8 +3,13 @@ module TestSpecs {
     // Note the specs below maybe wrong because we do not provide an implementation. Once things are
     // more stable, we need to add them.
 
+    struct S {
+      a: address
+    }
+
     resource R {
-      x: u64
+      x: u64,
+      s: Self.S
     }
 
     public div(x1: u64, x2: u64): u64
@@ -25,6 +30,34 @@ module TestSpecs {
       return;
     }
 
-    // TODO: add more tests once fields are working. We can't effectively test `global` and the likes without
-    // fields ready,
+    public select_from_global_resource()
+      requires global<Self.R>(0x1)/x > 0
+    {
+      return;
+    }
+
+    public select_from_resource(r: Self.R): Self.R
+      requires r/x > 0
+    {
+      return move(r);
+    }
+
+    public select_from_resource_nested(r: Self.R): Self.R
+      requires r/s/a == 0x1
+    {
+      return move(r);
+    }
+
+    public select_from_global_resource_dynamic_address(r: Self.R): Self.R
+      requires global<Self.R>(r/s/a)/x > 0
+    {
+      return move(r);
+    }
+
+    public select_from_reference(r: &Self.R)
+        requires r/s/a == 0x1
+        ensures r/s/a == old(r/s/a)
+    {
+      return;
+    }
 }

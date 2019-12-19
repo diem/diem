@@ -159,19 +159,23 @@ procedure {:inline 1} Unpack_LibraCoin_T(v: Value) returns (v0: Value)
 }
 
 const unique LibraCoin_MintCapability: TypeName;
+const LibraCoin_MintCapability__dummy: FieldName;
+axiom LibraCoin_MintCapability__dummy == 0;
 function LibraCoin_MintCapability_type_value(): TypeValue {
-    StructType(LibraCoin_MintCapability, TypeValueArray(DefaultTypeMap, 0))
+    StructType(LibraCoin_MintCapability, TypeValueArray(DefaultTypeMap[0 := BooleanType()], 1))
 }
 
-procedure {:inline 1} Pack_LibraCoin_MintCapability() returns (v: Value)
+procedure {:inline 1} Pack_LibraCoin_MintCapability(v0: Value) returns (v: Value)
 {
-    v := Struct(ValueArray(DefaultIntMap, 0));
+    assume has_type(BooleanType(), v0);
+    v := Struct(ValueArray(DefaultIntMap[LibraCoin_MintCapability__dummy := v0], 1));
     assume has_type(LibraCoin_MintCapability_type_value(), v);
 }
 
-procedure {:inline 1} Unpack_LibraCoin_MintCapability(v: Value) returns ()
+procedure {:inline 1} Unpack_LibraCoin_MintCapability(v: Value) returns (v0: Value)
 {
     assert is#Struct(v);
+    v0 := smap(v)[LibraCoin_MintCapability__dummy];
 }
 
 const unique LibraCoin_MarketCap: TypeName;
@@ -1480,9 +1484,10 @@ requires ExistsTxnSenderAccount();
     var t2: Value; // BooleanType()
     var t3: Value; // BooleanType()
     var t4: Value; // IntegerType()
-    var t5: Value; // LibraCoin_MintCapability_type_value()
-    var t6: Value; // IntegerType()
-    var t7: Value; // LibraCoin_MarketCap_type_value()
+    var t5: Value; // BooleanType()
+    var t6: Value; // LibraCoin_MintCapability_type_value()
+    var t7: Value; // IntegerType()
+    var t8: Value; // LibraCoin_MarketCap_type_value()
 
     var tmp: Value;
     var old_size: int;
@@ -1491,7 +1496,7 @@ requires ExistsTxnSenderAccount();
     // assume arguments are of correct types
 
     old_size := m_size;
-    m_size := m_size + 8;
+    m_size := m_size + 9;
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
@@ -1515,20 +1520,25 @@ requires ExistsTxnSenderAccount();
     assert false;
 
 Label_7:
-    call tmp := Pack_LibraCoin_MintCapability();
+    call tmp := LdTrue();
     m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
 
-    call MoveToSender(LibraCoin_MintCapability_type_value(), contents#Memory(m)[old_size+5]);
+    assume has_type(BooleanType(), contents#Memory(m)[old_size+5]);
 
-    call tmp := LdConst(0);
+    call tmp := Pack_LibraCoin_MintCapability(contents#Memory(m)[old_size+5]);
     m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+6]);
+    call MoveToSender(LibraCoin_MintCapability_type_value(), contents#Memory(m)[old_size+6]);
 
-    call tmp := Pack_LibraCoin_MarketCap(contents#Memory(m)[old_size+6]);
+    call tmp := LdConst(0);
     m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
 
-    call MoveToSender(LibraCoin_MarketCap_type_value(), contents#Memory(m)[old_size+7]);
+    assume has_type(IntegerType(), contents#Memory(m)[old_size+7]);
+
+    call tmp := Pack_LibraCoin_MarketCap(contents#Memory(m)[old_size+7]);
+    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+
+    call MoveToSender(LibraCoin_MarketCap_type_value(), contents#Memory(m)[old_size+8]);
 
     return;
 
@@ -3752,493 +3762,421 @@ procedure LibraAccount_exists_verify (arg0: Value) returns (ret0: Value)
     call ret0 := LibraAccount_exists(arg0);
 }
 
-procedure {:inline 1} LibraAccount_prologue () returns ()
+procedure {:inline 1} LibraAccount_prologue (arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns ()
 requires ExistsTxnSenderAccount();
 {
     // declare local variables
-    var t0: Value; // AddressType()
-    var t1: Value; // BooleanType()
-    var t2: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t3: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t4: Value; // ByteArrayType()
-    var t5: Value; // ByteArrayType()
-    var t6: Value; // IntegerType()
+    var t0: Value; // IntegerType()
+    var t1: Value; // ByteArrayType()
+    var t2: Value; // IntegerType()
+    var t3: Value; // IntegerType()
+    var t4: Value; // AddressType()
+    var t5: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t6: Reference; // ReferenceType(LibraAccount_T_type_value())
     var t7: Value; // IntegerType()
     var t8: Value; // IntegerType()
     var t9: Value; // IntegerType()
-    var t10: Value; // IntegerType()
-    var t11: Value; // IntegerType()
-    var t12: Value; // AddressType()
-    var t13: Value; // AddressType()
-    var t14: Value; // BooleanType()
-    var t15: Value; // BooleanType()
-    var t16: Value; // BooleanType()
-    var t17: Value; // IntegerType()
-    var t18: Value; // AddressType()
+    var t10: Value; // AddressType()
+    var t11: Value; // AddressType()
+    var t12: Value; // BooleanType()
+    var t13: Value; // BooleanType()
+    var t14: Value; // IntegerType()
+    var t15: Value; // AddressType()
+    var t16: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t17: Value; // ByteArrayType()
+    var t18: Value; // ByteArrayType()
     var t19: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t20: Value; // ByteArrayType()
+    var t20: Reference; // ReferenceType(ByteArrayType())
     var t21: Value; // ByteArrayType()
-    var t22: Value; // ByteArrayType()
-    var t23: Value; // ByteArrayType()
-    var t24: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t25: Reference; // ReferenceType(ByteArrayType())
-    var t26: Value; // ByteArrayType()
-    var t27: Value; // BooleanType()
-    var t28: Value; // BooleanType()
-    var t29: Value; // IntegerType()
-    var t30: Value; // IntegerType()
+    var t22: Value; // BooleanType()
+    var t23: Value; // BooleanType()
+    var t24: Value; // IntegerType()
+    var t25: Value; // IntegerType()
+    var t26: Value; // IntegerType()
+    var t27: Value; // IntegerType()
+    var t28: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t29: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t30: Reference; // ReferenceType(LibraAccount_T_type_value())
     var t31: Value; // IntegerType()
     var t32: Value; // IntegerType()
     var t33: Value; // IntegerType()
-    var t34: Value; // IntegerType()
-    var t35: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t36: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t34: Value; // BooleanType()
+    var t35: Value; // BooleanType()
+    var t36: Value; // IntegerType()
     var t37: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t38: Value; // IntegerType()
+    var t38: Reference; // ReferenceType(IntegerType())
     var t39: Value; // IntegerType()
     var t40: Value; // IntegerType()
-    var t41: Value; // BooleanType()
+    var t41: Value; // IntegerType()
     var t42: Value; // BooleanType()
-    var t43: Value; // IntegerType()
-    var t44: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t45: Reference; // ReferenceType(IntegerType())
+    var t43: Value; // BooleanType()
+    var t44: Value; // IntegerType()
+    var t45: Value; // IntegerType()
     var t46: Value; // IntegerType()
-    var t47: Value; // IntegerType()
-    var t48: Value; // IntegerType()
+    var t47: Value; // BooleanType()
+    var t48: Value; // BooleanType()
     var t49: Value; // IntegerType()
-    var t50: Value; // BooleanType()
-    var t51: Value; // BooleanType()
-    var t52: Value; // IntegerType()
-    var t53: Value; // IntegerType()
-    var t54: Value; // IntegerType()
-    var t55: Value; // BooleanType()
-    var t56: Value; // BooleanType()
-    var t57: Value; // IntegerType()
 
     var tmp: Value;
     var old_size: int;
     assume !abort_flag;
 
     // assume arguments are of correct types
+    assume has_type(IntegerType(), arg0);
+    assume has_type(ByteArrayType(), arg1);
+    assume has_type(IntegerType(), arg2);
+    assume has_type(IntegerType(), arg3);
 
     old_size := m_size;
-    m_size := m_size + 58;
+    m_size := m_size + 50;
+    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size :=  arg2]);
+    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size :=  arg3]);
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+12]);
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
-
-    call tmp := Exists(contents#Memory(m)[old_size+13], LibraAccount_T_type_value());
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+14]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
-
-    call tmp := Not(contents#Memory(m)[old_size+15]);
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
-
-    tmp := contents#Memory(m)[old_size + 16];
-    if (!b#Boolean(tmp)) { goto Label_10; }
-
-    call tmp := LdConst(5);
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
-
-    assert false;
-
-Label_10:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
-
-    call t19 := BorrowGlobal(contents#Memory(m)[old_size+18], LibraAccount_T_type_value());
-
-    call t2 := CopyOrMoveRef(t19);
-
-    call tmp := GetTxnPublicKey();
-    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+20]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+10]);
     m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
 
     call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
 
-    call t22 := Hash_sha3_256(contents#Memory(m)[old_size+21]);
-    assume has_type(ByteArrayType(), t22);
+    call tmp := Exists(contents#Memory(m)[old_size+11], LibraAccount_T_type_value());
+    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
 
-    m := Memory(domain#Memory(m)[old_size+22 := true], contents#Memory(m)[old_size+22 := t22]);
+    call tmp := Not(contents#Memory(m)[old_size+12]);
+    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+22]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    tmp := contents#Memory(m)[old_size + 13];
+    if (!b#Boolean(tmp)) { goto Label_8; }
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
-
-    call t24 := CopyOrMoveRef(t2);
-
-    call t25 := BorrowField(t24, LibraAccount_T_authentication_key);
-
-    call tmp := ReadRef(t25);
-    assume has_type(ByteArrayType(), tmp);
-
-    m := Memory(domain#Memory(m)[26+old_size := true], contents#Memory(m)[26+old_size := tmp]);
-
-    tmp := Boolean(is_equal(ByteArrayType(), contents#Memory(m)[old_size+23], contents#Memory(m)[old_size+26]));
-    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
-
-    call tmp := Not(contents#Memory(m)[old_size+27]);
-    m := Memory(domain#Memory(m)[28+old_size := true], contents#Memory(m)[28+old_size := tmp]);
-
-    tmp := contents#Memory(m)[old_size + 28];
-    if (!b#Boolean(tmp)) { goto Label_27; }
-
-    call tmp := LdConst(2);
-    m := Memory(domain#Memory(m)[29+old_size := true], contents#Memory(m)[29+old_size := tmp]);
+    call tmp := LdConst(5);
+    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
 
     assert false;
 
-Label_27:
-    call tmp := GetTxnGasUnitPrice();
-    m := Memory(domain#Memory(m)[30+old_size := true], contents#Memory(m)[30+old_size := tmp]);
+Label_8:
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
+    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+30]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call t16 := BorrowGlobal(contents#Memory(m)[old_size+15], LibraAccount_T_type_value());
 
-    call tmp := GetTxnMaxGasUnits();
-    m := Memory(domain#Memory(m)[31+old_size := true], contents#Memory(m)[31+old_size := tmp]);
+    call t5 := CopyOrMoveRef(t16);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+31]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
+    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
+
+    call t18 := Hash_sha3_256(contents#Memory(m)[old_size+17]);
+    assume has_type(ByteArrayType(), t18);
+
+    m := Memory(domain#Memory(m)[old_size+18 := true], contents#Memory(m)[old_size+18 := t18]);
+
+    call t19 := CopyOrMoveRef(t5);
+
+    call t20 := BorrowField(t19, LibraAccount_T_authentication_key);
+
+    call tmp := ReadRef(t20);
+    assume has_type(ByteArrayType(), tmp);
+
+    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+
+    tmp := Boolean(is_equal(ByteArrayType(), contents#Memory(m)[old_size+18], contents#Memory(m)[old_size+21]));
+    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+
+    call tmp := Not(contents#Memory(m)[old_size+22]);
+    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
+
+    tmp := contents#Memory(m)[old_size + 23];
+    if (!b#Boolean(tmp)) { goto Label_21; }
+
+    call tmp := LdConst(2);
+    m := Memory(domain#Memory(m)[24+old_size := true], contents#Memory(m)[24+old_size := tmp]);
+
+    assert false;
+
+Label_21:
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
+    m := Memory(domain#Memory(m)[25+old_size := true], contents#Memory(m)[25+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
+    m := Memory(domain#Memory(m)[26+old_size := true], contents#Memory(m)[26+old_size := tmp]);
+
+    call tmp := Mul(contents#Memory(m)[old_size+25], contents#Memory(m)[old_size+26]);
+    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+27]);
     m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
+    call t28 := CopyOrMoveRef(t5);
+
+    call t29 := FreezeRef(t28);
+
+    call t6 := CopyOrMoveRef(t29);
+
+    call t30 := CopyOrMoveRef(t6);
+
+    call t31 := LibraAccount_balance_for_account(t30);
+    assume has_type(IntegerType(), t31);
+
+    m := Memory(domain#Memory(m)[old_size+31 := true], contents#Memory(m)[old_size+31 := t31]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+31]);
+    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+8]);
     m := Memory(domain#Memory(m)[32+old_size := true], contents#Memory(m)[32+old_size := tmp]);
 
     call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+7]);
     m := Memory(domain#Memory(m)[33+old_size := true], contents#Memory(m)[33+old_size := tmp]);
 
-    call tmp := Mul(contents#Memory(m)[old_size+32], contents#Memory(m)[old_size+33]);
+    call tmp := Ge(contents#Memory(m)[old_size+32], contents#Memory(m)[old_size+33]);
     m := Memory(domain#Memory(m)[34+old_size := true], contents#Memory(m)[34+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+34]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := Not(contents#Memory(m)[old_size+34]);
+    m := Memory(domain#Memory(m)[35+old_size := true], contents#Memory(m)[35+old_size := tmp]);
 
-    call t35 := CopyOrMoveRef(t2);
-
-    call t36 := FreezeRef(t35);
-
-    call t3 := CopyOrMoveRef(t36);
-
-    call t37 := CopyOrMoveRef(t3);
-
-    call t38 := LibraAccount_balance_for_account(t37);
-    assume has_type(IntegerType(), t38);
-
-    m := Memory(domain#Memory(m)[old_size+38 := true], contents#Memory(m)[old_size+38 := t38]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+38]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[39+old_size := true], contents#Memory(m)[39+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[40+old_size := true], contents#Memory(m)[40+old_size := tmp]);
-
-    call tmp := Ge(contents#Memory(m)[old_size+39], contents#Memory(m)[old_size+40]);
-    m := Memory(domain#Memory(m)[41+old_size := true], contents#Memory(m)[41+old_size := tmp]);
-
-    call tmp := Not(contents#Memory(m)[old_size+41]);
-    m := Memory(domain#Memory(m)[42+old_size := true], contents#Memory(m)[42+old_size := tmp]);
-
-    tmp := contents#Memory(m)[old_size + 42];
-    if (!b#Boolean(tmp)) { goto Label_48; }
+    tmp := contents#Memory(m)[old_size + 35];
+    if (!b#Boolean(tmp)) { goto Label_38; }
 
     call tmp := LdConst(6);
-    m := Memory(domain#Memory(m)[43+old_size := true], contents#Memory(m)[43+old_size := tmp]);
+    m := Memory(domain#Memory(m)[36+old_size := true], contents#Memory(m)[36+old_size := tmp]);
 
     assert false;
 
-Label_48:
-    call t44 := CopyOrMoveRef(t2);
+Label_38:
+    call t37 := CopyOrMoveRef(t5);
 
-    call t45 := BorrowField(t44, LibraAccount_T_sequence_number);
+    call t38 := BorrowField(t37, LibraAccount_T_sequence_number);
 
-    call tmp := ReadRef(t45);
+    call tmp := ReadRef(t38);
     assume has_type(IntegerType(), tmp);
 
-    m := Memory(domain#Memory(m)[46+old_size := true], contents#Memory(m)[46+old_size := tmp]);
+    m := Memory(domain#Memory(m)[39+old_size := true], contents#Memory(m)[39+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+46]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+39]);
+    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
 
-    call tmp := GetTxnSequenceNumber();
-    m := Memory(domain#Memory(m)[47+old_size := true], contents#Memory(m)[47+old_size := tmp]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
+    m := Memory(domain#Memory(m)[40+old_size := true], contents#Memory(m)[40+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+47]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
+    m := Memory(domain#Memory(m)[41+old_size := true], contents#Memory(m)[41+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+11]);
-    m := Memory(domain#Memory(m)[48+old_size := true], contents#Memory(m)[48+old_size := tmp]);
+    call tmp := Ge(contents#Memory(m)[old_size+40], contents#Memory(m)[old_size+41]);
+    m := Memory(domain#Memory(m)[42+old_size := true], contents#Memory(m)[42+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+10]);
-    m := Memory(domain#Memory(m)[49+old_size := true], contents#Memory(m)[49+old_size := tmp]);
+    call tmp := Not(contents#Memory(m)[old_size+42]);
+    m := Memory(domain#Memory(m)[43+old_size := true], contents#Memory(m)[43+old_size := tmp]);
 
-    call tmp := Ge(contents#Memory(m)[old_size+48], contents#Memory(m)[old_size+49]);
-    m := Memory(domain#Memory(m)[50+old_size := true], contents#Memory(m)[50+old_size := tmp]);
-
-    call tmp := Not(contents#Memory(m)[old_size+50]);
-    m := Memory(domain#Memory(m)[51+old_size := true], contents#Memory(m)[51+old_size := tmp]);
-
-    tmp := contents#Memory(m)[old_size + 51];
-    if (!b#Boolean(tmp)) { goto Label_61; }
+    tmp := contents#Memory(m)[old_size + 43];
+    if (!b#Boolean(tmp)) { goto Label_49; }
 
     call tmp := LdConst(3);
-    m := Memory(domain#Memory(m)[52+old_size := true], contents#Memory(m)[52+old_size := tmp]);
+    m := Memory(domain#Memory(m)[44+old_size := true], contents#Memory(m)[44+old_size := tmp]);
 
     assert false;
 
-Label_61:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+11]);
-    m := Memory(domain#Memory(m)[53+old_size := true], contents#Memory(m)[53+old_size := tmp]);
+Label_49:
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
+    m := Memory(domain#Memory(m)[45+old_size := true], contents#Memory(m)[45+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+10]);
-    m := Memory(domain#Memory(m)[54+old_size := true], contents#Memory(m)[54+old_size := tmp]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
+    m := Memory(domain#Memory(m)[46+old_size := true], contents#Memory(m)[46+old_size := tmp]);
 
-    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+53], contents#Memory(m)[old_size+54]));
-    m := Memory(domain#Memory(m)[55+old_size := true], contents#Memory(m)[55+old_size := tmp]);
+    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+45], contents#Memory(m)[old_size+46]));
+    m := Memory(domain#Memory(m)[47+old_size := true], contents#Memory(m)[47+old_size := tmp]);
 
-    call tmp := Not(contents#Memory(m)[old_size+55]);
-    m := Memory(domain#Memory(m)[56+old_size := true], contents#Memory(m)[56+old_size := tmp]);
+    call tmp := Not(contents#Memory(m)[old_size+47]);
+    m := Memory(domain#Memory(m)[48+old_size := true], contents#Memory(m)[48+old_size := tmp]);
 
-    tmp := contents#Memory(m)[old_size + 56];
-    if (!b#Boolean(tmp)) { goto Label_68; }
+    tmp := contents#Memory(m)[old_size + 48];
+    if (!b#Boolean(tmp)) { goto Label_56; }
 
     call tmp := LdConst(4);
-    m := Memory(domain#Memory(m)[57+old_size := true], contents#Memory(m)[57+old_size := tmp]);
+    m := Memory(domain#Memory(m)[49+old_size := true], contents#Memory(m)[49+old_size := tmp]);
 
     assert false;
 
-Label_68:
+Label_56:
     return;
 
 }
 
-procedure LibraAccount_prologue_verify () returns ()
+procedure LibraAccount_prologue_verify (arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns ()
 {
-    call LibraAccount_prologue();
+    call LibraAccount_prologue(arg0, arg1, arg2, arg3);
 }
 
-procedure {:inline 1} LibraAccount_epilogue () returns ()
+procedure {:inline 1} LibraAccount_epilogue (arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns ()
 requires ExistsTxnSenderAccount();
 {
     // declare local variables
-    var t0: Value; // AddressType()
-    var t1: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t2: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t3: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
+    var t0: Value; // IntegerType()
+    var t1: Value; // IntegerType()
+    var t2: Value; // IntegerType()
+    var t3: Value; // IntegerType()
+    var t4: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t5: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t6: Reference; // ReferenceType(LibraAccount_T_type_value())
     var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // LibraCoin_T_type_value()
-    var t10: Value; // IntegerType()
-    var t11: Value; // AddressType()
-    var t12: Value; // AddressType()
-    var t13: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t8: Value; // LibraCoin_T_type_value()
+    var t9: Value; // AddressType()
+    var t10: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t11: Value; // IntegerType()
+    var t12: Value; // IntegerType()
+    var t13: Value; // IntegerType()
     var t14: Value; // IntegerType()
     var t15: Value; // IntegerType()
-    var t16: Value; // IntegerType()
-    var t17: Value; // IntegerType()
-    var t18: Value; // IntegerType()
+    var t16: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t17: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t18: Reference; // ReferenceType(LibraAccount_T_type_value())
     var t19: Value; // IntegerType()
     var t20: Value; // IntegerType()
-    var t21: Value; // IntegerType()
-    var t22: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t23: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t21: Value; // BooleanType()
+    var t22: Value; // BooleanType()
+    var t23: Value; // IntegerType()
     var t24: Reference; // ReferenceType(LibraAccount_T_type_value())
     var t25: Value; // IntegerType()
-    var t26: Value; // IntegerType()
+    var t26: Value; // LibraCoin_T_type_value()
     var t27: Value; // IntegerType()
-    var t28: Value; // BooleanType()
-    var t29: Value; // BooleanType()
-    var t30: Value; // IntegerType()
-    var t31: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t32: Value; // IntegerType()
-    var t33: Value; // LibraCoin_T_type_value()
-    var t34: Value; // IntegerType()
-    var t35: Value; // IntegerType()
-    var t36: Value; // IntegerType()
-    var t37: Value; // IntegerType()
-    var t38: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t39: Reference; // ReferenceType(IntegerType())
-    var t40: Value; // AddressType()
-    var t41: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t42: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var t43: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t44: Value; // LibraCoin_T_type_value()
+    var t28: Value; // IntegerType()
+    var t29: Value; // IntegerType()
+    var t30: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t31: Reference; // ReferenceType(IntegerType())
+    var t32: Value; // AddressType()
+    var t33: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t34: Reference; // ReferenceType(LibraAccount_T_type_value())
+    var t35: Reference; // ReferenceType(LibraCoin_T_type_value())
+    var t36: Value; // LibraCoin_T_type_value()
 
     var tmp: Value;
     var old_size: int;
     assume !abort_flag;
 
     // assume arguments are of correct types
+    assume has_type(IntegerType(), arg0);
+    assume has_type(IntegerType(), arg1);
+    assume has_type(IntegerType(), arg2);
+    assume has_type(IntegerType(), arg3);
 
     old_size := m_size;
-    m_size := m_size + 45;
+    m_size := m_size + 37;
+    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size :=  arg2]);
+    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size :=  arg3]);
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
+    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+
+    call t10 := BorrowGlobal(contents#Memory(m)[old_size+9], LibraAccount_T_type_value());
+
+    call t4 := CopyOrMoveRef(t10);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
     m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+11]);
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
     m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
 
-    call t13 := BorrowGlobal(contents#Memory(m)[old_size+12], LibraAccount_T_type_value());
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
+    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
 
-    call t1 := CopyOrMoveRef(t13);
-
-    call tmp := GetTxnGasUnitPrice();
+    call tmp := Sub(contents#Memory(m)[old_size+12], contents#Memory(m)[old_size+13]);
     m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+14]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
-
-    call tmp := GetTxnMaxGasUnits();
+    call tmp := Mul(contents#Memory(m)[old_size+11], contents#Memory(m)[old_size+14]);
     m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
 
     call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+15]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
-
-    call tmp := GetGasRemaining();
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+16]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
-
-    call tmp := Sub(contents#Memory(m)[old_size+18], contents#Memory(m)[old_size+19]);
-    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
-
-    call tmp := Mul(contents#Memory(m)[old_size+17], contents#Memory(m)[old_size+20]);
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+21]);
     m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
 
-    call t22 := CopyOrMoveRef(t1);
+    call t16 := CopyOrMoveRef(t4);
 
-    call t23 := FreezeRef(t22);
+    call t17 := FreezeRef(t16);
 
-    call t3 := CopyOrMoveRef(t23);
+    call t6 := CopyOrMoveRef(t17);
 
-    call t24 := CopyOrMoveRef(t3);
+    call t18 := CopyOrMoveRef(t6);
 
-    call t25 := LibraAccount_balance_for_account(t24);
-    assume has_type(IntegerType(), t25);
+    call t19 := LibraAccount_balance_for_account(t18);
+    assume has_type(IntegerType(), t19);
 
-    m := Memory(domain#Memory(m)[old_size+25 := true], contents#Memory(m)[old_size+25 := t25]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+25]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[26+old_size := true], contents#Memory(m)[26+old_size := tmp]);
+    m := Memory(domain#Memory(m)[old_size+19 := true], contents#Memory(m)[old_size+19 := t19]);
 
     call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
+    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
 
-    call tmp := Ge(contents#Memory(m)[old_size+26], contents#Memory(m)[old_size+27]);
-    m := Memory(domain#Memory(m)[28+old_size := true], contents#Memory(m)[28+old_size := tmp]);
+    call tmp := Ge(contents#Memory(m)[old_size+19], contents#Memory(m)[old_size+20]);
+    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
 
-    call tmp := Not(contents#Memory(m)[old_size+28]);
-    m := Memory(domain#Memory(m)[29+old_size := true], contents#Memory(m)[29+old_size := tmp]);
+    call tmp := Not(contents#Memory(m)[old_size+21]);
+    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
 
-    tmp := contents#Memory(m)[old_size + 29];
-    if (!b#Boolean(tmp)) { goto Label_30; }
+    tmp := contents#Memory(m)[old_size + 22];
+    if (!b#Boolean(tmp)) { goto Label_20; }
 
     call tmp := LdConst(6);
-    m := Memory(domain#Memory(m)[30+old_size := true], contents#Memory(m)[30+old_size := tmp]);
+    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
 
     assert false;
 
-Label_30:
-    call t31 := CopyOrMoveRef(t1);
+Label_20:
+    call t24 := CopyOrMoveRef(t4);
 
     call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[32+old_size := true], contents#Memory(m)[32+old_size := tmp]);
+    m := Memory(domain#Memory(m)[25+old_size := true], contents#Memory(m)[25+old_size := tmp]);
 
-    call t33 := LibraAccount_withdraw_from_account(t31, contents#Memory(m)[old_size+32]);
-    assume has_type(LibraCoin_T_type_value(), t33);
+    call t26 := LibraAccount_withdraw_from_account(t24, contents#Memory(m)[old_size+25]);
+    assume has_type(LibraCoin_T_type_value(), t26);
 
-    m := Memory(domain#Memory(m)[old_size+33 := true], contents#Memory(m)[old_size+33 := t33]);
+    m := Memory(domain#Memory(m)[old_size+26 := true], contents#Memory(m)[old_size+26 := t26]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+33]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+26]);
+    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
 
-    call tmp := GetTxnSequenceNumber();
-    m := Memory(domain#Memory(m)[34+old_size := true], contents#Memory(m)[34+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+34]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+10]);
-    m := Memory(domain#Memory(m)[35+old_size := true], contents#Memory(m)[35+old_size := tmp]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
+    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
 
     call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[36+old_size := true], contents#Memory(m)[36+old_size := tmp]);
+    m := Memory(domain#Memory(m)[28+old_size := true], contents#Memory(m)[28+old_size := tmp]);
 
-    call tmp := Add(contents#Memory(m)[old_size+35], contents#Memory(m)[old_size+36]);
-    m := Memory(domain#Memory(m)[37+old_size := true], contents#Memory(m)[37+old_size := tmp]);
+    call tmp := Add(contents#Memory(m)[old_size+27], contents#Memory(m)[old_size+28]);
+    m := Memory(domain#Memory(m)[29+old_size := true], contents#Memory(m)[29+old_size := tmp]);
 
-    call t38 := CopyOrMoveRef(t1);
+    call t30 := CopyOrMoveRef(t4);
 
-    call t39 := BorrowField(t38, LibraAccount_T_sequence_number);
+    call t31 := BorrowField(t30, LibraAccount_T_sequence_number);
 
-    call WriteRef(t39, contents#Memory(m)[old_size+37]);
+    call WriteRef(t31, contents#Memory(m)[old_size+29]);
 
     call tmp := LdAddr(4078);
-    m := Memory(domain#Memory(m)[40+old_size := true], contents#Memory(m)[40+old_size := tmp]);
+    m := Memory(domain#Memory(m)[32+old_size := true], contents#Memory(m)[32+old_size := tmp]);
 
-    call t41 := BorrowGlobal(contents#Memory(m)[old_size+40], LibraAccount_T_type_value());
+    call t33 := BorrowGlobal(contents#Memory(m)[old_size+32], LibraAccount_T_type_value());
 
-    call t2 := CopyOrMoveRef(t41);
+    call t5 := CopyOrMoveRef(t33);
 
-    call t42 := CopyOrMoveRef(t2);
+    call t34 := CopyOrMoveRef(t5);
 
-    call t43 := BorrowField(t42, LibraAccount_T_balance);
+    call t35 := BorrowField(t34, LibraAccount_T_balance);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[44+old_size := true], contents#Memory(m)[44+old_size := tmp]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+8]);
+    m := Memory(domain#Memory(m)[36+old_size := true], contents#Memory(m)[36+old_size := tmp]);
 
-    call LibraCoin_deposit(t43, contents#Memory(m)[old_size+44]);
+    call LibraCoin_deposit(t35, contents#Memory(m)[old_size+36]);
 
     return;
 
 }
 
-procedure LibraAccount_epilogue_verify () returns ()
+procedure LibraAccount_epilogue_verify (arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns ()
 {
-    call LibraAccount_epilogue();
+    call LibraAccount_epilogue(arg0, arg1, arg2, arg3);
 }
 
 procedure {:inline 1} LibraAccount_fresh_guid (arg0: Reference, arg1: Value) returns (ret0: Value)

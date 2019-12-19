@@ -150,12 +150,17 @@ function {:inline 1} GetLocalReference(frame_idx: int, idx: int): Reference {
 }
 
 // Applies a field selection to the reference.
-function {:inline 1} SelectField(ref: Reference, field: FieldName): Reference {
+function {:inline 1} SelectFieldFromRef(ref: Reference, field: FieldName): Reference {
   Reference(
     rt#Reference(ref),
     Path(p#Path(p#Reference(ref))[size#Path(p#Reference(ref)) := Field(field)], size#Path(p#Reference(ref)) + 1),
     l#Reference(ref)
   )
+}
+
+// Applies a field selection to a value.
+function {:inline 1} SelectField(val: Value, field: FieldName): Value {
+  smap(val)[field]
 }
 
 // Dereferences a reference.
