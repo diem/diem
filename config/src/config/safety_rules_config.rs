@@ -76,6 +76,6 @@ impl OnDiskStorageConfig {
 #[serde(rename_all = "snake_case")]
 pub enum SafetyRulesService {
     Local,
-    Remote,
+    Serializer,
     Thread,
 }

@@ -12,7 +12,7 @@
 use crate::{
     network::{NetworkClient, NetworkServer},
     persistent_storage::PersistentStorage,
-    remote::{RemoteClient, RemoteService, SafetyRulesInput, TRemoteClient},
+    serializer::{SafetyRulesInput, SerializerClient, SerializerService, TSerializerClient},
     Error, SafetyRules,
 };
 use consensus_types::common::Payload;
@@ -48,10 +48,10 @@ impl<T: Payload> ThreadClient<T> {
         }
     }
 
-    pub fn client(&self) -> RemoteClient<T> {
+    pub fn client(&self) -> SerializerClient<T> {
         let network_client = NetworkClient::connect(self.server_addr).unwrap();
         let service = Box::new(ThreadService::new(network_client));
-        RemoteClient::new_client(service)
+        SerializerClient::new_client(service)
     }
 
     fn execute(
@@ -60,12 +60,12 @@ impl<T: Payload> ThreadClient<T> {
         listen_addr: SocketAddr,
     ) {
         let safety_rules = SafetyRules::<T>::new(storage, Arc::new(validator_signer));
-        let mut remote_service = RemoteService::new(safety_rules);
+        let mut serializer_service = SerializerService::new(safety_rules);
         let mut network_server = NetworkServer::new(listen_addr);
 
         loop {
             let request = network_server.read().unwrap();
-            let response = remote_service.handle_message(request).unwrap();
+            let response = serializer_service.handle_message(request).unwrap();
             network_server.write(&response).unwrap();
         }
     }
@@ -86,7 +86,7 @@ impl<T> ThreadService<T> {
     }
 }
 
-impl<T: Payload> TRemoteClient<T> for ThreadService<T> {
+impl<T: Payload> TSerializerClient<T> for ThreadService<T> {
     fn request(&mut self, input: SafetyRulesInput<T>) -> Result<Vec<u8>, Error> {
         let input_message = lcs::to_bytes(&input)?;
         self.network_client.write(&input_message)?;

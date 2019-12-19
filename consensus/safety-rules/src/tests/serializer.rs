@@ -14,7 +14,7 @@ fn test() {
 fn safety_rules<T: Payload>() -> (Box<dyn TSafetyRules<T>>, Arc<ValidatorSigner>) {
     let signer = ValidatorSigner::from_int(0);
     let safety_rules_manager =
-        SafetyRulesManager::new_remote(Box::new(InMemoryStorage::default()), signer.clone());
+        SafetyRulesManager::new_serializer(Box::new(InMemoryStorage::default()), signer.clone());
     let safety_rules = safety_rules_manager.client();
     (safety_rules, Arc::new(signer))
 }

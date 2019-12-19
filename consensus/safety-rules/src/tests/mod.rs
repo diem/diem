@@ -3,7 +3,7 @@
 
 mod local;
 mod network;
-mod remote;
 mod safety_rules;
+mod serializer;
 mod suite;
 mod thread;

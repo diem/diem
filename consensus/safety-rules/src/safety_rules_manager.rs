@@ -4,7 +4,7 @@
 use crate::{
     local_client::LocalClient,
     persistent_storage::PersistentStorage,
-    remote::{RemoteClient, RemoteService},
+    serializer::{SerializerClient, SerializerService},
     thread::ThreadClient,
     InMemoryStorage, OnDiskStorage, SafetyRules, TSafetyRules,
 };
@@ -61,7 +61,7 @@ impl SafetyRulesManagerConfig {
 
 enum SafetyRulesWrapper<T> {
     Local(Arc<RwLock<SafetyRules<T>>>),
-    Remote(Arc<RwLock<RemoteService<T>>>),
+    Serializer(Arc<RwLock<SerializerService<T>>>),
     Thread(ThreadClient<T>),
 }
 
@@ -79,7 +79,7 @@ impl<T: Payload> SafetyRulesManager<T> {
 
         match config.service {
             SafetyRulesService::Local => Self::new_local(storage, validator_signer),
-            SafetyRulesService::Remote => Self::new_remote(storage, validator_signer),
+            SafetyRulesService::Serializer => Self::new_serializer(storage, validator_signer),
             SafetyRulesService::Thread => Self::new_thread(storage, validator_signer),
         }
     }
@@ -95,16 +95,16 @@ impl<T: Payload> SafetyRulesManager<T> {
         }
     }
 
-    pub fn new_remote(
+    pub fn new_serializer(
         storage: Box<dyn PersistentStorage>,
         validator_signer: ValidatorSigner,
     ) -> Self {
         let safety_rules = SafetyRules::new(storage, Arc::new(validator_signer));
-        let remote_service = RemoteService::new(safety_rules);
+        let serializer_service = SerializerService::new(safety_rules);
 
         Self {
-            internal_safety_rules: SafetyRulesWrapper::Remote(Arc::new(RwLock::new(
-                remote_service,
+            internal_safety_rules: SafetyRulesWrapper::Serializer(Arc::new(RwLock::new(
+                serializer_service,
             ))),
         }
     }
@@ -125,8 +125,8 @@ impl<T: Payload> SafetyRulesManager<T> {
             SafetyRulesWrapper::Local(safety_rules) => {
                 Box::new(LocalClient::new(safety_rules.clone()))
             }
-            SafetyRulesWrapper::Remote(remote_service) => {
-                Box::new(RemoteClient::new(remote_service.clone()))
+            SafetyRulesWrapper::Serializer(serializer_service) => {
+                Box::new(SerializerClient::new(serializer_service.clone()))
             }
             SafetyRulesWrapper::Thread(thread) => Box::new(thread.client()),
         }
