@@ -362,18 +362,6 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_epoch_change_ledger_infos`]:
     /// ../libradb/struct.LibraDB.html#method.get_epoch_change_ledger_infos
-    fn get_epoch_change_ledger_infos(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
-        block_on(self.get_epoch_change_ledger_infos_async(start_epoch, end_epoch))
-    }
-
-    /// See [`LibraDB::get_epoch_change_ledger_infos`].
-    ///
-    /// [`LibraDB::get_epoch_change_ledger_infos`]:
-    /// ../libradb/struct.LibraDB.html#method.get_epoch_change_ledger_infos
     async fn get_epoch_change_ledger_infos_async(
         &self,
         start_epoch: u64,
