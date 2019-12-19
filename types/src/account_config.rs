@@ -25,6 +25,10 @@ lazy_static! {
     // Account
     static ref ACCOUNT_MODULE_NAME: Identifier = Identifier::new("LibraAccount").unwrap();
     static ref ACCOUNT_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
+
+    // Payment Events
+    static ref SENT_EVENT_NAME: Identifier = Identifier::new("SentPaymentEvent").unwrap();
+    static ref RECEIVED_EVENT_NAME: Identifier = Identifier::new("ReceivedPaymentEvent").unwrap();
 }
 
 pub fn coin_module_name() -> &'static IdentStr {
@@ -41,6 +45,14 @@ pub fn account_module_name() -> &'static IdentStr {
 
 pub fn account_struct_name() -> &'static IdentStr {
     &*ACCOUNT_STRUCT_NAME
+}
+
+pub fn sent_event_name() -> &'static IdentStr {
+    &*SENT_EVENT_NAME
+}
+
+pub fn received_event_name() -> &'static IdentStr {
+    &*RECEIVED_EVENT_NAME
 }
 
 pub fn core_code_address() -> AccountAddress {
@@ -72,6 +84,24 @@ pub fn account_struct_tag() -> StructTag {
         address: core_code_address(),
         module: account_module_name().to_owned(),
         name: account_struct_name().to_owned(),
+        type_params: vec![],
+    }
+}
+
+pub fn sent_payment_tag() -> StructTag {
+    StructTag {
+        address: core_code_address(),
+        module: account_module_name().to_owned(),
+        name: sent_event_name().to_owned(),
+        type_params: vec![],
+    }
+}
+
+pub fn received_payment_tag() -> StructTag {
+    StructTag {
+        address: core_code_address(),
+        module: account_module_name().to_owned(),
+        name: received_event_name().to_owned(),
         type_params: vec![],
     }
 }
@@ -206,33 +236,69 @@ lazy_static! {
     };
 }
 
-/// Generic struct that represents an Account event.
-/// Both SentPaymentEvent and ReceivedPaymentEvent are representable with this struct.
-/// They have an AccountAddress for the sender or receiver, the amount transferred, and metadata.
+/// Struct that represents a SentPaymentEvent.
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct AccountEvent {
+pub struct SentPaymentEvent {
     amount: u64,
-    account: AccountAddress,
+    receiver: AccountAddress,
     metadata: Vec<u8>,
 }
 
-impl AccountEvent {
+impl SentPaymentEvent {
     // TODO: should only be used for libra client testing and be removed eventually
-    pub fn new(amount: u64, account: AccountAddress, metadata: Vec<u8>) -> Self {
+    pub fn new(amount: u64, receiver: AccountAddress, metadata: Vec<u8>) -> Self {
         Self {
             amount,
-            account,
+            receiver,
             metadata,
         }
     }
 
-    pub fn try_from(bytes: &[u8]) -> Result<AccountEvent> {
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         lcs::from_bytes(bytes).map_err(Into::into)
     }
 
-    /// Get the account related to the event
-    pub fn account(&self) -> AccountAddress {
-        self.account
+    /// Get the sender of this transaction event.
+    pub fn receiver(&self) -> AccountAddress {
+        self.receiver
+    }
+
+    /// Get the amount sent or received
+    pub fn amount(&self) -> u64 {
+        self.amount
+    }
+
+    /// Get the metadata associated with this event
+    pub fn metadata(&self) -> &Vec<u8> {
+        &self.metadata
+    }
+}
+
+/// Struct that represents a ReceivedPaymentEvent.
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct ReceivedPaymentEvent {
+    amount: u64,
+    sender: AccountAddress,
+    metadata: Vec<u8>,
+}
+
+impl ReceivedPaymentEvent {
+    // TODO: should only be used for libra client testing and be removed eventually
+    pub fn new(amount: u64, sender: AccountAddress, metadata: Vec<u8>) -> Self {
+        Self {
+            amount,
+            sender,
+            metadata,
+        }
+    }
+
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
+        lcs::from_bytes(bytes).map_err(Into::into)
+    }
+
+    /// Get the receiver of this transaction event.
+    pub fn sender(&self) -> AccountAddress {
+        self.sender
     }
 
     /// Get the amount sent or received

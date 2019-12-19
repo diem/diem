@@ -9,11 +9,11 @@ use crate::{
 };
 use libra_config::config::VMPublishingOption;
 use libra_types::{
-    account_config::AccountEvent,
+    account_config::{ReceivedPaymentEvent, SentPaymentEvent},
     transaction::{SignedTransaction, TransactionOutput, TransactionPayload, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
-use std::time::Instant;
+use std::{convert::TryFrom, time::Instant};
 
 #[test]
 fn single_peer_to_peer_with_event() {
@@ -145,13 +145,15 @@ fn few_peer_to_peer_with_event() {
 
             // check events
             for event in txn_output.events() {
-                let account_event: AccountEvent =
-                    AccountEvent::try_from(event.event_data()).expect("event data must parse");
-                assert_eq!(transfer_amount, account_event.amount());
-                assert!(
-                    &account_event.account() == sender.address()
-                        || &account_event.account() == receiver.address()
-                );
+                if let Ok(payload) = SentPaymentEvent::try_from(event) {
+                    assert_eq!(transfer_amount, payload.amount());
+                    assert_eq!(receiver.address(), &payload.receiver());
+                } else if let Ok(payload) = ReceivedPaymentEvent::try_from(event) {
+                    assert_eq!(transfer_amount, payload.amount());
+                    assert_eq!(sender.address(), &payload.sender());
+                } else {
+                    panic!("Unexpected Event Type")
+                }
             }
 
             let original_sender = executor
