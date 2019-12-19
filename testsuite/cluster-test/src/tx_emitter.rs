@@ -4,9 +4,10 @@
 #![forbid(unsafe_code)]
 
 use crate::{cluster::Cluster, instance::Instance};
-use admission_control_proto::proto::{
-    admission_control::SubmitTransactionRequest, AdmissionControlClientBlocking,
+use admission_control_proto_grpcio::proto::admission_control::{
+    AdmissionControlClient, SubmitTransactionRequest,
 };
+use grpcio::{ChannelBuilder, EnvBuilder};
 use std::{
     convert::TryFrom,
     slice,
@@ -15,7 +16,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
+use admission_control_proto_grpcio::{AdmissionControlStatus, SubmitTransactionResponse};
 use anyhow::{bail, format_err, Result};
 use itertools::zip;
 use libra_crypto::{
@@ -44,7 +45,7 @@ use slog_scope::{debug, info};
 
 use std::cmp::{max, min};
 use std::fmt;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use util::retry;
@@ -144,7 +145,7 @@ impl TxEmitter {
             return Ok(()); // Early return to skip printing 'Minting ...' logs
         }
         let mut faucet_account = load_faucet_account(
-            &mut Self::pick_mint_client(&req.instances),
+            &Self::pick_mint_client(&req.instances),
             self.mint_key_pair.clone(),
         )?;
         let faucet_address = faucet_account.address;
@@ -154,7 +155,7 @@ impl TxEmitter {
             LIBRA_PER_NEW_ACCOUNT * num_accounts as u64,
         );
         execute_and_wait_transactions(
-            &mut Self::pick_mint_client(&req.instances),
+            &Self::pick_mint_client(&req.instances),
             &mut faucet_account,
             vec![mint_txn],
         )?;
@@ -217,8 +218,11 @@ impl TxEmitter {
         }
     }
 
-    fn make_client(instance: &Instance) -> AdmissionControlClientBlocking {
-        AdmissionControlClientBlocking::new(instance.ip(), instance.ac_port() as u16)
+    fn make_client(instance: &Instance) -> AdmissionControlClient {
+        let address = format!("{}:{}", instance.ip(), instance.ac_port());
+        let env_builder = Arc::new(EnvBuilder::new().name_prefix("ac-grpc-").build());
+        let ch = ChannelBuilder::new(env_builder).connect(&address);
+        AdmissionControlClient::new(ch)
     }
 
     pub fn emit_txn_for(&mut self, duration: Duration, instances: Vec<Instance>) -> Result<()> {
@@ -240,7 +244,7 @@ struct Worker {
 struct SubmissionThread {
     accounts: Vec<AccountData>,
     instance: Instance,
-    client: AdmissionControlClientBlocking,
+    client: AdmissionControlClient,
     all_addresses: Arc<Vec<AccountAddress>>,
     stop: Arc<AtomicBool>,
     params: EmitThreadParams,
@@ -255,7 +259,7 @@ impl SubmissionThread {
             let requests = self.gen_requests(&mut rng);
             for request in requests {
                 let wait_util = Instant::now() + wait;
-                let resp = self.client.submit_transaction(request);
+                let resp = self.client.submit_transaction(&request);
                 match resp {
                     Err(e) => {
                         info!("[{}] Failed to submit request: {:?}", self.instance, e);
@@ -276,7 +280,7 @@ impl SubmissionThread {
                 }
             }
             if self.params.wait_committed {
-                if wait_for_accounts_sequence(&mut self.client, &mut self.accounts).is_err() {
+                if wait_for_accounts_sequence(&self.client, &mut self.accounts).is_err() {
                     info!(
                         "[{}] Some transactions were not committed before expiration",
                         self.instance
@@ -304,7 +308,7 @@ impl SubmissionThread {
 }
 
 fn wait_for_accounts_sequence(
-    client: &mut AdmissionControlClientBlocking,
+    client: &AdmissionControlClient,
     accounts: &mut [AccountData],
 ) -> Result<(), ()> {
     let deadline = Instant::now() + TXN_MAX_WAIT;
@@ -339,7 +343,7 @@ fn is_sequence_equal(accounts: &[AccountData], sequence_numbers: &[u64]) -> bool
 }
 
 fn query_sequence_numbers(
-    client: &mut AdmissionControlClientBlocking,
+    client: &AdmissionControlClient,
     addresses: &[AccountAddress],
 ) -> Result<Vec<u64>> {
     let mut result = vec![];
@@ -355,7 +359,7 @@ fn query_sequence_numbers(
             update_request.requested_items.push(request_item);
         }
         let resp = client
-            .update_to_latest_ledger(update_request)
+            .update_to_latest_ledger(&update_request)
             .map_err(|e| format_err!("update_to_latest_ledger failed: {:?} ", e))?;
 
         for item in resp.response_items.into_iter() {
@@ -458,7 +462,7 @@ fn gen_transfer_txn_requests(
 }
 
 fn execute_and_wait_transactions(
-    client: &mut NamedAdmissionControlClient,
+    client: &NamedAdmissionControlClient,
     account: &mut AccountData,
     txn: Vec<SubmitTransactionRequest>,
 ) -> Result<()> {
@@ -471,8 +475,7 @@ fn execute_and_wait_transactions(
     );
     for request in txn {
         retry::retry(retry::fixed_retry_strategy(5_000, 20), || {
-            let request = request.clone();
-            let resp = client.submit_transaction(request);
+            let resp = client.submit_transaction(&request);
             match resp {
                 Err(e) => {
                     bail!("[{}] Failed to submit request: {:?}", client, e);
@@ -499,7 +502,7 @@ fn execute_and_wait_transactions(
 }
 
 fn load_faucet_account(
-    client: &mut NamedAdmissionControlClient,
+    client: &NamedAdmissionControlClient,
     key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 ) -> Result<AccountData> {
     let address = association_address();
@@ -524,7 +527,7 @@ fn create_new_accounts(
     num_new_accounts: usize,
     libra_per_new_account: u64,
     max_num_accounts_per_batch: u64,
-    mut client: NamedAdmissionControlClient,
+    client: NamedAdmissionControlClient,
 ) -> Result<Vec<AccountData>> {
     let mut i = 0;
     let mut accounts = vec![];
@@ -534,7 +537,7 @@ fn create_new_accounts(
             min(MAX_TXN_BATCH_SIZE, num_new_accounts - i),
         ));
         let requests = gen_transfer_txn_requests(source_account, &batch, libra_per_new_account);
-        execute_and_wait_transactions(&mut client, source_account, requests)?;
+        execute_and_wait_transactions(&client, source_account, requests)?;
         i += batch.len();
         accounts.append(&mut batch);
     }
@@ -555,7 +558,7 @@ fn is_accepted(resp: &SubmitTransactionResponse) -> bool {
     false
 }
 
-struct NamedAdmissionControlClient(Instance, AdmissionControlClientBlocking);
+struct NamedAdmissionControlClient(Instance, AdmissionControlClient);
 
 impl fmt::Display for NamedAdmissionControlClient {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -564,15 +567,9 @@ impl fmt::Display for NamedAdmissionControlClient {
 }
 
 impl Deref for NamedAdmissionControlClient {
-    type Target = AdmissionControlClientBlocking;
+    type Target = AdmissionControlClient;
 
     fn deref(&self) -> &Self::Target {
         &self.1
-    }
-}
-
-impl DerefMut for NamedAdmissionControlClient {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.1
     }
 }

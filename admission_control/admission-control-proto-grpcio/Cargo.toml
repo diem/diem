@@ -1,0 +1,28 @@
+[package]
+name = "admission-control-proto-grpcio"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra admission control proto"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+bytes = "0.4.12"
+futures = "0.1.28"
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
+prost = "0.5.0"
+
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+
+[build-dependencies]
+grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]
