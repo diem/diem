@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_config::AccountEvent, event::EventKey, language_storage::TypeTag,
-    ledger_info::LedgerInfo, proof::EventProof, transaction::Version,
+    account_config::{
+        received_payment_tag, sent_payment_tag, ReceivedPaymentEvent, SentPaymentEvent,
+    },
+    event::EventKey,
+    language_storage::TypeTag,
+    ledger_info::LedgerInfo,
+    proof::EventProof,
+    transaction::Version,
 };
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
@@ -61,6 +67,28 @@ impl ContractEvent {
     }
 }
 
+impl TryFrom<&ContractEvent> for SentPaymentEvent {
+    type Error = Error;
+
+    fn try_from(event: &ContractEvent) -> Result<Self> {
+        if event.type_tag != TypeTag::Struct(sent_payment_tag()) {
+            anyhow::bail!("Expected Sent Payment")
+        }
+        Self::try_from_bytes(&event.event_data)
+    }
+}
+
+impl TryFrom<&ContractEvent> for ReceivedPaymentEvent {
+    type Error = Error;
+
+    fn try_from(event: &ContractEvent) -> Result<Self> {
+        if event.type_tag != TypeTag::Struct(received_payment_tag()) {
+            anyhow::bail!("Expected Received Payment")
+        }
+        Self::try_from_bytes(&event.event_data)
+    }
+}
+
 impl std::fmt::Debug for ContractEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -76,7 +104,13 @@ impl std::fmt::Debug for ContractEvent {
 
 impl std::fmt::Display for ContractEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Ok(payload) = AccountEvent::try_from(&self.event_data) {
+        if let Ok(payload) = SentPaymentEvent::try_from(self) {
+            write!(
+                f,
+                "ContractEvent {{ key: {}, index: {:?}, type: {:?}, event_data: {:?} }}",
+                self.key, self.sequence_number, self.type_tag, payload,
+            )
+        } else if let Ok(payload) = ReceivedPaymentEvent::try_from(self) {
             write!(
                 f,
                 "ContractEvent {{ key: {}, index: {:?}, type: {:?}, event_data: {:?} }}",
