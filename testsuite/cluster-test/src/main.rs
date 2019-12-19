@@ -123,17 +123,18 @@ pub fn main() {
     }
 
     if args.emit_tx {
+        let mut rt = Runtime::new().unwrap();
         let thread_params = EmitThreadParams {
             wait_millis: args.wait_millis,
             wait_committed: !args.burst,
         };
         if args.swarm {
             let util = BasicSwarmUtil::setup(&args);
-            util.emit_tx(args.accounts_per_client, thread_params);
+            rt.block_on(util.emit_tx(args.accounts_per_client, thread_params));
             return;
         } else {
             let util = ClusterUtil::setup(&args);
-            util.emit_tx(args.accounts_per_client, thread_params);
+            rt.block_on(util.emit_tx(args.accounts_per_client, thread_params));
             return;
         }
     } else if args.discovery {
@@ -294,7 +295,7 @@ impl BasicSwarmUtil {
         }
     }
 
-    pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
+    pub async fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
         let mut emitter = TxEmitter::new(&self.cluster);
         emitter
             .start_job(EmitJobRequest {
@@ -302,6 +303,7 @@ impl BasicSwarmUtil {
                 accounts_per_client,
                 thread_params,
             })
+            .await
             .expect("Failed to start emit job");
         thread::park();
     }
@@ -351,7 +353,7 @@ impl ClusterUtil {
         runtime.block_on(join_all(futures));
     }
 
-    pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
+    pub async fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
         let mut emitter = TxEmitter::new(&self.cluster);
         emitter
             .start_job(EmitJobRequest {
@@ -359,6 +361,7 @@ impl ClusterUtil {
                 accounts_per_client,
                 thread_params,
             })
+            .await
             .expect("Failed to start emit job");
         self.run_stat_loop();
     }
@@ -647,12 +650,12 @@ impl ClusterTestRunner {
         let window = Duration::from_secs(60);
         loop {
             let job = self
-                .tx_emitter
-                .start_job(EmitJobRequest {
+                .runtime
+                .block_on(self.tx_emitter.start_job(EmitJobRequest {
                     instances: instances.clone(),
                     accounts_per_client: 10,
                     thread_params: EmitThreadParams::default(),
-                })
+                }))
                 .expect("Failed to start emit job");
             thread::sleep(Duration::from_secs(30) + window);
             let now = unix_timestamp_now();

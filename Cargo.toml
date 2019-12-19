@@ -3,7 +3,6 @@
 members = [
     "admission_control/admission-control-service",
     "admission_control/admission-control-proto",
-    "admission_control/admission-control-proto-grpcio",
     "client",
     "client/libra_wallet",
     "common/bounded-executor",
