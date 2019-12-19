@@ -308,14 +308,6 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_latest_state_root`]:
     /// ../libradb/struct.LibraDB.html#method.get_latest_state_root
-    fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
-        block_on(self.get_latest_state_root_async())
-    }
-
-    /// See [`LibraDB::get_latest_state_root`].
-    ///
-    /// [`LibraDB::get_latest_state_root`]:
-    /// ../libradb/struct.LibraDB.html#method.get_latest_state_root
     async fn get_latest_state_root_async(&self) -> Result<(Version, HashValue)>;
 
     /// See [`LibraDB::get_latest_account_state`].
