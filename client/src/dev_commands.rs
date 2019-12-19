@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{client_proxy::ClientProxy, commands::*};
+use chrono::{DateTime, Utc};
+use libra_types::waypoint::Waypoint;
+use std::time::{Duration, UNIX_EPOCH};
 
 /// Major command for account related operations.
 pub struct DevCommand {}
@@ -20,6 +23,7 @@ impl Command for DevCommand {
             Box::new(DevCommandExecute {}),
             Box::new(DevCommandAddValidator {}),
             Box::new(DevCommandRemoveValidator {}),
+            Box::new(DevCommandGenWaypoint {}),
         ];
         subcommand_execute(&params[0], commands, client, &params[1..]);
     }
@@ -157,6 +161,55 @@ impl Command for DevCommandRemoveValidator {
         match client.remove_validator(params, true) {
             Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
+        }
+    }
+}
+
+pub struct DevCommandGenWaypoint {}
+
+impl Command for DevCommandGenWaypoint {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["gen_waypoint"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        ""
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Generate a waypoint for the latest epoch change LedgerInfo"
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() != 1 {
+            println!("No parameters required for waypoint generation");
+            return;
+        }
+        println!("Retrieving the uptodate ledger info...");
+        if let Err(e) = client.test_validator_connection() {
+            println!("Failed to get uptodate ledger info connection: {}", e);
+            return;
+        }
+
+        let latest_epoch_change_li = match client.latest_epoch_change_li() {
+            Some(li) => li,
+            None => {
+                println!("No epoch change LedgerInfo found");
+                return;
+            }
+        };
+        let li_time_str = DateTime::<Utc>::from(
+            UNIX_EPOCH
+                + Duration::from_micros(latest_epoch_change_li.ledger_info().timestamp_usecs()),
+        );
+        match Waypoint::new(latest_epoch_change_li.ledger_info()) {
+            Err(e) => println!("Failed to generate a waypoint: {}", e),
+            Ok(waypoint) => println!(
+                "Waypoint (end of epoch {}, time {}): {}",
+                latest_epoch_change_li.ledger_info().epoch(),
+                li_time_str,
+                waypoint
+            ),
         }
     }
 }
