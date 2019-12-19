@@ -125,7 +125,8 @@ impl ExecutorProxyTrait for ExecutorProxy {
     ) -> Result<ValidatorChangeProof> {
         let validator_change_proof = self
             .storage_read_client
-            .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
+            .get_epoch_change_ledger_infos_async(start_epoch, end_epoch)
+            .await?;
         Ok(validator_change_proof)
     }
 
