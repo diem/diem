@@ -28,6 +28,7 @@ use std::sync::Arc;
 use storage_client::StorageRead;
 use tokio::runtime::Handle;
 use vm_validator::vm_validator::VMValidator;
+use block_storage_proto::proto::block_storage::BlockStorageClient;
 
 /// Struct implementing trait (service handle) AdmissionControlService.
 #[derive(Clone)]
@@ -38,6 +39,7 @@ pub struct AdmissionControlService {
     )>,
     /// gRPC client to send read requests to Storage.
     storage_read_client: Arc<dyn StorageRead>,
+    block_storage_client: Arc<BlockStorageClient>,
 }
 
 impl AdmissionControlService {
@@ -48,10 +50,12 @@ impl AdmissionControlService {
             oneshot::Sender<Result<SubmitTransactionResponse>>,
         )>,
         storage_read_client: Arc<dyn StorageRead>,
+        block_storage_client: Arc<BlockStorageClient>,
     ) -> Self {
         AdmissionControlService {
             ac_sender,
             storage_read_client,
+            block_storage_client,
         }
     }
 

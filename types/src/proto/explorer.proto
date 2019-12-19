@@ -11,18 +11,18 @@ import "google/protobuf/empty.proto";
 ////////////////////////////////////block
 
 message BlockRequestItem {
-    oneof requested_items {
-        BlockId block_id = 1;
-        GetBlockSummaryListRequest get_block_summary_list_request = 2;
-        google.protobuf.Empty latest_block_height_request = 3;
+    oneof block_requested_items {
+        BlockId block_id_item = 1;
+        GetBlockSummaryListRequest get_block_summary_list_request_item = 2;
+        google.protobuf.Empty latest_block_height_request_item = 3;
     }
 }
 
 message BlockResponseItem {
-    oneof response_items {
-        //GetBlockByBlockIdResponse get_block_by_block_id_response = 1;
-        GetBlockSummaryListResponse get_block_summary_list_response = 2;
-        LatestBlockHeightResponse latest_block_height_response = 3;
+    oneof block_response_items {
+        //GetBlockByBlockIdResponse get_block_by_block_id_response_item = 1;
+        GetBlockSummaryListResponse get_block_summary_list_response_item = 2;
+        LatestBlockHeightResponse latest_block_height_response_item = 3;
     }
 }
 
@@ -58,18 +58,18 @@ message LatestBlockHeightResponse {
 ////////////////////////////////////transaction
 
 message TxnRequestItem {
-    oneof requested_items {
-        google.protobuf.Empty latest_version_request = 1;
-        GetTransactionListRequest get_transaction_list_request = 2;
-        Version get_transaction_by_version_request = 3;
+    oneof txn_requested_items {
+        google.protobuf.Empty latest_version_request_item = 1;
+        GetTransactionListRequest get_transaction_list_request_item = 2;
+        Version get_transaction_by_version_request_item = 3;
     }
 }
 
 message TxnResponseItem {
-    oneof response_items {
-        LatestVersionResponse latest_version_response = 1;
-        GetTransactionListResponse get_transaction_list_response = 2;
-        GetTransactionByVersionResponse get_transaction_by_version_response = 3;
+    oneof txn_response_items {
+        LatestVersionResponse latest_version_response_item = 1;
+        GetTransactionListResponse get_transaction_list_response_item = 2;
+        GetTransactionByVersionResponse get_transaction_by_version_response_item = 3;
     }
 }
 
