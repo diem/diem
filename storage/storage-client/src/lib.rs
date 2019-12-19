@@ -278,24 +278,6 @@ pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::get_transactions`].
     ///
     /// [`LibraDB::get_transactions`]: ../libradb/struct.LibraDB.html#method.get_transactions
-    fn get_transactions(
-        &self,
-        start_version: Version,
-        batch_size: u64,
-        ledger_version: Version,
-        fetch_events: bool,
-    ) -> Result<TransactionListWithProof> {
-        block_on(self.get_transactions_async(
-            start_version,
-            batch_size,
-            ledger_version,
-            fetch_events,
-        ))
-    }
-
-    /// See [`LibraDB::get_transactions`].
-    ///
-    /// [`LibraDB::get_transactions`]: ../libradb/struct.LibraDB.html#method.get_transactions
     async fn get_transactions_async(
         &self,
         start_version: Version,

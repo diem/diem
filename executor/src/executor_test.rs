@@ -351,6 +351,7 @@ rusty_fork_test! {
 fn create_transaction_chunks(
     chunk_ranges: Vec<std::ops::Range<Version>>,
 ) -> (Vec<TransactionListWithProof>, LedgerInfoWithSignatures) {
+    let mut rt = Runtime::new().unwrap();
     assert_eq!(chunk_ranges.first().unwrap().start, 1);
     for i in 1..chunk_ranges.len() {
         let previous_range = &chunk_ranges[i - 1];
@@ -402,14 +403,13 @@ fn create_transaction_chunks(
     let batches: Vec<_> = chunk_ranges
         .into_iter()
         .map(|range| {
-            storage_client
-                .get_transactions(
-                    range.start,
-                    range.end - range.start,
-                    ledger_version,
-                    false, /* fetch_events */
-                )
-                .unwrap()
+            rt.block_on(storage_client.get_transactions_async(
+                range.start,
+                range.end - range.start,
+                ledger_version,
+                false, /* fetch_events */
+            ))
+            .unwrap()
         })
         .collect();
 
