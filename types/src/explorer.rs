@@ -62,7 +62,7 @@ impl From<GetBlockSummaryListRequest> for crate::proto::types::GetBlockSummaryLi
 }
 
 /// Helper to construct and parse [`proto::types::BlockSummary`]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Debug, Eq, Clone)]
 pub struct BlockSummary {
     pub block_id: HashValue,
     pub height: u64,
@@ -110,7 +110,7 @@ impl From<BlockSummary> for crate::proto::types::BlockSummary {
 }
 
 /// Helper to construct and parse [`proto::types::GetBlockSummaryListResponse`]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Debug, Eq, Clone)]
 pub struct GetBlockSummaryListResponse {
     pub blocks: Vec<BlockSummary>,
 }
@@ -144,7 +144,7 @@ impl From<GetBlockSummaryListResponse> for crate::proto::types::GetBlockSummaryL
 
 ////////////////
 /// Helper to construct and parse [`proto::types::Version`]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Debug, Eq, Clone)]
 pub struct Version {
     pub ver:u64,
 }
@@ -198,7 +198,7 @@ impl From<LatestVersionResponse> for crate::proto::types::LatestVersionResponse 
 }
 
 /// Helper to construct and parse [`proto::types::GetTransactionListRequest`]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Debug, Eq, Clone)]
 pub struct GetTransactionListRequest {
     pub version:Option<Version>,
 }
@@ -230,7 +230,7 @@ impl From<GetTransactionListRequest> for crate::proto::types::GetTransactionList
 }
 
 /// Helper to construct and parse [`proto::types::GetTransactionListResponse`]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Debug, Eq, Clone)]
 pub struct GetTransactionListResponse {
     pub transactions:Vec<Transaction>,
 }
