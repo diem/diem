@@ -488,28 +488,29 @@ async fn execute_and_wait_transactions(
         account.address
     );
     for request in txn {
-        retry::retry(retry::fixed_retry_strategy(5_000, 20), || {
+        retry::retry_async(retry::fixed_retry_strategy(5_000, 20), || {
             let request = request.clone();
             let mut c = client.clone();
-            let resp = futures::executor::block_on(tokio::spawn(async move {
-                c.submit_transaction(request).await
-            }))
-            .unwrap();
-            match resp {
-                Err(e) => {
-                    bail!("[{}] Failed to submit request: {:?}", client, e);
-                }
-                Ok(r) => {
-                    let r = SubmitTransactionResponse::try_from(r)
-                        .expect("Failed to parse SubmitTransactionResponse");
-                    if !is_accepted(&r) {
-                        bail!("[{}] Request declined: {:?}", client, r);
-                    } else {
-                        Ok(())
+            let client_name = client.to_string();
+            Box::pin(async move {
+                let resp = c.submit_transaction(request).await;
+                match resp {
+                    Err(e) => {
+                        bail!("[{}] Failed to submit request: {:?}", client_name, e);
+                    }
+                    Ok(r) => {
+                        let r = SubmitTransactionResponse::try_from(r)
+                            .expect("Failed to parse SubmitTransactionResponse");
+                        if !is_accepted(&r) {
+                            bail!("[{}] Request declined: {:?}", client_name, r);
+                        } else {
+                            Ok(())
+                        }
                     }
                 }
-            }
-        })?;
+            })
+        })
+        .await?;
     }
     let r = wait_for_accounts_sequence(client, slice::from_mut(account))
         .await
