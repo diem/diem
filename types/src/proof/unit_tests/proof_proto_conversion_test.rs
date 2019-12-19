@@ -3,7 +3,8 @@
 
 use crate::proof::{
     AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
-    TestAccumulatorProof, TestAccumulatorRangeProof, TransactionListProof, TransactionProof,
+    SparseMerkleRangeProof, TestAccumulatorProof, TestAccumulatorRangeProof, TransactionListProof,
+    TransactionProof,
 };
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
@@ -31,6 +32,13 @@ proptest! {
         proof in any::<TestAccumulatorRangeProof>(),
     ) {
         assert_protobuf_encode_decode::<crate::proto::types::AccumulatorRangeProof, TestAccumulatorRangeProof>(&proof);
+    }
+
+    #[test]
+    fn test_sparse_merkle_range_protobuf_conversion_roundtrip(
+        proof in any::<SparseMerkleRangeProof>(),
+    ) {
+        assert_protobuf_encode_decode::<crate::proto::types::SparseMerkleRangeProof, SparseMerkleRangeProof>(&proof);
     }
 
     #[test]

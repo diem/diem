@@ -740,7 +740,7 @@ fn verify_range_proof(
         .iter_bits()
         .enumerate()
         .filter_map(|(i, bit)| if !bit { Some(i) } else { None })
-        .zip(proof.siblings().iter().rev())
+        .zip(proof.right_siblings().iter().rev())
     {
         // This means the `i`-th bit is zero. We take `i` bits from `last_proven_key` and append a
         // one to make up the key for this sibling.

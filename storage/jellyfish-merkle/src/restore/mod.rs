@@ -518,7 +518,7 @@ where
             }
         }
         ensure!(
-            num_visited_right_siblings >= proof.siblings().len(),
+            num_visited_right_siblings >= proof.right_siblings().len(),
             "Too many right siblings in the proof.",
         );
 
@@ -534,7 +534,7 @@ where
                     break;
                 }
             } else {
-                if num_visited_right_siblings > proof.siblings().len() {
+                if num_visited_right_siblings > proof.right_siblings().len() {
                     num_visited_right_siblings -= 1;
                 } else {
                     break;
@@ -543,9 +543,9 @@ where
         }
 
         // Compute the root hash now that we have all the siblings.
-        let num_siblings = left_siblings.len() + proof.siblings().len();
+        let num_siblings = left_siblings.len() + proof.right_siblings().len();
         let mut left_sibling_iter = left_siblings.iter().rev();
-        let mut right_sibling_iter = proof.siblings().iter();
+        let mut right_sibling_iter = proof.right_siblings().iter();
         let mut current_hash = previous_leaf.hash();
         for bit in previous_key
             .iter_bits()
