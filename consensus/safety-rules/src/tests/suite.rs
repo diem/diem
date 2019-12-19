@@ -46,7 +46,7 @@ pub fn run_test_suite(round_func: RoundCallback, byte_func: ByteArrayCallback) {
 
 fn test_initial_state(func: RoundCallback) {
     // Start from scratch, verify the state
-    let (safety_rules, _) = func();
+    let (mut safety_rules, _) = func();
     let block = Block::<Round>::make_genesis_block();
     let state = safety_rules.consensus_state().unwrap();
     assert_eq!(state.last_voted_round(), block.round());

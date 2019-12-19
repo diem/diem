@@ -894,7 +894,7 @@ impl<T: Payload> EventProcessor<T> {
 
     /// Inspect the current consensus state.
     #[cfg(test)]
-    pub fn consensus_state(&self) -> ConsensusState {
+    pub fn consensus_state(&mut self) -> ConsensusState {
         self.safety_rules.consensus_state().unwrap()
     }
 

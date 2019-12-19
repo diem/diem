@@ -12,7 +12,7 @@ use libra_types::crypto_proxies::Signature;
 pub trait TSafetyRules<T> {
     /// Provides the internal state of SafetyRules for monitoring / debugging purposes. This does
     /// not include sensitive data like private keys.
-    fn consensus_state(&self) -> Result<ConsensusState, Error>;
+    fn consensus_state(&mut self) -> Result<ConsensusState, Error>;
 
     /// Learn about a new quorum certificate. In normal state, this updates the preferred round,
     /// if the parent is greater than our current preferred round.
@@ -26,9 +26,9 @@ pub trait TSafetyRules<T> {
 
     /// As the holder of the private key, SafetyRules also signs proposals or blocks.
     /// A Block is a signed BlockData along with some additional metadata.
-    fn sign_proposal(&self, block_data: BlockData<T>) -> Result<Block<T>, Error>;
+    fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error>;
 
     /// As the holder of the private key, SafetyRules also signs what is effectively a
     /// timeout message. This returns the signature for that timeout message.
-    fn sign_timeout(&self, timeout: &Timeout) -> Result<Signature, Error>;
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Signature, Error>;
 }
