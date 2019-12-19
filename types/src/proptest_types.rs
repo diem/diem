@@ -113,6 +113,21 @@ impl Arbitrary for WriteSet {
     type Strategy = BoxedStrategy<Self>;
 }
 
+impl Arbitrary for ChangeSet {
+    type Parameters = ();
+    fn arbitrary_with(_args: ()) -> Self::Strategy {
+        (
+            any::<u64>(),
+            any::<WriteSet>(),
+            vec(any::<ContractEvent>(), 0..10),
+        )
+            .prop_map(|(seq, ws, events)| ChangeSet::new(seq, ws, events))
+            .boxed()
+    }
+
+    type Strategy = BoxedStrategy<Self>;
+}
+
 #[derive(Debug)]
 struct AccountInfo {
     address: AccountAddress,
@@ -428,13 +443,14 @@ impl TransactionPayload {
     }
 
     pub fn write_set_strategy() -> impl Strategy<Value = Self> {
-        any::<WriteSet>().prop_map(|ws| TransactionPayload::WriteSet(ChangeSet::new(ws, vec![])))
+        (any::<u64>(), any::<WriteSet>())
+            .prop_map(|(seq, ws)| TransactionPayload::WriteSet(ChangeSet::new(seq, ws, vec![])))
     }
 
     /// Similar to `write_set_strategy` except generates a valid write set for the genesis block.
     pub fn genesis_strategy() -> impl Strategy<Value = Self> {
         WriteSet::genesis_strategy()
-            .prop_map(|ws| TransactionPayload::WriteSet(ChangeSet::new(ws, vec![])))
+            .prop_map(|ws| TransactionPayload::WriteSet(ChangeSet::new(0, ws, vec![])))
     }
 }
 

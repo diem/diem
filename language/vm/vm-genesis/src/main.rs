@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use libra_config::{config::PersistableConfig, generator};
+use libra_crypto::HashValue;
 use libra_types::transaction::Transaction;
 use std::{fs::File, io::prelude::*};
 use transaction_builder::default_config;
@@ -15,23 +16,24 @@ const CONFIG_LOCATION: &str = "genesis/vm_config.toml";
 const GENESIS_LOCATION: &str = "genesis/genesis.blob";
 
 /// Generate the genesis blob used by the Libra blockchain
-fn generate_genesis_blob() -> Vec<u8> {
+fn generate_genesis_blob() -> (Vec<u8>, HashValue) {
     let configs = generator::validator_swarm_for_testing(10);
     let consensus_peers = &configs[0].consensus.consensus_peers;
     let network_peers = &configs[0].validator_network.as_ref().unwrap().network_peers;
     let validator_set = consensus_peers.get_validator_set(network_peers);
     let discovery_set = make_placeholder_discovery_set(&validator_set);
+    let (txn, hash) = encode_genesis_transaction_with_validator(
+        &GENESIS_KEYPAIR.0,
+        GENESIS_KEYPAIR.1.clone(),
+        validator_set,
+        discovery_set,
+    );
 
-    lcs::to_bytes(&Transaction::UserTransaction(
-        encode_genesis_transaction_with_validator(
-            &GENESIS_KEYPAIR.0,
-            GENESIS_KEYPAIR.1.clone(),
-            validator_set,
-            discovery_set,
-        )
-        .into_inner(),
-    ))
-    .expect("Generating genesis block failed")
+    (
+        lcs::to_bytes(&Transaction::UserTransaction(txn.into_inner()))
+            .expect("Generating genesis block failed"),
+        hash,
+    )
 }
 
 fn main() {
@@ -39,13 +41,15 @@ fn main() {
         "Creating genesis binary blob at {} from configuration file {}",
         GENESIS_LOCATION, CONFIG_LOCATION
     );
-    let config = default_config();
+
+    let (genesis, hash) = generate_genesis_blob();
+    let config = default_config(hash);
     config
         .save_config(CONFIG_LOCATION)
         .expect("Unable to save genesis config");
 
     let mut file = File::create(GENESIS_LOCATION).unwrap();
-    file.write_all(&generate_genesis_blob()).unwrap();
+    file.write_all(&genesis).unwrap();
 }
 
 // A test that fails if the generated genesis blob is different from the one on disk. Intended

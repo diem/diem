@@ -260,10 +260,13 @@ pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
     .collect()
 }
 
-pub fn default_config() -> VMConfig {
+pub fn default_config(genesis_hash: HashValue) -> VMConfig {
+    let mut hash = [0; SCRIPT_HASH_LENGTH];
+    hash.copy_from_slice(genesis_hash.as_ref());
     VMConfig {
         publishing_options: VMPublishingOption::Locked(HashSet::from_iter(
             allowing_script_hashes().into_iter(),
         )),
+        allowed_writesets: vec![hash].into_iter().collect(),
     }
 }

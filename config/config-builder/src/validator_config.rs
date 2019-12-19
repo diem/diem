@@ -8,7 +8,7 @@ use libra_config::{
     generator,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
-use libra_types::transaction::Transaction;
+use libra_types::transaction::{Transaction, SCRIPT_HASH_LENGTH};
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
@@ -148,18 +148,19 @@ impl ValidatorConfig {
         let validator_set = consensus_peers.get_validator_set(network_peers);
         let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
 
-        let genesis = Some(Transaction::UserTransaction(
-            vm_genesis::encode_genesis_transaction_with_validator(
-                &faucet_key,
-                faucet_key.public_key(),
-                validator_set,
-                discovery_set,
-            )
-            .into_inner(),
-        ));
+        let (genesis_txn, genesis_hash) = vm_genesis::encode_genesis_transaction_with_validator(
+            &faucet_key,
+            faucet_key.public_key(),
+            validator_set,
+            discovery_set,
+        );
+        let genesis = Some(Transaction::UserTransaction(genesis_txn.into_inner()));
 
         for config in &mut configs {
             config.execution.genesis = genesis.clone();
+            let mut hash = [0; SCRIPT_HASH_LENGTH];
+            hash.copy_from_slice(genesis_hash.as_ref());
+            config.vm_config.allowed_writesets.insert(hash);
         }
 
         Ok((configs, faucet_key))

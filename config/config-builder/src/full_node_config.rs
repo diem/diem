@@ -178,6 +178,8 @@ impl FullNodeConfig {
             }
 
             config.execution.genesis = validator_config.execution.genesis.clone();
+            config.vm_config.allowed_writesets =
+                validator_config.vm_config.allowed_writesets.clone();
             let network = config
                 .full_node_networks
                 .get_mut(0)

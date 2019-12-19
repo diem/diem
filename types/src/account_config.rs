@@ -109,6 +109,10 @@ pub fn received_payment_tag() -> StructTag {
     }
 }
 
+pub fn libra_version_path() -> AccessPath {
+    AccessPath::new(core_code_address(), vec![])
+}
+
 /// A Rust representation of an Account resource.
 /// This is not how the Account is represented in the VM but it's a convenient representation.
 #[derive(Debug, Serialize, Deserialize)]

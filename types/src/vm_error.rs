@@ -404,6 +404,7 @@ pub enum StatusCode {
     EVENT_KEY_MISMATCH = 2010,
     UNREACHABLE = 2011,
     VM_STARTUP_FAILURE = 2012,
+    UNKNOWN_WRITESET_VERSION = 2013,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999

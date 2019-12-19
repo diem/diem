@@ -176,7 +176,7 @@ impl RawTransaction {
         RawTransaction {
             sender,
             sequence_number,
-            payload: TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
+            payload: TransactionPayload::WriteSet(ChangeSet::new(0, write_set, vec![])),
             // Since write-set transactions bypass the VM, these fields aren't relevant.
             max_gas_amount: 0,
             gas_unit_price: 0,
@@ -1068,7 +1068,7 @@ pub enum Transaction {
 
     /// Transaction that applies a WriteSet to the current storage. This should be used for ONLY for
     /// genesis right now.
-    WriteSet(WriteSet),
+    WriteSet(ChangeSet),
 
     /// Transaction to update the block metadata resource at the beginning of a block.
     BlockMetadata(BlockMetadata),

@@ -12,6 +12,7 @@ use libra_crypto::{
     ed25519::*,
     traits::ValidKey,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+    HashValue,
 };
 use libra_state_view::StateView;
 use libra_types::{
@@ -233,7 +234,7 @@ pub fn encode_genesis_transaction_with_validator(
     public_key: Ed25519PublicKey,
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
-) -> SignatureCheckedTransaction {
+) -> (SignatureCheckedTransaction, HashValue) {
     const INIT_BALANCE: u64 = 1_000_000_000;
 
     // Compile the needed stdlib modules.
@@ -531,9 +532,14 @@ pub fn encode_genesis_transaction_with_validator(
                 "Discovery set in emitted event does not match discovery set fed into genesis transaction",
             );
 
-            ChangeSet::new(txn_output.write_set().clone(), txn_output.events().to_vec())
+            ChangeSet::new(
+                0,
+                txn_output.write_set().clone(),
+                txn_output.events().to_vec(),
+            )
         }
     };
+    let hash = genesis_write_set.get_hash();
     let transaction = RawTransaction::new_change_set(genesis_addr, 0, genesis_write_set);
-    transaction.sign(private_key, public_key).unwrap()
+    (transaction.sign(private_key, public_key).unwrap(), hash)
 }

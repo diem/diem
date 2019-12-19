@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_crypto::HashValue;
 use libra_types::transaction::SCRIPT_HASH_LENGTH;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashSet, hash::BuildHasher};
@@ -10,6 +11,9 @@ use std::{collections::HashSet, hash::BuildHasher};
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct VMConfig {
+    #[serde(deserialize_with = "deserialize_whitelist")]
+    #[serde(serialize_with = "serialize_whitelist")]
+    pub allowed_writesets: HashSet<[u8; SCRIPT_HASH_LENGTH]>,
     pub publishing_options: VMPublishingOption,
 }
 
@@ -32,6 +36,7 @@ impl Default for VMConfig {
 
         VMConfig {
             publishing_options: VMPublishingOption::Locked(whitelist),
+            allowed_writesets: HashSet::new(),
         }
     }
 }
@@ -44,6 +49,7 @@ impl VMConfig {
     pub fn empty_whitelist_FOR_TESTING() -> Self {
         VMConfig {
             publishing_options: VMPublishingOption::Locked(HashSet::new()),
+            allowed_writesets: HashSet::new(),
         }
     }
 }

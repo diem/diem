@@ -97,6 +97,7 @@ impl FakeExecutor {
             validator_set,
             discovery_set,
         )
+        .0
         .payload()
         {
             TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
