@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, format_err};
 use super::account_address::AccountAddress;
 use std::convert::TryFrom;
 use libra_crypto::HashValue;
@@ -45,6 +45,19 @@ impl TryFrom<crate::proto::types::GetBlockSummaryListRequest> for GetBlockSummar
             None => None,
         };
         Ok(Self { block_id })
+    }
+}
+
+impl From<GetBlockSummaryListRequest> for crate::proto::types::GetBlockSummaryListRequest {
+    fn from(req: GetBlockSummaryListRequest) -> Self {
+
+        let block_id = match req.block_id {
+            Some(b) => {Some(b.into())},
+            None => None
+        };
+        Self {
+            block_id
+        }
     }
 }
 
@@ -277,6 +290,240 @@ impl From<GetTransactionByVersionResponse> for crate::proto::types::GetTransacti
         };
         Self {
             txn
+        }
+    }
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Clone, Eq, PartialEq)]
+pub enum BlockRequestItem {
+    BlockIdItem {block_id:BlockId},
+    GetBlockSummaryListRequestItem{request:GetBlockSummaryListRequest},
+    LatestBlockHeightRequestItem,
+}
+
+impl TryFrom<crate::proto::types::BlockRequestItem> for BlockRequestItem {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::BlockRequestItem) -> Result<Self> {
+        use crate::proto::types::block_request_item::BlockRequestedItems::*;
+
+        let item = proto
+            .block_requested_items
+            .ok_or_else(|| format_err!("Missing block_requested_items"))?;
+
+        let request = match item {
+            BlockIdItem(request) => {
+                let block_id = BlockId::try_from(request)?;
+                BlockRequestItem::BlockIdItem { block_id }
+            }
+            GetBlockSummaryListRequestItem(r) => {
+                let request = GetBlockSummaryListRequest::try_from(r)?;
+                BlockRequestItem::GetBlockSummaryListRequestItem {
+                    request
+                }
+            }
+            LatestBlockHeightRequestItem(_) => {
+                BlockRequestItem::LatestBlockHeightRequestItem
+            }
+        };
+
+        Ok(request)
+    }
+}
+
+impl From<BlockRequestItem> for crate::proto::types::BlockRequestItem {
+    fn from(request: BlockRequestItem) -> Self {
+        use crate::proto::types::block_request_item::BlockRequestedItems;
+
+        let req = match request {
+            BlockRequestItem::BlockIdItem { block_id } => {
+                let block_id = block_id.into();
+                BlockRequestedItems::BlockIdItem(block_id)
+            },
+            BlockRequestItem::GetBlockSummaryListRequestItem {
+                request,
+            } => {
+                let get_block_summary_list_request = request.into();
+                BlockRequestedItems::GetBlockSummaryListRequestItem(get_block_summary_list_request)
+            },
+            BlockRequestItem::LatestBlockHeightRequestItem => BlockRequestedItems::LatestBlockHeightRequestItem({()}),
+        };
+
+        Self {
+            block_requested_items: Some(req),
+        }
+    }
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Clone, Eq, PartialEq)]
+pub enum BlockResponseItem {
+    GetBlockSummaryListResponseItem{resp:GetBlockSummaryListResponse},
+    LatestBlockHeightResponseItem{height:u64},
+}
+
+impl TryFrom<crate::proto::types::BlockResponseItem> for BlockResponseItem {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::BlockResponseItem) -> Result<Self> {
+        use crate::proto::types::block_response_item::BlockResponseItems::*;
+
+        let item = proto
+            .block_response_items
+            .ok_or_else(|| format_err!("Missing block_response_items"))?;
+
+        let response = match item {
+            GetBlockSummaryListResponseItem(r) => {
+                let resp = GetBlockSummaryListResponse::try_from(r)?;
+                BlockResponseItem::GetBlockSummaryListResponseItem { resp }
+            }
+            LatestBlockHeightResponseItem(r) => {
+                BlockResponseItem::LatestBlockHeightResponseItem {
+                    height: r.height
+                }
+            }
+        };
+
+        Ok(response)
+    }
+}
+
+impl From<BlockResponseItem> for crate::proto::types::BlockResponseItem {
+    fn from(response: BlockResponseItem) -> Self {
+        use crate::proto::types::block_response_item::BlockResponseItems;
+
+        let resp = match response {
+            BlockResponseItem::GetBlockSummaryListResponseItem { resp } => {
+                let r = resp.into();
+                BlockResponseItems::GetBlockSummaryListResponseItem(r)
+            },
+            BlockResponseItem::LatestBlockHeightResponseItem {
+                height,
+            } => {
+                let mut r = crate::proto::types::LatestBlockHeightResponse::default();
+                r.height = height;
+                BlockResponseItems::LatestBlockHeightResponseItem(r)
+            },
+        };
+
+        Self {
+            block_response_items: Some(resp),
+        }
+    }
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Clone, Eq, PartialEq)]
+pub enum TxnRequestItem {
+    LatestVersionRequestItem,
+    GetTransactionListRequestItem{request: GetTransactionListRequest},
+    GetTransactionByVersionRequestItem{version: u64},
+}
+
+impl TryFrom<crate::proto::types::TxnRequestItem> for TxnRequestItem {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::TxnRequestItem) -> Result<Self> {
+        use crate::proto::types::txn_request_item::TxnRequestedItems::*;
+
+        let item = proto
+            .txn_requested_items
+            .ok_or_else(|| format_err!("Missing block_requested_items"))?;
+
+        let request = match item {
+            LatestVersionRequestItem(_) => {
+                TxnRequestItem::LatestVersionRequestItem
+            }
+            GetTransactionListRequestItem(request) => {
+                let r = GetTransactionListRequest::try_from(request)?;
+                TxnRequestItem::GetTransactionListRequestItem { request:r }
+            }
+            GetTransactionByVersionRequestItem(r) => {
+                let ver = Version::try_from(r)?;
+                TxnRequestItem::GetTransactionByVersionRequestItem {
+                    version: ver.ver
+                }
+            }
+        };
+
+        Ok(request)
+    }
+}
+
+impl From<TxnRequestItem> for crate::proto::types::TxnRequestItem {
+    fn from(request: TxnRequestItem) -> Self {
+        use crate::proto::types::txn_request_item::TxnRequestedItems;
+
+        let req = match request {
+            TxnRequestItem::LatestVersionRequestItem => TxnRequestedItems::LatestVersionRequestItem({()}),
+            TxnRequestItem::GetTransactionListRequestItem { request } => {
+                TxnRequestedItems::GetTransactionListRequestItem(request.into())
+            },
+            TxnRequestItem::GetTransactionByVersionRequestItem {
+                version,
+            } => {
+                let ver = Version{ver: version};
+                TxnRequestedItems::GetTransactionByVersionRequestItem(ver.into())
+            },
+        };
+
+        Self {
+            txn_requested_items: Some(req),
+        }
+    }
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Clone, Eq, PartialEq)]
+pub enum TxnResponseItem {
+    LatestVersionResponseItem(LatestVersionResponse),
+    GetTransactionListResponseItem(GetTransactionListResponse),
+    GetTransactionByVersionResponseItem(GetTransactionByVersionResponse),
+}
+
+impl TryFrom<crate::proto::types::TxnResponseItem> for TxnResponseItem {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::TxnResponseItem) -> Result<Self> {
+        use crate::proto::types::txn_response_item::TxnResponseItems::*;
+
+        let item = proto
+            .txn_response_items
+            .ok_or_else(|| format_err!("Missing txn_response_items"))?;
+
+        let response = match item {
+            LatestVersionResponseItem(resp) => {
+                TxnResponseItem::LatestVersionResponseItem(LatestVersionResponse::try_from(resp)?)
+            }
+            GetTransactionListResponseItem(resp) => {
+                TxnResponseItem::GetTransactionListResponseItem(GetTransactionListResponse::try_from(resp)?)
+            }
+            GetTransactionByVersionResponseItem(resp) => {
+                TxnResponseItem::GetTransactionByVersionResponseItem(GetTransactionByVersionResponse::try_from(resp)?)
+            }
+        };
+
+        Ok(response)
+    }
+}
+
+impl From<TxnResponseItem> for crate::proto::types::TxnResponseItem {
+    fn from(response: TxnResponseItem) -> Self {
+        use crate::proto::types::txn_response_item::TxnResponseItems;
+
+        let resp = match response {
+            TxnResponseItem::LatestVersionResponseItem(r) => TxnResponseItems::LatestVersionResponseItem(r.into()),
+            TxnResponseItem::GetTransactionListResponseItem(r) => {
+                TxnResponseItems::GetTransactionListResponseItem(r.into())
+            },
+            TxnResponseItem::GetTransactionByVersionResponseItem(r) => {
+                TxnResponseItems::GetTransactionByVersionResponseItem(r.into())
+            },
+        };
+
+        Self {
+            txn_response_items: Some(resp),
         }
     }
 }
