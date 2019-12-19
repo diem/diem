@@ -4,7 +4,7 @@
 //! This module translates specification conditions to Boogie code.
 
 use bytecode_verifier::VerifiedModule;
-use ir_to_bytecode_syntax::ast::{BinOp, CopyableVal, Field, StructName};
+use ir_to_bytecode_syntax::ast::{BinOp, CopyableVal, Field, QualifiedStructIdent, Type};
 use ir_to_bytecode_syntax::spec_language_ast::{Condition, SpecExp, StorageLocation};
 use itertools::Itertools;
 use libra_types::account_address::AccountAddress;
@@ -12,8 +12,6 @@ use num::{BigInt, Num};
 
 use crate::cli::abort_with_error;
 use crate::translator::FunctionInfo;
-use vm::access::ModuleAccess;
-use vm::views::StructHandleView;
 
 pub struct SpecTranslator<'a> {
     #[allow(dead_code)]
@@ -123,10 +121,14 @@ impl<'a> SpecTranslator<'a> {
         match expr {
             SpecExp::Constant(val) => self.translate_constant(val),
             SpecExp::StorageLocation(loc) => self.translate_location_as_value(loc),
-            SpecExp::GlobalExists { type_, address } => format!(
+            SpecExp::GlobalExists {
+                type_,
+                type_actuals,
+                address,
+            } => format!(
                 "ExistsResource(gs, {}, {})",
                 self.translate_location_as_address(address),
-                self.translate_resource_name(type_)
+                Self::translate_resource_name(type_, type_actuals)
             ),
             SpecExp::Dereference(loc) => format!(
                 "Dereference(m, {})",
@@ -228,10 +230,14 @@ impl<'a> SpecTranslator<'a> {
             StorageLocation::Formal(name) => {
                 format!("GetLocalReference(m_size, {})", self.get_param_index(name))
             }
-            StorageLocation::GlobalResource { type_, address } => format!(
+            StorageLocation::GlobalResource {
+                type_,
+                type_actuals,
+                address,
+            } => format!(
                 "GetResourceReference(gs, {}, {})",
                 self.translate_location_as_address(address),
-                self.translate_resource_name(type_)
+                Self::translate_resource_name(type_, type_actuals)
             ),
             StorageLocation::AccessPath { base, fields } => {
                 let mut res = self.translate_location_as_reference(base);
@@ -277,22 +283,10 @@ impl<'a> SpecTranslator<'a> {
         format!("{}", BigInt::from_str_radix(&addr.to_string(), 16).unwrap())
     }
 
-    /// Translates a resource name.
-    fn translate_resource_name(&mut self, name: &StructName) -> String {
-        // TODO: right now StructName is simple (not qualified) so this isn't working if
-        //   different modules have same resource names. We need to extend the parser to
-        //   allow qualified/dotted names here.
-        for handle in self.module.struct_handles() {
-            let view = StructHandleView::new(self.module, handle);
-            if view.name() == name.as_inner() {
-                let module_name = self.module.identifier_at(view.module_handle().name);
-                return format!("{}_{}", module_name, view.name());
-            }
-        }
-        self.error(
-            &format!("cannot resolve struct `{}`", name),
-            format!("<struct {}>", name),
-        )
+    /// Translates a resource name with type actuals
+    fn translate_resource_name(id: &QualifiedStructIdent, _type_actuals: &[Type]) -> String {
+        // TODO: incorporate type actuals
+        format!("{}_{}", id.module, id.name)
     }
 
     /// Translate a parameter name.
