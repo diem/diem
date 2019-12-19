@@ -22,11 +22,11 @@ pub enum SafetyRulesInput<T> {
     SignTimeout(Box<Timeout>),
 }
 
-pub struct RemoteService<T> {
+pub struct SerializerService<T> {
     internal: SafetyRules<T>,
 }
 
-impl<T: Payload> RemoteService<T> {
+impl<T: Payload> SerializerService<T> {
     pub fn new(internal: SafetyRules<T>) -> Self {
         Self { internal }
     }
@@ -55,17 +55,17 @@ impl<T: Payload> RemoteService<T> {
     }
 }
 
-pub struct RemoteClient<T> {
-    service: Box<dyn TRemoteClient<T>>,
+pub struct SerializerClient<T> {
+    service: Box<dyn TSerializerClient<T>>,
 }
 
-impl<T: Payload> RemoteClient<T> {
-    pub fn new(remote_service: Arc<RwLock<RemoteService<T>>>) -> Self {
-        let service = Box::new(LocalService { remote_service });
+impl<T: Payload> SerializerClient<T> {
+    pub fn new(serializer_service: Arc<RwLock<SerializerService<T>>>) -> Self {
+        let service = Box::new(LocalService { serializer_service });
         Self { service }
     }
 
-    pub fn new_client(service: Box<dyn TRemoteClient<T>>) -> Self {
+    pub fn new_client(service: Box<dyn TSerializerClient<T>>) -> Self {
         Self { service }
     }
 
@@ -74,7 +74,7 @@ impl<T: Payload> RemoteClient<T> {
     }
 }
 
-impl<T: Payload> TSafetyRules<T> for RemoteClient<T> {
+impl<T: Payload> TSafetyRules<T> for SerializerClient<T> {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         let response = self.request(SafetyRulesInput::ConsensusState)?;
         lcs::from_bytes(&response)?
@@ -108,18 +108,18 @@ impl<T: Payload> TSafetyRules<T> for RemoteClient<T> {
     }
 }
 
-pub trait TRemoteClient<T>: Send + Sync {
+pub trait TSerializerClient<T>: Send + Sync {
     fn request(&mut self, input: SafetyRulesInput<T>) -> Result<Vec<u8>, Error>;
 }
 
 struct LocalService<T> {
-    pub remote_service: Arc<RwLock<RemoteService<T>>>,
+    pub serializer_service: Arc<RwLock<SerializerService<T>>>,
 }
 
-impl<T: Payload> TRemoteClient<T> for LocalService<T> {
+impl<T: Payload> TSerializerClient<T> for LocalService<T> {
     fn request(&mut self, input: SafetyRulesInput<T>) -> Result<Vec<u8>, Error> {
         let input_message = lcs::to_bytes(&input)?;
-        self.remote_service
+        self.serializer_service
             .write()
             .unwrap()
             .handle_message(input_message)
