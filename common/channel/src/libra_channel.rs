@@ -32,8 +32,6 @@ struct SharedState<K: Eq + Hash + Clone, M> {
 
     /// A boolean which tracks whether the receiver has dropped
     receiver_dropped: bool,
-    /// A boolean which tracks whether the sender has dropped
-    sender_dropped: bool,
     /// A boolean which tracks whether the stream has terminated
     /// A stream is considered terminated when sender has dropped
     /// and we have drained everything inside our internal queue
@@ -41,6 +39,7 @@ struct SharedState<K: Eq + Hash + Clone, M> {
 }
 
 /// The sending end of the libra_channel.
+#[derive(Clone)]
 pub struct Sender<K: Eq + Hash + Clone, M> {
     shared_state: Arc<Mutex<SharedState<K, M>>>,
 }
@@ -63,7 +62,6 @@ impl<K: Eq + Hash + Clone, M> Sender<K, M> {
 impl<K: Eq + Hash + Clone, M> Drop for Sender<K, M> {
     fn drop(&mut self) {
         let mut shared_state = self.shared_state.lock().unwrap();
-        shared_state.sender_dropped = true;
         if let Some(w) = shared_state.waker.take() {
             w.wake();
         }
@@ -100,7 +98,10 @@ impl<K: Eq + Hash + Clone, M> Stream for Receiver<K, M> {
         let mut shared_state = self.shared_state.lock().unwrap();
         if let Some(val) = shared_state.internal_queue.pop() {
             Poll::Ready(Some(val))
-        } else if shared_state.sender_dropped {
+
+        // if the only Arc reference to `shared_state` is 1, which is this receiver,
+        // this must mean all senders have been dropped (and so the stream is terminated)
+        } else if Arc::strong_count(&self.shared_state) == 1 {
             shared_state.stream_terminated = true;
             Poll::Ready(None)
         } else {
@@ -126,7 +127,6 @@ pub fn new<K: Eq + Hash + Clone, M>(
         internal_queue: PerKeyQueue::new(queue_style, max_queue_size_per_key, counters),
         waker: None,
         receiver_dropped: false,
-        sender_dropped: false,
         stream_terminated: false,
     }));
     let shared_state_clone = Arc::clone(&shared_state);
