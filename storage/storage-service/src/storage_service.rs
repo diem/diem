@@ -206,16 +206,16 @@ impl StorageRead for StorageService {
         unimplemented!()
     }
 
-    fn latest_version(&mut self) -> Result<LatestVersionResponse> {
+    fn latest_version(&self) -> Result<LatestVersionResponse> {
         unimplemented!()
     }
 
-    fn get_transaction_list(&mut self, req: GetTransactionListRequest)
+    fn get_transaction_list(&self, req: GetTransactionListRequest)
                             -> Result<GetTransactionListResponse>{
         unimplemented!()
     }
 
-    fn get_transaction_by_version(&mut self, req: Version)
+    fn get_transaction_by_version(&self, req: Version)
                                   -> Result<GetTransactionByVersionResponse>{
         unimplemented!()
     }

@@ -26,7 +26,7 @@ use libra_types::{
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
     explorer::{
-        LatestVersionResponse, GetTransactionListRequest,
+        LatestVersionResponse, GetTransactionListRequest, Version as TxnVersion,
         GetTransactionListResponse, GetTransactionByVersionResponse
     }
 };
@@ -254,18 +254,21 @@ impl StorageRead for StorageReadServiceClient {
         .boxed()
     }
 
-    fn latest_version(&mut self) -> Result<LatestVersionResponse> {
-        unimplemented!()
+    fn latest_version(&self) -> Result<LatestVersionResponse> {
+        let resp = self.client().latest_version(&())?;
+        LatestVersionResponse::try_from(resp)
     }
 
-    fn get_transaction_list(&mut self, req: GetTransactionListRequest)
+    fn get_transaction_list(&self, req: GetTransactionListRequest)
                             -> Result<GetTransactionListResponse>{
-        unimplemented!()
+        let resp = self.client().get_transaction_list(&req.into())?;
+        GetTransactionListResponse::try_from(resp)
     }
 
-    fn get_transaction_by_version(&mut self, req: Version)
+    fn get_transaction_by_version(&self, req: Version)
                                   -> Result<GetTransactionByVersionResponse>{
-        unimplemented!()
+        let resp = self.client().get_transaction_by_version(&TxnVersion{ver:req}.into())?;
+        GetTransactionByVersionResponse::try_from(resp)
     }
 }
 
@@ -445,12 +448,12 @@ pub trait StorageRead: Send + Sync {
         start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>>;
 
-    fn latest_version(&mut self) -> Result<LatestVersionResponse>;
+    fn latest_version(&self) -> Result<LatestVersionResponse>;
 
-    fn get_transaction_list(&mut self, req: GetTransactionListRequest)
+    fn get_transaction_list(&self, req: GetTransactionListRequest)
         -> Result<GetTransactionListResponse>;
 
-    fn get_transaction_by_version(&mut self, req: Version) -> Result<GetTransactionByVersionResponse>;
+    fn get_transaction_by_version(&self, req: Version) -> Result<GetTransactionByVersionResponse>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.
