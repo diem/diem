@@ -404,6 +404,7 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
+            self.rt.handle().clone(),
             committed_trees.version(),
             committed_trees.state_root(),
             parent_trees.state_tree(),
@@ -595,6 +596,7 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
+            self.rt.handle().clone(),
             synced_trees.version(),
             synced_trees.state_root(),
             synced_trees.state_tree(),

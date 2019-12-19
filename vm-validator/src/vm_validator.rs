@@ -10,6 +10,7 @@ use libra_types::{
 use scratchpad::SparseMerkleTree;
 use std::sync::Arc;
 use storage_client::{StorageRead, VerifiedStateView};
+use tokio::runtime::Handle;
 use vm_runtime::{LibraVM, VMVerifier};
 
 #[cfg(test)]
@@ -26,13 +27,19 @@ pub trait TransactionValidation: Send + Sync + Clone {
 #[derive(Clone)]
 pub struct VMValidator {
     storage_read_client: Arc<dyn StorageRead>,
+    rt_handle: Handle,
     vm: LibraVM,
 }
 
 impl VMValidator {
-    pub fn new(config: &NodeConfig, storage_read_client: Arc<dyn StorageRead>) -> Self {
+    pub fn new(
+        config: &NodeConfig,
+        storage_read_client: Arc<dyn StorageRead>,
+        rt_handle: Handle,
+    ) -> Self {
         VMValidator {
             storage_read_client,
+            rt_handle,
             vm: LibraVM::new(&config.vm_config),
         }
     }
@@ -50,6 +57,7 @@ impl TransactionValidation for VMValidator {
         let smt = SparseMerkleTree::new(state_root);
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
+            self.rt_handle.clone(),
             Some(version),
             state_root,
             &smt,

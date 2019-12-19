@@ -32,6 +32,12 @@ impl AdmissionControlRuntime {
         network_sender: AdmissionControlNetworkSender,
         network_events: Vec<AdmissionControlNetworkEvents>,
     ) -> Self {
+        let ac_service_rt = Builder::new()
+            .thread_name("ac-service-")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .expect("[admission control] failed to create runtime");
         let (ac_sender, ac_receiver) = mpsc::channel(1_024);
 
         let port = config.admission_control.admission_control_service_port;
@@ -56,14 +62,12 @@ impl AdmissionControlRuntime {
         let admission_control_service =
             AdmissionControlService::new(ac_sender, Arc::clone(&storage_client));
 
-        let vm_validator = Arc::new(VMValidator::new(&config, Arc::clone(&storage_client)));
+        let vm_validator = Arc::new(VMValidator::new(
+            &config,
+            Arc::clone(&storage_client),
+            ac_service_rt.handle().clone(),
+        ));
 
-        let ac_service_rt = Builder::new()
-            .thread_name("ac-service-")
-            .threaded_scheduler()
-            .enable_all()
-            .build()
-            .expect("[admission control] failed to create runtime");
         let addr = format!("{}:{}", config.admission_control.address, port)
             .to_socket_addrs()
             .unwrap()

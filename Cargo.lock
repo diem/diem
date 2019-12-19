@@ -4382,6 +4382,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
  "storage-proto 0.1.0",
+ "tokio 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
