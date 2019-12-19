@@ -147,12 +147,12 @@ fn few_peer_to_peer_with_event() {
             for event in txn_output.events() {
                 if let Ok(payload) = SentPaymentEvent::try_from(event) {
                     assert_eq!(transfer_amount, payload.amount());
-                    assert_eq!(sender.address(), payload.sender());
+                    assert_eq!(sender.address(), &payload.sender());
                 } else if let Ok(payload) = ReceivedPaymentEvent::try_from(event) {
                     assert_eq!(transfer_amount, payload.amount());
-                    assert_eq!(receiver.address(), payload.receiver());
+                    assert_eq!(receiver.address(), &payload.receiver());
                 } else {
-                    bail!("Unexpected Event Type")
+                    panic!("Unexpected Event Type")
                 }
             }
 
