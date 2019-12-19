@@ -16,5 +16,5 @@ fn safety_rules<T: Payload>() -> (Box<dyn TSafetyRules<T>>, Arc<ValidatorSigner>
     let safety_rules_manager =
         SafetyRulesManager::new_local(Box::new(InMemoryStorage::default()), signer.clone());
     let safety_rules = safety_rules_manager.client();
-    (safety_rules, Arc::new(signer.clone()))
+    (safety_rules, Arc::new(signer))
 }

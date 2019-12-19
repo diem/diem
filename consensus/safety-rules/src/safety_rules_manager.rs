@@ -5,6 +5,7 @@ use crate::{
     local_client::LocalClient,
     persistent_storage::PersistentStorage,
     remote::{RemoteClient, RemoteService},
+    thread::ThreadClient,
     InMemoryStorage, OnDiskStorage, SafetyRules, TSafetyRules,
 };
 use consensus_types::common::Payload;
@@ -61,6 +62,7 @@ impl SafetyRulesManagerConfig {
 enum SafetyRulesWrapper<T> {
     Local(Arc<RwLock<SafetyRules<T>>>),
     Remote(Arc<RwLock<RemoteService<T>>>),
+    Thread(ThreadClient<T>),
 }
 
 pub struct SafetyRulesManager<T> {
@@ -78,6 +80,7 @@ impl<T: Payload> SafetyRulesManager<T> {
         match config.service {
             SafetyRulesService::Local => Self::new_local(storage, validator_signer),
             SafetyRulesService::Remote => Self::new_remote(storage, validator_signer),
+            SafetyRulesService::Thread => Self::new_thread(storage, validator_signer),
         }
     }
 
@@ -106,6 +109,17 @@ impl<T: Payload> SafetyRulesManager<T> {
         }
     }
 
+    pub fn new_thread(
+        storage: Box<dyn PersistentStorage>,
+        validator_signer: ValidatorSigner,
+    ) -> Self {
+        let thread = ThreadClient::<T>::new(storage, validator_signer);
+
+        Self {
+            internal_safety_rules: SafetyRulesWrapper::Thread(thread),
+        }
+    }
+
     pub fn client(&self) -> Box<dyn TSafetyRules<T> + Send + Sync> {
         match &self.internal_safety_rules {
             SafetyRulesWrapper::Local(safety_rules) => {
@@ -114,6 +128,7 @@ impl<T: Payload> SafetyRulesManager<T> {
             SafetyRulesWrapper::Remote(remote_service) => {
                 Box::new(RemoteClient::new(remote_service.clone()))
             }
+            SafetyRulesWrapper::Thread(thread) => Box::new(thread.client()),
         }
     }
 }

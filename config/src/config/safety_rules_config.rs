@@ -77,4 +77,5 @@ impl OnDiskStorageConfig {
 pub enum SafetyRulesService {
     Local,
     Remote,
+    Thread,
 }
