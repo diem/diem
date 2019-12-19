@@ -12,6 +12,7 @@ use anyhow::{ensure, Result};
 use futures::{async_await::FusedStream, stream::Stream};
 use libra_metrics::IntCounterVec;
 use std::{
+    fmt::Debug,
     hash::Hash,
     pin::Pin,
     sync::{Arc, Mutex},
@@ -20,6 +21,7 @@ use std::{
 
 /// SharedState is a data structure private to this module which is
 /// shared by the sender and receiver.
+#[derive(Debug)]
 struct SharedState<K: Eq + Hash + Clone, M> {
     /// The internal queue of messages in this Channel
     internal_queue: PerKeyQueue<K, M>,
@@ -39,7 +41,7 @@ struct SharedState<K: Eq + Hash + Clone, M> {
 }
 
 /// The sending end of the libra_channel.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Sender<K: Eq + Hash + Clone, M> {
     shared_state: Arc<Mutex<SharedState<K, M>>>,
 }

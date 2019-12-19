@@ -2,15 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_metrics::IntCounterVec;
-use std::collections::{HashMap, VecDeque};
-use std::hash::Hash;
+use std::{
+    collections::{HashMap, VecDeque},
+    fmt::{Debug, Formatter, Result},
+    hash::Hash,
+};
 
 /// QueueStyle is an enum which can be used as a configuration option for
 /// PerValidatorQueue. Since the queue per key is going to be bounded,
 /// QueueStyle also determines the policy for dropping messages.
 /// With LIFO, oldest messages are dropped.
 /// With FIFO, newest messages are dropped.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum QueueStyle {
     LIFO,
     FIFO,
@@ -38,6 +41,20 @@ pub(crate) struct PerKeyQueue<K: Eq + Hash + Clone, T> {
     /// Maximum number of messages to store per key
     max_queue_size: usize,
     counters: Option<&'static IntCounterVec>,
+}
+
+// TODO potentially add `per_key_queue` and `round_robin_queue`
+impl<K: Eq + Hash + Clone, T> Debug for PerKeyQueue<K, T> {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(
+            f,
+            "PerKeyQueue {{\n\
+             queue_style: {:?},\n\
+             max_queue_size: {},\n\
+             }}",
+            self.queue_style, self.max_queue_size
+        )
+    }
 }
 
 impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
