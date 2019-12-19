@@ -6,6 +6,7 @@
 mod consensus_state;
 mod error;
 mod local_client;
+mod network;
 mod persistent_storage;
 mod remote;
 mod safety_rules;
