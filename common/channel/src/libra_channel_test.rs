@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{libra_channel, message_queues::QueueStyle};
-use futures::{executor::block_on, future::join, future::FutureExt, stream::StreamExt};
+use futures::{
+    executor::block_on,
+    future::join,
+    future::FutureExt,
+    stream::{FusedStream, StreamExt},
+};
 use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};
 use std::time::Duration;
 use tokio::{runtime::Runtime, time::delay_for};
@@ -53,6 +58,33 @@ fn test_waker() {
     };
     let mut rt = Runtime::new().unwrap();
     rt.block_on(join(f1, f2));
+}
+
+#[test]
+fn test_sender_clone() {
+    let (mut sender, mut receiver) = libra_channel::new(QueueStyle::FIFO, 5, None);
+    // Ensures that there is no other value which is ready
+    assert_eq!(receiver.select_next_some().now_or_never(), None);
+
+    let _sender_clone = sender.clone();
+
+    let f1 = async move {
+        sender.push(0, 0).unwrap();
+        sender.push(0, 1).unwrap();
+    };
+
+    let f2 = async move {
+        assert_eq!(receiver.select_next_some().await, 0);
+        assert_eq!(receiver.select_next_some().await, 1);
+        assert_eq!(receiver.select_next_some().now_or_never(), None);
+
+        // receiver should not think stream is terminated, since
+        // sender_clone is not dropped yet (sender is dropped at this point)
+        assert!(!receiver.is_terminated());
+    };
+
+    block_on(f1);
+    block_on(f2);
 }
 
 fn test_multiple_validators_helper(
