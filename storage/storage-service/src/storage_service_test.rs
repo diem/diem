@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use futures::{executor::block_on, stream::StreamExt};
+use futures::stream::StreamExt;
 use grpcio::EnvBuilder;
 use itertools::zip_eq;
 use libra_config::config::NodeConfig;
@@ -117,7 +117,8 @@ proptest! {
         }
 
         // Check state backup for all account states.
-        let backup_responses = block_on(read_client.backup_account_state_async(version - 1).unwrap().collect::<Vec<_>>());
+        let stream = rt.block_on(read_client.backup_account_state_async(version - 1));
+        let backup_responses = rt.block_on(stream.unwrap().collect::<Vec<_>>());
         for ((hash, blob), response) in zip_eq(all_accounts, backup_responses) {
             let resp = response.unwrap();
             prop_assert_eq!(&hash, &resp.account_key);
