@@ -240,16 +240,16 @@ lazy_static! {
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct SentPaymentEvent {
     amount: u64,
-    sender: AccountAddress,
+    receiver: AccountAddress,
     metadata: Vec<u8>,
 }
 
 impl SentPaymentEvent {
     // TODO: should only be used for libra client testing and be removed eventually
-    pub fn new(amount: u64, sender: AccountAddress, metadata: Vec<u8>) -> Self {
+    pub fn new(amount: u64, receiver: AccountAddress, metadata: Vec<u8>) -> Self {
         Self {
             amount,
-            sender,
+            receiver,
             metadata,
         }
     }
@@ -259,8 +259,8 @@ impl SentPaymentEvent {
     }
 
     /// Get the sender of this transaction event.
-    pub fn sender(&self) -> AccountAddress {
-        self.sender
+    pub fn receiver(&self) -> AccountAddress {
+        self.receiver
     }
 
     /// Get the amount sent or received
@@ -278,16 +278,16 @@ impl SentPaymentEvent {
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ReceivedPaymentEvent {
     amount: u64,
-    receiver: AccountAddress,
+    sender: AccountAddress,
     metadata: Vec<u8>,
 }
 
 impl ReceivedPaymentEvent {
     // TODO: should only be used for libra client testing and be removed eventually
-    pub fn new(amount: u64, receiver: AccountAddress, metadata: Vec<u8>) -> Self {
+    pub fn new(amount: u64, sender: AccountAddress, metadata: Vec<u8>) -> Self {
         Self {
             amount,
-            receiver,
+            sender,
             metadata,
         }
     }
@@ -297,8 +297,8 @@ impl ReceivedPaymentEvent {
     }
 
     /// Get the receiver of this transaction event.
-    pub fn receiver(&self) -> AccountAddress {
-        self.receiver
+    pub fn sender(&self) -> AccountAddress {
+        self.sender
     }
 
     /// Get the amount sent or received
