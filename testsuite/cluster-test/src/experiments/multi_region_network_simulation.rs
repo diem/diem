@@ -206,6 +206,7 @@ impl Experiment for MultiRegionSimulation {
                             accounts_per_client: 10,
                             thread_params: EmitThreadParams::default(),
                         })
+                        .await
                         .expect("Failed to start emit job");
                     // Wait for minting to complete and transactions to start
                     time::delay_for(Duration::from_secs(30)).await;

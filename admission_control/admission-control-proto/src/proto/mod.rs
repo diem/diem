@@ -87,3 +87,55 @@ impl AdmissionControlClientBlocking {
         .map(tonic::Response::into_inner)
     }
 }
+
+// Allow for lazily creating a Client
+#[derive(Clone)]
+pub struct AdmissionControlClientAsync {
+    addr: String,
+    client: Option<AdmissionControlClient<tonic::transport::Channel>>,
+}
+
+impl AdmissionControlClientAsync {
+    pub fn new<A: AsRef<str>>(address: A, port: u16) -> Self {
+        let addr = format!("http://{}:{}", address.as_ref(), port);
+
+        Self { client: None, addr }
+    }
+
+    async fn client(
+        &mut self,
+    ) -> Result<&mut AdmissionControlClient<tonic::transport::Channel>, tonic::Status> {
+        if self.client.is_none() {
+            self.client = Some(
+                AdmissionControlClient::connect(self.addr.clone())
+                    .await
+                    .map_err(|e| tonic::Status::new(tonic::Code::Unavailable, e.to_string()))?,
+            );
+        }
+
+        // client is guaranteed to be populated by the time we reach here
+        Ok(self.client.as_mut().unwrap())
+    }
+
+    pub async fn submit_transaction(
+        &mut self,
+        request: SubmitTransactionRequest,
+    ) -> Result<SubmitTransactionResponse, tonic::Status> {
+        self.client()
+            .await?
+            .submit_transaction(request)
+            .await
+            .map(tonic::Response::into_inner)
+    }
+
+    pub async fn update_to_latest_ledger(
+        &mut self,
+        request: types::UpdateToLatestLedgerRequest,
+    ) -> Result<types::UpdateToLatestLedgerResponse, tonic::Status> {
+        self.client()
+            .await?
+            .update_to_latest_ledger(request)
+            .await
+            .map(tonic::Response::into_inner)
+    }
+}

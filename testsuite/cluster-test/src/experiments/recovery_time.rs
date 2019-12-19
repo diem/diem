@@ -56,14 +56,17 @@ impl Experiment for RecoveryTime {
         async move {
             let stop_effect = StopContainer::new(self.instance.clone());
             let delete_action = DeleteLibraData::new(self.instance.clone());
-            context.tx_emitter.mint_accounts(
-                &EmitJobRequest {
-                    instances: context.cluster.instances().to_vec(),
-                    accounts_per_client: 100,
-                    thread_params: EmitThreadParams::default(),
-                },
-                self.params.num_accounts_to_mint as usize,
-            )?;
+            context
+                .tx_emitter
+                .mint_accounts(
+                    &EmitJobRequest {
+                        instances: context.cluster.instances().to_vec(),
+                        accounts_per_client: 100,
+                        thread_params: EmitThreadParams::default(),
+                    },
+                    self.params.num_accounts_to_mint as usize,
+                )
+                .await?;
             info!("Stopping {}", self.instance);
             stop_effect.activate().await?;
             info!("Deleted db for {}", self.instance);
