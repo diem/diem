@@ -314,17 +314,6 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_latest_account_state`]:
     /// ../libradb/struct.LibraDB.html#method.get_latest_account_state
-    fn get_latest_account_state(
-        &self,
-        address: AccountAddress,
-    ) -> Result<Option<AccountStateBlob>> {
-        block_on(self.get_latest_account_state_async(address))
-    }
-
-    /// See [`LibraDB::get_latest_account_state`].
-    ///
-    /// [`LibraDB::get_latest_account_state`]:
-    /// ../libradb/struct.LibraDB.html#method.get_latest_account_state
     async fn get_latest_account_state_async(
         &self,
         address: AccountAddress,
