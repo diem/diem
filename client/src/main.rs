@@ -97,7 +97,7 @@ fn main() -> std::io::Result<()> {
         .build();
     let mut rl = Editor::<()>::with_config(config);
     loop {
-        let readline = rl.readline("libra% ");
+        let readline = rl.readline("violas% ");
         match readline {
             Ok(line) => {
                 let params = parse_cmd(&line);
