@@ -15,12 +15,12 @@ use anyhow::{ensure, Result};
 use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME, BLOCK_INDEX_CF_NAME};
+use libra_types::block_index::BlockIndex;
+use schema::{BLOCK_CF_NAME, BLOCK_INDEX_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
 use schemadb::{
     ColumnFamilyOptions, ColumnFamilyOptionsMap, ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME,
 };
 use std::{collections::HashMap, iter::Iterator, path::Path, time::Instant};
-use libra_types::block_index::BlockIndex;
 
 type HighestTimeoutCertificate = Vec<u8>;
 type VoteMsgData = Vec<u8>;
@@ -232,7 +232,13 @@ impl ConsensusDB {
     pub fn query_block_index(&self, height: Option<u64>, size: usize) -> Result<Vec<BlockIndex>> {
         let mut block_index_list = vec![];
         let mut begin = match height {
-            Some(h) => if h > 0 {h - 1} else {0},
+            Some(h) => {
+                if h > 0 {
+                    h - 1
+                } else {
+                    0
+                }
+            }
             None => {
                 let mut iter = self.db.iter::<BlockIndexSchema>(ReadOptions::default())?;
                 iter.seek_to_last();
@@ -264,7 +270,10 @@ impl ConsensusDB {
     }
 
     pub fn latest_height(&self) -> Option<u64> {
-        let mut iter = self.db.iter::<BlockIndexSchema>(ReadOptions::default()).expect("db err.");
+        let mut iter = self
+            .db
+            .iter::<BlockIndexSchema>(ReadOptions::default())
+            .expect("db err.");
         iter.seek_to_last();
         let result = iter.next();
         match result {

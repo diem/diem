@@ -1,7 +1,8 @@
-use crate::pow::payload_ext::{genesis_id};
+use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::state_replication::TxnManager;
 use anyhow::{Result, *};
 use atomic_refcell::AtomicRefCell;
+use consensus_types::{block::Block, common::Payload};
 use executor::ProcessedVMOutput;
 use libra_crypto::hash::PRE_GENESIS_BLOCK_ID;
 use libra_crypto::HashValue;
@@ -13,8 +14,6 @@ use libra_types::PeerId;
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
 use storage_client::StorageWrite;
-use crate::chained_bft::consensusdb::ConsensusDB;
-use consensus_types::{block::Block, common::Payload};
 
 pub type BlockHeight = u64;
 
@@ -50,7 +49,8 @@ impl BlockTree {
         let genesis_height = 0;
         let genesis_block: Block<T> = Block::make_genesis_block();
         let genesis_id = genesis_block.id();
-        let genesis_block_info = BlockInfo::new_inner(&genesis_id, &PRE_GENESIS_BLOCK_ID, genesis_height, 0, None);
+        let genesis_block_info =
+            BlockInfo::new_inner(&genesis_id, &PRE_GENESIS_BLOCK_ID, genesis_height, 0, None);
         let genesis_block_index = genesis_block_info.block_index();
 
         //init block_store
@@ -111,7 +111,12 @@ impl BlockTree {
     //        }
     //    }
 
-    async fn add_block_info_inner<T: Payload>(&mut self, block: Block<T>, new_block_info: BlockInfo, new_root: bool) {
+    async fn add_block_info_inner<T: Payload>(
+        &mut self,
+        block: Block<T>,
+        new_block_info: BlockInfo,
+        new_root: bool,
+    ) {
         //4. new root, rollback, commit
         if new_root {
             let old_root = self.root_hash();
@@ -180,7 +185,9 @@ impl BlockTree {
         qcs.push(block.quorum_cert().clone());
         let mut blocks: Vec<Block<T>> = Vec::new();
         blocks.push(block);
-        self.block_store.save_blocks_and_quorum_certificates(blocks, qcs).expect("save_blocks err.");
+        self.block_store
+            .save_blocks_and_quorum_certificates(blocks, qcs)
+            .expect("save_blocks err.");
     }
 
     async fn commit_block(&self, block_info: &BlockInfo) {
@@ -222,7 +229,9 @@ impl BlockTree {
             .expect("save transactions failed.");
 
         // 3. update main chain
-        self.block_store.insert_block_index(&height, &block_index).expect("insert_block_index err.");
+        self.block_store
+            .insert_block_index(&height, &block_index)
+            .expect("insert_block_index err.");
         self.main_chain.borrow_mut().insert(height, block_index);
     }
 
@@ -260,7 +269,8 @@ impl BlockTree {
             vm_output,
             commit_data,
         );
-        self.add_block_info_inner(block, new_block_info, new_root).await;
+        self.add_block_info_inner(block, new_block_info, new_root)
+            .await;
         Ok(())
     }
 
@@ -419,9 +429,9 @@ impl BlockInfo {
         }
     }
 
-//    fn genesis_block_info() -> Self {
-//        BlockInfo::new_inner(&genesis_id(), &PRE_GENESIS_BLOCK_ID, 0, 0, None)
-//    }
+    //    fn genesis_block_info() -> Self {
+    //        BlockInfo::new_inner(&genesis_id(), &PRE_GENESIS_BLOCK_ID, 0, 0, None)
+    //    }
 
     fn block_index(&self) -> BlockIndex {
         self.block_index

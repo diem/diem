@@ -11,6 +11,7 @@ use admission_control_proto::proto::admission_control::{
     AdmissionControl, SubmitTransactionRequest, SubmitTransactionResponse,
 };
 use anyhow::{format_err, Result};
+use block_storage_proto::proto::block_storage::BlockStorageClient;
 use futures::{
     channel::{mpsc, oneshot},
     executor::block_on,
@@ -20,18 +21,21 @@ use grpc_helpers::provide_grpc_response;
 use libra_logger::prelude::*;
 use libra_mempool::core_mempool_client::CoreMemPoolClient;
 use libra_metrics::counters::SVC_COUNTERS;
-use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
-                                BlockRequestItem as BlockRequestItemProto, BlockResponseItem as BlockResponseItemProto,
-                                TxnRequestItem as TxnRequestItemProto, TxnResponseItem as TxnResponseItemProto};
-use libra_types::explorer::{BlockRequestItem, BlockResponseItem, TxnRequestItem, TxnResponseItem,
-                            GetBlockSummaryListResponse, LatestVersionResponse, GetTransactionListResponse,
-                            GetTransactionByVersionResponse, Version};
+use libra_types::explorer::{
+    BlockRequestItem, BlockResponseItem, GetBlockSummaryListResponse,
+    GetTransactionByVersionResponse, GetTransactionListResponse, LatestVersionResponse,
+    TxnRequestItem, TxnResponseItem,
+};
+use libra_types::proto::types::{
+    BlockRequestItem as BlockRequestItemProto, BlockResponseItem as BlockResponseItemProto,
+    TxnRequestItem as TxnRequestItemProto, TxnResponseItem as TxnResponseItemProto,
+    UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+};
 use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::StorageRead;
 use tokio::runtime::Handle;
 use vm_validator::vm_validator::VMValidator;
-use block_storage_proto::proto::block_storage::BlockStorageClient;
 
 /// Struct implementing trait (service handle) AdmissionControlService.
 #[derive(Clone)]
@@ -155,54 +159,82 @@ impl AdmissionControl for AdmissionControlService {
         provide_grpc_response(resp, ctx, sink);
     }
 
-    fn block_explorer(&mut self, ctx: ::grpcio::RpcContext,
-                      req: BlockRequestItemProto,
-                      sink: ::grpcio::UnarySink<BlockResponseItemProto>) {
+    fn block_explorer(
+        &mut self,
+        ctx: ::grpcio::RpcContext,
+        req: BlockRequestItemProto,
+        sink: ::grpcio::UnarySink<BlockResponseItemProto>,
+    ) {
         debug!("[GRPC] AdmissionControl::block_explorer");
         let request = BlockRequestItem::try_from(req).expect("parse BlockRequestItem err.");
         let resp = match request {
-            BlockRequestItem::BlockIdItem{block_id} => {
+            BlockRequestItem::BlockIdItem { block_id } => {
                 //self.block_storage_client.get_block_by_block_id(&block_id.into())?
                 Err(format_err!("unimplemented"))
-            },
-            BlockRequestItem::GetBlockSummaryListRequestItem {request} => {
-                let r = self.block_storage_client.get_block_summary_list(&request.into()).expect("get_block_summary_list err.");
-                Ok(BlockResponseItem::GetBlockSummaryListResponseItem {resp:
-                GetBlockSummaryListResponse::try_from(r).expect("parse GetBlockSummaryListResponse err.")}.into())
-            },
+            }
+            BlockRequestItem::GetBlockSummaryListRequestItem { request } => {
+                let r = self
+                    .block_storage_client
+                    .get_block_summary_list(&request.into())
+                    .expect("get_block_summary_list err.");
+                Ok(BlockResponseItem::GetBlockSummaryListResponseItem {
+                    resp: GetBlockSummaryListResponse::try_from(r)
+                        .expect("parse GetBlockSummaryListResponse err."),
+                }
+                .into())
+            }
             BlockRequestItem::LatestBlockHeightRequestItem => {
-                let r = self.block_storage_client.latest_block_height(&()).expect("latest_block_height err.");
-                Ok(BlockResponseItem::LatestBlockHeightResponseItem {height: r.height}.into())
-            },
+                let r = self
+                    .block_storage_client
+                    .latest_block_height(&())
+                    .expect("latest_block_height err.");
+                Ok(BlockResponseItem::LatestBlockHeightResponseItem { height: r.height }.into())
+            }
         };
         provide_grpc_response(resp, ctx, sink);
     }
 
-    fn txn_explorer(&mut self, ctx: ::grpcio::RpcContext,
-                    req: TxnRequestItemProto,
-                    sink: ::grpcio::UnarySink<TxnResponseItemProto>) {
+    fn txn_explorer(
+        &mut self,
+        ctx: ::grpcio::RpcContext,
+        req: TxnRequestItemProto,
+        sink: ::grpcio::UnarySink<TxnResponseItemProto>,
+    ) {
         debug!("[GRPC] AdmissionControl::txn_explorer");
         let request = TxnRequestItem::try_from(req).expect("parse TxnRequestItem err.");
-        ///get_transaction_list/latest_version
         let resp = match request {
-            TxnRequestItem::GetTransactionByVersionRequestItem{version} => {
-                let r = self.storage_read_client.get_transaction_by_version(version)
+            TxnRequestItem::GetTransactionByVersionRequestItem { version } => {
+                let r = self
+                    .storage_read_client
+                    .get_transaction_by_version(version)
                     .expect("get_transaction_by_version err.");
-                Ok(TxnResponseItem::GetTransactionByVersionResponseItem(GetTransactionByVersionResponse::try_from(r)
-                    .expect("parse GetTransactionByVersionResponse err.")).into())
-            },
-            TxnRequestItem::GetTransactionListRequestItem {request} => {
-                let r = self.storage_read_client.get_transaction_list(request)
+                Ok(TxnResponseItem::GetTransactionByVersionResponseItem(
+                    GetTransactionByVersionResponse::try_from(r)
+                        .expect("parse GetTransactionByVersionResponse err."),
+                )
+                .into())
+            }
+            TxnRequestItem::GetTransactionListRequestItem { request } => {
+                let r = self
+                    .storage_read_client
+                    .get_transaction_list(request)
                     .expect("get_block_summary_list err.");
                 Ok(TxnResponseItem::GetTransactionListResponseItem(
                     GetTransactionListResponse::try_from(r)
-                        .expect("parse GetTransactionListResponse err.")).into())
-            },
+                        .expect("parse GetTransactionListResponse err."),
+                )
+                .into())
+            }
             TxnRequestItem::LatestVersionRequestItem => {
-                let r = self.storage_read_client.latest_version().expect("latest_version err.");
-                Ok(TxnResponseItem::LatestVersionResponseItem(LatestVersionResponse::try_from(r)
-                    .expect("parse LatestVersionResponse err.")).into())
-            },
+                let r = self
+                    .storage_read_client
+                    .latest_version()
+                    .expect("latest_version err.");
+                Ok(TxnResponseItem::LatestVersionResponseItem(
+                    LatestVersionResponse::try_from(r).expect("parse LatestVersionResponse err."),
+                )
+                .into())
+            }
         };
         provide_grpc_response(resp, ctx, sink);
     }

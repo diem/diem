@@ -7,6 +7,7 @@ use crate::{
     upstream_proxy::{process_network_messages, UpstreamProxyData},
 };
 use admission_control_proto::proto::admission_control::create_admission_control;
+use block_storage_client::make_block_storage_client;
 use futures::channel::mpsc;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
@@ -17,7 +18,6 @@ use std::{cmp::min, collections::HashMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::vm_validator::VMValidator;
-use block_storage_client::make_block_storage_client;
 
 /// Handle for AdmissionControl Runtime
 pub struct AdmissionControlRuntime {
@@ -62,10 +62,16 @@ impl AdmissionControlRuntime {
             config.storage.port,
         ));
 
-        let block_storage_client = make_block_storage_client(config.consensus.consensus_rpc_address.as_str(),
-                                                             config.consensus.consensus_rpc_port, Some(100_000_000));
-        let admission_control_service =
-            AdmissionControlService::new(ac_sender, Arc::clone(&storage_client), Arc::new(block_storage_client));
+        let block_storage_client = make_block_storage_client(
+            config.consensus.consensus_rpc_address.as_str(),
+            config.consensus.consensus_rpc_port,
+            Some(100_000_000),
+        );
+        let admission_control_service = AdmissionControlService::new(
+            ac_sender,
+            Arc::clone(&storage_client),
+            Arc::new(block_storage_client),
+        );
 
         let vm_validator = Arc::new(VMValidator::new(&config, Arc::clone(&storage_client)));
 

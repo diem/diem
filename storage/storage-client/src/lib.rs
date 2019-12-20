@@ -19,27 +19,26 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
+    explorer::{
+        GetTransactionByVersionResponse, GetTransactionListRequest, GetTransactionListResponse,
+        LatestVersionResponse, Version as TxnVersion,
+    },
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     proof::AccumulatorConsistencyProof,
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
-    explorer::{
-        LatestVersionResponse, GetTransactionListRequest, Version as TxnVersion,
-        GetTransactionListResponse, GetTransactionByVersionResponse
-    }
 };
 use rand::Rng;
 use std::convert::TryFrom;
 use std::{pin::Pin, sync::Arc};
 use storage_proto::{
     proto::storage::{GetStartupInfoRequest, StorageClient},
-    GetAccountStateWithProofByVersionRequest,
-    GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
-    GetEpochChangeLedgerInfosResponse, GetHistoryStartupInfoByBlockIdRequest,
-    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    RollbackRequest, SaveTransactionsRequest, StartupInfo,
+    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse,
+    GetHistoryStartupInfoByBlockIdRequest, GetStartupInfoResponse, GetTransactionsRequest,
+    GetTransactionsResponse, RollbackRequest, SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;
@@ -259,15 +258,18 @@ impl StorageRead for StorageReadServiceClient {
         LatestVersionResponse::try_from(resp)
     }
 
-    fn get_transaction_list(&self, req: GetTransactionListRequest)
-                            -> Result<GetTransactionListResponse>{
+    fn get_transaction_list(
+        &self,
+        req: GetTransactionListRequest,
+    ) -> Result<GetTransactionListResponse> {
         let resp = self.client().get_transaction_list(&req.into())?;
         GetTransactionListResponse::try_from(resp)
     }
 
-    fn get_transaction_by_version(&self, req: Version)
-                                  -> Result<GetTransactionByVersionResponse>{
-        let resp = self.client().get_transaction_by_version(&TxnVersion{ver:req}.into())?;
+    fn get_transaction_by_version(&self, req: Version) -> Result<GetTransactionByVersionResponse> {
+        let resp = self
+            .client()
+            .get_transaction_by_version(&TxnVersion { ver: req }.into())?;
         GetTransactionByVersionResponse::try_from(resp)
     }
 }
@@ -450,8 +452,10 @@ pub trait StorageRead: Send + Sync {
 
     fn latest_version(&self) -> Result<LatestVersionResponse>;
 
-    fn get_transaction_list(&self, req: GetTransactionListRequest)
-        -> Result<GetTransactionListResponse>;
+    fn get_transaction_list(
+        &self,
+        req: GetTransactionListRequest,
+    ) -> Result<GetTransactionListResponse>;
 
     fn get_transaction_by_version(&self, req: Version) -> Result<GetTransactionByVersionResponse>;
 }

@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub(crate) mod block;
+pub mod block_index;
 pub(crate) mod quorum_certificate;
 pub(crate) mod single_entry;
-pub mod block_index;
 
 use anyhow::{ensure, Result};
 use schemadb::ColumnFamilyName;

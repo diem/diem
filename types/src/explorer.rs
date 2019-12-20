@@ -1,8 +1,8 @@
-use anyhow::{Result, format_err};
 use super::account_address::AccountAddress;
-use std::convert::TryFrom;
-use libra_crypto::HashValue;
 use crate::transaction::Transaction;
+use anyhow::{format_err, Result};
+use libra_crypto::HashValue;
+use std::convert::TryFrom;
 
 /// Helper to construct and parse [`proto::types::BlockId`]
 #[derive(PartialEq, Eq, Clone)]
@@ -39,9 +39,7 @@ impl TryFrom<crate::proto::types::GetBlockSummaryListRequest> for GetBlockSummar
 
     fn try_from(proto: crate::proto::types::GetBlockSummaryListRequest) -> Result<Self> {
         let block_id = match proto.block_id {
-            Some(id) => {
-                Some(BlockId::try_from(id).expect("BlockId err."))
-            },
+            Some(id) => Some(BlockId::try_from(id).expect("BlockId err.")),
             None => None,
         };
         Ok(Self { block_id })
@@ -50,14 +48,11 @@ impl TryFrom<crate::proto::types::GetBlockSummaryListRequest> for GetBlockSummar
 
 impl From<GetBlockSummaryListRequest> for crate::proto::types::GetBlockSummaryListRequest {
     fn from(req: GetBlockSummaryListRequest) -> Self {
-
         let block_id = match req.block_id {
-            Some(b) => {Some(b.into())},
-            None => None
+            Some(b) => Some(b.into()),
+            None => None,
         };
-        Self {
-            block_id
-        }
+        Self { block_id }
     }
 }
 
@@ -82,14 +77,26 @@ impl TryFrom<crate::proto::types::BlockSummary> for BlockSummary {
         let block_id = HashValue::from_slice(&proto.block_id[..]).expect("block_id err.");
         let height = proto.height;
         let parent_id = HashValue::from_slice(&proto.parent_id[..]).expect("parent_id err.");
-        let accumulator_root_hash = HashValue::from_slice(&proto.accumulator_root_hash[..]).expect("accumulator_root_hash err.");
-        let state_root_hash = HashValue::from_slice(&proto.state_root_hash[..]).expect("state_root_hash err.");
+        let accumulator_root_hash = HashValue::from_slice(&proto.accumulator_root_hash[..])
+            .expect("accumulator_root_hash err.");
+        let state_root_hash =
+            HashValue::from_slice(&proto.state_root_hash[..]).expect("state_root_hash err.");
         let miner = AccountAddress::try_from(&proto.miner[..]).expect("miner err.");
         let nonce = proto.nonce;
         let target = HashValue::from_slice(&proto.target[..]).expect("target err.");
         let algo = proto.algo;
 
-        Ok(Self { block_id, height, parent_id, accumulator_root_hash, state_root_hash, miner, nonce, target, algo})
+        Ok(Self {
+            block_id,
+            height,
+            parent_id,
+            accumulator_root_hash,
+            state_root_hash,
+            miner,
+            nonce,
+            target,
+            algo,
+        })
     }
 }
 
@@ -125,20 +132,18 @@ impl TryFrom<crate::proto::types::GetBlockSummaryListResponse> for GetBlockSumma
             blocks.push(tmp);
         }
 
-        Ok(Self { blocks})
+        Ok(Self { blocks })
     }
 }
 
 impl From<GetBlockSummaryListResponse> for crate::proto::types::GetBlockSummaryListResponse {
     fn from(req: GetBlockSummaryListResponse) -> Self {
-        let mut blocks= Vec::new();
+        let mut blocks = Vec::new();
         for b in req.blocks {
             let tmp = b.into();
             blocks.push(tmp);
         }
-        Self {
-            blocks
-        }
+        Self { blocks }
     }
 }
 
@@ -146,29 +151,27 @@ impl From<GetBlockSummaryListResponse> for crate::proto::types::GetBlockSummaryL
 /// Helper to construct and parse [`proto::types::Version`]
 #[derive(PartialEq, Debug, Eq, Clone)]
 pub struct Version {
-    pub ver:u64,
+    pub ver: u64,
 }
 
 impl TryFrom<crate::proto::types::Version> for Version {
     type Error = anyhow::Error;
 
     fn try_from(proto: crate::proto::types::Version) -> Result<Self> {
-        Ok(Self { ver:proto.ver})
+        Ok(Self { ver: proto.ver })
     }
 }
 
 impl From<Version> for crate::proto::types::Version {
     fn from(req: Version) -> Self {
-        Self {
-            ver:req.ver
-        }
+        Self { ver: req.ver }
     }
 }
 
 /// Helper to construct and parse [`proto::types::LatestVersionResponse`]
 #[derive(PartialEq, Eq, Clone)]
 pub struct LatestVersionResponse {
-    pub version:Option<Version>,
+    pub version: Option<Version>,
 }
 
 impl TryFrom<crate::proto::types::LatestVersionResponse> for LatestVersionResponse {
@@ -179,28 +182,24 @@ impl TryFrom<crate::proto::types::LatestVersionResponse> for LatestVersionRespon
             Some(v) => Some(Version::try_from(v).expect("to Version err.")),
             None => None,
         };
-        Ok(Self { version})
+        Ok(Self { version })
     }
 }
 
 impl From<LatestVersionResponse> for crate::proto::types::LatestVersionResponse {
     fn from(req: LatestVersionResponse) -> Self {
         let version = match req.version {
-            Some(v) => {
-                Some(v.into())
-            },
+            Some(v) => Some(v.into()),
             None => None,
         };
-        Self {
-            version
-        }
+        Self { version }
     }
 }
 
 /// Helper to construct and parse [`proto::types::GetTransactionListRequest`]
 #[derive(PartialEq, Debug, Eq, Clone)]
 pub struct GetTransactionListRequest {
-    pub version:Option<Version>,
+    pub version: Option<Version>,
 }
 
 impl TryFrom<crate::proto::types::GetTransactionListRequest> for GetTransactionListRequest {
@@ -211,28 +210,24 @@ impl TryFrom<crate::proto::types::GetTransactionListRequest> for GetTransactionL
             Some(v) => Some(Version::try_from(v).expect("to Version err.")),
             None => None,
         };
-        Ok(Self { version})
+        Ok(Self { version })
     }
 }
 
 impl From<GetTransactionListRequest> for crate::proto::types::GetTransactionListRequest {
     fn from(req: GetTransactionListRequest) -> Self {
         let version = match req.version {
-            Some(v) => {
-                Some(v.into())
-            },
+            Some(v) => Some(v.into()),
             None => None,
         };
-        Self {
-            version
-        }
+        Self { version }
     }
 }
 
 /// Helper to construct and parse [`proto::types::GetTransactionListResponse`]
 #[derive(PartialEq, Debug, Eq, Clone)]
 pub struct GetTransactionListResponse {
-    pub transactions:Vec<Transaction>,
+    pub transactions: Vec<Transaction>,
 }
 
 impl TryFrom<crate::proto::types::GetTransactionListResponse> for GetTransactionListResponse {
@@ -245,20 +240,18 @@ impl TryFrom<crate::proto::types::GetTransactionListResponse> for GetTransaction
             transactions.push(tmp);
         }
 
-        Ok(Self { transactions})
+        Ok(Self { transactions })
     }
 }
 
 impl From<GetTransactionListResponse> for crate::proto::types::GetTransactionListResponse {
     fn from(req: GetTransactionListResponse) -> Self {
-        let mut transactions= Vec::new();
+        let mut transactions = Vec::new();
         for txn in req.transactions {
             let tmp = txn.into();
             transactions.push(tmp);
         }
-        Self {
-            transactions
-        }
+        Self { transactions }
     }
 }
 
@@ -268,37 +261,37 @@ pub struct GetTransactionByVersionResponse {
     pub txn: Option<Transaction>,
 }
 
-impl TryFrom<crate::proto::types::GetTransactionByVersionResponse> for GetTransactionByVersionResponse {
+impl TryFrom<crate::proto::types::GetTransactionByVersionResponse>
+    for GetTransactionByVersionResponse
+{
     type Error = anyhow::Error;
 
     fn try_from(proto: crate::proto::types::GetTransactionByVersionResponse) -> Result<Self> {
         let txn = match proto.txn {
-            Some(t) => {Some(Transaction::try_from(t).expect("to BlockSummary err."))},
+            Some(t) => Some(Transaction::try_from(t).expect("to BlockSummary err.")),
             None => None,
         };
-        Ok(Self { txn})
+        Ok(Self { txn })
     }
 }
 
-impl From<GetTransactionByVersionResponse> for crate::proto::types::GetTransactionByVersionResponse {
+impl From<GetTransactionByVersionResponse>
+    for crate::proto::types::GetTransactionByVersionResponse
+{
     fn from(req: GetTransactionByVersionResponse) -> Self {
         let txn = match req.txn {
-            Some(t) => {
-                Some(t.into())
-            },
+            Some(t) => Some(t.into()),
             None => None,
         };
-        Self {
-            txn
-        }
+        Self { txn }
     }
 }
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Eq, PartialEq)]
 pub enum BlockRequestItem {
-    BlockIdItem {block_id:BlockId},
-    GetBlockSummaryListRequestItem{request:GetBlockSummaryListRequest},
+    BlockIdItem { block_id: BlockId },
+    GetBlockSummaryListRequestItem { request: GetBlockSummaryListRequest },
     LatestBlockHeightRequestItem,
 }
 
@@ -319,13 +312,9 @@ impl TryFrom<crate::proto::types::BlockRequestItem> for BlockRequestItem {
             }
             GetBlockSummaryListRequestItem(r) => {
                 let request = GetBlockSummaryListRequest::try_from(r)?;
-                BlockRequestItem::GetBlockSummaryListRequestItem {
-                    request
-                }
+                BlockRequestItem::GetBlockSummaryListRequestItem { request }
             }
-            LatestBlockHeightRequestItem(_) => {
-                BlockRequestItem::LatestBlockHeightRequestItem
-            }
+            LatestBlockHeightRequestItem(_) => BlockRequestItem::LatestBlockHeightRequestItem,
         };
 
         Ok(request)
@@ -340,14 +329,14 @@ impl From<BlockRequestItem> for crate::proto::types::BlockRequestItem {
             BlockRequestItem::BlockIdItem { block_id } => {
                 let block_id = block_id.into();
                 BlockRequestedItems::BlockIdItem(block_id)
-            },
-            BlockRequestItem::GetBlockSummaryListRequestItem {
-                request,
-            } => {
+            }
+            BlockRequestItem::GetBlockSummaryListRequestItem { request } => {
                 let get_block_summary_list_request = request.into();
                 BlockRequestedItems::GetBlockSummaryListRequestItem(get_block_summary_list_request)
-            },
-            BlockRequestItem::LatestBlockHeightRequestItem => BlockRequestedItems::LatestBlockHeightRequestItem({()}),
+            }
+            BlockRequestItem::LatestBlockHeightRequestItem => {
+                BlockRequestedItems::LatestBlockHeightRequestItem({ () })
+            }
         };
 
         Self {
@@ -359,8 +348,8 @@ impl From<BlockRequestItem> for crate::proto::types::BlockRequestItem {
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Eq, PartialEq)]
 pub enum BlockResponseItem {
-    GetBlockSummaryListResponseItem{resp:GetBlockSummaryListResponse},
-    LatestBlockHeightResponseItem{height:u64},
+    GetBlockSummaryListResponseItem { resp: GetBlockSummaryListResponse },
+    LatestBlockHeightResponseItem { height: u64 },
 }
 
 impl TryFrom<crate::proto::types::BlockResponseItem> for BlockResponseItem {
@@ -379,9 +368,7 @@ impl TryFrom<crate::proto::types::BlockResponseItem> for BlockResponseItem {
                 BlockResponseItem::GetBlockSummaryListResponseItem { resp }
             }
             LatestBlockHeightResponseItem(r) => {
-                BlockResponseItem::LatestBlockHeightResponseItem {
-                    height: r.height
-                }
+                BlockResponseItem::LatestBlockHeightResponseItem { height: r.height }
             }
         };
 
@@ -397,14 +384,12 @@ impl From<BlockResponseItem> for crate::proto::types::BlockResponseItem {
             BlockResponseItem::GetBlockSummaryListResponseItem { resp } => {
                 let r = resp.into();
                 BlockResponseItems::GetBlockSummaryListResponseItem(r)
-            },
-            BlockResponseItem::LatestBlockHeightResponseItem {
-                height,
-            } => {
+            }
+            BlockResponseItem::LatestBlockHeightResponseItem { height } => {
                 let mut r = crate::proto::types::LatestBlockHeightResponse::default();
                 r.height = height;
                 BlockResponseItems::LatestBlockHeightResponseItem(r)
-            },
+            }
         };
 
         Self {
@@ -417,8 +402,8 @@ impl From<BlockResponseItem> for crate::proto::types::BlockResponseItem {
 #[derive(Clone, Eq, PartialEq)]
 pub enum TxnRequestItem {
     LatestVersionRequestItem,
-    GetTransactionListRequestItem{request: GetTransactionListRequest},
-    GetTransactionByVersionRequestItem{version: u64},
+    GetTransactionListRequestItem { request: GetTransactionListRequest },
+    GetTransactionByVersionRequestItem { version: u64 },
 }
 
 impl TryFrom<crate::proto::types::TxnRequestItem> for TxnRequestItem {
@@ -432,18 +417,14 @@ impl TryFrom<crate::proto::types::TxnRequestItem> for TxnRequestItem {
             .ok_or_else(|| format_err!("Missing block_requested_items"))?;
 
         let request = match item {
-            LatestVersionRequestItem(_) => {
-                TxnRequestItem::LatestVersionRequestItem
-            }
+            LatestVersionRequestItem(_) => TxnRequestItem::LatestVersionRequestItem,
             GetTransactionListRequestItem(request) => {
                 let r = GetTransactionListRequest::try_from(request)?;
-                TxnRequestItem::GetTransactionListRequestItem { request:r }
+                TxnRequestItem::GetTransactionListRequestItem { request: r }
             }
             GetTransactionByVersionRequestItem(r) => {
                 let ver = Version::try_from(r)?;
-                TxnRequestItem::GetTransactionByVersionRequestItem {
-                    version: ver.ver
-                }
+                TxnRequestItem::GetTransactionByVersionRequestItem { version: ver.ver }
             }
         };
 
@@ -456,16 +437,16 @@ impl From<TxnRequestItem> for crate::proto::types::TxnRequestItem {
         use crate::proto::types::txn_request_item::TxnRequestedItems;
 
         let req = match request {
-            TxnRequestItem::LatestVersionRequestItem => TxnRequestedItems::LatestVersionRequestItem({()}),
+            TxnRequestItem::LatestVersionRequestItem => {
+                TxnRequestedItems::LatestVersionRequestItem({ () })
+            }
             TxnRequestItem::GetTransactionListRequestItem { request } => {
                 TxnRequestedItems::GetTransactionListRequestItem(request.into())
-            },
-            TxnRequestItem::GetTransactionByVersionRequestItem {
-                version,
-            } => {
-                let ver = Version{ver: version};
+            }
+            TxnRequestItem::GetTransactionByVersionRequestItem { version } => {
+                let ver = Version { ver: version };
                 TxnRequestedItems::GetTransactionByVersionRequestItem(ver.into())
-            },
+            }
         };
 
         Self {
@@ -497,10 +478,14 @@ impl TryFrom<crate::proto::types::TxnResponseItem> for TxnResponseItem {
                 TxnResponseItem::LatestVersionResponseItem(LatestVersionResponse::try_from(resp)?)
             }
             GetTransactionListResponseItem(resp) => {
-                TxnResponseItem::GetTransactionListResponseItem(GetTransactionListResponse::try_from(resp)?)
+                TxnResponseItem::GetTransactionListResponseItem(
+                    GetTransactionListResponse::try_from(resp)?,
+                )
             }
             GetTransactionByVersionResponseItem(resp) => {
-                TxnResponseItem::GetTransactionByVersionResponseItem(GetTransactionByVersionResponse::try_from(resp)?)
+                TxnResponseItem::GetTransactionByVersionResponseItem(
+                    GetTransactionByVersionResponse::try_from(resp)?,
+                )
             }
         };
 
@@ -513,13 +498,15 @@ impl From<TxnResponseItem> for crate::proto::types::TxnResponseItem {
         use crate::proto::types::txn_response_item::TxnResponseItems;
 
         let resp = match response {
-            TxnResponseItem::LatestVersionResponseItem(r) => TxnResponseItems::LatestVersionResponseItem(r.into()),
+            TxnResponseItem::LatestVersionResponseItem(r) => {
+                TxnResponseItems::LatestVersionResponseItem(r.into())
+            }
             TxnResponseItem::GetTransactionListResponseItem(r) => {
                 TxnResponseItems::GetTransactionListResponseItem(r.into())
-            },
+            }
             TxnResponseItem::GetTransactionByVersionResponseItem(r) => {
                 TxnResponseItems::GetTransactionByVersionResponseItem(r.into())
-            },
+            }
         };
 
         Self {

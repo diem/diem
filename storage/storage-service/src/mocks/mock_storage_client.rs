@@ -11,6 +11,10 @@ use libra_types::{
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     event::EventHandle,
+    explorer::{
+        GetTransactionByVersionResponse, GetTransactionListRequest, GetTransactionListResponse,
+        LatestVersionResponse,
+    },
     get_with_proof::{RequestItem, ResponseItem},
     proof::AccumulatorConsistencyProof,
     proof::SparseMerkleProof,
@@ -24,10 +28,6 @@ use libra_types::{
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, Version},
     vm_error::StatusCode,
-    explorer::{
-        LatestVersionResponse, GetTransactionListRequest,
-        GetTransactionListResponse, GetTransactionByVersionResponse
-    }
 };
 use rand::{
     rngs::{OsRng, StdRng},
@@ -168,13 +168,14 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
-    fn get_transaction_list(&self, req: GetTransactionListRequest)
-                            -> Result<GetTransactionListResponse>{
+    fn get_transaction_list(
+        &self,
+        req: GetTransactionListRequest,
+    ) -> Result<GetTransactionListResponse> {
         unimplemented!()
     }
 
-    fn get_transaction_by_version(&self, req: Version)
-        -> Result<GetTransactionByVersionResponse>{
+    fn get_transaction_by_version(&self, req: Version) -> Result<GetTransactionByVersionResponse> {
         unimplemented!()
     }
 }

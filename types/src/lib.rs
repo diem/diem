@@ -13,6 +13,7 @@ pub mod channel;
 pub mod contract_event;
 pub mod crypto_proxies;
 pub mod event;
+pub mod explorer;
 pub mod get_with_proof;
 pub mod identifier;
 pub mod language_storage;
@@ -32,7 +33,6 @@ pub mod validator_verifier;
 pub mod vm_error;
 pub mod write_set;
 pub mod write_set_ext;
-pub mod explorer;
 
 pub use account_address::AccountAddress as PeerId;
 

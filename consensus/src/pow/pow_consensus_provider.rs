@@ -1,8 +1,8 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::pow::{
+    block_storage_service::make_block_storage_service,
     event_processor::EventProcessor,
     mine_state::{BlockIndex, MineStateManager},
-    block_storage_service::make_block_storage_service,
 };
 use crate::{
     consensus_provider::ConsensusProvider, state_computer::ExecutionProxy,
@@ -24,13 +24,12 @@ use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::{self, Handle};
 use vm_runtime::MoveVM;
-use block_storage_proto::proto::block_storage::create_block_storage;
 
 pub struct PowConsensusProvider {
     runtime: tokio::runtime::Runtime,
     event_handle: Option<EventProcessor>,
     miner_proxy: Option<Server>,
-    block_storage_server: Server,
+    _block_storage_server: Server,
 }
 
 impl PowConsensusProvider {
@@ -66,7 +65,8 @@ impl PowConsensusProvider {
         let block_store = Arc::new(ConsensusDB::new(&node_config.storage.dir()));
 
         //BlockStorageService
-        let block_storage_server = make_block_storage_service(node_config, &Arc::clone(&block_store));
+        let block_storage_server =
+            make_block_storage_service(node_config, &Arc::clone(&block_store));
 
         //Start miner proxy server
         let mine_state = MineStateManager::new(BlockIndex::new(block_store.clone()));
@@ -102,7 +102,7 @@ impl PowConsensusProvider {
             runtime,
             event_handle: Some(event_handle),
             miner_proxy: Some(miner_proxy),
-            block_storage_server,
+            _block_storage_server: block_storage_server,
         }
     }
 
