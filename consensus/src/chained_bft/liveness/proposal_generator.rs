@@ -33,14 +33,14 @@ mod proposal_generator_test;
 ///
 /// TxnManager should be aware of the pending transactions in the branch that it is extending,
 /// such that it will filter them out to avoid transaction duplication.
-pub struct ProposalGenerator<TM, T> {
+pub struct ProposalGenerator<T> {
     // The account address of this validator
     author: Author,
     // Block store is queried both for finding the branch to extend and for generating the
     // proposed block.
     block_store: Arc<dyn BlockReader<Payload = T> + Send + Sync>,
     // Transaction manager is delivering the transactions.
-    txn_manager: TM,
+    txn_manager: Box<dyn TxnManager<Payload = T>>,
     // Time service to generate block timestamps
     time_service: Arc<dyn TimeService>,
     // Max number of transactions to be added to a proposed block.
@@ -49,15 +49,11 @@ pub struct ProposalGenerator<TM, T> {
     last_round_generated: Mutex<Round>,
 }
 
-impl<TM, T> ProposalGenerator<TM, T>
-where
-    TM: TxnManager<Payload = T>,
-    T: Payload,
-{
+impl<T: Payload> ProposalGenerator<T> {
     pub fn new(
         author: Author,
         block_store: Arc<dyn BlockReader<Payload = T> + Send + Sync>,
-        txn_manager: TM,
+        txn_manager: Box<dyn TxnManager<Payload = T>>,
         time_service: Arc<dyn TimeService>,
         max_block_size: u64,
     ) -> Self {

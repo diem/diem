@@ -112,7 +112,7 @@ impl SMRNode {
         let (mp, commit_receiver) = MockTransactionManager::new();
         let mempool = mp;
         smr.start(
-            mempool.clone(),
+            Box::new(mempool.clone()),
             Arc::new(MockStateComputer::new(
                 commit_cb_sender.clone(),
                 Arc::clone(&storage),

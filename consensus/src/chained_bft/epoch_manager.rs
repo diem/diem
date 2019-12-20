@@ -31,24 +31,20 @@ use std::sync::{Arc, RwLock};
 
 // Manager the components that shared across epoch and spawn per-epoch EventProcessor with
 // epoch-specific input.
-pub struct EpochManager<TM, T> {
+pub struct EpochManager<T> {
     epoch_info: Arc<RwLock<EpochInfo>>,
     config: ChainedBftSMRConfig,
     time_service: Arc<ClockTimeService>,
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
     network_sender: ConsensusNetworkSender,
     timeout_sender: channel::Sender<Round>,
-    txn_manager: TM,
+    txn_manager: Box<dyn TxnManager<Payload = T>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     storage: Arc<dyn PersistentStorage<T>>,
     safety_rules_manager: SafetyRulesManager<T>,
 }
 
-impl<TM, T> EpochManager<TM, T>
-where
-    TM: TxnManager<Payload = T>,
-    T: Payload,
-{
+impl<T: Payload> EpochManager<T> {
     pub fn new(
         epoch_info: Arc<RwLock<EpochInfo>>,
         config: ChainedBftSMRConfig,
@@ -56,7 +52,7 @@ where
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
         network_sender: ConsensusNetworkSender,
         timeout_sender: channel::Sender<Round>,
-        txn_manager: TM,
+        txn_manager: Box<dyn TxnManager<Payload = T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         storage: Arc<dyn PersistentStorage<T>>,
         safety_rules_manager: SafetyRulesManager<T>,
@@ -193,7 +189,7 @@ where
     pub async fn start_new_epoch(
         &mut self,
         ledger_info: LedgerInfoWithSignatures,
-    ) -> EventProcessor<TM, T> {
+    ) -> EventProcessor<T> {
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
         if let Err(e) = self.state_computer.sync_to(ledger_info.clone()).await {
             error!("State sync to new epoch {} failed with {:?}, we'll try to start from current libradb", ledger_info, e);
@@ -206,7 +202,7 @@ where
         self.start_epoch(initial_data)
     }
 
-    pub fn start_epoch(&mut self, initial_data: RecoveryData<T>) -> EventProcessor<TM, T> {
+    pub fn start_epoch(&mut self, initial_data: RecoveryData<T>) -> EventProcessor<T> {
         let validators = initial_data.validators();
         let epoch = self.epoch();
         counters::EPOCH.set(epoch as i64);

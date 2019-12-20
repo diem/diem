@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 #[async_trait::async_trait]
-pub trait TxnManager: Send + Sync + Clone + 'static {
+pub trait TxnManager: Send + Sync {
     type Payload;
 
     /// Brings new transactions to be applied.
@@ -31,6 +31,15 @@ pub trait TxnManager: Send + Sync + Clone + 'static {
         // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
         timestamp_usecs: u64,
     ) -> Result<()>;
+
+    /// Bypass the trait object non-clonable limit.
+    fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>>;
+}
+
+impl<T> Clone for Box<dyn TxnManager<Payload = T>> {
+    fn clone(&self) -> Box<dyn TxnManager<Payload = T>> {
+        self._clone_box()
+    }
 }
 
 /// While Consensus is managing proposed blocks, `StateComputer` is managing the results of the
@@ -79,9 +88,9 @@ pub trait StateMachineReplication {
     type Payload;
     /// The function is synchronous: it returns when the state is initialized / recovered from
     /// persisted storage and all the threads have been started.
-    fn start<TM: TxnManager<Payload = Self::Payload>>(
+    fn start(
         &mut self,
-        txn_manager: TM,
+        txn_manager: Box<dyn TxnManager<Payload = Self::Payload>>,
         state_computer: Arc<dyn StateComputer<Payload = Self::Payload>>,
     ) -> Result<()>;
 

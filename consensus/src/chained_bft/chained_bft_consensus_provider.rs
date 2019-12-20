@@ -91,8 +91,10 @@ impl ChainedBftProvider {
 impl ConsensusProvider for ChainedBftProvider {
     fn start(&mut self) -> Result<()> {
         debug!("Starting consensus provider.");
-        self.smr
-            .start(self.txn_manager.clone(), Arc::clone(&self.state_computer))
+        self.smr.start(
+            Box::new(self.txn_manager.clone()),
+            Arc::clone(&self.state_computer),
+        )
     }
 
     fn stop(&mut self) {

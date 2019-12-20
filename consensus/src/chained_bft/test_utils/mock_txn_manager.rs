@@ -72,4 +72,8 @@ impl TxnManager for MockTransactionManager {
             .expect("Failed to notify about mempool commit");
         Ok(())
     }
+
+    fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>> {
+        Box::new(self.clone())
+    }
 }
