@@ -348,7 +348,7 @@ impl BlockTree {
 
     pub fn print_block_chain_root(&self, peer_id: PeerId) {
         let height = self.main_chain.borrow().len() as u64;
-        let begin_height = if height > 1000 {height - 300} else {0};
+        let begin_height = if height > 1000 { height - 300 } else { 0 };
         for index in begin_height..height {
             info!(
                 "Main Chain Block, PeerId: {:?} , Height: {} , Block Root: {:?}",
