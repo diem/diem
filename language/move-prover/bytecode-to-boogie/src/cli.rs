@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub const INLINE_PRELUDE: &str = "<inline-prelude>";
 
 /// Default flags passed to boogie. Additional flags will be added to this via the -B option.
-const DEFAULT_BOOGIE_FLAGS: &[&str] = &["-doModSetAnalysis"];
+const DEFAULT_BOOGIE_FLAGS: &[&str] = &["-doModSetAnalysis", "-noinfer"];
 
 /// Atomic used to prevent re-initialization of logging.
 static LOGGER_CONFIGURED: AtomicBool = AtomicBool::new(false);

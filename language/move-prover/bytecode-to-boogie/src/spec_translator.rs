@@ -374,7 +374,7 @@ impl<'a> SpecTranslator<'a> {
             }
             StorageLocation::Ret => self.translate_return(),
             StorageLocation::TxnSenderAddress => BoogieExpr(
-                "Address(TxnSenderAddress())".to_string(),
+                "Address(TxnSenderAddress(txn))".to_string(),
                 SignatureToken::Address,
             ),
             StorageLocation::Address(addr) => BoogieExpr(

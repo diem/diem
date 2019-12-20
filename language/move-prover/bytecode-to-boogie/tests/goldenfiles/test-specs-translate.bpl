@@ -68,7 +68,10 @@ ensures (b#Boolean(Boolean(i#Integer(arg0) > i#Integer(Integer(1))))) && !(b#Boo
 
     var tmp: Value;
     var old_size: int;
+
+    var saved_m: Memory;
     assume !abort_flag;
+    saved_m := m;
 
     // assume arguments are of correct types
     assume is#Integer(arg0);
@@ -82,22 +85,32 @@ ensures (b#Boolean(Boolean(i#Integer(arg0) > i#Integer(Integer(1))))) && !(b#Boo
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 3, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 4, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Div(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 5, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 2, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 6, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 6);
     return;
+    if (abort_flag) { goto Label_Abort; }
 
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
+    ret0 := DefaultValue;
 }
 
 procedure TestSpecs_div_verify (arg0: Value, arg1: Value) returns (ret0: Value)
@@ -114,7 +127,10 @@ ensures !(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Addres
 
     var tmp: Value;
     var old_size: int;
+
+    var saved_m: Memory;
     assume !abort_flag;
+    saved_m := m;
 
     // assume arguments are of correct types
 
@@ -123,7 +139,11 @@ ensures !(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Addres
 
     // bytecode translation starts here
     return;
+    if (abort_flag) { goto Label_Abort; }
 
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
 }
 
 procedure TestSpecs_create_resource_verify () returns ()
@@ -139,7 +159,10 @@ requires ExistsTxnSenderAccount(m, txn);
 
     var tmp: Value;
     var old_size: int;
+
+    var saved_m: Memory;
     assume !abort_flag;
+    saved_m := m;
 
     // assume arguments are of correct types
 
@@ -148,7 +171,11 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     return;
+    if (abort_flag) { goto Label_Abort; }
 
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
 }
 
 procedure TestSpecs_select_from_global_resource_verify () returns ()
@@ -166,7 +193,10 @@ requires ExistsTxnSenderAccount(m, txn);
 
     var tmp: Value;
     var old_size: int;
+
+    var saved_m: Memory;
     assume !abort_flag;
+    saved_m := m;
 
     // assume arguments are of correct types
     assume is#Vector(arg0);
@@ -178,10 +208,16 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 1);
     return;
+    if (abort_flag) { goto Label_Abort; }
 
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
+    ret0 := DefaultValue;
 }
 
 procedure TestSpecs_select_from_resource_verify (arg0: Value) returns (ret0: Value)
@@ -199,7 +235,10 @@ requires ExistsTxnSenderAccount(m, txn);
 
     var tmp: Value;
     var old_size: int;
+
+    var saved_m: Memory;
     assume !abort_flag;
+    saved_m := m;
 
     // assume arguments are of correct types
     assume is#Vector(arg0);
@@ -211,10 +250,16 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 1);
     return;
+    if (abort_flag) { goto Label_Abort; }
 
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
+    ret0 := DefaultValue;
 }
 
 procedure TestSpecs_select_from_resource_nested_verify (arg0: Value) returns (ret0: Value)
@@ -232,7 +277,10 @@ requires ExistsTxnSenderAccount(m, txn);
 
     var tmp: Value;
     var old_size: int;
+
+    var saved_m: Memory;
     assume !abort_flag;
+    saved_m := m;
 
     // assume arguments are of correct types
     assume is#Vector(arg0);
@@ -244,10 +292,16 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 1);
     return;
+    if (abort_flag) { goto Label_Abort; }
 
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
+    ret0 := DefaultValue;
 }
 
 procedure TestSpecs_select_from_global_resource_dynamic_address_verify (arg0: Value) returns (ret0: Value)
@@ -265,7 +319,10 @@ ensures b#Boolean(Boolean((SelectField(SelectField(Dereference(m, arg0), TestSpe
 
     var tmp: Value;
     var old_size: int;
+
+    var saved_m: Memory;
     assume !abort_flag;
+    saved_m := m;
 
     // assume arguments are of correct types
 
@@ -275,7 +332,11 @@ ensures b#Boolean(Boolean((SelectField(SelectField(Dereference(m, arg0), TestSpe
 
     // bytecode translation starts here
     return;
+    if (abort_flag) { goto Label_Abort; }
 
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
 }
 
 procedure TestSpecs_select_from_reference_verify (arg0: Reference) returns ()
