@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::cli::{abort_on_error, Options, INLINE_PRELUDE};
+use crate::cli::{abort_on_error, abort_with_error, Options, INLINE_PRELUDE};
 use crate::translator::{BoogieTranslator, FunctionInfo, ModuleInfo};
 use bytecode_source_map::source_map::SourceMap;
 use bytecode_verifier::VerifiedModule;
@@ -13,6 +13,7 @@ use ir_to_bytecode::parser::parse_module;
 use itertools::Itertools;
 use libra_types::account_address::AccountAddress;
 use log::{debug, error, info};
+use regex::Regex;
 use std::fs;
 use std::process::Command;
 use vm::file_format::FunctionDefinitionIndex;
@@ -58,7 +59,7 @@ impl<'app> Driver<'app> {
             "cannot write boogie file",
         );
         if !self.options.generate_only {
-            self.call_boogie(&self.options.output_path);
+            self.call_boogie_and_verify_output(&self.options.output_path);
         }
     }
 
@@ -169,20 +170,43 @@ impl<'app> Driver<'app> {
         );
     }
 
-    /// Calls boogie on the given file.
-    pub fn call_boogie(&self, boogie_file: &str) -> bool {
+    /// Calls boogie on the given file. On success, returns a pair of a string with the standard
+    /// output and a vector of lines in the output which contain boogie errors.
+    pub fn call_boogie(&self, boogie_file: &str) -> Option<(String, Vec<String>)> {
         let args = self.options.get_boogie_command(boogie_file);
         info!("calling boogie");
         debug!("command line: {}", args.iter().join(" "));
-        let status = abort_on_error(
-            Command::new(&args[0]).args(&args[1..]).status(),
+        let output = abort_on_error(
+            Command::new(&args[0]).args(&args[1..]).output(),
             "error executing boogie",
         );
-        if !status.success() {
-            error!("boogie exited with status {}", status.code().unwrap());
-            false
+        if !output.status.success() {
+            error!(
+                "boogie exited with status {}",
+                output.status.code().unwrap()
+            );
+            None
         } else {
-            true
+            let out = String::from_utf8_lossy(&output.stdout).to_string();
+            let mut diag = vec![];
+            let diag_re = Regex::new(r"(?m)^.*(Error BP|Error:|error:).*$").unwrap();
+            for cap in diag_re.captures_iter(&out) {
+                diag.push(cap[0].to_string());
+            }
+            Some((out, diag))
+        }
+    }
+
+    /// Calls boogie, analyzes output, and aborts if errors found.
+    pub fn call_boogie_and_verify_output(&self, boogie_file: &str) {
+        match self.call_boogie(boogie_file) {
+            None => abort_with_error("exiting"), // we already reported boogie error
+            Some((stdout, diag)) => {
+                println!("{}", stdout);
+                if !diag.is_empty() {
+                    abort_with_error("boogie reported errors")
+                }
+            }
         }
     }
 }

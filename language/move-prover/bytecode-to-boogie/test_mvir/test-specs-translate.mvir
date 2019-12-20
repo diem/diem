@@ -1,7 +1,7 @@
 module TestSpecs {
 
-    // Note the specs below maybe wrong because we do not provide an implementation. Once things are
-    // more stable, we need to add them.
+    // Note the specs below maybe wrong because we do not provide an implementation. This is mostly for verifying
+    // translation issues, and tested with verification off.
 
     struct S {
       a: address

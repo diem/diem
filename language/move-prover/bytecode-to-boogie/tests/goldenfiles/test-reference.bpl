@@ -36,7 +36,10 @@ requires ExistsTxnSenderAccount(m, txn);
 
     var tmp: Value;
     var old_size: int;
+
+    var saved_m: Memory;
     assume !abort_flag;
+    saved_m := m;
 
     // assume arguments are of correct types
 
@@ -47,13 +50,20 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := LdConst(10);
     m := UpdateLocal(m, old_size + 1, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t0);
+    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t2, GetLocal(m, old_size + 1));
+    if (abort_flag) { goto Label_Abort; }
 
     return;
+    if (abort_flag) { goto Label_Abort; }
 
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
 }
 
 procedure TestReference_mut_b_verify (arg0: Reference) returns ()
@@ -80,7 +90,10 @@ requires ExistsTxnSenderAccount(m, txn);
 
     var tmp: Value;
     var old_size: int;
+
+    var saved_m: Memory;
     assume !abort_flag;
+    saved_m := m;
 
     // assume arguments are of correct types
 
@@ -90,51 +103,71 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := LdConst(20);
     m := UpdateLocal(m, old_size + 2, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 0, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowLoc(old_size+0);
+    if (abort_flag) { goto Label_Abort; }
 
     call t1 := CopyOrMoveRef(t3);
+    if (abort_flag) { goto Label_Abort; }
 
     call t4 := CopyOrMoveRef(t1);
+    if (abort_flag) { goto Label_Abort; }
 
     call TestReference_mut_b(t4);
+    if (abort_flag) { goto Label_Abort; }
 
     call t5 := CopyOrMoveRef(t1);
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t5);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
     m := UpdateLocal(m, old_size + 0, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 7, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(10);
     m := UpdateLocal(m, old_size + 8, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     tmp := Boolean(IsEqual(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8)));
     m := UpdateLocal(m, old_size + 9, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 9));
     m := UpdateLocal(m, old_size + 10, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 10);
     if (!b#Boolean(tmp)) { goto Label_16; }
+    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(42);
     m := UpdateLocal(m, old_size + 11, tmp);
+    if (abort_flag) { goto Label_Abort; }
 
-    assert false;
+    goto Label_Abort;
+    if (abort_flag) { goto Label_Abort; }
 
 Label_16:
     return;
+    if (abort_flag) { goto Label_Abort; }
 
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
 }
 
 procedure TestReference_mut_ref_verify () returns ()

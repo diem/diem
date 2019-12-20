@@ -334,7 +334,7 @@ impl<'a> ModuleTranslator<'a> {
         let fun_name = self.function_name_from_definition_index(func_idx);
         let mut var_decls = String::new();
         let mut res = String::new();
-        let stmts = match bytecode {
+        let mut stmts = match bytecode {
             Branch(target) => vec![format!("goto Label_{};", target)],
             BrTrue(target, idx) => {
                 let (dbg_branch_taken_str, dbg_branch_not_taken_str) =
@@ -582,7 +582,6 @@ impl<'a> ModuleTranslator<'a> {
                     struct_def_index,
                     type_actuals,
                 );
-                // DO NOT SUBMIT let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![
                     format!(
                         "call tmp := MoveFrom(GetLocal(m, old_size + {}), {});",
@@ -731,7 +730,7 @@ impl<'a> ModuleTranslator<'a> {
             BitOr(_, _, _) | BitAnd(_, _, _) | Xor(_, _, _) => {
                 vec!["// bit operation not supported".into()]
             }
-            Abort(_) => vec!["assert false;".into()],
+            Abort(_) => vec!["goto Label_Abort;".into()],
             GetGasRemaining(idx) => vec![
                 "call tmp := GetGasRemaining();".to_string(),
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
@@ -758,6 +757,7 @@ impl<'a> ModuleTranslator<'a> {
             ],
             _ => vec!["// unimplemented instruction".into()],
         };
+        stmts.push("if (abort_flag) { goto Label_Abort; }".to_string());
         for code in stmts {
             res.push_str(&format!("    {}\n", code));
         }
@@ -955,9 +955,9 @@ impl<'a> ModuleTranslator<'a> {
         }
         var_decls.push_str("\n    var tmp: Value;\n");
         var_decls.push_str("    var old_size: int;\n");
-        //        if !inline {
+        res.push_str("\n    var saved_m: Memory;\n");
         res.push_str("    assume !abort_flag;\n");
-        //        }
+        res.push_str("    saved_m := m;\n");
         res.push_str("\n    // assume arguments are of correct types\n");
         res.push_str(&arg_value_assumption_str);
         res.push_str("\n    old_size := local_counter;\n");
@@ -995,6 +995,16 @@ impl<'a> ModuleTranslator<'a> {
                 self.translate_bytecode(offset, bytecode, idx, arg_names);
             var_decls.push_str(&new_var_decls);
             res.push_str(&new_res);
+        }
+        res.push_str("Label_Abort:\n");
+        res.push_str("    abort_flag := true;\n");
+        res.push_str("    m := saved_m;\n");
+        for (i, sig) in get_return_types(self.module, idx).iter().enumerate() {
+            if let SignatureToken::Reference(_) = sig {
+                res.push_str(&format!("    ret{} := DefaultReference;\n", i));
+            } else {
+                res.push_str(&format!("    ret{} := DefaultValue;\n", i));
+            }
         }
         res.push_str("}\n");
         var_decls.push_str(&res);
@@ -1259,4 +1269,12 @@ pub fn get_field_infos(
             })
             .collect()
     }
+}
+
+/// Get return types of function via definition index.
+pub fn get_return_types(module: &VerifiedModule, idx: usize) -> &[SignatureToken] {
+    let function_def = &module.function_defs()[idx];
+    let function_handle = module.function_handle_at(function_def.function);
+    let function_signature = module.function_signature_at(function_handle.signature);
+    &function_signature.return_types
 }

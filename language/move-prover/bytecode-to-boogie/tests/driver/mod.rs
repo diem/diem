@@ -7,16 +7,14 @@ use goldenfile;
 use itertools::Itertools;
 use libra_tools::tempdir::TempPath;
 use prettydiff::{basic::DiffOp, diff_lines};
+use regex::Regex;
+use std::fs::read_to_string;
 use std::{env, fs, fs::File, io::Error, io::Read, io::Write, path::Path};
 
-pub fn test(sources: &[&str]) {
+pub fn test(flags: &[&str], sources: &[&str]) {
     // Configure options.
-    let mut args: Vec<&str> = vec![
-        "-v=debug",
-        // Right now we configure boogie to only do type check.
-        "-B=-noinfer",
-        "-B=-noVerify",
-    ];
+    let mut args: Vec<&str> = vec!["-v=debug"];
+    args.extend_from_slice(flags);
     args.extend(sources.iter());
     let mut options = Options::default();
     options.initialize_from_args(&args.iter().map(|s| s.to_string()).collect_vec());
@@ -61,8 +59,54 @@ pub fn test(sources: &[&str]) {
     fs::write(&boogie_file_path, boogie_str).expect("cannot write boogie file");
 
     if env::var("BOOGIE_EXE").is_ok() {
-        // Call boogie to verify results. Right now, we call boogie for type checking only.
-        assert!(driver.call_boogie(&boogie_file_path));
+        // Call boogie and verify results.
+        let (_, diag) = driver
+            .call_boogie(&boogie_file_path)
+            .expect("boogie execution ok");
+        verify_diag(sources, diag);
+    }
+}
+
+/// Extracts expected diags from sources and compares it with actual diags.
+fn verify_diag(sources: &[&str], mut actual_diag: Vec<String>) {
+    // Collect expected diagnosis from source. A comment of the form
+    // `//! <text>` represents an expected diag.
+    let expect_diag_re = Regex::new(r"(?m)//!\s*(.*)$").unwrap();
+    let mut expected_diag = vec![];
+    for file in sources {
+        let source = read_to_string(&Path::new(*file)).unwrap();
+        for cap in expect_diag_re.captures_iter(&source) {
+            expected_diag.push(cap[1].to_string());
+        }
+    }
+    // Now try to remove expected diags from the actual ones.
+    let mut i = 0;
+    while i < expected_diag.len() {
+        if actual_diag.is_empty() {
+            break;
+        }
+        let expected = &expected_diag[i];
+        if let Some(pos) = actual_diag
+            .iter()
+            .position(|actual| actual.contains(expected))
+        {
+            actual_diag.remove(pos);
+            expected_diag.remove(i);
+        } else {
+            i += 1;
+        }
+    }
+    if !expected_diag.is_empty() || !actual_diag.is_empty() {
+        let mut msg = vec![];
+        if !expected_diag.is_empty() {
+            msg.push("expected boogie diagnosis:".to_string());
+            msg.extend_from_slice(&expected_diag);
+        };
+        if !actual_diag.is_empty() {
+            msg.push("unexpected boogie diagnosis:".to_string());
+            msg.extend_from_slice(&actual_diag);
+        }
+        panic!(msg.join("\n"));
     }
 }
 
