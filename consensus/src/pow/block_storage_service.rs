@@ -1,5 +1,6 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::pow::payload_ext::BlockPayloadExt;
+use crate::pow::target::current_hash_rate;
 use block_storage_proto::proto::block_storage::{
     create_block_storage, BlockStorage, GetBlockByBlockIdResponse as GetBlockByBlockIdResponseProto,
 };
@@ -12,9 +13,10 @@ use libra_types::explorer::{
     BlockId, BlockSummary, GetBlockSummaryListRequest, GetBlockSummaryListResponse,
 };
 use libra_types::proto::types::{
-    BlockId as BlockIdProto, GetBlockSummaryListRequest as GetBlockSummaryListRequestProto,
+    BlockId as BlockIdProto, DifficultHashRate as DifficultHashRateProto,
+    GetBlockSummaryListRequest as GetBlockSummaryListRequestProto,
     GetBlockSummaryListResponse as GetBlockSummaryListResponseProto,
-    LatestBlockHeightResponse as LatestBlockHeightResponseProto, DifficultHashRate as DifficultHashRateProto
+    LatestBlockHeightResponse as LatestBlockHeightResponseProto,
 };
 use network::proto::Block as BlockBytes;
 use std::convert::TryFrom;
@@ -125,12 +127,23 @@ impl BlockStorage for BlockStorageService {
         provide_grpc_response(Ok(resp), ctx, sink);
     }
 
-    fn current_difficulty(&mut self, ctx: ::grpcio::RpcContext, req: (),
-                          sink: ::grpcio::UnarySink<DifficultHashRateProto>) {
-        let latest_block: Block<BlockPayloadExt> = self.block_storage.latest_block().expect("latest block is none.");
-        //let target_current = latest_block.payload().expect("payload is none.").clone().target;
-        //2. difficult_hash_rate = (difficult_1_target/target_current) * difficult_1_hash/block_per_esc
+    fn current_difficulty(
+        &mut self,
+        ctx: ::grpcio::RpcContext,
+        req: (),
+        sink: ::grpcio::UnarySink<DifficultHashRateProto>,
+    ) {
+        let latest_block: Block<BlockPayloadExt> = self
+            .block_storage
+            .latest_block()
+            .expect("latest block is none.");
+        let target_current = latest_block
+            .payload()
+            .expect("payload is none.")
+            .clone()
+            .target;
 
+        let hash_rate = current_hash_rate(&target_current);
         unimplemented!()
     }
 }
