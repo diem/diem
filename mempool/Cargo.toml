@@ -23,6 +23,7 @@ tokio = { version = "0.2", features = ["full"] }
 tonic = { git = "https://github.com/hyperium/tonic.git" }
 ttl_cache = "0.4.2"
 
+channel = { path = "../common/channel", version = "0.1.0" }
 libra-mempool-shared-proto = { path = "mempool-shared-proto", version = "0.1.0" }
 bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }
@@ -41,6 +42,7 @@ assert_matches = "1.3.0"
 rand = "0.6.5"
 channel = { path = "../common/channel", version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
+parity-multiaddr = { version = "0.6.0", default-features = false }
 
 [build-dependencies]
 tonic-build = { git = "https://github.com/hyperium/tonic.git" }

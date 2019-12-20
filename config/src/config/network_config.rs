@@ -9,13 +9,12 @@ use crate::{
 use anyhow::{anyhow, ensure, Result};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::TEST_SEED,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
     Uniform, ValidKey,
 };
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
-use rand::{rngs::StdRng, SeedableRng};
+use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, string::ToString};
 
@@ -82,50 +81,6 @@ impl Default for NetworkConfig {
 }
 
 impl NetworkConfig {
-    /// Creates a validator network of with `nodes_in_network_count` validator nodes
-    pub fn default_validator_network_with_peers(
-        nodes_in_network_count: u32,
-    ) -> HashMap<PeerId, Self> {
-        let mut peers_network_config: HashMap<PeerId, Self> = HashMap::new();
-        let mut peers_keypairs: HashMap<PeerId, NetworkKeyPairs> = HashMap::new();
-        let mut all_peers: Vec<PeerId> = Vec::new();
-
-        // create peers
-        let mut rng = StdRng::from_seed(TEST_SEED);
-        for _n in 0..nodes_in_network_count {
-            let signing_key = Ed25519PrivateKey::generate_for_testing(&mut rng);
-            let identity_key = X25519StaticPrivateKey::generate_for_testing(&mut rng);
-            let keypair = NetworkKeyPairs::load(signing_key, identity_key);
-            let peer_id = PeerId::try_from(keypair.identity_keys.public().to_bytes()).unwrap();
-            peers_keypairs.insert(peer_id.clone(), keypair);
-            all_peers.push(peer_id.clone());
-        }
-
-        for (peer_id, keypair) in peers_keypairs.into_iter() {
-            let other_peers: Vec<&PeerId> =
-                all_peers.iter().filter(|peer| peer != &&peer_id).collect();
-            let network_peers = Self::default_multiple_peers(&keypair, other_peers.clone());
-
-            let config = Self {
-                peer_id,
-                listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
-                advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
-                discovery_interval_ms: 1000,
-                connectivity_check_interval_ms: 5000,
-                enable_encryption_and_authentication: true,
-                is_permissioned: true,
-                network_keypairs_file: PathBuf::new(),
-                network_keypairs: keypair,
-                network_peers_file: PathBuf::new(),
-                network_peers,
-                seed_peers_file: PathBuf::new(),
-                seed_peers: SeedPeersConfig::default(),
-            };
-            peers_network_config.insert(peer_id.clone(), config);
-        }
-        peers_network_config
-    }
-
     /// This clones the underlying data except for the keypair so that this config can be used as a
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
@@ -247,24 +202,6 @@ impl NetworkConfig {
                 signing_public_key: keypair.signing_keys.public().clone(),
             },
         );
-        peers
-    }
-
-    /// creates a default NetworkPeersConfig with all peers in `peer_ids`
-    fn default_multiple_peers(
-        keypair: &NetworkKeyPairs,
-        peer_ids: Vec<&PeerId>,
-    ) -> NetworkPeersConfig {
-        let mut peers = NetworkPeersConfig::default();
-        for peer_id in peer_ids.iter() {
-            peers.peers.insert(
-                **peer_id,
-                NetworkPeerInfo {
-                    identity_public_key: keypair.identity_keys.public().clone(),
-                    signing_public_key: keypair.signing_keys.public().clone(),
-                },
-            );
-        }
         peers
     }
 }

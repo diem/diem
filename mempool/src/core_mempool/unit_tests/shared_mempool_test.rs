@@ -13,21 +13,31 @@ use futures::{
     executor::block_on,
     SinkExt, StreamExt,
 };
-use libra_config::config::{NetworkConfig, NodeConfig};
+use libra_config::config::{
+    NetworkConfig, NetworkKeyPairs, NetworkPeerInfo, NetworkPeersConfig, NodeConfig,
+    SeedPeersConfig,
+};
+use libra_crypto::{
+    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519::X25519StaticPrivateKey, Uniform,
+    ValidKey,
+};
 use libra_prost_ext::MessageExt;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
     proto::{BroadcastTransactionsResponse, MempoolSyncMsg, MempoolSyncMsg_oneof},
+    protocols::rpc::InboundRpcRequest,
+    validator_network::MEMPOOL_RPC_PROTOCOL,
     validator_network::{MempoolNetworkEvents, MempoolNetworkSender},
+    ProtocolId,
 };
-use network::{
-    protocols::rpc::InboundRpcRequest, validator_network::MEMPOOL_RPC_PROTOCOL, ProtocolId,
-};
+use parity_multiaddr::Multiaddr;
 use prost::Message as _;
+use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
+    path::PathBuf,
     sync::{Arc, Mutex},
     thread,
     time::Duration,
@@ -45,6 +55,63 @@ struct SharedMempoolNetwork {
     subscribers: HashMap<PeerId, UnboundedReceiver<SharedMempoolNotification>>,
 }
 
+/// Creates a validator network of with `nodes_in_network_count` validator nodes
+fn default_validator_network_with_peers(
+    nodes_in_network_count: u32,
+) -> HashMap<PeerId, NetworkConfig> {
+    let mut peers_network_config: HashMap<PeerId, NetworkConfig> = HashMap::new();
+    let mut peers_keypairs: HashMap<PeerId, NetworkKeyPairs> = HashMap::new();
+    let mut all_peers: Vec<PeerId> = Vec::new();
+
+    // create peers
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    for _ in 0..nodes_in_network_count {
+        let signing_key = Ed25519PrivateKey::generate_for_testing(&mut rng);
+        let identity_key = X25519StaticPrivateKey::generate_for_testing(&mut rng);
+        let keypair = NetworkKeyPairs::load(signing_key, identity_key);
+        let peer_id = PeerId::try_from(keypair.identity_keys.public().to_bytes()).unwrap();
+        peers_keypairs.insert(peer_id.clone(), keypair);
+        all_peers.push(peer_id.clone());
+    }
+
+    for (peer_id, keypair) in peers_keypairs.into_iter() {
+        let other_peers: Vec<&PeerId> = all_peers.iter().filter(|peer| peer != &&peer_id).collect();
+        let network_peers = default_multiple_peers(&keypair, other_peers.clone());
+
+        let config = NetworkConfig {
+            peer_id,
+            listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
+            advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
+            discovery_interval_ms: 1000,
+            connectivity_check_interval_ms: 5000,
+            enable_encryption_and_authentication: true,
+            is_permissioned: true,
+            network_keypairs_file: PathBuf::new(),
+            network_keypairs: keypair,
+            network_peers_file: PathBuf::new(),
+            network_peers,
+            seed_peers_file: PathBuf::new(),
+            seed_peers: SeedPeersConfig::default(),
+        };
+        peers_network_config.insert(peer_id.clone(), config);
+    }
+    peers_network_config
+}
+
+fn default_multiple_peers(keypair: &NetworkKeyPairs, peer_ids: Vec<&PeerId>) -> NetworkPeersConfig {
+    let mut peers = NetworkPeersConfig::default();
+    for peer_id in peer_ids.iter() {
+        peers.peers.insert(
+            **peer_id,
+            NetworkPeerInfo {
+                identity_public_key: keypair.identity_keys.public().clone(),
+                signing_public_key: keypair.signing_keys.public().clone(),
+            },
+        );
+    }
+    peers
+}
+
 impl SharedMempoolNetwork {
     fn bootstrap_validator_network_smp(validator_nodes_count: u32) -> (Self, Vec<PeerId>) {
         let mut config = NodeConfig::random();
@@ -52,8 +119,7 @@ impl SharedMempoolNetwork {
         config.mempool.shared_mempool_batch_size = 1;
 
         // add all peers in this vector as validator peers
-        let validator_network_peers =
-            NetworkConfig::default_validator_network_with_peers(validator_nodes_count);
+        let validator_network_peers = default_validator_network_with_peers(validator_nodes_count);
 
         let mut peers: Vec<PeerId> = Vec::new();
         for peer in validator_network_peers.keys() {
