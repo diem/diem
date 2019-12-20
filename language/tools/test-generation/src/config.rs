@@ -60,4 +60,8 @@ pub struct Args {
     /// If `None`, then the module will just be printed out.
     #[structopt(short = "o", long = "output")]
     pub output_path: Option<String>,
+
+    /// The optional seed used for test generation.
+    #[structopt(short = "s", long = "seed")]
+    pub seed: Option<String>,
 }

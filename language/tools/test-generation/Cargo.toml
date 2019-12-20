@@ -16,6 +16,8 @@ env_logger = "0.6"
 mirai-annotations = "1.4.0"
 structopt = "0.3.2"
 itertools = "0.8.2"
+hex = "0.3.1"
+getrandom = "0.1.13"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 libra-config = { path = "../../../config", version = "0.1.0" }

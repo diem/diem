@@ -21,9 +21,11 @@ extern crate env_logger;
 use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::VerifiedModule;
+use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use rand::{rngs::StdRng, SeedableRng};
 use std::{fs, io::Write, panic};
 use utils::module_generation::{generate_module, ModuleGeneratorOptions};
 use vm::{
@@ -131,6 +133,25 @@ fn output_error_case(module: CompiledModule, output_path: Option<String>, iterat
     }
 }
 
+fn seed(seed: Option<String>) -> [u8; 32] {
+    let mut array = [0u8; 32];
+    match seed {
+        Some(string) => {
+            let vec = hex::decode(string).unwrap();
+            if vec.len() != 32 {
+                panic!("Invalid seed supplied, the length must be 32.");
+            }
+            for (i, byte) in vec.into_iter().enumerate() {
+                array[i] = byte;
+            }
+        }
+        None => {
+            getrandom(&mut array).unwrap();
+        }
+    };
+    array
+}
+
 /// Run generate_bytecode for 'iterations' iterations and test each generated module
 /// on the bytecode verifier.
 pub fn run_generation(args: Args) {
@@ -147,9 +168,11 @@ pub fn run_generation(args: Args) {
     generation_options.references_allowed = false;
     // Test generation cannot currently cope with resources
     generation_options.add_resources = false;
+    let seed = seed(args.seed);
+    let mut rng = StdRng::from_seed(seed);
     for i in 0..iterations {
-        let mut module = generate_module(None, generation_options.clone()).into_inner();
-        module = BytecodeGenerator::new(None).generate_module(module);
+        let mut module = generate_module(&mut rng, generation_options.clone()).into_inner();
+        module = BytecodeGenerator::new(&mut rng).generate_module(module);
         debug!("Running on verifier...");
         let module = module.freeze().expect("generated module failed to freeze.");
         let verified_module = match run_verifier(module.clone()) {
