@@ -287,12 +287,85 @@ impl From<GetTransactionByVersionResponse>
     }
 }
 
+/// Helper to construct and parse [`proto::types::DifficultHashRate`]
+#[derive(PartialEq, Debug, Eq, Clone)]
+pub struct DifficultHashRate {
+    pub difficulty: u64,
+}
+
+impl TryFrom<crate::proto::types::DifficultHashRate> for DifficultHashRate {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::DifficultHashRate) -> Result<Self> {
+        Ok(Self {
+            difficulty: proto.difficulty,
+        })
+    }
+}
+
+impl From<DifficultHashRate> for crate::proto::types::DifficultHashRate {
+    fn from(req: DifficultHashRate) -> Self {
+        Self {
+            difficulty: req.difficulty,
+        }
+    }
+}
+
+/// Helper to construct and parse [`proto::types::BlockDetail`]
+#[derive(PartialEq, Debug, Eq, Clone)]
+pub struct BlockDetail {
+    pub bytes: Vec<u8>,
+}
+
+impl TryFrom<crate::proto::types::BlockDetail> for BlockDetail {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::BlockDetail) -> Result<Self> {
+        Ok(Self { bytes: proto.bytes })
+    }
+}
+
+impl From<BlockDetail> for crate::proto::types::BlockDetail {
+    fn from(req: BlockDetail) -> Self {
+        Self { bytes: req.bytes }
+    }
+}
+
+/// Helper to construct and parse [`proto::types::GetBlockByBlockIdResponse`]
+#[derive(PartialEq, Debug, Eq, Clone)]
+pub struct GetBlockByBlockIdResponse {
+    pub block_detail: Option<BlockDetail>,
+}
+
+impl TryFrom<crate::proto::types::GetBlockByBlockIdResponse> for GetBlockByBlockIdResponse {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::GetBlockByBlockIdResponse) -> Result<Self> {
+        let block_detail = match proto.block_detail {
+            Some(block) => Some(BlockDetail::try_from(block).expect("BlockDetail err.")),
+            None => None,
+        };
+        Ok(Self { block_detail })
+    }
+}
+
+impl From<GetBlockByBlockIdResponse> for crate::proto::types::GetBlockByBlockIdResponse {
+    fn from(req: GetBlockByBlockIdResponse) -> Self {
+        let block_detail = match req.block_detail {
+            Some(b) => Some(b.into()),
+            None => None,
+        };
+        Self { block_detail }
+    }
+}
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Eq, PartialEq)]
 pub enum BlockRequestItem {
     BlockIdItem { block_id: BlockId },
     GetBlockSummaryListRequestItem { request: GetBlockSummaryListRequest },
     LatestBlockHeightRequestItem,
+    DifficultHashRateRequestItem,
 }
 
 impl TryFrom<crate::proto::types::BlockRequestItem> for BlockRequestItem {
@@ -315,6 +388,7 @@ impl TryFrom<crate::proto::types::BlockRequestItem> for BlockRequestItem {
                 BlockRequestItem::GetBlockSummaryListRequestItem { request }
             }
             LatestBlockHeightRequestItem(_) => BlockRequestItem::LatestBlockHeightRequestItem,
+            DifficultHashRateRequestItem(_) => BlockRequestItem::DifficultHashRateRequestItem,
         };
 
         Ok(request)
@@ -337,6 +411,9 @@ impl From<BlockRequestItem> for crate::proto::types::BlockRequestItem {
             BlockRequestItem::LatestBlockHeightRequestItem => {
                 BlockRequestedItems::LatestBlockHeightRequestItem({ () })
             }
+            BlockRequestItem::DifficultHashRateRequestItem => {
+                BlockRequestedItems::DifficultHashRateRequestItem({ () })
+            }
         };
 
         Self {
@@ -346,10 +423,12 @@ impl From<BlockRequestItem> for crate::proto::types::BlockRequestItem {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BlockResponseItem {
+    GetBlockByBlockIdResponseItem(GetBlockByBlockIdResponse),
     GetBlockSummaryListResponseItem { resp: GetBlockSummaryListResponse },
     LatestBlockHeightResponseItem { height: u64 },
+    DifficultHashRateResponseItem(DifficultHashRate),
 }
 
 impl TryFrom<crate::proto::types::BlockResponseItem> for BlockResponseItem {
@@ -363,12 +442,18 @@ impl TryFrom<crate::proto::types::BlockResponseItem> for BlockResponseItem {
             .ok_or_else(|| format_err!("Missing block_response_items"))?;
 
         let response = match item {
+            GetBlockByBlockIdResponseItem(r) => BlockResponseItem::GetBlockByBlockIdResponseItem(
+                GetBlockByBlockIdResponse::try_from(r)?,
+            ),
             GetBlockSummaryListResponseItem(r) => {
                 let resp = GetBlockSummaryListResponse::try_from(r)?;
                 BlockResponseItem::GetBlockSummaryListResponseItem { resp }
             }
             LatestBlockHeightResponseItem(r) => {
                 BlockResponseItem::LatestBlockHeightResponseItem { height: r.height }
+            }
+            DifficultHashRateResponseItem(r) => {
+                BlockResponseItem::DifficultHashRateResponseItem(DifficultHashRate::try_from(r)?)
             }
         };
 
@@ -381,6 +466,9 @@ impl From<BlockResponseItem> for crate::proto::types::BlockResponseItem {
         use crate::proto::types::block_response_item::BlockResponseItems;
 
         let resp = match response {
+            BlockResponseItem::GetBlockByBlockIdResponseItem(resp) => {
+                BlockResponseItems::GetBlockByBlockIdResponseItem(resp.into())
+            }
             BlockResponseItem::GetBlockSummaryListResponseItem { resp } => {
                 let r = resp.into();
                 BlockResponseItems::GetBlockSummaryListResponseItem(r)
@@ -389,6 +477,9 @@ impl From<BlockResponseItem> for crate::proto::types::BlockResponseItem {
                 let mut r = crate::proto::types::LatestBlockHeightResponse::default();
                 r.height = height;
                 BlockResponseItems::LatestBlockHeightResponseItem(r)
+            }
+            BlockResponseItem::DifficultHashRateResponseItem(difficulty) => {
+                BlockResponseItems::DifficultHashRateResponseItem(difficulty.into())
             }
         };
 

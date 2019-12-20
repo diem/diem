@@ -109,6 +109,11 @@ impl PowConsensusProvider {
     pub fn event_handle(&mut self, executor: Handle) {
         match self.event_handle.take() {
             Some(mut handle) => {
+                let block_cache_receiver = handle
+                    .block_cache_receiver
+                    .take()
+                    .expect("block_cache_receiver is none.");
+
                 //mint
                 handle.mint_manager.borrow_mut().mint(executor.clone());
 
@@ -119,7 +124,7 @@ impl PowConsensusProvider {
                 handle
                     .chain_manager
                     .borrow_mut()
-                    .save_block(executor.clone());
+                    .save_block(block_cache_receiver, executor.clone());
 
                 //sync
                 handle

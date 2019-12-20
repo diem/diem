@@ -1,11 +1,21 @@
 use libra_crypto::HashValue;
-use miner::types::{Algo, H256, U256};
+use miner::types::{from_slice, Algo, H256, U256};
 
 pub const BLOCK_WINDOW: u32 = 12;
 pub const BLOCK_TIME_SEC: u64 = 5;
 
 pub fn difficult_1_target() -> H256 {
-    (U256::max_value() / (1000 as u64)).into()
+    (U256::max_value() / DIFF_1_HASH_TIMES).into()
+}
+
+pub const DIFF_1_HASH_TIMES: u128 = 1000;
+
+pub fn current_hash_rate(target: &[u8]) -> u64 {
+    // current_hash_rate = (difficult_1_target/target_current) * difficult_1_hash/block_per_esc
+    let target_h256: H256 = from_slice(target).into();
+    let target_u256: U256 = target_h256.into();
+    let target_1_u256: U256 = difficult_1_target().into();
+    ((target_1_u256 / target_u256) * DIFF_1_HASH_TIMES / BLOCK_TIME_SEC).0[0]
 }
 
 pub fn get_next_work_required<B>(block_index: B, algo: Algo) -> H256

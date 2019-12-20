@@ -269,7 +269,7 @@ impl ConsensusDB {
         Ok(block_index_list)
     }
 
-    pub fn latest_height(&self) -> Option<u64> {
+    fn latest_block_index(&self) -> Option<(u64, BlockIndex)> {
         let mut iter = self
             .db
             .iter::<BlockIndexSchema>(ReadOptions::default())
@@ -278,10 +278,29 @@ impl ConsensusDB {
         let result = iter.next();
         match result {
             Some(val) => {
-                let (k, _v) = val.expect("Get value from db err.");
-                Some(k)
+                let (k, v) = val.expect("Get value from db err.");
+                Some((k, v))
             }
             None => None,
+        }
+    }
+
+    pub fn latest_height(&self) -> Option<u64> {
+        let latest_block_index = self.latest_block_index();
+        match latest_block_index {
+            Some((height, _block_index)) => return Some(height),
+            None => return None,
+        }
+    }
+
+    pub fn latest_block<T: Payload>(&self) -> Option<Block<T>> {
+        let latest_block_index = self.latest_block_index();
+        match latest_block_index {
+            Some((_height, block_index)) => {
+                let block_id = block_index.id();
+                self.get_block_by_hash(&block_id)
+            }
+            None => return None,
         }
     }
 }

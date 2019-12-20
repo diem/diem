@@ -51,7 +51,6 @@ impl BlockTree {
         let genesis_id = genesis_block.id();
         let genesis_block_info =
             BlockInfo::new_inner(&genesis_id, &PRE_GENESIS_BLOCK_ID, genesis_height, 0, None);
-        let genesis_block_index = genesis_block_info.block_index();
 
         //init block_store
         let mut genesis_qcs = Vec::new();
@@ -89,7 +88,7 @@ impl BlockTree {
         }
     }
 
-    pub fn init(&mut self) {
+    pub fn _init(&mut self) {
         //TODO
     }
 

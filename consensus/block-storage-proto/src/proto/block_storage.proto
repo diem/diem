@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package block_storage;
 
-import "consensus.proto";
 import "google/protobuf/empty.proto";
 import "explorer.proto";
 
@@ -10,11 +9,8 @@ import "explorer.proto";
 // ----------- Service definition for BlockStorage
 // --------------------------------------------------------------
 service BlockStorage {
-    rpc GetBlockByBlockId(types.BlockId) returns (GetBlockByBlockIdResponse);
+    rpc GetBlockByBlockId(types.BlockId) returns (types.GetBlockByBlockIdResponse);
     rpc GetBlockSummaryList(types.GetBlockSummaryListRequest) returns (types.GetBlockSummaryListResponse);
     rpc LatestBlockHeight(google.protobuf.Empty) returns (types.LatestBlockHeightResponse);
-}
-
-message GetBlockByBlockIdResponse {
-    consensus.Block block = 1;
+    rpc CurrentDifficulty(google.protobuf.Empty) returns (types.DifficultHashRate);
 }

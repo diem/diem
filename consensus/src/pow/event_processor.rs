@@ -56,6 +56,7 @@ pub struct EventProcessor {
     pub sync_manager: Arc<AtomicRefCell<SyncManager>>,
     pub chain_manager: Arc<AtomicRefCell<ChainManager>>,
     pub mint_manager: Arc<AtomicRefCell<MintManager>>,
+    pub block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
 }
 
 impl EventProcessor {
@@ -79,7 +80,7 @@ impl EventProcessor {
         let (sync_block_sender, sync_block_receiver) = mpsc::channel(10);
         let (sync_signal_sender, sync_signal_receiver) = mpsc::channel(1024);
         let chain_manager = Arc::new(AtomicRefCell::new(ChainManager::new(
-            Some(block_cache_receiver),
+            //            Some(block_cache_receiver),
             Arc::clone(&block_store),
             txn_manager.clone(),
             state_computer.clone(),
@@ -122,6 +123,7 @@ impl EventProcessor {
             sync_manager,
             chain_manager,
             mint_manager,
+            block_cache_receiver: Some(block_cache_receiver),
         }
     }
 

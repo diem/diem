@@ -1,8 +1,7 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::pow::payload_ext::BlockPayloadExt;
-use block_storage_proto::proto::block_storage::{
-    create_block_storage, BlockStorage, GetBlockByBlockIdResponse as GetBlockByBlockIdResponseProto,
-};
+use crate::pow::target::current_hash_rate;
+use block_storage_proto::proto::block_storage::{create_block_storage, BlockStorage};
 use consensus_types::block::Block;
 use grpc_helpers::provide_grpc_response;
 use grpcio::{EnvBuilder, RpcContext, Server, ServerBuilder, UnarySink};
@@ -12,11 +11,14 @@ use libra_types::explorer::{
     BlockId, BlockSummary, GetBlockSummaryListRequest, GetBlockSummaryListResponse,
 };
 use libra_types::proto::types::{
-    BlockId as BlockIdProto, GetBlockSummaryListRequest as GetBlockSummaryListRequestProto,
+    BlockDetail as BlockDetailProto, BlockId as BlockIdProto,
+    DifficultHashRate as DifficultHashRateProto,
+    GetBlockByBlockIdResponse as GetBlockByBlockIdResponseProto,
+    GetBlockSummaryListRequest as GetBlockSummaryListRequestProto,
     GetBlockSummaryListResponse as GetBlockSummaryListResponseProto,
     LatestBlockHeightResponse as LatestBlockHeightResponseProto,
 };
-use network::proto::Block as BlockBytes;
+use network::proto::Block as BlockProto;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
@@ -61,7 +63,10 @@ impl BlockStorage for BlockStorageService {
         let mut resp = GetBlockByBlockIdResponseProto::default();
         match block {
             Some(b) => {
-                resp.block = Some(BlockBytes::try_from(b).expect("to BlockBytes err."));
+                let block_proto = BlockProto::try_from(b).expect("to BlockBytes err.");
+                let mut block_detail = BlockDetailProto::default();
+                block_detail.bytes = block_proto.bytes;
+                resp.block_detail = Some(block_detail);
             }
             None => {}
         }
@@ -121,6 +126,31 @@ impl BlockStorage for BlockStorageService {
             }
             None => {}
         }
+
+        provide_grpc_response(Ok(resp), ctx, sink);
+    }
+
+    fn current_difficulty(
+        &mut self,
+        ctx: ::grpcio::RpcContext,
+        _req: (),
+        sink: ::grpcio::UnarySink<DifficultHashRateProto>,
+    ) {
+        let latest_block: Block<BlockPayloadExt> = self
+            .block_storage
+            .latest_block()
+            .expect("latest block is none.");
+
+        let target_current = latest_block
+            .payload()
+            .expect("payload is none.")
+            .clone()
+            .target;
+
+        let hash_rate = current_hash_rate(&target_current);
+
+        let mut resp = DifficultHashRateProto::default();
+        resp.difficulty = hash_rate;
 
         provide_grpc_response(Ok(resp), ctx, sink);
     }
