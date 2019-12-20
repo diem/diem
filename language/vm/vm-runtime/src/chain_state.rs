@@ -1,14 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::data_cache::{RemoteCache, TransactionDataCache};
+use crate::{
+    counters::*,
+    data_cache::{RemoteCache, TransactionDataCache},
+};
 use libra_types::{
     access_path::AccessPath,
     contract_event::ContractEvent,
     language_storage::ModuleId,
+    transaction::{TransactionOutput, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
+use vm::transaction_metadata::TransactionMetadata;
 use vm::{
     errors::VMResult,
     gas_schedule::{GasAlgebra, GasCarrier, GasUnits},
@@ -84,6 +89,31 @@ impl<'txn> TransactionExecutionContext<'txn> {
     ) -> VMResult<WriteSet> {
         self.data_view.make_write_set(to_be_published_modules)
     }
+
+    pub fn get_transaction_output(
+        &mut self,
+        txn_data: &TransactionMetadata,
+        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
+        result: VMResult<()>,
+    ) -> VMResult<TransactionOutput> {
+        let gas_used: u64 = txn_data
+            .max_gas_amount()
+            .sub(self.gas_left())
+            .mul(txn_data.gas_unit_price())
+            .get();
+        let write_set = self.make_write_set(to_be_published_modules)?;
+        record_stats!(observe | TXN_TOTAL_GAS_USAGE | gas_used);
+
+        Ok(TransactionOutput::new(
+            write_set,
+            self.events().to_vec(),
+            gas_used,
+            match result {
+                Ok(()) => TransactionStatus::from(VMStatus::new(StatusCode::EXECUTED)),
+                Err(err) => TransactionStatus::from(err),
+            },
+        ))
+    }
 }
 
 impl<'txn> ChainState for TransactionExecutionContext<'txn> {
@@ -118,5 +148,72 @@ impl<'txn> ChainState for TransactionExecutionContext<'txn> {
 
     fn emit_event(&mut self, event: ContractEvent) {
         self.event_data.push(event)
+    }
+}
+
+pub struct SystemExecutionContext<'txn>(TransactionExecutionContext<'txn>);
+
+impl<'txn> SystemExecutionContext<'txn> {
+    pub fn new(data_cache: &'txn dyn RemoteCache, gas_left: GasUnits<GasCarrier>) -> Self {
+        SystemExecutionContext(TransactionExecutionContext::new(gas_left, data_cache))
+    }
+
+    /// Clear all the writes local to this execution.
+    pub fn clear(&mut self) {
+        self.0.clear()
+    }
+
+    /// Return the list of events emitted during execution.
+    pub fn events(&self) -> &[ContractEvent] {
+        self.0.events()
+    }
+
+    /// Generate a `WriteSet` as a result of an execution.
+    pub fn make_write_set(
+        &mut self,
+        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
+    ) -> VMResult<WriteSet> {
+        self.0.make_write_set(to_be_published_modules)
+    }
+
+    pub fn get_transaction_output(
+        &mut self,
+        txn_data: &TransactionMetadata,
+        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
+        result: VMResult<()>,
+    ) -> VMResult<TransactionOutput> {
+        self.0
+            .get_transaction_output(txn_data, to_be_published_modules, result)
+    }
+}
+
+impl<'txn> ChainState for SystemExecutionContext<'txn> {
+    fn deduct_gas(&mut self, _amount: GasUnits<GasCarrier>) -> VMResult<()> {
+        Ok(())
+    }
+
+    fn publish_resource(&mut self, ap: &AccessPath, root: GlobalRef) -> VMResult<()> {
+        self.0.publish_resource(ap, root)
+    }
+
+    fn remaining_gas(&self) -> GasUnits<GasCarrier> {
+        self.0.gas_left()
+    }
+
+    fn load_data(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalRef> {
+        self.0.load_data(ap, def)
+    }
+    fn exists_module(&self, key: &ModuleId) -> bool {
+        self.0.exists_module(key)
+    }
+
+    fn emit_event(&mut self, event: ContractEvent) {
+        self.0.emit_event(event)
+    }
+}
+
+impl<'txn> From<TransactionExecutionContext<'txn>> for SystemExecutionContext<'txn> {
+    fn from(ctx: TransactionExecutionContext<'txn>) -> Self {
+        Self(ctx)
     }
 }

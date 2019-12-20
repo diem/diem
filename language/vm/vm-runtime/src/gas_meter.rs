@@ -6,11 +6,10 @@ use crate::{
     code_cache::module_cache::ModuleCache,
     data_cache::RemoteCache,
     identifier::{create_access_path, resource_storage_key},
+    system_module_names::GAS_SCHEDULE_MODULE,
 };
 use libra_types::{
     account_config,
-    identifier::Identifier,
-    language_storage::ModuleId,
     vm_error::{sub_status, StatusCode, VMStatus},
 };
 use vm::{errors::VMResult, gas_schedule::*};
@@ -18,12 +17,6 @@ use vm::{errors::VMResult, gas_schedule::*};
 //***************************************************************************
 // Gas Schedule Loading
 //***************************************************************************
-
-lazy_static! {
-    /// The ModuleId for the gas schedule module
-    pub static ref GAS_SCHEDULE_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), Identifier::new("GasSchedule").unwrap()) };
-}
 
 pub(crate) fn load_gas_schedule(
     module_cache: &dyn ModuleCache,

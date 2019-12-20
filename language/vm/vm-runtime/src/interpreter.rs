@@ -15,16 +15,19 @@ use crate::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
     },
+    system_module_names::{
+        ACCOUNT_MODULE, ACCOUNT_STRUCT_NAME, CREATE_ACCOUNT_NAME, EMIT_EVENT_NAME,
+        SAVE_ACCOUNT_NAME,
+    },
 };
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config,
     byte_array::ByteArray,
     contract_event::ContractEvent,
     event::EventKey,
-    identifier::{IdentStr, Identifier},
+    identifier::IdentStr,
     language_storage::{ModuleId, StructTag, TypeTag},
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
@@ -52,21 +55,6 @@ use vm_runtime_types::{
     native_functions::dispatch::resolve_native_function,
     value::{IntegerValue, Locals, ReferenceValue, Struct, Value},
 };
-
-// Data to resolve basic account and transaction flow functions and structs
-lazy_static! {
-    /// The ModuleId for the Account module
-    pub static ref ACCOUNT_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraAccount").unwrap()) };
-}
-
-// Names for special functions and structs
-lazy_static! {
-    static ref CREATE_ACCOUNT_NAME: Identifier = Identifier::new("make").unwrap();
-    static ref ACCOUNT_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
-    static ref EMIT_EVENT_NAME: Identifier = Identifier::new("write_to_event_store").unwrap();
-    static ref SAVE_ACCOUNT_NAME: Identifier = Identifier::new("save_account").unwrap();
-}
 
 fn derive_type_tag(
     module: &impl ModuleAccess,

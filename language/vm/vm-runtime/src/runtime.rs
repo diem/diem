@@ -8,14 +8,13 @@ use crate::{
         module_cache::{BlockModuleCache, VMModuleCache},
         script_cache::ScriptCache,
     },
-    data_cache::BlockDataCache,
+    data_cache::RemoteCache,
     execution_context::InterpreterContext,
     gas_meter::load_gas_schedule,
     interpreter::Interpreter,
     loaded_data::{function::FunctionReference, loaded_module::LoadedModule},
 };
 use bytecode_verifier::VerifiedModule;
-use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
@@ -46,32 +45,26 @@ use vm_runtime_types::{loaded_data::struct_def::StructDef, value::Value};
 pub struct VMRuntime<'alloc> {
     code_cache: VMModuleCache<'alloc>,
     script_cache: ScriptCache<'alloc>,
-    publishing_option: VMPublishingOption,
 }
 
 impl<'alloc> VMRuntime<'alloc> {
     /// Create a new VM instance with an Arena allocator to store the modules and a `config` that
     /// contains the whitelist that this VM is allowed to execute.
-    pub fn new(allocator: &'alloc Arena<LoadedModule>, config: &VMConfig) -> Self {
+    pub fn new(allocator: &'alloc Arena<LoadedModule>) -> Self {
         VMRuntime {
             code_cache: VMModuleCache::new(allocator),
             script_cache: ScriptCache::new(allocator),
-            publishing_option: config.publishing_options.clone(),
         }
     }
 
     pub fn load_gas_schedule(
         &self,
-        data_cache: &mut BlockDataCache<'_>,
+        data_cache: &dyn RemoteCache,
         state_view: &dyn StateView,
     ) -> VMResult<CostTable> {
         let code_cache =
             BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(state_view));
         load_gas_schedule(&code_cache, data_cache)
-    }
-
-    pub(crate) fn publishing_option(&self) -> &VMPublishingOption {
-        &self.publishing_option
     }
 
     pub(crate) fn publish_module(

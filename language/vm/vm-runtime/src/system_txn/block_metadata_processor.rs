@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data_cache::BlockDataCache,
-    runtime::VMRuntime,
-    txn_executor::{TransactionExecutor, LIBRA_SYSTEM_MODULE},
+    data_cache::BlockDataCache, runtime::VMRuntime, system_module_names::LIBRA_SYSTEM_MODULE,
+    txn_executor::TransactionExecutor,
 };
 use lazy_static::lazy_static;
 use libra_state_view::StateView;

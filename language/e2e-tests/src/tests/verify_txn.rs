@@ -297,8 +297,8 @@ fn verify_simple_payment() {
             1,
         );
         assert_eq!(
-            executor.verify_transaction(txn),
-            Some(
+            executor.execute_transaction(txn).status(),
+            &TransactionStatus::Discard(
                 VMStatus::new(StatusCode::TYPE_MISMATCH)
                     .with_message("Actual Type Mismatch".to_string())
             )
@@ -313,8 +313,8 @@ fn verify_simple_payment() {
             1,
         );
         assert_eq!(
-            executor.verify_transaction(txn),
-            Some(
+            executor.execute_transaction(txn).status(),
+            &TransactionStatus::Discard(
                 VMStatus::new(StatusCode::TYPE_MISMATCH)
                     .with_message("Actual Type Mismatch".to_string())
             )
@@ -441,18 +441,19 @@ pub fn test_open_publishing_invalid_address() {
         .account()
         .create_user_txn(random_module, 10, 100_000, 1);
 
+    // TODO: This is not verified for now.
     // verify and fail because the addresses don't match
-    let vm_status = executor.verify_transaction(txn.clone()).unwrap();
+    // let vm_status = executor.verify_transaction(txn.clone()).unwrap();
 
-    assert!(vm_status.is(StatusType::Verification));
-    assert!(vm_status.major_status == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER);
+    // assert!(vm_status.is(StatusType::Verification));
+    // assert!(vm_status.major_status == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER);
 
     // execute and fail for the same reason
     let output = executor.execute_transaction(txn);
     if let TransactionStatus::Discard(status) = output.status() {
         assert!(status.major_status == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER)
     } else {
-        panic!("Unexpected verification status: {:?}", vm_status)
+        panic!("Unexpected execution status: {:?}", output)
     };
 }
 
