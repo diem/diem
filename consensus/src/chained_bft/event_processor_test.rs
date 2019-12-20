@@ -64,7 +64,7 @@ use tokio::runtime::Handle;
 /// Auxiliary struct that is setting up node environment for the test.
 pub struct NodeSetup {
     block_store: Arc<BlockStore<TestPayload>>,
-    event_processor: EventProcessor<MockTransactionManager, TestPayload>,
+    event_processor: EventProcessor<TestPayload>,
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner,
     proposer_author: Author,
@@ -170,7 +170,7 @@ impl NodeSetup {
         let proposal_generator = ProposalGenerator::new(
             author,
             block_store.clone(),
-            MockTransactionManager::new().0,
+            Box::new(MockTransactionManager::new().0),
             time_service.clone(),
             1,
         );
@@ -185,7 +185,7 @@ impl NodeSetup {
             proposer_election,
             proposal_generator,
             safety_rules_manager.client(),
-            MockTransactionManager::new().0,
+            Box::new(MockTransactionManager::new().0),
             network,
             storage.clone(),
             time_service,

@@ -125,4 +125,8 @@ impl TxnManager for MempoolProxy {
             Self::gen_commit_transactions_request(txns.as_slice(), compute_result, timestamp_usecs);
         self.submit_commit_transactions_request(req).await
     }
+
+    fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>> {
+        Box::new(self.clone())
+    }
 }

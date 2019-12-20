@@ -95,10 +95,10 @@ impl<T: Payload> ChainedBftSMR<T> {
         self.block_store.clone()
     }
 
-    fn start_event_processing<TM: TxnManager<Payload = T>>(
+    fn start_event_processing(
         executor: Handle,
-        mut epoch_manager: EpochManager<TM, T>,
-        mut event_processor: EventProcessor<TM, T>,
+        mut epoch_manager: EpochManager<T>,
+        mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
         network_task: NetworkTask<T>,
         mut network_receivers: NetworkReceivers<T>,
@@ -164,9 +164,9 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
     /// 1. Construct the EpochManager from the latest libradb state
     /// 2. Construct per-epoch component with the fixed Validators provided by EpochManager including
     /// ProposerElection, Pacemaker, SafetyRules, Network(Populate with known validators), EventProcessor
-    fn start<TM: TxnManager<Payload = Self::Payload>>(
+    fn start(
         &mut self,
-        txn_manager: TM,
+        txn_manager: Box<dyn TxnManager<Payload = Self::Payload>>,
         state_computer: Arc<dyn StateComputer<Payload = Self::Payload>>,
     ) -> Result<()> {
         let mut initial_setup = self
