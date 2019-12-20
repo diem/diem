@@ -9,15 +9,15 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
+    explorer::{
+        GetTransactionByVersionResponse, GetTransactionListRequest, GetTransactionListResponse,
+        LatestVersionResponse,
+    },
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
-    explorer::{
-        LatestVersionResponse, GetTransactionListRequest,
-        GetTransactionListResponse, GetTransactionByVersionResponse
-    }
 };
 use std::{
     convert::{TryFrom, TryInto},
@@ -210,13 +210,14 @@ impl StorageRead for StorageService {
         unimplemented!()
     }
 
-    fn get_transaction_list(&self, req: GetTransactionListRequest)
-                            -> Result<GetTransactionListResponse>{
+    fn get_transaction_list(
+        &self,
+        _req: GetTransactionListRequest,
+    ) -> Result<GetTransactionListResponse> {
         unimplemented!()
     }
 
-    fn get_transaction_by_version(&self, req: Version)
-                                  -> Result<GetTransactionByVersionResponse>{
+    fn get_transaction_by_version(&self, _req: Version) -> Result<GetTransactionByVersionResponse> {
         unimplemented!()
     }
 }

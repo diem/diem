@@ -4,9 +4,11 @@ use admission_control_proto::proto::admission_control::{
     SubmitTransactionRequest, SubmitTransactionResponse,
 };
 use libra_mempool::core_mempool_client::CoreMemPoolClient;
-use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
-//                                BlockRequestItem, BlockResponseItem,
-//                                TxnRequestItem, TxnResponseItem
+use libra_types::proto::types::{
+    UpdateToLatestLedgerRequest,
+    UpdateToLatestLedgerResponse,
+    //                                BlockRequestItem, BlockResponseItem,
+    //                                TxnRequestItem, TxnResponseItem
 };
 use std::sync::Arc;
 use tokio::runtime::Handle;
@@ -54,13 +56,13 @@ impl AdmissionControlMockClient {
             .map_err(|e| ::grpcio::Error::InvalidMetadata(e.to_string()))
     }
 
-//    fn block_explorer(&mut self, req: &BlockRequestItem)
-//        -> ::grpcio::Result<BlockResponseItem> {
-//        unimplemented!()
-//    }
-//
-//    fn txn_explorer(&mut self, req: &TxnRequestItem)
-//        -> ::grpcio::Result<TxnResponseItem> {
-//        unimplemented!()
-//    }
+    //    fn block_explorer(&mut self, req: &BlockRequestItem)
+    //        -> ::grpcio::Result<BlockResponseItem> {
+    //        unimplemented!()
+    //    }
+    //
+    //    fn txn_explorer(&mut self, req: &TxnRequestItem)
+    //        -> ::grpcio::Result<TxnResponseItem> {
+    //        unimplemented!()
+    //    }
 }
