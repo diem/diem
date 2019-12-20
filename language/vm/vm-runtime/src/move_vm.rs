@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chain_state::ChainState, loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
+    chain_state::ChainState, data_cache::RemoteCache, loaded_data::loaded_module::LoadedModule,
+    runtime::VMRuntime,
 };
-use libra_config::config::VMConfig;
 use libra_state_view::StateView;
 use libra_types::{identifier::IdentStr, language_storage::ModuleId};
 use move_vm_definition::MoveVMImpl;
@@ -27,9 +27,9 @@ rental! {
 pub struct MoveVM(MoveVMImpl);
 
 impl MoveVM {
-    pub fn new(config: &VMConfig) -> Self {
+    pub fn new() -> Self {
         MoveVM(MoveVMImpl::new(Box::new(Arena::new()), |arena| {
-            VMRuntime::new(&*arena, config)
+            VMRuntime::new(&*arena)
         }))
     }
 
@@ -91,12 +91,20 @@ impl MoveVM {
     #[allow(unused)]
     pub fn publish_module<S: ChainState>(
         &self,
-        module: Vec<u8>,
+        module: &[u8],
         chain_state: &mut S,
         txn_data: &TransactionMetadata,
-    ) -> VMResult<()> {
+    ) -> VMResult<ModuleId> {
         self.0
             .rent(|runtime| runtime.publish_module(&module, chain_state, txn_data))
-            .map(|_| ())
+    }
+
+    pub(crate) fn load_gas_schedule(
+        &self,
+        state_view: &dyn StateView,
+        data_view: &dyn RemoteCache,
+    ) -> VMResult<CostTable> {
+        self.0
+            .rent(|runtime| runtime.load_gas_schedule(data_view, state_view))
     }
 }

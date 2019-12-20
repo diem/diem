@@ -8,7 +8,6 @@ mod genesis_gas_schedule;
 use crate::genesis_gas_schedule::initial_gas_schedule;
 use anyhow::Result;
 use lazy_static::lazy_static;
-use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::{
     ed25519::*,
     traits::ValidKey,
@@ -37,12 +36,8 @@ use vm::{
 };
 use vm_cache_map::Arena;
 use vm_runtime::{
-    data_cache::BlockDataCache,
-    runtime::VMRuntime,
-    txn_executor::{
-        TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, GAS_SCHEDULE_MODULE, LIBRA_SYSTEM_MODULE,
-        VALIDATOR_CONFIG_MODULE,
-    },
+    data_cache::BlockDataCache, runtime::VMRuntime, system_module_names::*,
+    txn_executor::TransactionExecutor,
 };
 use vm_runtime_types::value::Value;
 
@@ -245,10 +240,7 @@ pub fn encode_genesis_transaction_with_validator(
     let modules = stdlib_modules();
 
     let arena = Arena::new();
-    let config = VMConfig {
-        publishing_options: VMPublishingOption::Open,
-    };
-    let mut runtime = VMRuntime::new(&arena, &config);
+    let mut runtime = VMRuntime::new(&arena);
     for module in modules {
         runtime.cache_module(module.clone());
     }

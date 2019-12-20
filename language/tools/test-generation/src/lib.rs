@@ -22,7 +22,6 @@ use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::VerifiedModule;
 use language_e2e_tests::executor::FakeExecutor;
-use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 use std::{fs, io::Write, panic};
@@ -96,10 +95,7 @@ fn execute_function_in_module(
     };
     {
         let arena = Arena::new();
-        let config = VMConfig {
-            publishing_options: VMPublishingOption::Open,
-        };
-        let mut runtime = VMRuntime::new(&arena, &config);
+        let mut runtime = VMRuntime::new(&arena);
         runtime.cache_module(module.clone());
 
         let mut data_cache = BlockDataCache::new(state_view);
