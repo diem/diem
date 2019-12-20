@@ -1,19 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::core_mempool::{CoreMempool, TimelineState};
 use anyhow::{format_err, Result};
 use bounded_executor::BoundedExecutor;
 use bytes05::Bytes;
-
-use crate::core_mempool::{CoreMempool, TimelineState};
+use channel::{
+    libra_channel,
+    libra_channel::{Receiver, Sender},
+    message_queues::QueueStyle,
+};
 use futures::{
-    channel::{
-        mpsc::{channel, Receiver, Sender, UnboundedSender},
-        oneshot,
-    },
+    channel::{mpsc::UnboundedSender, oneshot},
     executor::ThreadPool,
     future::join_all,
-    sink::SinkExt,
     StreamExt,
 };
 use libra_config::config::{MempoolConfig, NodeConfig};
@@ -41,8 +41,8 @@ use tokio::{
 };
 use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 
-const WORKER_CHANNEL_BUFFER_SIZE: usize = 5;
-const WORKER_TO_MASTER_CHANNEL_BUFFER_SIZE: usize = 100;
+const WORKER_CHANNEL_BUFFER_SIZE: usize = 1;
+const MASTER_CHANNEL_KEY: i64 = 1;
 
 /// state of last sync with peer
 /// `timeline_id`: the timeline ID of the last transaction broadcast to and successfully processed this peer
@@ -52,17 +52,17 @@ const WORKER_TO_MASTER_CHANNEL_BUFFER_SIZE: usize = 100;
 struct PeerSyncState {
     timeline_id: u64,
     is_alive: bool,
-    to_worker: Sender<OutboundProcessState>,
+    to_worker: Sender<i64, WorkerState>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 struct PeerSyncUpdate {
     peer_id: PeerId,
     timeline_id: u64,
 }
 
-#[derive(Debug, PartialEq)]
-enum OutboundProcessState {
+#[derive(Clone, Debug, PartialEq)]
+enum WorkerState {
     START,
     PAUSE,
     KILL,
@@ -265,8 +265,11 @@ async fn inbound_network_task<V>(
     let bounded_executor = BoundedExecutor::new(workers_available, executor.clone());
 
     // Create a threadpool that manages concurrent worker processes
-    let worker_pool = ThreadPool::new().unwrap();
-    let (worker_sender, mut receiver) = channel(WORKER_TO_MASTER_CHANNEL_BUFFER_SIZE);
+    let worker_pool = ThreadPool::new()
+        .expect("[shared mempool] failed to create threadpool for worker processes");
+    let (worker_sender, mut receiver) =
+        libra_channel::new(QueueStyle::LIFO, WORKER_CHANNEL_BUFFER_SIZE, None);
+    let batch_size = smp.config.shared_mempool_batch_size;
     loop {
         ::futures::select! {
             // network events
@@ -283,11 +286,11 @@ async fn inbound_network_task<V>(
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                                 let mut timeline_id = 0;
 
-                                // start outbound rpc sync process for this new peer\
+                                // start outbound rpc sync process for this new peer
                                 // check if this brand new peer
                                 if let Some(mut peer_sync_state) = peer_info.get_mut(&peer_id) {
                                     // try restarting paused worker
-                                    if peer_sync_state.to_worker.send(OutboundProcessState::START).await.is_err() {
+                                    if peer_sync_state.to_worker.push(MASTER_CHANNEL_KEY, WorkerState::START).is_err() {
                                         // TODO log this
 
                                         // restart worker process for this peer
@@ -298,7 +301,11 @@ async fn inbound_network_task<V>(
                                 }
 
                                 // start brand new worker
-                                let (master_sender, worker_receiver) = channel(WORKER_CHANNEL_BUFFER_SIZE);
+                                let (master_sender, worker_receiver) = libra_channel::new(
+                                    QueueStyle::LIFO,
+                                    WORKER_CHANNEL_BUFFER_SIZE,
+                                    None,
+                                );
                                 let smp_outbound = smp.clone();
                                 let mempool = smp_outbound.mempool.clone();
                                 let mut network_sender = smp_outbound.network_sender.clone();
@@ -318,6 +325,7 @@ async fn inbound_network_task<V>(
                                         &mempool,
                                          &mut network_sender,
                                         timeline_id,
+                                        batch_size,
                                     )
                                     .await;
                                 });
@@ -329,7 +337,7 @@ async fn inbound_network_task<V>(
                                 if let Some(peer_sync_state) = peer_info.get_mut(&peer_id) {
                                     // check state
                                     if peer_sync_state.is_alive {
-                                        if peer_sync_state.to_worker.send(OutboundProcessState::PAUSE).await.is_err() {
+                                        if peer_sync_state.to_worker.push(MASTER_CHANNEL_KEY, WorkerState::PAUSE).is_err() {
                                             // TODO log this
                                             // disconnected channels will just treat worker process as dead
                                         }
@@ -353,7 +361,6 @@ async fn inbound_network_task<V>(
                                 if let Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(request)) =
                                     msg.message
                                 {
-                                    // get transactions from MempoolSyncMsg
                                     bounded_executor
                                         .spawn(process_rpc_submit_transactions_request(
                                             smp.clone(),
@@ -365,7 +372,6 @@ async fn inbound_network_task<V>(
                                 }
                             }
                             _ => {}
-
                         }
                         Err(e) => {
                             security_log(SecurityEvent::InvalidNetworkEventMP)
@@ -410,109 +416,113 @@ async fn gc_task(mempool: Arc<Mutex<CoreMempool>>, gc_interval_ms: u64) {
 }
 
 async fn worker<'a>(
-    mut from_master: Receiver<OutboundProcessState>,
-    mut to_master: Sender<PeerSyncUpdate>,
+    mut from_master: Receiver<i64, WorkerState>,
+    to_master: Sender<PeerId, PeerSyncUpdate>,
     peer_id: PeerId,
     mempool: &'a Arc<Mutex<CoreMempool>>,
     network_sender: &'a mut MempoolNetworkSender,
     timeline_id: u64,
+    batch_size: usize,
 ) {
-    let mut state: OutboundProcessState = OutboundProcessState::START;
+    let mut state = WorkerState::START;
     let current_sleep_duration_ms = 50; // TODO this is hard coded, get from config instead
     let timeout = Duration::from_secs(1); // TODO hardcoded, get from config instead
-    let batch_size = 1; // TODO hardcoded, get from config instead
     let mut curr_timeline_id = timeline_id; // TODO check for valid timeline_id (e.g. no negative)
 
-    // channel for ::futures::select non-event loop below
-    let (sender, mut receiver) = channel(WORKER_CHANNEL_BUFFER_SIZE);
-    sender.clone().send(1).await.ok();
-
-    while state != OutboundProcessState::KILL {
+    while state != WorkerState::KILL {
         ::futures::select! {
-            maybe_new_state = from_master.next() => {
-                match maybe_new_state {
-                    None => {
-                        // TODO log
-                        state = OutboundProcessState::KILL;
-                    }
-                    Some(new_state) => {
-                        state = new_state;
-                    }
-                }
+            new_state = from_master.select_next_some() => {
+                state = new_state;
             },
-            // non-event channel
-            // this is needed to unblock from waiting for update from `from_master` when
-            // there is none
-            // Note: we cannot use the default arm, as this does not give enough time for the
-            // future in `from_master` to become ready
-            non_event = receiver.next() => {
-                if non_event.is_none() {
-                    unreachable!("[shared_mempool] non-event channel in worker process \
-                        unexpectedly closed");
-                } else {
-                    sender.clone().send(1).await.ok();
-                }
-            },
+            default => {}
             complete => {
                 // channel `from_master` terminated, so should close
                 // TODO log
-                state = OutboundProcessState::KILL;
+                state = WorkerState::KILL;
             }
         }
-
-        if state == OutboundProcessState::START {
-            // broadcast transactions to peer
-            let (transactions, new_timeline_id) = mempool
-                .lock()
-                .expect("[shared mempool] failed to acquire mempool lock")
-                .read_timeline(curr_timeline_id, batch_size);
-
-            if !transactions.is_empty() {
-                let mut req = BroadcastTransactionsRequest::default();
-                req.peer_id = peer_id.into();
-                req.transactions = transactions
-                    .into_iter()
-                    .map(|txn| txn.try_into().unwrap())
-                    .collect();
-
-                let result = network_sender
-                    .broadcast_transactions(peer_id.clone(), req, timeout)
-                    .await;
-                match result {
-                    Ok(_res) => {
-                        // TODO update timeline_id/sleep from response
-                        // TODO log
-                        curr_timeline_id = new_timeline_id;
-                    }
-                    Err(_e) => {
-                        // TODO log and handle RPC error
-                    }
-                }
-
-                // send back timeline_id to master
-                if let Err(e) = to_master
-                    .send(PeerSyncUpdate {
-                        peer_id,
-                        timeline_id: curr_timeline_id,
-                    })
-                    .await
-                {
-                    // TODO log this
-                    // this will shut down channels to/from this worker thread, so master will know
-                    // this is dead and needs to start new worker for this peer
-                    if e.is_disconnected() {
-                        // TODO log
-                        return;
-                    }
-                } else {
-                    // TODO log
-                }
-            } else {
-                // TODO log
-            }
-            sleep(Duration::from_millis(current_sleep_duration_ms));
+        if state == WorkerState::START {
+            let to_master_clone = to_master.clone();
+            let (result_timeline_id, result_state) = broadcast_transactions(
+                mempool,
+                network_sender,
+                to_master_clone,
+                curr_timeline_id,
+                peer_id,
+                current_sleep_duration_ms,
+                batch_size,
+                timeout,
+            )
+            .await;
+            state = result_state;
+            curr_timeline_id = result_timeline_id;
         }
     }
+}
+
+async fn broadcast_transactions(
+    mempool: &Arc<Mutex<CoreMempool>>,
+    network_sender: &mut MempoolNetworkSender,
+    mut to_master: Sender<PeerId, PeerSyncUpdate>,
+    mut curr_timeline_id: u64,
+    peer_id: PeerId,
+    current_sleep_duration_ms: i32,
+    batch_size: usize,
+    timeout: Duration,
+) -> (u64, WorkerState) {
+    // broadcast transactions to peer
+    let (transactions, new_timeline_id) = mempool
+        .lock()
+        .expect("[shared mempool] failed to acquire mempool lock")
+        .read_timeline(curr_timeline_id, batch_size);
+
+    if !transactions.is_empty() {
+        let mut req = BroadcastTransactionsRequest::default();
+        req.peer_id = peer_id.into();
+        req.transactions = transactions
+            .into_iter()
+            .map(|txn| txn.try_into().unwrap())
+            .collect();
+
+        let result = network_sender
+            .broadcast_transactions(peer_id.clone(), req, timeout)
+            .await;
+        match result {
+            Ok(_res) => {
+                // TODO update timeline_id/sleep from response
+                // TODO log
+                curr_timeline_id = new_timeline_id;
+            }
+            Err(_e) => {
+                // TODO log and handle RPC error
+            }
+        }
+
+        // send back timeline_id to master
+        if to_master
+            .push(
+                peer_id,
+                PeerSyncUpdate {
+                    peer_id,
+                    timeline_id: curr_timeline_id,
+                },
+            )
+            .is_err()
+        {
+            // TODO log this
+            // this will shut down channels to/from this worker thread, so master will know
+            // this is dead and needs to start new worker for this peer
+            return (curr_timeline_id, WorkerState::KILL);
+        } else {
+            // TODO log
+        }
+    } else {
+        // TODO log
+    }
+    sleep(Duration::from_millis(
+        current_sleep_duration_ms.try_into().unwrap(),
+    ));
+    (curr_timeline_id, WorkerState::START)
 }
 
 /// bootstrap of SharedMempool
@@ -540,11 +550,16 @@ where
         .expect("[shared mempool] failed to create runtime");
     let executor = runtime.handle();
 
-    let validator_peers = if let Some(v) = &config.validator_network {
-        v.network_peers.peers.iter().map(|(key, _)| *key).collect()
-    } else {
-        HashSet::new()
-    };
+    // TODO deprecate this way of obtaining validator peers from config - dynamic config is coming
+    let validator_peers;
+    match &config.validator_network {
+        Some(v) => {
+            validator_peers = v.network_peers.peers.iter().map(|(key, _)| *key).collect();
+        }
+        None => {
+            validator_peers = HashSet::new();
+        }
+    }
 
     let smp = SharedMempool {
         mempool: mempool.clone(),
