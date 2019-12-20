@@ -28,22 +28,22 @@ axiom GasSchedule_Cost_cpu == 0;
 const GasSchedule_Cost_storage: FieldName;
 axiom GasSchedule_Cost_storage == 1;
 function GasSchedule_Cost_type_value(): TypeValue {
-    StructType(GasSchedule_Cost, TypeValueArray(DefaultTypeMap[0 := IntegerType()][1 := IntegerType()], 2))
+    StructType(GasSchedule_Cost, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), IntegerType()))
 }
 
 procedure {:inline 1} Pack_GasSchedule_Cost(v0: Value, v1: Value) returns (v: Value)
 {
-    assume has_type(IntegerType(), v0);
-    assume has_type(IntegerType(), v1);
-    v := Struct(ValueArray(DefaultIntMap[GasSchedule_Cost_cpu := v0][GasSchedule_Cost_storage := v1], 2));
-    assume has_type(GasSchedule_Cost_type_value(), v);
+    assume is#Integer(v0);
+    assume is#Integer(v1);
+    v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
+
 }
 
 procedure {:inline 1} Unpack_GasSchedule_Cost(v: Value) returns (v0: Value, v1: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[GasSchedule_Cost_cpu];
-    v1 := smap(v)[GasSchedule_Cost_storage];
+    assume is#Vector(v);
+    v0 := SelectField(v, GasSchedule_Cost_cpu);
+    v1 := SelectField(v, GasSchedule_Cost_storage);
 }
 
 const unique GasSchedule_T: TypeName;
@@ -52,22 +52,22 @@ axiom GasSchedule_T_instruction_schedule == 0;
 const GasSchedule_T_native_schedule: FieldName;
 axiom GasSchedule_T_native_schedule == 1;
 function GasSchedule_T_type_value(): TypeValue {
-    StructType(GasSchedule_T, TypeValueArray(DefaultTypeMap[0 := Vector_T_type_value(GasSchedule_Cost_type_value())][1 := Vector_T_type_value(GasSchedule_Cost_type_value())], 2))
+    StructType(GasSchedule_T, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, Vector_T_type_value(GasSchedule_Cost_type_value())), Vector_T_type_value(GasSchedule_Cost_type_value())))
 }
 
 procedure {:inline 1} Pack_GasSchedule_T(v0: Value, v1: Value) returns (v: Value)
 {
-    assume has_type(Vector_T_type_value(GasSchedule_Cost_type_value()), v0);
-    assume has_type(Vector_T_type_value(GasSchedule_Cost_type_value()), v1);
-    v := Struct(ValueArray(DefaultIntMap[GasSchedule_T_instruction_schedule := v0][GasSchedule_T_native_schedule := v1], 2));
-    assume has_type(GasSchedule_T_type_value(), v);
+    assume is#Vector(v0);
+    assume is#Vector(v1);
+    v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
+
 }
 
 procedure {:inline 1} Unpack_GasSchedule_T(v: Value) returns (v0: Value, v1: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[GasSchedule_T_instruction_schedule];
-    v1 := smap(v)[GasSchedule_T_native_schedule];
+    assume is#Vector(v);
+    v0 := SelectField(v, GasSchedule_T_instruction_schedule);
+    v1 := SelectField(v, GasSchedule_T_native_schedule);
 }
 
 
@@ -88,50 +88,50 @@ axiom ValidatorConfig_Config_fullnodes_network_identity_pubkey == 4;
 const ValidatorConfig_Config_fullnodes_network_address: FieldName;
 axiom ValidatorConfig_Config_fullnodes_network_address == 5;
 function ValidatorConfig_Config_type_value(): TypeValue {
-    StructType(ValidatorConfig_Config, TypeValueArray(DefaultTypeMap[0 := ByteArrayType()][1 := ByteArrayType()][2 := ByteArrayType()][3 := ByteArrayType()][4 := ByteArrayType()][5 := ByteArrayType()], 6))
+    StructType(ValidatorConfig_Config, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, ByteArrayType()), ByteArrayType()), ByteArrayType()), ByteArrayType()), ByteArrayType()), ByteArrayType()))
 }
 
 procedure {:inline 1} Pack_ValidatorConfig_Config(v0: Value, v1: Value, v2: Value, v3: Value, v4: Value, v5: Value) returns (v: Value)
 {
-    assume has_type(ByteArrayType(), v0);
-    assume has_type(ByteArrayType(), v1);
-    assume has_type(ByteArrayType(), v2);
-    assume has_type(ByteArrayType(), v3);
-    assume has_type(ByteArrayType(), v4);
-    assume has_type(ByteArrayType(), v5);
-    v := Struct(ValueArray(DefaultIntMap[ValidatorConfig_Config_consensus_pubkey := v0][ValidatorConfig_Config_validator_network_signing_pubkey := v1][ValidatorConfig_Config_validator_network_identity_pubkey := v2][ValidatorConfig_Config_validator_network_address := v3][ValidatorConfig_Config_fullnodes_network_identity_pubkey := v4][ValidatorConfig_Config_fullnodes_network_address := v5], 6));
-    assume has_type(ValidatorConfig_Config_type_value(), v);
+    assume is#ByteArray(v0);
+    assume is#ByteArray(v1);
+    assume is#ByteArray(v2);
+    assume is#ByteArray(v3);
+    assume is#ByteArray(v4);
+    assume is#ByteArray(v5);
+    v := Vector(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1), v2), v3), v4), v5));
+
 }
 
 procedure {:inline 1} Unpack_ValidatorConfig_Config(v: Value) returns (v0: Value, v1: Value, v2: Value, v3: Value, v4: Value, v5: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[ValidatorConfig_Config_consensus_pubkey];
-    v1 := smap(v)[ValidatorConfig_Config_validator_network_signing_pubkey];
-    v2 := smap(v)[ValidatorConfig_Config_validator_network_identity_pubkey];
-    v3 := smap(v)[ValidatorConfig_Config_validator_network_address];
-    v4 := smap(v)[ValidatorConfig_Config_fullnodes_network_identity_pubkey];
-    v5 := smap(v)[ValidatorConfig_Config_fullnodes_network_address];
+    assume is#Vector(v);
+    v0 := SelectField(v, ValidatorConfig_Config_consensus_pubkey);
+    v1 := SelectField(v, ValidatorConfig_Config_validator_network_signing_pubkey);
+    v2 := SelectField(v, ValidatorConfig_Config_validator_network_identity_pubkey);
+    v3 := SelectField(v, ValidatorConfig_Config_validator_network_address);
+    v4 := SelectField(v, ValidatorConfig_Config_fullnodes_network_identity_pubkey);
+    v5 := SelectField(v, ValidatorConfig_Config_fullnodes_network_address);
 }
 
 const unique ValidatorConfig_T: TypeName;
 const ValidatorConfig_T_config: FieldName;
 axiom ValidatorConfig_T_config == 0;
 function ValidatorConfig_T_type_value(): TypeValue {
-    StructType(ValidatorConfig_T, TypeValueArray(DefaultTypeMap[0 := ValidatorConfig_Config_type_value()], 1))
+    StructType(ValidatorConfig_T, ExtendTypeValueArray(EmptyTypeValueArray, ValidatorConfig_Config_type_value()))
 }
 
 procedure {:inline 1} Pack_ValidatorConfig_T(v0: Value) returns (v: Value)
 {
-    assume has_type(ValidatorConfig_Config_type_value(), v0);
-    v := Struct(ValueArray(DefaultIntMap[ValidatorConfig_T_config := v0], 1));
-    assume has_type(ValidatorConfig_T_type_value(), v);
+    assume is#Vector(v0);
+    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+
 }
 
 procedure {:inline 1} Unpack_ValidatorConfig_T(v: Value) returns (v0: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[ValidatorConfig_T_config];
+    assume is#Vector(v);
+    v0 := SelectField(v, ValidatorConfig_T_config);
 }
 
 
@@ -142,60 +142,60 @@ const unique LibraCoin_T: TypeName;
 const LibraCoin_T_value: FieldName;
 axiom LibraCoin_T_value == 0;
 function LibraCoin_T_type_value(): TypeValue {
-    StructType(LibraCoin_T, TypeValueArray(DefaultTypeMap[0 := IntegerType()], 1))
+    StructType(LibraCoin_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
 
 procedure {:inline 1} Pack_LibraCoin_T(v0: Value) returns (v: Value)
 {
-    assume has_type(IntegerType(), v0);
-    v := Struct(ValueArray(DefaultIntMap[LibraCoin_T_value := v0], 1));
-    assume has_type(LibraCoin_T_type_value(), v);
+    assume is#Integer(v0);
+    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+
 }
 
 procedure {:inline 1} Unpack_LibraCoin_T(v: Value) returns (v0: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[LibraCoin_T_value];
+    assume is#Vector(v);
+    v0 := SelectField(v, LibraCoin_T_value);
 }
 
 const unique LibraCoin_MintCapability: TypeName;
 const LibraCoin_MintCapability__dummy: FieldName;
 axiom LibraCoin_MintCapability__dummy == 0;
 function LibraCoin_MintCapability_type_value(): TypeValue {
-    StructType(LibraCoin_MintCapability, TypeValueArray(DefaultTypeMap[0 := BooleanType()], 1))
+    StructType(LibraCoin_MintCapability, ExtendTypeValueArray(EmptyTypeValueArray, BooleanType()))
 }
 
 procedure {:inline 1} Pack_LibraCoin_MintCapability(v0: Value) returns (v: Value)
 {
-    assume has_type(BooleanType(), v0);
-    v := Struct(ValueArray(DefaultIntMap[LibraCoin_MintCapability__dummy := v0], 1));
-    assume has_type(LibraCoin_MintCapability_type_value(), v);
+    assume is#Boolean(v0);
+    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+
 }
 
 procedure {:inline 1} Unpack_LibraCoin_MintCapability(v: Value) returns (v0: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[LibraCoin_MintCapability__dummy];
+    assume is#Vector(v);
+    v0 := SelectField(v, LibraCoin_MintCapability__dummy);
 }
 
 const unique LibraCoin_MarketCap: TypeName;
 const LibraCoin_MarketCap_total_value: FieldName;
 axiom LibraCoin_MarketCap_total_value == 0;
 function LibraCoin_MarketCap_type_value(): TypeValue {
-    StructType(LibraCoin_MarketCap, TypeValueArray(DefaultTypeMap[0 := IntegerType()], 1))
+    StructType(LibraCoin_MarketCap, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
 
 procedure {:inline 1} Pack_LibraCoin_MarketCap(v0: Value) returns (v: Value)
 {
-    assume has_type(IntegerType(), v0);
-    v := Struct(ValueArray(DefaultIntMap[LibraCoin_MarketCap_total_value := v0], 1));
-    assume has_type(LibraCoin_MarketCap_type_value(), v);
+    assume is#Integer(v0);
+    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+
 }
 
 procedure {:inline 1} Unpack_LibraCoin_MarketCap(v: Value) returns (v0: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[LibraCoin_MarketCap_total_value];
+    assume is#Vector(v);
+    v0 := SelectField(v, LibraCoin_MarketCap_total_value);
 }
 
 
@@ -220,74 +220,74 @@ axiom LibraAccount_T_sequence_number == 6;
 const LibraAccount_T_event_generator: FieldName;
 axiom LibraAccount_T_event_generator == 7;
 function LibraAccount_T_type_value(): TypeValue {
-    StructType(LibraAccount_T, TypeValueArray(DefaultTypeMap[0 := ByteArrayType()][1 := LibraCoin_T_type_value()][2 := BooleanType()][3 := BooleanType()][4 := LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value())][5 := LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value())][6 := IntegerType()][7 := LibraAccount_EventHandleGenerator_type_value()], 8))
+    StructType(LibraAccount_T, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, ByteArrayType()), LibraCoin_T_type_value()), BooleanType()), BooleanType()), LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value())), LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value())), IntegerType()), LibraAccount_EventHandleGenerator_type_value()))
 }
 
 procedure {:inline 1} Pack_LibraAccount_T(v0: Value, v1: Value, v2: Value, v3: Value, v4: Value, v5: Value, v6: Value, v7: Value) returns (v: Value)
 {
-    assume has_type(ByteArrayType(), v0);
-    assume has_type(LibraCoin_T_type_value(), v1);
-    assume has_type(BooleanType(), v2);
-    assume has_type(BooleanType(), v3);
-    assume has_type(LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value()), v4);
-    assume has_type(LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value()), v5);
-    assume has_type(IntegerType(), v6);
-    assume has_type(LibraAccount_EventHandleGenerator_type_value(), v7);
-    v := Struct(ValueArray(DefaultIntMap[LibraAccount_T_authentication_key := v0][LibraAccount_T_balance := v1][LibraAccount_T_delegated_key_rotation_capability := v2][LibraAccount_T_delegated_withdrawal_capability := v3][LibraAccount_T_received_events := v4][LibraAccount_T_sent_events := v5][LibraAccount_T_sequence_number := v6][LibraAccount_T_event_generator := v7], 8));
-    assume has_type(LibraAccount_T_type_value(), v);
+    assume is#ByteArray(v0);
+    assume is#Vector(v1);
+    assume is#Boolean(v2);
+    assume is#Boolean(v3);
+    assume is#Vector(v4);
+    assume is#Vector(v5);
+    assume is#Integer(v6);
+    assume is#Vector(v7);
+    v := Vector(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1), v2), v3), v4), v5), v6), v7));
+
 }
 
 procedure {:inline 1} Unpack_LibraAccount_T(v: Value) returns (v0: Value, v1: Value, v2: Value, v3: Value, v4: Value, v5: Value, v6: Value, v7: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[LibraAccount_T_authentication_key];
-    v1 := smap(v)[LibraAccount_T_balance];
-    v2 := smap(v)[LibraAccount_T_delegated_key_rotation_capability];
-    v3 := smap(v)[LibraAccount_T_delegated_withdrawal_capability];
-    v4 := smap(v)[LibraAccount_T_received_events];
-    v5 := smap(v)[LibraAccount_T_sent_events];
-    v6 := smap(v)[LibraAccount_T_sequence_number];
-    v7 := smap(v)[LibraAccount_T_event_generator];
+    assume is#Vector(v);
+    v0 := SelectField(v, LibraAccount_T_authentication_key);
+    v1 := SelectField(v, LibraAccount_T_balance);
+    v2 := SelectField(v, LibraAccount_T_delegated_key_rotation_capability);
+    v3 := SelectField(v, LibraAccount_T_delegated_withdrawal_capability);
+    v4 := SelectField(v, LibraAccount_T_received_events);
+    v5 := SelectField(v, LibraAccount_T_sent_events);
+    v6 := SelectField(v, LibraAccount_T_sequence_number);
+    v7 := SelectField(v, LibraAccount_T_event_generator);
 }
 
 const unique LibraAccount_WithdrawalCapability: TypeName;
 const LibraAccount_WithdrawalCapability_account_address: FieldName;
 axiom LibraAccount_WithdrawalCapability_account_address == 0;
 function LibraAccount_WithdrawalCapability_type_value(): TypeValue {
-    StructType(LibraAccount_WithdrawalCapability, TypeValueArray(DefaultTypeMap[0 := AddressType()], 1))
+    StructType(LibraAccount_WithdrawalCapability, ExtendTypeValueArray(EmptyTypeValueArray, AddressType()))
 }
 
 procedure {:inline 1} Pack_LibraAccount_WithdrawalCapability(v0: Value) returns (v: Value)
 {
-    assume has_type(AddressType(), v0);
-    v := Struct(ValueArray(DefaultIntMap[LibraAccount_WithdrawalCapability_account_address := v0], 1));
-    assume has_type(LibraAccount_WithdrawalCapability_type_value(), v);
+    assume is#Address(v0);
+    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+
 }
 
 procedure {:inline 1} Unpack_LibraAccount_WithdrawalCapability(v: Value) returns (v0: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[LibraAccount_WithdrawalCapability_account_address];
+    assume is#Vector(v);
+    v0 := SelectField(v, LibraAccount_WithdrawalCapability_account_address);
 }
 
 const unique LibraAccount_KeyRotationCapability: TypeName;
 const LibraAccount_KeyRotationCapability_account_address: FieldName;
 axiom LibraAccount_KeyRotationCapability_account_address == 0;
 function LibraAccount_KeyRotationCapability_type_value(): TypeValue {
-    StructType(LibraAccount_KeyRotationCapability, TypeValueArray(DefaultTypeMap[0 := AddressType()], 1))
+    StructType(LibraAccount_KeyRotationCapability, ExtendTypeValueArray(EmptyTypeValueArray, AddressType()))
 }
 
 procedure {:inline 1} Pack_LibraAccount_KeyRotationCapability(v0: Value) returns (v: Value)
 {
-    assume has_type(AddressType(), v0);
-    v := Struct(ValueArray(DefaultIntMap[LibraAccount_KeyRotationCapability_account_address := v0], 1));
-    assume has_type(LibraAccount_KeyRotationCapability_type_value(), v);
+    assume is#Address(v0);
+    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+
 }
 
 procedure {:inline 1} Unpack_LibraAccount_KeyRotationCapability(v: Value) returns (v0: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[LibraAccount_KeyRotationCapability_account_address];
+    assume is#Vector(v);
+    v0 := SelectField(v, LibraAccount_KeyRotationCapability_account_address);
 }
 
 const unique LibraAccount_SentPaymentEvent: TypeName;
@@ -298,24 +298,24 @@ axiom LibraAccount_SentPaymentEvent_payee == 1;
 const LibraAccount_SentPaymentEvent_metadata: FieldName;
 axiom LibraAccount_SentPaymentEvent_metadata == 2;
 function LibraAccount_SentPaymentEvent_type_value(): TypeValue {
-    StructType(LibraAccount_SentPaymentEvent, TypeValueArray(DefaultTypeMap[0 := IntegerType()][1 := AddressType()][2 := ByteArrayType()], 3))
+    StructType(LibraAccount_SentPaymentEvent, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), AddressType()), ByteArrayType()))
 }
 
 procedure {:inline 1} Pack_LibraAccount_SentPaymentEvent(v0: Value, v1: Value, v2: Value) returns (v: Value)
 {
-    assume has_type(IntegerType(), v0);
-    assume has_type(AddressType(), v1);
-    assume has_type(ByteArrayType(), v2);
-    v := Struct(ValueArray(DefaultIntMap[LibraAccount_SentPaymentEvent_amount := v0][LibraAccount_SentPaymentEvent_payee := v1][LibraAccount_SentPaymentEvent_metadata := v2], 3));
-    assume has_type(LibraAccount_SentPaymentEvent_type_value(), v);
+    assume is#Integer(v0);
+    assume is#Address(v1);
+    assume is#ByteArray(v2);
+    v := Vector(ExtendValueArray(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1), v2));
+
 }
 
 procedure {:inline 1} Unpack_LibraAccount_SentPaymentEvent(v: Value) returns (v0: Value, v1: Value, v2: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[LibraAccount_SentPaymentEvent_amount];
-    v1 := smap(v)[LibraAccount_SentPaymentEvent_payee];
-    v2 := smap(v)[LibraAccount_SentPaymentEvent_metadata];
+    assume is#Vector(v);
+    v0 := SelectField(v, LibraAccount_SentPaymentEvent_amount);
+    v1 := SelectField(v, LibraAccount_SentPaymentEvent_payee);
+    v2 := SelectField(v, LibraAccount_SentPaymentEvent_metadata);
 }
 
 const unique LibraAccount_ReceivedPaymentEvent: TypeName;
@@ -326,44 +326,44 @@ axiom LibraAccount_ReceivedPaymentEvent_payer == 1;
 const LibraAccount_ReceivedPaymentEvent_metadata: FieldName;
 axiom LibraAccount_ReceivedPaymentEvent_metadata == 2;
 function LibraAccount_ReceivedPaymentEvent_type_value(): TypeValue {
-    StructType(LibraAccount_ReceivedPaymentEvent, TypeValueArray(DefaultTypeMap[0 := IntegerType()][1 := AddressType()][2 := ByteArrayType()], 3))
+    StructType(LibraAccount_ReceivedPaymentEvent, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), AddressType()), ByteArrayType()))
 }
 
 procedure {:inline 1} Pack_LibraAccount_ReceivedPaymentEvent(v0: Value, v1: Value, v2: Value) returns (v: Value)
 {
-    assume has_type(IntegerType(), v0);
-    assume has_type(AddressType(), v1);
-    assume has_type(ByteArrayType(), v2);
-    v := Struct(ValueArray(DefaultIntMap[LibraAccount_ReceivedPaymentEvent_amount := v0][LibraAccount_ReceivedPaymentEvent_payer := v1][LibraAccount_ReceivedPaymentEvent_metadata := v2], 3));
-    assume has_type(LibraAccount_ReceivedPaymentEvent_type_value(), v);
+    assume is#Integer(v0);
+    assume is#Address(v1);
+    assume is#ByteArray(v2);
+    v := Vector(ExtendValueArray(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1), v2));
+
 }
 
 procedure {:inline 1} Unpack_LibraAccount_ReceivedPaymentEvent(v: Value) returns (v0: Value, v1: Value, v2: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[LibraAccount_ReceivedPaymentEvent_amount];
-    v1 := smap(v)[LibraAccount_ReceivedPaymentEvent_payer];
-    v2 := smap(v)[LibraAccount_ReceivedPaymentEvent_metadata];
+    assume is#Vector(v);
+    v0 := SelectField(v, LibraAccount_ReceivedPaymentEvent_amount);
+    v1 := SelectField(v, LibraAccount_ReceivedPaymentEvent_payer);
+    v2 := SelectField(v, LibraAccount_ReceivedPaymentEvent_metadata);
 }
 
 const unique LibraAccount_EventHandleGenerator: TypeName;
 const LibraAccount_EventHandleGenerator_counter: FieldName;
 axiom LibraAccount_EventHandleGenerator_counter == 0;
 function LibraAccount_EventHandleGenerator_type_value(): TypeValue {
-    StructType(LibraAccount_EventHandleGenerator, TypeValueArray(DefaultTypeMap[0 := IntegerType()], 1))
+    StructType(LibraAccount_EventHandleGenerator, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
 
 procedure {:inline 1} Pack_LibraAccount_EventHandleGenerator(v0: Value) returns (v: Value)
 {
-    assume has_type(IntegerType(), v0);
-    v := Struct(ValueArray(DefaultIntMap[LibraAccount_EventHandleGenerator_counter := v0], 1));
-    assume has_type(LibraAccount_EventHandleGenerator_type_value(), v);
+    assume is#Integer(v0);
+    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+
 }
 
 procedure {:inline 1} Unpack_LibraAccount_EventHandleGenerator(v: Value) returns (v0: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[LibraAccount_EventHandleGenerator_counter];
+    assume is#Vector(v);
+    v0 := SelectField(v, LibraAccount_EventHandleGenerator_counter);
 }
 
 const unique LibraAccount_EventHandle: TypeName;
@@ -372,135 +372,27 @@ axiom LibraAccount_EventHandle_counter == 0;
 const LibraAccount_EventHandle_guid: FieldName;
 axiom LibraAccount_EventHandle_guid == 1;
 function LibraAccount_EventHandle_type_value(tv0: TypeValue): TypeValue {
-    StructType(LibraAccount_EventHandle, TypeValueArray(DefaultTypeMap[0 := IntegerType()][1 := ByteArrayType()], 2))
+    StructType(LibraAccount_EventHandle, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), ByteArrayType()))
 }
 
 procedure {:inline 1} Pack_LibraAccount_EventHandle(tv0: TypeValue, v0: Value, v1: Value) returns (v: Value)
 {
-    assume has_type(IntegerType(), v0);
-    assume has_type(ByteArrayType(), v1);
-    v := Struct(ValueArray(DefaultIntMap[LibraAccount_EventHandle_counter := v0][LibraAccount_EventHandle_guid := v1], 2));
-    assume has_type(LibraAccount_EventHandle_type_value(tv0), v);
+    assume is#Integer(v0);
+    assume is#ByteArray(v1);
+    v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
+
 }
 
 procedure {:inline 1} Unpack_LibraAccount_EventHandle(v: Value) returns (v0: Value, v1: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[LibraAccount_EventHandle_counter];
-    v1 := smap(v)[LibraAccount_EventHandle_guid];
+    assume is#Vector(v);
+    v0 := SelectField(v, LibraAccount_EventHandle_counter);
+    v1 := SelectField(v, LibraAccount_EventHandle_guid);
 }
 
 
 
 // ** structs of module TestLib
-
-
-
-// ** stratified functions
-
-procedure {:inline 1} ReadValue0(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        assert false;
-    }
-}
-
-procedure {:inline 1} ReadValue1(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue0(p, i+1, v');
-    }
-}
-
-procedure {:inline 1} ReadValue2(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue1(p, i+1, v');
-    }
-}
-
-procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue2(p, i+1, v');
-    }
-}
-
-procedure {:inline 1} UpdateValue0(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        assert false;
-    }
-}
-
-procedure {:inline 1} UpdateValue1(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue0(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
-
-procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue1(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
-
-procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue2(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
 
 
 
@@ -527,7 +419,7 @@ procedure {:inline 1} Signature_ed25519_verify (arg0: Value, arg1: Value, arg2: 
 // ** functions of module GasSchedule
 
 procedure {:inline 1} GasSchedule_initialize (arg0: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // GasSchedule_T_type_value()
@@ -543,38 +435,38 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(GasSchedule_T_type_value(), arg0);
+    assume is#Vector(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 7;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 7;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 1, tmp);
 
     call tmp := LdAddr(173345816);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    tmp := Boolean(is_equal(AddressType(), contents#Memory(m)[old_size+1], contents#Memory(m)[old_size+2]));
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    tmp := Boolean(IsEqual(GetLocal(m, old_size + 1), GetLocal(m, old_size + 2)));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    tmp := contents#Memory(m)[old_size + 4];
+    tmp := GetLocal(m, old_size + 4);
     if (!b#Boolean(tmp)) { goto Label_7; }
 
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 5, tmp);
 
     assert false;
 
 Label_7:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call MoveToSender(GasSchedule_T_type_value(), contents#Memory(m)[old_size+6]);
+    call MoveToSender(GasSchedule_T_type_value(), GetLocal(m, old_size + 6));
 
     return;
 
@@ -586,7 +478,7 @@ procedure GasSchedule_initialize_verify (arg0: Value) returns ()
 }
 
 procedure {:inline 1} GasSchedule_instruction_table_size () returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(GasSchedule_T_type_value())
@@ -604,14 +496,14 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 8;
+    old_size := local_counter;
+    local_counter := local_counter + 8;
 
     // bytecode translation starts here
     call tmp := LdAddr(173345816);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call t3 := BorrowGlobal(contents#Memory(m)[old_size+2], GasSchedule_T_type_value());
+    call t3 := BorrowGlobal(GetLocal(m, old_size + 2), GasSchedule_T_type_value());
 
     call t0 := CopyOrMoveRef(t3);
 
@@ -620,17 +512,17 @@ requires ExistsTxnSenderAccount();
     call t5 := BorrowField(t4, GasSchedule_T_instruction_schedule);
 
     call t6 := Vector_length(GasSchedule_Cost_type_value(), t5);
-    assume has_type(IntegerType(), t6);
+    assume is#Integer(t6);
 
-    m := Memory(domain#Memory(m)[old_size+6 := true], contents#Memory(m)[old_size+6 := t6]);
+    m := UpdateLocal(m, old_size + 6, t6);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    ret0 := contents#Memory(m)[old_size+7];
+    ret0 := GetLocal(m, old_size + 7);
     return;
 
 }
@@ -641,7 +533,7 @@ procedure GasSchedule_instruction_table_size_verify () returns (ret0: Value)
 }
 
 procedure {:inline 1} GasSchedule_native_table_size () returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(GasSchedule_T_type_value())
@@ -659,14 +551,14 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 8;
+    old_size := local_counter;
+    local_counter := local_counter + 8;
 
     // bytecode translation starts here
     call tmp := LdAddr(173345816);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call t3 := BorrowGlobal(contents#Memory(m)[old_size+2], GasSchedule_T_type_value());
+    call t3 := BorrowGlobal(GetLocal(m, old_size + 2), GasSchedule_T_type_value());
 
     call t0 := CopyOrMoveRef(t3);
 
@@ -675,17 +567,17 @@ requires ExistsTxnSenderAccount();
     call t5 := BorrowField(t4, GasSchedule_T_native_schedule);
 
     call t6 := Vector_length(GasSchedule_Cost_type_value(), t5);
-    assume has_type(IntegerType(), t6);
+    assume is#Integer(t6);
 
-    m := Memory(domain#Memory(m)[old_size+6 := true], contents#Memory(m)[old_size+6 := t6]);
+    m := UpdateLocal(m, old_size + 6, t6);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    ret0 := contents#Memory(m)[old_size+7];
+    ret0 := GetLocal(m, old_size + 7);
     return;
 
 }
@@ -700,7 +592,7 @@ procedure GasSchedule_native_table_size_verify () returns (ret0: Value)
 // ** functions of module ValidatorConfig
 
 procedure {:inline 1} ValidatorConfig_has (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -712,20 +604,20 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 3;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 3;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := Exists(contents#Memory(m)[old_size+1], ValidatorConfig_T_type_value());
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := Exists(GetLocal(m, old_size + 1), ValidatorConfig_T_type_value());
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    ret0 := contents#Memory(m)[old_size+2];
+    ret0 := GetLocal(m, old_size + 2);
     return;
 
 }
@@ -736,7 +628,7 @@ procedure ValidatorConfig_has_verify (arg0: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} ValidatorConfig_config (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -752,17 +644,17 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 7;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 7;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call t3 := BorrowGlobal(contents#Memory(m)[old_size+2], ValidatorConfig_T_type_value());
+    call t3 := BorrowGlobal(GetLocal(m, old_size + 2), ValidatorConfig_T_type_value());
 
     call t1 := CopyOrMoveRef(t3);
 
@@ -771,11 +663,11 @@ requires ExistsTxnSenderAccount();
     call t5 := BorrowField(t4, ValidatorConfig_T_config);
 
     call tmp := ReadRef(t5);
-    assume has_type(ValidatorConfig_Config_type_value(), tmp);
+    assume is#Vector(tmp);
 
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    ret0 := contents#Memory(m)[old_size+6];
+    ret0 := GetLocal(m, old_size + 6);
     return;
 
 }
@@ -786,7 +678,7 @@ procedure ValidatorConfig_config_verify (arg0: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} ValidatorConfig_consensus_pubkey (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
@@ -800,8 +692,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 4;
+    old_size := local_counter;
+    local_counter := local_counter + 4;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -810,11 +702,11 @@ requires ExistsTxnSenderAccount();
     call t2 := BorrowField(t1, ValidatorConfig_Config_consensus_pubkey);
 
     call tmp := ReadRef(t2);
-    assume has_type(ByteArrayType(), tmp);
+    assume is#ByteArray(tmp);
 
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -825,7 +717,7 @@ procedure ValidatorConfig_consensus_pubkey_verify (arg0: Reference) returns (ret
 }
 
 procedure {:inline 1} ValidatorConfig_validator_network_signing_pubkey (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
@@ -839,8 +731,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 4;
+    old_size := local_counter;
+    local_counter := local_counter + 4;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -849,11 +741,11 @@ requires ExistsTxnSenderAccount();
     call t2 := BorrowField(t1, ValidatorConfig_Config_validator_network_signing_pubkey);
 
     call tmp := ReadRef(t2);
-    assume has_type(ByteArrayType(), tmp);
+    assume is#ByteArray(tmp);
 
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -864,7 +756,7 @@ procedure ValidatorConfig_validator_network_signing_pubkey_verify (arg0: Referen
 }
 
 procedure {:inline 1} ValidatorConfig_validator_network_identity_pubkey (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
@@ -878,8 +770,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 4;
+    old_size := local_counter;
+    local_counter := local_counter + 4;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -888,11 +780,11 @@ requires ExistsTxnSenderAccount();
     call t2 := BorrowField(t1, ValidatorConfig_Config_validator_network_identity_pubkey);
 
     call tmp := ReadRef(t2);
-    assume has_type(ByteArrayType(), tmp);
+    assume is#ByteArray(tmp);
 
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -903,7 +795,7 @@ procedure ValidatorConfig_validator_network_identity_pubkey_verify (arg0: Refere
 }
 
 procedure {:inline 1} ValidatorConfig_validator_network_address (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
@@ -917,8 +809,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 4;
+    old_size := local_counter;
+    local_counter := local_counter + 4;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -927,11 +819,11 @@ requires ExistsTxnSenderAccount();
     call t2 := BorrowField(t1, ValidatorConfig_Config_validator_network_address);
 
     call tmp := ReadRef(t2);
-    assume has_type(ByteArrayType(), tmp);
+    assume is#ByteArray(tmp);
 
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -942,7 +834,7 @@ procedure ValidatorConfig_validator_network_address_verify (arg0: Reference) ret
 }
 
 procedure {:inline 1} ValidatorConfig_fullnodes_network_identity_pubkey (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
@@ -956,8 +848,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 4;
+    old_size := local_counter;
+    local_counter := local_counter + 4;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -966,11 +858,11 @@ requires ExistsTxnSenderAccount();
     call t2 := BorrowField(t1, ValidatorConfig_Config_fullnodes_network_identity_pubkey);
 
     call tmp := ReadRef(t2);
-    assume has_type(ByteArrayType(), tmp);
+    assume is#ByteArray(tmp);
 
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -981,7 +873,7 @@ procedure ValidatorConfig_fullnodes_network_identity_pubkey_verify (arg0: Refere
 }
 
 procedure {:inline 1} ValidatorConfig_fullnodes_network_address (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
@@ -995,8 +887,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 4;
+    old_size := local_counter;
+    local_counter := local_counter + 4;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -1005,11 +897,11 @@ requires ExistsTxnSenderAccount();
     call t2 := BorrowField(t1, ValidatorConfig_Config_fullnodes_network_address);
 
     call tmp := ReadRef(t2);
-    assume has_type(ByteArrayType(), tmp);
+    assume is#ByteArray(tmp);
 
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -1020,7 +912,7 @@ procedure ValidatorConfig_fullnodes_network_address_verify (arg0: Reference) ret
 }
 
 procedure {:inline 1} ValidatorConfig_register_candidate_validator (arg0: Value, arg1: Value, arg2: Value, arg3: Value, arg4: Value, arg5: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // ByteArrayType()
@@ -1043,62 +935,62 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(ByteArrayType(), arg0);
-    assume has_type(ByteArrayType(), arg1);
-    assume has_type(ByteArrayType(), arg2);
-    assume has_type(ByteArrayType(), arg3);
-    assume has_type(ByteArrayType(), arg4);
-    assume has_type(ByteArrayType(), arg5);
+    assume is#ByteArray(arg0);
+    assume is#ByteArray(arg1);
+    assume is#ByteArray(arg2);
+    assume is#ByteArray(arg3);
+    assume is#ByteArray(arg4);
+    assume is#ByteArray(arg5);
 
-    old_size := m_size;
-    m_size := m_size + 14;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size :=  arg2]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size :=  arg3]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size :=  arg4]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size :=  arg5]);
+    old_size := local_counter;
+    local_counter := local_counter + 14;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 2, arg2);
+    m := UpdateLocal(m, old_size + 3, arg3);
+    m := UpdateLocal(m, old_size + 4, arg4);
+    m := UpdateLocal(m, old_size + 5, arg5);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+6]);
+    assume is#ByteArray(GetLocal(m, old_size + 6));
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+7]);
+    assume is#ByteArray(GetLocal(m, old_size + 7));
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+8]);
+    assume is#ByteArray(GetLocal(m, old_size + 8));
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+9]);
+    assume is#ByteArray(GetLocal(m, old_size + 9));
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+10]);
+    assume is#ByteArray(GetLocal(m, old_size + 10));
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+11]);
+    assume is#ByteArray(GetLocal(m, old_size + 11));
 
-    call tmp := Pack_ValidatorConfig_Config(contents#Memory(m)[old_size+6], contents#Memory(m)[old_size+7], contents#Memory(m)[old_size+8], contents#Memory(m)[old_size+9], contents#Memory(m)[old_size+10], contents#Memory(m)[old_size+11]);
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    call tmp := Pack_ValidatorConfig_Config(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7), GetLocal(m, old_size + 8), GetLocal(m, old_size + 9), GetLocal(m, old_size + 10), GetLocal(m, old_size + 11));
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    assume has_type(ValidatorConfig_Config_type_value(), contents#Memory(m)[old_size+12]);
+    assume is#Vector(GetLocal(m, old_size + 12));
 
-    call tmp := Pack_ValidatorConfig_T(contents#Memory(m)[old_size+12]);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+    call tmp := Pack_ValidatorConfig_T(GetLocal(m, old_size + 12));
+    m := UpdateLocal(m, old_size + 13, tmp);
 
-    call MoveToSender(ValidatorConfig_T_type_value(), contents#Memory(m)[old_size+13]);
+    call MoveToSender(ValidatorConfig_T_type_value(), GetLocal(m, old_size + 13));
 
     return;
 
@@ -1110,7 +1002,7 @@ procedure ValidatorConfig_register_candidate_validator_verify (arg0: Value, arg1
 }
 
 procedure {:inline 1} ValidatorConfig_rotate_consensus_pubkey (arg0: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // ByteArrayType()
@@ -1131,17 +1023,17 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(ByteArrayType(), arg0);
+    assume is#ByteArray(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 12;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 12;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call t5 := BorrowGlobal(contents#Memory(m)[old_size+4], ValidatorConfig_T_type_value());
+    call t5 := BorrowGlobal(GetLocal(m, old_size + 4), ValidatorConfig_T_type_value());
 
     call t1 := CopyOrMoveRef(t5);
 
@@ -1157,12 +1049,12 @@ requires ExistsTxnSenderAccount();
 
     call t3 := CopyOrMoveRef(t9);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
     call t11 := CopyOrMoveRef(t3);
 
-    call WriteRef(t11, contents#Memory(m)[old_size+10]);
+    call WriteRef(t11, GetLocal(m, old_size + 10));
 
     return;
 
@@ -1174,7 +1066,7 @@ procedure ValidatorConfig_rotate_consensus_pubkey_verify (arg0: Value) returns (
 }
 
 procedure {:inline 1} ValidatorConfig_rotate_validator_network_identity_pubkey (arg0: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // ByteArrayType()
@@ -1195,17 +1087,17 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(ByteArrayType(), arg0);
+    assume is#ByteArray(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 12;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 12;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call t5 := BorrowGlobal(contents#Memory(m)[old_size+4], ValidatorConfig_T_type_value());
+    call t5 := BorrowGlobal(GetLocal(m, old_size + 4), ValidatorConfig_T_type_value());
 
     call t1 := CopyOrMoveRef(t5);
 
@@ -1221,12 +1113,12 @@ requires ExistsTxnSenderAccount();
 
     call t3 := CopyOrMoveRef(t9);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
     call t11 := CopyOrMoveRef(t3);
 
-    call WriteRef(t11, contents#Memory(m)[old_size+10]);
+    call WriteRef(t11, GetLocal(m, old_size + 10));
 
     return;
 
@@ -1238,7 +1130,7 @@ procedure ValidatorConfig_rotate_validator_network_identity_pubkey_verify (arg0:
 }
 
 procedure {:inline 1} ValidatorConfig_rotate_validator_network_address (arg0: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // ByteArrayType()
@@ -1259,17 +1151,17 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(ByteArrayType(), arg0);
+    assume is#ByteArray(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 12;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 12;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call t5 := BorrowGlobal(contents#Memory(m)[old_size+4], ValidatorConfig_T_type_value());
+    call t5 := BorrowGlobal(GetLocal(m, old_size + 4), ValidatorConfig_T_type_value());
 
     call t1 := CopyOrMoveRef(t5);
 
@@ -1285,12 +1177,12 @@ requires ExistsTxnSenderAccount();
 
     call t3 := CopyOrMoveRef(t9);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
     call t11 := CopyOrMoveRef(t3);
 
-    call WriteRef(t11, contents#Memory(m)[old_size+10]);
+    call WriteRef(t11, GetLocal(m, old_size + 10));
 
     return;
 
@@ -1306,7 +1198,7 @@ procedure ValidatorConfig_rotate_validator_network_address_verify (arg0: Value) 
 // ** functions of module LibraCoin
 
 procedure {:inline 1} LibraCoin_mint_with_default_capability (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -1320,27 +1212,27 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(IntegerType(), arg0);
+    assume is#Integer(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 5;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 5;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call t3 := BorrowGlobal(contents#Memory(m)[old_size+2], LibraCoin_MintCapability_type_value());
+    call t3 := BorrowGlobal(GetLocal(m, old_size + 2), LibraCoin_MintCapability_type_value());
 
-    call t4 := LibraCoin_mint(contents#Memory(m)[old_size+1], t3);
-    assume has_type(LibraCoin_T_type_value(), t4);
+    call t4 := LibraCoin_mint(GetLocal(m, old_size + 1), t3);
+    assume is#Vector(t4);
 
-    m := Memory(domain#Memory(m)[old_size+4 := true], contents#Memory(m)[old_size+4 := t4]);
+    m := UpdateLocal(m, old_size + 4, t4);
 
-    ret0 := contents#Memory(m)[old_size+4];
+    ret0 := GetLocal(m, old_size + 4);
     return;
 
 }
@@ -1351,7 +1243,7 @@ procedure LibraCoin_mint_with_default_capability_verify (arg0: Value) returns (r
 }
 
 procedure {:inline 1} LibraCoin_mint (arg0: Value, arg1: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -1384,11 +1276,11 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(IntegerType(), arg0);
+    assume is#Integer(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 24;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 24;
+    m := UpdateLocal(m, old_size + 0, arg0);
     t1 := arg1;
 
     // bytecode translation starts here
@@ -1396,37 +1288,37 @@ requires ExistsTxnSenderAccount();
 
     // unimplemented instruction
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
     call tmp := LdConst(1000000000);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 6, tmp);
 
     call tmp := LdConst(1000000);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := Mul(contents#Memory(m)[old_size+6], contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := Mul(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call tmp := Le(contents#Memory(m)[old_size+5], contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := Le(GetLocal(m, old_size + 5), GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 9));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
-    tmp := contents#Memory(m)[old_size + 10];
+    tmp := GetLocal(m, old_size + 10);
     if (!b#Boolean(tmp)) { goto Label_11; }
 
     call tmp := LdConst(11);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 11, tmp);
 
     assert false;
 
 Label_11:
     call tmp := LdAddr(173345816);
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    call t13 := BorrowGlobal(contents#Memory(m)[old_size+12], LibraCoin_MarketCap_type_value());
+    call t13 := BorrowGlobal(GetLocal(m, old_size + 12), LibraCoin_MarketCap_type_value());
 
     call t2 := CopyOrMoveRef(t13);
 
@@ -1435,37 +1327,37 @@ Label_11:
     call t15 := BorrowField(t14, LibraCoin_MarketCap_total_value);
 
     call tmp := ReadRef(t15);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 16, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+16]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 16));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 17, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 18, tmp);
 
-    call tmp := Add(contents#Memory(m)[old_size+17], contents#Memory(m)[old_size+18]);
-    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
+    call tmp := Add(GetLocal(m, old_size + 17), GetLocal(m, old_size + 18));
+    m := UpdateLocal(m, old_size + 19, tmp);
 
     call t20 := CopyOrMoveRef(t2);
 
     call t21 := BorrowField(t20, LibraCoin_MarketCap_total_value);
 
-    call WriteRef(t21, contents#Memory(m)[old_size+19]);
+    call WriteRef(t21, GetLocal(m, old_size + 19));
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 22, tmp);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+22]);
+    assume is#Integer(GetLocal(m, old_size + 22));
 
-    call tmp := Pack_LibraCoin_T(contents#Memory(m)[old_size+22]);
-    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
+    call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 22));
+    m := UpdateLocal(m, old_size + 23, tmp);
 
-    ret0 := contents#Memory(m)[old_size+23];
+    ret0 := GetLocal(m, old_size + 23);
     return;
 
 }
@@ -1476,7 +1368,7 @@ procedure LibraCoin_mint_verify (arg0: Value, arg1: Reference) returns (ret0: Va
 }
 
 procedure {:inline 1} LibraCoin_initialize () returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -1495,50 +1387,50 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 9;
+    old_size := local_counter;
+    local_counter := local_counter + 9;
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 0, tmp);
 
     call tmp := LdAddr(173345816);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    tmp := Boolean(is_equal(AddressType(), contents#Memory(m)[old_size+0], contents#Memory(m)[old_size+1]));
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    tmp := Boolean(IsEqual(GetLocal(m, old_size + 0), GetLocal(m, old_size + 1)));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    tmp := contents#Memory(m)[old_size + 3];
+    tmp := GetLocal(m, old_size + 3);
     if (!b#Boolean(tmp)) { goto Label_7; }
 
     call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
     assert false;
 
 Label_7:
     call tmp := LdTrue();
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    assume has_type(BooleanType(), contents#Memory(m)[old_size+5]);
+    assume is#Boolean(GetLocal(m, old_size + 5));
 
-    call tmp := Pack_LibraCoin_MintCapability(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := Pack_LibraCoin_MintCapability(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call MoveToSender(LibraCoin_MintCapability_type_value(), contents#Memory(m)[old_size+6]);
+    call MoveToSender(LibraCoin_MintCapability_type_value(), GetLocal(m, old_size + 6));
 
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+7]);
+    assume is#Integer(GetLocal(m, old_size + 7));
 
-    call tmp := Pack_LibraCoin_MarketCap(contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := Pack_LibraCoin_MarketCap(GetLocal(m, old_size + 7));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call MoveToSender(LibraCoin_MarketCap_type_value(), contents#Memory(m)[old_size+8]);
+    call MoveToSender(LibraCoin_MarketCap_type_value(), GetLocal(m, old_size + 8));
 
     return;
 
@@ -1550,7 +1442,7 @@ procedure LibraCoin_initialize_verify () returns ()
 }
 
 procedure {:inline 1} LibraCoin_market_cap () returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -1564,23 +1456,23 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 4;
+    old_size := local_counter;
+    local_counter := local_counter + 4;
 
     // bytecode translation starts here
     call tmp := LdAddr(173345816);
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 0, tmp);
 
-    call t1 := BorrowGlobal(contents#Memory(m)[old_size+0], LibraCoin_MarketCap_type_value());
+    call t1 := BorrowGlobal(GetLocal(m, old_size + 0), LibraCoin_MarketCap_type_value());
 
     call t2 := BorrowField(t1, LibraCoin_MarketCap_total_value);
 
     call tmp := ReadRef(t2);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -1591,7 +1483,7 @@ procedure LibraCoin_market_cap_verify () returns (ret0: Value)
 }
 
 procedure {:inline 1} LibraCoin_zero () returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -1603,19 +1495,19 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 2;
+    old_size := local_counter;
+    local_counter := local_counter + 2;
 
     // bytecode translation starts here
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 0, tmp);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+0]);
+    assume is#Integer(GetLocal(m, old_size + 0));
 
-    call tmp := Pack_LibraCoin_T(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    ret0 := contents#Memory(m)[old_size+1];
+    ret0 := GetLocal(m, old_size + 1);
     return;
 
 }
@@ -1626,7 +1518,7 @@ procedure LibraCoin_zero_verify () returns (ret0: Value)
 }
 
 procedure {:inline 1} LibraCoin_value (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraCoin_T_type_value())
@@ -1640,8 +1532,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 4;
+    old_size := local_counter;
+    local_counter := local_counter + 4;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -1650,11 +1542,11 @@ requires ExistsTxnSenderAccount();
     call t2 := BorrowField(t1, LibraCoin_T_value);
 
     call tmp := ReadRef(t2);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -1665,7 +1557,7 @@ procedure LibraCoin_value_verify (arg0: Reference) returns (ret0: Value)
 }
 
 procedure {:inline 1} LibraCoin_split (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // LibraCoin_T_type_value()
@@ -1682,36 +1574,36 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(LibraCoin_T_type_value(), arg0);
-    assume has_type(IntegerType(), arg1);
+    assume is#Vector(arg0);
+    assume is#Integer(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 8;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    old_size := local_counter;
+    local_counter := local_counter + 8;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call t3 := BorrowLoc(old_size+0);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call t5 := LibraCoin_withdraw(t3, contents#Memory(m)[old_size+4]);
-    assume has_type(LibraCoin_T_type_value(), t5);
+    call t5 := LibraCoin_withdraw(t3, GetLocal(m, old_size + 4));
+    assume is#Vector(t5);
 
-    m := Memory(domain#Memory(m)[old_size+5 := true], contents#Memory(m)[old_size+5 := t5]);
+    m := UpdateLocal(m, old_size + 5, t5);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    ret0 := contents#Memory(m)[old_size+6];
-    ret1 := contents#Memory(m)[old_size+7];
+    ret0 := GetLocal(m, old_size + 6);
+    ret1 := GetLocal(m, old_size + 7);
     return;
 
 }
@@ -1722,7 +1614,7 @@ procedure LibraCoin_split_verify (arg0: Value, arg1: Value) returns (ret0: Value
 }
 
 procedure {:inline 1} LibraCoin_withdraw (arg0: Reference, arg1: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraCoin_T_type_value())
@@ -1749,12 +1641,12 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-        assume has_type(IntegerType(), arg1);
+        assume is#Integer(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 18;
+    old_size := local_counter;
+    local_counter := local_counter + 18;
     t0 := arg0;
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call t3 := CopyOrMoveRef(t0);
@@ -1762,58 +1654,58 @@ requires ExistsTxnSenderAccount();
     call t4 := BorrowField(t3, LibraCoin_T_value);
 
     call tmp := ReadRef(t4);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := Ge(contents#Memory(m)[old_size+6], contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := Ge(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    tmp := contents#Memory(m)[old_size + 9];
+    tmp := GetLocal(m, old_size + 9);
     if (!b#Boolean(tmp)) { goto Label_11; }
 
     call tmp := LdConst(10);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 10, tmp);
 
     assert false;
 
 Label_11:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    call tmp := Sub(contents#Memory(m)[old_size+11], contents#Memory(m)[old_size+12]);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+    call tmp := Sub(GetLocal(m, old_size + 11), GetLocal(m, old_size + 12));
+    m := UpdateLocal(m, old_size + 13, tmp);
 
     call t14 := CopyOrMoveRef(t0);
 
     call t15 := BorrowField(t14, LibraCoin_T_value);
 
-    call WriteRef(t15, contents#Memory(m)[old_size+13]);
+    call WriteRef(t15, GetLocal(m, old_size + 13));
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 16, tmp);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+16]);
+    assume is#Integer(GetLocal(m, old_size + 16));
 
-    call tmp := Pack_LibraCoin_T(contents#Memory(m)[old_size+16]);
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
+    call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 16));
+    m := UpdateLocal(m, old_size + 17, tmp);
 
-    ret0 := contents#Memory(m)[old_size+17];
+    ret0 := GetLocal(m, old_size + 17);
     return;
 
 }
@@ -1824,7 +1716,7 @@ procedure LibraCoin_withdraw_verify (arg0: Reference, arg1: Value) returns (ret0
 }
 
 procedure {:inline 1} LibraCoin_join (arg0: Value, arg1: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // LibraCoin_T_type_value()
@@ -1838,26 +1730,26 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(LibraCoin_T_type_value(), arg0);
-    assume has_type(LibraCoin_T_type_value(), arg1);
+    assume is#Vector(arg0);
+    assume is#Vector(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 5;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    old_size := local_counter;
+    local_counter := local_counter + 5;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call t2 := BorrowLoc(old_size+0);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call LibraCoin_deposit(t2, contents#Memory(m)[old_size+3]);
+    call LibraCoin_deposit(t2, GetLocal(m, old_size + 3));
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    ret0 := contents#Memory(m)[old_size+4];
+    ret0 := GetLocal(m, old_size + 4);
     return;
 
 }
@@ -1868,7 +1760,7 @@ procedure LibraCoin_join_verify (arg0: Value, arg1: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} LibraCoin_deposit (arg0: Reference, arg1: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraCoin_T_type_value())
@@ -1891,12 +1783,12 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-        assume has_type(LibraCoin_T_type_value(), arg1);
+        assume is#Vector(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 14;
+    old_size := local_counter;
+    local_counter := local_counter + 14;
     t0 := arg0;
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call t4 := CopyOrMoveRef(t0);
@@ -1904,38 +1796,38 @@ requires ExistsTxnSenderAccount();
     call t5 := BorrowField(t4, LibraCoin_T_value);
 
     call tmp := ReadRef(t5);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call t8 := Unpack_LibraCoin_T(contents#Memory(m)[old_size+7]);
-    assume has_type(IntegerType(), t8);
+    call t8 := Unpack_LibraCoin_T(GetLocal(m, old_size + 7));
+    assume is#Integer(t8);
 
-    m := Memory(domain#Memory(m)[old_size+8 := true], contents#Memory(m)[old_size+8 := t8]);
+    m := UpdateLocal(m, old_size + 8, t8);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
-    call tmp := Add(contents#Memory(m)[old_size+9], contents#Memory(m)[old_size+10]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := Add(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
     call t12 := CopyOrMoveRef(t0);
 
     call t13 := BorrowField(t12, LibraCoin_T_value);
 
-    call WriteRef(t13, contents#Memory(m)[old_size+11]);
+    call WriteRef(t13, GetLocal(m, old_size + 11));
 
     return;
 
@@ -1947,7 +1839,7 @@ procedure LibraCoin_deposit_verify (arg0: Reference, arg1: Value) returns ()
 }
 
 procedure {:inline 1} LibraCoin_destroy_zero (arg0: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // LibraCoin_T_type_value()
@@ -1965,41 +1857,41 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(LibraCoin_T_type_value(), arg0);
+    assume is#Vector(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 9;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 9;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call t3 := Unpack_LibraCoin_T(contents#Memory(m)[old_size+2]);
-    assume has_type(IntegerType(), t3);
+    call t3 := Unpack_LibraCoin_T(GetLocal(m, old_size + 2));
+    assume is#Integer(t3);
 
-    m := Memory(domain#Memory(m)[old_size+3 := true], contents#Memory(m)[old_size+3 := t3]);
+    m := UpdateLocal(m, old_size + 3, t3);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+4], contents#Memory(m)[old_size+5]));
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    tmp := Boolean(IsEqual(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5)));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 6));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    tmp := contents#Memory(m)[old_size + 7];
+    tmp := GetLocal(m, old_size + 7);
     if (!b#Boolean(tmp)) { goto Label_10; }
 
     call tmp := LdConst(11);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 8, tmp);
 
     assert false;
 
@@ -2018,7 +1910,7 @@ procedure LibraCoin_destroy_zero_verify (arg0: Value) returns ()
 // ** functions of module LibraAccount
 
 procedure {:inline 1} LibraAccount_make (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2053,113 +1945,113 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 26;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 26;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call t7 := AddressUtil_address_to_bytes(contents#Memory(m)[old_size+6]);
-    assume has_type(ByteArrayType(), t7);
+    call t7 := AddressUtil_address_to_bytes(GetLocal(m, old_size + 6));
+    assume is#ByteArray(t7);
 
-    m := Memory(domain#Memory(m)[old_size+7 := true], contents#Memory(m)[old_size+7 := t7]);
+    m := UpdateLocal(m, old_size + 7, t7);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+8]);
+    assume is#Integer(GetLocal(m, old_size + 8));
 
-    call tmp := Pack_LibraAccount_EventHandleGenerator(contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := Pack_LibraAccount_EventHandleGenerator(GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 9));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
     call t10 := BorrowLoc(old_size+2);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    call t12 := LibraAccount_new_event_handle_impl(LibraAccount_SentPaymentEvent_type_value(), t10, contents#Memory(m)[old_size+11]);
-    assume has_type(LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value()), t12);
+    call t12 := LibraAccount_new_event_handle_impl(LibraAccount_SentPaymentEvent_type_value(), t10, GetLocal(m, old_size + 11));
+    assume is#Vector(t12);
 
-    m := Memory(domain#Memory(m)[old_size+12 := true], contents#Memory(m)[old_size+12 := t12]);
+    m := UpdateLocal(m, old_size + 12, t12);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+12]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 12));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
     call t13 := BorrowLoc(old_size+2);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 14, tmp);
 
-    call t15 := LibraAccount_new_event_handle_impl(LibraAccount_ReceivedPaymentEvent_type_value(), t13, contents#Memory(m)[old_size+14]);
-    assume has_type(LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value()), t15);
+    call t15 := LibraAccount_new_event_handle_impl(LibraAccount_ReceivedPaymentEvent_type_value(), t13, GetLocal(m, old_size + 14));
+    assume is#Vector(t15);
 
-    m := Memory(domain#Memory(m)[old_size+15 := true], contents#Memory(m)[old_size+15 := t15]);
+    m := UpdateLocal(m, old_size + 15, t15);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+15]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 15));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
     call t16 := LibraCoin_zero();
-    assume has_type(LibraCoin_T_type_value(), t16);
+    assume is#Vector(t16);
 
-    m := Memory(domain#Memory(m)[old_size+16 := true], contents#Memory(m)[old_size+16 := t16]);
+    m := UpdateLocal(m, old_size + 16, t16);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+16]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 16));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 17, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
-
-    call tmp := LdFalse();
-    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 18, tmp);
 
     call tmp := LdFalse();
-    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 19, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+    call tmp := LdFalse();
+    m := UpdateLocal(m, old_size + 20, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 21, tmp);
+
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 22, tmp);
 
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 23, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[24+old_size := true], contents#Memory(m)[24+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 24, tmp);
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+17]);
+    assume is#ByteArray(GetLocal(m, old_size + 17));
 
-    assume has_type(LibraCoin_T_type_value(), contents#Memory(m)[old_size+18]);
+    assume is#Vector(GetLocal(m, old_size + 18));
 
-    assume has_type(BooleanType(), contents#Memory(m)[old_size+19]);
+    assume is#Boolean(GetLocal(m, old_size + 19));
 
-    assume has_type(BooleanType(), contents#Memory(m)[old_size+20]);
+    assume is#Boolean(GetLocal(m, old_size + 20));
 
-    assume has_type(LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value()), contents#Memory(m)[old_size+21]);
+    assume is#Vector(GetLocal(m, old_size + 21));
 
-    assume has_type(LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value()), contents#Memory(m)[old_size+22]);
+    assume is#Vector(GetLocal(m, old_size + 22));
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+23]);
+    assume is#Integer(GetLocal(m, old_size + 23));
 
-    assume has_type(LibraAccount_EventHandleGenerator_type_value(), contents#Memory(m)[old_size+24]);
+    assume is#Vector(GetLocal(m, old_size + 24));
 
-    call tmp := Pack_LibraAccount_T(contents#Memory(m)[old_size+17], contents#Memory(m)[old_size+18], contents#Memory(m)[old_size+19], contents#Memory(m)[old_size+20], contents#Memory(m)[old_size+21], contents#Memory(m)[old_size+22], contents#Memory(m)[old_size+23], contents#Memory(m)[old_size+24]);
-    m := Memory(domain#Memory(m)[25+old_size := true], contents#Memory(m)[25+old_size := tmp]);
+    call tmp := Pack_LibraAccount_T(GetLocal(m, old_size + 17), GetLocal(m, old_size + 18), GetLocal(m, old_size + 19), GetLocal(m, old_size + 20), GetLocal(m, old_size + 21), GetLocal(m, old_size + 22), GetLocal(m, old_size + 23), GetLocal(m, old_size + 24));
+    m := UpdateLocal(m, old_size + 25, tmp);
 
-    ret0 := contents#Memory(m)[old_size+25];
+    ret0 := GetLocal(m, old_size + 25);
     return;
 
 }
@@ -2170,7 +2062,7 @@ procedure LibraAccount_make_verify (arg0: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} LibraAccount_deposit (arg0: Value, arg1: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2184,24 +2076,24 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
-    assume has_type(LibraCoin_T_type_value(), arg1);
+    assume is#Address(arg0);
+    assume is#Vector(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 5;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    old_size := local_counter;
+    local_counter := local_counter + 5;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
     // unimplemented instruction
 
-    call LibraAccount_deposit_with_metadata(contents#Memory(m)[old_size+2], contents#Memory(m)[old_size+3], contents#Memory(m)[old_size+4]);
+    call LibraAccount_deposit_with_metadata(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
 
     return;
 
@@ -2213,7 +2105,7 @@ procedure LibraAccount_deposit_verify (arg0: Value, arg1: Value) returns ()
 }
 
 procedure {:inline 1} LibraAccount_deposit_with_metadata (arg0: Value, arg1: Value, arg2: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2256,58 +2148,58 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
-    assume has_type(LibraCoin_T_type_value(), arg1);
-    assume has_type(ByteArrayType(), arg2);
+    assume is#Address(arg0);
+    assume is#Vector(arg1);
+    assume is#ByteArray(arg2);
 
-    old_size := m_size;
-    m_size := m_size + 34;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size :=  arg2]);
+    old_size := local_counter;
+    local_counter := local_counter + 34;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 2, arg2);
 
     // bytecode translation starts here
     call t7 := BorrowLoc(old_size+1);
 
     call t8 := LibraCoin_value(t7);
-    assume has_type(IntegerType(), t8);
+    assume is#Integer(t8);
 
-    m := Memory(domain#Memory(m)[old_size+8 := true], contents#Memory(m)[old_size+8 := t8]);
+    m := UpdateLocal(m, old_size + 8, t8);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 10, tmp);
 
-    call tmp := Gt(contents#Memory(m)[old_size+9], contents#Memory(m)[old_size+10]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := Gt(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+11]);
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 11));
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    tmp := contents#Memory(m)[old_size + 12];
+    tmp := GetLocal(m, old_size + 12);
     if (!b#Boolean(tmp)) { goto Label_10; }
 
     call tmp := LdConst(7);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 13, tmp);
 
     assert false;
 
 Label_10:
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 14, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+14]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 14));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 15, tmp);
 
-    call t16 := BorrowGlobal(contents#Memory(m)[old_size+15], LibraAccount_T_type_value());
+    call t16 := BorrowGlobal(GetLocal(m, old_size + 15), LibraAccount_T_type_value());
 
     call t6 := CopyOrMoveRef(t16);
 
@@ -2315,30 +2207,30 @@ Label_10:
 
     call t18 := BorrowField(t17, LibraAccount_T_sent_events);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 19, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 20, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 21, tmp);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+19]);
+    assume is#Integer(GetLocal(m, old_size + 19));
 
-    assume has_type(AddressType(), contents#Memory(m)[old_size+20]);
+    assume is#Address(GetLocal(m, old_size + 20));
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+21]);
+    assume is#ByteArray(GetLocal(m, old_size + 21));
 
-    call tmp := Pack_LibraAccount_SentPaymentEvent(contents#Memory(m)[old_size+19], contents#Memory(m)[old_size+20], contents#Memory(m)[old_size+21]);
-    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+    call tmp := Pack_LibraAccount_SentPaymentEvent(GetLocal(m, old_size + 19), GetLocal(m, old_size + 20), GetLocal(m, old_size + 21));
+    m := UpdateLocal(m, old_size + 22, tmp);
 
-    call LibraAccount_emit_event(LibraAccount_SentPaymentEvent_type_value(), t18, contents#Memory(m)[old_size+22]);
+    call LibraAccount_emit_event(LibraAccount_SentPaymentEvent_type_value(), t18, GetLocal(m, old_size + 22));
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 23, tmp);
 
-    call t24 := BorrowGlobal(contents#Memory(m)[old_size+23], LibraAccount_T_type_value());
+    call t24 := BorrowGlobal(GetLocal(m, old_size + 23), LibraAccount_T_type_value());
 
     call t4 := CopyOrMoveRef(t24);
 
@@ -2346,34 +2238,34 @@ Label_10:
 
     call t26 := BorrowField(t25, LibraAccount_T_balance);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 27, tmp);
 
-    call LibraCoin_deposit(t26, contents#Memory(m)[old_size+27]);
+    call LibraCoin_deposit(t26, GetLocal(m, old_size + 27));
 
     call t28 := CopyOrMoveRef(t4);
 
     call t29 := BorrowField(t28, LibraAccount_T_received_events);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[30+old_size := true], contents#Memory(m)[30+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 30, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[31+old_size := true], contents#Memory(m)[31+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 31, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[32+old_size := true], contents#Memory(m)[32+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 32, tmp);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+30]);
+    assume is#Integer(GetLocal(m, old_size + 30));
 
-    assume has_type(AddressType(), contents#Memory(m)[old_size+31]);
+    assume is#Address(GetLocal(m, old_size + 31));
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+32]);
+    assume is#ByteArray(GetLocal(m, old_size + 32));
 
-    call tmp := Pack_LibraAccount_ReceivedPaymentEvent(contents#Memory(m)[old_size+30], contents#Memory(m)[old_size+31], contents#Memory(m)[old_size+32]);
-    m := Memory(domain#Memory(m)[33+old_size := true], contents#Memory(m)[33+old_size := tmp]);
+    call tmp := Pack_LibraAccount_ReceivedPaymentEvent(GetLocal(m, old_size + 30), GetLocal(m, old_size + 31), GetLocal(m, old_size + 32));
+    m := UpdateLocal(m, old_size + 33, tmp);
 
-    call LibraAccount_emit_event(LibraAccount_ReceivedPaymentEvent_type_value(), t29, contents#Memory(m)[old_size+33]);
+    call LibraAccount_emit_event(LibraAccount_ReceivedPaymentEvent_type_value(), t29, GetLocal(m, old_size + 33));
 
     return;
 
@@ -2385,7 +2277,7 @@ procedure LibraAccount_deposit_with_metadata_verify (arg0: Value, arg1: Value, a
 }
 
 procedure {:inline 1} LibraAccount_mint_to_address (arg0: Value, arg1: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2403,45 +2295,45 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
-    assume has_type(IntegerType(), arg1);
+    assume is#Address(arg0);
+    assume is#Integer(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 9;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    old_size := local_counter;
+    local_counter := local_counter + 9;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := Exists(contents#Memory(m)[old_size+2], LibraAccount_T_type_value());
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := Exists(GetLocal(m, old_size + 2), LibraAccount_T_type_value());
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    tmp := contents#Memory(m)[old_size + 4];
+    tmp := GetLocal(m, old_size + 4);
     if (!b#Boolean(tmp)) { goto Label_6; }
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call LibraAccount_create_account(contents#Memory(m)[old_size+5]);
+    call LibraAccount_create_account(GetLocal(m, old_size + 5));
 
 Label_6:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call t8 := LibraCoin_mint_with_default_capability(contents#Memory(m)[old_size+7]);
-    assume has_type(LibraCoin_T_type_value(), t8);
+    call t8 := LibraCoin_mint_with_default_capability(GetLocal(m, old_size + 7));
+    assume is#Vector(t8);
 
-    m := Memory(domain#Memory(m)[old_size+8 := true], contents#Memory(m)[old_size+8 := t8]);
+    m := UpdateLocal(m, old_size + 8, t8);
 
-    call LibraAccount_deposit(contents#Memory(m)[old_size+6], contents#Memory(m)[old_size+8]);
+    call LibraAccount_deposit(GetLocal(m, old_size + 6), GetLocal(m, old_size + 8));
 
     return;
 
@@ -2453,7 +2345,7 @@ procedure LibraAccount_mint_to_address_verify (arg0: Value, arg1: Value) returns
 }
 
 procedure {:inline 1} LibraAccount_withdraw_from_account (arg0: Reference, arg1: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -2470,33 +2362,33 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-        assume has_type(IntegerType(), arg1);
+        assume is#Integer(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 8;
+    old_size := local_counter;
+    local_counter := local_counter + 8;
     t0 := arg0;
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call t3 := CopyOrMoveRef(t0);
 
     call t4 := BorrowField(t3, LibraAccount_T_balance);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call t6 := LibraCoin_withdraw(t4, contents#Memory(m)[old_size+5]);
-    assume has_type(LibraCoin_T_type_value(), t6);
+    call t6 := LibraCoin_withdraw(t4, GetLocal(m, old_size + 5));
+    assume is#Vector(t6);
 
-    m := Memory(domain#Memory(m)[old_size+6 := true], contents#Memory(m)[old_size+6 := t6]);
+    m := UpdateLocal(m, old_size + 6, t6);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    ret0 := contents#Memory(m)[old_size+7];
+    ret0 := GetLocal(m, old_size + 7);
     return;
 
 }
@@ -2507,7 +2399,7 @@ procedure LibraAccount_withdraw_from_account_verify (arg0: Reference, arg1: Valu
 }
 
 procedure {:inline 1} LibraAccount_withdraw_from_sender (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -2527,17 +2419,17 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(IntegerType(), arg0);
+    assume is#Integer(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 11;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 11;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call t3 := BorrowGlobal(contents#Memory(m)[old_size+2], LibraAccount_T_type_value());
+    call t3 := BorrowGlobal(GetLocal(m, old_size + 2), LibraAccount_T_type_value());
 
     call t1 := CopyOrMoveRef(t3);
 
@@ -2546,30 +2438,30 @@ requires ExistsTxnSenderAccount();
     call t5 := BorrowField(t4, LibraAccount_T_delegated_withdrawal_capability);
 
     call tmp := ReadRef(t5);
-    assume has_type(BooleanType(), tmp);
+    assume is#Boolean(tmp);
 
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    tmp := contents#Memory(m)[old_size + 6];
+    tmp := GetLocal(m, old_size + 6);
     if (!b#Boolean(tmp)) { goto Label_9; }
 
     call tmp := LdConst(11);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 7, tmp);
 
     assert false;
 
 Label_9:
     call t8 := CopyOrMoveRef(t1);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    call t10 := LibraAccount_withdraw_from_account(t8, contents#Memory(m)[old_size+9]);
-    assume has_type(LibraCoin_T_type_value(), t10);
+    call t10 := LibraAccount_withdraw_from_account(t8, GetLocal(m, old_size + 9));
+    assume is#Vector(t10);
 
-    m := Memory(domain#Memory(m)[old_size+10 := true], contents#Memory(m)[old_size+10 := t10]);
+    m := UpdateLocal(m, old_size + 10, t10);
 
-    ret0 := contents#Memory(m)[old_size+10];
+    ret0 := GetLocal(m, old_size + 10);
     return;
 
 }
@@ -2580,7 +2472,7 @@ procedure LibraAccount_withdraw_from_sender_verify (arg0: Value) returns (ret0: 
 }
 
 procedure {:inline 1} LibraAccount_withdraw_with_capability (arg0: Reference, arg1: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_WithdrawalCapability_type_value())
@@ -2599,12 +2491,12 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-        assume has_type(IntegerType(), arg1);
+        assume is#Integer(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 10;
+    old_size := local_counter;
+    local_counter := local_counter + 10;
     t0 := arg0;
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call t3 := CopyOrMoveRef(t0);
@@ -2612,25 +2504,25 @@ requires ExistsTxnSenderAccount();
     call t4 := BorrowField(t3, LibraAccount_WithdrawalCapability_account_address);
 
     call tmp := ReadRef(t4);
-    assume has_type(AddressType(), tmp);
+    assume is#Address(tmp);
 
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call t6 := BorrowGlobal(contents#Memory(m)[old_size+5], LibraAccount_T_type_value());
+    call t6 := BorrowGlobal(GetLocal(m, old_size + 5), LibraAccount_T_type_value());
 
     call t2 := CopyOrMoveRef(t6);
 
     call t7 := CopyOrMoveRef(t2);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call t9 := LibraAccount_withdraw_from_account(t7, contents#Memory(m)[old_size+8]);
-    assume has_type(LibraCoin_T_type_value(), t9);
+    call t9 := LibraAccount_withdraw_from_account(t7, GetLocal(m, old_size + 8));
+    assume is#Vector(t9);
 
-    m := Memory(domain#Memory(m)[old_size+9 := true], contents#Memory(m)[old_size+9 := t9]);
+    m := UpdateLocal(m, old_size + 9, t9);
 
-    ret0 := contents#Memory(m)[old_size+9];
+    ret0 := GetLocal(m, old_size + 9);
     return;
 
 }
@@ -2641,7 +2533,7 @@ procedure LibraAccount_withdraw_with_capability_verify (arg0: Reference, arg1: V
 }
 
 procedure {:inline 1} LibraAccount_extract_sender_withdrawal_capability () returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2666,20 +2558,20 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 15;
+    old_size := local_counter;
+    local_counter := local_counter + 15;
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 0, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call t5 := BorrowGlobal(contents#Memory(m)[old_size+4], LibraAccount_T_type_value());
+    call t5 := BorrowGlobal(GetLocal(m, old_size + 4), LibraAccount_T_type_value());
 
     call t1 := CopyOrMoveRef(t5);
 
@@ -2692,35 +2584,35 @@ requires ExistsTxnSenderAccount();
     call t8 := CopyOrMoveRef(t2);
 
     call tmp := ReadRef(t8);
-    assume has_type(BooleanType(), tmp);
+    assume is#Boolean(tmp);
 
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    tmp := contents#Memory(m)[old_size + 9];
+    tmp := GetLocal(m, old_size + 9);
     if (!b#Boolean(tmp)) { goto Label_13; }
 
     call tmp := LdConst(11);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 10, tmp);
 
     assert false;
 
 Label_13:
     call tmp := LdTrue();
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 11, tmp);
 
     call t12 := CopyOrMoveRef(t2);
 
-    call WriteRef(t12, contents#Memory(m)[old_size+11]);
+    call WriteRef(t12, GetLocal(m, old_size + 11));
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 13, tmp);
 
-    assume has_type(AddressType(), contents#Memory(m)[old_size+13]);
+    assume is#Address(GetLocal(m, old_size + 13));
 
-    call tmp := Pack_LibraAccount_WithdrawalCapability(contents#Memory(m)[old_size+13]);
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    call tmp := Pack_LibraAccount_WithdrawalCapability(GetLocal(m, old_size + 13));
+    m := UpdateLocal(m, old_size + 14, tmp);
 
-    ret0 := contents#Memory(m)[old_size+14];
+    ret0 := GetLocal(m, old_size + 14);
     return;
 
 }
@@ -2731,7 +2623,7 @@ procedure LibraAccount_extract_sender_withdrawal_capability_verify () returns (r
 }
 
 procedure {:inline 1} LibraAccount_restore_withdrawal_capability (arg0: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // LibraAccount_WithdrawalCapability_type_value()
@@ -2750,39 +2642,39 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(LibraAccount_WithdrawalCapability_type_value(), arg0);
+    assume is#Vector(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 10;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 10;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call t4 := Unpack_LibraAccount_WithdrawalCapability(contents#Memory(m)[old_size+3]);
-    assume has_type(AddressType(), t4);
+    call t4 := Unpack_LibraAccount_WithdrawalCapability(GetLocal(m, old_size + 3));
+    assume is#Address(t4);
 
-    m := Memory(domain#Memory(m)[old_size+4 := true], contents#Memory(m)[old_size+4 := t4]);
+    m := UpdateLocal(m, old_size + 4, t4);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call t6 := BorrowGlobal(contents#Memory(m)[old_size+5], LibraAccount_T_type_value());
+    call t6 := BorrowGlobal(GetLocal(m, old_size + 5), LibraAccount_T_type_value());
 
     call t2 := CopyOrMoveRef(t6);
 
     call tmp := LdFalse();
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 7, tmp);
 
     call t8 := CopyOrMoveRef(t2);
 
     call t9 := BorrowField(t8, LibraAccount_T_delegated_withdrawal_capability);
 
-    call WriteRef(t9, contents#Memory(m)[old_size+7]);
+    call WriteRef(t9, GetLocal(m, old_size + 7));
 
     return;
 
@@ -2794,7 +2686,7 @@ procedure LibraAccount_restore_withdrawal_capability_verify (arg0: Value) return
 }
 
 procedure {:inline 1} LibraAccount_pay_from_sender_with_metadata (arg0: Value, arg1: Value, arg2: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2814,50 +2706,50 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
-    assume has_type(IntegerType(), arg1);
-    assume has_type(ByteArrayType(), arg2);
+    assume is#Address(arg0);
+    assume is#Integer(arg1);
+    assume is#ByteArray(arg2);
 
-    old_size := m_size;
-    m_size := m_size + 11;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size :=  arg2]);
+    old_size := local_counter;
+    local_counter := local_counter + 11;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 2, arg2);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := Exists(contents#Memory(m)[old_size+3], LibraAccount_T_type_value());
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := Exists(GetLocal(m, old_size + 3), LibraAccount_T_type_value());
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    tmp := contents#Memory(m)[old_size + 5];
+    tmp := GetLocal(m, old_size + 5);
     if (!b#Boolean(tmp)) { goto Label_6; }
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call LibraAccount_create_account(contents#Memory(m)[old_size+6]);
+    call LibraAccount_create_account(GetLocal(m, old_size + 6));
 
 Label_6:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call t9 := LibraAccount_withdraw_from_sender(contents#Memory(m)[old_size+8]);
-    assume has_type(LibraCoin_T_type_value(), t9);
+    call t9 := LibraAccount_withdraw_from_sender(GetLocal(m, old_size + 8));
+    assume is#Vector(t9);
 
-    m := Memory(domain#Memory(m)[old_size+9 := true], contents#Memory(m)[old_size+9 := t9]);
+    m := UpdateLocal(m, old_size + 9, t9);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
-    call LibraAccount_deposit_with_metadata(contents#Memory(m)[old_size+7], contents#Memory(m)[old_size+9], contents#Memory(m)[old_size+10]);
+    call LibraAccount_deposit_with_metadata(GetLocal(m, old_size + 7), GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
 
     return;
 
@@ -2869,7 +2761,7 @@ procedure LibraAccount_pay_from_sender_with_metadata_verify (arg0: Value, arg1: 
 }
 
 procedure {:inline 1} LibraAccount_pay_from_sender (arg0: Value, arg1: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2883,24 +2775,24 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
-    assume has_type(IntegerType(), arg1);
+    assume is#Address(arg0);
+    assume is#Integer(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 5;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    old_size := local_counter;
+    local_counter := local_counter + 5;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
     // unimplemented instruction
 
-    call LibraAccount_pay_from_sender_with_metadata(contents#Memory(m)[old_size+2], contents#Memory(m)[old_size+3], contents#Memory(m)[old_size+4]);
+    call LibraAccount_pay_from_sender_with_metadata(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
 
     return;
 
@@ -2912,7 +2804,7 @@ procedure LibraAccount_pay_from_sender_verify (arg0: Value, arg1: Value) returns
 }
 
 procedure {:inline 1} LibraAccount_rotate_authentication_key_for_account (arg0: Reference, arg1: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -2926,22 +2818,22 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-        assume has_type(ByteArrayType(), arg1);
+        assume is#ByteArray(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 5;
+    old_size := local_counter;
+    local_counter := local_counter + 5;
     t0 := arg0;
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
     call t3 := CopyOrMoveRef(t0);
 
     call t4 := BorrowField(t3, LibraAccount_T_authentication_key);
 
-    call WriteRef(t4, contents#Memory(m)[old_size+2]);
+    call WriteRef(t4, GetLocal(m, old_size + 2));
 
     return;
 
@@ -2953,7 +2845,7 @@ procedure LibraAccount_rotate_authentication_key_for_account_verify (arg0: Refer
 }
 
 procedure {:inline 1} LibraAccount_rotate_authentication_key (arg0: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // ByteArrayType()
@@ -2972,17 +2864,17 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(ByteArrayType(), arg0);
+    assume is#ByteArray(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 10;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 10;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call t3 := BorrowGlobal(contents#Memory(m)[old_size+2], LibraAccount_T_type_value());
+    call t3 := BorrowGlobal(GetLocal(m, old_size + 2), LibraAccount_T_type_value());
 
     call t1 := CopyOrMoveRef(t3);
 
@@ -2991,25 +2883,25 @@ requires ExistsTxnSenderAccount();
     call t5 := BorrowField(t4, LibraAccount_T_delegated_key_rotation_capability);
 
     call tmp := ReadRef(t5);
-    assume has_type(BooleanType(), tmp);
+    assume is#Boolean(tmp);
 
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    tmp := contents#Memory(m)[old_size + 6];
+    tmp := GetLocal(m, old_size + 6);
     if (!b#Boolean(tmp)) { goto Label_9; }
 
     call tmp := LdConst(11);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 7, tmp);
 
     assert false;
 
 Label_9:
     call t8 := CopyOrMoveRef(t1);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    call LibraAccount_rotate_authentication_key_for_account(t8, contents#Memory(m)[old_size+9]);
+    call LibraAccount_rotate_authentication_key_for_account(t8, GetLocal(m, old_size + 9));
 
     return;
 
@@ -3021,7 +2913,7 @@ procedure LibraAccount_rotate_authentication_key_verify (arg0: Value) returns ()
 }
 
 procedure {:inline 1} LibraAccount_rotate_authentication_key_with_capability (arg0: Reference, arg1: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_KeyRotationCapability_type_value())
@@ -3037,12 +2929,12 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-        assume has_type(ByteArrayType(), arg1);
+        assume is#ByteArray(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 7;
+    old_size := local_counter;
+    local_counter := local_counter + 7;
     t0 := arg0;
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call t2 := CopyOrMoveRef(t0);
@@ -3050,16 +2942,16 @@ requires ExistsTxnSenderAccount();
     call t3 := BorrowField(t2, LibraAccount_KeyRotationCapability_account_address);
 
     call tmp := ReadRef(t3);
-    assume has_type(AddressType(), tmp);
+    assume is#Address(tmp);
 
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call t5 := BorrowGlobal(contents#Memory(m)[old_size+4], LibraAccount_T_type_value());
+    call t5 := BorrowGlobal(GetLocal(m, old_size + 4), LibraAccount_T_type_value());
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call LibraAccount_rotate_authentication_key_for_account(t5, contents#Memory(m)[old_size+6]);
+    call LibraAccount_rotate_authentication_key_for_account(t5, GetLocal(m, old_size + 6));
 
     return;
 
@@ -3071,7 +2963,7 @@ procedure LibraAccount_rotate_authentication_key_with_capability_verify (arg0: R
 }
 
 procedure {:inline 1} LibraAccount_extract_sender_key_rotation_capability () returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3094,20 +2986,20 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 13;
+    old_size := local_counter;
+    local_counter := local_counter + 13;
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 0, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call t4 := BorrowGlobal(contents#Memory(m)[old_size+3], LibraAccount_T_type_value());
+    call t4 := BorrowGlobal(GetLocal(m, old_size + 3), LibraAccount_T_type_value());
 
     call t5 := BorrowField(t4, LibraAccount_T_delegated_key_rotation_capability);
 
@@ -3116,35 +3008,35 @@ requires ExistsTxnSenderAccount();
     call t6 := CopyOrMoveRef(t1);
 
     call tmp := ReadRef(t6);
-    assume has_type(BooleanType(), tmp);
+    assume is#Boolean(tmp);
 
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    tmp := contents#Memory(m)[old_size + 7];
+    tmp := GetLocal(m, old_size + 7);
     if (!b#Boolean(tmp)) { goto Label_11; }
 
     call tmp := LdConst(11);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 8, tmp);
 
     assert false;
 
 Label_11:
     call tmp := LdTrue();
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 9, tmp);
 
     call t10 := CopyOrMoveRef(t1);
 
-    call WriteRef(t10, contents#Memory(m)[old_size+9]);
+    call WriteRef(t10, GetLocal(m, old_size + 9));
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    assume has_type(AddressType(), contents#Memory(m)[old_size+11]);
+    assume is#Address(GetLocal(m, old_size + 11));
 
-    call tmp := Pack_LibraAccount_KeyRotationCapability(contents#Memory(m)[old_size+11]);
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    call tmp := Pack_LibraAccount_KeyRotationCapability(GetLocal(m, old_size + 11));
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    ret0 := contents#Memory(m)[old_size+12];
+    ret0 := GetLocal(m, old_size + 12);
     return;
 
 }
@@ -3155,7 +3047,7 @@ procedure LibraAccount_extract_sender_key_rotation_capability_verify () returns 
 }
 
 procedure {:inline 1} LibraAccount_restore_key_rotation_capability (arg0: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // LibraAccount_KeyRotationCapability_type_value()
@@ -3174,39 +3066,39 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(LibraAccount_KeyRotationCapability_type_value(), arg0);
+    assume is#Vector(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 10;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 10;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call t4 := Unpack_LibraAccount_KeyRotationCapability(contents#Memory(m)[old_size+3]);
-    assume has_type(AddressType(), t4);
+    call t4 := Unpack_LibraAccount_KeyRotationCapability(GetLocal(m, old_size + 3));
+    assume is#Address(t4);
 
-    m := Memory(domain#Memory(m)[old_size+4 := true], contents#Memory(m)[old_size+4 := t4]);
+    m := UpdateLocal(m, old_size + 4, t4);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call t6 := BorrowGlobal(contents#Memory(m)[old_size+5], LibraAccount_T_type_value());
+    call t6 := BorrowGlobal(GetLocal(m, old_size + 5), LibraAccount_T_type_value());
 
     call t2 := CopyOrMoveRef(t6);
 
     call tmp := LdFalse();
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 7, tmp);
 
     call t8 := CopyOrMoveRef(t2);
 
     call t9 := BorrowField(t8, LibraAccount_T_delegated_key_rotation_capability);
 
-    call WriteRef(t9, contents#Memory(m)[old_size+7]);
+    call WriteRef(t9, GetLocal(m, old_size + 7));
 
     return;
 
@@ -3218,7 +3110,7 @@ procedure LibraAccount_restore_key_rotation_capability_verify (arg0: Value) retu
 }
 
 procedure {:inline 1} LibraAccount_create_account (arg0: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3246,92 +3138,92 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 19;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 19;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+2]);
+    assume is#Integer(GetLocal(m, old_size + 2));
 
-    call tmp := Pack_LibraAccount_EventHandleGenerator(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := Pack_LibraAccount_EventHandleGenerator(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call t6 := AddressUtil_address_to_bytes(contents#Memory(m)[old_size+5]);
-    assume has_type(ByteArrayType(), t6);
+    call t6 := AddressUtil_address_to_bytes(GetLocal(m, old_size + 5));
+    assume is#ByteArray(t6);
 
-    m := Memory(domain#Memory(m)[old_size+6 := true], contents#Memory(m)[old_size+6 := t6]);
+    m := UpdateLocal(m, old_size + 6, t6);
 
     call t7 := LibraCoin_zero();
-    assume has_type(LibraCoin_T_type_value(), t7);
+    assume is#Vector(t7);
 
-    m := Memory(domain#Memory(m)[old_size+7 := true], contents#Memory(m)[old_size+7 := t7]);
-
-    call tmp := LdFalse();
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 7, t7);
 
     call tmp := LdFalse();
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 8, tmp);
+
+    call tmp := LdFalse();
+    m := UpdateLocal(m, old_size + 9, tmp);
 
     call t10 := BorrowLoc(old_size+1);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    call t12 := LibraAccount_new_event_handle_impl(LibraAccount_ReceivedPaymentEvent_type_value(), t10, contents#Memory(m)[old_size+11]);
-    assume has_type(LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value()), t12);
+    call t12 := LibraAccount_new_event_handle_impl(LibraAccount_ReceivedPaymentEvent_type_value(), t10, GetLocal(m, old_size + 11));
+    assume is#Vector(t12);
 
-    m := Memory(domain#Memory(m)[old_size+12 := true], contents#Memory(m)[old_size+12 := t12]);
+    m := UpdateLocal(m, old_size + 12, t12);
 
     call t13 := BorrowLoc(old_size+1);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 14, tmp);
 
-    call t15 := LibraAccount_new_event_handle_impl(LibraAccount_SentPaymentEvent_type_value(), t13, contents#Memory(m)[old_size+14]);
-    assume has_type(LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value()), t15);
+    call t15 := LibraAccount_new_event_handle_impl(LibraAccount_SentPaymentEvent_type_value(), t13, GetLocal(m, old_size + 14));
+    assume is#Vector(t15);
 
-    m := Memory(domain#Memory(m)[old_size+15 := true], contents#Memory(m)[old_size+15 := t15]);
+    m := UpdateLocal(m, old_size + 15, t15);
 
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 16, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 17, tmp);
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+6]);
+    assume is#ByteArray(GetLocal(m, old_size + 6));
 
-    assume has_type(LibraCoin_T_type_value(), contents#Memory(m)[old_size+7]);
+    assume is#Vector(GetLocal(m, old_size + 7));
 
-    assume has_type(BooleanType(), contents#Memory(m)[old_size+8]);
+    assume is#Boolean(GetLocal(m, old_size + 8));
 
-    assume has_type(BooleanType(), contents#Memory(m)[old_size+9]);
+    assume is#Boolean(GetLocal(m, old_size + 9));
 
-    assume has_type(LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value()), contents#Memory(m)[old_size+12]);
+    assume is#Vector(GetLocal(m, old_size + 12));
 
-    assume has_type(LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value()), contents#Memory(m)[old_size+15]);
+    assume is#Vector(GetLocal(m, old_size + 15));
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+16]);
+    assume is#Integer(GetLocal(m, old_size + 16));
 
-    assume has_type(LibraAccount_EventHandleGenerator_type_value(), contents#Memory(m)[old_size+17]);
+    assume is#Vector(GetLocal(m, old_size + 17));
 
-    call tmp := Pack_LibraAccount_T(contents#Memory(m)[old_size+6], contents#Memory(m)[old_size+7], contents#Memory(m)[old_size+8], contents#Memory(m)[old_size+9], contents#Memory(m)[old_size+12], contents#Memory(m)[old_size+15], contents#Memory(m)[old_size+16], contents#Memory(m)[old_size+17]);
-    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
+    call tmp := Pack_LibraAccount_T(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7), GetLocal(m, old_size + 8), GetLocal(m, old_size + 9), GetLocal(m, old_size + 12), GetLocal(m, old_size + 15), GetLocal(m, old_size + 16), GetLocal(m, old_size + 17));
+    m := UpdateLocal(m, old_size + 18, tmp);
 
-    call LibraAccount_save_account(contents#Memory(m)[old_size+4], contents#Memory(m)[old_size+18]);
+    call LibraAccount_save_account(GetLocal(m, old_size + 4), GetLocal(m, old_size + 18));
 
     return;
 
@@ -3343,7 +3235,7 @@ procedure LibraAccount_create_account_verify (arg0: Value) returns ()
 }
 
 procedure {:inline 1} LibraAccount_create_new_account (arg0: Value, arg1: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3360,39 +3252,39 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
-    assume has_type(IntegerType(), arg1);
+    assume is#Address(arg0);
+    assume is#Integer(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 8;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    old_size := local_counter;
+    local_counter := local_counter + 8;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call LibraAccount_create_account(contents#Memory(m)[old_size+2]);
+    call LibraAccount_create_account(GetLocal(m, old_size + 2));
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := Gt(contents#Memory(m)[old_size+3], contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := Gt(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    tmp := contents#Memory(m)[old_size + 5];
+    tmp := GetLocal(m, old_size + 5);
     if (!b#Boolean(tmp)) { goto Label_9; }
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call LibraAccount_pay_from_sender(contents#Memory(m)[old_size+6], contents#Memory(m)[old_size+7]);
+    call LibraAccount_pay_from_sender(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
 
 Label_9:
     return;
@@ -3405,7 +3297,7 @@ procedure LibraAccount_create_new_account_verify (arg0: Value, arg1: Value) retu
 }
 
 procedure {:inline 1} LibraAccount_save_account (arg0: Value, arg1: Value) returns ();procedure {:inline 1} LibraAccount_balance_for_account (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -3421,8 +3313,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 6;
+    old_size := local_counter;
+    local_counter := local_counter + 6;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -3431,17 +3323,17 @@ requires ExistsTxnSenderAccount();
     call t3 := BorrowField(t2, LibraAccount_T_balance);
 
     call t4 := LibraCoin_value(t3);
-    assume has_type(IntegerType(), t4);
+    assume is#Integer(t4);
 
-    m := Memory(domain#Memory(m)[old_size+4 := true], contents#Memory(m)[old_size+4 := t4]);
+    m := UpdateLocal(m, old_size + 4, t4);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    ret0 := contents#Memory(m)[old_size+5];
+    ret0 := GetLocal(m, old_size + 5);
     return;
 
 }
@@ -3452,7 +3344,7 @@ procedure LibraAccount_balance_for_account_verify (arg0: Reference) returns (ret
 }
 
 procedure {:inline 1} LibraAccount_balance (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3465,24 +3357,24 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 4;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 4;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call t2 := BorrowGlobal(contents#Memory(m)[old_size+1], LibraAccount_T_type_value());
+    call t2 := BorrowGlobal(GetLocal(m, old_size + 1), LibraAccount_T_type_value());
 
     call t3 := LibraAccount_balance_for_account(t2);
-    assume has_type(IntegerType(), t3);
+    assume is#Integer(t3);
 
-    m := Memory(domain#Memory(m)[old_size+3 := true], contents#Memory(m)[old_size+3 := t3]);
+    m := UpdateLocal(m, old_size + 3, t3);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -3493,7 +3385,7 @@ procedure LibraAccount_balance_verify (arg0: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} LibraAccount_sequence_number_for_account (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -3507,8 +3399,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 4;
+    old_size := local_counter;
+    local_counter := local_counter + 4;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -3517,11 +3409,11 @@ requires ExistsTxnSenderAccount();
     call t2 := BorrowField(t1, LibraAccount_T_sequence_number);
 
     call tmp := ReadRef(t2);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -3532,7 +3424,7 @@ procedure LibraAccount_sequence_number_for_account_verify (arg0: Reference) retu
 }
 
 procedure {:inline 1} LibraAccount_sequence_number (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3545,24 +3437,24 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 4;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 4;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call t2 := BorrowGlobal(contents#Memory(m)[old_size+1], LibraAccount_T_type_value());
+    call t2 := BorrowGlobal(GetLocal(m, old_size + 1), LibraAccount_T_type_value());
 
     call t3 := LibraAccount_sequence_number_for_account(t2);
-    assume has_type(IntegerType(), t3);
+    assume is#Integer(t3);
 
-    m := Memory(domain#Memory(m)[old_size+3 := true], contents#Memory(m)[old_size+3 := t3]);
+    m := UpdateLocal(m, old_size + 3, t3);
 
-    ret0 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -3573,7 +3465,7 @@ procedure LibraAccount_sequence_number_verify (arg0: Value) returns (ret0: Value
 }
 
 procedure {:inline 1} LibraAccount_delegated_key_rotation_capability (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3587,26 +3479,26 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 5;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 5;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call t2 := BorrowGlobal(contents#Memory(m)[old_size+1], LibraAccount_T_type_value());
+    call t2 := BorrowGlobal(GetLocal(m, old_size + 1), LibraAccount_T_type_value());
 
     call t3 := BorrowField(t2, LibraAccount_T_delegated_key_rotation_capability);
 
     call tmp := ReadRef(t3);
-    assume has_type(BooleanType(), tmp);
+    assume is#Boolean(tmp);
 
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    ret0 := contents#Memory(m)[old_size+4];
+    ret0 := GetLocal(m, old_size + 4);
     return;
 
 }
@@ -3617,7 +3509,7 @@ procedure LibraAccount_delegated_key_rotation_capability_verify (arg0: Value) re
 }
 
 procedure {:inline 1} LibraAccount_delegated_withdrawal_capability (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3631,26 +3523,26 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 5;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 5;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call t2 := BorrowGlobal(contents#Memory(m)[old_size+1], LibraAccount_T_type_value());
+    call t2 := BorrowGlobal(GetLocal(m, old_size + 1), LibraAccount_T_type_value());
 
     call t3 := BorrowField(t2, LibraAccount_T_delegated_withdrawal_capability);
 
     call tmp := ReadRef(t3);
-    assume has_type(BooleanType(), tmp);
+    assume is#Boolean(tmp);
 
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    ret0 := contents#Memory(m)[old_size+4];
+    ret0 := GetLocal(m, old_size + 4);
     return;
 
 }
@@ -3661,7 +3553,7 @@ procedure LibraAccount_delegated_withdrawal_capability_verify (arg0: Value) retu
 }
 
 procedure {:inline 1} LibraAccount_withdrawal_capability_address (arg0: Reference) returns (ret0: Reference)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_WithdrawalCapability_type_value())
@@ -3674,8 +3566,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 3;
+    old_size := local_counter;
+    local_counter := local_counter + 3;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -3694,7 +3586,7 @@ procedure LibraAccount_withdrawal_capability_address_verify (arg0: Reference) re
 }
 
 procedure {:inline 1} LibraAccount_key_rotation_capability_address (arg0: Reference) returns (ret0: Reference)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_KeyRotationCapability_type_value())
@@ -3707,8 +3599,8 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 3;
+    old_size := local_counter;
+    local_counter := local_counter + 3;
     t0 := arg0;
 
     // bytecode translation starts here
@@ -3727,7 +3619,7 @@ procedure LibraAccount_key_rotation_capability_address_verify (arg0: Reference) 
 }
 
 procedure {:inline 1} LibraAccount_exists (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3739,20 +3631,20 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 3;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 3;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := Exists(contents#Memory(m)[old_size+1], LibraAccount_T_type_value());
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := Exists(GetLocal(m, old_size + 1), LibraAccount_T_type_value());
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    ret0 := contents#Memory(m)[old_size+2];
+    ret0 := GetLocal(m, old_size + 2);
     return;
 
 }
@@ -3763,7 +3655,7 @@ procedure LibraAccount_exists_verify (arg0: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} LibraAccount_prologue (arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -3822,93 +3714,93 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(IntegerType(), arg0);
-    assume has_type(ByteArrayType(), arg1);
-    assume has_type(IntegerType(), arg2);
-    assume has_type(IntegerType(), arg3);
+    assume is#Integer(arg0);
+    assume is#ByteArray(arg1);
+    assume is#Integer(arg2);
+    assume is#Integer(arg3);
 
-    old_size := m_size;
-    m_size := m_size + 50;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size :=  arg2]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size :=  arg3]);
+    old_size := local_counter;
+    local_counter := local_counter + 50;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 2, arg2);
+    m := UpdateLocal(m, old_size + 3, arg3);
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 10, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+10]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 10));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    call tmp := Exists(contents#Memory(m)[old_size+11], LibraAccount_T_type_value());
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    call tmp := Exists(GetLocal(m, old_size + 11), LibraAccount_T_type_value());
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+12]);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 12));
+    m := UpdateLocal(m, old_size + 13, tmp);
 
-    tmp := contents#Memory(m)[old_size + 13];
+    tmp := GetLocal(m, old_size + 13);
     if (!b#Boolean(tmp)) { goto Label_8; }
 
     call tmp := LdConst(5);
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 14, tmp);
 
     assert false;
 
 Label_8:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 15, tmp);
 
-    call t16 := BorrowGlobal(contents#Memory(m)[old_size+15], LibraAccount_T_type_value());
+    call t16 := BorrowGlobal(GetLocal(m, old_size + 15), LibraAccount_T_type_value());
 
     call t5 := CopyOrMoveRef(t16);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 17, tmp);
 
-    call t18 := Hash_sha3_256(contents#Memory(m)[old_size+17]);
-    assume has_type(ByteArrayType(), t18);
+    call t18 := Hash_sha3_256(GetLocal(m, old_size + 17));
+    assume is#ByteArray(t18);
 
-    m := Memory(domain#Memory(m)[old_size+18 := true], contents#Memory(m)[old_size+18 := t18]);
+    m := UpdateLocal(m, old_size + 18, t18);
 
     call t19 := CopyOrMoveRef(t5);
 
     call t20 := BorrowField(t19, LibraAccount_T_authentication_key);
 
     call tmp := ReadRef(t20);
-    assume has_type(ByteArrayType(), tmp);
+    assume is#ByteArray(tmp);
 
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 21, tmp);
 
-    tmp := Boolean(is_equal(ByteArrayType(), contents#Memory(m)[old_size+18], contents#Memory(m)[old_size+21]));
-    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+    tmp := Boolean(IsEqual(GetLocal(m, old_size + 18), GetLocal(m, old_size + 21)));
+    m := UpdateLocal(m, old_size + 22, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+22]);
-    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 22));
+    m := UpdateLocal(m, old_size + 23, tmp);
 
-    tmp := contents#Memory(m)[old_size + 23];
+    tmp := GetLocal(m, old_size + 23);
     if (!b#Boolean(tmp)) { goto Label_21; }
 
     call tmp := LdConst(2);
-    m := Memory(domain#Memory(m)[24+old_size := true], contents#Memory(m)[24+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 24, tmp);
 
     assert false;
 
 Label_21:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[25+old_size := true], contents#Memory(m)[25+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 25, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[26+old_size := true], contents#Memory(m)[26+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 26, tmp);
 
-    call tmp := Mul(contents#Memory(m)[old_size+25], contents#Memory(m)[old_size+26]);
-    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
+    call tmp := Mul(GetLocal(m, old_size + 25), GetLocal(m, old_size + 26));
+    m := UpdateLocal(m, old_size + 27, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+27]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 27));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
     call t28 := CopyOrMoveRef(t5);
 
@@ -3919,30 +3811,30 @@ Label_21:
     call t30 := CopyOrMoveRef(t6);
 
     call t31 := LibraAccount_balance_for_account(t30);
-    assume has_type(IntegerType(), t31);
+    assume is#Integer(t31);
 
-    m := Memory(domain#Memory(m)[old_size+31 := true], contents#Memory(m)[old_size+31 := t31]);
+    m := UpdateLocal(m, old_size + 31, t31);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+31]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 31));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[32+old_size := true], contents#Memory(m)[32+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 32, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[33+old_size := true], contents#Memory(m)[33+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
+    m := UpdateLocal(m, old_size + 33, tmp);
 
-    call tmp := Ge(contents#Memory(m)[old_size+32], contents#Memory(m)[old_size+33]);
-    m := Memory(domain#Memory(m)[34+old_size := true], contents#Memory(m)[34+old_size := tmp]);
+    call tmp := Ge(GetLocal(m, old_size + 32), GetLocal(m, old_size + 33));
+    m := UpdateLocal(m, old_size + 34, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+34]);
-    m := Memory(domain#Memory(m)[35+old_size := true], contents#Memory(m)[35+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 34));
+    m := UpdateLocal(m, old_size + 35, tmp);
 
-    tmp := contents#Memory(m)[old_size + 35];
+    tmp := GetLocal(m, old_size + 35);
     if (!b#Boolean(tmp)) { goto Label_38; }
 
     call tmp := LdConst(6);
-    m := Memory(domain#Memory(m)[36+old_size := true], contents#Memory(m)[36+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 36, tmp);
 
     assert false;
 
@@ -3952,51 +3844,51 @@ Label_38:
     call t38 := BorrowField(t37, LibraAccount_T_sequence_number);
 
     call tmp := ReadRef(t38);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[39+old_size := true], contents#Memory(m)[39+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 39, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+39]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 39));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[40+old_size := true], contents#Memory(m)[40+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 40, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[41+old_size := true], contents#Memory(m)[41+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 9));
+    m := UpdateLocal(m, old_size + 41, tmp);
 
-    call tmp := Ge(contents#Memory(m)[old_size+40], contents#Memory(m)[old_size+41]);
-    m := Memory(domain#Memory(m)[42+old_size := true], contents#Memory(m)[42+old_size := tmp]);
+    call tmp := Ge(GetLocal(m, old_size + 40), GetLocal(m, old_size + 41));
+    m := UpdateLocal(m, old_size + 42, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+42]);
-    m := Memory(domain#Memory(m)[43+old_size := true], contents#Memory(m)[43+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 42));
+    m := UpdateLocal(m, old_size + 43, tmp);
 
-    tmp := contents#Memory(m)[old_size + 43];
+    tmp := GetLocal(m, old_size + 43);
     if (!b#Boolean(tmp)) { goto Label_49; }
 
     call tmp := LdConst(3);
-    m := Memory(domain#Memory(m)[44+old_size := true], contents#Memory(m)[44+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 44, tmp);
 
     assert false;
 
 Label_49:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[45+old_size := true], contents#Memory(m)[45+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 45, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[46+old_size := true], contents#Memory(m)[46+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 9));
+    m := UpdateLocal(m, old_size + 46, tmp);
 
-    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+45], contents#Memory(m)[old_size+46]));
-    m := Memory(domain#Memory(m)[47+old_size := true], contents#Memory(m)[47+old_size := tmp]);
+    tmp := Boolean(IsEqual(GetLocal(m, old_size + 45), GetLocal(m, old_size + 46)));
+    m := UpdateLocal(m, old_size + 47, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+47]);
-    m := Memory(domain#Memory(m)[48+old_size := true], contents#Memory(m)[48+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 47));
+    m := UpdateLocal(m, old_size + 48, tmp);
 
-    tmp := contents#Memory(m)[old_size + 48];
+    tmp := GetLocal(m, old_size + 48);
     if (!b#Boolean(tmp)) { goto Label_56; }
 
     call tmp := LdConst(4);
-    m := Memory(domain#Memory(m)[49+old_size := true], contents#Memory(m)[49+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 49, tmp);
 
     assert false;
 
@@ -4011,7 +3903,7 @@ procedure LibraAccount_prologue_verify (arg0: Value, arg1: Value, arg2: Value, a
 }
 
 procedure {:inline 1} LibraAccount_epilogue (arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -4057,43 +3949,43 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(IntegerType(), arg0);
-    assume has_type(IntegerType(), arg1);
-    assume has_type(IntegerType(), arg2);
-    assume has_type(IntegerType(), arg3);
+    assume is#Integer(arg0);
+    assume is#Integer(arg1);
+    assume is#Integer(arg2);
+    assume is#Integer(arg3);
 
-    old_size := m_size;
-    m_size := m_size + 37;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size :=  arg2]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size :=  arg3]);
+    old_size := local_counter;
+    local_counter := local_counter + 37;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 2, arg2);
+    m := UpdateLocal(m, old_size + 3, arg3);
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    call t10 := BorrowGlobal(contents#Memory(m)[old_size+9], LibraAccount_T_type_value());
+    call t10 := BorrowGlobal(GetLocal(m, old_size + 9), LibraAccount_T_type_value());
 
     call t4 := CopyOrMoveRef(t10);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 13, tmp);
 
-    call tmp := Sub(contents#Memory(m)[old_size+12], contents#Memory(m)[old_size+13]);
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    call tmp := Sub(GetLocal(m, old_size + 12), GetLocal(m, old_size + 13));
+    m := UpdateLocal(m, old_size + 14, tmp);
 
-    call tmp := Mul(contents#Memory(m)[old_size+11], contents#Memory(m)[old_size+14]);
-    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
+    call tmp := Mul(GetLocal(m, old_size + 11), GetLocal(m, old_size + 14));
+    m := UpdateLocal(m, old_size + 15, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+15]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 15));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
     call t16 := CopyOrMoveRef(t4);
 
@@ -4104,60 +3996,60 @@ requires ExistsTxnSenderAccount();
     call t18 := CopyOrMoveRef(t6);
 
     call t19 := LibraAccount_balance_for_account(t18);
-    assume has_type(IntegerType(), t19);
+    assume is#Integer(t19);
 
-    m := Memory(domain#Memory(m)[old_size+19 := true], contents#Memory(m)[old_size+19 := t19]);
+    m := UpdateLocal(m, old_size + 19, t19);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
+    m := UpdateLocal(m, old_size + 20, tmp);
 
-    call tmp := Ge(contents#Memory(m)[old_size+19], contents#Memory(m)[old_size+20]);
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+    call tmp := Ge(GetLocal(m, old_size + 19), GetLocal(m, old_size + 20));
+    m := UpdateLocal(m, old_size + 21, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+21]);
-    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 21));
+    m := UpdateLocal(m, old_size + 22, tmp);
 
-    tmp := contents#Memory(m)[old_size + 22];
+    tmp := GetLocal(m, old_size + 22);
     if (!b#Boolean(tmp)) { goto Label_20; }
 
     call tmp := LdConst(6);
-    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 23, tmp);
 
     assert false;
 
 Label_20:
     call t24 := CopyOrMoveRef(t4);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[25+old_size := true], contents#Memory(m)[25+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
+    m := UpdateLocal(m, old_size + 25, tmp);
 
-    call t26 := LibraAccount_withdraw_from_account(t24, contents#Memory(m)[old_size+25]);
-    assume has_type(LibraCoin_T_type_value(), t26);
+    call t26 := LibraAccount_withdraw_from_account(t24, GetLocal(m, old_size + 25));
+    assume is#Vector(t26);
 
-    m := Memory(domain#Memory(m)[old_size+26 := true], contents#Memory(m)[old_size+26 := t26]);
+    m := UpdateLocal(m, old_size + 26, t26);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+26]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 26));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 27, tmp);
 
     call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[28+old_size := true], contents#Memory(m)[28+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 28, tmp);
 
-    call tmp := Add(contents#Memory(m)[old_size+27], contents#Memory(m)[old_size+28]);
-    m := Memory(domain#Memory(m)[29+old_size := true], contents#Memory(m)[29+old_size := tmp]);
+    call tmp := Add(GetLocal(m, old_size + 27), GetLocal(m, old_size + 28));
+    m := UpdateLocal(m, old_size + 29, tmp);
 
     call t30 := CopyOrMoveRef(t4);
 
     call t31 := BorrowField(t30, LibraAccount_T_sequence_number);
 
-    call WriteRef(t31, contents#Memory(m)[old_size+29]);
+    call WriteRef(t31, GetLocal(m, old_size + 29));
 
     call tmp := LdAddr(4078);
-    m := Memory(domain#Memory(m)[32+old_size := true], contents#Memory(m)[32+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 32, tmp);
 
-    call t33 := BorrowGlobal(contents#Memory(m)[old_size+32], LibraAccount_T_type_value());
+    call t33 := BorrowGlobal(GetLocal(m, old_size + 32), LibraAccount_T_type_value());
 
     call t5 := CopyOrMoveRef(t33);
 
@@ -4165,10 +4057,10 @@ Label_20:
 
     call t35 := BorrowField(t34, LibraAccount_T_balance);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[36+old_size := true], contents#Memory(m)[36+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 36, tmp);
 
-    call LibraCoin_deposit(t35, contents#Memory(m)[old_size+36]);
+    call LibraCoin_deposit(t35, GetLocal(m, old_size + 36));
 
     return;
 
@@ -4180,7 +4072,7 @@ procedure LibraAccount_epilogue_verify (arg0: Value, arg1: Value, arg2: Value, a
 }
 
 procedure {:inline 1} LibraAccount_fresh_guid (arg0: Reference, arg1: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_EventHandleGenerator_type_value())
@@ -4211,12 +4103,12 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-        assume has_type(AddressType(), arg1);
+        assume is#Address(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 22;
+    old_size := local_counter;
+    local_counter := local_counter + 22;
     t0 := arg0;
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call t6 := CopyOrMoveRef(t0);
@@ -4225,67 +4117,67 @@ requires ExistsTxnSenderAccount();
 
     call t2 := CopyOrMoveRef(t7);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call t9 := AddressUtil_address_to_bytes(contents#Memory(m)[old_size+8]);
-    assume has_type(ByteArrayType(), t9);
+    call t9 := AddressUtil_address_to_bytes(GetLocal(m, old_size + 8));
+    assume is#ByteArray(t9);
 
-    m := Memory(domain#Memory(m)[old_size+9 := true], contents#Memory(m)[old_size+9 := t9]);
+    m := UpdateLocal(m, old_size + 9, t9);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 9));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
     call t10 := CopyOrMoveRef(t2);
 
     call tmp := ReadRef(t10);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    call t12 := U64Util_u64_to_bytes(contents#Memory(m)[old_size+11]);
-    assume has_type(ByteArrayType(), t12);
+    call t12 := U64Util_u64_to_bytes(GetLocal(m, old_size + 11));
+    assume is#ByteArray(t12);
 
-    m := Memory(domain#Memory(m)[old_size+12 := true], contents#Memory(m)[old_size+12 := t12]);
+    m := UpdateLocal(m, old_size + 12, t12);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+12]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 12));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
     call t13 := CopyOrMoveRef(t2);
 
     call tmp := ReadRef(t13);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 14, tmp);
 
     call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 15, tmp);
 
-    call tmp := Add(contents#Memory(m)[old_size+14], contents#Memory(m)[old_size+15]);
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
+    call tmp := Add(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
+    m := UpdateLocal(m, old_size + 16, tmp);
 
     call t17 := CopyOrMoveRef(t2);
 
-    call WriteRef(t17, contents#Memory(m)[old_size+16]);
+    call WriteRef(t17, GetLocal(m, old_size + 16));
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 18, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 19, tmp);
 
-    call t20 := BytearrayUtil_bytearray_concat(contents#Memory(m)[old_size+18], contents#Memory(m)[old_size+19]);
-    assume has_type(ByteArrayType(), t20);
+    call t20 := BytearrayUtil_bytearray_concat(GetLocal(m, old_size + 18), GetLocal(m, old_size + 19));
+    assume is#ByteArray(t20);
 
-    m := Memory(domain#Memory(m)[old_size+20 := true], contents#Memory(m)[old_size+20 := t20]);
+    m := UpdateLocal(m, old_size + 20, t20);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+20]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 20));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 21, tmp);
 
-    ret0 := contents#Memory(m)[old_size+21];
+    ret0 := GetLocal(m, old_size + 21);
     return;
 
 }
@@ -4296,7 +4188,7 @@ procedure LibraAccount_fresh_guid_verify (arg0: Reference, arg1: Value) returns 
 }
 
 procedure {:inline 1} LibraAccount_new_event_handle_impl (tv0: TypeValue, arg0: Reference, arg1: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_EventHandleGenerator_type_value())
@@ -4312,35 +4204,35 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-        assume has_type(AddressType(), arg1);
+        assume is#Address(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 7;
+    old_size := local_counter;
+    local_counter := local_counter + 7;
     t0 := arg0;
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
     call t3 := CopyOrMoveRef(t0);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call t5 := LibraAccount_fresh_guid(t3, contents#Memory(m)[old_size+4]);
-    assume has_type(ByteArrayType(), t5);
+    call t5 := LibraAccount_fresh_guid(t3, GetLocal(m, old_size + 4));
+    assume is#ByteArray(t5);
 
-    m := Memory(domain#Memory(m)[old_size+5 := true], contents#Memory(m)[old_size+5 := t5]);
+    m := UpdateLocal(m, old_size + 5, t5);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+2]);
+    assume is#Integer(GetLocal(m, old_size + 2));
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+5]);
+    assume is#ByteArray(GetLocal(m, old_size + 5));
 
-    call tmp := Pack_LibraAccount_EventHandle(tv0, contents#Memory(m)[old_size+2], contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := Pack_LibraAccount_EventHandle(tv0, GetLocal(m, old_size + 2), GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    ret0 := contents#Memory(m)[old_size+6];
+    ret0 := GetLocal(m, old_size + 6);
     return;
 
 }
@@ -4351,7 +4243,7 @@ procedure LibraAccount_new_event_handle_impl_verify (tv0: TypeValue, arg0: Refer
 }
 
 procedure {:inline 1} LibraAccount_new_event_handle (tv0: TypeValue) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -4369,14 +4261,14 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 8;
+    old_size := local_counter;
+    local_counter := local_counter + 8;
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call t3 := BorrowGlobal(contents#Memory(m)[old_size+2], LibraAccount_T_type_value());
+    call t3 := BorrowGlobal(GetLocal(m, old_size + 2), LibraAccount_T_type_value());
 
     call t0 := CopyOrMoveRef(t3);
 
@@ -4385,14 +4277,14 @@ requires ExistsTxnSenderAccount();
     call t5 := BorrowField(t4, LibraAccount_T_event_generator);
 
     call tmp := GetTxnSenderAddress();
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call t7 := LibraAccount_new_event_handle_impl(tv0, t5, contents#Memory(m)[old_size+6]);
-    assume has_type(LibraAccount_EventHandle_type_value(tv0), t7);
+    call t7 := LibraAccount_new_event_handle_impl(tv0, t5, GetLocal(m, old_size + 6));
+    assume is#Vector(t7);
 
-    m := Memory(domain#Memory(m)[old_size+7 := true], contents#Memory(m)[old_size+7 := t7]);
+    m := UpdateLocal(m, old_size + 7, t7);
 
-    ret0 := contents#Memory(m)[old_size+7];
+    ret0 := GetLocal(m, old_size + 7);
     return;
 
 }
@@ -4403,7 +4295,7 @@ procedure LibraAccount_new_event_handle_verify (tv0: TypeValue) returns (ret0: V
 }
 
 procedure {:inline 1} LibraAccount_emit_event (tv0: TypeValue, arg0: Reference, arg1: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_EventHandle_type_value(tv0))
@@ -4430,12 +4322,11 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-        assume has_type(tv0, arg1);
 
-    old_size := m_size;
-    m_size := m_size + 18;
+    old_size := local_counter;
+    local_counter := local_counter + 18;
     t0 := arg0;
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call t4 := CopyOrMoveRef(t0);
@@ -4443,12 +4334,12 @@ requires ExistsTxnSenderAccount();
     call t5 := BorrowField(t4, LibraAccount_EventHandle_guid);
 
     call tmp := ReadRef(t5);
-    assume has_type(ByteArrayType(), tmp);
+    assume is#ByteArray(tmp);
 
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
     call t7 := CopyOrMoveRef(t0);
 
@@ -4456,37 +4347,37 @@ requires ExistsTxnSenderAccount();
 
     call t2 := CopyOrMoveRef(t8);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
     call t10 := CopyOrMoveRef(t2);
 
     call tmp := ReadRef(t10);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    call LibraAccount_write_to_event_store(tv0, contents#Memory(m)[old_size+9], contents#Memory(m)[old_size+11], contents#Memory(m)[old_size+12]);
+    call LibraAccount_write_to_event_store(tv0, GetLocal(m, old_size + 9), GetLocal(m, old_size + 11), GetLocal(m, old_size + 12));
 
     call t13 := CopyOrMoveRef(t2);
 
     call tmp := ReadRef(t13);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 14, tmp);
 
     call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 15, tmp);
 
-    call tmp := Add(contents#Memory(m)[old_size+14], contents#Memory(m)[old_size+15]);
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
+    call tmp := Add(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
+    m := UpdateLocal(m, old_size + 16, tmp);
 
     call t17 := CopyOrMoveRef(t2);
 
-    call WriteRef(t17, contents#Memory(m)[old_size+16]);
+    call WriteRef(t17, GetLocal(m, old_size + 16));
 
     return;
 
@@ -4498,7 +4389,7 @@ procedure LibraAccount_emit_event_verify (tv0: TypeValue, arg0: Reference, arg1:
 }
 
 procedure {:inline 1} LibraAccount_write_to_event_store (tv0: TypeValue, arg0: Value, arg1: Value, arg2: Value) returns ();procedure {:inline 1} LibraAccount_destroy_handle (tv0: TypeValue, arg0: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // LibraAccount_EventHandle_type_value(tv0)
@@ -4513,29 +4404,29 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(LibraAccount_EventHandle_type_value(tv0), arg0);
+    assume is#Vector(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 6;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 6;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call t4, t5 := Unpack_LibraAccount_EventHandle(contents#Memory(m)[old_size+3]);
-    assume has_type(IntegerType(), t4);
+    call t4, t5 := Unpack_LibraAccount_EventHandle(GetLocal(m, old_size + 3));
+    assume is#Integer(t4);
 
-    assume has_type(ByteArrayType(), t5);
+    assume is#ByteArray(t5);
 
-    m := Memory(domain#Memory(m)[old_size+4 := true], contents#Memory(m)[old_size+4 := t4]);
-    m := Memory(domain#Memory(m)[old_size+5 := true], contents#Memory(m)[old_size+5 := t5]);
+    m := UpdateLocal(m, old_size + 4, t4);
+    m := UpdateLocal(m, old_size + 5, t5);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
     return;
 
