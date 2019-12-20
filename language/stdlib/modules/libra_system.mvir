@@ -662,23 +662,15 @@ module LibraSystem {
      distribute_transaction_fees() acquires TransactionFees, ValidatorSet {
        let num_validators: u64;
        let amount_to_distribute_per_validator: u64;
-       let lib_coin_to_distribute: LibraCoin.T;
        let amount_collected: u64;
-       let distribution_resource: &mut Self.TransactionFees;
-
-       distribution_resource = borrow_global_mut<TransactionFees>(0xFEE);
 
        num_validators = Self.validator_set_size();
        amount_collected = LibraAccount.balance(0xFEE);
 
+       // If amount_collected == 0, this will also return early
        if (copy(amount_collected) < copy(num_validators)) {
            return;
        }
-
-       lib_coin_to_distribute = LibraAccount.withdraw_with_capability(
-           &move(distribution_resource).fee_withdrawal_capability,
-           copy(amount_collected)
-       );
 
        // Calculate the amount of money to be dispursed, along with the remainder.
        amount_to_distribute_per_validator = Self.per_validator_distribution_amount(
@@ -688,7 +680,6 @@ module LibraSystem {
 
        // Iterate through the validators distributing fees equally
        Self.distribute_transaction_fees_internal(
-           move(lib_coin_to_distribute),
            move(amount_to_distribute_per_validator),
            move(num_validators),
        );
@@ -702,19 +693,14 @@ module LibraSystem {
      // evenly divide the transaction fee pot) is distributed to the first
      // validator.
      distribute_transaction_fees_internal(
-         collected_fees: LibraCoin.T,
          amount_to_distribute_per_validator: u64,
          num_validators: u64
-     ) acquires ValidatorSet {
+     ) acquires ValidatorSet, TransactionFees {
          let index: u64;
          let addr: address;
-         let payment_coin: LibraCoin.T;
+         let distribution_resource: &Self.TransactionFees;
 
-         if (LibraCoin.value(&collected_fees) == 0)  {
-             LibraCoin.destroy_zero(move(collected_fees));
-             return;
-         }
-
+         distribution_resource = borrow_global<TransactionFees>(0xFEE);
          index = 0;
 
          while (copy(index) < copy(num_validators)) {
@@ -723,20 +709,12 @@ module LibraSystem {
              // Increment the index into the validator set.
              index = copy(index) + 1;
 
-             collected_fees, payment_coin = LibraCoin.split(
-                 move(collected_fees),
-                 copy(amount_to_distribute_per_validator)
+             LibraAccount.pay_from_capability(
+                 move(addr),
+                 &copy(distribution_resource).fee_withdrawal_capability,
+                 copy(amount_to_distribute_per_validator),
+                 h"0FEE",
              );
-
-             LibraAccount.deposit(move(addr), move(payment_coin));
-         }
-
-         // Now pay back any remainder to the transaction fees. Deposits with value zero
-         // are not allowed so if the remainder is zero we have to destroy the coin.
-         if (LibraCoin.value(&collected_fees) == 0) {
-             LibraCoin.destroy_zero(move(collected_fees));
-         } else {
-             LibraAccount.deposit(0xFEE, move(collected_fees));
          }
 
          return;
