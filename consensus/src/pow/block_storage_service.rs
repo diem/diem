@@ -14,7 +14,7 @@ use libra_types::explorer::{
 use libra_types::proto::types::{
     BlockId as BlockIdProto, GetBlockSummaryListRequest as GetBlockSummaryListRequestProto,
     GetBlockSummaryListResponse as GetBlockSummaryListResponseProto,
-    LatestBlockHeightResponse as LatestBlockHeightResponseProto,
+    LatestBlockHeightResponse as LatestBlockHeightResponseProto, DifficultHashRate as DifficultHashRateProto
 };
 use network::proto::Block as BlockBytes;
 use std::convert::TryFrom;
@@ -123,6 +123,15 @@ impl BlockStorage for BlockStorageService {
         }
 
         provide_grpc_response(Ok(resp), ctx, sink);
+    }
+
+    fn current_difficulty(&mut self, ctx: ::grpcio::RpcContext, req: (),
+                          sink: ::grpcio::UnarySink<DifficultHashRateProto>) {
+        let latest_block: Block<BlockPayloadExt> = self.block_storage.latest_block().expect("latest block is none.");
+        //let target_current = latest_block.payload().expect("payload is none.").clone().target;
+        //2. difficult_hash_rate = (difficult_1_target/target_current) * difficult_1_hash/block_per_esc
+
+        unimplemented!()
     }
 }
 

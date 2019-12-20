@@ -24,7 +24,7 @@ use libra_metrics::counters::SVC_COUNTERS;
 use libra_types::explorer::{
     BlockRequestItem, BlockResponseItem, GetBlockSummaryListResponse,
     GetTransactionByVersionResponse, GetTransactionListResponse, LatestVersionResponse,
-    TxnRequestItem, TxnResponseItem,
+    TxnRequestItem, TxnResponseItem, DifficultHashRate
 };
 use libra_types::proto::types::{
     BlockRequestItem as BlockRequestItemProto, BlockResponseItem as BlockResponseItemProto,
@@ -189,6 +189,11 @@ impl AdmissionControl for AdmissionControlService {
                     .latest_block_height(&())
                     .expect("latest_block_height err.");
                 Ok(BlockResponseItem::LatestBlockHeightResponseItem { height: r.height }.into())
+            }
+            BlockRequestItem::DifficultHashRateRequestItem => {
+                let r = self.block_storage_client.current_difficulty(&()).expect("current_difficulty err.");
+                Ok(BlockResponseItem::DifficultHashRateResponseItem (
+                    DifficultHashRate::try_from(r).expect("parse DifficultHashRate err.")).into())
             }
         };
         provide_grpc_response(resp, ctx, sink);

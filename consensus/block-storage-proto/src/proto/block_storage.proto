@@ -13,6 +13,7 @@ service BlockStorage {
     rpc GetBlockByBlockId(types.BlockId) returns (GetBlockByBlockIdResponse);
     rpc GetBlockSummaryList(types.GetBlockSummaryListRequest) returns (types.GetBlockSummaryListResponse);
     rpc LatestBlockHeight(google.protobuf.Empty) returns (types.LatestBlockHeightResponse);
+    rpc CurrentDifficulty(google.protobuf.Empty) returns (types.DifficultHashRate);
 }
 
 message GetBlockByBlockIdResponse {

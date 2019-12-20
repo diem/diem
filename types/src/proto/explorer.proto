@@ -15,6 +15,7 @@ message BlockRequestItem {
         BlockId block_id_item = 1;
         GetBlockSummaryListRequest get_block_summary_list_request_item = 2;
         google.protobuf.Empty latest_block_height_request_item = 3;
+        google.protobuf.Empty difficult_hash_rate_request_item = 4;
     }
 }
 
@@ -23,6 +24,7 @@ message BlockResponseItem {
         //GetBlockByBlockIdResponse get_block_by_block_id_response_item = 1;
         GetBlockSummaryListResponse get_block_summary_list_response_item = 2;
         LatestBlockHeightResponse latest_block_height_response_item = 3;
+        DifficultHashRate difficult_hash_rate_response_item = 4;
     }
 }
 
@@ -53,6 +55,10 @@ message GetBlockSummaryListResponse {
 
 message LatestBlockHeightResponse {
     uint64 height = 1;
+}
+
+message DifficultHashRate {
+    uint64 difficulty = 1;
 }
 
 ////////////////////////////////////transaction

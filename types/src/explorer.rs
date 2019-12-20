@@ -287,12 +287,33 @@ impl From<GetTransactionByVersionResponse>
     }
 }
 
+/// Helper to construct and parse [`proto::types::DifficultHashRate`]
+#[derive(PartialEq, Debug, Eq, Clone)]
+pub struct DifficultHashRate {
+    pub difficulty:u64,
+}
+
+impl TryFrom<crate::proto::types::DifficultHashRate> for DifficultHashRate {
+    type Error = anyhow::Error;
+
+    fn try_from(proto: crate::proto::types::DifficultHashRate) -> Result<Self> {
+        Ok(Self { difficulty: proto.difficulty })
+    }
+}
+
+impl From<DifficultHashRate> for crate::proto::types::DifficultHashRate {
+    fn from(req: DifficultHashRate) -> Self {
+        Self { difficulty: req.difficulty }
+    }
+}
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Eq, PartialEq)]
 pub enum BlockRequestItem {
     BlockIdItem { block_id: BlockId },
     GetBlockSummaryListRequestItem { request: GetBlockSummaryListRequest },
     LatestBlockHeightRequestItem,
+    DifficultHashRateRequestItem,
 }
 
 impl TryFrom<crate::proto::types::BlockRequestItem> for BlockRequestItem {
@@ -315,6 +336,7 @@ impl TryFrom<crate::proto::types::BlockRequestItem> for BlockRequestItem {
                 BlockRequestItem::GetBlockSummaryListRequestItem { request }
             }
             LatestBlockHeightRequestItem(_) => BlockRequestItem::LatestBlockHeightRequestItem,
+            DifficultHashRateRequestItem(_) => BlockRequestItem::DifficultHashRateRequestItem,
         };
 
         Ok(request)
@@ -337,6 +359,9 @@ impl From<BlockRequestItem> for crate::proto::types::BlockRequestItem {
             BlockRequestItem::LatestBlockHeightRequestItem => {
                 BlockRequestedItems::LatestBlockHeightRequestItem({ () })
             }
+            BlockRequestItem::DifficultHashRateRequestItem => {
+                BlockRequestedItems::DifficultHashRateRequestItem({ () })
+            }
         };
 
         Self {
@@ -346,10 +371,11 @@ impl From<BlockRequestItem> for crate::proto::types::BlockRequestItem {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BlockResponseItem {
     GetBlockSummaryListResponseItem { resp: GetBlockSummaryListResponse },
     LatestBlockHeightResponseItem { height: u64 },
+    DifficultHashRateResponseItem(DifficultHashRate)
 }
 
 impl TryFrom<crate::proto::types::BlockResponseItem> for BlockResponseItem {
@@ -370,6 +396,9 @@ impl TryFrom<crate::proto::types::BlockResponseItem> for BlockResponseItem {
             LatestBlockHeightResponseItem(r) => {
                 BlockResponseItem::LatestBlockHeightResponseItem { height: r.height }
             }
+            DifficultHashRateResponseItem(r) => {
+                BlockResponseItem::DifficultHashRateResponseItem(DifficultHashRate::try_from(r)?)
+            }
         };
 
         Ok(response)
@@ -389,6 +418,9 @@ impl From<BlockResponseItem> for crate::proto::types::BlockResponseItem {
                 let mut r = crate::proto::types::LatestBlockHeightResponse::default();
                 r.height = height;
                 BlockResponseItems::LatestBlockHeightResponseItem(r)
+            }
+            BlockResponseItem::DifficultHashRateResponseItem(difficulty) => {
+                BlockResponseItems::DifficultHashRateResponseItem(difficulty.into())
             }
         };
 
