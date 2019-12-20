@@ -1,0 +1,65 @@
+module Test {
+
+    struct Config { b: bool }
+
+    // A current or prospective validator should publish one of these under their address
+    resource T {
+        config: Self.Config,
+    }
+
+    public publish_config(b: bool) {
+        move_to_sender<T>(T { config: Config { b: move(b) } });
+        return;
+    }
+
+    // Retrieve a read-only instance of a specific accounts ValidatorConfig.T.config
+    public config(addr: address): Self.Config acquires T {
+        let t_ref: &Self.T;
+
+        t_ref = borrow_global<T>(move(addr));
+        return *&move(t_ref).config;
+    }
+
+    public value(config: &Self.Config): bool {
+        return *&move(config).b;
+    }
+
+    public set(b: bool) acquires T {
+        let t_ref: &mut Self.T;
+        let config_ref: &mut Self.Config;
+        let b_ref: &mut bool;
+
+        t_ref = borrow_global_mut<T>(get_txn_sender());
+        config_ref = &mut move(t_ref).config;
+        b_ref = &mut move(config_ref).b;
+        *move(b_ref) = move(b);
+
+        return;
+    }
+
+}
+
+// check: EXECUTED
+
+//! new-transaction
+import {{default}}.Test;
+
+main() {
+    let config: Test.Config;
+    let config1: Test.Config;
+
+    Test.publish_config(false);
+
+    config = Test.config(get_txn_sender());
+    assert(Test.value(&config) == false, 77);
+
+    Test.set(true); // shouldn't affect local config variable
+    assert(Test.value(&config) == false, 88);
+
+    config1 = Test.config(get_txn_sender());
+    assert(Test.value(&config1) == true, 99);
+
+    return;
+}
+
+// check: EXECUTED

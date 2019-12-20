@@ -53,11 +53,14 @@ main() {
     config = ValidatorConfig.config(get_txn_sender());
     assert(ValidatorConfig.consensus_pubkey(&config) == h"10", 11);
     ValidatorConfig.rotate_consensus_pubkey(h"70");
-    assert(ValidatorConfig.consensus_pubkey(&config) == h"70", 12);
+    assert(ValidatorConfig.consensus_pubkey(&config) == h"10", 12);
+    config = ValidatorConfig.config(get_txn_sender());
+    assert(ValidatorConfig.consensus_pubkey(&config) == h"70", 15);
 
     // Rotating the validator_network_pubkey should work
     assert(ValidatorConfig.validator_network_identity_pubkey(&config) == h"30", 13);
     ValidatorConfig.rotate_validator_network_identity_pubkey(h"80");
+    config = ValidatorConfig.config(get_txn_sender());
     assert(ValidatorConfig.validator_network_identity_pubkey(&config) == h"80", 14);
 
     return;

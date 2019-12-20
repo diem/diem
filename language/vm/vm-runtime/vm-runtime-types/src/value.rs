@@ -159,6 +159,8 @@ impl ValueImpl {
                 Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
             }
             ValueImpl::PromotedReference(reference) => reference.copy_value(),
+            ValueImpl::Struct(s) => s.copy_value(),
+            ValueImpl::NativeStruct(s) => s.copy_value(),
             _ => Ok(Value(self.clone())),
         }
     }
@@ -494,7 +496,7 @@ impl MutVal {
         }
     }
 
-    fn copy_value(&self) -> VMResult<Value> {
+    pub(crate) fn copy_value(&self) -> VMResult<Value> {
         self.peek().copy_value()
     }
 
@@ -579,6 +581,14 @@ impl Struct {
             let msg = format!("Invalid field at index {} for {:?}", field_offset, self);
             Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
         }
+    }
+
+    fn copy_value(&self) -> VMResult<Value> {
+        let mut values: Vec<Value> = vec![];
+        for value in &self.0 {
+            values.push(value.copy_value()?);
+        }
+        Ok(Value::struct_(Struct::new(values)))
     }
 
     // Invoked by gas metering to determine the size of the struct. (review)
@@ -860,8 +870,7 @@ impl GlobalRef {
     }
 
     fn copy_value(&self) -> VMResult<Value> {
-        let value = self.reference.copy_value()?;
-        Ok(value)
+        self.reference.copy_value()
     }
 
     fn write_value(self, value: Value) {

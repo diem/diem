@@ -1,0 +1,110 @@
+module DeepCopy {
+    import 0x0.Vector;
+
+    struct Config { i: u64 }
+    struct Nested { c: Self.Config }
+
+    public test_struct_shallow() {
+        let c1: Self.Config;
+        let c2: Self.Config;
+
+        c1 = Config { i: 0 };
+        c2 = copy(c1);
+
+        // mutate c1.i to 1
+        *(&mut (&mut c1).i) = 1;
+        // c2.i should still be 0
+        assert(*&(&c2).i == 0, 77);
+
+        // mutate c2.i to 2
+        *(&mut (&mut c2).i) = 2;
+        // c1.i should still be 1
+        assert(*&(&c1).i == 1, 78);
+
+        return;
+    }
+
+    public test_struct_deep() {
+        let n1: Self.Nested;
+        let n2: Self.Nested;
+
+        n1 = Nested { c: Config { i: 0 } };
+        n2 = copy(n1);
+
+        // mutate n1.c.i to 1
+        *(&mut (&mut (&mut n1).c).i) = 1;
+        // n2.c.i should still be 0
+        assert(*&(&(&n2).c).i == 0, 79);
+        // n1.c.i is 1
+        assert(*&(&(&n1).c).i == 1, 80);
+
+        // mutate n2.c.i to 2
+        *(&mut (&mut (&mut n2).c).i) = 2;
+        // n1.c.i should still be 1
+        assert(*&(&(&n1).c).i == 1, 81);
+        // n2.c.i is 2
+        assert(*&(&(&n2).c).i == 2, 82);
+
+        return;
+    }
+
+    public test_vector() {
+        let v1: Vector.T<u64>;
+        let v2: Vector.T<u64>;
+
+        v1 = Vector.empty<u64>();
+        Vector.push_back<u64>(&mut v1, 0);
+        v2 = copy(v1);
+        *Vector.borrow_mut<u64>(&mut v1, 0) = 1;
+        assert(*Vector.borrow<u64>(&v2, 0) == 0, 83);
+
+        *Vector.borrow_mut<u64>(&mut v2, 0) = 2;
+        assert(*Vector.borrow<u64>(&v1, 0) == 1, 84);
+
+        return;
+    }
+
+    public test_vector_to_struct() {
+        let v1: Vector.T<Self.Config>;
+        let v2: Vector.T<Self.Config>;
+        let c1: Self.Config;
+        let c2: Self.Config;
+        let r1: &mut Self.Config;
+        let r2: &mut Self.Config;
+        let ri1: &mut u64;
+
+        c1 = Config { i: 0 };
+        c2 = copy(c1);
+        *(&mut (&mut c2).i) = 1;
+
+        v1 = Vector.empty<Self.Config>();
+        Vector.push_back<Self.Config>(&mut v1, move(c1));
+        Vector.push_back<Self.Config>(&mut v1, move(c2));
+        v2 = copy(v1);
+
+        r1 = Vector.borrow_mut<Self.Config>(&mut v1, 0);
+        r2 = Vector.borrow_mut<Self.Config>(&mut v2, 0);
+        assert(*&copy(r1).i == 0, 90);
+        assert(*&copy(r1).i == *&move(r2).i, 91);
+        r2 = Vector.borrow_mut<Self.Config>(&mut v2, 1);
+        assert(*&copy(r2).i == 1, 91);
+        assert(*&copy(r1).i != *&copy(r2).i, 91);
+        *&mut copy(r1).i = 1;
+        assert(*&copy(r1).i == *&copy(r2).i, 92);
+
+        return;
+    }
+}
+
+//! new-transaction
+import {{default}}.DeepCopy;
+
+main() {
+    DeepCopy.test_struct_shallow();
+    DeepCopy.test_struct_deep();
+    DeepCopy.test_vector();
+    DeepCopy.test_vector_to_struct();
+    return;
+}
+
+// check: EXECUTED
