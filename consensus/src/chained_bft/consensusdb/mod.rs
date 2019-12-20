@@ -288,10 +288,8 @@ impl ConsensusDB {
     pub fn latest_height(&self) -> Option<u64> {
         let latest_block_index = self.latest_block_index();
         match latest_block_index {
-            Some((height, _block_index)) => {
-                return Some(height)
-            },
-            None => return None
+            Some((height, _block_index)) => return Some(height),
+            None => return None,
         }
     }
 
@@ -301,8 +299,8 @@ impl ConsensusDB {
             Some((_height, block_index)) => {
                 let block_id = block_index.id();
                 self.get_block_by_hash(&block_id)
-            },
-            None => return None
+            }
+            None => return None,
         }
     }
 }

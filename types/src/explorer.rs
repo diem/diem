@@ -290,27 +290,31 @@ impl From<GetTransactionByVersionResponse>
 /// Helper to construct and parse [`proto::types::DifficultHashRate`]
 #[derive(PartialEq, Debug, Eq, Clone)]
 pub struct DifficultHashRate {
-    pub difficulty:u64,
+    pub difficulty: u64,
 }
 
 impl TryFrom<crate::proto::types::DifficultHashRate> for DifficultHashRate {
     type Error = anyhow::Error;
 
     fn try_from(proto: crate::proto::types::DifficultHashRate) -> Result<Self> {
-        Ok(Self { difficulty: proto.difficulty })
+        Ok(Self {
+            difficulty: proto.difficulty,
+        })
     }
 }
 
 impl From<DifficultHashRate> for crate::proto::types::DifficultHashRate {
     fn from(req: DifficultHashRate) -> Self {
-        Self { difficulty: req.difficulty }
+        Self {
+            difficulty: req.difficulty,
+        }
     }
 }
 
 /// Helper to construct and parse [`proto::types::BlockDetail`]
 #[derive(PartialEq, Debug, Eq, Clone)]
 pub struct BlockDetail {
-    pub bytes:Vec<u8>,
+    pub bytes: Vec<u8>,
 }
 
 impl TryFrom<crate::proto::types::BlockDetail> for BlockDetail {
@@ -424,7 +428,7 @@ pub enum BlockResponseItem {
     GetBlockByBlockIdResponseItem(GetBlockByBlockIdResponse),
     GetBlockSummaryListResponseItem { resp: GetBlockSummaryListResponse },
     LatestBlockHeightResponseItem { height: u64 },
-    DifficultHashRateResponseItem(DifficultHashRate)
+    DifficultHashRateResponseItem(DifficultHashRate),
 }
 
 impl TryFrom<crate::proto::types::BlockResponseItem> for BlockResponseItem {
@@ -438,9 +442,9 @@ impl TryFrom<crate::proto::types::BlockResponseItem> for BlockResponseItem {
             .ok_or_else(|| format_err!("Missing block_response_items"))?;
 
         let response = match item {
-            GetBlockByBlockIdResponseItem(r) => {
-                BlockResponseItem::GetBlockByBlockIdResponseItem(GetBlockByBlockIdResponse::try_from(r)?)
-            }
+            GetBlockByBlockIdResponseItem(r) => BlockResponseItem::GetBlockByBlockIdResponseItem(
+                GetBlockByBlockIdResponse::try_from(r)?,
+            ),
             GetBlockSummaryListResponseItem(r) => {
                 let resp = GetBlockSummaryListResponse::try_from(r)?;
                 BlockResponseItem::GetBlockSummaryListResponseItem { resp }

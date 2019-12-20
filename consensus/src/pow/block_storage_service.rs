@@ -1,9 +1,7 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::pow::payload_ext::BlockPayloadExt;
 use crate::pow::target::current_hash_rate;
-use block_storage_proto::proto::block_storage::{
-    create_block_storage, BlockStorage,
-};
+use block_storage_proto::proto::block_storage::{create_block_storage, BlockStorage};
 use consensus_types::block::Block;
 use grpc_helpers::provide_grpc_response;
 use grpcio::{EnvBuilder, RpcContext, Server, ServerBuilder, UnarySink};
@@ -13,11 +11,12 @@ use libra_types::explorer::{
     BlockId, BlockSummary, GetBlockSummaryListRequest, GetBlockSummaryListResponse,
 };
 use libra_types::proto::types::{
-    BlockId as BlockIdProto, DifficultHashRate as DifficultHashRateProto,
+    BlockDetail as BlockDetailProto, BlockId as BlockIdProto,
+    DifficultHashRate as DifficultHashRateProto,
+    GetBlockByBlockIdResponse as GetBlockByBlockIdResponseProto,
     GetBlockSummaryListRequest as GetBlockSummaryListRequestProto,
     GetBlockSummaryListResponse as GetBlockSummaryListResponseProto,
     LatestBlockHeightResponse as LatestBlockHeightResponseProto,
-    GetBlockByBlockIdResponse as GetBlockByBlockIdResponseProto, BlockDetail as BlockDetailProto
 };
 use network::proto::Block as BlockProto;
 use std::convert::TryFrom;

@@ -21,7 +21,7 @@ use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
 
 pub struct ChainManager {
-    block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
+    //    block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
     block_store: Arc<ConsensusDB>,
     state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
     block_tree: Arc<RwLock<BlockTree>>,
@@ -32,7 +32,7 @@ pub struct ChainManager {
 
 impl ChainManager {
     pub fn new(
-        block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
+        //        block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
         block_store: Arc<ConsensusDB>,
         txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
         state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
@@ -52,7 +52,7 @@ impl ChainManager {
             Arc::clone(&block_store),
         )));
         ChainManager {
-            block_cache_receiver,
+            //            block_cache_receiver,
             block_store,
             state_computer,
             block_tree,
@@ -66,13 +66,17 @@ impl ChainManager {
         //TODO:orphan
     }
 
-    pub fn save_block(&mut self, executor: Handle) {
+    pub fn save_block(
+        &self,
+        mut block_cache_receiver: mpsc::Receiver<Block<BlockPayloadExt>>,
+        executor: Handle,
+    ) {
         let block_db = self.block_store.clone();
         let orphan_blocks = self.orphan_blocks.clone();
-        let mut block_cache_receiver = self
-            .block_cache_receiver
-            .take()
-            .expect("block_cache_receiver is none.");
+        //        let mut block_cache_receiver = self
+        //            .block_cache_receiver
+        //            .take()
+        //            .expect("block_cache_receiver is none.");
         let state_computer = self.state_computer.clone();
         let author = self.author.clone();
         let block_tree = self.block_tree.clone();
