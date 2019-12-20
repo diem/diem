@@ -16,7 +16,7 @@ use crate::{
 use anyhow::Result;
 use jellyfish_merkle::{
     node_type::{LeafNode, Node, NodeKey},
-    JellyfishMerkleTree, TreeReader,
+    JellyfishMerkleTree, NodeBatch, TreeReader, TreeWriter,
 };
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
@@ -25,7 +25,7 @@ use libra_types::{
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
     transaction::Version,
 };
-use schemadb::DB;
+use schemadb::{SchemaBatch, DB};
 use std::{collections::HashMap, sync::Arc};
 
 pub(crate) struct StateStore {
@@ -86,11 +86,7 @@ impl StateStore {
             LedgerCounter::NewStateLeaves,
             tree_update_batch.num_new_leaves,
         );
-        tree_update_batch
-            .node_batch
-            .iter()
-            .map(|(node_key, node)| cs.batch.put::<JellyfishMerkleNodeSchema>(node_key, node))
-            .collect::<Result<Vec<()>>>()?;
+        add_node_batch(&mut cs.batch, &tree_update_batch.node_batch)?;
 
         cs.counter_bumps.bump(
             LedgerCounter::StaleStateNodes,
@@ -108,6 +104,11 @@ impl StateStore {
 
         Ok(new_root_hash_vec)
     }
+
+    #[cfg(test)]
+    pub fn get_root_hash(&self, version: Version) -> Result<HashValue> {
+        JellyfishMerkleTree::new(self).get_root_hash(version)
+    }
 }
 
 impl TreeReader for StateStore {
@@ -116,6 +117,24 @@ impl TreeReader for StateStore {
     }
 
     fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>> {
-        unimplemented!();
+        // TODO(wqfish): implement this for real. For now we just assume we never crash in the
+        // middle of restore, then this will only be called before anything is written to DB.
+        Ok(None)
     }
+}
+
+impl TreeWriter for StateStore {
+    fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()> {
+        let mut batch = SchemaBatch::new();
+        add_node_batch(&mut batch, node_batch)?;
+        self.db.write_schemas(batch)
+    }
+}
+
+fn add_node_batch(batch: &mut SchemaBatch, node_batch: &NodeBatch) -> Result<()> {
+    node_batch
+        .iter()
+        .map(|(node_key, node)| batch.put::<JellyfishMerkleNodeSchema>(node_key, node))
+        .collect::<Result<Vec<_>>>()?;
+    Ok(())
 }
