@@ -119,9 +119,25 @@ module LibraAccount {
         to_deposit: LibraCoin.T,
         metadata: bytearray
     ) acquires T {
+        Self.deposit_with_sender_and_metadata(
+            move(payee),
+            get_txn_sender(),
+            move(to_deposit),
+            move(metadata)
+        );
+        return;
+    }
+
+    // Deposits the `to_deposit` coin into the `payee`'s account with the attached `metadata` and
+    // sender address
+    deposit_with_sender_and_metadata(
+        payee: address,
+        sender: address,
+        to_deposit: LibraCoin.T,
+        metadata: bytearray
+    ) acquires T {
         let deposit_value: u64;
         let payee_account_ref: &mut Self.T;
-        let sender: address;
         let sender_account_ref: &mut Self.T;
 
         // Check that the `to_deposit` coin is non-zero
@@ -129,7 +145,6 @@ module LibraAccount {
         assert(copy(deposit_value) > 0, 7);
 
         // Load the sender's account
-        sender = get_txn_sender();
         sender_account_ref = borrow_global_mut<T>(copy(sender));
         // Log a sent event
         Self.emit_event<Self.SentPaymentEvent>(
@@ -235,6 +250,26 @@ module LibraAccount {
         // extract_sender_withdrawal_capability again.
         *(&mut move(account).delegated_withdrawal_capability) = false;
 
+        return;
+    }
+
+    // Withdraws `amount` LibraCoin.T using the passed in WithdrawalCapability, and deposits it
+    // into the `payee`'s account. Creates the `payee` account if it doesn't exist.
+    public pay_from_capability(
+        payee: address,
+        cap: &Self.WithdrawalCapability,
+        amount: u64,
+        metadata: bytearray
+    ) acquires T {
+        if (!exists<T>(copy(payee))) {
+            Self.create_account(copy(payee));
+        }
+        Self.deposit_with_sender_and_metadata(
+            move(payee),
+            *&copy(cap).account_address,
+            Self.withdraw_with_capability(move(cap), move(amount)),
+            h""
+        );
         return;
     }
 
