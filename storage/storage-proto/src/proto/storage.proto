@@ -61,6 +61,9 @@ service Storage {
     // Returns a stream of account states.
     rpc BackupAccountState(BackupAccountStateRequest)
     returns (stream BackupAccountStateResponse);
+
+    rpc GetAccountStateRangeProof(GetAccountStateRangeProofRequest)
+    returns (GetAccountStateRangeProofResponse);
 }
 
 message SaveTransactionsRequest {
@@ -178,4 +181,16 @@ message BackupAccountStateResponse {
 
     // Raw account state
     types.AccountStateBlob account_state_blob = 2;
+}
+
+message GetAccountStateRangeProofRequest {
+    // The rightmost key in the range to prove.
+    bytes rightmost_key = 1;
+
+    // The version of the state.
+    uint64 version = 2;
+}
+
+message GetAccountStateRangeProofResponse {
+    types.SparseMerkleRangeProof proof = 1;
 }

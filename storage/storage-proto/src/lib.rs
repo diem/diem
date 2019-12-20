@@ -33,7 +33,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
-    proof::SparseMerkleProof,
+    proof::{SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
 #[cfg(any(test, feature = "fuzzing"))]
@@ -252,6 +252,89 @@ impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
 {
     fn into(self) -> (Option<AccountStateBlob>, SparseMerkleProof) {
         (self.account_state_blob, self.sparse_merkle_proof)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct GetAccountStateRangeProofRequest {
+    pub rightmost_key: HashValue,
+    pub version: Version,
+}
+
+impl GetAccountStateRangeProofRequest {
+    pub fn new(rightmost_key: HashValue, version: Version) -> Self {
+        Self {
+            rightmost_key,
+            version,
+        }
+    }
+}
+
+impl TryFrom<crate::proto::storage::GetAccountStateRangeProofRequest>
+    for GetAccountStateRangeProofRequest
+{
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::GetAccountStateRangeProofRequest) -> Result<Self> {
+        let rightmost_key = HashValue::from_slice(&proto.rightmost_key)?;
+        let version = proto.version;
+        Ok(Self::new(rightmost_key, version))
+    }
+}
+
+impl From<GetAccountStateRangeProofRequest>
+    for crate::proto::storage::GetAccountStateRangeProofRequest
+{
+    fn from(request: GetAccountStateRangeProofRequest) -> Self {
+        let rightmost_key = request.rightmost_key.to_vec();
+        let version = request.version;
+
+        Self {
+            rightmost_key,
+            version,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct GetAccountStateRangeProofResponse {
+    proof: SparseMerkleRangeProof,
+}
+
+impl GetAccountStateRangeProofResponse {
+    pub fn new(proof: SparseMerkleRangeProof) -> Self {
+        Self { proof }
+    }
+}
+
+impl TryFrom<crate::proto::storage::GetAccountStateRangeProofResponse>
+    for GetAccountStateRangeProofResponse
+{
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::GetAccountStateRangeProofResponse) -> Result<Self> {
+        let proof = proto
+            .proof
+            .ok_or_else(|| format_err!("Missing proof."))?
+            .try_into()?;
+        Ok(Self::new(proof))
+    }
+}
+
+impl From<GetAccountStateRangeProofResponse>
+    for crate::proto::storage::GetAccountStateRangeProofResponse
+{
+    fn from(response: GetAccountStateRangeProofResponse) -> Self {
+        let proof = Some(response.proof.into());
+        Self { proof }
+    }
+}
+
+impl Into<SparseMerkleRangeProof> for GetAccountStateRangeProofResponse {
+    fn into(self) -> SparseMerkleRangeProof {
+        self.proof
     }
 }
 

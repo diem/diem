@@ -12,8 +12,7 @@ use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
-    proof::AccumulatorConsistencyProof,
-    proof::SparseMerkleProof,
+    proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     proto::types::{
         request_item::RequestedItems, response_item::ResponseItems, AccountStateWithProof,
         GetAccountStateResponse, GetTransactionsResponse,
@@ -115,6 +114,14 @@ impl StorageRead for MockStorageReadClient {
         &self,
         _version: u64,
     ) -> Result<BoxStream<'_, Result<BackupAccountStateResponse, Error>>> {
+        unimplemented!()
+    }
+
+    async fn get_account_state_range_proof(
+        &self,
+        _rightmost_key: HashValue,
+        _version: Version,
+    ) -> Result<SparseMerkleRangeProof> {
         unimplemented!()
     }
 }
