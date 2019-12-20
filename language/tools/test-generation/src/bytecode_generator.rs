@@ -7,7 +7,7 @@ use crate::{
     control_flow_graph::CFG,
     summaries,
 };
-use rand::{rngs::StdRng, FromEntropy, Rng, SeedableRng};
+use rand::{rngs::StdRng, Rng};
 use vm::access::ModuleAccess;
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
@@ -101,16 +101,16 @@ enum StackEffect {
 /// This generator has:
 /// - `instructions`: A list of bytecode instructions to use for generation
 /// - `rng`: A random number generator for uniform random choice of next instruction
-#[derive(Debug, Clone)]
-pub struct BytecodeGenerator {
+#[derive(Debug)]
+pub struct BytecodeGenerator<'a> {
     instructions: Vec<(StackEffect, BytecodeType)>,
-    rng: StdRng,
+    rng: &'a mut StdRng,
 }
 
-impl BytecodeGenerator {
+impl<'a> BytecodeGenerator<'a> {
     /// The `BytecodeGenerator` is instantiated with a seed to use with
     /// its random number generator.
-    pub fn new(seed: Option<[u8; 32]>) -> Self {
+    pub fn new(rng: &'a mut StdRng) -> Self {
         let instructions: Vec<(StackEffect, BytecodeType)> = vec![
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Pop)),
             (StackEffect::Add, BytecodeType::U8(Bytecode::LdU8)),
@@ -235,11 +235,7 @@ impl BytecodeGenerator {
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Abort)),
             (StackEffect::Nop, BytecodeType::NoArg(Bytecode::Ret)),
         ];
-        let generator = seed.map_or_else(StdRng::from_entropy, StdRng::from_seed);
-        Self {
-            instructions,
-            rng: generator,
-        }
+        Self { instructions, rng }
     }
 
     fn index_or_none<T>(table: &[T], rng: &mut StdRng) -> Option<TableIndex> {

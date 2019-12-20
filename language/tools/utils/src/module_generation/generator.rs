@@ -8,7 +8,7 @@ use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::compiler::compile_module;
 use ir_to_bytecode_syntax::ast::*;
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
-use rand::{rngs::StdRng, FromEntropy, Rng, SeedableRng};
+use rand::{rngs::StdRng, Rng};
 use std::collections::{BTreeSet, VecDeque};
 use vm::file_format::CompiledModule;
 
@@ -20,13 +20,13 @@ macro_rules! init {
     };
 }
 
-pub fn generate_module(seed: Option<[u8; 32]>, options: ModuleGeneratorOptions) -> CompiledModule {
-    generate_modules(seed, 1, options).0
+pub fn generate_module(rng: &mut StdRng, options: ModuleGeneratorOptions) -> CompiledModule {
+    generate_modules(rng, 1, options).0
 }
 
 /// Generate a `number - 1` modules. Then generate a root module that imports all of these modules.
 pub fn generate_modules(
-    seed: Option<[u8; 32]>,
+    rng: &mut StdRng,
     number: usize,
     options: ModuleGeneratorOptions,
 ) -> (CompiledModule, Vec<CompiledModule>) {
@@ -35,13 +35,13 @@ pub fn generate_modules(
     let table_size = options.min_table_size;
     let (callee_names, callees): (Set<Identifier>, Vec<ModuleDefinition>) = (0..(number - 1))
         .map(|_| {
-            let module = ModuleGenerator::create(seed, options.clone(), &Set::new());
+            let module = ModuleGenerator::create(rng, options.clone(), &Set::new());
             let module_name = module.name.as_inner().to_string();
             (Identifier::new(module_name).unwrap(), module)
         })
         .unzip();
 
-    let root_module = ModuleGenerator::create(seed, options.clone(), &callee_names);
+    let root_module = ModuleGenerator::create(rng, options.clone(), &callee_names);
     let empty_deps: Vec<CompiledModule> = Vec::new();
     let compiled_callees = callees
         .into_iter()
@@ -65,11 +65,11 @@ pub fn generate_modules(
 }
 
 pub fn generate_verified_modules(
-    seed: Option<[u8; 32]>,
+    rng: &mut StdRng,
     number: usize,
     options: ModuleGeneratorOptions,
 ) -> (VerifiedModule, Vec<VerifiedModule>) {
-    let (root, callees) = generate_modules(seed, number, options);
+    let (root, callees) = generate_modules(rng, number, options);
     let verified_modules = callees
         .into_iter()
         .map(|m| VerifiedModule::new(m).unwrap())
@@ -82,13 +82,13 @@ pub fn generate_verified_modules(
 // Generation of IR-level modules
 ///////////////////////////////////////////////////////////////////////////
 
-pub struct ModuleGenerator {
+pub struct ModuleGenerator<'a> {
     options: ModuleGeneratorOptions,
     current_module: ModuleDefinition,
-    gen: StdRng,
+    gen: &'a mut StdRng,
 }
 
-impl ModuleGenerator {
+impl<'a> ModuleGenerator<'a> {
     fn index(&mut self, bound: usize) -> usize {
         self.gen.gen_range(0, bound)
     }
@@ -295,15 +295,14 @@ impl ModuleGenerator {
     }
 
     pub fn create(
-        seed: Option<[u8; 32]>,
+        gen: &'a mut StdRng,
         options: ModuleGeneratorOptions,
         callable_modules: &Set<Identifier>,
     ) -> ModuleDefinition {
         // TODO: Generation of struct and function handles to the `callable_modules`
-        let mut gen = seed.map_or_else(StdRng::from_entropy, StdRng::from_seed);
         let module_name = {
             let len = gen.gen_range(10, options.max_string_size);
-            Identifier::new(random_string(&mut gen, len)).unwrap()
+            Identifier::new(random_string(gen, len)).unwrap()
         };
         let current_module = ModuleDefinition {
             name: ModuleName::new(module_name),

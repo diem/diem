@@ -66,7 +66,7 @@ impl CFG {
     /// and outgoing locals.
     /// Currently the control flow graph is acyclic.
     pub fn new(
-        mut rng: &mut StdRng,
+        rng: &mut StdRng,
         locals: &[SignatureToken],
         signature: &FunctionSignature,
         target_blocks: BlockIDSize,
@@ -134,7 +134,7 @@ impl CFG {
         };
         // Assign locals to basic blocks
         assume!(target_blocks == 0 || !cfg.basic_blocks.is_empty());
-        CFG::add_locals(&mut cfg, &mut rng, locals, signature.arg_types.len());
+        CFG::add_locals(&mut cfg, rng, locals, signature.arg_types.len());
         cfg
     }
 
@@ -237,7 +237,7 @@ impl CFG {
 
     /// Add the incoming and outgoing locals for each basic block in the control flow graph.
     /// Currently the incoming and outgoing locals are the same for each block.
-    fn add_locals(cfg: &mut CFG, mut rng: &mut StdRng, locals: &[SignatureToken], args_len: usize) {
+    fn add_locals(cfg: &mut CFG, rng: &mut StdRng, locals: &[SignatureToken], args_len: usize) {
         precondition!(
             !cfg.basic_blocks.is_empty(),
             "Cannot add locals to empty cfg"
@@ -274,7 +274,7 @@ impl CFG {
                 basic_block.locals_in =
                     cfg_copy.merge_locals(cfg_copy.get_parent_ids(block_id as BlockIDSize));
             }
-            basic_block.locals_out = CFG::vary_locals(&mut rng, basic_block.locals_in.clone());
+            basic_block.locals_out = CFG::vary_locals(rng, basic_block.locals_in.clone());
         }
     }
 
