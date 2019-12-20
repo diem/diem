@@ -300,6 +300,8 @@ pub trait PersistableConfig: Serialize + DeserializeOwned {
         let contents = toml::to_vec(&self)?;
         let mut file = File::create(output_file)?;
         file.write_all(&contents)?;
+        // @TODO This causes a major perf regression that needs to be evaluated before enabling
+        // file.sync_all()?;
         Ok(())
     }
 
