@@ -53,3 +53,11 @@ test_conversion!(
     test_backup_account_state_response,
     BackupAccountStateResponse,
 );
+test_conversion!(
+    test_get_account_state_range_proof_request,
+    GetAccountStateRangeProofRequest,
+);
+test_conversion!(
+    test_get_account_state_range_proof_response,
+    GetAccountStateRangeProofResponse,
+);

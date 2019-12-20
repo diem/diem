@@ -25,8 +25,7 @@ use libra_types::{
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
-    proof::AccumulatorConsistencyProof,
-    proof::SparseMerkleProof,
+    proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
 use rand::Rng;
@@ -34,11 +33,12 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_proto::{
     proto::storage::{GetLatestStateRootRequest, GetStartupInfoRequest, StorageClient},
-    BackupAccountStateRequest, BackupAccountStateResponse,
-    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
-    GetLatestStateRootResponse, GetStartupInfoResponse, GetTransactionsRequest,
-    GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
+    BackupAccountStateRequest, BackupAccountStateResponse, GetAccountStateRangeProofRequest,
+    GetAccountStateRangeProofResponse, GetAccountStateWithProofByVersionRequest,
+    GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
+    GetLatestAccountStateRequest, GetLatestAccountStateResponse, GetLatestStateRootResponse,
+    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;
@@ -212,6 +212,20 @@ impl StorageRead for StorageReadServiceClient {
                 .boxed(),
         )
     }
+
+    async fn get_account_state_range_proof(
+        &self,
+        rightmost_key: HashValue,
+        version: Version,
+    ) -> Result<SparseMerkleRangeProof> {
+        let req = GetAccountStateRangeProofRequest::new(rightmost_key, version);
+        let resp = convert_grpc_response(
+            self.client()
+                .get_account_state_range_proof_async(&req.into()),
+        )
+        .await?;
+        Ok(GetAccountStateRangeProofResponse::try_from(resp)?.into())
+    }
 }
 
 /// This provides storage write interfaces backed by real storage service.
@@ -336,6 +350,16 @@ pub trait StorageRead: Send + Sync {
         &self,
         version: u64,
     ) -> Result<BoxStream<'_, Result<BackupAccountStateResponse, Error>>>;
+
+    /// See [`LibraDB::get_account_state_range_proof`].
+    ///
+    /// [`LibraDB::get_account_state_range_proof`]:
+    /// ../libradb/struct.LibraDB.html#method.get_account_state_range_proof
+    async fn get_account_state_range_proof(
+        &self,
+        rightmost_key: HashValue,
+        version: Version,
+    ) -> Result<SparseMerkleRangeProof>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.

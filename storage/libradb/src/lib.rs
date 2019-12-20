@@ -59,7 +59,7 @@ use libra_types::{
     get_with_proof::{RequestItem, ResponseItem},
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
-        TransactionListProof, TransactionProof,
+        SparseMerkleRangeProof, TransactionListProof, TransactionProof,
     },
     transaction::{
         TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
@@ -772,6 +772,16 @@ impl LibraDB {
             HashValue::zero(),
         )?;
         Ok(Box::new(iterator))
+    }
+
+    /// Gets the proof that proves a range of accounts.
+    pub fn get_account_state_range_proof(
+        &self,
+        rightmost_key: HashValue,
+        version: Version,
+    ) -> Result<SparseMerkleRangeProof> {
+        self.state_store
+            .get_account_state_range_proof(rightmost_key, version)
     }
 
     // ================================== Private APIs ==================================

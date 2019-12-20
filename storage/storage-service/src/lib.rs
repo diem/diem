@@ -30,6 +30,7 @@ use std::{
 };
 use storage_proto::proto::storage::{
     create_storage, BackupAccountStateRequest, BackupAccountStateResponse,
+    GetAccountStateRangeProofRequest, GetAccountStateRangeProofResponse,
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
     GetLatestStateRootRequest, GetLatestStateRootResponse, GetStartupInfoRequest,
@@ -254,6 +255,18 @@ impl StorageService {
             libra_types::validator_change::ValidatorChangeProof::new(ledger_infos, more);
         Ok(rust_resp.into())
     }
+
+    fn get_account_state_range_proof_inner(
+        &self,
+        req: GetAccountStateRangeProofRequest,
+    ) -> Result<GetAccountStateRangeProofResponse> {
+        let rust_req = storage_proto::GetAccountStateRangeProofRequest::try_from(req)?;
+        let proof = self
+            .db
+            .get_account_state_range_proof(rust_req.rightmost_key, rust_req.version)?;
+        let rust_resp = storage_proto::GetAccountStateRangeProofResponse::new(proof);
+        Ok(rust_resp.into())
+    }
 }
 
 impl Storage for StorageService {
@@ -392,6 +405,18 @@ impl Storage for StorageService {
             }
         }
         SVC_COUNTERS.resp(&ctx, success);
+    }
+
+    fn get_account_state_range_proof(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetAccountStateRangeProofRequest,
+        sink: grpcio::UnarySink<GetAccountStateRangeProofResponse>,
+    ) {
+        debug!("[GRPC] Storage::get_account_state_range_proof");
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_account_state_range_proof_inner(req);
+        provide_grpc_response(resp, ctx, sink);
     }
 }
 
