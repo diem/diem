@@ -67,8 +67,15 @@ impl AdmissionControlClientBlocking {
         request: SubmitTransactionRequest,
     ) -> Result<SubmitTransactionResponse, tonic::Status> {
         let (rt, client) = self.client()?;
-        rt.block_on(client.submit_transaction(request))
-            .map(tonic::Response::into_inner)
+        rt.block_on(async {
+            tokio::time::timeout(
+                std::time::Duration::from_millis(5000),
+                client.submit_transaction(request),
+            )
+            .await
+        })
+        .map_err(|_| tonic::Status::new(tonic::Code::DeadlineExceeded, ""))?
+        .map(tonic::Response::into_inner)
     }
 
     pub fn update_to_latest_ledger(
