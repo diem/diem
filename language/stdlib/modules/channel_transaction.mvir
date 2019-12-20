@@ -9,4 +9,5 @@ module ChannelTransaction {
     native public get_proposer(): address;
     native public get_public_keys(): Vector.T<bytearray>;
     native public get_signatures(): Vector.T<bytearray>;
+    native public get_current_block_height(): u64;
 }

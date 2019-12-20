@@ -3,12 +3,15 @@
 
 //! Support for running the VM to execute and verify transactions.
 
+use crate::witness_store::FakeWitnessStore;
 use crate::{
     account::{Account, AccountData},
     data_store::{FakeDataStore, GENESIS_WRITE_SET, TESTNET_GENESIS},
 };
-use libra_config::config::{VMConfig, VMPublishingOption};
+use libra_config::config::{VMConfig, VMMode, VMPublishingOption};
 use libra_state_view::StateView;
+use libra_types::account_address::AccountAddress;
+use libra_types::channel::Witness;
 use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,
@@ -31,6 +34,7 @@ use vm_runtime::{MoveVM, VMExecutor, VMVerifier};
 pub struct FakeExecutor {
     config: VMConfig,
     data_store: FakeDataStore,
+    witness_store: FakeWitnessStore,
 }
 
 pub fn test_all_genesis_impl<T, F>(test_fn: F) -> Result<(), T>
@@ -67,6 +71,7 @@ impl FakeExecutor {
         let mut executor = FakeExecutor {
             config,
             data_store: FakeDataStore::default(),
+            witness_store: FakeWitnessStore::default(),
         };
         executor.apply_write_set(write_set);
         executor
@@ -109,6 +114,7 @@ impl FakeExecutor {
         FakeExecutor {
             config: VMConfig::default(),
             data_store: FakeDataStore::default(),
+            witness_store: FakeWitnessStore::default(),
         }
     }
 
@@ -127,6 +133,23 @@ impl FakeExecutor {
     /// Applies a [`WriteSet`] to this executor's data store.
     pub fn apply_write_set(&mut self, write_set: &WriteSet) {
         self.data_store.add_write_set(write_set);
+    }
+
+    pub fn add_witness(&mut self, account: AccountAddress, witness: Witness) {
+        self.witness_store.add_witness(account, witness);
+    }
+
+    pub fn get_witness(
+        &self,
+        account: &AccountAddress,
+        channel_sequence_number: u64,
+    ) -> Option<Witness> {
+        self.witness_store
+            .get_witness(account, channel_sequence_number)
+    }
+
+    pub fn get_latest_witness(&self, account: &AccountAddress) -> Option<Witness> {
+        self.witness_store.get_latest_witness(account)
     }
 
     /// Adds an account to this executor's data store.
@@ -211,5 +234,22 @@ impl FakeExecutor {
 
     pub fn get_state_view(&self) -> &FakeDataStore {
         &self.data_store
+    }
+
+    pub fn execute_offchain_transaction(&self, txn: SignedTransaction) -> TransactionOutput {
+        assert!(
+            txn.payload().is_channel(),
+            "offchain txn must be a channel transaction."
+        );
+        let mut offchain_config = self.config.clone();
+        offchain_config.mode = VMMode::Offchain;
+        MoveVM::execute_block(
+            vec![Transaction::UserTransaction(txn)],
+            &offchain_config,
+            &self.data_store,
+        )
+        .expect("The VM should not fail to startup")
+        .pop()
+        .expect("A block with one transaction should have one output")
     }
 }

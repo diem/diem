@@ -1,12 +1,11 @@
 use libra_crypto::HashValue;
-use libra_logger::prelude::*;
 use miner::types::{Algo, H256, U256};
 
 pub const BLOCK_WINDOW: u32 = 12;
 pub const BLOCK_TIME_SEC: u64 = 5;
 
 pub fn difficult_1_target() -> H256 {
-    (U256::max_value() / (100 as u64)).into()
+    (U256::max_value() / (1000 as u64)).into()
 }
 
 pub fn get_next_work_required<B>(block_index: B, algo: Algo) -> H256
@@ -48,7 +47,13 @@ where
         }
     };
     //new_target = old_target * (old_time/plan_time);
+    let diff_1_target_u256: U256 = difficult_1_target().into();
     let target_u256: U256 = target.into();
+    if target_u256.clone() / (BLOCK_TIME_SEC * blocks.len() as u64)
+        >= diff_1_target_u256 / time_used
+    {
+        return difficult_1_target();
+    }
     let new_target_u256 = target_u256 / (BLOCK_TIME_SEC * blocks.len() as u64) * time_used;
     let new_target: H256 = new_target_u256.into();
     new_target

@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::config::transaction::ChannelTransactionConfig;
 use crate::{
     config::{global::Config as GlobalConfig, transaction::Config as TransactionConfig},
     errors::*,
@@ -19,17 +20,17 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::CryptoHash,
 };
+use libra_types::transaction::TransactionPayload;
+use libra_types::write_set::WriteSet;
 use libra_types::{
-    access_path::{AccessPath, DataPath},
     account_address::AccountAddress,
-    channel::{ChannelResource, Witness, WitnessData},
+    channel::{Witness, WitnessData},
     transaction::{
         Action, ChannelTransactionPayload, ChannelTransactionPayloadBody,
         Module as TransactionModule, RawTransaction, Script as TransactionScript, ScriptAction,
         SignedTransaction, TransactionOutput, TransactionStatus,
     },
     vm_error::{StatusCode, VMStatus},
-    write_set::WriteSet,
 };
 use std::{
     fmt::{self, Debug},
@@ -86,6 +87,7 @@ pub enum OutputType {
     CompiledModule(CompiledModule),
     CompiledScript(CompiledScript),
     Ast(ScriptOrModule),
+    Transaction(SignedTransaction),
     TransactionOutput(TransactionOutput),
     Action(ScriptAction),
 }
@@ -163,6 +165,7 @@ impl fmt::Display for OutputType {
             Ast(ast) => write!(f, "{}", ast),
             TransactionOutput(output) => write!(f, "{:#?}", output),
             Action(action) => write!(f, "{:#?}", action),
+            Transaction(transaction) => write!(f, "{:#?}", transaction),
         }
     }
 }
@@ -301,18 +304,29 @@ fn make_channel_transaction(
     exec: &FakeExecutor,
     config: &TransactionConfig,
     action: ScriptAction,
-    channel_sequence_number: u64,
 ) -> Result<SignedTransaction> {
     let params = get_transaction_parameters(exec, config);
     let channel_txn_config = config.channel.as_ref().ok_or(ErrorKind::Other(
         "channel txn config must exist.".to_string(),
     ))?;
-    let witness_data = WitnessData::new(channel_sequence_number, WriteSet::default());
-    let hash = witness_data.hash();
-    let witness = Witness::new(
-        witness_data,
-        channel_txn_config.channel.sign_by_participants(&hash),
-    );
+    let witness = match channel_txn_config.channel_sequence_number {
+        None => exec
+            .get_latest_witness(channel_txn_config.proposer.address())
+            .unwrap_or(Witness::default()),
+        Some(channel_sequence_number) => exec
+            .get_witness(
+                channel_txn_config.proposer.address(),
+                channel_sequence_number,
+            )
+            .expect(
+                format!(
+                    "witness with channel_sequence_number {} must exist",
+                    channel_sequence_number
+                )
+                .as_str(),
+            ),
+    };
+
     let body = ChannelTransactionPayloadBody::new(
         channel_txn_config.channel.channel_address,
         *channel_txn_config.proposer.address(),
@@ -365,6 +379,81 @@ fn run_transaction(
     } else {
         unreachable!("transaction outputs size mismatch")
     }
+}
+
+/// Runs a single transaction using the fake executor.
+fn run_channel_transaction(
+    exec: &mut FakeExecutor,
+    config: &TransactionConfig,
+    transaction: SignedTransaction,
+) -> Result<TransactionOutput> {
+    let (channel_sequence_number, is_authorized) = match transaction.payload() {
+        TransactionPayload::Channel(channel_txn_payload) => (
+            channel_txn_payload.channel_sequence_number(),
+            channel_txn_payload.is_authorized(),
+        ),
+        _ => unreachable!("expect channel transaction"),
+    };
+    let channel_txn_config = config.channel.as_ref().ok_or(ErrorKind::Other(
+        "channel txn config must exist.".to_string(),
+    ))?;
+    let output = exec.execute_offchain_transaction(transaction.clone());
+    if output.is_travel_txn() || !is_authorized {
+        let output = exec.execute_transaction(transaction);
+        match output.status() {
+            TransactionStatus::Keep(status) => {
+                exec.apply_write_set(output.write_set());
+                save_witness(
+                    exec,
+                    channel_txn_config,
+                    channel_sequence_number,
+                    WriteSet::default(),
+                );
+                if status.major_status == StatusCode::EXECUTED {
+                    Ok(output)
+                } else {
+                    Err(ErrorKind::VMExecutionFailure(output).into())
+                }
+            }
+            TransactionStatus::Discard(_) => Err(ErrorKind::DiscardedTransaction(output).into()),
+        }
+    } else {
+        match output.status() {
+            TransactionStatus::Keep(status) => {
+                save_witness(
+                    exec,
+                    channel_txn_config,
+                    channel_sequence_number,
+                    output.write_set().clone(),
+                );
+                if status.major_status == StatusCode::EXECUTED {
+                    Ok(output)
+                } else {
+                    Err(ErrorKind::VMExecutionFailure(output).into())
+                }
+            }
+            TransactionStatus::Discard(_) => Err(ErrorKind::DiscardedTransaction(output).into()),
+        }
+    }
+}
+
+fn save_witness(
+    exec: &mut FakeExecutor,
+    channel_txn_config: &ChannelTransactionConfig,
+    channel_sequence_number: u64,
+    write_set: WriteSet,
+) {
+    let witness_data = WitnessData::new(channel_sequence_number + 1, write_set);
+    let data_hash = witness_data.hash();
+    let signatures = channel_txn_config.channel.sign_by_participants(&data_hash);
+    let witness = Witness::new(witness_data, signatures);
+    channel_txn_config
+        .channel
+        .participants
+        .iter()
+        .for_each(|participant| {
+            exec.add_witness(participant.address, witness.clone());
+        });
 }
 
 /// Serializes the script then deserializes it.
@@ -436,24 +525,6 @@ fn eval_transaction(
     log.append(EvaluationOutput::Stage(Stage::Parser));
 
     if transaction.config.is_channel_transaction() {
-        let channel_txn_config = transaction
-            .config
-            .channel
-            .as_ref()
-            .expect("channel must exist in channel transaction.");
-        let channel_address = channel_txn_config.channel.channel_address;
-        let channel_access_path =
-            AccessPath::new_for_data_path(channel_address, DataPath::channel_data_path());
-
-        let channel_sequence_number = exec
-            .read_from_access_path(&channel_access_path)
-            .map(|bytes| {
-                ChannelResource::make_from(bytes)
-                    .unwrap()
-                    .channel_sequence_number()
-            })
-            .unwrap_or(0);
-
         let input = transaction.input.as_str();
 
         let script_action = if is_call(input) {
@@ -515,13 +586,16 @@ fn eval_transaction(
             return Ok(Status::Success);
         }
         log.append(EvaluationOutput::Stage(Stage::Runtime));
-        let channel_transaction = make_channel_transaction(
-            &exec,
+        let channel_transaction =
+            make_channel_transaction(&exec, &transaction.config, script_action)?;
+        log.append(EvaluationOutput::Output(Box::new(OutputType::Transaction(
+            channel_transaction.clone(),
+        ))));
+        let txn_output = unwrap_or_abort!(run_channel_transaction(
+            exec,
             &transaction.config,
-            script_action,
-            channel_sequence_number,
-        )?;
-        let txn_output = unwrap_or_abort!(run_transaction(exec, channel_transaction));
+            channel_transaction
+        ));
         log.append(EvaluationOutput::Output(Box::new(
             OutputType::TransactionOutput(txn_output),
         )));

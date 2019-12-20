@@ -37,7 +37,7 @@ pub enum Entry {
     MaxGas(u64),
     SequenceNumber(u64),
     /// Channel name, Channel txn proposer, Channel txn signed by participants.
-    Channel(String, String, bool),
+    Channel(String, String, bool, Option<u64>),
 }
 
 impl FromStr for Entry {
@@ -118,7 +118,13 @@ impl FromStr for Entry {
                     }
                 })
                 .unwrap_or(true);
-            return Ok(Entry::Channel(name?, proposer?, signed_by_participants));
+            let channel_sequence_number = parts.get(3).and_then(|s| s.parse::<u64>().ok());
+            return Ok(Entry::Channel(
+                name?,
+                proposer?,
+                signed_by_participants,
+                channel_sequence_number,
+            ));
         }
         Err(ErrorKind::Other(format!(
             "failed to parse '{}' as transaction config entry",
@@ -152,6 +158,7 @@ pub struct ChannelTransactionConfig<'a> {
     pub channel: ChannelData<'a>,
     pub proposer: &'a Account,
     pub signed_by_participants: bool,
+    pub channel_sequence_number: Option<u64>,
 }
 
 /// A table of options specific to one transaction, fine tweaking how the transaction
@@ -230,7 +237,7 @@ impl<'a> Config<'a> {
                         )
                     }
                 },
-                Entry::Channel(name, proposer, signed_by_participants) => {
+                Entry::Channel(name, proposer, signed_by_participants, channel_sequence_number) => {
                     match channel_transaction_config {
                         None => {
                             let channel_config = config.get_channel_for_name(name)?;
@@ -250,6 +257,7 @@ impl<'a> Config<'a> {
                                 channel,
                                 proposer,
                                 signed_by_participants: *signed_by_participants,
+                                channel_sequence_number: channel_sequence_number.clone(),
                             });
                         }
                         _ => return Err(ErrorKind::Other("channel already set".to_string()).into()),

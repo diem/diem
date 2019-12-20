@@ -35,9 +35,9 @@ use network::{
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event},
 };
+use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::sync::Arc;
-use std::{convert::TryFrom, path::PathBuf};
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
 

@@ -246,12 +246,6 @@ impl MintManager {
     }
 }
 
-fn generate_nonce() -> u64 {
-    let mut rng = rand::thread_rng();
-    rng.gen::<u64>();
-    rng.gen_range(0, u64::max_value())
-}
-
 fn network_keypair() -> (X25519StaticPrivateKey, X25519StaticPublicKey) {
     let seed = [0u8; 32];
     let mut fast_rng = StdRng::from_seed(seed);

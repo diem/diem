@@ -24,7 +24,7 @@ module HashTimeLock {
             unlocker: move(unlocker),
             locked_rs: move(locked_rs),
             hash_lock: move(hash_lock),
-            time_lock: move(time_lock),
+            time_lock: LibraSystem.get_current_block_height() + move(time_lock),
         };
         //TODO fire event
         move_to_sender<T>(move(t));
@@ -40,7 +40,7 @@ module HashTimeLock {
        t = borrow_global<T>(copy(locker));
        assert(*&copy(t).locker == copy(locker), 100);
        assert(*&copy(t).unlocker == move(sender), 100);
-       assert(*&copy(t).time_lock < LibraSystem.get_current_block_height(), 101)
+       assert(*&copy(t).time_lock >= LibraSystem.get_current_block_height(), 101)
 
        hash = Hash.sha3_256(move(preimage));
        assert(*&move(t).hash_lock == move(hash), 102);
@@ -55,7 +55,7 @@ module HashTimeLock {
           sender = get_txn_sender();
           t = borrow_global<T>(copy(sender));
           assert(*&copy(t).locker == copy(sender), 100);
-          assert(*&move(t).time_lock >= LibraSystem.get_current_block_height(), 101)
+          assert(*&move(t).time_lock < LibraSystem.get_current_block_height(), 101)
 
           return Self.unpark_rs(move_from<T>(move(sender)));
    }
@@ -71,7 +71,7 @@ module HashTimeLock {
             unlocker: move(unlocker),
             locked_rs: move(locked_rs),
             hash_lock: move(hash_lock),
-            time_lock: move(time_lock),
+            time_lock: LibraSystem.get_current_block_height() + move(time_lock),
         };
         ChannelUtil.move_to_shared<Self.T>(move(t));
         return;
@@ -89,6 +89,7 @@ module HashTimeLock {
         t = ChannelUtil.borrow_from_shared<Self.T>();
         assert(*&copy(t).unlocker == move(proposer), 100);
 
+        assert(*&copy(t).time_lock >= LibraSystem.get_current_block_height(), 101);
         hash = Hash.sha3_256(move(preimage));
         assert(*&move(t).hash_lock == move(hash), 102);
 
@@ -104,7 +105,7 @@ module HashTimeLock {
         t = ChannelUtil.borrow_from_shared<Self.T>();
 
         assert(*&copy(t).locker == copy(proposer), 100);
-        assert(*&copy(t).time_lock >= LibraSystem.get_current_block_height(), 101)
+        assert(*&copy(t).time_lock < LibraSystem.get_current_block_height(), 101)
 
         return Self.unpark_rs(ChannelUtil.move_from_shared<Self.T>());
     }
