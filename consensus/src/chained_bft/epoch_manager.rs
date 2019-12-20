@@ -75,7 +75,7 @@ where
         }
     }
 
-    fn epoch(&self) -> u64 {
+    pub fn epoch(&self) -> u64 {
         self.epoch_info.read().unwrap().epoch
     }
 
