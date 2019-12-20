@@ -135,10 +135,18 @@ jobs:
     steps:
       - build_setup
       - run:
-          name: Cargo Audit
+          name: Install Cargo Audit
           command: |
             cargo install --force cargo-audit
-            cargo audit
+      - run:
+          # NOTE ignored advisory rules
+          # RUSTSEC-2018-0015 - term
+          # RUSTSEC-2019-0031 - spin
+          name: Audit crates
+          command: |
+            cargo audit --deny-warnings \
+              --ignore RUSTSEC-2018-0015 \
+              --ignore RUSTSEC-2019-0031
       - build_teardown
   code-coverage:
     description: Run code coverage
