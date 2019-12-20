@@ -4,62 +4,10 @@
 
 
 
-// ** stratified functions
-
-procedure {:inline 1} ReadValue0(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        assert false;
-    }
-}
-
-procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue0(p, i+1, v');
-    }
-}
-
-procedure {:inline 1} UpdateValue0(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        assert false;
-    }
-}
-
-procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue0(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
-
-
-
 // ** functions of module TestArithmetic
 
 procedure {:inline 1} TestArithmetic_add_two_number (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -78,41 +26,41 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(IntegerType(), arg0);
-    assume has_type(IntegerType(), arg1);
+    assume is#Integer(arg0);
+    assume is#Integer(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 10;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    old_size := local_counter;
+    local_counter := local_counter + 10;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := Add(contents#Memory(m)[old_size+4], contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := Add(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
     call tmp := LdConst(3);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    ret0 := contents#Memory(m)[old_size+8];
-    ret1 := contents#Memory(m)[old_size+9];
+    ret0 := GetLocal(m, old_size + 8);
+    ret1 := GetLocal(m, old_size + 9);
     return;
 
 }
@@ -123,7 +71,7 @@ procedure TestArithmetic_add_two_number_verify (arg0: Value, arg1: Value) return
 }
 
 procedure {:inline 1} TestArithmetic_multiple_ops (arg0: Value, arg1: Value, arg2: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -142,39 +90,39 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(IntegerType(), arg0);
-    assume has_type(IntegerType(), arg1);
-    assume has_type(IntegerType(), arg2);
+    assume is#Integer(arg0);
+    assume is#Integer(arg1);
+    assume is#Integer(arg2);
 
-    old_size := m_size;
-    m_size := m_size + 10;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size :=  arg2]);
+    old_size := local_counter;
+    local_counter := local_counter + 10;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 2, arg2);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := Add(contents#Memory(m)[old_size+4], contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := Add(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := Mul(contents#Memory(m)[old_size+6], contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := Mul(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    ret0 := contents#Memory(m)[old_size+9];
+    ret0 := GetLocal(m, old_size + 9);
     return;
 
 }
@@ -185,7 +133,7 @@ procedure TestArithmetic_multiple_ops_verify (arg0: Value, arg1: Value, arg2: Va
 }
 
 procedure {:inline 1} TestArithmetic_bool_ops (arg0: Value, arg1: Value) returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -217,80 +165,80 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(IntegerType(), arg0);
-    assume has_type(IntegerType(), arg1);
+    assume is#Integer(arg0);
+    assume is#Integer(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 23;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    old_size := local_counter;
+    local_counter := local_counter + 23;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := Gt(contents#Memory(m)[old_size+4], contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := Gt(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call tmp := Ge(contents#Memory(m)[old_size+7], contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := Ge(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    call tmp := And(contents#Memory(m)[old_size+6], contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := And(GetLocal(m, old_size + 6), GetLocal(m, old_size + 9));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+10]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 10));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    call tmp := Lt(contents#Memory(m)[old_size+11], contents#Memory(m)[old_size+12]);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+    call tmp := Lt(GetLocal(m, old_size + 11), GetLocal(m, old_size + 12));
+    m := UpdateLocal(m, old_size + 13, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 14, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 15, tmp);
 
-    call tmp := Le(contents#Memory(m)[old_size+14], contents#Memory(m)[old_size+15]);
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
+    call tmp := Le(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
+    m := UpdateLocal(m, old_size + 16, tmp);
 
-    call tmp := Or(contents#Memory(m)[old_size+13], contents#Memory(m)[old_size+16]);
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
+    call tmp := Or(GetLocal(m, old_size + 13), GetLocal(m, old_size + 16));
+    m := UpdateLocal(m, old_size + 17, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+17]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 17));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 18, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 19, tmp);
 
-    tmp := Boolean(!is_equal(BooleanType(), contents#Memory(m)[old_size+18], contents#Memory(m)[old_size+19]));
-    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
+    tmp := Boolean(!IsEqual(GetLocal(m, old_size + 18), GetLocal(m, old_size + 19)));
+    m := UpdateLocal(m, old_size + 20, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+20]);
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 20));
+    m := UpdateLocal(m, old_size + 21, tmp);
 
-    tmp := contents#Memory(m)[old_size + 21];
+    tmp := GetLocal(m, old_size + 21);
     if (!b#Boolean(tmp)) { goto Label_23; }
 
     call tmp := LdConst(42);
-    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 22, tmp);
 
     assert false;
 
@@ -305,7 +253,7 @@ procedure TestArithmetic_bool_ops_verify (arg0: Value, arg1: Value) returns ()
 }
 
 procedure {:inline 1} TestArithmetic_arithmetic_ops (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -335,80 +283,80 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(IntegerType(), arg0);
-    assume has_type(IntegerType(), arg1);
+    assume is#Integer(arg0);
+    assume is#Integer(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 21;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    old_size := local_counter;
+    local_counter := local_counter + 21;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
     call tmp := LdConst(6);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
     call tmp := LdConst(4);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := Add(contents#Memory(m)[old_size+3], contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := Add(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
     call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := Sub(contents#Memory(m)[old_size+5], contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := Sub(GetLocal(m, old_size + 5), GetLocal(m, old_size + 6));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
     call tmp := LdConst(2);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    call tmp := Mul(contents#Memory(m)[old_size+7], contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := Mul(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
     call tmp := LdConst(3);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 10, tmp);
 
-    call tmp := Div(contents#Memory(m)[old_size+9], contents#Memory(m)[old_size+10]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := Div(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
     call tmp := LdConst(4);
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    call tmp := Mod(contents#Memory(m)[old_size+11], contents#Memory(m)[old_size+12]);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+    call tmp := Mod(GetLocal(m, old_size + 11), GetLocal(m, old_size + 12));
+    m := UpdateLocal(m, old_size + 13, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+13]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 13));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 14, tmp);
 
     call tmp := LdConst(2);
-    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 15, tmp);
 
-    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+14], contents#Memory(m)[old_size+15]));
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
+    tmp := Boolean(IsEqual(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15)));
+    m := UpdateLocal(m, old_size + 16, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+16]);
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 16));
+    m := UpdateLocal(m, old_size + 17, tmp);
 
-    tmp := contents#Memory(m)[old_size + 17];
+    tmp := GetLocal(m, old_size + 17);
     if (!b#Boolean(tmp)) { goto Label_19; }
 
     call tmp := LdConst(42);
-    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 18, tmp);
 
     assert false;
 
 Label_19:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 19, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 20, tmp);
 
-    ret0 := contents#Memory(m)[old_size+19];
-    ret1 := contents#Memory(m)[old_size+20];
+    ret0 := GetLocal(m, old_size + 19);
+    ret1 := GetLocal(m, old_size + 20);
     return;
 
 }
@@ -419,7 +367,7 @@ procedure TestArithmetic_arithmetic_ops_verify (arg0: Value, arg1: Value) return
 }
 
 procedure {:inline 1} TestArithmetic_overflow () returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -435,27 +383,27 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 6;
+    old_size := local_counter;
+    local_counter := local_counter + 6;
 
     // bytecode translation starts here
     call tmp := LdConst(9223372036854775807);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 0, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
     call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := Add(contents#Memory(m)[old_size+3], contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := Add(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
     return;
 
@@ -467,7 +415,7 @@ procedure TestArithmetic_overflow_verify () returns ()
 }
 
 procedure {:inline 1} TestArithmetic_underflow () returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -483,27 +431,27 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 6;
+    old_size := local_counter;
+    local_counter := local_counter + 6;
 
     // bytecode translation starts here
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 0, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
     call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := Sub(contents#Memory(m)[old_size+3], contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := Sub(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
     return;
 
@@ -515,7 +463,7 @@ procedure TestArithmetic_underflow_verify () returns ()
 }
 
 procedure {:inline 1} TestArithmetic_div_by_zero () returns ()
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -531,27 +479,27 @@ requires ExistsTxnSenderAccount();
 
     // assume arguments are of correct types
 
-    old_size := m_size;
-    m_size := m_size + 6;
+    old_size := local_counter;
+    local_counter := local_counter + 6;
 
     // bytecode translation starts here
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 0, tmp);
 
     call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := Div(contents#Memory(m)[old_size+3], contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := Div(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
     return;
 

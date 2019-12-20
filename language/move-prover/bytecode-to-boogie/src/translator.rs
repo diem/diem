@@ -144,9 +144,6 @@ impl<'a> BoogieTranslator<'a> {
         // generate names and struct specific functions for all structs
         res.push_str(&self.emit_struct_code());
 
-        // generate IsPrefix and UpdateValue to the max depth
-        res.push_str(&self.emit_stratified_functions());
-
         for (module_idx, module) in self.modules.iter().enumerate() {
             let mut mt = ModuleTranslator::new(
                 self,
@@ -197,18 +194,16 @@ impl<'a> BoogieTranslator<'a> {
                     .enumerate()
                     .map(|(i, _)| format!("tv{0}: TypeValue", i))
                     .join(", ");
-                let field_type_map = field_infos
-                    .iter()
-                    .enumerate()
-                    .map(|(i, (_, sig))| format!("[{} := {}]", i, format_type_value(module, sig)))
-                    .join("");
+                let mut field_types = String::from("EmptyTypeValueArray");
+                for (_, field_type) in field_infos {
+                    field_types = format!(
+                        "ExtendTypeValueArray({}, {})",
+                        field_types,
+                        format_type_value(module, &field_type)
+                    );
+                }
 
-                let type_value = format!(
-                    "StructType({}, TypeValueArray(DefaultTypeMap{}, {}))",
-                    struct_name,
-                    field_type_map,
-                    field_infos.len(),
-                );
+                let type_value = format!("StructType({}, {})", struct_name, field_types);
                 emit_str(&format!(
                     "function {}_type_value({}): TypeValue {{\n    {}\n}}\n",
                     struct_name, type_args, type_value
@@ -357,7 +352,7 @@ impl<'a> ModuleTranslator<'a> {
                         (String::new(), String::new())
                     };
                 vec![format!(
-                    "tmp := contents#Memory(m)[old_size + {}];\nif (b#Boolean(tmp)) {{ {}goto Label_{}; }}{}",
+                    "tmp := GetLocal(m, old_size + {});\nif (b#Boolean(tmp)) {{ {}goto Label_{}; }}{}",
                     idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
                 )]
             }
@@ -377,7 +372,7 @@ impl<'a> ModuleTranslator<'a> {
                         (String::new(), String::new())
                     };
                 vec![format!(
-                    "tmp := contents#Memory(m)[old_size + {}];\n    if (!b#Boolean(tmp)) {{ {}goto Label_{}; }}{}",
+                    "tmp := GetLocal(m, old_size + {});\n    if (!b#Boolean(tmp)) {{ {}goto Label_{}; }}{}",
                     idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
                 )]
             }
@@ -390,8 +385,11 @@ impl<'a> ModuleTranslator<'a> {
                     )]
                 } else {
                     vec![
-                        format!("call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+{}]);", src),
-                        format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);",dest, dest),
+                        format!(
+                            "call tmp := CopyOrMoveValue(GetLocal(m, old_size + {}));",
+                            src
+                        ),
+                        format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
                     ]
                 }
             }
@@ -404,8 +402,11 @@ impl<'a> ModuleTranslator<'a> {
                     )]
                 } else {
                     vec![
-                        format!("call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+{}]);", src),
-                        format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                        format!(
+                            "call tmp := CopyOrMoveValue(GetLocal(m, old_size + {}));",
+                            src
+                        ),
+                        format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
                     ]
                 }
             }
@@ -418,18 +419,24 @@ impl<'a> ModuleTranslator<'a> {
                     )]
                 } else {
                     vec![
-                        format!("call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+{}]);", src),
-                        format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                        format!(
+                            "call tmp := CopyOrMoveValue(GetLocal(m, old_size + {}));",
+                            src
+                        ),
+                        format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
                     ]
                 }
             }
             BorrowLoc(dest, src) => vec![format!("call t{} := BorrowLoc(old_size+{});", dest, src)],
             ReadRef(dest, src) => vec![
                 format!("call tmp := ReadRef(t{});", src),
-                self.format_type_checking("tmp".to_string(), &self.get_local_type(*dest, func_idx)),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format_type_checking(self.module, "tmp".to_string(), &self.get_local_type(*dest, func_idx)),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
-            WriteRef(dest, src) => vec![format!("call WriteRef(t{}, contents#Memory(m)[old_size+{}]);", dest, src)],
+            WriteRef(dest, src) => vec![format!(
+                "call WriteRef(t{}, GetLocal(m, old_size + {}));",
+                dest, src
+            )],
             FreezeRef(dest, src) => vec![format!("call t{} := FreezeRef(t{});", dest, src)],
             Call(dests, callee_index, type_actuals, args) => {
                 let callee_name = self.function_name_from_handle_index(*callee_index);
@@ -446,7 +453,7 @@ impl<'a> ModuleTranslator<'a> {
                     if self.is_local_ref(*arg, func_idx) {
                         args_str.push_str(&format!("t{}", arg));
                     } else {
-                        args_str.push_str(&format!("contents#Memory(m)[old_size+{}]", arg));
+                        args_str.push_str(&format!("GetLocal(m, old_size + {})", arg));
                     }
                 }
                 for (i, dest) in dests.iter().enumerate() {
@@ -454,14 +461,15 @@ impl<'a> ModuleTranslator<'a> {
                         dest_str.push_str(", ");
                     }
                     dest_str.push_str(&format!("t{}", dest));
-                    dest_type_assumptions.push(self.format_type_checking(
+                    dest_type_assumptions.push(format_type_checking(self.module,
                         format!("t{}", dest),
                         &self.get_local_type(*dest, func_idx),
                     ));
                     if !self.is_local_ref(*dest, func_idx) {
                         tmp_assignments.push(format!(
-                            "m := Memory(domain#Memory(m)[old_size+{} := true], contents#Memory(m)[old_size+{} := t{}]);",
-                            dest, dest, dest));
+                            "m := UpdateLocal(m, old_size + {}, t{});",
+                            dest, dest
+                        ));
                     }
                 }
                 let mut res_vec = vec![];
@@ -482,18 +490,18 @@ impl<'a> ModuleTranslator<'a> {
                 let mut fields_str = String::new();
                 let mut res_vec = vec![];
                 fields_str.push_str(&format_type_actuals(self.module, type_actuals));
-                for  field_temp in fields.iter() {
+                for field_temp in fields.iter() {
                     if !fields_str.is_empty() {
                         fields_str.push_str(", ");
                     }
-                    fields_str.push_str(&format!("contents#Memory(m)[old_size+{}]", field_temp));
-                    res_vec.push(self.format_type_checking(
-                        format!("contents#Memory(m)[old_size+{}]", field_temp),
+                    fields_str.push_str(&format!("GetLocal(m, old_size + {})", field_temp));
+                    res_vec.push(format_type_checking(self.module,
+                        format!("GetLocal(m, old_size + {})", field_temp),
                         &self.get_local_type(*field_temp, func_idx),
                     ));
                 }
                 res_vec.push(format!("call tmp := Pack_{}({});", struct_str, fields_str));
-                res_vec.push(format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest));
+                res_vec.push(format!("m := UpdateLocal(m, old_size + {}, tmp);", dest));
                 res_vec
             }
             Unpack(dests, struct_def_index, _, src) => {
@@ -506,20 +514,19 @@ impl<'a> ModuleTranslator<'a> {
                         dests_str.push_str(", ");
                     }
                     dests_str.push_str(&format!("t{}", dest));
-                    dest_type_assumptions.push(self.format_type_checking(
+                    dest_type_assumptions.push(format_type_checking(self.module,
                         format!("t{}", dest),
                         &self.get_local_type(*dest, func_idx),
                     ));
                     if !self.is_local_ref(*dest, func_idx) {
-                        tmp_assignments.push(
-                            format!(
-                                "m := Memory(domain#Memory(m)[old_size+{} := true], contents#Memory(m)[old_size+{} := t{}]);",
-                                dest, dest, dest));
-                            // format!("contents#Memory(m)[old_size+{}] := t{};", dest, dest));
+                        tmp_assignments.push(format!(
+                            "m := UpdateLocal(m, old_size + {}, t{});",
+                            dest, dest
+                        ));
                     }
                 }
                 let mut res_vec = vec![format!(
-                    "call {} := Unpack_{}(contents#Memory(m)[old_size+{}]);",
+                    "call {} := Unpack_{}(GetLocal(m, old_size + {}));",
                     dests_str, struct_str, src
                 )];
                 res_vec.extend(dest_type_assumptions);
@@ -534,36 +541,55 @@ impl<'a> ModuleTranslator<'a> {
                 )]
             }
             Exists(dest, addr, struct_def_index, type_actuals) => {
-                let resource_type = format_struct_type_value_from_def_idx(self.module, struct_def_index, type_actuals);
+                let resource_type = format_struct_type_value_from_def_idx(
+                    self.module,
+                    struct_def_index,
+                    type_actuals,
+                );
                 vec![
-                    format!("call tmp := Exists(contents#Memory(m)[old_size+{}], {});", addr, resource_type),
-                    format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                    format!(
+                        "call tmp := Exists(GetLocal(m, old_size + {}), {});",
+                        addr, resource_type
+                    ),
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
                 ]
             }
             BorrowGlobal(dest, addr, struct_def_index, type_actuals) => {
-                let resource_type = format_struct_type_value_from_def_idx(self.module, struct_def_index, type_actuals);
+                let resource_type = format_struct_type_value_from_def_idx(
+                    self.module,
+                    struct_def_index,
+                    type_actuals,
+                );
                 vec![format!(
-                    "call t{} := BorrowGlobal(contents#Memory(m)[old_size+{}], {});",
+                    "call t{} := BorrowGlobal(GetLocal(m, old_size + {}), {});",
                     dest, addr, resource_type,
                 )]
             }
             MoveToSender(src, struct_def_index, type_actuals) => {
-                let resource_type = format_struct_type_value_from_def_idx(self.module, struct_def_index, type_actuals);
+                let resource_type = format_struct_type_value_from_def_idx(
+                    self.module,
+                    struct_def_index,
+                    type_actuals,
+                );
                 vec![format!(
-                    "call MoveToSender({}, contents#Memory(m)[old_size+{}]);",
+                    "call MoveToSender({}, GetLocal(m, old_size + {}));",
                     resource_type, src,
                 )]
             }
             MoveFrom(dest, src, struct_def_index, type_actuals) => {
-                let resource_type = format_struct_type_value_from_def_idx(self.module, struct_def_index, type_actuals);
+                let resource_type = format_struct_type_value_from_def_idx(
+                    self.module,
+                    struct_def_index,
+                    type_actuals,
+                );
                 // DO NOT SUBMIT let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![
                     format!(
-                        "call tmp := MoveFrom(contents#Memory(m)[old_size+{}], {});",
+                        "call tmp := MoveFrom(GetLocal(m, old_size + {}), {});",
                         src, resource_type,
                     ),
-                    format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
-                    self.format_type_checking(
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
+                    format_type_checking(self.module,
                         format!("t{}", dest),
                         &self.get_local_type(*dest, func_idx),
                     ),
@@ -575,7 +601,7 @@ impl<'a> ModuleTranslator<'a> {
                     if self.is_local_ref(*r, func_idx) {
                         ret_assignments.push(format!("ret{} := t{};", i, r));
                     } else {
-                        ret_assignments.push(format!("ret{} := contents#Memory(m)[old_size+{}];", i, r));
+                        ret_assignments.push(format!("ret{} := GetLocal(m, old_size + {});", i, r));
                     }
                 }
                 ret_assignments.push("return;".to_string());
@@ -583,127 +609,123 @@ impl<'a> ModuleTranslator<'a> {
             }
             LdTrue(idx) => vec![
                 "call tmp := LdTrue();".to_string(),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
             LdFalse(idx) => vec![
                 "call tmp := LdFalse();".to_string(),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
             LdConst(idx, num) => vec![
                 format!("call tmp := LdConst({});", num),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
             LdAddr(idx, addr_idx) => {
                 let addr = self.module.address_pool()[(*addr_idx).into_index()];
                 let addr_int = BigInt::from_str_radix(&addr.to_string(), 16).unwrap();
                 vec![
                     format!("call tmp := LdAddr({});", addr_int),
-                    format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
                 ]
             }
             Not(dest, operand) => vec![
-                format!("call tmp := Not(contents#Memory(m)[old_size+{}]);", operand),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("call tmp := Not(GetLocal(m, old_size + {}));", operand),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Add(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Add(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := Add(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Sub(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Sub(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := Sub(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Mul(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Mul(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := Mul(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Div(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Div(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := Div(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Mod(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Mod(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := Mod(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Lt(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Lt(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := Lt(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Gt(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Gt(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := Gt(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Le(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Le(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := Le(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Ge(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Ge(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := Ge(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Or(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Or(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := Or(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             And(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := And(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                    "call tmp := And(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Eq(dest, op1, op2) => {
-                let sig = &self.get_local_type(*op1, func_idx);
                 vec![
                     format!(
-                        "tmp := Boolean(is_equal({}, contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]));",
-                        format_type_value(self.module, sig),
+                        "tmp := Boolean(IsEqual(GetLocal(m, old_size + {}), GetLocal(m, old_size + {})));",
                         op1,
                         op2
                     ),
-                    format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
                 ]
             }
             Neq(dest, op1, op2) => {
-                let sig = &self.get_local_type(*op1, func_idx);
                 vec![
                     format!(
-                        "tmp := Boolean(!is_equal({}, contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]));",
-                        format_type_value(self.module, sig),
+                        "tmp := Boolean(!IsEqual(GetLocal(m, old_size + {}), GetLocal(m, old_size + {})));",
                         op1,
                         op2
                     ),
-                    format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
                 ]
             }
             BitOr(_, _, _) | BitAnd(_, _, _) | Xor(_, _, _) => {
@@ -712,27 +734,27 @@ impl<'a> ModuleTranslator<'a> {
             Abort(_) => vec!["assert false;".into()],
             GetGasRemaining(idx) => vec![
                 "call tmp := GetGasRemaining();".to_string(),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
             GetTxnSequenceNumber(idx) => vec![
                 "call tmp := GetTxnSequenceNumber();".to_string(),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
             GetTxnPublicKey(idx) => vec![
                 "call tmp := GetTxnPublicKey();".to_string(),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
             GetTxnSenderAddress(idx) => vec![
                 "call tmp := GetTxnSenderAddress();".to_string(),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
             GetTxnMaxGasUnits(idx) => vec![
                 "call tmp := GetTxnMaxGasUnits();".to_string(),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
             GetTxnGasUnitPrice(idx) => vec![
                 "call tmp := GetTxnGasUnitPrice();".to_string(),
-                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
+                format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
             _ => vec!["// unimplemented instruction".into()],
         };
@@ -890,8 +912,8 @@ impl<'a> ModuleTranslator<'a> {
             if i < num_args {
                 if !self.is_local_ref(i, idx) {
                     arg_assignment_str.push_str(&format!(
-                        "    m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size :=  {}]);\n",
-                        i, i,
+                        "    m := UpdateLocal(m, old_size + {}, {});\n",
+                        i,
                         self.get_arg_name(i, arg_names)
                     ));
                 } else {
@@ -904,7 +926,7 @@ impl<'a> ModuleTranslator<'a> {
 
                 arg_value_assumption_str.push_str(&format!(
                     "    {}",
-                    self.format_type_checking(self.get_arg_name(i, arg_names), local_type)
+                    format_type_checking(self.module, self.get_arg_name(i, arg_names), local_type)
                 ));
                 if self.dbg_args_enabled(&fun_name) {
                     var_decls.push_str(&format!(
@@ -938,9 +960,9 @@ impl<'a> ModuleTranslator<'a> {
         //        }
         res.push_str("\n    // assume arguments are of correct types\n");
         res.push_str(&arg_value_assumption_str);
-        res.push_str("\n    old_size := m_size;\n");
+        res.push_str("\n    old_size := local_counter;\n");
         res.push_str(&format!(
-            "    m_size := m_size + {};\n",
+            "    local_counter := local_counter + {};\n",
             code.local_types.len()
         ));
         res.push_str(&arg_assignment_str);
@@ -1083,17 +1105,28 @@ impl<'a> ModuleTranslator<'a> {
         }
         .into()
     }
+}
 
-    pub fn format_type_checking(&self, name: String, sig: &SignatureToken) -> String {
-        match sig {
-            // Reference does not require type checking
-            SignatureToken::Reference(_) | SignatureToken::MutableReference(_) => "".to_string(),
-            sig => format!(
-                "assume has_type({}, {});\n",
-                format_type_value(self.module, sig),
-                name
-            ),
-        }
+pub fn format_type_checking(
+    _module: &VerifiedModule,
+    name: String,
+    sig: &SignatureToken,
+) -> String {
+    let check = match sig {
+        SignatureToken::U64 => "is#Integer",
+        SignatureToken::Bool => "is#Boolean",
+        SignatureToken::Address => "is#Address",
+        SignatureToken::String => "is#Str",
+        SignatureToken::ByteArray => "is#ByteArray",
+        // Only need to check Struct for top-level; fields will be checked as we extract them.
+        SignatureToken::Struct(_, _) => "is#Vector",
+        // Otherwise it is a reference or a type parameter. Will be checked when accessed.
+        _ => "",
+    };
+    if check.is_empty() {
+        "".to_string()
+    } else {
+        format!("assume {}({});\n", check, name)
     }
 }
 

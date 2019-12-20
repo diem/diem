@@ -8,22 +8,22 @@ axiom TestStruct_B_addr == 0;
 const TestStruct_B_val: FieldName;
 axiom TestStruct_B_val == 1;
 function TestStruct_B_type_value(): TypeValue {
-    StructType(TestStruct_B, TypeValueArray(DefaultTypeMap[0 := AddressType()][1 := IntegerType()], 2))
+    StructType(TestStruct_B, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, AddressType()), IntegerType()))
 }
 
 procedure {:inline 1} Pack_TestStruct_B(v0: Value, v1: Value) returns (v: Value)
 {
-    assume has_type(AddressType(), v0);
-    assume has_type(IntegerType(), v1);
-    v := Struct(ValueArray(DefaultIntMap[TestStruct_B_addr := v0][TestStruct_B_val := v1], 2));
-    assume has_type(TestStruct_B_type_value(), v);
+    assume is#Address(v0);
+    assume is#Integer(v1);
+    v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
+
 }
 
 procedure {:inline 1} Unpack_TestStruct_B(v: Value) returns (v0: Value, v1: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[TestStruct_B_addr];
-    v1 := smap(v)[TestStruct_B_val];
+    assume is#Vector(v);
+    v0 := SelectField(v, TestStruct_B_addr);
+    v1 := SelectField(v, TestStruct_B_val);
 }
 
 const unique TestStruct_A: TypeName;
@@ -32,22 +32,22 @@ axiom TestStruct_A_val == 0;
 const TestStruct_A_b: FieldName;
 axiom TestStruct_A_b == 1;
 function TestStruct_A_type_value(): TypeValue {
-    StructType(TestStruct_A, TypeValueArray(DefaultTypeMap[0 := IntegerType()][1 := TestStruct_B_type_value()], 2))
+    StructType(TestStruct_A, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), TestStruct_B_type_value()))
 }
 
 procedure {:inline 1} Pack_TestStruct_A(v0: Value, v1: Value) returns (v: Value)
 {
-    assume has_type(IntegerType(), v0);
-    assume has_type(TestStruct_B_type_value(), v1);
-    v := Struct(ValueArray(DefaultIntMap[TestStruct_A_val := v0][TestStruct_A_b := v1], 2));
-    assume has_type(TestStruct_A_type_value(), v);
+    assume is#Integer(v0);
+    assume is#Vector(v1);
+    v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
+
 }
 
 procedure {:inline 1} Unpack_TestStruct_A(v: Value) returns (v0: Value, v1: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[TestStruct_A_val];
-    v1 := smap(v)[TestStruct_A_b];
+    assume is#Vector(v);
+    v0 := SelectField(v, TestStruct_A_val);
+    v1 := SelectField(v, TestStruct_A_b);
 }
 
 const unique TestStruct_C: TypeName;
@@ -56,178 +56,42 @@ axiom TestStruct_C_val == 0;
 const TestStruct_C_b: FieldName;
 axiom TestStruct_C_b == 1;
 function TestStruct_C_type_value(): TypeValue {
-    StructType(TestStruct_C, TypeValueArray(DefaultTypeMap[0 := IntegerType()][1 := TestStruct_A_type_value()], 2))
+    StructType(TestStruct_C, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), TestStruct_A_type_value()))
 }
 
 procedure {:inline 1} Pack_TestStruct_C(v0: Value, v1: Value) returns (v: Value)
 {
-    assume has_type(IntegerType(), v0);
-    assume has_type(TestStruct_A_type_value(), v1);
-    v := Struct(ValueArray(DefaultIntMap[TestStruct_C_val := v0][TestStruct_C_b := v1], 2));
-    assume has_type(TestStruct_C_type_value(), v);
+    assume is#Integer(v0);
+    assume is#Vector(v1);
+    v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
+
 }
 
 procedure {:inline 1} Unpack_TestStruct_C(v: Value) returns (v0: Value, v1: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[TestStruct_C_val];
-    v1 := smap(v)[TestStruct_C_b];
+    assume is#Vector(v);
+    v0 := SelectField(v, TestStruct_C_val);
+    v1 := SelectField(v, TestStruct_C_b);
 }
 
 const unique TestStruct_T: TypeName;
 const TestStruct_T_x: FieldName;
 axiom TestStruct_T_x == 0;
 function TestStruct_T_type_value(): TypeValue {
-    StructType(TestStruct_T, TypeValueArray(DefaultTypeMap[0 := IntegerType()], 1))
+    StructType(TestStruct_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
 
 procedure {:inline 1} Pack_TestStruct_T(v0: Value) returns (v: Value)
 {
-    assume has_type(IntegerType(), v0);
-    v := Struct(ValueArray(DefaultIntMap[TestStruct_T_x := v0], 1));
-    assume has_type(TestStruct_T_type_value(), v);
+    assume is#Integer(v0);
+    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+
 }
 
 procedure {:inline 1} Unpack_TestStruct_T(v: Value) returns (v0: Value)
 {
-    assert is#Struct(v);
-    v0 := smap(v)[TestStruct_T_x];
-}
-
-
-
-// ** stratified functions
-
-procedure {:inline 1} ReadValue0(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        assert false;
-    }
-}
-
-procedure {:inline 1} ReadValue1(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue0(p, i+1, v');
-    }
-}
-
-procedure {:inline 1} ReadValue2(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue1(p, i+1, v');
-    }
-}
-
-procedure {:inline 1} ReadValue3(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue2(p, i+1, v');
-    }
-}
-
-procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := ReadValue3(p, i+1, v');
-    }
-}
-
-procedure {:inline 1} UpdateValue0(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        assert false;
-    }
-}
-
-procedure {:inline 1} UpdateValue1(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue0(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
-
-procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue1(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
-
-procedure {:inline 1} UpdateValue3(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue2(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
-}
-
-procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) returns (v': Value)
-{
-    var e: Edge;
-    if (i == size#Path(p)) {
-        v' := new_v;
-    } else {
-        e := p#Path(p)[i];
-        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
-        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
-        call v' := UpdateValue3(p, i+1, v', new_v);
-        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
-        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
-    }
+    assume is#Vector(v);
+    v0 := SelectField(v, TestStruct_T_x);
 }
 
 
@@ -235,7 +99,7 @@ procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) re
 // ** functions of module TestStruct
 
 procedure {:inline 1} TestStruct_identity (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // TestStruct_A_type_value()
@@ -248,23 +112,23 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(TestStruct_A_type_value(), arg0);
-    assume has_type(TestStruct_C_type_value(), arg1);
+    assume is#Vector(arg0);
+    assume is#Vector(arg1);
 
-    old_size := m_size;
-    m_size := m_size + 4;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size :=  arg1]);
+    old_size := local_counter;
+    local_counter := local_counter + 4;
+    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 1, arg1);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    ret0 := contents#Memory(m)[old_size+2];
-    ret1 := contents#Memory(m)[old_size+3];
+    ret0 := GetLocal(m, old_size + 2);
+    ret1 := GetLocal(m, old_size + 3);
     return;
 
 }
@@ -275,7 +139,7 @@ procedure TestStruct_identity_verify (arg0: Value, arg1: Value) returns (ret0: V
 }
 
 procedure {:inline 1} TestStruct_module_builtins (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -304,41 +168,41 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 20;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 20;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := Exists(contents#Memory(m)[old_size+5], TestStruct_T_type_value());
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := Exists(GetLocal(m, old_size + 5), TestStruct_T_type_value());
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+7]);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 7));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    tmp := contents#Memory(m)[old_size + 8];
+    tmp := GetLocal(m, old_size + 8);
     if (!b#Boolean(tmp)) { goto Label_8; }
 
     call tmp := LdConst(42);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 9, tmp);
 
     assert false;
 
 Label_8:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
-    call t11 := BorrowGlobal(contents#Memory(m)[old_size+10], TestStruct_T_type_value());
+    call t11 := BorrowGlobal(GetLocal(m, old_size + 10), TestStruct_T_type_value());
 
     call t2 := CopyOrMoveRef(t11);
 
@@ -346,10 +210,10 @@ Label_8:
 
     // unimplemented instruction
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 13, tmp);
 
-    call t14 := BorrowGlobal(contents#Memory(m)[old_size+13], TestStruct_T_type_value());
+    call t14 := BorrowGlobal(GetLocal(m, old_size + 13), TestStruct_T_type_value());
 
     call t3 := CopyOrMoveRef(t14);
 
@@ -357,26 +221,26 @@ Label_8:
 
     // unimplemented instruction
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 16, tmp);
 
-    call tmp := MoveFrom(contents#Memory(m)[old_size+16], TestStruct_T_type_value());
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
-    assume has_type(TestStruct_T_type_value(), t17);
+    call tmp := MoveFrom(GetLocal(m, old_size + 16), TestStruct_T_type_value());
+    m := UpdateLocal(m, old_size + 17, tmp);
+    assume is#Vector(t17);
 
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+17]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 17));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 18, tmp);
 
-    call MoveToSender(TestStruct_T_type_value(), contents#Memory(m)[old_size+18]);
+    call MoveToSender(TestStruct_T_type_value(), GetLocal(m, old_size + 18));
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
-    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 19, tmp);
 
-    ret0 := contents#Memory(m)[old_size+19];
+    ret0 := GetLocal(m, old_size + 19);
     return;
 
 }
@@ -387,7 +251,7 @@ procedure TestStruct_module_builtins_verify (arg0: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} TestStruct_nested_struct (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -420,53 +284,53 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 24;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 24;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
     call tmp := LdFalse();
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    tmp := contents#Memory(m)[old_size + 6];
+    tmp := GetLocal(m, old_size + 6);
     if (!b#Boolean(tmp)) { goto Label_7; }
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
     call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 8, tmp);
 
-    assume has_type(AddressType(), contents#Memory(m)[old_size+7]);
+    assume is#Address(GetLocal(m, old_size + 7));
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+8]);
+    assume is#Integer(GetLocal(m, old_size + 8));
 
-    call tmp := Pack_TestStruct_B(contents#Memory(m)[old_size+7], contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+    call tmp := Pack_TestStruct_B(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 9));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
     goto Label_11;
 
 Label_7:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
     call tmp := LdConst(42);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    assume has_type(AddressType(), contents#Memory(m)[old_size+10]);
+    assume is#Address(GetLocal(m, old_size + 10));
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+11]);
+    assume is#Integer(GetLocal(m, old_size + 11));
 
-    call tmp := Pack_TestStruct_B(contents#Memory(m)[old_size+10], contents#Memory(m)[old_size+11]);
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    call tmp := Pack_TestStruct_B(GetLocal(m, old_size + 10), GetLocal(m, old_size + 11));
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+12]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 12));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
 Label_11:
     call t13 := BorrowLoc(old_size+2);
@@ -482,38 +346,38 @@ Label_11:
     call t16 := CopyOrMoveRef(t4);
 
     call tmp := ReadRef(t16);
-    assume has_type(IntegerType(), tmp);
+    assume is#Integer(tmp);
 
-    m := Memory(domain#Memory(m)[17+old_size := true], contents#Memory(m)[17+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 17, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+17]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 17));
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 18, tmp);
 
     call tmp := LdConst(42);
-    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 19, tmp);
 
-    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+18], contents#Memory(m)[old_size+19]));
-    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
+    tmp := Boolean(IsEqual(GetLocal(m, old_size + 18), GetLocal(m, old_size + 19)));
+    m := UpdateLocal(m, old_size + 20, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+20]);
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 20));
+    m := UpdateLocal(m, old_size + 21, tmp);
 
-    tmp := contents#Memory(m)[old_size + 21];
+    tmp := GetLocal(m, old_size + 21);
     if (!b#Boolean(tmp)) { goto Label_26; }
 
     call tmp := LdConst(42);
-    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 22, tmp);
 
     assert false;
 
 Label_26:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 23, tmp);
 
-    ret0 := contents#Memory(m)[old_size+23];
+    ret0 := GetLocal(m, old_size + 23);
     return;
 
 }
@@ -524,7 +388,7 @@ procedure TestStruct_nested_struct_verify (arg0: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} TestStruct_try_unpack (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount();
+requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -549,71 +413,71 @@ requires ExistsTxnSenderAccount();
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume has_type(AddressType(), arg0);
+    assume is#Address(arg0);
 
-    old_size := m_size;
-    m_size := m_size + 16;
-    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+    old_size := local_counter;
+    local_counter := local_counter + 16;
+    m := UpdateLocal(m, old_size + 0, arg0);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 4, tmp);
 
     call tmp := LdConst(42);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 5, tmp);
 
-    assume has_type(AddressType(), contents#Memory(m)[old_size+4]);
+    assume is#Address(GetLocal(m, old_size + 4));
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+5]);
+    assume is#Integer(GetLocal(m, old_size + 5));
 
-    call tmp := Pack_TestStruct_B(contents#Memory(m)[old_size+4], contents#Memory(m)[old_size+5]);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    call tmp := Pack_TestStruct_B(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
+    m := UpdateLocal(m, old_size + 6, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
+    m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 7, tmp);
 
-    call t8, t9 := Unpack_TestStruct_B(contents#Memory(m)[old_size+7]);
-    assume has_type(AddressType(), t8);
+    call t8, t9 := Unpack_TestStruct_B(GetLocal(m, old_size + 7));
+    assume is#Address(t8);
 
-    assume has_type(IntegerType(), t9);
+    assume is#Integer(t9);
 
-    m := Memory(domain#Memory(m)[old_size+8 := true], contents#Memory(m)[old_size+8 := t8]);
-    m := Memory(domain#Memory(m)[old_size+9 := true], contents#Memory(m)[old_size+9 := t9]);
+    m := UpdateLocal(m, old_size + 8, t8);
+    m := UpdateLocal(m, old_size + 9, t9);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 9));
+    m := UpdateLocal(m, old_size + 1, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+8]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
+    m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 10, tmp);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 11, tmp);
 
-    tmp := Boolean(is_equal(AddressType(), contents#Memory(m)[old_size+10], contents#Memory(m)[old_size+11]));
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+    tmp := Boolean(IsEqual(GetLocal(m, old_size + 10), GetLocal(m, old_size + 11)));
+    m := UpdateLocal(m, old_size + 12, tmp);
 
-    call tmp := Not(contents#Memory(m)[old_size+12]);
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+    call tmp := Not(GetLocal(m, old_size + 12));
+    m := UpdateLocal(m, old_size + 13, tmp);
 
-    tmp := contents#Memory(m)[old_size + 13];
+    tmp := GetLocal(m, old_size + 13);
     if (!b#Boolean(tmp)) { goto Label_15; }
 
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
+    m := UpdateLocal(m, old_size + 14, tmp);
 
     assert false;
 
 Label_15:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 15, tmp);
 
-    ret0 := contents#Memory(m)[old_size+15];
+    ret0 := GetLocal(m, old_size + 15);
     return;
 
 }

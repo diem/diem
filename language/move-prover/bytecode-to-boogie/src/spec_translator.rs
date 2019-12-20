@@ -77,7 +77,7 @@ impl<'a> SpecTranslator<'a> {
                 ))
             }
         }
-        res.push_str("requires ExistsTxnSenderAccount();\n");
+        res.push_str("requires ExistsTxnSenderAccount(m, txn);\n");
 
         // Generate succeeds_if and aborts_if setup (for post conditions)
         let succeeds_if_string = self
@@ -160,9 +160,9 @@ impl<'a> SpecTranslator<'a> {
                 let _ = self.require_type(at, &SignatureToken::Address);
                 BoogieExpr(
                     format!(
-                        "ExistsResource(gs, a#Address({}), {})",
-                        a,
-                        self.translate_resource_name(type_, type_actuals).0
+                        "ExistsResource(m, {}, a#Address({}))",
+                        self.translate_resource_type(type_, type_actuals).0,
+                        a
                     ),
                     SignatureToken::Bool,
                 )
@@ -421,11 +421,11 @@ impl<'a> SpecTranslator<'a> {
                 type_actuals,
                 address,
             } => {
-                let (s, t) = self.translate_resource_name(type_, type_actuals);
+                let (s, t) = self.translate_resource_type(type_, type_actuals);
                 let BoogieExpr(a, at) = self.translate_location_as_value(address);
                 let _ = self.require_type(at, &SignatureToken::Address);
                 BoogieExpr(
-                    format!("GetResourceReference(gs, a#Address({}), {})", a, s),
+                    format!("GetResourceReference({}, a#Address({}))", s, a),
                     SignatureToken::Reference(Box::new(t)),
                 )
             }
@@ -467,12 +467,13 @@ impl<'a> SpecTranslator<'a> {
     }
 
     /// Translates a resource name with type actuals
-    fn translate_resource_name(
+    fn translate_resource_type(
         &mut self,
         id: &QualifiedStructIdent,
         _type_actuals: &[Type],
     ) -> (String, SignatureToken) {
-        // TODO: incorporate type actuals
+        // TODO: incorporate type actuals. For that, we need a translator from Type AST into
+        //   SignatureToken, which requires name resolution.
         let struct_name = id.name.as_inner();
         let mut module_name = id.module.as_inner().to_string();
         if module_name == "Self" {
@@ -485,10 +486,11 @@ impl<'a> SpecTranslator<'a> {
         for (index, handle) in self.module.struct_handles().iter().enumerate() {
             let view = StructHandleView::new(self.module, handle);
             if view.name() == struct_name && view.module_id().name().as_str() == module_name {
-                let module_name = self.module.identifier_at(view.module_handle().name);
+                let resource_type =
+                    SignatureToken::Struct(StructHandleIndex::new(index as u16), vec![]);
                 return (
-                    format!("{}_{}", module_name, view.name()),
-                    SignatureToken::Struct(StructHandleIndex::new(index as u16), vec![]),
+                    format_type_value(self.module, &resource_type),
+                    resource_type,
                 );
             }
         }

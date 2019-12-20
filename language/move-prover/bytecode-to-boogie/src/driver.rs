@@ -18,7 +18,7 @@ use std::process::Command;
 use vm::file_format::FunctionDefinitionIndex;
 
 /// Content of the default prelude.
-const DEFAULT_PRELUDE: &[u8] = include_bytes!("bytecode_instrs.bpl");
+const DEFAULT_PRELUDE: &[u8] = include_bytes!("prelude.bpl");
 
 /// Represents the driver for translation. This is the top-level object which owns
 /// all data during the steps of translation. Phases of the translation refer back to it.
