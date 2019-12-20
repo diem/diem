@@ -1,11 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::value::{MutVal, Value};
 use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_structs::vector::NativeVector,
 };
 use serde::{ser, Deserialize, Serialize};
+use vm::errors::VMResult;
 use vm::gas_schedule::{AbstractMemorySize, GasCarrier};
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -70,6 +72,20 @@ impl NativeStructValue {
                     .map(|v| v.to_type_FOR_TESTING())
                     .unwrap_or(Type::Bool),
             )),
+        }
+    }
+
+    pub(crate) fn copy_value(&self) -> VMResult<Value> {
+        match self {
+            NativeStructValue::Vector(v) => {
+                let mut values: Vec<MutVal> = vec![];
+                for value in &v.0 {
+                    values.push(MutVal::new(value.copy_value()?));
+                }
+                Ok(Value::native_struct(NativeStructValue::Vector(
+                    NativeVector(values),
+                )))
+            }
         }
     }
 }
