@@ -24,7 +24,7 @@ use libra_metrics::counters::SVC_COUNTERS;
 use libra_types::explorer::{
     BlockRequestItem, BlockResponseItem, GetBlockSummaryListResponse,
     GetTransactionByVersionResponse, GetTransactionListResponse, LatestVersionResponse,
-    TxnRequestItem, TxnResponseItem, DifficultHashRate
+    TxnRequestItem, TxnResponseItem, DifficultHashRate, GetBlockByBlockIdResponse
 };
 use libra_types::proto::types::{
     BlockRequestItem as BlockRequestItemProto, BlockResponseItem as BlockResponseItemProto,
@@ -169,8 +169,13 @@ impl AdmissionControl for AdmissionControlService {
         let request = BlockRequestItem::try_from(req).expect("parse BlockRequestItem err.");
         let resp = match request {
             BlockRequestItem::BlockIdItem { block_id } => {
-                //self.block_storage_client.get_block_by_block_id(&block_id.into())?
-                Err(format_err!("unimplemented"))
+                let r = self.block_storage_client
+                    .get_block_by_block_id(&block_id.into())
+                    .expect("get_block_by_block_id err.");
+                Ok(BlockResponseItem::GetBlockByBlockIdResponseItem(
+                    GetBlockByBlockIdResponse::try_from(r)
+                    .expect("parse GetBlockByBlockIdResponse err."))
+                    .into())
             }
             BlockRequestItem::GetBlockSummaryListRequestItem { request } => {
                 let r = self

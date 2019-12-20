@@ -21,7 +21,7 @@ message BlockRequestItem {
 
 message BlockResponseItem {
     oneof block_response_items {
-        //GetBlockByBlockIdResponse get_block_by_block_id_response_item = 1;
+        GetBlockByBlockIdResponse get_block_by_block_id_response_item = 1;
         GetBlockSummaryListResponse get_block_summary_list_response_item = 2;
         LatestBlockHeightResponse latest_block_height_response_item = 3;
         DifficultHashRate difficult_hash_rate_response_item = 4;
@@ -59,6 +59,14 @@ message LatestBlockHeightResponse {
 
 message DifficultHashRate {
     uint64 difficulty = 1;
+}
+
+message BlockDetail {
+    bytes bytes = 1;
+}
+
+message GetBlockByBlockIdResponse {
+    BlockDetail block_detail = 1;
 }
 
 ////////////////////////////////////transaction
