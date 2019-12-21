@@ -4,6 +4,7 @@
 use crate::SynchronizerState;
 use anyhow::{ensure, format_err, Result};
 use executor::{ExecutedTrees, Executor};
+use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
@@ -54,7 +55,9 @@ pub(crate) struct ExecutorProxy {
 
 impl ExecutorProxy {
     pub(crate) fn new(executor: Arc<Executor<LibraVM>>, config: &NodeConfig) -> Self {
+        let client_env = Arc::new(EnvBuilder::new().name_prefix("grpc-coord-").build());
         let storage_read_client = Arc::new(StorageReadServiceClient::new(
+            client_env,
             &config.storage.address,
             config.storage.port,
         ));

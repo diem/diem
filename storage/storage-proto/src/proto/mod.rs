@@ -6,5 +6,5 @@
 use ::libra_types::proto::types;
 
 pub mod storage {
-    tonic::include_proto!("storage");
+    include!(concat!(env!("OUT_DIR"), "/storage.rs"));
 }

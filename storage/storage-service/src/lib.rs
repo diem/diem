@@ -13,44 +13,46 @@
 pub mod mocks;
 
 use anyhow::Result;
-use futures::channel::mpsc;
-use futures::sink::SinkExt;
+use futures01::{Future, Sink};
+use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
+use libra_metrics::counters::SVC_COUNTERS;
 use libra_types::proto::types::{
     UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, ValidatorChangeProof,
 };
 use libradb::LibraDB;
-use std::{convert::TryFrom, net::ToSocketAddrs, ops::Deref, path::Path, sync::Arc};
-use storage_proto::proto::storage::{
-    storage_server::{Storage, StorageServer},
-    BackupAccountStateRequest, BackupAccountStateResponse, GetAccountStateRangeProofRequest,
-    GetAccountStateRangeProofResponse, GetAccountStateWithProofByVersionRequest,
-    GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
-    GetLatestAccountStateRequest, GetLatestAccountStateResponse, GetLatestStateRootRequest,
-    GetLatestStateRootResponse, GetStartupInfoRequest, GetStartupInfoResponse,
-    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
-    SaveTransactionsResponse,
+use std::{
+    convert::TryFrom,
+    ops::Deref,
+    path::Path,
+    sync::{mpsc, Arc, Mutex},
 };
-use tokio::runtime::Runtime;
+use storage_proto::proto::storage::{
+    create_storage, BackupAccountStateRequest, BackupAccountStateResponse,
+    GetAccountStateRangeProofRequest, GetAccountStateRangeProofResponse,
+    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+    GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
+    GetLatestStateRootRequest, GetLatestStateRootResponse, GetStartupInfoRequest,
+    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    SaveTransactionsRequest, SaveTransactionsResponse, Storage,
+};
 
 /// Starts storage service according to config.
-pub fn start_storage_service(config: &NodeConfig) -> Runtime {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-
-    let storage_service = StorageService::new(&config.storage.dir());
-
-    let addr = format!("{}:{}", config.storage.address, config.storage.port)
-        .to_socket_addrs()
-        .unwrap()
-        .next()
-        .unwrap();
-    rt.spawn(
-        tonic::transport::Server::builder()
-            .add_service(StorageServer::new(storage_service))
-            .serve(addr),
-    );
-    rt
+pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
+    let (storage_service, shutdown_receiver) = StorageService::new(&config.storage.dir());
+    spawn_service_thread_with_drop_closure(
+        create_storage(storage_service),
+        config.storage.address.clone(),
+        config.storage.port,
+        "storage",
+        config.storage.grpc_max_receive_len,
+        move || {
+            shutdown_receiver
+                .recv()
+                .expect("Failed to receive on shutdown channel when storage service was dropped")
+        },
+    )
 }
 
 /// The implementation of the storage [GRPC](http://grpc.io) service.
@@ -62,14 +64,45 @@ pub struct StorageService {
     db: Arc<LibraDBWrapper>,
 }
 
+/// When dropping GRPC server we want to wait until LibraDB is dropped first, so the RocksDB
+/// instance held by GRPC threads is closed before the main function of GRPC server
+/// finishes. Otherwise, if we don't manually guarantee this, some thread(s) may still be
+/// alive holding an Arc pointer to LibraDB after main function of GRPC server returns.
+/// Having this wrapper with a channel gives us a way to signal the receiving end that all GRPC
+/// server threads are joined so RocksDB is closed.
+///
+/// See these links for more details.
+///   https://github.com/pingcap/grpc-rs/issues/227
+///   https://github.com/facebook/rocksdb/issues/649
 struct LibraDBWrapper {
     db: Option<LibraDB>,
+    shutdown_sender: Mutex<mpsc::Sender<()>>,
 }
 
 impl LibraDBWrapper {
-    pub fn new<P: AsRef<Path>>(path: &P) -> Self {
+    pub fn new<P: AsRef<Path>>(path: &P) -> (Self, mpsc::Receiver<()>) {
         let db = LibraDB::new(path);
-        Self { db: Some(db) }
+        let (shutdown_sender, shutdown_receiver) = mpsc::channel();
+        (
+            Self {
+                db: Some(db),
+                shutdown_sender: Mutex::new(shutdown_sender),
+            },
+            shutdown_receiver,
+        )
+    }
+}
+
+impl Drop for LibraDBWrapper {
+    fn drop(&mut self) {
+        // Drop inner LibraDB instance.
+        self.db.take();
+        // Send the shutdown message after DB is dropped.
+        self.shutdown_sender
+            .lock()
+            .expect("Failed to lock mutex.")
+            .send(())
+            .expect("Failed to send shutdown message.");
     }
 }
 
@@ -83,11 +116,30 @@ impl Deref for LibraDBWrapper {
 
 impl StorageService {
     /// This opens a [`LibraDB`] at `path` and returns a [`StorageService`] instance serving it.
-    pub fn new<P: AsRef<Path>>(path: &P) -> Self {
-        let db_wrapper = LibraDBWrapper::new(path);
-        Self {
-            db: Arc::new(db_wrapper),
-        }
+    ///
+    /// A receiver side of a channel is also returned through which one can receive a notice after
+    /// all resources used by the service including the underlying [`LibraDB`] instance are
+    /// fully dropped.
+    ///
+    /// example:
+    /// ```no_run,
+    ///    # use storage_service::*;
+    ///    # use std::path::Path;
+    ///    let (service, shutdown_receiver) = StorageService::new(&Path::new("path/to/db"));
+    ///
+    ///    drop(service);
+    ///    shutdown_receiver.recv().expect("recv() should succeed.");
+    ///
+    ///    // LibraDB instance is guaranteed to be properly dropped at this point.
+    /// ```
+    pub fn new<P: AsRef<Path>>(path: &P) -> (Self, mpsc::Receiver<()>) {
+        let (db_wrapper, shutdown_receiver) = LibraDBWrapper::new(path);
+        (
+            Self {
+                db: Arc::new(db_wrapper),
+            },
+            shutdown_receiver,
+        )
     }
 }
 
@@ -217,148 +269,154 @@ impl StorageService {
     }
 }
 
-#[tonic::async_trait]
 impl Storage for StorageService {
-    async fn save_transactions(
-        &self,
-        request: tonic::Request<SaveTransactionsRequest>,
-    ) -> Result<tonic::Response<SaveTransactionsResponse>, tonic::Status> {
+    fn save_transactions(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: SaveTransactionsRequest,
+        sink: grpcio::UnarySink<SaveTransactionsResponse>,
+    ) {
         debug!("[GRPC] Storage::save_transactions");
-        let req = request.into_inner();
-        let resp = self
-            .save_transactions_inner(req)
-            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
-        Ok(tonic::Response::new(resp))
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.save_transactions_inner(req);
+        provide_grpc_response(resp, ctx, sink);
     }
 
-    async fn update_to_latest_ledger(
-        &self,
-        request: tonic::Request<UpdateToLatestLedgerRequest>,
-    ) -> Result<tonic::Response<UpdateToLatestLedgerResponse>, tonic::Status> {
+    fn update_to_latest_ledger(
+        &mut self,
+        ctx: grpcio::RpcContext<'_>,
+        req: UpdateToLatestLedgerRequest,
+        sink: grpcio::UnarySink<UpdateToLatestLedgerResponse>,
+    ) {
         debug!("[GRPC] Storage::update_to_latest_ledger");
-        let req = request.into_inner();
-        let resp = self
-            .update_to_latest_ledger_inner(req)
-            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
-        Ok(tonic::Response::new(resp))
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.update_to_latest_ledger_inner(req);
+        provide_grpc_response(resp, ctx, sink);
     }
 
-    async fn get_transactions(
-        &self,
-        request: tonic::Request<GetTransactionsRequest>,
-    ) -> Result<tonic::Response<GetTransactionsResponse>, tonic::Status> {
+    fn get_transactions(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetTransactionsRequest,
+        sink: grpcio::UnarySink<GetTransactionsResponse>,
+    ) {
         debug!("[GRPC] Storage::get_transactions");
-        let req = request.into_inner();
-        let resp = self
-            .get_transactions_inner(req)
-            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
-        Ok(tonic::Response::new(resp))
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_transactions_inner(req);
+        provide_grpc_response(resp, ctx, sink);
     }
 
-    async fn get_latest_state_root(
-        &self,
-        request: tonic::Request<GetLatestStateRootRequest>,
-    ) -> Result<tonic::Response<GetLatestStateRootResponse>, tonic::Status> {
+    fn get_latest_state_root(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetLatestStateRootRequest,
+        sink: grpcio::UnarySink<GetLatestStateRootResponse>,
+    ) {
         debug!("[GRPC] Storage::get_latest_state_root");
-        let req = request.into_inner();
-        let resp = self
-            .get_latest_state_root_inner(req)
-            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
-        Ok(tonic::Response::new(resp))
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_latest_state_root_inner(req);
+        provide_grpc_response(resp, ctx, sink);
     }
 
-    async fn get_latest_account_state(
-        &self,
-        request: tonic::Request<GetLatestAccountStateRequest>,
-    ) -> Result<tonic::Response<GetLatestAccountStateResponse>, tonic::Status> {
+    fn get_latest_account_state(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetLatestAccountStateRequest,
+        sink: grpcio::UnarySink<GetLatestAccountStateResponse>,
+    ) {
         debug!("[GRPC] Storage::get_latest_account_state");
-        let req = request.into_inner();
-        let resp = self
-            .get_latest_account_state_inner(req)
-            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
-        Ok(tonic::Response::new(resp))
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_latest_account_state_inner(req);
+        provide_grpc_response(resp, ctx, sink);
     }
 
-    async fn get_account_state_with_proof_by_version(
-        &self,
-        request: tonic::Request<GetAccountStateWithProofByVersionRequest>,
-    ) -> Result<tonic::Response<GetAccountStateWithProofByVersionResponse>, tonic::Status> {
+    fn get_account_state_with_proof_by_version(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetAccountStateWithProofByVersionRequest,
+        sink: grpcio::UnarySink<GetAccountStateWithProofByVersionResponse>,
+    ) {
         debug!("[GRPC] Storage::get_account_state_with_proof_by_version");
-        let req = request.into_inner();
-        let resp = self
-            .get_account_state_with_proof_by_version_inner(req)
-            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
-        Ok(tonic::Response::new(resp))
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_account_state_with_proof_by_version_inner(req);
+        provide_grpc_response(resp, ctx, sink);
     }
 
-    async fn get_startup_info(
-        &self,
-        _request: tonic::Request<GetStartupInfoRequest>,
-    ) -> Result<tonic::Response<GetStartupInfoResponse>, tonic::Status> {
+    fn get_startup_info(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        _req: GetStartupInfoRequest,
+        sink: grpcio::UnarySink<GetStartupInfoResponse>,
+    ) {
         debug!("[GRPC] Storage::get_startup_info");
-        let resp = self
-            .get_startup_info_inner()
-            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
-        Ok(tonic::Response::new(resp))
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_startup_info_inner();
+        provide_grpc_response(resp, ctx, sink);
     }
 
-    async fn get_epoch_change_ledger_infos(
-        &self,
-        request: tonic::Request<GetEpochChangeLedgerInfosRequest>,
-    ) -> Result<tonic::Response<ValidatorChangeProof>, tonic::Status> {
+    fn get_epoch_change_ledger_infos(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetEpochChangeLedgerInfosRequest,
+        sink: grpcio::UnarySink<ValidatorChangeProof>,
+    ) {
         debug!("[GRPC] Storage::get_epoch_change_ledger_infos");
-        let req = request.into_inner();
-        let resp = self
-            .get_epoch_change_ledger_infos_inner(req)
-            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
-        Ok(tonic::Response::new(resp))
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_epoch_change_ledger_infos_inner(req);
+        provide_grpc_response(resp, ctx, sink);
     }
 
-    type BackupAccountStateStream =
-        mpsc::Receiver<Result<BackupAccountStateResponse, tonic::Status>>;
-
-    async fn backup_account_state(
-        &self,
-        request: tonic::Request<BackupAccountStateRequest>,
-    ) -> Result<tonic::Response<Self::BackupAccountStateStream>, tonic::Status> {
+    fn backup_account_state(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: BackupAccountStateRequest,
+        sink: grpcio::ServerStreamingSink<BackupAccountStateResponse>,
+    ) {
         debug!("[GRPC] Storage::backup_account_state");
-        let req = request.into_inner();
-        let iter = self
-            .db
-            .get_account_iter(req.version)
-            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
-
-        let iter = iter.map(|res| match res {
-            Ok((hash, blob)) => {
-                let resp: BackupAccountStateResponse =
-                    storage_proto::BackupAccountStateResponse::new(hash, blob).into();
-                Ok(resp)
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let mut success = true;
+        let iter = self.db.get_account_iter(req.version);
+        match iter {
+            Ok(iter) => {
+                let f = sink
+                    .send_all(futures01::stream::iter_result(iter.map(|res| match res {
+                        Ok((hash, blob)) => Ok((
+                            storage_proto::BackupAccountStateResponse::new(hash, blob).into(),
+                            grpcio::WriteFlags::default(),
+                        )),
+                        Err(e) => Err(grpcio::Error::RpcFailure(grpcio::RpcStatus::new(
+                            grpcio::RpcStatusCode::INTERNAL,
+                            Some(e.to_string()),
+                        ))),
+                    })))
+                    .map(|_| ())
+                    .map_err(|e| error!("error during backup_account_state: {}", e));
+                ctx.spawn(f);
             }
-            Err(e) => Err(tonic::Status::new(tonic::Code::Internal, e.to_string())),
-        });
-
-        // Channel to buffer the stream
-        let (mut tx, rx) = mpsc::channel(32);
-
-        tokio::spawn(async move {
-            for resp in iter {
-                tx.send(resp).await.unwrap();
+            Err(err) => {
+                let f = sink
+                    .fail(::grpcio::RpcStatus::new(
+                        ::grpcio::RpcStatusCode::INTERNAL,
+                        Some(err.to_string()),
+                    ))
+                    .map_err(|e| error!("error while failing backup_account_state: {}", e));
+                ctx.spawn(f);
+                success = false;
             }
-        });
-
-        Ok(tonic::Response::new(rx))
+        }
+        SVC_COUNTERS.resp(&ctx, success);
     }
 
-    async fn get_account_state_range_proof(
-        &self,
-        request: tonic::Request<GetAccountStateRangeProofRequest>,
-    ) -> Result<tonic::Response<GetAccountStateRangeProofResponse>, tonic::Status> {
+    fn get_account_state_range_proof(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetAccountStateRangeProofRequest,
+        sink: grpcio::UnarySink<GetAccountStateRangeProofResponse>,
+    ) {
         debug!("[GRPC] Storage::get_account_state_range_proof");
-        let req = request.into_inner();
-        let resp = self
-            .get_account_state_range_proof_inner(req)
-            .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
-        Ok(tonic::Response::new(resp))
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_account_state_range_proof_inner(req);
+        provide_grpc_response(resp, ctx, sink);
     }
 }
 

@@ -3,6 +3,7 @@
 
 use super::*;
 use futures::stream::StreamExt;
+use grpcio::EnvBuilder;
 use itertools::zip_eq;
 use libra_config::config::NodeConfig;
 use libra_crypto::hash::CryptoHash;
@@ -19,18 +20,35 @@ use tokio::runtime::Runtime;
 fn start_test_storage_with_read_write_client() -> (
     Runtime,
     libra_tools::tempdir::TempPath,
+    ServerHandle,
     StorageReadServiceClient,
     StorageWriteServiceClient,
 ) {
+    let rt = Runtime::new().unwrap();
     let mut config = NodeConfig::random();
     let tmp_dir = libra_tools::tempdir::TempPath::new();
     config.storage.dir = tmp_dir.path().to_path_buf();
 
     let storage_server_handle = start_storage_service(&config);
 
-    let read_client = StorageReadServiceClient::new(&config.storage.address, config.storage.port);
-    let write_client = StorageWriteServiceClient::new(&config.storage.address, config.storage.port);
-    (storage_server_handle, tmp_dir, read_client, write_client)
+    let read_client = StorageReadServiceClient::new(
+        Arc::new(EnvBuilder::new().build()),
+        &config.storage.address,
+        config.storage.port,
+    );
+    let write_client = StorageWriteServiceClient::new(
+        Arc::new(EnvBuilder::new().build()),
+        &config.storage.address,
+        config.storage.port,
+        None,
+    );
+    (
+        rt,
+        tmp_dir,
+        storage_server_handle,
+        read_client,
+        write_client,
+    )
 }
 
 proptest! {
@@ -38,7 +56,7 @@ proptest! {
 
     #[test]
     fn test_storage_service_basic(blocks in arb_blocks_to_commit().no_shrink()) {
-        let(mut rt, _tmp_dir, read_client, write_client) =
+        let(mut rt, _tmp_dir, _server_handler, read_client, write_client) =
             start_test_storage_with_read_write_client();
 
         let mut version = 0;
