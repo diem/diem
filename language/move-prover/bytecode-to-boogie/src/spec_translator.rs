@@ -400,7 +400,7 @@ impl<'a> SpecTranslator<'a> {
                 let BoogieExpr(s, t) = self.translate_location_as_value(loc);
                 BoogieExpr(format!("old({})", s), t)
             }
-            StorageLocation::Ret => self.translate_return(),
+            StorageLocation::Ret(index) => self.translate_return(*index as usize),
             StorageLocation::TxnSenderAddress => BoogieExpr(
                 "Address(TxnSenderAddress(txn))".to_string(),
                 SignatureToken::Address,
@@ -558,29 +558,31 @@ impl<'a> SpecTranslator<'a> {
     }
 
     /// Translate a function return value.
-    fn translate_return(&mut self) -> BoogieExpr {
+    fn translate_return(&mut self, index: usize) -> BoogieExpr {
         let sig = self.get_function_signature();
-        match sig.return_count().cmp(&1usize) {
-            std::cmp::Ordering::Greater => {
-                // TODO: the parser currently only handles `return` for single value. Need to
-                //   generalize for multiple ret0, ret1, ...
-                self.error(
-                    "cannt handle more than one return value as of now",
-                    BoogieExpr("<ret>".to_string(), SignatureToken::U64),
-                )
-            }
-            std::cmp::Ordering::Less => self.error(
+        let return_count = sig.return_count();
+        if return_count < 1 {
+            self.error(
                 "function does not return a value",
                 BoogieExpr("<ret>".to_string(), SignatureToken::U64),
-            ),
-            _ => BoogieExpr(
-                "ret0".to_string(),
+            )
+        } else if index >= return_count {
+            self.error(
+                &format!(
+                    "RET index {} out of bounds; function declaration has {} return values",
+                    index, return_count
+                ),
+                BoogieExpr("<ret>".to_string(), SignatureToken::U64),
+            )
+        } else {
+            BoogieExpr(
+                format!("ret{}", index),
                 sig.return_tokens()
-                    .nth(0)
+                    .nth(index as usize)
                     .expect("non-empty return")
                     .signature_token()
                     .clone(),
-            ),
+            )
         }
     }
 

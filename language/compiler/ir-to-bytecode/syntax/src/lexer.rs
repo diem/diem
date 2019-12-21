@@ -84,6 +84,9 @@ pub enum Tok {
     Public,
     Requires,
     Resource,
+    /// Return in the specification language
+    SpecReturn,
+    /// Return statement in the Move language
     Return,
     Script,
     Struct,
@@ -408,6 +411,7 @@ fn get_name_token(name: &str) -> Tok {
         "public" => Tok::Public,
         "requires" => Tok::Requires,
         "resource" => Tok::Resource,
+        "RET" => Tok::SpecReturn,
         "return" => Tok::Return,
         "struct" => Tok::Struct,
         "succeeds_if" => Tok::SucceedsIf,

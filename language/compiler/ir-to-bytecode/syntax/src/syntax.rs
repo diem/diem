@@ -1339,11 +1339,23 @@ fn parse_storage_location<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<StorageLocation, ParseError<usize, anyhow::Error>> {
     let base = match tokens.peek() {
-        // TODO: probably shouldn't reuse the Move return operator, but reserving "ret" as a
-        // keyword caused too many parse errors in existing code
-        Tok::Return => {
+        Tok::SpecReturn => {
+            // RET(i)
             tokens.advance()?;
-            StorageLocation::Ret
+            let i = {
+                if tokens.peek() == Tok::LParen {
+                    consume_token(tokens, Tok::LParen)?;
+                    let i = u8::from_str(tokens.content()).unwrap();
+                    consume_token(tokens, Tok::U64Value)?;
+                    consume_token(tokens, Tok::RParen)?;
+                    i
+                } else {
+                    // RET without brackets; use RET(0)
+                    0
+                }
+            };
+
+            StorageLocation::Ret(i)
         }
         Tok::TxnSender => {
             tokens.advance()?;

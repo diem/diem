@@ -16,7 +16,7 @@ module TestSpecs {
       requires x2 > 0
       succeeds_if x1 > 1
       aborts_if x1 <= 0
-      ensures return == x1 * x2
+      ensures RET == x1 * x2
     {
         let r: u64;
         r = move(x1) / move(x2);
@@ -59,5 +59,13 @@ module TestSpecs {
         ensures r/s/a == old(r/s/a)
     {
       return;
+    }
+
+    public ret_values(): u64 * bool * u64
+      ensures RET(0) == 7
+      ensures RET(1) == false
+      ensures RET(2) == 10
+    {
+        return (7, false, 10);
     }
 }
