@@ -8,6 +8,7 @@ use crate::{
 };
 use admission_control_proto::proto::admission_control::admission_control_server::AdmissionControlServer;
 use futures::channel::mpsc;
+use grpcio::EnvBuilder;
 use libra_config::config::{NodeConfig, RoleType};
 use libra_mempool::proto::mempool_client::MempoolClientWrapper;
 use network::validator_network::{AdmissionControlNetworkEvents, AdmissionControlNetworkSender};
@@ -53,6 +54,7 @@ impl AdmissionControlRuntime {
 
         // Create storage read client
         let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
+            Arc::new(EnvBuilder::new().name_prefix("grpc-ac-sto-").build()),
             "localhost",
             config.storage.port,
         ));
