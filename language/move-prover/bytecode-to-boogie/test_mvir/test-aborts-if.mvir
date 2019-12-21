@@ -63,7 +63,7 @@ module TestAbortIf {
        public abort8(x: u64, y: u64): bool
        succeeds_if x > y
        aborts_if x < y
-       ensures return == true
+       ensures RET == true
        {
                       assert(copy(x) > copy(y), 1);
                       y = copy(x);

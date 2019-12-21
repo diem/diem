@@ -331,3 +331,54 @@ procedure TestSpecs_select_from_reference_verify (arg0: Reference) returns ()
 {
     call TestSpecs_select_from_reference(arg0);
 }
+
+procedure {:inline 1} TestSpecs_ret_values () returns (ret0: Value, ret1: Value, ret2: Value)
+requires ExistsTxnSenderAccount(m, txn);
+ensures b#Boolean(Boolean((ret0) == (Integer(7))));
+ensures b#Boolean(Boolean((ret1) == (Boolean(false))));
+ensures b#Boolean(Boolean((ret2) == (Integer(10))));
+{
+    // declare local variables
+    var t0: Value; // IntegerType()
+    var t1: Value; // BooleanType()
+    var t2: Value; // IntegerType()
+
+    var tmp: Value;
+    var old_size: int;
+
+    var saved_m: Memory;
+    assume !abort_flag;
+    saved_m := m;
+
+    // assume arguments are of correct types
+
+    old_size := local_counter;
+    local_counter := local_counter + 3;
+
+    // bytecode translation starts here
+    call tmp := LdConst(7);
+    m := UpdateLocal(m, old_size + 0, tmp);
+
+    call tmp := LdFalse();
+    m := UpdateLocal(m, old_size + 1, tmp);
+
+    call tmp := LdConst(10);
+    m := UpdateLocal(m, old_size + 2, tmp);
+
+    ret0 := GetLocal(m, old_size + 0);
+    ret1 := GetLocal(m, old_size + 1);
+    ret2 := GetLocal(m, old_size + 2);
+    return;
+
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
+    ret0 := DefaultValue;
+    ret1 := DefaultValue;
+    ret2 := DefaultValue;
+}
+
+procedure TestSpecs_ret_values_verify () returns (ret0: Value, ret1: Value, ret2: Value)
+{
+    call ret0, ret1, ret2 := TestSpecs_ret_values();
+}

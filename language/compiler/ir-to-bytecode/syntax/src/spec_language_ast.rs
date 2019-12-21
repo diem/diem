@@ -29,8 +29,8 @@ pub enum StorageLocation {
     TxnSenderAddress,
     /// Account address constant
     Address(AccountAddress),
-    /// The return value of the current procedure
-    Ret,
+    /// The ith return value of the current procedure
+    Ret(u8),
     // TODO: useful constants like U64_MAX
 }
 

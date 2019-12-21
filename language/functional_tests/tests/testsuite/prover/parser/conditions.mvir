@@ -86,10 +86,18 @@ module TestSpecExp {
   resource T1<Name> { b: Name }
 
   public ensures_ret()
-  ensures return
+  ensures RET
   {
       return;
   }
+
+  public ensures_multiple_ret()
+  ensures RET(0)
+  ensures RET(1)
+  {
+      return;
+  }
+
 
   public ensures_txn_sender()
   ensures txn_sender {
@@ -202,37 +210,37 @@ module TestBinaryOps {
   resource Pair { x: u64, y: u64}
 
   public ret_eq_seven(): u64
-  ensures return == 7
+  ensures RET == 7
   {
       return 7;
   }
 
   public ret_neq_seven(): u64
-  ensures return != 7
+  ensures RET != 7
   {
       return 5;
   }
 
   public ret_add(x: u64): u64
-  ensures return == x + 1
+  ensures RET == x + 1
   {
       return move(x) + 1;
   }
 
   public ret_sub(x: u64): u64
-  ensures return - 1 == x
+  ensures RET - 1 == x
   {
       return move(x) + 1;
   }
 
   public ret_unop(x: bool): bool
-  ensures return == !x
+  ensures RET == !x
   {
       return !move(x);
   }
 
   public ret_access_path_exp(p: &Self.Pair): u64
-  ensures return == p/x + p/y
+  ensures RET == p/x + p/y
   {
       return *&copy(p).x + *&move(p).y;
   }
