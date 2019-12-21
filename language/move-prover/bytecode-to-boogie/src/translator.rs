@@ -334,7 +334,8 @@ impl<'a> ModuleTranslator<'a> {
         let fun_name = self.function_name_from_definition_index(func_idx);
         let mut var_decls = String::new();
         let mut res = String::new();
-        let mut stmts = match bytecode {
+        let propagate_abort = "if (abort_flag) { goto Label_Abort; }".to_string();
+        let stmts = match bytecode {
             Branch(target) => vec![format!("goto Label_{};", target)],
             BrTrue(target, idx) => {
                 let (dbg_branch_taken_str, dbg_branch_not_taken_str) =
@@ -481,6 +482,7 @@ impl<'a> ModuleTranslator<'a> {
                         dest_str, callee_name, args_str
                     ));
                 }
+                res_vec.push(propagate_abort);
                 res_vec.extend(dest_type_assumptions);
                 res_vec.extend(tmp_assignments);
                 res_vec
@@ -563,7 +565,7 @@ impl<'a> ModuleTranslator<'a> {
                 vec![format!(
                     "call t{} := BorrowGlobal(GetLocal(m, old_size + {}), {});",
                     dest, addr, resource_type,
-                )]
+                ), propagate_abort]
             }
             MoveToSender(src, struct_def_index, type_actuals) => {
                 let resource_type = format_struct_type_value_from_def_idx(
@@ -574,7 +576,7 @@ impl<'a> ModuleTranslator<'a> {
                 vec![format!(
                     "call MoveToSender({}, GetLocal(m, old_size + {}));",
                     resource_type, src,
-                )]
+                ), propagate_abort]
             }
             MoveFrom(dest, src, struct_def_index, type_actuals) => {
                 let resource_type = format_struct_type_value_from_def_idx(
@@ -592,6 +594,7 @@ impl<'a> ModuleTranslator<'a> {
                         format!("t{}", dest),
                         &self.get_local_type(*dest, func_idx),
                     ),
+                    propagate_abort
                 ]
             }
             Ret(rets) => {
@@ -635,6 +638,7 @@ impl<'a> ModuleTranslator<'a> {
                     "call tmp := Add(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
+                propagate_abort,
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Sub(dest, op1, op2) => vec![
@@ -642,6 +646,7 @@ impl<'a> ModuleTranslator<'a> {
                     "call tmp := Sub(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
+                propagate_abort,
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Mul(dest, op1, op2) => vec![
@@ -649,6 +654,7 @@ impl<'a> ModuleTranslator<'a> {
                     "call tmp := Mul(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
+                propagate_abort,
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Div(dest, op1, op2) => vec![
@@ -656,6 +662,7 @@ impl<'a> ModuleTranslator<'a> {
                     "call tmp := Div(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
+                propagate_abort,
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Mod(dest, op1, op2) => vec![
@@ -663,6 +670,7 @@ impl<'a> ModuleTranslator<'a> {
                     "call tmp := Mod(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
                     op1, op2
                 ),
+                propagate_abort,
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
             Lt(dest, op1, op2) => vec![
@@ -757,7 +765,6 @@ impl<'a> ModuleTranslator<'a> {
             ],
             _ => vec!["// unimplemented instruction".into()],
         };
-        stmts.push("if (abort_flag) { goto Label_Abort; }".to_string());
         for code in stmts {
             res.push_str(&format!("    {}\n", code));
         }

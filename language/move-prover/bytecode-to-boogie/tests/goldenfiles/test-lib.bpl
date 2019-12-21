@@ -447,41 +447,32 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdAddr(173345816);
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := Boolean(IsEqual(GetLocal(m, old_size + 1), GetLocal(m, old_size + 2)));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 4);
     if (!b#Boolean(tmp)) { goto Label_7; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_7:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call MoveToSender(GasSchedule_T_type_value(), GetLocal(m, old_size + 6));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -521,37 +512,30 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := LdAddr(173345816);
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowGlobal(GetLocal(m, old_size + 2), GasSchedule_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t0 := CopyOrMoveRef(t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowField(t4, GasSchedule_T_instruction_schedule);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := Vector_length(GasSchedule_Cost_type_value(), t5);
+    if (abort_flag) { goto Label_Abort; }
     assume is#Integer(t6);
 
     m := UpdateLocal(m, old_size + 6, t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 7);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -592,37 +576,30 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := LdAddr(173345816);
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowGlobal(GetLocal(m, old_size + 2), GasSchedule_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t0 := CopyOrMoveRef(t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowField(t4, GasSchedule_T_native_schedule);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := Vector_length(GasSchedule_Cost_type_value(), t5);
+    if (abort_flag) { goto Label_Abort; }
     assume is#Integer(t6);
 
     m := UpdateLocal(m, old_size + 6, t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 7);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -664,15 +641,12 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Exists(GetLocal(m, old_size + 1), ValidatorConfig_T_type_value());
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 2);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -714,29 +688,23 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowGlobal(GetLocal(m, old_size + 2), ValidatorConfig_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t1 := CopyOrMoveRef(t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowField(t4, ValidatorConfig_T_config);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t5);
     assume is#Vector(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 6);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -773,20 +741,16 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t1 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, ValidatorConfig_Config_consensus_pubkey);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t2);
     assume is#ByteArray(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -823,20 +787,16 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t1 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, ValidatorConfig_Config_validator_network_signing_pubkey);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t2);
     assume is#ByteArray(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -873,20 +833,16 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t1 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, ValidatorConfig_Config_validator_network_identity_pubkey);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t2);
     assume is#ByteArray(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -923,20 +879,16 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t1 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, ValidatorConfig_Config_validator_network_address);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t2);
     assume is#ByteArray(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -973,20 +925,16 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t1 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, ValidatorConfig_Config_fullnodes_network_identity_pubkey);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t2);
     assume is#ByteArray(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1023,20 +971,16 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t1 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, ValidatorConfig_Config_fullnodes_network_address);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t2);
     assume is#ByteArray(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1095,27 +1039,21 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#ByteArray(GetLocal(m, old_size + 6));
 
@@ -1131,19 +1069,16 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call tmp := Pack_ValidatorConfig_Config(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7), GetLocal(m, old_size + 8), GetLocal(m, old_size + 9), GetLocal(m, old_size + 10), GetLocal(m, old_size + 11));
     m := UpdateLocal(m, old_size + 12, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Vector(GetLocal(m, old_size + 12));
 
     call tmp := Pack_ValidatorConfig_T(GetLocal(m, old_size + 12));
     m := UpdateLocal(m, old_size + 13, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call MoveToSender(ValidatorConfig_T_type_value(), GetLocal(m, old_size + 13));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1189,44 +1124,32 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowGlobal(GetLocal(m, old_size + 4), ValidatorConfig_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t1 := CopyOrMoveRef(t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call t7 := BorrowField(t6, ValidatorConfig_T_config);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t7);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call t9 := BorrowField(t8, ValidatorConfig_Config_consensus_pubkey);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := CopyOrMoveRef(t9);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t11 := CopyOrMoveRef(t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t11, GetLocal(m, old_size + 10));
-    if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1272,44 +1195,32 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowGlobal(GetLocal(m, old_size + 4), ValidatorConfig_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t1 := CopyOrMoveRef(t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call t7 := BorrowField(t6, ValidatorConfig_T_config);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t7);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call t9 := BorrowField(t8, ValidatorConfig_Config_validator_network_identity_pubkey);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := CopyOrMoveRef(t9);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t11 := CopyOrMoveRef(t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t11, GetLocal(m, old_size + 10));
-    if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1355,44 +1266,32 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowGlobal(GetLocal(m, old_size + 4), ValidatorConfig_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t1 := CopyOrMoveRef(t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call t7 := BorrowField(t6, ValidatorConfig_T_config);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t7);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call t9 := BorrowField(t8, ValidatorConfig_Config_validator_network_address);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := CopyOrMoveRef(t9);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t11 := CopyOrMoveRef(t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t11, GetLocal(m, old_size + 10));
-    if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1435,24 +1334,21 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowGlobal(GetLocal(m, old_size + 2), LibraCoin_MintCapability_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t4 := LibraCoin_mint(GetLocal(m, old_size + 1), t3);
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t4);
 
     m := UpdateLocal(m, old_size + 4, t4);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 4);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1511,107 +1407,83 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t4 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     // unimplemented instruction
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(1000000000);
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(1000000);
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Mul(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
-    m := UpdateLocal(m, old_size + 8, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 8, tmp);
 
     call tmp := Le(GetLocal(m, old_size + 5), GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 9));
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 10);
     if (!b#Boolean(tmp)) { goto Label_11; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(11);
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_11:
     call tmp := LdAddr(173345816);
     m := UpdateLocal(m, old_size + 12, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t13 := BorrowGlobal(GetLocal(m, old_size + 12), LibraCoin_MarketCap_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t13);
-    if (abort_flag) { goto Label_Abort; }
 
     call t14 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call t15 := BorrowField(t14, LibraCoin_MarketCap_total_value);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t15);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 16, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 16));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 17, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 18, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Add(GetLocal(m, old_size + 17), GetLocal(m, old_size + 18));
-    m := UpdateLocal(m, old_size + 19, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 19, tmp);
 
     call t20 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call t21 := BorrowField(t20, LibraCoin_MarketCap_total_value);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t21, GetLocal(m, old_size + 19));
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 22, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Integer(GetLocal(m, old_size + 22));
 
     call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 22));
     m := UpdateLocal(m, old_size + 23, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 23);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1653,60 +1525,48 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 0, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdAddr(173345816);
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := Boolean(IsEqual(GetLocal(m, old_size + 0), GetLocal(m, old_size + 1)));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 3);
     if (!b#Boolean(tmp)) { goto Label_7; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_7:
     call tmp := LdTrue();
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Boolean(GetLocal(m, old_size + 5));
 
     call tmp := Pack_LibraCoin_MintCapability(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call MoveToSender(LibraCoin_MintCapability_type_value(), GetLocal(m, old_size + 6));
     if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Integer(GetLocal(m, old_size + 7));
 
     call tmp := Pack_LibraCoin_MarketCap(GetLocal(m, old_size + 7));
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call MoveToSender(LibraCoin_MarketCap_type_value(), GetLocal(m, old_size + 8));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1742,23 +1602,19 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := LdAddr(173345816);
     m := UpdateLocal(m, old_size + 0, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t1 := BorrowGlobal(GetLocal(m, old_size + 0), LibraCoin_MarketCap_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, LibraCoin_MarketCap_total_value);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t2);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1793,17 +1649,14 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 0, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Integer(GetLocal(m, old_size + 0));
 
     call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 1);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1840,20 +1693,16 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t1 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, LibraCoin_T_value);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t2);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1897,34 +1746,28 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t3 := BorrowLoc(old_size+0);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := LibraCoin_withdraw(t3, GetLocal(m, old_size + 4));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t5);
 
     m := UpdateLocal(m, old_size + 5, t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 6);
     ret1 := GetLocal(m, old_size + 7);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -1978,83 +1821,64 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t3 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := BorrowField(t3, LibraCoin_T_value);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t4);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Ge(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 9);
     if (!b#Boolean(tmp)) { goto Label_11; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(10);
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_11:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 12, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Sub(GetLocal(m, old_size + 11), GetLocal(m, old_size + 12));
-    m := UpdateLocal(m, old_size + 13, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 13, tmp);
 
     call t14 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t15 := BorrowField(t14, LibraCoin_T_value);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t15, GetLocal(m, old_size + 13));
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 16, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Integer(GetLocal(m, old_size + 16));
 
     call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 16));
     m := UpdateLocal(m, old_size + 17, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 17);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -2095,22 +1919,18 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t2 := BorrowLoc(old_size+0);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraCoin_deposit(t2, GetLocal(m, old_size + 3));
     if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 4);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -2159,58 +1979,45 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t4 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowField(t4, LibraCoin_T_value);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t5);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := Unpack_LibraCoin_T(GetLocal(m, old_size + 7));
     assume is#Integer(t8);
 
     m := UpdateLocal(m, old_size + 8, t8);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Add(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
-    m := UpdateLocal(m, old_size + 11, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 11, tmp);
 
     call t12 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t13 := BorrowField(t12, LibraCoin_T_value);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t13, GetLocal(m, old_size + 11));
-    if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -2253,48 +2060,37 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := Unpack_LibraCoin_T(GetLocal(m, old_size + 2));
     assume is#Integer(t3);
 
     m := UpdateLocal(m, old_size + 3, t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := Boolean(IsEqual(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5)));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 6));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 7);
     if (!b#Boolean(tmp)) { goto Label_10; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(11);
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_10:
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -2358,107 +2154,87 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t7 := AddressUtil_address_to_bytes(GetLocal(m, old_size + 6));
+    if (abort_flag) { goto Label_Abort; }
     assume is#ByteArray(t7);
 
     m := UpdateLocal(m, old_size + 7, t7);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Integer(GetLocal(m, old_size + 8));
 
     call tmp := Pack_LibraAccount_EventHandleGenerator(GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 9));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t10 := BorrowLoc(old_size+2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t12 := LibraAccount_new_event_handle_impl(LibraAccount_SentPaymentEvent_type_value(), t10, GetLocal(m, old_size + 11));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t12);
 
     m := UpdateLocal(m, old_size + 12, t12);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 12));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t13 := BorrowLoc(old_size+2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 14, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t15 := LibraAccount_new_event_handle_impl(LibraAccount_ReceivedPaymentEvent_type_value(), t13, GetLocal(m, old_size + 14));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t15);
 
     m := UpdateLocal(m, old_size + 15, t15);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 15));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t16 := LibraCoin_zero();
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t16);
 
     m := UpdateLocal(m, old_size + 16, t16);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 16));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 17, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 18, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdFalse();
     m := UpdateLocal(m, old_size + 19, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdFalse();
     m := UpdateLocal(m, old_size + 20, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 21, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 22, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 23, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 24, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#ByteArray(GetLocal(m, old_size + 17));
 
@@ -2478,11 +2254,9 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call tmp := Pack_LibraAccount_T(GetLocal(m, old_size + 17), GetLocal(m, old_size + 18), GetLocal(m, old_size + 19), GetLocal(m, old_size + 20), GetLocal(m, old_size + 21), GetLocal(m, old_size + 22), GetLocal(m, old_size + 23), GetLocal(m, old_size + 24));
     m := UpdateLocal(m, old_size + 25, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 25);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -2524,20 +2298,16 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     // unimplemented instruction
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_deposit_with_metadata(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -2608,81 +2378,63 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t7 := BorrowLoc(old_size+1);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := LibraCoin_value(t7);
+    if (abort_flag) { goto Label_Abort; }
     assume is#Integer(t8);
 
     m := UpdateLocal(m, old_size + 8, t8);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Gt(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 11));
     m := UpdateLocal(m, old_size + 12, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 12);
     if (!b#Boolean(tmp)) { goto Label_10; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(7);
     m := UpdateLocal(m, old_size + 13, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_10:
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 14, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 14));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 15, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t16 := BorrowGlobal(GetLocal(m, old_size + 15), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t6 := CopyOrMoveRef(t16);
-    if (abort_flag) { goto Label_Abort; }
 
     call t17 := CopyOrMoveRef(t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call t18 := BorrowField(t17, LibraAccount_T_sent_events);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 19, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 20, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 21, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Integer(GetLocal(m, old_size + 19));
 
@@ -2692,51 +2444,40 @@ Label_10:
 
     call tmp := Pack_LibraAccount_SentPaymentEvent(GetLocal(m, old_size + 19), GetLocal(m, old_size + 20), GetLocal(m, old_size + 21));
     m := UpdateLocal(m, old_size + 22, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_emit_event(LibraAccount_SentPaymentEvent_type_value(), t18, GetLocal(m, old_size + 22));
     if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 23, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t24 := BorrowGlobal(GetLocal(m, old_size + 23), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t4 := CopyOrMoveRef(t24);
-    if (abort_flag) { goto Label_Abort; }
 
     call t25 := CopyOrMoveRef(t4);
-    if (abort_flag) { goto Label_Abort; }
 
     call t26 := BorrowField(t25, LibraAccount_T_balance);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 27, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraCoin_deposit(t26, GetLocal(m, old_size + 27));
     if (abort_flag) { goto Label_Abort; }
 
     call t28 := CopyOrMoveRef(t4);
-    if (abort_flag) { goto Label_Abort; }
 
     call t29 := BorrowField(t28, LibraAccount_T_received_events);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 30, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 31, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 32, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Integer(GetLocal(m, old_size + 30));
 
@@ -2746,13 +2487,11 @@ Label_10:
 
     call tmp := Pack_LibraAccount_ReceivedPaymentEvent(GetLocal(m, old_size + 30), GetLocal(m, old_size + 31), GetLocal(m, old_size + 32));
     m := UpdateLocal(m, old_size + 33, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_emit_event(LibraAccount_ReceivedPaymentEvent_type_value(), t29, GetLocal(m, old_size + 33));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -2797,23 +2536,18 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Exists(GetLocal(m, old_size + 2), LibraAccount_T_type_value());
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 4);
     if (!b#Boolean(tmp)) { goto Label_6; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_create_account(GetLocal(m, old_size + 5));
     if (abort_flag) { goto Label_Abort; }
@@ -2821,23 +2555,20 @@ requires ExistsTxnSenderAccount(m, txn);
 Label_6:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := LibraCoin_mint_with_default_capability(GetLocal(m, old_size + 7));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t8);
 
     m := UpdateLocal(m, old_size + 8, t8);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_deposit(GetLocal(m, old_size + 6), GetLocal(m, old_size + 8));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -2879,32 +2610,26 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t3 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := BorrowField(t3, LibraAccount_T_balance);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := LibraCoin_withdraw(t4, GetLocal(m, old_size + 5));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t6);
 
     m := UpdateLocal(m, old_size + 6, t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 7);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -2950,54 +2675,43 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowGlobal(GetLocal(m, old_size + 2), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t1 := CopyOrMoveRef(t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowField(t4, LibraAccount_T_delegated_withdrawal_capability);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t5);
     assume is#Boolean(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 6);
     if (!b#Boolean(tmp)) { goto Label_9; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(11);
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_9:
     call t8 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t10 := LibraAccount_withdraw_from_account(t8, GetLocal(m, old_size + 9));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t10);
 
     m := UpdateLocal(m, old_size + 10, t10);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 10);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3042,39 +2756,32 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t3 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := BorrowField(t3, LibraAccount_WithdrawalCapability_account_address);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t4);
     assume is#Address(tmp);
 
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := BorrowGlobal(GetLocal(m, old_size + 5), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call t7 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t9 := LibraAccount_withdraw_from_account(t7, GetLocal(m, old_size + 8));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t9);
 
     m := UpdateLocal(m, old_size + 9, t9);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 9);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3122,75 +2829,57 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 0, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowGlobal(GetLocal(m, old_size + 4), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t1 := CopyOrMoveRef(t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call t7 := BorrowField(t6, LibraAccount_T_delegated_withdrawal_capability);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t7);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t8);
     assume is#Boolean(tmp);
 
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 9);
     if (!b#Boolean(tmp)) { goto Label_13; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(11);
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_13:
     call tmp := LdTrue();
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t12 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t12, GetLocal(m, old_size + 11));
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 13, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Address(GetLocal(m, old_size + 13));
 
     call tmp := Pack_LibraAccount_WithdrawalCapability(GetLocal(m, old_size + 13));
     m := UpdateLocal(m, old_size + 14, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 14);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3235,43 +2924,33 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := Unpack_LibraAccount_WithdrawalCapability(GetLocal(m, old_size + 3));
     assume is#Address(t4);
 
     m := UpdateLocal(m, old_size + 4, t4);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := BorrowGlobal(GetLocal(m, old_size + 5), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdFalse();
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call t9 := BorrowField(t8, LibraAccount_T_delegated_withdrawal_capability);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t9, GetLocal(m, old_size + 7));
-    if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3320,23 +2999,18 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Exists(GetLocal(m, old_size + 3), LibraAccount_T_type_value());
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 5);
     if (!b#Boolean(tmp)) { goto Label_6; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_create_account(GetLocal(m, old_size + 6));
     if (abort_flag) { goto Label_Abort; }
@@ -3344,27 +3018,23 @@ requires ExistsTxnSenderAccount(m, txn);
 Label_6:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t9 := LibraAccount_withdraw_from_sender(GetLocal(m, old_size + 8));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t9);
 
     m := UpdateLocal(m, old_size + 9, t9);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_deposit_with_metadata(GetLocal(m, old_size + 7), GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3405,20 +3075,16 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     // unimplemented instruction
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_pay_from_sender_with_metadata(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3458,19 +3124,14 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := BorrowField(t3, LibraAccount_T_authentication_key);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t4, GetLocal(m, old_size + 2));
-    if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3514,50 +3175,39 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowGlobal(GetLocal(m, old_size + 2), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t1 := CopyOrMoveRef(t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowField(t4, LibraAccount_T_delegated_key_rotation_capability);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t5);
     assume is#Boolean(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 6);
     if (!b#Boolean(tmp)) { goto Label_9; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(11);
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_9:
     call t8 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_rotate_authentication_key_for_account(t8, GetLocal(m, old_size + 9));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3598,29 +3248,24 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t2 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowField(t2, LibraAccount_KeyRotationCapability_account_address);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t3);
     assume is#Address(tmp);
 
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowGlobal(GetLocal(m, old_size + 4), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_rotate_authentication_key_for_account(t5, GetLocal(m, old_size + 6));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3665,69 +3310,53 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 0, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := BorrowGlobal(GetLocal(m, old_size + 3), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowField(t4, LibraAccount_T_delegated_key_rotation_capability);
-    if (abort_flag) { goto Label_Abort; }
 
     call t1 := CopyOrMoveRef(t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t6);
     assume is#Boolean(tmp);
 
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 7);
     if (!b#Boolean(tmp)) { goto Label_11; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(11);
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_11:
     call tmp := LdTrue();
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t10 := CopyOrMoveRef(t1);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t10, GetLocal(m, old_size + 9));
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Address(GetLocal(m, old_size + 11));
 
     call tmp := Pack_LibraAccount_KeyRotationCapability(GetLocal(m, old_size + 11));
     m := UpdateLocal(m, old_size + 12, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 12);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3772,43 +3401,33 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := Unpack_LibraAccount_KeyRotationCapability(GetLocal(m, old_size + 3));
     assume is#Address(t4);
 
     m := UpdateLocal(m, old_size + 4, t4);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := BorrowGlobal(GetLocal(m, old_size + 5), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdFalse();
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call t9 := BorrowField(t8, LibraAccount_T_delegated_key_rotation_capability);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t9, GetLocal(m, old_size + 7));
-    if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -3861,79 +3480,66 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Integer(GetLocal(m, old_size + 2));
 
     call tmp := Pack_LibraAccount_EventHandleGenerator(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := AddressUtil_address_to_bytes(GetLocal(m, old_size + 5));
+    if (abort_flag) { goto Label_Abort; }
     assume is#ByteArray(t6);
 
     m := UpdateLocal(m, old_size + 6, t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call t7 := LibraCoin_zero();
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t7);
 
     m := UpdateLocal(m, old_size + 7, t7);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdFalse();
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdFalse();
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t10 := BorrowLoc(old_size+1);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t12 := LibraAccount_new_event_handle_impl(LibraAccount_ReceivedPaymentEvent_type_value(), t10, GetLocal(m, old_size + 11));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t12);
 
     m := UpdateLocal(m, old_size + 12, t12);
-    if (abort_flag) { goto Label_Abort; }
 
     call t13 := BorrowLoc(old_size+1);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 14, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t15 := LibraAccount_new_event_handle_impl(LibraAccount_SentPaymentEvent_type_value(), t13, GetLocal(m, old_size + 14));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t15);
 
     m := UpdateLocal(m, old_size + 15, t15);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 16, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 17, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#ByteArray(GetLocal(m, old_size + 6));
 
@@ -3953,13 +3559,11 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call tmp := Pack_LibraAccount_T(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7), GetLocal(m, old_size + 8), GetLocal(m, old_size + 9), GetLocal(m, old_size + 12), GetLocal(m, old_size + 15), GetLocal(m, old_size + 16), GetLocal(m, old_size + 17));
     m := UpdateLocal(m, old_size + 18, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_save_account(GetLocal(m, old_size + 4), GetLocal(m, old_size + 18));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4003,41 +3607,33 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_create_account(GetLocal(m, old_size + 2));
     if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Gt(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 5);
     if (!b#Boolean(tmp)) { goto Label_9; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_pay_from_sender(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
     if (abort_flag) { goto Label_Abort; }
 
 Label_9:
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4075,28 +3671,23 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t2 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowField(t2, LibraAccount_T_balance);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := LibraCoin_value(t3);
+    if (abort_flag) { goto Label_Abort; }
     assume is#Integer(t4);
 
     m := UpdateLocal(m, old_size + 4, t4);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 5);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4135,20 +3726,18 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowGlobal(GetLocal(m, old_size + 1), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t3 := LibraAccount_balance_for_account(t2);
+    if (abort_flag) { goto Label_Abort; }
     assume is#Integer(t3);
 
     m := UpdateLocal(m, old_size + 3, t3);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4185,20 +3774,16 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t1 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, LibraAccount_T_sequence_number);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t2);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4237,20 +3822,18 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowGlobal(GetLocal(m, old_size + 1), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t3 := LibraAccount_sequence_number_for_account(t2);
+    if (abort_flag) { goto Label_Abort; }
     assume is#Integer(t3);
 
     m := UpdateLocal(m, old_size + 3, t3);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 3);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4290,23 +3873,19 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowGlobal(GetLocal(m, old_size + 1), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowField(t2, LibraAccount_T_delegated_key_rotation_capability);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t3);
     assume is#Boolean(tmp);
 
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 4);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4346,23 +3925,19 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowGlobal(GetLocal(m, old_size + 1), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowField(t2, LibraAccount_T_delegated_withdrawal_capability);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t3);
     assume is#Boolean(tmp);
 
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 4);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4398,14 +3973,11 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t1 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, LibraAccount_WithdrawalCapability_account_address);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := t2;
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4441,14 +4013,11 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t1 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := BorrowField(t1, LibraAccount_KeyRotationCapability_account_address);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := t2;
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4486,15 +4055,12 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Exists(GetLocal(m, old_size + 1), LibraAccount_T_type_value());
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 2);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4585,228 +4151,175 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 10));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Exists(GetLocal(m, old_size + 11), LibraAccount_T_type_value());
     m := UpdateLocal(m, old_size + 12, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 12));
     m := UpdateLocal(m, old_size + 13, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 13);
     if (!b#Boolean(tmp)) { goto Label_8; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(5);
     m := UpdateLocal(m, old_size + 14, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_8:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 15, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t16 := BorrowGlobal(GetLocal(m, old_size + 15), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t5 := CopyOrMoveRef(t16);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 17, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t18 := Hash_sha3_256(GetLocal(m, old_size + 17));
+    if (abort_flag) { goto Label_Abort; }
     assume is#ByteArray(t18);
 
     m := UpdateLocal(m, old_size + 18, t18);
-    if (abort_flag) { goto Label_Abort; }
 
     call t19 := CopyOrMoveRef(t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call t20 := BorrowField(t19, LibraAccount_T_authentication_key);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t20);
     assume is#ByteArray(tmp);
 
     m := UpdateLocal(m, old_size + 21, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := Boolean(IsEqual(GetLocal(m, old_size + 18), GetLocal(m, old_size + 21)));
     m := UpdateLocal(m, old_size + 22, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 22));
     m := UpdateLocal(m, old_size + 23, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 23);
     if (!b#Boolean(tmp)) { goto Label_21; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(2);
     m := UpdateLocal(m, old_size + 24, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_21:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 25, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 26, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Mul(GetLocal(m, old_size + 25), GetLocal(m, old_size + 26));
-    m := UpdateLocal(m, old_size + 27, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 27, tmp);
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 27));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t28 := CopyOrMoveRef(t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call t29 := FreezeRef(t28);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := CopyOrMoveRef(t29);
-    if (abort_flag) { goto Label_Abort; }
 
     call t30 := CopyOrMoveRef(t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call t31 := LibraAccount_balance_for_account(t30);
+    if (abort_flag) { goto Label_Abort; }
     assume is#Integer(t31);
 
     m := UpdateLocal(m, old_size + 31, t31);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 31));
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 32, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
     m := UpdateLocal(m, old_size + 33, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Ge(GetLocal(m, old_size + 32), GetLocal(m, old_size + 33));
     m := UpdateLocal(m, old_size + 34, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 34));
     m := UpdateLocal(m, old_size + 35, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 35);
     if (!b#Boolean(tmp)) { goto Label_38; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(6);
     m := UpdateLocal(m, old_size + 36, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_38:
     call t37 := CopyOrMoveRef(t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call t38 := BorrowField(t37, LibraAccount_T_sequence_number);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t38);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 39, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 39));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 40, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 9));
     m := UpdateLocal(m, old_size + 41, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Ge(GetLocal(m, old_size + 40), GetLocal(m, old_size + 41));
     m := UpdateLocal(m, old_size + 42, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 42));
     m := UpdateLocal(m, old_size + 43, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 43);
     if (!b#Boolean(tmp)) { goto Label_49; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(3);
     m := UpdateLocal(m, old_size + 44, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_49:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 45, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 9));
     m := UpdateLocal(m, old_size + 46, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := Boolean(IsEqual(GetLocal(m, old_size + 45), GetLocal(m, old_size + 46)));
     m := UpdateLocal(m, old_size + 47, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 47));
     m := UpdateLocal(m, old_size + 48, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 48);
     if (!b#Boolean(tmp)) { goto Label_56; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(4);
     m := UpdateLocal(m, old_size + 49, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_56:
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -4883,143 +4396,113 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t10 := BorrowGlobal(GetLocal(m, old_size + 9), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t4 := CopyOrMoveRef(t10);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 12, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 13, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Sub(GetLocal(m, old_size + 12), GetLocal(m, old_size + 13));
-    m := UpdateLocal(m, old_size + 14, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 14, tmp);
 
     call tmp := Mul(GetLocal(m, old_size + 11), GetLocal(m, old_size + 14));
-    m := UpdateLocal(m, old_size + 15, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 15, tmp);
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 15));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t16 := CopyOrMoveRef(t4);
-    if (abort_flag) { goto Label_Abort; }
 
     call t17 := FreezeRef(t16);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := CopyOrMoveRef(t17);
-    if (abort_flag) { goto Label_Abort; }
 
     call t18 := CopyOrMoveRef(t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call t19 := LibraAccount_balance_for_account(t18);
+    if (abort_flag) { goto Label_Abort; }
     assume is#Integer(t19);
 
     m := UpdateLocal(m, old_size + 19, t19);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
     m := UpdateLocal(m, old_size + 20, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Ge(GetLocal(m, old_size + 19), GetLocal(m, old_size + 20));
     m := UpdateLocal(m, old_size + 21, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Not(GetLocal(m, old_size + 21));
     m := UpdateLocal(m, old_size + 22, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 22);
     if (!b#Boolean(tmp)) { goto Label_20; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(6);
     m := UpdateLocal(m, old_size + 23, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_20:
     call t24 := CopyOrMoveRef(t4);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
     m := UpdateLocal(m, old_size + 25, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t26 := LibraAccount_withdraw_from_account(t24, GetLocal(m, old_size + 25));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t26);
 
     m := UpdateLocal(m, old_size + 26, t26);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 26));
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 27, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 28, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Add(GetLocal(m, old_size + 27), GetLocal(m, old_size + 28));
-    m := UpdateLocal(m, old_size + 29, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 29, tmp);
 
     call t30 := CopyOrMoveRef(t4);
-    if (abort_flag) { goto Label_Abort; }
 
     call t31 := BorrowField(t30, LibraAccount_T_sequence_number);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t31, GetLocal(m, old_size + 29));
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdAddr(4078);
     m := UpdateLocal(m, old_size + 32, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t33 := BorrowGlobal(GetLocal(m, old_size + 32), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t5 := CopyOrMoveRef(t33);
-    if (abort_flag) { goto Label_Abort; }
 
     call t34 := CopyOrMoveRef(t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call t35 := BorrowField(t34, LibraAccount_T_balance);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 36, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraCoin_deposit(t35, GetLocal(m, old_size + 36));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -5075,95 +4558,77 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t6 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t7 := BorrowField(t6, LibraAccount_EventHandleGenerator_counter);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t7);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t9 := AddressUtil_address_to_bytes(GetLocal(m, old_size + 8));
+    if (abort_flag) { goto Label_Abort; }
     assume is#ByteArray(t9);
 
     m := UpdateLocal(m, old_size + 9, t9);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 9));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t10 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t10);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t12 := U64Util_u64_to_bytes(GetLocal(m, old_size + 11));
+    if (abort_flag) { goto Label_Abort; }
     assume is#ByteArray(t12);
 
     m := UpdateLocal(m, old_size + 12, t12);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 12));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t13 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t13);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 14, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 15, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Add(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
-    m := UpdateLocal(m, old_size + 16, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 16, tmp);
 
     call t17 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t17, GetLocal(m, old_size + 16));
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 18, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 19, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t20 := BytearrayUtil_bytearray_concat(GetLocal(m, old_size + 18), GetLocal(m, old_size + 19));
+    if (abort_flag) { goto Label_Abort; }
     assume is#ByteArray(t20);
 
     m := UpdateLocal(m, old_size + 20, t20);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 20));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 21, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 21);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -5206,20 +4671,17 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := LibraAccount_fresh_guid(t3, GetLocal(m, old_size + 4));
+    if (abort_flag) { goto Label_Abort; }
     assume is#ByteArray(t5);
 
     m := UpdateLocal(m, old_size + 5, t5);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Integer(GetLocal(m, old_size + 2));
 
@@ -5227,11 +4689,9 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call tmp := Pack_LibraAccount_EventHandle(tv0, GetLocal(m, old_size + 2), GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 6);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -5272,33 +4732,27 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowGlobal(GetLocal(m, old_size + 2), LibraAccount_T_type_value());
     if (abort_flag) { goto Label_Abort; }
 
     call t0 := CopyOrMoveRef(t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowField(t4, LibraAccount_T_event_generator);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t7 := LibraAccount_new_event_handle_impl(tv0, t5, GetLocal(m, old_size + 6));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t7);
 
     m := UpdateLocal(m, old_size + 7, t7);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 7);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -5350,75 +4804,58 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t4 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowField(t4, LibraAccount_EventHandle_guid);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t5);
     assume is#ByteArray(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t7 := CopyOrMoveRef(t0);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := BorrowField(t7, LibraAccount_EventHandle_counter);
-    if (abort_flag) { goto Label_Abort; }
 
     call t2 := CopyOrMoveRef(t8);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t10 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t10);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 12, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call LibraAccount_write_to_event_store(tv0, GetLocal(m, old_size + 9), GetLocal(m, old_size + 11), GetLocal(m, old_size + 12));
     if (abort_flag) { goto Label_Abort; }
 
     call t13 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := ReadRef(t13);
     assume is#Integer(tmp);
 
     m := UpdateLocal(m, old_size + 14, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 15, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Add(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
-    m := UpdateLocal(m, old_size + 16, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 16, tmp);
 
     call t17 := CopyOrMoveRef(t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call WriteRef(t17, GetLocal(m, old_size + 16));
-    if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -5458,7 +4895,6 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t4, t5 := Unpack_LibraAccount_EventHandle(GetLocal(m, old_size + 3));
     assume is#Integer(t4);
@@ -5467,18 +4903,14 @@ requires ExistsTxnSenderAccount(m, txn);
 
     m := UpdateLocal(m, old_size + 4, t4);
     m := UpdateLocal(m, old_size + 5, t5);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;

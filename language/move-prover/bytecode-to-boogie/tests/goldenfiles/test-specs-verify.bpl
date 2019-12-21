@@ -53,39 +53,31 @@ ensures !(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Addres
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 0, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Exists(GetLocal(m, old_size + 0), TestSpecs_R_type_value());
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 1);
     if (!b#Boolean(tmp)) { goto Label_5; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_5:
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Integer(GetLocal(m, old_size + 3));
 
     call tmp := Pack_TestSpecs_R(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call MoveToSender(TestSpecs_R_type_value(), GetLocal(m, old_size + 4));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -106,8 +98,6 @@ ensures !(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Addres
     var t0: Value; // AddressType()
     var t1: Value; // BooleanType()
     var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // TestSpecs_R_type_value()
 
     var tmp: Value;
     var old_size: int;
@@ -119,44 +109,25 @@ ensures !(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Addres
     // assume arguments are of correct types
 
     old_size := local_counter;
-    local_counter := local_counter + 5;
+    local_counter := local_counter + 3;
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 0, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Exists(GetLocal(m, old_size + 0), TestSpecs_R_type_value());
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 1);
     if (!b#Boolean(tmp)) { goto Label_5; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     goto Label_Abort;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_5:
-    call tmp := LdConst(1);
-    m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
-
-    assume is#Integer(GetLocal(m, old_size + 3));
-
-    call tmp := Pack_TestSpecs_R(GetLocal(m, old_size + 3));
-    m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
-
-    call MoveToSender(TestSpecs_R_type_value(), GetLocal(m, old_size + 4));
-    if (abort_flag) { goto Label_Abort; }
-
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -170,8 +141,8 @@ procedure TestSpecs_create_resource_error_verify () returns ()
 
 procedure {:inline 1} TestSpecs_div_by_zero (arg0: Value, arg1: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
-ensures !old(b#Boolean(Boolean(i#Integer(arg1) > i#Integer(Integer(0))))) ==> abort_flag;
-ensures (b#Boolean(Boolean(i#Integer(arg1) > i#Integer(Integer(0))))) ==> !abort_flag;
+ensures !old(b#Boolean(Boolean((arg1) != (Integer(0))))) ==> abort_flag;
+ensures (b#Boolean(Boolean((arg1) != (Integer(0))))) ==> !abort_flag;
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -201,27 +172,22 @@ ensures (b#Boolean(Boolean(i#Integer(arg1) > i#Integer(Integer(0))))) ==> !abort
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Div(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
-    m := UpdateLocal(m, old_size + 5, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 5, tmp);
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 6);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -267,27 +233,22 @@ ensures (b#Boolean(Boolean(true))) ==> !abort_flag;
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Div(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
-    m := UpdateLocal(m, old_size + 5, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 5, tmp);
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 6);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
