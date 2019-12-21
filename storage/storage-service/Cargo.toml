@@ -14,7 +14,8 @@ anyhow = "1.0"
 async-trait = "0.1"
 tokio = { version = "0.2", features = ["full"] }
 tonic = { git = "https://github.com/hyperium/tonic.git" }
-futures = "0.3"
+futures = { version = "0.3.0", features = ["compat"] }
+futures01 = { version = "0.1.29", package = "futures" }
 structopt = "0.3.2"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
