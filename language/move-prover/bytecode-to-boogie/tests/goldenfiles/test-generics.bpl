@@ -81,58 +81,48 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t4 := Vector_empty(IntegerType());
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t4);
 
     m := UpdateLocal(m, old_size + 4, t4);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t5 := BorrowLoc(old_size+2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call Vector_push_back(IntegerType(), t5, GetLocal(m, old_size + 6));
     if (abort_flag) { goto Label_Abort; }
 
     call t7 := BorrowLoc(old_size+2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 8, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call Vector_push_back(IntegerType(), t7, GetLocal(m, old_size + 8));
     if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Vector(GetLocal(m, old_size + 9));
 
     call tmp := Pack_TestGenerics_R(GetLocal(m, old_size + 9));
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 10));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call MoveToSender(TestGenerics_R_type_value(), GetLocal(m, old_size + 11));
     if (abort_flag) { goto Label_Abort; }
 
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -171,38 +161,32 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // bytecode translation starts here
     call t2 := Vector_empty(tv0);
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t2);
 
     m := UpdateLocal(m, old_size + 2, t2);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := BorrowLoc(old_size+1);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call Vector_push_back(tv0, t3, GetLocal(m, old_size + 4));
     if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     assume is#Vector(GetLocal(m, old_size + 5));
 
     call tmp := Pack_TestGenerics_T(tv0, GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 6, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 6);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -250,55 +234,45 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t6 := TestGenerics_create(tv0, GetLocal(m, old_size + 5));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t6);
 
     m := UpdateLocal(m, old_size + 6, t6);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 7, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t8 := TestGenerics_create(tv0, GetLocal(m, old_size + 7));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Vector(t8);
 
     m := UpdateLocal(m, old_size + 8, t8);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 9, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
     m := UpdateLocal(m, old_size + 10, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := Boolean(IsEqual(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10)));
     m := UpdateLocal(m, old_size + 11, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 11));
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 12, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 12);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
@@ -336,29 +310,24 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call t3 := TestGenerics_overcomplicated_equals(IntegerType(), GetLocal(m, old_size + 1), GetLocal(m, old_size + 2));
+    if (abort_flag) { goto Label_Abort; }
     assume is#Boolean(t3);
 
     m := UpdateLocal(m, old_size + 3, t3);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 0, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 4, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 4);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;

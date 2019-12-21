@@ -34,36 +34,29 @@ requires ExistsTxnSenderAccount(m, txn);
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     tmp := GetLocal(m, old_size + 1);
     if (!b#Boolean(tmp)) { goto Label_6; }
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 2, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := LdConst(2);
     m := UpdateLocal(m, old_size + 3, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     call tmp := Add(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3));
-    m := UpdateLocal(m, old_size + 4, tmp);
     if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 4, tmp);
 
     ret0 := GetLocal(m, old_size + 4);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_6:
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 5, tmp);
-    if (abort_flag) { goto Label_Abort; }
 
     ret0 := GetLocal(m, old_size + 5);
     return;
-    if (abort_flag) { goto Label_Abort; }
 
 Label_Abort:
     abort_flag := true;
