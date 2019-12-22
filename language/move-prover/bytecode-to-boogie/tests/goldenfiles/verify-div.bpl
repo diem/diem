@@ -6,13 +6,11 @@
 
 // ** functions of module TestSpecs
 
-procedure {:inline 1} TestSpecs_div (arg0: Value, arg1: Value) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_div (x: Value, y: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(b#Boolean(Boolean(i#Integer(arg1) > i#Integer(Integer(0))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(y) > i#Integer(Integer(0))))) ==> !abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // IntegerType()
@@ -27,13 +25,13 @@ ensures old(b#Boolean(Boolean(i#Integer(arg1) > i#Integer(Integer(0))))) ==> !ab
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -61,19 +59,17 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestSpecs_div_verify (arg0: Value, arg1: Value) returns (ret0: Value)
+procedure TestSpecs_div_verify (x: Value, y: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestSpecs_div(arg0, arg1);
+    call ret0 := TestSpecs_div(x, y);
 }
 
-procedure {:inline 1} TestSpecs_div_by_zero_detected (arg0: Value, arg1: Value) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_div_by_zero_detected (x: Value, y: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
 ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // IntegerType()
@@ -88,13 +84,13 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -122,8 +118,8 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestSpecs_div_by_zero_detected_verify (arg0: Value, arg1: Value) returns (ret0: Value)
+procedure TestSpecs_div_by_zero_detected_verify (x: Value, y: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestSpecs_div_by_zero_detected(arg0, arg1);
+    call ret0 := TestSpecs_div_by_zero_detected(x, y);
 }

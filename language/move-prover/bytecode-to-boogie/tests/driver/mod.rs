@@ -21,7 +21,7 @@ pub fn test(flags: &[&str], sources: &[&str]) {
     options.setup_logging_for_test();
 
     // Run the translator.
-    let mut driver = Driver::new(&options);
+    let mut driver = Driver::new(options);
     let (prelude, generated) = driver.run_for_test();
 
     if env::var("VERIFY_BPL_GOLDEN").is_ok() {

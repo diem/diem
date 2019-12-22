@@ -8,18 +8,18 @@ axiom TestGenerics_R_v == 0;
 function TestGenerics_R_type_value(): TypeValue {
     StructType(TestGenerics_R, ExtendTypeValueArray(EmptyTypeValueArray, Vector_T_type_value(IntegerType())))
 }
-
-procedure {:inline 1} Pack_TestGenerics_R(v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestGenerics_R(v: Value) returns (_struct: Value)
 {
-    assume is#Vector(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+    assume is#Vector(v);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, v));
 
 }
 
-procedure {:inline 1} Unpack_TestGenerics_R(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_TestGenerics_R(_struct: Value) returns (v: Value)
 {
+    assume is#Vector(_struct);
+    v := SelectField(_struct, TestGenerics_R_v);
     assume is#Vector(v);
-    v0 := SelectField(v, TestGenerics_R_v);
 }
 
 const unique TestGenerics_T: TypeName;
@@ -28,30 +28,28 @@ axiom TestGenerics_T_v == 0;
 function TestGenerics_T_type_value(tv0: TypeValue): TypeValue {
     StructType(TestGenerics_T, ExtendTypeValueArray(EmptyTypeValueArray, Vector_T_type_value(tv0)))
 }
-
-procedure {:inline 1} Pack_TestGenerics_T(tv0: TypeValue, v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestGenerics_T(tv0: TypeValue, v: Value) returns (_struct: Value)
 {
-    assume is#Vector(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+    assume is#Vector(v);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, v));
 
 }
 
-procedure {:inline 1} Unpack_TestGenerics_T(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_TestGenerics_T(_struct: Value) returns (v: Value)
 {
+    assume is#Vector(_struct);
+    v := SelectField(_struct, TestGenerics_T_v);
     assume is#Vector(v);
-    v0 := SelectField(v, TestGenerics_T_v);
 }
 
 
 
 // ** functions of module TestGenerics
 
-procedure {:inline 1} TestGenerics_move2 (arg0: Value, arg1: Value) returns ()
+procedure {:inline 1} TestGenerics_move2 (x1: Value, x2: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // Vector_T_type_value(IntegerType())
     var t3: Value; // TestGenerics_R_type_value()
     var t4: Value; // Vector_T_type_value(IntegerType())
@@ -71,13 +69,13 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x1);
+    assume IsValidInteger(x2);
 
     old_size := local_counter;
     local_counter := local_counter + 12;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x1);
+    m := UpdateLocal(m, old_size + 1, x2);
 
     // bytecode translation starts here
     call t4 := Vector_empty(IntegerType());
@@ -108,8 +106,6 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 9, tmp);
 
-    assume is#Vector(GetLocal(m, old_size + 9));
-
     call tmp := Pack_TestGenerics_R(GetLocal(m, old_size + 9));
     m := UpdateLocal(m, old_size + 10, tmp);
 
@@ -129,17 +125,16 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestGenerics_move2_verify (arg0: Value, arg1: Value) returns ()
+procedure TestGenerics_move2_verify (x1: Value, x2: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestGenerics_move2(arg0, arg1);
+    call TestGenerics_move2(x1, x2);
 }
 
-procedure {:inline 1} TestGenerics_create (tv0: TypeValue, arg0: Value) returns (ret0: Value)
+procedure {:inline 1} TestGenerics_create (tv0: TypeValue, x: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // tv0
     var t1: Value; // Vector_T_type_value(tv0)
     var t2: Value; // Vector_T_type_value(tv0)
     var t3: Reference; // ReferenceType(Vector_T_type_value(tv0))
@@ -158,7 +153,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 0, x);
 
     // bytecode translation starts here
     call t2 := Vector_empty(tv0);
@@ -181,8 +176,6 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 5, tmp);
 
-    assume is#Vector(GetLocal(m, old_size + 5));
-
     call tmp := Pack_TestGenerics_T(tv0, GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 6, tmp);
 
@@ -195,18 +188,16 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestGenerics_create_verify (tv0: TypeValue, arg0: Value) returns (ret0: Value)
+procedure TestGenerics_create_verify (tv0: TypeValue, x: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestGenerics_create(tv0: TypeValue, arg0);
+    call ret0 := TestGenerics_create(tv0, x);
 }
 
-procedure {:inline 1} TestGenerics_overcomplicated_equals (tv0: TypeValue, arg0: Value, arg1: Value) returns (ret0: Value)
+procedure {:inline 1} TestGenerics_overcomplicated_equals (tv0: TypeValue, x: Value, y: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // tv0
-    var t1: Value; // tv0
     var t2: Value; // BooleanType()
     var t3: Value; // TestGenerics_T_type_value(tv0)
     var t4: Value; // TestGenerics_T_type_value(tv0)
@@ -230,8 +221,8 @@ requires ExistsTxnSenderAccount(m, txn);
 
     old_size := local_counter;
     local_counter := local_counter + 13;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -282,10 +273,10 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestGenerics_overcomplicated_equals_verify (tv0: TypeValue, arg0: Value, arg1: Value) returns (ret0: Value)
+procedure TestGenerics_overcomplicated_equals_verify (tv0: TypeValue, x: Value, y: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestGenerics_overcomplicated_equals(tv0: TypeValue, arg0, arg1);
+    call ret0 := TestGenerics_overcomplicated_equals(tv0, x, y);
 }
 
 procedure {:inline 1} TestGenerics_test () returns (ret0: Value)

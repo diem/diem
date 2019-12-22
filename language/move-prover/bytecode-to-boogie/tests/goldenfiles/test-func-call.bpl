@@ -6,11 +6,10 @@
 
 // ** functions of module TestFuncCall
 
-procedure {:inline 1} TestFuncCall_f (arg0: Value) returns (ret0: Value)
+procedure {:inline 1} TestFuncCall_f (x: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
     var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
@@ -23,11 +22,11 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
+    assume IsValidInteger(x);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 0, x);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -49,17 +48,16 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestFuncCall_f_verify (arg0: Value) returns (ret0: Value)
+procedure TestFuncCall_f_verify (x: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestFuncCall_f(arg0);
+    call ret0 := TestFuncCall_f(x);
 }
 
-procedure {:inline 1} TestFuncCall_g (arg0: Value) returns (ret0: Value)
+procedure {:inline 1} TestFuncCall_g (x: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
     var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
@@ -72,11 +70,11 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
+    assume IsValidInteger(x);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 0, x);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -98,17 +96,18 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestFuncCall_g_verify (arg0: Value) returns (ret0: Value)
+procedure TestFuncCall_g_verify (x: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestFuncCall_g(arg0);
+    call ret0 := TestFuncCall_g(x);
 }
 
-procedure {:inline 1} TestFuncCall_h (arg0: Value) returns (ret0: Value)
+procedure {:inline 1} TestFuncCall_h (b: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // BooleanType()
     var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
@@ -141,11 +140,11 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Boolean(arg0);
+    assume is#Boolean(b);
 
     old_size := local_counter;
     local_counter := local_counter + 24;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 0, b);
 
     // bytecode translation starts here
     call tmp := LdConst(3);
@@ -248,8 +247,8 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestFuncCall_h_verify (arg0: Value) returns (ret0: Value)
+procedure TestFuncCall_h_verify (b: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestFuncCall_h(arg0);
+    call ret0 := TestFuncCall_h(b);
 }

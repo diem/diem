@@ -10,20 +10,21 @@ axiom TestStruct_B_val == 1;
 function TestStruct_B_type_value(): TypeValue {
     StructType(TestStruct_B, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, AddressType()), IntegerType()))
 }
-
-procedure {:inline 1} Pack_TestStruct_B(v0: Value, v1: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestStruct_B(addr: Value, val: Value) returns (_struct: Value)
 {
-    assume is#Address(v0);
-    assume IsValidInteger(v1);
-    v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
+    assume is#Address(addr);
+    assume IsValidInteger(val);
+    _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, addr), val));
 
 }
 
-procedure {:inline 1} Unpack_TestStruct_B(v: Value) returns (v0: Value, v1: Value)
+procedure {:inline 1} Unpack_TestStruct_B(_struct: Value) returns (addr: Value, val: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, TestStruct_B_addr);
-    v1 := SelectField(v, TestStruct_B_val);
+    assume is#Vector(_struct);
+    addr := SelectField(_struct, TestStruct_B_addr);
+    assume is#Address(addr);
+    val := SelectField(_struct, TestStruct_B_val);
+    assume IsValidInteger(val);
 }
 
 const unique TestStruct_A: TypeName;
@@ -34,20 +35,21 @@ axiom TestStruct_A_b == 1;
 function TestStruct_A_type_value(): TypeValue {
     StructType(TestStruct_A, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), TestStruct_B_type_value()))
 }
-
-procedure {:inline 1} Pack_TestStruct_A(v0: Value, v1: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestStruct_A(val: Value, b: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    assume is#Vector(v1);
-    v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
+    assume IsValidInteger(val);
+    assume is#Vector(b);
+    _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, val), b));
 
 }
 
-procedure {:inline 1} Unpack_TestStruct_A(v: Value) returns (v0: Value, v1: Value)
+procedure {:inline 1} Unpack_TestStruct_A(_struct: Value) returns (val: Value, b: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, TestStruct_A_val);
-    v1 := SelectField(v, TestStruct_A_b);
+    assume is#Vector(_struct);
+    val := SelectField(_struct, TestStruct_A_val);
+    assume IsValidInteger(val);
+    b := SelectField(_struct, TestStruct_A_b);
+    assume is#Vector(b);
 }
 
 const unique TestStruct_C: TypeName;
@@ -58,20 +60,21 @@ axiom TestStruct_C_b == 1;
 function TestStruct_C_type_value(): TypeValue {
     StructType(TestStruct_C, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), TestStruct_A_type_value()))
 }
-
-procedure {:inline 1} Pack_TestStruct_C(v0: Value, v1: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestStruct_C(val: Value, b: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    assume is#Vector(v1);
-    v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
+    assume IsValidInteger(val);
+    assume is#Vector(b);
+    _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, val), b));
 
 }
 
-procedure {:inline 1} Unpack_TestStruct_C(v: Value) returns (v0: Value, v1: Value)
+procedure {:inline 1} Unpack_TestStruct_C(_struct: Value) returns (val: Value, b: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, TestStruct_C_val);
-    v1 := SelectField(v, TestStruct_C_b);
+    assume is#Vector(_struct);
+    val := SelectField(_struct, TestStruct_C_val);
+    assume IsValidInteger(val);
+    b := SelectField(_struct, TestStruct_C_b);
+    assume is#Vector(b);
 }
 
 const unique TestStruct_T: TypeName;
@@ -80,30 +83,28 @@ axiom TestStruct_T_x == 0;
 function TestStruct_T_type_value(): TypeValue {
     StructType(TestStruct_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-
-procedure {:inline 1} Pack_TestStruct_T(v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestStruct_T(x: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+    assume IsValidInteger(x);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, x));
 
 }
 
-procedure {:inline 1} Unpack_TestStruct_T(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_TestStruct_T(_struct: Value) returns (x: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, TestStruct_T_x);
+    assume is#Vector(_struct);
+    x := SelectField(_struct, TestStruct_T_x);
+    assume IsValidInteger(x);
 }
 
 
 
 // ** functions of module TestStruct
 
-procedure {:inline 1} TestStruct_identity (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+procedure {:inline 1} TestStruct_identity (a: Value, c: Value) returns (ret0: Value, ret1: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // TestStruct_A_type_value()
-    var t1: Value; // TestStruct_C_type_value()
     var t2: Value; // TestStruct_A_type_value()
     var t3: Value; // TestStruct_C_type_value()
 
@@ -115,13 +116,13 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Vector(arg0);
-    assume is#Vector(arg1);
+    assume is#Vector(a);
+    assume is#Vector(c);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, a);
+    m := UpdateLocal(m, old_size + 1, c);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -141,17 +142,16 @@ Label_Abort:
     ret1 := DefaultValue;
 }
 
-procedure TestStruct_identity_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+procedure TestStruct_identity_verify (a: Value, c: Value) returns (ret0: Value, ret1: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0, ret1 := TestStruct_identity(arg0, arg1);
+    call ret0, ret1 := TestStruct_identity(a, c);
 }
 
-procedure {:inline 1} TestStruct_module_builtins (arg0: Value) returns (ret0: Value)
+procedure {:inline 1} TestStruct_module_builtins (a: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // AddressType()
     var t1: Value; // TestStruct_T_type_value()
     var t2: Reference; // ReferenceType(TestStruct_T_type_value())
     var t3: Reference; // ReferenceType(TestStruct_T_type_value())
@@ -180,11 +180,11 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Address(arg0);
+    assume is#Address(a);
 
     old_size := local_counter;
     local_counter := local_counter + 20;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 0, a);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -265,17 +265,18 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestStruct_module_builtins_verify (arg0: Value) returns (ret0: Value)
+procedure TestStruct_module_builtins_verify (a: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestStruct_module_builtins(arg0);
+    call ret0 := TestStruct_module_builtins(a);
 }
 
-procedure {:inline 1} TestStruct_nested_struct (arg0: Value) returns (ret0: Value)
+procedure {:inline 1} TestStruct_nested_struct (a: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // AddressType()
     var t1: Value; // TestStruct_A_type_value()
     var t2: Value; // TestStruct_B_type_value()
     var t3: Reference; // ReferenceType(TestStruct_B_type_value())
@@ -308,11 +309,11 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Address(arg0);
+    assume is#Address(a);
 
     old_size := local_counter;
     local_counter := local_counter + 24;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 0, a);
 
     // bytecode translation starts here
     call tmp := LdFalse();
@@ -326,10 +327,6 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 8, tmp);
-
-    assume is#Address(GetLocal(m, old_size + 7));
-
-    assume IsValidInteger(GetLocal(m, old_size + 8));
 
     call tmp := Pack_TestStruct_B(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 9, tmp);
@@ -345,10 +342,6 @@ Label_7:
 
     call tmp := LdConst(42);
     m := UpdateLocal(m, old_size + 11, tmp);
-
-    assume is#Address(GetLocal(m, old_size + 10));
-
-    assume IsValidInteger(GetLocal(m, old_size + 11));
 
     call tmp := Pack_TestStruct_B(GetLocal(m, old_size + 10), GetLocal(m, old_size + 11));
     m := UpdateLocal(m, old_size + 12, tmp);
@@ -410,17 +403,18 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestStruct_nested_struct_verify (arg0: Value) returns (ret0: Value)
+procedure TestStruct_nested_struct_verify (a: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestStruct_nested_struct(arg0);
+    call ret0 := TestStruct_nested_struct(a);
 }
 
-procedure {:inline 1} TestStruct_try_unpack (arg0: Value) returns (ret0: Value)
+procedure {:inline 1} TestStruct_try_unpack (a: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // AddressType()
     var t1: Value; // IntegerType()
     var t2: Value; // TestStruct_B_type_value()
     var t3: Value; // AddressType()
@@ -445,11 +439,11 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Address(arg0);
+    assume is#Address(a);
 
     old_size := local_counter;
     local_counter := local_counter + 16;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 0, a);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -457,10 +451,6 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call tmp := LdConst(42);
     m := UpdateLocal(m, old_size + 5, tmp);
-
-    assume is#Address(GetLocal(m, old_size + 4));
-
-    assume IsValidInteger(GetLocal(m, old_size + 5));
 
     call tmp := Pack_TestStruct_B(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 6, tmp);
@@ -472,10 +462,6 @@ requires ExistsTxnSenderAccount(m, txn);
     m := UpdateLocal(m, old_size + 7, tmp);
 
     call t8, t9 := Unpack_TestStruct_B(GetLocal(m, old_size + 7));
-    assume is#Address(t8);
-
-    assume IsValidInteger(t9);
-
     m := UpdateLocal(m, old_size + 8, t8);
     m := UpdateLocal(m, old_size + 9, t9);
 
@@ -518,8 +504,8 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestStruct_try_unpack_verify (arg0: Value) returns (ret0: Value)
+procedure TestStruct_try_unpack_verify (a: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestStruct_try_unpack(arg0);
+    call ret0 := TestStruct_try_unpack(a);
 }

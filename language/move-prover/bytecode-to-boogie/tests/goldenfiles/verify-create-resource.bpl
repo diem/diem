@@ -8,18 +8,18 @@ axiom TestSpecs_R_x == 0;
 function TestSpecs_R_type_value(): TypeValue {
     StructType(TestSpecs_R, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-
-procedure {:inline 1} Pack_TestSpecs_R(v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestSpecs_R(x: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+    assume IsValidInteger(x);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, x));
 
 }
 
-procedure {:inline 1} Unpack_TestSpecs_R(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_TestSpecs_R(_struct: Value) returns (x: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, TestSpecs_R_x);
+    assume is#Vector(_struct);
+    x := SelectField(_struct, TestSpecs_R_x);
+    assume IsValidInteger(x);
 }
 
 
@@ -69,8 +69,6 @@ ensures old(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Addr
 Label_5:
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 3, tmp);
-
-    assume IsValidInteger(GetLocal(m, old_size + 3));
 
     call tmp := Pack_TestSpecs_R(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 4, tmp);

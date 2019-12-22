@@ -6,11 +6,10 @@
 
 // ** functions of module TestControlFlow
 
-procedure {:inline 1} TestControlFlow_branch_once (arg0: Value) returns (ret0: Value)
+procedure {:inline 1} TestControlFlow_branch_once (cond: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // BooleanType()
     var t1: Value; // BooleanType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
@@ -25,11 +24,11 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Boolean(arg0);
+    assume is#Boolean(cond);
 
     old_size := local_counter;
     local_counter := local_counter + 6;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 0, cond);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -64,8 +63,8 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestControlFlow_branch_once_verify (arg0: Value) returns (ret0: Value)
+procedure TestControlFlow_branch_once_verify (cond: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestControlFlow_branch_once(arg0);
+    call ret0 := TestControlFlow_branch_once(cond);
 }

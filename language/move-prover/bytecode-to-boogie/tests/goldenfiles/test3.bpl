@@ -10,31 +10,33 @@ axiom Test3_T_g == 1;
 function Test3_T_type_value(): TypeValue {
     StructType(Test3_T, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), IntegerType()))
 }
-
-procedure {:inline 1} Pack_Test3_T(v0: Value, v1: Value) returns (v: Value)
+procedure {:inline 1} Pack_Test3_T(f: Value, g: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    assume IsValidInteger(v1);
-    v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
+    assume IsValidInteger(f);
+    assume IsValidInteger(g);
+    _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, f), g));
 
 }
 
-procedure {:inline 1} Unpack_Test3_T(v: Value) returns (v0: Value, v1: Value)
+procedure {:inline 1} Unpack_Test3_T(_struct: Value) returns (f: Value, g: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, Test3_T_f);
-    v1 := SelectField(v, Test3_T_g);
+    assume is#Vector(_struct);
+    f := SelectField(_struct, Test3_T_f);
+    assume IsValidInteger(f);
+    g := SelectField(_struct, Test3_T_g);
+    assume IsValidInteger(g);
 }
 
 
 
 // ** functions of module Test3
 
-procedure {:inline 1} Test3_test3 (arg0: Value) returns ()
+procedure {:inline 1} Test3_test3 (flag: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // BooleanType()
     var t1: Value; // Test3_T_type_value()
     var t2: Reference; // ReferenceType(Test3_T_type_value())
     var t3: Reference; // ReferenceType(IntegerType())
@@ -100,11 +102,11 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Boolean(arg0);
+    assume is#Boolean(flag);
 
     old_size := local_counter;
     local_counter := local_counter + 57;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    m := UpdateLocal(m, old_size + 0, flag);
 
     // bytecode translation starts here
     call tmp := LdConst(0);
@@ -112,10 +114,6 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 10, tmp);
-
-    assume IsValidInteger(GetLocal(m, old_size + 9));
-
-    assume IsValidInteger(GetLocal(m, old_size + 10));
 
     call tmp := Pack_Test3_T(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
     m := UpdateLocal(m, old_size + 11, tmp);
@@ -320,8 +318,8 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure Test3_test3_verify (arg0: Value) returns ()
+procedure Test3_test3_verify (flag: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call Test3_test3(arg0);
+    call Test3_test3(flag);
 }
