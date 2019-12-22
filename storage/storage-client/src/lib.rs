@@ -12,10 +12,9 @@
 mod state_view;
 
 use anyhow::{format_err, Error, Result};
-use futures::{
-    compat::Future01CompatExt, compat::Stream01CompatExt, prelude::*, stream::BoxStream,
-};
-use futures_01::{future::Future as Future01, stream::Stream as Stream01};
+use futures::{compat::Stream01CompatExt, prelude::*, stream::BoxStream};
+use futures_01::stream::Stream as Stream01;
+use grpc_helpers::convert_grpc_response;
 use grpcio::{ChannelBuilder, Environment};
 use libra_crypto::HashValue;
 use libra_types::{
@@ -68,14 +67,6 @@ fn make_clients(
             StorageClient::new(channel)
         })
         .collect::<Vec<StorageClient>>()
-}
-
-fn convert_grpc_response<T>(
-    response: grpcio::Result<impl Future01<Item = T, Error = grpcio::Error>>,
-) -> impl Future<Output = Result<T>> {
-    future::ready(response.map_err(convert_grpc_err))
-        .map_ok(Future01CompatExt::compat)
-        .and_then(|x| x.map_err(convert_grpc_err))
 }
 
 fn convert_grpc_stream<T>(

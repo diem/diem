@@ -15,6 +15,7 @@ async-trait = "0.1"
 futures = { version = "0.3.0", features = ["compat"] }
 futures_01 = { version = "0.1.28", package = "futures" }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
+grpc-helpers = { path = "../../common/grpc-helpers", version = "0.1.0" }
 rand = "0.6.5"
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 scratchpad = { path = "../scratchpad", version = "0.1.0" }
