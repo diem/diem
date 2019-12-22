@@ -31,6 +31,7 @@ use std::cmp::Ordering;
 use std::sync::RwLock;
 use std::{
     convert::{TryFrom, TryInto},
+    num::NonZeroUsize,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -292,26 +293,35 @@ impl<T: Payload> NetworkTask<T> {
         network_events: ConsensusNetworkEvents,
         self_receiver: channel::Receiver<anyhow::Result<Event<ConsensusMsg>>>,
     ) -> (NetworkTask<T>, NetworkReceivers<T>) {
-        let (proposal_tx, proposal_rx) =
-            libra_channel::new(QueueStyle::LIFO, 1, Some(&counters::PROPOSAL_CHANNEL_MSGS));
-        let (vote_tx, vote_rx) =
-            libra_channel::new(QueueStyle::LIFO, 1, Some(&counters::VOTES_CHANNEL_MSGS));
+        let (proposal_tx, proposal_rx) = libra_channel::new(
+            QueueStyle::LIFO,
+            NonZeroUsize::new(1).unwrap(),
+            Some(&counters::PROPOSAL_CHANNEL_MSGS),
+        );
+        let (vote_tx, vote_rx) = libra_channel::new(
+            QueueStyle::LIFO,
+            NonZeroUsize::new(1).unwrap(),
+            Some(&counters::VOTES_CHANNEL_MSGS),
+        );
         let (block_request_tx, block_request_rx) = libra_channel::new(
             QueueStyle::LIFO,
-            1,
+            NonZeroUsize::new(1).unwrap(),
             Some(&counters::BLOCK_RETRIEVAL_CHANNEL_MSGS),
         );
-        let (sync_info_tx, sync_info_rx) =
-            libra_channel::new(QueueStyle::LIFO, 1, Some(&counters::SYNC_INFO_CHANNEL_MSGS));
+        let (sync_info_tx, sync_info_rx) = libra_channel::new(
+            QueueStyle::LIFO,
+            NonZeroUsize::new(1).unwrap(),
+            Some(&counters::SYNC_INFO_CHANNEL_MSGS),
+        );
         let (epoch_change_tx, epoch_change_rx) = libra_channel::new(
             QueueStyle::LIFO,
-            1,
+            NonZeroUsize::new(1).unwrap(),
             Some(&counters::EPOCH_CHANGE_CHANNEL_MSGS),
         );
         let (different_epoch_tx, different_epoch_rx) =
-            libra_channel::new(QueueStyle::LIFO, 1, None);
+            libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
         let (epoch_retrieval_tx, epoch_retrieval_rx) =
-            libra_channel::new(QueueStyle::LIFO, 1, None);
+            libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
         let network_events = network_events.map_err(Into::<anyhow::Error>::into);
         let all_events = Box::new(select(network_events, self_receiver));
         (
