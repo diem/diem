@@ -12,6 +12,6 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     options.initialize_from_args(&args);
     options.setup_logging();
-    let mut driver = Driver::new(&options);
+    let mut driver = Driver::new(options);
     driver.run();
 }

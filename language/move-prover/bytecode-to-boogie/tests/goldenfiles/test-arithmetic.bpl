@@ -6,12 +6,10 @@
 
 // ** functions of module TestArithmetic
 
-procedure {:inline 1} TestArithmetic_add_two_number (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+procedure {:inline 1} TestArithmetic_add_two_number (x: Value, y: Value) returns (ret0: Value, ret1: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // IntegerType()
@@ -29,13 +27,13 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 10;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -74,19 +72,16 @@ Label_Abort:
     ret1 := DefaultValue;
 }
 
-procedure TestArithmetic_add_two_number_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+procedure TestArithmetic_add_two_number_verify (x: Value, y: Value) returns (ret0: Value, ret1: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0, ret1 := TestArithmetic_add_two_number(arg0, arg1);
+    call ret0, ret1 := TestArithmetic_add_two_number(x, y);
 }
 
-procedure {:inline 1} TestArithmetic_multiple_ops (arg0: Value, arg1: Value, arg2: Value) returns (ret0: Value)
+procedure {:inline 1} TestArithmetic_multiple_ops (x: Value, y: Value, z: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // IntegerType()
     var t5: Value; // IntegerType()
@@ -103,15 +98,15 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
-    assume IsValidInteger(arg2);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
+    assume IsValidInteger(z);
 
     old_size := local_counter;
     local_counter := local_counter + 10;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
-    m := UpdateLocal(m, old_size + 2, arg2);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
+    m := UpdateLocal(m, old_size + 2, z);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -146,18 +141,16 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestArithmetic_multiple_ops_verify (arg0: Value, arg1: Value, arg2: Value) returns (ret0: Value)
+procedure TestArithmetic_multiple_ops_verify (x: Value, y: Value, z: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestArithmetic_multiple_ops(arg0, arg1, arg2);
+    call ret0 := TestArithmetic_multiple_ops(x, y, z);
 }
 
-procedure {:inline 1} TestArithmetic_bool_ops (arg0: Value, arg1: Value) returns ()
+procedure {:inline 1} TestArithmetic_bool_ops (a: Value, b: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // BooleanType()
     var t3: Value; // BooleanType()
     var t4: Value; // IntegerType()
@@ -188,13 +181,13 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(a);
+    assume IsValidInteger(b);
 
     old_size := local_counter;
     local_counter := local_counter + 23;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, a);
+    m := UpdateLocal(m, old_size + 1, b);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -273,18 +266,16 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestArithmetic_bool_ops_verify (arg0: Value, arg1: Value) returns ()
+procedure TestArithmetic_bool_ops_verify (a: Value, b: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestArithmetic_bool_ops(arg0, arg1);
+    call TestArithmetic_bool_ops(a, b);
 }
 
-procedure {:inline 1} TestArithmetic_arithmetic_ops (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+procedure {:inline 1} TestArithmetic_arithmetic_ops (a: Value, b: Value) returns (ret0: Value, ret1: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // IntegerType()
@@ -313,13 +304,13 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(a);
+    assume IsValidInteger(b);
 
     old_size := local_counter;
     local_counter := local_counter + 21;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, a);
+    m := UpdateLocal(m, old_size + 1, b);
 
     // bytecode translation starts here
     call tmp := LdConst(6);
@@ -401,10 +392,10 @@ Label_Abort:
     ret1 := DefaultValue;
 }
 
-procedure TestArithmetic_arithmetic_ops_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+procedure TestArithmetic_arithmetic_ops_verify (a: Value, b: Value) returns (ret0: Value, ret1: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0, ret1 := TestArithmetic_arithmetic_ops(arg0, arg1);
+    call ret0, ret1 := TestArithmetic_arithmetic_ops(a, b);
 }
 
 procedure {:inline 1} TestArithmetic_overflow () returns ()

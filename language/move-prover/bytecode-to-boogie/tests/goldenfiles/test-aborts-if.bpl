@@ -6,14 +6,12 @@
 
 // ** functions of module TestAbortIf
 
-procedure {:inline 1} TestAbortIf_abort1 (arg0: Value, arg1: Value) returns ()
+procedure {:inline 1} TestAbortIf_abort1 (x: Value, y: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y)))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // BooleanType()
@@ -28,13 +26,13 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_fl
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -65,20 +63,18 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestAbortIf_abort1_verify (arg0: Value, arg1: Value) returns ()
+procedure TestAbortIf_abort1_verify (x: Value, y: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestAbortIf_abort1(arg0, arg1);
+    call TestAbortIf_abort1(x, y);
 }
 
-procedure {:inline 1} TestAbortIf_abort2 (arg0: Value, arg1: Value) returns ()
+procedure {:inline 1} TestAbortIf_abort2 (x: Value, y: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y)))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
 
     var tmp: Value;
     var old_size: int;
@@ -88,13 +84,13 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_fl
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 2;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     return;
@@ -104,20 +100,18 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestAbortIf_abort2_verify (arg0: Value, arg1: Value) returns ()
+procedure TestAbortIf_abort2_verify (x: Value, y: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestAbortIf_abort2(arg0, arg1);
+    call TestAbortIf_abort2(x, y);
 }
 
-procedure {:inline 1} TestAbortIf_abort3 (arg0: Value, arg1: Value) returns ()
+procedure {:inline 1} TestAbortIf_abort3 (x: Value, y: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y)))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // BooleanType()
     var t3: Value; // BooleanType()
     var t4: Value; // IntegerType()
@@ -130,13 +124,13 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_fl
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 5;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := LdFalse();
@@ -161,20 +155,18 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestAbortIf_abort3_verify (arg0: Value, arg1: Value) returns ()
+procedure TestAbortIf_abort3_verify (x: Value, y: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestAbortIf_abort3(arg0, arg1);
+    call TestAbortIf_abort3(x, y);
 }
 
-procedure {:inline 1} TestAbortIf_abort4 (arg0: Value, arg1: Value) returns ()
+procedure {:inline 1} TestAbortIf_abort4 (x: Value, y: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(x) < i#Integer(y))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // BooleanType()
@@ -189,13 +181,13 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_fla
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -226,20 +218,18 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestAbortIf_abort4_verify (arg0: Value, arg1: Value) returns ()
+procedure TestAbortIf_abort4_verify (x: Value, y: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestAbortIf_abort4(arg0, arg1);
+    call TestAbortIf_abort4(x, y);
 }
 
-procedure {:inline 1} TestAbortIf_abort5 (arg0: Value, arg1: Value) returns ()
+procedure {:inline 1} TestAbortIf_abort5 (x: Value, y: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) && (b#Boolean(Boolean(i#Integer(arg0) > i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y)))) && (b#Boolean(Boolean(i#Integer(x) > i#Integer(y))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y)))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // BooleanType()
@@ -254,13 +244,13 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_fl
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -291,20 +281,18 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestAbortIf_abort5_verify (arg0: Value, arg1: Value) returns ()
+procedure TestAbortIf_abort5_verify (x: Value, y: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestAbortIf_abort5(arg0, arg1);
+    call TestAbortIf_abort5(x, y);
 }
 
-procedure {:inline 1} TestAbortIf_abort6 (arg0: Value, arg1: Value) returns ()
+procedure {:inline 1} TestAbortIf_abort6 (x: Value, y: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) && (b#Boolean(Boolean(i#Integer(arg0) > i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) && (b#Boolean(Boolean(i#Integer(x) > i#Integer(y))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // BooleanType()
@@ -319,13 +307,13 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_fla
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -356,20 +344,18 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestAbortIf_abort6_verify (arg0: Value, arg1: Value) returns ()
+procedure TestAbortIf_abort6_verify (x: Value, y: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestAbortIf_abort6(arg0, arg1);
+    call TestAbortIf_abort6(x, y);
 }
 
-procedure {:inline 1} TestAbortIf_abort7 (arg0: Value, arg1: Value) returns ()
+procedure {:inline 1} TestAbortIf_abort7 (x: Value, y: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) && (b#Boolean(Boolean(i#Integer(arg0) >= i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) && (b#Boolean(Boolean(i#Integer(x) >= i#Integer(y))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // BooleanType()
@@ -384,13 +370,13 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_fla
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -421,21 +407,19 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestAbortIf_abort7_verify (arg0: Value, arg1: Value) returns ()
+procedure TestAbortIf_abort7_verify (x: Value, y: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestAbortIf_abort7(arg0, arg1);
+    call TestAbortIf_abort7(x, y);
 }
 
-procedure {:inline 1} TestAbortIf_abort8 (arg0: Value, arg1: Value) returns (ret0: Value)
+procedure {:inline 1} TestAbortIf_abort8 (x: Value, y: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
 ensures !abort_flag ==> b#Boolean(Boolean((ret0) == (Boolean(true))));
-ensures old(!(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) && (b#Boolean(Boolean(i#Integer(arg0) > i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) && (b#Boolean(Boolean(i#Integer(x) > i#Integer(y))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // BooleanType()
@@ -454,13 +438,13 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_fla
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 11;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -508,21 +492,19 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestAbortIf_abort8_verify (arg0: Value, arg1: Value) returns (ret0: Value)
+procedure TestAbortIf_abort8_verify (x: Value, y: Value) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestAbortIf_abort8(arg0, arg1);
+    call ret0 := TestAbortIf_abort8(x, y);
 }
 
-procedure {:inline 1} TestAbortIf_abort9 (arg0: Value, arg1: Value) returns ()
+procedure {:inline 1} TestAbortIf_abort9 (x: Value, y: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
-ensures !abort_flag ==> b#Boolean(Boolean((arg0) == (arg1)));
-ensures old(!(b#Boolean(Boolean(i#Integer(arg0) > i#Integer(arg1))) || b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(arg0) > i#Integer(arg1))) || b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_flag;
+ensures !abort_flag ==> b#Boolean(Boolean((x) == (y)));
+ensures old(!(b#Boolean(Boolean(i#Integer(x) > i#Integer(y))) || b#Boolean(Boolean(i#Integer(x) < i#Integer(y))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(x) > i#Integer(y))) || b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> abort_flag;
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // BooleanType()
@@ -537,13 +519,13 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) > i#Integer(arg1))) || b#Boolean(B
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
+    assume IsValidInteger(x);
+    assume IsValidInteger(y);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    m := UpdateLocal(m, old_size + 0, x);
+    m := UpdateLocal(m, old_size + 1, y);
 
     // bytecode translation starts here
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
@@ -574,8 +556,8 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestAbortIf_abort9_verify (arg0: Value, arg1: Value) returns ()
+procedure TestAbortIf_abort9_verify (x: Value, y: Value) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestAbortIf_abort9(arg0, arg1);
+    call TestAbortIf_abort9(x, y);
 }

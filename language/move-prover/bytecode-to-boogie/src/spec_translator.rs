@@ -3,32 +3,25 @@
 
 //! This module translates specification conditions to Boogie code.
 
-use bytecode_verifier::VerifiedModule;
-use ir_to_bytecode_syntax::ast::{BinOp, CopyableVal, Field, QualifiedStructIdent, Type};
-use ir_to_bytecode_syntax::spec_language_ast::{Condition, SpecExp, StorageLocation};
 use itertools::Itertools;
-use libra_types::account_address::AccountAddress;
 use num::{BigInt, Num};
 
-use crate::cli::abort_with_error;
-use crate::translator::{format_type_value, FunctionInfo};
-use vm::access::ModuleAccess;
-use vm::file_format::{ModuleHandleIndex, SignatureToken, StructHandle, StructHandleIndex};
-use vm::views::{
-    FieldDefinitionView, FunctionDefinitionView, FunctionHandleView, FunctionSignatureView,
-    ModuleHandleView, SignatureTokenView, StructDefinitionView, StructHandleView,
-};
+use ir_to_bytecode_syntax::ast::{BinOp, CopyableVal, Field, QualifiedStructIdent, Type};
+use ir_to_bytecode_syntax::spec_language_ast::{Condition, SpecExp, StorageLocation};
+use libra_types::account_address::AccountAddress;
 
-pub struct SpecTranslator<'a> {
-    all_modules: &'a [VerifiedModule],
-    module: &'a VerifiedModule,
-    function_info: &'a FunctionInfo,
+use crate::boogie_helpers::{boogie_field_name, boogie_type_value};
+use crate::cli::abort_with_error;
+use crate::env::{FunctionEnv, GlobalType, Parameter};
+
+pub struct SpecTranslator<'env> {
+    func_env: &'env FunctionEnv<'env>,
 }
 
 /// Represents a boogie expression as a string and its type. The type is used to access
 /// necessary context information for generating boogie expressions, as well as for type
 /// checking.
-struct BoogieExpr(String, SignatureToken);
+struct BoogieExpr(String, GlobalType);
 
 impl BoogieExpr {
     fn result(self) -> String {
@@ -38,25 +31,17 @@ impl BoogieExpr {
 
 /// A dummy type to represent an error. We use a type parameter for this, with an index
 /// which no one will/can ever realistically use.
-const ERROR_TYPE: SignatureToken = SignatureToken::TypeParameter(std::u16::MAX);
+const ERROR_TYPE: GlobalType = GlobalType::TypeParameter(std::u16::MAX);
 
 /// A dummy type to represent an unknown type. We use a type parameter for this, with an index
 /// which no one will/can ever realistically use. We currently need this to support a hack
 /// for specification helper functions (SpecExp::Call) whose type we do not know, and which
 /// are defined in Boogie.
-const UNKNOWN_TYPE: SignatureToken = SignatureToken::TypeParameter(std::u16::MAX - 1);
+const UNKNOWN_TYPE: GlobalType = GlobalType::TypeParameter(std::u16::MAX - 1);
 
-impl<'a> SpecTranslator<'a> {
-    pub fn new(
-        all_modules: &'a [VerifiedModule],
-        module: &'a VerifiedModule,
-        function_info: &'a FunctionInfo,
-    ) -> SpecTranslator<'a> {
-        SpecTranslator {
-            all_modules,
-            module,
-            function_info,
-        }
+impl<'env> SpecTranslator<'env> {
+    pub fn new(func_env: &'env FunctionEnv<'env>) -> SpecTranslator<'env> {
+        SpecTranslator { func_env }
     }
 
     /// Reports an error. At the moment, we simply abort.
@@ -65,7 +50,7 @@ impl<'a> SpecTranslator<'a> {
     pub fn error<T>(&mut self, msg: &str, _pass_through: T) -> T {
         abort_with_error(&format!(
             "[in function `{}`] {}",
-            self.get_current_function_name(),
+            self.func_env.get_name(),
             msg
         ))
     }
@@ -80,7 +65,7 @@ impl<'a> SpecTranslator<'a> {
         // the senders account resource (which contains the pubkey)
         // must have existed! So we can assume txn_sender account
         // exists in pre-condition.
-        for cond in &self.function_info.specification {
+        for cond in self.func_env.get_specification() {
             if let Condition::Requires(expr) = cond {
                 res.push_str(&format!(
                     "requires b#Boolean({});\n",
@@ -94,8 +79,8 @@ impl<'a> SpecTranslator<'a> {
 
         // When all succeeds_if conditions hold, function must not abort.
         let mut succeeds_if_string = self
-            .function_info
-            .specification
+            .func_env
+            .get_specification()
             .iter()
             .filter_map(|c| match c {
                 Condition::SucceedsIf(expr) => {
@@ -108,8 +93,8 @@ impl<'a> SpecTranslator<'a> {
         // abort_if P means function MUST abort if P holds.
         // multiple abort_if conditions are "or"ed.
         let aborts_if_string = self
-            .function_info
-            .specification
+            .func_env
+            .get_specification()
             .iter()
             .filter_map(|c| match c {
                 Condition::AbortsIf(expr) => {
@@ -137,7 +122,7 @@ impl<'a> SpecTranslator<'a> {
         }
 
         // Generate explicit ensures conditions
-        for cond in &self.function_info.specification {
+        for cond in self.func_env.get_specification() {
             if let Condition::Ensures(expr) = cond {
                 // FIXME: Do we really need to check whether succeeds_if & aborts_if are
                 // empty, below?
@@ -187,14 +172,14 @@ impl<'a> SpecTranslator<'a> {
                 address,
             } => {
                 let BoogieExpr(a, at) = self.translate_location_as_value(address);
-                let _ = self.require_type(at, &SignatureToken::Address);
+                let _ = self.require_type(at, &GlobalType::Address);
                 BoogieExpr(
                     format!(
                         "ExistsResource(m, {}, a#Address({}))",
                         self.translate_resource_type(type_, type_actuals).0,
                         a
                     ),
-                    SignatureToken::Bool,
+                    GlobalType::Bool,
                 )
             }
             SpecExp::Dereference(loc) => self.translate_dref(loc),
@@ -203,7 +188,7 @@ impl<'a> SpecTranslator<'a> {
                 let BoogieExpr(s, t) = self.translate_expr(expr);
                 BoogieExpr(
                     format!("Boolean(!(b#Boolean({})))", s),
-                    self.require_type(t, &SignatureToken::Bool),
+                    self.require_type(t, &GlobalType::Bool),
                 )
             }
             SpecExp::Binop(left, op, right) => {
@@ -231,13 +216,13 @@ impl<'a> SpecTranslator<'a> {
     /// Translate a dereference.
     fn translate_dref(&mut self, loc: &StorageLocation) -> BoogieExpr {
         let BoogieExpr(s, t) = self.translate_location_as_reference(loc);
-        if let SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) = t {
+        if let GlobalType::Reference(sig) | GlobalType::MutableReference(sig) = t {
             BoogieExpr(format!("Dereference(m, {})", s), *sig)
         } else {
             self.error(
                 &format!(
                     "expected reference type, found `{}`",
-                    format_type_value(self.module, &t)
+                    boogie_type_value(self.func_env.module_env.env, &t)
                 ),
                 BoogieExpr("<deref>".to_string(), ERROR_TYPE),
             )
@@ -248,121 +233,65 @@ impl<'a> SpecTranslator<'a> {
     fn translate_binop(&mut self, op: &BinOp, left: BoogieExpr, right: BoogieExpr) -> BoogieExpr {
         match op {
             // u64
-            BinOp::Add => self.translate_op_helper(
-                "+",
-                &SignatureToken::U64,
-                SignatureToken::U64,
-                left,
-                right,
-            ),
-            BinOp::Sub => self.translate_op_helper(
-                "-",
-                &SignatureToken::U64,
-                SignatureToken::U64,
-                left,
-                right,
-            ),
-            BinOp::Mul => self.translate_op_helper(
-                "*",
-                &SignatureToken::U64,
-                SignatureToken::U64,
-                left,
-                right,
-            ),
-            BinOp::Mod => self.translate_op_helper(
-                "mod",
-                &SignatureToken::U64,
-                SignatureToken::U64,
-                left,
-                right,
-            ),
-            BinOp::Div => self.translate_op_helper(
-                "div",
-                &SignatureToken::U64,
-                SignatureToken::U64,
-                left,
-                right,
-            ),
-            BinOp::BitAnd => self.translate_op_helper(
-                "&",
-                &SignatureToken::U64,
-                SignatureToken::U64,
-                left,
-                right,
-            ),
-            BinOp::BitOr => self.translate_op_helper(
-                "|",
-                &SignatureToken::U64,
-                SignatureToken::U64,
-                left,
-                right,
-            ),
-            BinOp::Xor => self.translate_op_helper(
-                "^",
-                &SignatureToken::U64,
-                SignatureToken::U64,
-                left,
-                right,
-            ),
+            BinOp::Add => {
+                self.translate_op_helper("+", &GlobalType::U64, GlobalType::U64, left, right)
+            }
+            BinOp::Sub => {
+                self.translate_op_helper("-", &GlobalType::U64, GlobalType::U64, left, right)
+            }
+            BinOp::Mul => {
+                self.translate_op_helper("*", &GlobalType::U64, GlobalType::U64, left, right)
+            }
+            BinOp::Mod => {
+                self.translate_op_helper("mod", &GlobalType::U64, GlobalType::U64, left, right)
+            }
+            BinOp::Div => {
+                self.translate_op_helper("div", &GlobalType::U64, GlobalType::U64, left, right)
+            }
+            BinOp::BitAnd => {
+                self.translate_op_helper("&", &GlobalType::U64, GlobalType::U64, left, right)
+            }
+            BinOp::BitOr => {
+                self.translate_op_helper("|", &GlobalType::U64, GlobalType::U64, left, right)
+            }
+            BinOp::Xor => {
+                self.translate_op_helper("^", &GlobalType::U64, GlobalType::U64, left, right)
+            }
             BinOp::Shl => unimplemented!(),
             BinOp::Shr => unimplemented!(),
 
             // bool
-            BinOp::And => self.translate_op_helper(
-                "&&",
-                &SignatureToken::Bool,
-                SignatureToken::Bool,
-                left,
-                right,
-            ),
-            BinOp::Or => self.translate_op_helper(
-                "||",
-                &SignatureToken::Bool,
-                SignatureToken::Bool,
-                left,
-                right,
-            ),
+            BinOp::And => {
+                self.translate_op_helper("&&", &GlobalType::Bool, GlobalType::Bool, left, right)
+            }
+            BinOp::Or => {
+                self.translate_op_helper("||", &GlobalType::Bool, GlobalType::Bool, left, right)
+            }
 
             // generic equality
             BinOp::Eq => BoogieExpr(
                 format!("Boolean(({}) == ({}))", left.0, right.0),
-                SignatureToken::Bool,
+                GlobalType::Bool,
             ),
             BinOp::Neq => BoogieExpr(
                 format!("Boolean(({}) != ({}))", left.0, right.0),
-                SignatureToken::Bool,
+                GlobalType::Bool,
             ),
 
             // Ordering
             // TODO: is this defined also for non-integer types?
-            BinOp::Lt => self.translate_op_helper(
-                "<",
-                &SignatureToken::U64,
-                SignatureToken::Bool,
-                left,
-                right,
-            ),
-            BinOp::Gt => self.translate_op_helper(
-                ">",
-                &SignatureToken::U64,
-                SignatureToken::Bool,
-                left,
-                right,
-            ),
-            BinOp::Le => self.translate_op_helper(
-                "<=",
-                &SignatureToken::U64,
-                SignatureToken::Bool,
-                left,
-                right,
-            ),
-            BinOp::Ge => self.translate_op_helper(
-                ">=",
-                &SignatureToken::U64,
-                SignatureToken::Bool,
-                left,
-                right,
-            ),
+            BinOp::Lt => {
+                self.translate_op_helper("<", &GlobalType::U64, GlobalType::Bool, left, right)
+            }
+            BinOp::Gt => {
+                self.translate_op_helper(">", &GlobalType::U64, GlobalType::Bool, left, right)
+            }
+            BinOp::Le => {
+                self.translate_op_helper("<=", &GlobalType::U64, GlobalType::Bool, left, right)
+            }
+            BinOp::Ge => {
+                self.translate_op_helper(">=", &GlobalType::U64, GlobalType::Bool, left, right)
+            }
         }
     }
 
@@ -371,21 +300,21 @@ impl<'a> SpecTranslator<'a> {
     fn translate_op_helper(
         &mut self,
         op: &str,
-        expected_operand_type: &SignatureToken,
-        result_type: SignatureToken,
+        expected_operand_type: &GlobalType,
+        result_type: GlobalType,
         BoogieExpr(l, lt): BoogieExpr,
         BoogieExpr(r, rt): BoogieExpr,
     ) -> BoogieExpr {
         let _ = self.require_type(rt, expected_operand_type);
         let _ = self.require_type(lt, expected_operand_type);
         let expr = match expected_operand_type {
-            SignatureToken::U64 => format!("i#Integer({}) {} i#Integer({})", l, op, r),
-            SignatureToken::Bool => format!("b#Boolean({}) {} b#Boolean({})", l, op, r),
+            GlobalType::U64 => format!("i#Integer({}) {} i#Integer({})", l, op, r),
+            GlobalType::Bool => format!("b#Boolean({}) {} b#Boolean({})", l, op, r),
             _ => panic!("unexpected type"),
         };
         match result_type {
-            SignatureToken::U64 => BoogieExpr(format!("Integer({})", expr), result_type),
-            SignatureToken::Bool => BoogieExpr(format!("Boolean({})", expr), result_type),
+            GlobalType::U64 => BoogieExpr(format!("Integer({})", expr), result_type),
+            GlobalType::Bool => BoogieExpr(format!("Boolean({})", expr), result_type),
             _ => panic!("unexpected type"),
         }
     }
@@ -395,16 +324,16 @@ impl<'a> SpecTranslator<'a> {
         match val {
             CopyableVal::Address(addr) => BoogieExpr(
                 format!("Address({})", self.translate_account_address(addr)),
-                SignatureToken::Address,
+                GlobalType::Address,
             ),
             CopyableVal::U8(_) => unimplemented!(),
-            CopyableVal::U64(val) => BoogieExpr(format!("Integer({})", val), SignatureToken::U64),
+            CopyableVal::U64(val) => BoogieExpr(format!("Integer({})", val), GlobalType::U64),
             CopyableVal::U128(_) => unimplemented!(),
-            CopyableVal::Bool(val) => BoogieExpr(format!("Boolean({})", val), SignatureToken::Bool),
+            CopyableVal::Bool(val) => BoogieExpr(format!("Boolean({})", val), GlobalType::Bool),
             // TODO: byte arrays
             CopyableVal::ByteArray(_arr) => BoogieExpr(
                 self.error("ByteArray not implemented", "<bytearray>".to_string()),
-                SignatureToken::ByteArray,
+                GlobalType::ByteArray,
             ),
         }
     }
@@ -420,16 +349,16 @@ impl<'a> SpecTranslator<'a> {
             StorageLocation::Ret(index) => self.translate_return(*index as usize),
             StorageLocation::TxnSenderAddress => BoogieExpr(
                 "Address(TxnSenderAddress(txn))".to_string(),
-                SignatureToken::Address,
+                GlobalType::Address,
             ),
             StorageLocation::Address(addr) => BoogieExpr(
                 format!("Address({})", self.translate_account_address(addr)),
-                SignatureToken::Address,
+                GlobalType::Address,
             ),
             StorageLocation::AccessPath { base, fields } => {
                 let BoogieExpr(mut res, mut t) = self.translate_location_as_value(base);
                 // If the type of the location is a reference, dref it now.
-                if let SignatureToken::Reference(vt) | SignatureToken::MutableReference(vt) = t {
+                if let GlobalType::Reference(vt) | GlobalType::MutableReference(vt) = t {
                     res = format!("Dereference(m, {})", res);
                     t = *vt;
                 }
@@ -452,8 +381,8 @@ impl<'a> SpecTranslator<'a> {
         match loc {
             StorageLocation::Formal(name) => {
                 let BoogieExpr(s, t) = self.translate_param(name);
-                if let SignatureToken::Reference(_) | SignatureToken::MutableReference(_) = t {
-                    BoogieExpr(s, SignatureToken::Reference(Box::new(t)))
+                if let GlobalType::Reference(_) | GlobalType::MutableReference(_) = t {
+                    BoogieExpr(s, GlobalType::Reference(Box::new(t)))
                 } else {
                     self.error(
                         &format!("`{}` expected to be a reference", name),
@@ -468,10 +397,10 @@ impl<'a> SpecTranslator<'a> {
             } => {
                 let (s, t) = self.translate_resource_type(type_, type_actuals);
                 let BoogieExpr(a, at) = self.translate_location_as_value(address);
-                let _ = self.require_type(at, &SignatureToken::Address);
+                let _ = self.require_type(at, &GlobalType::Address);
                 BoogieExpr(
                     format!("GetResourceReference({}, a#Address({}))", s, a),
-                    SignatureToken::Reference(Box::new(t)),
+                    GlobalType::Reference(Box::new(t)),
                 )
             }
             StorageLocation::AccessPath { base, fields } => {
@@ -491,13 +420,13 @@ impl<'a> SpecTranslator<'a> {
     }
 
     /// Checks for an expected type.
-    fn require_type(&mut self, t: SignatureToken, expected: &SignatureToken) -> SignatureToken {
+    fn require_type(&mut self, t: GlobalType, expected: &GlobalType) -> GlobalType {
         if t != ERROR_TYPE && t != UNKNOWN_TYPE && t != *expected {
             self.error(
                 &format!(
                     "incompatible types: expected `{}`, found `{}`",
-                    format_type_value(self.module, expected),
-                    format_type_value(self.module, &t)
+                    boogie_type_value(self.func_env.module_env.env, expected),
+                    boogie_type_value(self.func_env.module_env.env, &t)
                 ),
                 expected.clone(),
             )
@@ -516,244 +445,127 @@ impl<'a> SpecTranslator<'a> {
         &mut self,
         id: &QualifiedStructIdent,
         _type_actuals: &[Type],
-    ) -> (String, SignatureToken) {
+    ) -> (String, GlobalType) {
         // TODO: incorporate type actuals. For that, we need a translator from Type AST into
-        //   SignatureToken, which requires name resolution.
+        //   GlobalSignatureToken, which requires name resolution.
+        // TODO: do we need to incorporate address in the resolution?
         let struct_name = id.name.as_inner();
         let mut module_name = id.module.as_inner().to_string();
         if module_name == "Self" {
-            let module_view = ModuleHandleView::new(
-                self.module,
-                self.module.module_handle_at(ModuleHandleIndex(0 as u16)),
-            );
-            module_name = module_view.module_id().name().to_string();
+            module_name = self.func_env.module_env.get_id().name().to_string();
         }
-        for (index, handle) in self.module.struct_handles().iter().enumerate() {
-            let view = StructHandleView::new(self.module, handle);
-            if view.name() == struct_name && view.module_id().name().as_str() == module_name {
-                let resource_type =
-                    SignatureToken::Struct(StructHandleIndex::new(index as u16), vec![]);
+        for module_env in self.func_env.module_env.env.get_modules() {
+            if module_env.get_id().name().as_str() != module_name {
+                continue;
+            }
+            if let Some(struct_env) = module_env.find_struct(struct_name) {
+                let resource_type = GlobalType::Struct(
+                    module_env.get_module_idx(),
+                    struct_env.get_def_idx(),
+                    vec![],
+                );
                 return (
-                    format_type_value(self.module, &resource_type),
+                    boogie_type_value(self.func_env.module_env.env, &resource_type),
                     resource_type,
                 );
             }
         }
         self.error(
-            // Specifications can use types with no corresponding StructHandleIndex in the
-            // VerifiedModule (e.g, `aborts_if global<LibraAccount.T>(a).balance.value == 0` in a
-            // module that does not use the `LibraCoin.T` type). Trying to verify a specification
-            // that does this will result in the error below. Thus, the detailed error message
-            // below tries to help the developer fix this problem.
-            // Note: this could also happen due to a bug in the verifier
-            &format!("Cannot resolve type `{}`. Make sure this type is explicitly used as a parameter, return, or field type in the module. (e.g., `resource ProverGhostTypes {{ f: {} }}`.", id, id),
-            (format!("<struct {}>", id), SignatureToken::U64),
+            &format!("Cannot resolve type `{}`", id),
+            (format!("<struct {}>", id), GlobalType::U64),
         )
     }
 
     /// Translate a function parameter.
     fn translate_param(&mut self, name: &str) -> BoogieExpr {
-        // Look up parameter index.
-        let arg_index = {
-            self.function_info
-                .arg_names
-                .iter()
-                .position(|s| s == name)
-                .unwrap_or_else(|| {
-                    self.error(
-                        &format!("cannot determine position of parameter `{}`", name),
-                        0,
-                    )
-                })
-        };
-        // Get the parameter type.
-        let arg_sig = {
-            if let Some(ty) = self.get_param_types().get(arg_index) {
-                ty.clone()
-            } else {
-                self.error(
-                    &format!("cannot determine type of parameter {}", name),
-                    ERROR_TYPE,
-                )
-            }
-        };
-        BoogieExpr(format!("arg{}", arg_index), arg_sig)
+        // Look up parameter.
+        if let Some(Parameter(name, sig)) = self
+            .func_env
+            .get_parameters()
+            .iter()
+            .find(|Parameter(n, _)| n.as_str() == name)
+        {
+            BoogieExpr(name.as_str().to_string(), sig.clone())
+        } else {
+            self.error(
+                &format!("parameter `{}` undefined", name),
+                BoogieExpr(name.to_string(), ERROR_TYPE),
+            )
+        }
     }
 
     /// Translate a function return value.
     fn translate_return(&mut self, index: usize) -> BoogieExpr {
-        let sig = self.get_function_signature();
-        let return_count = sig.return_count();
-        if return_count < 1 {
+        let return_types = self.func_env.get_return_types();
+        if return_types.is_empty() {
             self.error(
                 "function does not return a value",
-                BoogieExpr("<ret>".to_string(), SignatureToken::U64),
+                BoogieExpr("<ret>".to_string(), GlobalType::U64),
             )
-        } else if index >= return_count {
+        } else if index >= return_types.len() {
             self.error(
                 &format!(
                     "RET index {} out of bounds; function declaration has {} return values",
-                    index, return_count
+                    index,
+                    return_types.len()
                 ),
-                BoogieExpr("<ret>".to_string(), SignatureToken::U64),
+                BoogieExpr("<ret>".to_string(), GlobalType::U64),
             )
         } else {
-            BoogieExpr(
-                format!("ret{}", index),
-                sig.return_tokens()
-                    .nth(index as usize)
-                    .expect("non-empty return")
-                    .signature_token()
-                    .clone(),
-            )
+            BoogieExpr(format!("ret{}", index), return_types[index].clone())
         }
     }
 
     /// Translates a field name, where `sig` is the type from which the field is selected.
     /// Returns boogie field name and type.
-    fn translate_field(
-        &mut self,
-        mut sig: &SignatureToken,
-        field: &Field,
-    ) -> (String, SignatureToken) {
+    fn translate_field(&mut self, mut sig: &GlobalType, field: &Field) -> (String, GlobalType) {
         // If this is a reference, use the underlying type. This function works with both
         // references and non-references.
-        let is_ref = if let SignatureToken::Reference(s) = sig {
+        let is_ref = if let GlobalType::Reference(s) = sig {
             sig = &*s;
             true
         } else {
             false
         };
-
-        if let Some(struct_handle_view) = SignatureTokenView::new(self.module, sig).struct_handle()
-        {
-            // NOTE: this returns a StructDefinitionViewFrom a different module!
-            if let Some(struct_def) = self.get_struct_definition(struct_handle_view.handle()) {
-                let struct_name = struct_def.name().to_string(); // because of borrowing
-                if let Some(field_def) = self.get_field_definition(&struct_def, field) {
-                    // This is a SignatureToken in the dependent module, but we need one for the
-                    // current module
-                    let field_type_in_dependent_module = field_def.signature_token_view();
-                    if let Some(field_type_in_current_module) =
-                        field_type_in_dependent_module.resolve_in_module(self.module)
-                    {
-                        (
-                            format!(
-                                "{}_{}",
-                                self.get_struct_name_for_boogie(struct_handle_view.handle()),
-                                field_def.name()
-                            ),
-                            if is_ref {
-                                SignatureToken::Reference(Box::new(field_type_in_current_module))
-                            } else {
-                                field_type_in_current_module
-                            },
-                        )
+        if *sig == ERROR_TYPE {
+            return ("<field>".to_string(), ERROR_TYPE);
+        }
+        if *sig == UNKNOWN_TYPE {
+            return self.error(
+                "unknown result type of helper function; cannot select field",
+                ("<field>".to_string(), ERROR_TYPE),
+            );
+        }
+        if let GlobalType::Struct(module_index, struct_index, _actuals) = sig {
+            let module_env = self.func_env.module_env.env.get_module(*module_index);
+            let struct_env = module_env.get_struct(&struct_index);
+            if let Some(field_env) = struct_env.find_field(field.name()) {
+                (
+                    boogie_field_name(&field_env),
+                    if is_ref {
+                        GlobalType::Reference(Box::new(field_env.get_type()))
                     } else {
-                        let msg = format!("Cannot resolve type `{:?}` of field `{:?}` used in specification. Make sure this type is explicitly used as a parameter, return, or field type in the module. (e.g., `resource ProverGhostTypes {{ f: {:?} }}`.", field_type_in_dependent_module, field, field_type_in_dependent_module);
-                        // There is no SignatureToken for this field's type in the current
-                        // module. The developer will need to manually insert a usage of this
-                        // type.
-                        self.error(&msg, ("<field>".to_string(), ERROR_TYPE))
-                    }
-                } else {
-                    self.error(
-                        &format!("field `{}` undefined in struct `{}`", field, struct_name),
-                        ("<field>".to_string(), ERROR_TYPE),
-                    )
-                }
+                        field_env.get_type()
+                    },
+                )
             } else {
                 self.error(
-                    &format!("cannot determine struct and module for `{}`", field),
+                    &format!(
+                        "struct `{}` does not have field `{}`",
+                        struct_env.get_name(),
+                        field
+                    ),
                     ("<field>".to_string(), ERROR_TYPE),
                 )
             }
-        } else if *sig == UNKNOWN_TYPE {
-            self.error(
-                "unknown result type of helper function; cannot select field",
-                ("field".to_string(), ERROR_TYPE),
-            )
         } else {
             self.error(
                 &format!(
                     "expected Struct but found `{}`",
-                    format_type_value(self.module, sig)
+                    boogie_type_value(self.func_env.module_env.env, sig)
                 ),
                 ("<field>".to_string(), ERROR_TYPE),
             )
         }
-    }
-
-    /// Gets the current functions signature.
-    fn get_function_signature(&self) -> FunctionSignatureView<VerifiedModule> {
-        let function_def = self.module.function_def_at(self.function_info.index);
-        let function_view = FunctionHandleView::new(
-            self.module,
-            self.module.function_handle_at(function_def.function),
-        );
-        function_view.signature()
-    }
-
-    /// Returns parameter types of the current function.
-    fn get_param_types(&self) -> Vec<SignatureToken> {
-        self.get_function_signature()
-            .arg_tokens()
-            .map(|t| t.signature_token().clone())
-            .collect_vec()
-    }
-
-    /// Get a struct definition from a StructHandle.
-    fn get_struct_definition(
-        &self,
-        handle: &StructHandle,
-    ) -> Option<StructDefinitionView<VerifiedModule>> {
-        let struct_view = StructHandleView::new(self.module, handle);
-        let module_view = ModuleHandleView::new(self.module, struct_view.module_handle());
-        let module_id = module_view.module_id();
-
-        // The definition of this struct might be in a different module as for which are translating
-        // right now. We search for it by module id (pair of address and module name).
-        for module in self.all_modules {
-            let this_module_handle = module.module_handle_at(ModuleHandleIndex(0));
-            if module.module_id_for_handle(this_module_handle) != module_id {
-                continue;
-            }
-            for struct_def in module.struct_defs() {
-                let struct_def_view = StructDefinitionView::new(module, struct_def);
-                if struct_def_view.name() == struct_view.name() {
-                    return Some(struct_def_view);
-                }
-            }
-        }
-        None
-    }
-
-    /// Get a field definition from a StructDefinition and field name.
-    fn get_field_definition(
-        &self,
-        struct_def: &StructDefinitionView<'a, VerifiedModule>,
-        field: &Field,
-    ) -> Option<FieldDefinitionView<'a, VerifiedModule>> {
-        if let Some(mut fields) = struct_def.fields() {
-            fields.find(|d| d.name() == field.name())
-        } else {
-            None
-        }
-    }
-
-    /// Get struct name as expected by boogie.
-    fn get_struct_name_for_boogie(&self, handle: &StructHandle) -> String {
-        let struct_view = StructHandleView::new(self.module, handle);
-        let module_view = ModuleHandleView::new(self.module, struct_view.module_handle());
-        format!("{}_{}", module_view.module_id().name(), struct_view.name())
-    }
-
-    /// Get function name.
-    fn get_current_function_name(&self) -> String {
-        let function_view = FunctionDefinitionView::new(
-            self.module,
-            self.module.function_def_at(self.function_info.index),
-        );
-        function_view.name().to_string()
     }
 }

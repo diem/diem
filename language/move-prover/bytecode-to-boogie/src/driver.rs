@@ -3,72 +3,69 @@
 
 #![forbid(unsafe_code)]
 
+use crate::bytecode_translator::BoogieTranslator;
 use crate::cli::{abort_on_error, abort_with_error, Options, INLINE_PRELUDE};
-use crate::translator::{BoogieTranslator, FunctionInfo, ModuleInfo};
-use bytecode_source_map::source_map::SourceMap;
+use crate::env::GlobalEnv;
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::compiler::compile_module;
-use ir_to_bytecode::parser::ast::{Loc, ModuleDefinition};
+use ir_to_bytecode::parser::ast::ModuleDefinition;
 use ir_to_bytecode::parser::parse_module;
+use ir_to_bytecode_syntax::spec_language_ast::Condition;
 use itertools::Itertools;
 use libra_types::account_address::AccountAddress;
+use libra_types::identifier::Identifier;
 use log::{debug, error, info};
 use regex::Regex;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use vm::file_format::FunctionDefinitionIndex;
+use vm::access::ModuleAccess;
+use vm::file_format::{FunctionDefinitionIndex, StructDefinitionIndex};
 
 /// Content of the default prelude.
 const DEFAULT_PRELUDE: &[u8] = include_bytes!("prelude.bpl");
 
-/// Represents the driver for translation. This is the top-level object which owns
-/// all data during the steps of translation. Phases of the translation refer back to it.
-pub struct Driver<'app> {
-    /// Options passed via the cli.
-    options: &'app Options,
-    /// List of module specs.
-    module_infos: Vec<ModuleInfo>,
-    /// List of verified modules.
-    verified_modules: Vec<VerifiedModule>,
-    /// Source position map.
-    source_map: SourceMap<Loc>,
+/// Represents the driver for translation. Owns the environment used for translation.
+pub struct Driver {
+    /// Environment used for the translation.
+    env: GlobalEnv,
+
     /// Generated output.
-    pub output: String,
+    output: String,
 }
 
-impl<'app> Driver<'app> {
-    pub fn new(options: &'app Options) -> Self {
+impl Driver {
+    pub fn new(options: Options) -> Self {
         Driver {
-            options,
-            module_infos: vec![],
-            verified_modules: vec![],
-            source_map: vec![],
+            env: GlobalEnv::new(options),
             output: String::new(),
         }
     }
 
     /// Runs standard translation. When this finishes, the generated code is in `self.output`.
     pub fn run(&mut self) {
-        self.load_modules(&self.options.mvir_sources);
+        let sources = self.env.options.mvir_sources.clone();
+        self.load_modules(&sources);
         self.add_prelude();
         self.add_helpers();
         self.translate_modules();
         // write resulting code
-        info!("writing boogie to {}", self.options.output_path);
+        info!("writing boogie to {}", self.env.options.output_path);
         abort_on_error(
-            fs::write(&self.options.output_path, &self.output),
+            fs::write(&self.env.options.output_path, &self.output),
             "cannot write boogie file",
         );
-        if !self.options.generate_only {
-            self.call_boogie_and_verify_output(&self.options.output_path);
+        if !self.env.options.generate_only {
+            self.call_boogie_and_verify_output(&self.env.options.output_path);
         }
     }
 
     /// Runs translation in a test context. Instead of writing output to a file, returns
     /// a pair of the prelude and the actual translated code.
     pub fn run_for_test(&mut self) -> (String, String) {
-        self.load_modules(&self.options.mvir_sources);
+        let sources = self.env.options.mvir_sources.clone();
+        self.load_modules(&sources);
         self.add_prelude();
         // Extract the prelude from the generated output, as we want to return it in a separate
         // string.
@@ -88,14 +85,13 @@ impl<'app> Driver<'app> {
             // Parse module.
             let code = abort_on_error(fs::read_to_string(file_name), "cannot read mvir file");
             let parsed_module = abort_on_error(parse_module(&code), "mvir parsing errors");
-            let name = parsed_module.name.as_inner().to_string();
 
-            // Extract specifications from module.
-            let specs = self.extract_function_infos(&parsed_module);
+            // Extract information from parsed module.
+            let mut infos = self.extract_function_infos(&parsed_module);
 
             // Compile module.
             let (compiled_module, source_map) = abort_on_error(
-                compile_module(address, parsed_module, &self.verified_modules),
+                compile_module(address, parsed_module, self.env.get_bytecode_modules()),
                 "mvir compilation errors",
             );
 
@@ -107,40 +103,59 @@ impl<'app> Driver<'app> {
                 "mvir verification errors",
             );
 
-            // Store result.
-            self.verified_modules.push(verified_module);
-            self.module_infos.push(ModuleInfo {
-                name,
-                function_infos: specs,
-            });
-            self.source_map.push(source_map);
+            // Add module to environment.
+            let struct_data = (0..verified_module.struct_defs().len())
+                .map(|idx| {
+                    self.env
+                        .create_struct_data(&verified_module, StructDefinitionIndex(idx as u16))
+                })
+                .collect();
+            let function_data = (0..verified_module.function_defs().len())
+                .map(|idx| {
+                    let def_idx = FunctionDefinitionIndex(idx as u16);
+                    let (arg_names, type_arg_names, specs) =
+                        infos.remove(&def_idx).expect("function index");
+
+                    self.env.create_function_data(
+                        &verified_module,
+                        def_idx,
+                        arg_names,
+                        type_arg_names,
+                        specs,
+                    )
+                })
+                .collect();
+            self.env
+                .add(verified_module, source_map, struct_data, function_data);
         }
     }
 
     /// Extract function infos from the given parsed module.
-    fn extract_function_infos(&self, parsed_module: &ModuleDefinition) -> Vec<FunctionInfo> {
-        let mut result = vec![];
-        for (index, (_, def)) in parsed_module.functions.iter().enumerate() {
+    fn extract_function_infos(
+        &self,
+        parsed_module: &ModuleDefinition,
+    ) -> BTreeMap<FunctionDefinitionIndex, (Vec<Identifier>, Vec<Identifier>, Vec<Condition>)> {
+        let mut result = BTreeMap::new();
+        for (raw_index, (_, def)) in parsed_module.functions.iter().enumerate() {
             let type_arg_names = def
                 .value
                 .signature
                 .type_formals
                 .iter()
-                .map(|(v, _)| v.value.name().as_str().to_string())
+                .map(|(v, _)| v.value.name().into())
                 .collect();
             let arg_names = def
                 .value
                 .signature
                 .formals
                 .iter()
-                .map(|(v, _)| v.value.name().as_str().to_string())
+                .map(|(v, _)| v.value.name().into())
                 .collect();
-            result.push(FunctionInfo {
-                index: FunctionDefinitionIndex(index as u16),
-                type_arg_names,
-                arg_names,
-                specification: def.value.specifications.clone(),
-            });
+            let index = FunctionDefinitionIndex(raw_index as u16);
+            result.insert(
+                index,
+                (arg_names, type_arg_names, def.value.specifications.clone()),
+            );
         }
         result
     }
@@ -149,16 +164,16 @@ impl<'app> Driver<'app> {
     pub fn add_prelude(&mut self) {
         self.output.push_str(&format!(
             "\n// ** prelude from {}\n\n",
-            self.options.prelude_path
+            self.env.options.prelude_path
         ));
-        if self.options.prelude_path == INLINE_PRELUDE {
+        if self.env.options.prelude_path == INLINE_PRELUDE {
             info!("using inline prelude");
             self.output
                 .push_str(&String::from_utf8_lossy(DEFAULT_PRELUDE));
         } else {
-            info!("using prelude at {}", &self.options.prelude_path);
+            info!("using prelude at {}", &self.env.options.prelude_path);
             let content = abort_on_error(
-                fs::read_to_string(&self.options.prelude_path),
+                fs::read_to_string(&self.env.options.prelude_path),
                 "cannot read prelude file",
             );
             self.output.push_str(&content);
@@ -168,7 +183,7 @@ impl<'app> Driver<'app> {
     /// Add boogie helper functions on per-source base. For every source `path.mvir`, if a file
     /// `path.prover.bpl` exists, add it to the boogie output.
     pub fn add_helpers(&mut self) {
-        for src in &self.options.mvir_sources {
+        for src in &self.env.options.mvir_sources {
             let path = Path::new(src);
             let parent = path
                 .parent()
@@ -198,21 +213,14 @@ impl<'app> Driver<'app> {
 
     /// Translates all modules.
     pub fn translate_modules(&mut self) {
-        self.output.push_str(
-            &BoogieTranslator::new(
-                self.options,
-                &self.verified_modules,
-                &self.module_infos,
-                &self.source_map,
-            )
-            .translate(),
-        );
+        self.output
+            .push_str(&BoogieTranslator::new(&self.env).translate());
     }
 
     /// Calls boogie on the given file. On success, returns a pair of a string with the standard
     /// output and a vector of lines in the output which contain boogie errors.
     pub fn call_boogie(&self, boogie_file: &str) -> Option<(String, Vec<String>)> {
-        let args = self.options.get_boogie_command(boogie_file);
+        let args = self.env.options.get_boogie_command(boogie_file);
         info!("calling boogie");
         debug!("command line: {}", args.iter().join(" "));
         let output = abort_on_error(
@@ -220,10 +228,7 @@ impl<'app> Driver<'app> {
             "error executing boogie",
         );
         if !output.status.success() {
-            error!(
-                "boogie exited with status {}",
-                output.status.code().unwrap()
-            );
+            error!("boogie exited with status {:?}", output.status.code());
             None
         } else {
             let out = String::from_utf8_lossy(&output.stdout).to_string();

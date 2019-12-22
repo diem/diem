@@ -6,11 +6,10 @@
 
 // ** functions of module TestSpecs
 
-procedure {:inline 1} TestSpecs_mut_b (arg0: Reference) returns ()
+procedure {:inline 1} TestSpecs_mut_b (b: Reference) returns ()
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Reference; // ReferenceType(IntegerType())
     var t1: Value; // IntegerType()
     var t2: Reference; // ReferenceType(IntegerType())
 
@@ -22,18 +21,17 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(Dereference(m, arg0));
-    assume IsValidReferenceParameter(m, local_counter, arg0);
+    assume IsValidInteger(Dereference(m, b));
+    assume IsValidReferenceParameter(m, local_counter, b);
 
     old_size := local_counter;
     local_counter := local_counter + 3;
-    t0 := arg0;
 
     // bytecode translation starts here
     call tmp := LdConst(10);
     m := UpdateLocal(m, old_size + 1, tmp);
 
-    call t2 := CopyOrMoveRef(t0);
+    call t2 := CopyOrMoveRef(b);
 
     call WriteRef(t2, GetLocal(m, old_size + 1));
 
@@ -44,10 +42,10 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestSpecs_mut_b_verify (arg0: Reference) returns ()
+procedure TestSpecs_mut_b_verify (b: Reference) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestSpecs_mut_b(arg0);
+    call TestSpecs_mut_b(b);
 }
 
 procedure {:inline 1} TestSpecs_mut_ref () returns ()

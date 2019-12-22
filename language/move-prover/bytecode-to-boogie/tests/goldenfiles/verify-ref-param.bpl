@@ -8,30 +8,29 @@ axiom TestSpecs_T_value == 0;
 function TestSpecs_T_type_value(): TypeValue {
     StructType(TestSpecs_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-
-procedure {:inline 1} Pack_TestSpecs_T(v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestSpecs_T(value: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+    assume IsValidInteger(value);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, value));
 
 }
 
-procedure {:inline 1} Unpack_TestSpecs_T(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_TestSpecs_T(_struct: Value) returns (value: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, TestSpecs_T_value);
+    assume is#Vector(_struct);
+    value := SelectField(_struct, TestSpecs_T_value);
+    assume IsValidInteger(value);
 }
 
 
 
 // ** functions of module TestSpecs
 
-procedure {:inline 1} TestSpecs_value (arg0: Reference) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_value (ref: Reference) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
-ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, arg0), TestSpecs_T_value))));
+ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, ref), TestSpecs_T_value))));
 {
     // declare local variables
-    var t0: Reference; // ReferenceType(TestSpecs_T_type_value())
     var t1: Reference; // ReferenceType(TestSpecs_T_type_value())
     var t2: Reference; // ReferenceType(IntegerType())
     var t3: Value; // IntegerType()
@@ -44,15 +43,14 @@ ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, arg0), TestSpecs
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Vector(Dereference(m, arg0));
-    assume IsValidReferenceParameter(m, local_counter, arg0);
+    assume is#Vector(Dereference(m, ref));
+    assume IsValidReferenceParameter(m, local_counter, ref);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
-    t0 := arg0;
 
     // bytecode translation starts here
-    call t1 := CopyOrMoveRef(t0);
+    call t1 := CopyOrMoveRef(ref);
 
     call t2 := BorrowField(t1, TestSpecs_T_value);
 
@@ -70,8 +68,8 @@ Label_Abort:
     ret0 := DefaultValue;
 }
 
-procedure TestSpecs_value_verify (arg0: Reference) returns (ret0: Value)
+procedure TestSpecs_value_verify (ref: Reference) returns (ret0: Value)
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestSpecs_value(arg0);
+    call ret0 := TestSpecs_value(ref);
 }

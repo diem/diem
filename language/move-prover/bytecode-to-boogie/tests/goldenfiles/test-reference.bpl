@@ -8,29 +8,28 @@ axiom TestReference_T_value == 0;
 function TestReference_T_type_value(): TypeValue {
     StructType(TestReference_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-
-procedure {:inline 1} Pack_TestReference_T(v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestReference_T(value: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
+    assume IsValidInteger(value);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, value));
 
 }
 
-procedure {:inline 1} Unpack_TestReference_T(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_TestReference_T(_struct: Value) returns (value: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, TestReference_T_value);
+    assume is#Vector(_struct);
+    value := SelectField(_struct, TestReference_T_value);
+    assume IsValidInteger(value);
 }
 
 
 
 // ** functions of module TestReference
 
-procedure {:inline 1} TestReference_mut_b (arg0: Reference) returns ()
+procedure {:inline 1} TestReference_mut_b (b: Reference) returns ()
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
-    var t0: Reference; // ReferenceType(IntegerType())
     var t1: Value; // IntegerType()
     var t2: Reference; // ReferenceType(IntegerType())
 
@@ -42,18 +41,17 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(Dereference(m, arg0));
-    assume IsValidReferenceParameter(m, local_counter, arg0);
+    assume IsValidInteger(Dereference(m, b));
+    assume IsValidReferenceParameter(m, local_counter, b);
 
     old_size := local_counter;
     local_counter := local_counter + 3;
-    t0 := arg0;
 
     // bytecode translation starts here
     call tmp := LdConst(10);
     m := UpdateLocal(m, old_size + 1, tmp);
 
-    call t2 := CopyOrMoveRef(t0);
+    call t2 := CopyOrMoveRef(b);
 
     call WriteRef(t2, GetLocal(m, old_size + 1));
 
@@ -64,14 +62,16 @@ Label_Abort:
     m := saved_m;
 }
 
-procedure TestReference_mut_b_verify (arg0: Reference) returns ()
+procedure TestReference_mut_b_verify (b: Reference) returns ()
 {
     assume ExistsTxnSenderAccount(m, txn);
-    call TestReference_mut_b(arg0);
+    call TestReference_mut_b(b);
 }
 
 procedure {:inline 1} TestReference_mut_ref () returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // IntegerType()
