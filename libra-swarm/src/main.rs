@@ -78,18 +78,12 @@ fn main() {
 
     let faucet_key_file_path = &validator_swarm.config.faucet_key_path;
     let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
-    let validator_set_file = validator_swarm
-        .dir
-        .as_ref()
-        .join("0")
-        .join(&validator_config.consensus.consensus_peers_file);
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
     println!(
-        "\tcargo run --bin client -- -a localhost -p {} -s {:?} -m {:?}",
+        "\tcargo run --bin client -- -a localhost -p {} -m {:?}",
         validator_config
             .admission_control
             .admission_control_service_port,
-        validator_set_file,
         faucet_key_file_path,
     );
     let node_address_list = validator_swarm
@@ -114,11 +108,10 @@ fn main() {
         let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
-            "\tcargo run --bin client -- -a localhost -p {} -s {:?} -m {:?}",
+            "\tcargo run --bin client -- -a localhost -p {} -m {:?}",
             full_node_config
                 .admission_control
                 .admission_control_service_port,
-            validator_set_file,
             faucet_key_file_path,
         );
     }
@@ -130,7 +123,6 @@ fn main() {
             validator_swarm.get_ac_port(0),
             Path::new(&faucet_key_file_path),
             &tmp_mnemonic_file.path(),
-            validator_set_file.into_os_string().into_string().unwrap(),
         );
         println!("Loading client...");
         let _output = client.output().expect("Failed to wait on child");
