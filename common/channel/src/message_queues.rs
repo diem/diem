@@ -6,6 +6,7 @@ use std::{
     collections::{HashMap, VecDeque},
     fmt::{Debug, Formatter, Result},
     hash::Hash,
+    num::NonZeroUsize,
 };
 
 /// QueueStyle is an enum which can be used as a configuration option for
@@ -39,7 +40,7 @@ pub(crate) struct PerKeyQueue<K: Eq + Hash + Clone, T> {
     /// Keys for choosing the next message
     round_robin_queue: VecDeque<K>,
     /// Maximum number of messages to store per key
-    max_queue_size: usize,
+    max_queue_size: NonZeroUsize,
     counters: Option<&'static IntCounterVec>,
 }
 
@@ -62,13 +63,9 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
     /// max_queue_size_per_key
     pub(crate) fn new(
         queue_style: QueueStyle,
-        max_queue_size_per_key: usize,
+        max_queue_size_per_key: NonZeroUsize,
         counters: Option<&'static IntCounterVec>,
     ) -> Self {
-        assert!(
-            max_queue_size_per_key > 0,
-            "max_queue_size_per_key should be > 0"
-        );
         Self {
             queue_style,
             max_queue_size: max_queue_size_per_key,
@@ -101,7 +98,7 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
         if let Some(c) = self.counters.as_ref() {
             c.with_label_values(&["enqueued"]).inc();
         }
-        let max_queue_size = self.max_queue_size;
+        let max_queue_size = self.max_queue_size.get();
         let key_message_queue = self
             .per_key_queue
             .entry(key.clone())

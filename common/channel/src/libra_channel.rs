@@ -14,6 +14,7 @@ use libra_metrics::IntCounterVec;
 use std::{
     fmt::{Debug, Formatter},
     hash::Hash,
+    num::NonZeroUsize,
     pin::Pin,
     sync::{Arc, Mutex},
     task::{Context, Poll, Waker},
@@ -174,7 +175,7 @@ impl<K: Eq + Hash + Clone, M> FusedStream for Receiver<K, M> {
 /// Create a new Libra Channel and returns the two ends of the channel.
 pub fn new<K: Eq + Hash + Clone, M>(
     queue_style: QueueStyle,
-    max_queue_size_per_key: usize,
+    max_queue_size_per_key: NonZeroUsize,
     counters: Option<&'static IntCounterVec>,
 ) -> (Sender<K, M>, Receiver<K, M>) {
     let shared_state = Arc::new(Mutex::new(SharedState {
