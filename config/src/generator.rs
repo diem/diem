@@ -13,28 +13,33 @@ use crate::{
 };
 use rand::{rngs::StdRng, SeedableRng};
 
+pub struct ValidatorSwarm {
+    pub nodes: Vec<NodeConfig>,
+    pub consensus_peers: ConsensusPeersConfig,
+}
+
 pub fn validator_swarm(
     template: &NodeConfig,
-    nodes: usize,
+    count: usize,
     seed: [u8; 32],
     randomize_ports: bool,
-) -> Vec<NodeConfig> {
+) -> ValidatorSwarm {
     let mut rng = StdRng::from_seed(seed);
     let mut network_peers = NetworkPeersConfig::default();
     let mut consensus_peers = ConsensusPeersConfig::default();
-    let mut configs = Vec::new();
+    let mut nodes = Vec::new();
 
-    for _index in 0..nodes {
-        let mut config = NodeConfig::random_with_template(template, &mut rng);
+    for _index in 0..count {
+        let mut node = NodeConfig::random_with_template(template, &mut rng);
         if randomize_ports {
-            config.randomize_ports();
+            node.randomize_ports();
         }
 
         let mut storage_config = OnDiskStorageConfig::default();
         storage_config.default = true;
-        config.consensus.safety_rules.backend = SafetyRulesBackend::OnDiskStorage(storage_config);
+        node.consensus.safety_rules.backend = SafetyRulesBackend::OnDiskStorage(storage_config);
 
-        let network = config.validator_network.as_mut().unwrap();
+        let network = node.validator_network.as_mut().unwrap();
         network.listen_address = utils::get_available_port_in_multiaddr(true);
         network.advertised_address = network.listen_address.clone();
 
@@ -42,33 +47,35 @@ pub fn validator_swarm(
             .peers
             .insert(network.peer_id, network.network_keypairs.as_peer_info());
 
-        let test = config.test.as_ref().unwrap();
+        let test = node.test.as_ref().unwrap();
         let consensus_pubkey = test.consensus_keypair.as_ref().unwrap().public().clone();
 
         consensus_peers
             .peers
             .insert(network.peer_id, ConsensusPeerInfo { consensus_pubkey });
 
-        configs.push(config);
+        nodes.push(node);
     }
 
     let mut seed_peers = SeedPeersConfig::default();
-    let network = configs[0].validator_network.as_ref().unwrap();
+    let network = nodes[0].validator_network.as_ref().unwrap();
     seed_peers
         .seed_peers
         .insert(network.peer_id, vec![network.listen_address.clone()]);
 
-    for config in &mut configs {
-        config.consensus.consensus_peers = consensus_peers.clone();
-        let network = config.validator_network.as_mut().unwrap();
+    for node in &mut nodes {
+        let network = node.validator_network.as_mut().unwrap();
         network.network_peers = network_peers.clone();
         network.seed_peers = seed_peers.clone();
     }
 
-    configs
+    ValidatorSwarm {
+        nodes,
+        consensus_peers,
+    }
 }
 
-pub fn validator_swarm_for_testing(nodes: usize) -> Vec<NodeConfig> {
+pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
     let mut config = NodeConfig::default();
     config.vm_config.publishing_options = VMPublishingOption::Open;
     validator_swarm(&NodeConfig::default(), nodes, [1u8; 32], true)

@@ -16,9 +16,13 @@ const GENESIS_LOCATION: &str = "genesis/genesis.blob";
 
 /// Generate the genesis blob used by the Libra blockchain
 fn generate_genesis_blob() -> Vec<u8> {
-    let configs = generator::validator_swarm_for_testing(10);
-    let consensus_peers = &configs[0].consensus.consensus_peers;
-    let network_peers = &configs[0].validator_network.as_ref().unwrap().network_peers;
+    let swarm = generator::validator_swarm_for_testing(10);
+    let consensus_peers = &swarm.consensus_peers;
+    let network_peers = &swarm.nodes[0]
+        .validator_network
+        .as_ref()
+        .unwrap()
+        .network_peers;
     let validator_set = consensus_peers.get_validator_set(network_peers);
     let discovery_set = make_placeholder_discovery_set(&validator_set);
 

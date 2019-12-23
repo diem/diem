@@ -147,9 +147,9 @@ impl NodeConfig {
 
     pub fn set_data_dir(&mut self, data_dir: PathBuf) {
         self.base.data_dir = data_dir.clone();
+        self.consensus.set_data_dir(data_dir.clone());
         self.metrics.set_data_dir(data_dir.clone());
         self.storage.set_data_dir(data_dir.clone());
-        self.consensus.safety_rules.set_data_dir(data_dir);
     }
 
     /// This clones the underlying data except for the keypair so that this config can be used as a
@@ -199,7 +199,6 @@ impl NodeConfig {
         }
 
         let input_dir = RootPath::new(input_path);
-        config.consensus.load(&input_dir)?;
         config.execution.load(&input_dir)?;
         if let Some(network) = &mut config.validator_network {
             network.load(&input_dir, RoleType::Validator)?;
@@ -213,7 +212,6 @@ impl NodeConfig {
 
     pub fn save<P: AsRef<Path>>(&mut self, output_path: P) -> Result<()> {
         let output_dir = RootPath::new(&output_path);
-        self.consensus.save(&output_dir)?;
         self.execution.save(&output_dir)?;
         if let Some(network) = &mut self.validator_network {
             network.save(&output_dir)?;
@@ -391,8 +389,6 @@ mod test {
         expected.save(&path).expect("Unable to save config");
 
         let actual = NodeConfig::load(RANDOM_COMPLETE).expect("Unable to load config");
-        // @TODO this generation is broken and about to be deleted
-        expected.consensus.consensus_peers = actual.consensus.consensus_peers.clone();
         expected.set_data_dir(actual.data_dir().clone());
         compare_configs(&actual, &expected);
     }
@@ -408,8 +404,6 @@ mod test {
         expected.save(&path).expect("Unable to save config");
 
         let actual = NodeConfig::load(RANDOM_DEFAULT).expect("Unable to load config");
-        // @TODO this generation is broken and about to be deleted
-        expected.consensus.consensus_peers = actual.consensus.consensus_peers.clone();
         expected.set_data_dir(actual.data_dir().clone());
         compare_configs(&actual, &expected);
     }

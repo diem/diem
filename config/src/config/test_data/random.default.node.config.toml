@@ -1,6 +1,3 @@
-[consensus]
-consensus_peers_file = "consensus_peers.config.toml"
-
 [validator_network]
 peer_id = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654"
 network_keypairs_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654.network.keys.toml"

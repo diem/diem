@@ -8,6 +8,7 @@ use libra_config::{
     utils,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_types::transaction::Transaction;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
 use std::collections::HashMap;
@@ -18,6 +19,7 @@ pub struct FullNodeConfig {
     full_node_index: usize,
     full_node_seed: [u8; 32],
     full_nodes: usize,
+    genesis: Option<Transaction>,
     listen: Multiaddr,
     permissioned: bool,
     template: NodeConfig,
@@ -39,6 +41,7 @@ impl Default for FullNodeConfig {
             full_node_index: 0,
             full_node_seed: DEFAULT_SEED,
             full_nodes: 1,
+            genesis: None,
             listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
             permissioned: true,
             template,
@@ -74,6 +77,11 @@ impl FullNodeConfig {
 
     pub fn full_node_seed(&mut self, full_node_seed: [u8; 32]) -> &mut Self {
         self.full_node_seed = full_node_seed;
+        self
+    }
+
+    pub fn genesis(&mut self, genesis: Transaction) -> &mut Self {
+        self.genesis = Some(genesis);
         self
     }
 
@@ -177,7 +185,12 @@ impl FullNodeConfig {
                 config.randomize_ports();
             }
 
-            config.execution.genesis = validator_config.execution.genesis.clone();
+            config.execution.genesis = if let Some(genesis) = self.genesis.as_ref() {
+                Some(genesis.clone())
+            } else {
+                validator_config.execution.genesis.clone()
+            };
+
             let network = config
                 .full_node_networks
                 .get_mut(0)
@@ -258,7 +271,6 @@ mod test {
             DEFAULT_LISTEN.parse::<Multiaddr>().unwrap()
         );
         assert!(config.execution.genesis.is_some());
-        assert_eq!(config.consensus.consensus_peers.peers.len(), 1);
     }
 
     #[test]
@@ -284,7 +296,6 @@ mod test {
             .extend_validator(&mut config_extended)
             .unwrap();
         let config_full = FullNodeConfig::new().build().unwrap();
-        assert_eq!(config_extended.consensus, config_orig.consensus);
         assert_eq!(
             config_extended.validator_network,
             config_orig.validator_network
@@ -303,7 +314,6 @@ mod test {
         let mut fnc = FullNodeConfig::new();
         fnc.full_node_seed([33u8; 32]);
         fnc.extend(&mut config_two).unwrap();
-        assert_eq!(config_one.consensus, config_two.consensus);
         assert_eq!(
             config_one.full_node_networks[0],
             config_two.full_node_networks[0]
