@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+futures = "0.3"
 jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
 parity-multiaddr = "0.6.0"
 rayon = "1.2.0"
@@ -25,7 +26,6 @@ crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 executable-helpers = { path = "../common/executable-helpers", version = "0.1.0" }
 executor = { path = "../executor", version = "0.1.0" }
-futures = { version = "0.3.0", features = ["io-compat", "compat"] }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
