@@ -117,13 +117,12 @@ proptest! {
         }
 
         // Check state backup for all account states.
-        let stream = rt.block_on(read_client.backup_account_state_async(version - 1));
-        let backup_responses = rt.block_on(stream.unwrap().collect::<Vec<_>>());
+        let stream = read_client.backup_account_state(version - 1).unwrap();
+        let backup_responses = rt.block_on(stream.collect::<Vec<_>>());
         for ((hash, blob), response) in zip_eq(all_accounts, backup_responses) {
             let resp = response.unwrap();
             prop_assert_eq!(&hash, &resp.account_key);
             prop_assert_eq!(&blob, &resp.account_state_blob);
         }
-
     }
 }
