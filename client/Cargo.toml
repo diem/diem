@@ -12,7 +12,6 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 chrono = "0.4.7"
-futures = "0.1.28"
 tonic = { git = "https://github.com/hyperium/tonic.git" }
 hex = "0.3.2"
 itertools = "0.8.0"
