@@ -60,7 +60,7 @@ impl<'alloc> VMRuntime<'alloc> {
         }
     }
 
-    pub(crate) fn load_gas_schedule(
+    pub fn load_gas_schedule(
         &self,
         data_cache: &mut BlockDataCache<'_>,
         state_view: &dyn StateView,

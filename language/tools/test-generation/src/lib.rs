@@ -22,16 +22,22 @@ use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::VerifiedModule;
 use language_e2e_tests::executor::FakeExecutor;
-use libra_types::{
-    account_address::AccountAddress, byte_array::ByteArray, transaction::TransactionArgument,
-};
+use libra_config::config::{VMConfig, VMPublishingOption};
+use libra_state_view::StateView;
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 use std::{fs, io::Write, panic};
 use utils::module_generation::{generate_module, ModuleGeneratorOptions};
 use vm::{
     access::ModuleAccess,
+    errors::VMResult,
     file_format::{CompiledModule, FunctionDefinitionIndex, SignatureToken},
+    transaction_metadata::TransactionMetadata,
 };
-use vm_runtime::execute_function_in_module;
+use vm_cache_map::Arena;
+use vm_runtime::{
+    data_cache::BlockDataCache, runtime::VMRuntime, txn_executor::TransactionExecutor,
+};
+use vm_runtime_types::value::Value;
 
 /// This function calls the Bytecode verifier to test it
 fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
@@ -52,14 +58,14 @@ fn run_vm(module: VerifiedModule) -> Result<(), String> {
         let sig_idx = module.function_handle_at(handle).signature;
         module.function_signature_at(sig_idx).clone()
     };
-    let main_args: Vec<TransactionArgument> = function_signature
+    let main_args: Vec<Value> = function_signature
         .arg_types
         .iter()
         .map(|sig_tok| match sig_tok {
-            SignatureToken::Address => TransactionArgument::Address(AccountAddress::new([0; 32])),
-            SignatureToken::U64 => TransactionArgument::U64(0),
-            SignatureToken::Bool => TransactionArgument::Bool(true),
-            SignatureToken::ByteArray => TransactionArgument::ByteArray(ByteArray::new(vec![])),
+            SignatureToken::Address => Value::address(AccountAddress::new([0; 32])),
+            SignatureToken::U64 => Value::u64(0),
+            SignatureToken::Bool => Value::bool(true),
+            SignatureToken::ByteArray => Value::byte_array(ByteArray::new(vec![])),
             _ => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
         })
         .collect();
@@ -73,6 +79,35 @@ fn run_vm(module: VerifiedModule) -> Result<(), String> {
     )
     .map_err(|err| format!("Runtime error: {:?}", err))?;
     Ok(())
+}
+
+/// Execute the first function in a module
+fn execute_function_in_module(
+    state_view: &dyn StateView,
+    module: VerifiedModule,
+    idx: FunctionDefinitionIndex,
+    args: Vec<Value>,
+) -> VMResult<()> {
+    let module_id = module.as_inner().self_id();
+    let entry_name = {
+        let entry_func_idx = module.function_def_at(idx).function;
+        let entry_name_idx = module.function_handle_at(entry_func_idx).name;
+        module.identifier_at(entry_name_idx)
+    };
+    {
+        let arena = Arena::new();
+        let config = VMConfig {
+            publishing_options: VMPublishingOption::Open,
+        };
+        let mut runtime = VMRuntime::new(&arena, &config);
+        runtime.cache_module(module.clone());
+
+        let mut data_cache = BlockDataCache::new(state_view);
+        let gas_schedule = runtime.load_gas_schedule(&mut data_cache, state_view)?;
+        let mut txn_executor =
+            TransactionExecutor::new(&gas_schedule, &data_cache, TransactionMetadata::default());
+        txn_executor.execute_function(&runtime, state_view, &module_id, &entry_name, args)
+    }
 }
 
 /// Serialize a module to `path` if `output_path` is `Some(path)`. If `output_path` is `None`

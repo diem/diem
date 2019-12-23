@@ -17,6 +17,8 @@ mirai-annotations = "1.4.0"
 structopt = "0.3.2"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
+libra-config = { path = "../../../config", version = "0.1.0" }
+libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 utils = { path = "../utils", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 vm-runtime = { path = "../../vm/vm-runtime", version = "0.1.0" }

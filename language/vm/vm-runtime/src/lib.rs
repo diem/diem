@@ -135,7 +135,6 @@ pub mod runtime;
 pub mod txn_executor;
 
 pub use libra_vm::LibraVM;
-pub use txn_executor::execute_function_in_module;
 
 use libra_config::config::VMConfig;
 use libra_state_view::StateView;

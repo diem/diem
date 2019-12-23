@@ -3,13 +3,9 @@
 //! Processor for a single transaction.
 
 use crate::{
-    chain_state::TransactionExecutionContext,
-    counters::*,
-    data_cache::{BlockDataCache, RemoteCache},
+    chain_state::TransactionExecutionContext, counters::*, data_cache::RemoteCache,
     runtime::VMRuntime,
 };
-use bytecode_verifier::VerifiedModule;
-use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
@@ -22,13 +18,10 @@ use libra_types::{
     write_set::WriteSet,
 };
 use vm::{
-    access::ModuleAccess,
     errors::*,
-    file_format::FunctionDefinitionIndex,
     gas_schedule::{CostTable, GasAlgebra},
     transaction_metadata::TransactionMetadata,
 };
-use vm_cache_map::Arena;
 use vm_runtime_types::value::Value;
 
 pub use crate::gas_meter::GAS_SCHEDULE_MODULE;
@@ -335,7 +328,7 @@ fn error_output(err: VMStatus) -> TransactionOutput {
 }
 
 /// Convert the transaction arguments into move values.
-pub fn convert_txn_args(args: Vec<TransactionArgument>) -> VMResult<Vec<Value>> {
+fn convert_txn_args(args: Vec<TransactionArgument>) -> VMResult<Vec<Value>> {
     args.into_iter()
         .map(|arg| match arg {
             TransactionArgument::U64(i) => Ok(Value::u64(i)),
@@ -344,39 +337,4 @@ pub fn convert_txn_args(args: Vec<TransactionArgument>) -> VMResult<Vec<Value>> 
             TransactionArgument::ByteArray(b) => Ok(Value::byte_array(b)),
         })
         .collect()
-}
-
-/// Execute the first function in a module
-pub fn execute_function_in_module(
-    state_view: &dyn StateView,
-    module: VerifiedModule,
-    idx: FunctionDefinitionIndex,
-    args: Vec<TransactionArgument>,
-) -> VMResult<()> {
-    let module_id = module.as_inner().self_id();
-    let entry_name = {
-        let entry_func_idx = module.function_def_at(idx).function;
-        let entry_name_idx = module.function_handle_at(entry_func_idx).name;
-        module.identifier_at(entry_name_idx)
-    };
-    {
-        let arena = Arena::new();
-        let config = VMConfig {
-            publishing_options: VMPublishingOption::Open,
-        };
-        let mut runtime = VMRuntime::new(&arena, &config);
-        runtime.cache_module(module.clone());
-
-        let mut data_cache = BlockDataCache::new(state_view);
-        let gas_schedule = runtime.load_gas_schedule(&mut data_cache, state_view)?;
-        let mut txn_executor =
-            TransactionExecutor::new(&gas_schedule, &data_cache, TransactionMetadata::default());
-        txn_executor.execute_function(
-            &runtime,
-            state_view,
-            &module_id,
-            &entry_name,
-            convert_txn_args(args)?,
-        )
-    }
 }
