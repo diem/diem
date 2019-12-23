@@ -228,7 +228,6 @@ async fn sync_with_peers<'a>(
                 network_sender
                     .clone()
                     .send_to(peer_id, msg)
-                    .await
                     .expect("[shared mempool] failed to direct-send mempool sync message");
             }
 

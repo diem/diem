@@ -168,11 +168,7 @@ impl NetworkSender {
             .filter(|author| author != &self_author);
 
         // Broadcast message over direct-send to all other validators.
-        if let Err(err) = self
-            .network_sender
-            .send_to_many(other_validators, msg)
-            .await
-        {
+        if let Err(err) = self.network_sender.send_to_many(other_validators, msg) {
             error!("Error broadcasting message: {:?}", err);
         }
     }
@@ -206,7 +202,7 @@ impl NetworkSender {
                 }
                 continue;
             }
-            if let Err(e) = network_sender.send_to(peer, msg.clone()).await {
+            if let Err(e) = network_sender.send_to(peer, msg.clone()) {
                 error!("Failed to send a vote to peer {:?}: {:?}", peer, e);
             }
         }
@@ -230,7 +226,7 @@ impl NetworkSender {
     /// Sends the given sync info to the given author.
     /// The future is fulfilled as soon as the message is added to the internal network channel
     /// (does not indicate whether the message is delivered or sent out).
-    pub async fn send_sync_info(&self, sync_info: SyncInfo, recipient: Author) {
+    pub fn send_sync_info(&self, sync_info: SyncInfo, recipient: Author) {
         if recipient == self.author {
             error!("An attempt to deliver sync info msg to itself: ignore.");
             return;
@@ -246,7 +242,7 @@ impl NetworkSender {
             message: Some(ConsensusMsg_oneof::SyncInfo(sync_info)),
         };
         let mut network_sender = self.network_sender.clone();
-        if let Err(e) = network_sender.send_to(recipient, msg).await {
+        if let Err(e) = network_sender.send_to(recipient, msg) {
             warn!(
                 "Failed to send a sync info msg to peer {:?}: {:?}",
                 recipient, e

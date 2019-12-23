@@ -32,7 +32,7 @@ the receiver. Each RPC and DirectSend type corresponds to one such protocol.
 
 Only eligible members are allowed to join the inter-validator network. Their
 identity and public key information is provided by the consensus
-component at initialization and on updates to system membership. A new
+component at initialization and on validator set reconfiguration. A new
 validator also needs the network addresses of a few *seed* peers to help it
 bootstrap connectivity to the network. The seed peers first authenticate the
 joining validator as an eligible member and then share their network state
@@ -54,17 +54,17 @@ partial membership views, sophisticated failure detectors, or network overlays.
 
 ### System Architecture
 
-                                 +---------------------+---------------------+
-                                 |      Consensus      |       Mempool       |
-                                 +---------------------+---------------------+
-                                 |            Validator Network              |
-                                 +---------------------+---------------------+
-                                 |            NetworkProvider                |
-    +------------------------------------------------+-----------------+     |
-    | Discovery, health, etc     |            RPC    |  DirectSend     |     |
-    +--------------+---------------------------------------------------------+
-    |                                         Peer Manager                   |
-    +------------------------------------------------------------------+-----+
+    +--------------------+----------------------+
+    |      Consensus     |        Mempool       |
+    +--------------------+----------------------+
+    |               Peer Manager                |
+    +-------------------------------------------+
+    |              NetworkProvider(s)           |
+    +--------------------+----------------------+
+    |        RPC(s)      |      DirectSend(s)   |
+    +--------------------+----------------------+
+    |                  Peer(s)                  |
+    +-------------------------------------------+
 
 The network component is implemented in the
 [Actor](https://en.wikipedia.org/wiki/Actor_model) programming model &mdash;

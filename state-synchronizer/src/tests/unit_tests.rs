@@ -5,9 +5,9 @@ use crate::{
     peer_manager::{PeerManager, PeerScoreUpdateType},
     PeerId,
 };
-use channel;
+use channel::{self, libra_channel, message_queues::QueueStyle};
 use network::validator_network::StateSynchronizerSender;
-use std::collections::HashMap;
+use std::{collections::HashMap, num::NonZeroUsize};
 
 #[test]
 fn test_peer_manager() {
@@ -18,7 +18,8 @@ fn test_peer_manager() {
         PeerId::random(),
     ];
     let mut peer_manager = PeerManager::new(peers.clone());
-    let (network_reqs_tx, _) = channel::new_test(8);
+    let (network_reqs_tx, _) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let sender = StateSynchronizerSender::new(network_reqs_tx);
     for peer_id in peers.clone() {
         peer_manager.enable_peer(peer_id, sender.clone());

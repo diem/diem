@@ -564,7 +564,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 chunk_response.try_into()?,
             )),
         };
-        if network_sender.send_to(peer_id, msg).await.is_err() {
+        if network_sender.send_to(peer_id, msg).is_err() {
             error!("[state sync] failed to send p2p message");
         }
         Ok(())
@@ -856,7 +856,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         self.peer_manager
             .process_request(known_version + 1, peer_id);
-        sender.send_to(peer_id, msg).await?;
+        sender.send_to(peer_id, msg)?;
         counters::REQUESTS_SENT
             .with_label_values(&[&*peer_id.to_string()])
             .inc();

@@ -15,9 +15,12 @@
 //! to the peer.
 use crate::{
     common::NetworkPublicKeys,
-    peer_manager::{PeerManagerError, PeerManagerNotification, PeerManagerRequestSender},
+    peer_manager::PeerManagerNotification,
+    peer_manager::{PeerManagerError, PeerManagerRequestSender},
+    ProtocolId,
 };
 use channel;
+use channel::libra_channel;
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
@@ -39,7 +42,7 @@ use tokio::time;
 mod test;
 
 /// The ConnectivityManager actor.
-pub struct ConnectivityManager<TTicker, TSubstream, TBackoff> {
+pub struct ConnectivityManager<TTicker, TBackoff> {
     /// Nodes which are eligible to join the network.
     eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     /// PeerId and address of remote peers to which this peer is connected.
@@ -49,9 +52,9 @@ pub struct ConnectivityManager<TTicker, TSubstream, TBackoff> {
     /// Ticker to trigger connectivity checks to provide the guarantees stated above.
     ticker: TTicker,
     /// Channel to send requests to PeerManager.
-    peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
+    peer_mgr_reqs_tx: PeerManagerRequestSender,
     /// Channel to receive notifications from PeerManager.
-    peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+    peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
     /// Channel over which we receive requests from other actors.
     requests_rx: channel::Receiver<ConnectivityRequest>,
     /// Peers queued to be dialed, potentially with some delay. The dial can be cancelled by
@@ -98,18 +101,17 @@ struct DialState<TBackoff> {
     addr_idx: usize,
 }
 
-impl<TTicker, TSubstream, TBackoff> ConnectivityManager<TTicker, TSubstream, TBackoff>
+impl<TTicker, TBackoff> ConnectivityManager<TTicker, TBackoff>
 where
     TTicker: Stream + FusedStream + Unpin + 'static,
-    TSubstream: Debug + Send + 'static,
     TBackoff: Iterator<Item = Duration> + Clone,
 {
     /// Creates a new instance of the [`ConnectivityManager`] actor.
     pub fn new(
         eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
         ticker: TTicker,
-        peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
-        peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+        peer_mgr_reqs_tx: PeerManagerRequestSender,
+        peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
         requests_rx: channel::Receiver<ConnectivityRequest>,
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
@@ -139,6 +141,7 @@ where
         // 3. Notifications from PeerManager when we establish a new connection or lose an existing
         //    connection with a peer.
         let mut pending_dials = FuturesUnordered::new();
+        trace!("Started connection manager");
         loop {
             self.event_id += 1;
             ::futures::select! {
@@ -344,7 +347,7 @@ where
         }
     }
 
-    fn handle_peer_mgr_notification(&mut self, notif: PeerManagerNotification<TSubstream>) {
+    fn handle_peer_mgr_notification(&mut self, notif: PeerManagerNotification) {
         match notif {
             PeerManagerNotification::NewPeer(peer_id, addr) => {
                 self.connected.insert(peer_id, addr);
@@ -352,7 +355,7 @@ where
                 self.dial_states.remove(&peer_id);
                 self.dial_queue.remove(&peer_id);
             }
-            PeerManagerNotification::LostPeer(peer_id, addr) => {
+            PeerManagerNotification::LostPeer(peer_id, addr, _reason) => {
                 match self.connected.get(&peer_id) {
                     Some(curr_addr) if *curr_addr == addr => {
                         // Remove node from connected peers list.

@@ -55,6 +55,7 @@ fn test_network_builder() {
             .into_iter()
             .collect(),
         )
+        .add_discovery()
         .channel_size(8);
     let (_mempool_network_sender, _mempool_network_events) =
         validator_network::mempool::add_to_network(&mut network_builder);
@@ -116,6 +117,7 @@ fn test_mempool_sync() {
         .signing_keys((listener_signing_private_key, listener_signing_public_key))
         .trusted_peers(trusted_peers.clone())
         .transport(TransportType::Memory)
+        .add_discovery()
         .channel_size(8);
     let (_, mut listener_mp_net_events) =
         validator_network::mempool::add_to_network(&mut network_builder);
@@ -139,6 +141,7 @@ fn test_mempool_sync() {
                 .cloned()
                 .collect(),
         )
+        .add_discovery()
         .channel_size(8);
     let (mut dialer_mp_net_sender, mut dialer_mp_net_events) =
         validator_network::mempool::add_to_network(&mut network_builder);
@@ -166,7 +169,6 @@ fn test_mempool_sync() {
         // Dialer sends a mempool sync message
         dialer_mp_net_sender
             .send_to(listener_peer_id, mempool_msg)
-            .await
             .unwrap();
     };
 
@@ -251,6 +253,7 @@ fn test_unauthenticated_remote_mempool_sync() {
             listener_identity_private_key,
             listener_identity_public_key,
         ))))
+        .add_discovery()
         .channel_size(8);
     let (_, mut listener_mp_net_events) =
         validator_network::mempool::add_to_network(&mut network_builder);
@@ -277,6 +280,7 @@ fn test_unauthenticated_remote_mempool_sync() {
                 .cloned()
                 .collect(),
         )
+        .add_discovery()
         .channel_size(8);
     let (mut dialer_mp_net_sender, mut dialer_mp_net_events) =
         validator_network::mempool::add_to_network(&mut network_builder);
@@ -304,7 +308,6 @@ fn test_unauthenticated_remote_mempool_sync() {
         // Dialer sends a mempool sync message
         dialer_mp_net_sender
             .send_to(listener_peer_id, mempool_msg)
-            .await
             .unwrap();
     };
 
@@ -385,6 +388,7 @@ fn test_consensus_rpc() {
         .signing_keys((listener_signing_private_key, listener_signing_public_key))
         .trusted_peers(trusted_peers.clone())
         .transport(TransportType::Memory)
+        .add_discovery()
         .channel_size(8);
     let (_, mut listener_con_net_events) =
         validator_network::consensus::add_to_network(&mut network_builder);
@@ -408,6 +412,7 @@ fn test_consensus_rpc() {
                 .cloned()
                 .collect(),
         )
+        .add_discovery()
         .channel_size(8);
     let (mut dialer_con_net_sender, mut dialer_con_net_events) =
         validator_network::consensus::add_to_network(&mut network_builder);
@@ -445,14 +450,6 @@ fn test_consensus_rpc() {
     // rpc response.
     let f_listener = async move {
         // The listener receives a NewPeer event first
-        match listener_con_net_events.next().await.unwrap().unwrap() {
-            Event::NewPeer(peer_id) => {
-                assert_eq!(peer_id, dialer_peer_id);
-            }
-            event => panic!("Unexpected event {:?}", event),
-        }
-        // Note: This is temporary.
-        // Duplicate event since Consensus is registered as upstream for 2 protocols.
         match listener_con_net_events.next().await.unwrap().unwrap() {
             Event::NewPeer(peer_id) => {
                 assert_eq!(peer_id, dialer_peer_id);

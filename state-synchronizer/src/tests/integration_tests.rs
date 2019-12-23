@@ -279,7 +279,8 @@ impl SynchronizerEnv {
             ))
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
-            .transport(TransportType::Memory);
+            .transport(TransportType::Memory)
+            .add_discovery();
 
         let (sender, events) =
             validator_network::state_synchronizer::add_to_network(&mut network_builder);

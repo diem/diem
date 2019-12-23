@@ -103,7 +103,8 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         ))))
         .trusted_peers(trusted_peers.clone())
         .signing_keys((listener_signing_private_key, listener_signing_public_key))
-        .discovery_interval_ms(HOUR_IN_MS);
+        .discovery_interval_ms(HOUR_IN_MS)
+        .add_discovery();
     let (_listener_sender, mut listener_events) =
         validator_network::consensus::add_to_network(&mut network_builder);
     let listen_addr = network_builder.build();
@@ -128,7 +129,8 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
                 .cloned()
                 .collect(),
         )
-        .discovery_interval_ms(HOUR_IN_MS);
+        .discovery_interval_ms(HOUR_IN_MS)
+        .add_discovery();
     let (mut dialer_sender, mut dialer_events) =
         validator_network::consensus::add_to_network(&mut network_builder);
     let _dialer_addr = network_builder.build();
@@ -136,10 +138,6 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
     assert_eq!(first_dialer_event, Event::NewPeer(listener_peer_id));
-    let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
-    assert_eq!(first_dialer_event, Event::NewPeer(listener_peer_id));
-    let first_listener_event = block_on(listener_events.next()).unwrap().unwrap();
-    assert_eq!(first_listener_event, Event::NewPeer(dialer_peer_id));
     let first_listener_event = block_on(listener_events.next()).unwrap().unwrap();
     assert_eq!(first_listener_event, Event::NewPeer(dialer_peer_id));
 
@@ -156,7 +154,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
             // By the nature of DirectSend protocol, some messages may be lost when a connection is
             // broken temporarily.
             if counter == NUM_MSGS - TOLERANCE {
-                tx.send(()).await.unwrap();
+                let _ = tx.send(()).await;
                 counter = 0;
             }
         }
@@ -167,7 +165,9 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     // NUM_MSGS messages and wait until the listener side sends signal back.
     b.iter(|| {
         for _ in 0..NUM_MSGS {
-            block_on(dialer_sender.send_to(listener_peer_id, msg.clone())).unwrap();
+            dialer_sender
+                .send_to(listener_peer_id, msg.clone())
+                .unwrap();
         }
         block_on(rx.next()).unwrap();
     });
@@ -239,7 +239,8 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
         ))))
         .trusted_peers(trusted_peers.clone())
         .signing_keys((listener_signing_private_key, listener_signing_public_key))
-        .discovery_interval_ms(HOUR_IN_MS);
+        .discovery_interval_ms(HOUR_IN_MS)
+        .add_discovery();
     let (_listener_sender, mut listener_events) =
         validator_network::consensus::add_to_network(&mut network_builder);
     let listen_addr = network_builder.build();
@@ -264,7 +265,8 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
                 .cloned()
                 .collect(),
         )
-        .discovery_interval_ms(HOUR_IN_MS);
+        .discovery_interval_ms(HOUR_IN_MS)
+        .add_discovery();
     let (dialer_sender, mut dialer_events) =
         validator_network::consensus::add_to_network(&mut network_builder);
     let _dialer_addr = network_builder.build();

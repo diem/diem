@@ -5,29 +5,28 @@
 use crate::{
     counters,
     error::NetworkError,
-    interface::NetworkRequest,
+    peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
     proto::DiscoveryMsg,
-    validator_network::{network_builder::NetworkBuilder, NetworkEvents, NetworkSender},
+    validator_network::network_builder::NetworkBuilder,
+    validator_network::{NetworkEvents, NetworkSender},
     ProtocolId,
 };
+use channel::{libra_channel, message_queues::QueueStyle};
 use libra_types::PeerId;
-use std::time::Duration;
 
 pub const DISCOVERY_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/discovery/0.1.0";
-pub const DISCOVERY_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds.
 
 /// The interface from Network to Discovery module.
 ///
-/// `DiscoveryNetworkEvents` is a `Stream` of `NetworkNotification` where the
+/// `DiscoveryNetworkEvents` is a `Stream` of `PeerManagerNotification` where the
 /// raw `Bytes` rpc messages are deserialized into
 /// `DiscoveryMsg` types. `DiscoveryNetworkEvents` is a thin wrapper
-/// around a `channel::Receiver<NetworkNotification>`.
+/// around a `channel::Receiver<PeerManagerNotification>`.
 pub type DiscoveryNetworkEvents = NetworkEvents<DiscoveryMsg>;
 
 /// The interface from Discovery to Networking layer.
 ///
-/// This is a thin wrapper around a `NetworkSender<Discoverymsg>`, which is
-/// in turn a thin wrapper around a `channel::Sender<NetworkRequest>`, so it is
+/// This is a thin wrapper around a `NetworkSender<Discoverymsg>`, so it is
 /// easy to clone and send off to a separate task. For example, the rpc requests
 /// return Futures that encapsulate the whole flow, from sending the request to
 /// remote, to finally receiving the response and deserializing. It therefore
@@ -44,8 +43,8 @@ pub fn add_to_network(
     let (sender, receiver) = network.add_protocol_handler(
         vec![],
         vec![ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL)],
-        &counters::PENDING_DISCOVERY_NETWORK_EVENTS,
-        Duration::from_millis(DISCOVERY_INBOUND_MSG_TIMEOUT_MS),
+        QueueStyle::LIFO,
+        Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
     );
     (
         DiscoveryNetworkSender::new(sender),
@@ -54,20 +53,18 @@ pub fn add_to_network(
 }
 
 impl DiscoveryNetworkSender {
-    pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
+    pub fn new(inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>) -> Self {
         Self {
-            inner: NetworkSender::new(inner),
+            inner: NetworkSender::new(PeerManagerRequestSender::new(inner)),
         }
     }
 
     /// Send a DiscoveryMsg to a peer.
-    pub async fn send_to(&mut self, peer: PeerId, msg: DiscoveryMsg) -> Result<(), NetworkError> {
-        self.inner
-            .send_to(
-                peer,
-                ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
-                msg,
-            )
-            .await
+    pub fn send_to(&mut self, peer: PeerId, msg: DiscoveryMsg) -> Result<(), NetworkError> {
+        self.inner.send_to(
+            peer,
+            ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
+            msg,
+        )
     }
 }

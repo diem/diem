@@ -5,7 +5,7 @@ use crate::chained_bft::{
     network::{NetworkReceivers, NetworkSender},
     test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
-use channel;
+use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::{
     block::block_test_utils::certificate_for_genesis, block::Block, common::Author,
     proposal_msg::ProposalMsg, sync_info::SyncInfo, vote::Vote, vote_data::VoteData,
@@ -14,15 +14,21 @@ use consensus_types::{
 use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
 use libra_prost_ext::MessageExt;
 use libra_types::block_info::BlockInfo;
+use libra_types::PeerId;
 use network::{
-    interface::{NetworkNotification, NetworkRequest},
+    peer_manager::{PeerManagerNotification, PeerManagerRequest},
     proto::{ConsensusMsg, ConsensusMsg_oneof},
     protocols::rpc::InboundRpcRequest,
-    validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
+    validator_network::{
+        ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
+        CONSENSUS_RPC_PROTOCOL,
+    },
+    ProtocolId,
 };
 use prost::Message;
 use std::{
     collections::{HashMap, HashSet},
+    num::NonZeroUsize,
     sync::{Arc, Mutex, RwLock},
     time::Duration,
 };
@@ -40,12 +46,16 @@ pub struct NetworkPlayground {
     /// Maps each Author to a Sender of their inbound network notifications.
     /// These events will usually be handled by the event loop spawned in
     /// `ConsensusNetworkImpl`.
-    node_consensus_txs: Arc<Mutex<HashMap<Author, channel::Sender<NetworkNotification>>>>,
+    node_consensus_txs: Arc<
+        Mutex<
+            HashMap<Author, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+        >,
+    >,
     /// Nodes' outbound handlers forward their outbound non-rpc messages to this
     /// queue.
-    outbound_msgs_tx: mpsc::Sender<(Author, NetworkRequest)>,
+    outbound_msgs_tx: mpsc::Sender<(Author, PeerManagerRequest)>,
     /// NetworkPlayground reads all nodes' outbound messages through this queue.
-    outbound_msgs_rx: mpsc::Receiver<(Author, NetworkRequest)>,
+    outbound_msgs_rx: mpsc::Receiver<(Author, PeerManagerRequest)>,
     /// Allow test code to drop direct-send messages between peers.
     drop_config: Arc<RwLock<DropConfig>>,
     /// An executor for spawning node outbound network event handlers
@@ -76,9 +86,16 @@ impl NetworkPlayground {
     async fn start_node_outbound_handler(
         drop_config: Arc<RwLock<DropConfig>>,
         src: Author,
-        mut network_reqs_rx: channel::Receiver<NetworkRequest>,
-        mut outbound_msgs_tx: mpsc::Sender<(Author, NetworkRequest)>,
-        node_consensus_txs: Arc<Mutex<HashMap<Author, channel::Sender<NetworkNotification>>>>,
+        mut network_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+        mut outbound_msgs_tx: mpsc::Sender<(Author, PeerManagerRequest)>,
+        node_consensus_txs: Arc<
+            Mutex<
+                HashMap<
+                    Author,
+                    libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+                >,
+            >,
+        >,
     ) {
         while let Some(net_req) = network_reqs_rx.next().await {
             let drop_rpc = drop_config
@@ -96,7 +113,7 @@ impl NetworkPlayground {
                 // but because the rpc call blocks and depends on the message
                 // delivery, we'd have to spawn the sending behaviour on a
                 // separate task, which is inconvenient.
-                NetworkRequest::SendRpc(dst, outbound_req) => {
+                PeerManagerRequest::SendRpc(dst, outbound_req) => {
                     if drop_rpc {
                         continue;
                     }
@@ -114,11 +131,13 @@ impl NetworkPlayground {
                     };
 
                     node_consensus_tx
-                        .send(NetworkNotification::RecvRpc(src, inbound_req))
-                        .await
+                        .push(
+                            (src, ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)),
+                            PeerManagerNotification::RecvRpc(src, inbound_req),
+                        )
                         .unwrap();
                 }
-                // Other NetworkRequest get buffered for `deliver_messages` to
+                // Other PeerManagerRequest get buffered for `deliver_messages` to
                 // synchronously drain.
                 net_req => {
                     let _ = outbound_msgs_tx.send((src, net_req)).await;
@@ -133,11 +152,12 @@ impl NetworkPlayground {
         author: Author,
         // The `Sender` of inbound network events. The `Receiver` end of this
         // queue is usually wrapped in a `ConsensusNetworkEvents` adapter.
-        consensus_tx: channel::Sender<NetworkNotification>,
+        consensus_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
         // The `Receiver` of outbound network events this node sends. The
         // `Sender` side of this queue is usually wrapped in a
         // `ConsensusNetworkSender` adapter.
-        network_reqs_rx: channel::Receiver<NetworkRequest>,
+        network_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+        conn_mgr_reqs_rx: channel::Receiver<network::ConnectivityRequest>,
     ) {
         self.node_consensus_txs
             .lock()
@@ -145,27 +165,31 @@ impl NetworkPlayground {
             .insert(author, consensus_tx);
         self.drop_config.write().unwrap().add_node(author);
 
-        let fut = NetworkPlayground::start_node_outbound_handler(
+        let fut1 = NetworkPlayground::start_node_outbound_handler(
             Arc::clone(&self.drop_config),
             author,
             network_reqs_rx,
             self.outbound_msgs_tx.clone(),
             self.node_consensus_txs.clone(),
         );
-        self.executor.spawn(fut);
+        let fut2 = conn_mgr_reqs_rx.map(Ok).forward(::futures::sink::drain());
+        self.executor.spawn(futures::future::join(fut1, fut2));
     }
 
-    /// Deliver a `NetworkRequest` from peer `src` to the destination peer.
+    /// Deliver a `PeerManagerRequest` from peer `src` to the destination peer.
     /// Returns a copy of the delivered message and the sending peer id.
     async fn deliver_message(
         &mut self,
         src: Author,
-        msg: NetworkRequest,
+        msg: PeerManagerRequest,
     ) -> (Author, ConsensusMsg) {
         // extract destination peer
         let dst = match &msg {
-            NetworkRequest::SendMessage(dst, _) => *dst,
-            msg => panic!("[network playground] Unexpected NetworkRequest: {:?}", msg),
+            PeerManagerRequest::SendMessage(dst, _) => *dst,
+            msg => panic!(
+                "[network playground] Unexpected PeerManagerRequest: {:?}",
+                msg
+            ),
         };
 
         // get his sender
@@ -177,25 +201,35 @@ impl NetworkPlayground {
             .unwrap()
             .clone();
 
-        // convert NetworkRequest to corresponding NetworkNotification
+        // convert PeerManagerRequest to corresponding PeerManagerNotification
         let msg_notif = match msg {
-            NetworkRequest::SendMessage(_dst, msg) => NetworkNotification::RecvMessage(src, msg),
-            msg => panic!("[network playground] Unexpected NetworkRequest: {:?}", msg),
+            PeerManagerRequest::SendMessage(_dst, msg) => {
+                PeerManagerNotification::RecvMessage(src, msg)
+            }
+            msg => panic!(
+                "[network playground] Unexpected PeerManagerRequest: {:?}",
+                msg
+            ),
         };
 
         // copy message data
         let msg_copy = match &msg_notif {
-            NetworkNotification::RecvMessage(src, msg) => {
+            PeerManagerNotification::RecvMessage(src, msg) => {
                 let msg = ConsensusMsg::decode(msg.mdata.as_ref()).unwrap();
                 (*src, msg)
             }
             msg_notif => panic!(
-                "[network playground] Unexpected NetworkNotification: {:?}",
+                "[network playground] Unexpected PeerManagerNotification: {:?}",
                 msg_notif
             ),
         };
 
-        node_consensus_tx.send(msg_notif).await.unwrap();
+        node_consensus_tx
+            .push(
+                (src, ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL)),
+                msg_notif,
+            )
+            .unwrap();
         msg_copy
     }
 
@@ -285,7 +319,7 @@ impl NetworkPlayground {
         }
     }
 
-    fn is_message_dropped(&self, src: &Author, net_req: &NetworkRequest) -> bool {
+    fn is_message_dropped(&self, src: &Author, net_req: &PeerManagerRequest) -> bool {
         self.drop_config
             .read()
             .unwrap()
@@ -307,10 +341,10 @@ impl NetworkPlayground {
 struct DropConfig(HashMap<Author, HashSet<Author>>);
 
 impl DropConfig {
-    pub fn is_message_dropped(&self, src: &Author, net_req: &NetworkRequest) -> bool {
+    pub fn is_message_dropped(&self, src: &Author, net_req: &PeerManagerRequest) -> bool {
         match net_req {
-            NetworkRequest::SendMessage(dst, _) => self.0.get(src).unwrap().contains(&dst),
-            NetworkRequest::SendRpc(dst, _) => self.0.get(src).unwrap().contains(&dst),
+            PeerManagerRequest::SendMessage(dst, _) => self.0.get(src).unwrap().contains(&dst),
+            PeerManagerRequest::SendRpc(dst, _) => self.0.get(src).unwrap().contains(&dst),
             _ => true,
         }
     }
@@ -350,12 +384,15 @@ fn test_network_api() {
     let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
     let validators = Arc::new(validator_verifier);
     for peer in &peers {
-        let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-        let (consensus_tx, consensus_rx) = channel::new_test(8);
-        let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
+        let (network_reqs_tx, network_reqs_rx) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (consensus_tx, consensus_rx) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
+        let network_sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 
-        playground.add_node(*peer, consensus_tx, network_reqs_rx);
+        playground.add_node(*peer, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
         let (self_sender, self_receiver) = channel::new_test(8);
         let node = NetworkSender::new(*peer, network_sender, self_sender, Arc::clone(&validators));
         let (task, receiver) = NetworkTask::new(
@@ -418,12 +455,15 @@ fn test_rpc() {
     let validators = Arc::new(validator_verifier);
     let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
     for peer in peers.iter() {
-        let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-        let (consensus_tx, consensus_rx) = channel::new_test(1);
-        let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
+        let (network_reqs_tx, network_reqs_rx) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (consensus_tx, consensus_rx) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
+        let network_sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 
-        playground.add_node(*peer, consensus_tx, network_reqs_rx);
+        playground.add_node(*peer, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
         let (self_sender, self_receiver) = channel::new_test(8);
         let node = NetworkSender::new(
             *peer,

@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::peer::DisconnectReason;
 use crate::peer_manager::PeerManagerRequest;
+use channel::message_queues::QueueStyle;
 use core::str::FromStr;
 use futures::SinkExt;
 use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
-use memsocket::MemorySocket;
 use rand::{rngs::StdRng, SeedableRng};
 use std::io;
+use std::num::NonZeroUsize;
 use tokio::runtime::Runtime;
 use tokio_retry::strategy::FixedInterval;
 
@@ -16,16 +18,15 @@ fn setup_conn_mgr(
     rt: &mut Runtime,
     seed_peer_id: PeerId,
 ) -> (
-    channel::Receiver<PeerManagerRequest<MemorySocket>>,
-    channel::Sender<PeerManagerNotification<MemorySocket>>,
+    libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
     channel::Sender<ConnectivityRequest>,
     channel::Sender<()>,
 ) {
-    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx): (
-        channel::Sender<PeerManagerRequest<MemorySocket>>,
-        _,
-    ) = channel::new_test(0);
-    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = channel::new_test(0);
+    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let mut rng = StdRng::from_seed(TEST_SEED);
@@ -84,15 +85,25 @@ async fn get_dial_queue_size(conn_mgr_reqs_tx: &mut channel::Sender<Connectivity
     queue_size_rx.await.unwrap()
 }
 
-async fn expect_disconnect_request<'a, TSubstream>(
-    peer_mgr_reqs_rx: &'a mut channel::Receiver<PeerManagerRequest<TSubstream>>,
-    peer_mgr_notifs_tx: &'a mut channel::Sender<PeerManagerNotification<TSubstream>>,
+async fn send_notification_await_delivery(
+    peer_mgr_notifs_tx: &mut libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    peer_id: PeerId,
+    notif: PeerManagerNotification,
+) {
+    let (delivered_tx, delivered_rx) = oneshot::channel();
+    peer_mgr_notifs_tx
+        .push_with_feedback((peer_id, ProtocolId::default()), notif, Some(delivered_tx))
+        .unwrap();
+    delivered_rx.await.unwrap();
+}
+
+async fn expect_disconnect_request(
+    peer_mgr_reqs_rx: &mut libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    peer_mgr_notifs_tx: &mut libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
     peer_id: PeerId,
     address: Multiaddr,
     result: Result<(), PeerManagerError>,
-) where
-    TSubstream: Debug,
-{
+) {
     let success = result.is_ok();
     match peer_mgr_reqs_rx.next().await.unwrap() {
         PeerManagerRequest::DisconnectPeer(p, error_tx) => {
@@ -104,23 +115,23 @@ async fn expect_disconnect_request<'a, TSubstream>(
         }
     }
     if success {
-        peer_mgr_notifs_tx
-            .send(PeerManagerNotification::LostPeer(peer_id, address))
-            .await
-            .unwrap();
+        send_notification_await_delivery(
+            peer_mgr_notifs_tx,
+            peer_id,
+            PeerManagerNotification::LostPeer(peer_id, address, DisconnectReason::Requested),
+        )
+        .await;
     }
 }
 
-async fn expect_dial_request<'a, TSubstream>(
-    peer_mgr_reqs_rx: &'a mut channel::Receiver<PeerManagerRequest<TSubstream>>,
-    peer_mgr_notifs_tx: &'a mut channel::Sender<PeerManagerNotification<TSubstream>>,
-    conn_mgr_reqs_tx: &'a mut channel::Sender<ConnectivityRequest>,
+async fn expect_dial_request(
+    peer_mgr_reqs_rx: &mut libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    peer_mgr_notifs_tx: &mut libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>,
     peer_id: PeerId,
     address: Multiaddr,
     result: Result<(), PeerManagerError>,
-) where
-    TSubstream: Debug,
-{
+) {
     let success = result.is_ok();
     match peer_mgr_reqs_rx.next().await.unwrap() {
         PeerManagerRequest::DialPeer(p, addr, error_tx) => {
@@ -137,10 +148,12 @@ async fn expect_dial_request<'a, TSubstream>(
             "Sending NewPeer notification for peer: {}",
             peer_id.short_str()
         );
-        peer_mgr_notifs_tx
-            .send(PeerManagerNotification::NewPeer(peer_id, address))
-            .await
-            .unwrap();
+        send_notification_await_delivery(
+            peer_mgr_notifs_tx,
+            peer_id,
+            PeerManagerNotification::NewPeer(peer_id, address),
+        )
+        .await;
     }
 
     // Wait for dial queue to be empty. Without this, it's impossible to guarantee that a completed
@@ -228,13 +241,16 @@ fn addr_change() {
 
         // We expect the peer which changed its address to also disconnect.
         info!("Sending lost peer notification for seed peer at old address");
-        peer_mgr_notifs_tx
-            .send(PeerManagerNotification::LostPeer(
+        send_notification_await_delivery(
+            &mut peer_mgr_notifs_tx,
+            seed_peer_id,
+            PeerManagerNotification::LostPeer(
                 seed_peer_id,
                 seed_address,
-            ))
-            .await
-            .unwrap();
+                DisconnectReason::ConnectionLost,
+            ),
+        )
+        .await;
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -296,13 +312,16 @@ fn lost_connection() {
 
         // Notify connectivity actor of loss of connection to seed_peer.
         info!("Sending LostPeer event to signal connection loss");
-        peer_mgr_notifs_tx
-            .send(PeerManagerNotification::LostPeer(
+        send_notification_await_delivery(
+            &mut peer_mgr_notifs_tx,
+            seed_peer_id,
+            PeerManagerNotification::LostPeer(
                 seed_peer_id,
                 seed_address.clone(),
-            ))
-            .await
-            .unwrap();
+                DisconnectReason::ConnectionLost,
+            ),
+        )
+        .await;
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -529,13 +548,12 @@ fn no_op_requests() {
 
         // Send a delayed NewPeer notification.
         info!("Sending delayed NewPeer notification for seed peer");
-        peer_mgr_notifs_tx
-            .send(PeerManagerNotification::NewPeer(
-                seed_peer_id,
-                seed_address.clone(),
-            ))
-            .await
-            .unwrap();
+        send_notification_await_delivery(
+            &mut peer_mgr_notifs_tx,
+            seed_peer_id,
+            PeerManagerNotification::NewPeer(seed_peer_id, seed_address.clone()),
+        )
+        .await;
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -564,13 +582,16 @@ fn no_op_requests() {
         .await;
 
         // Send delayed LostPeer notification for seed peer.
-        peer_mgr_notifs_tx
-            .send(PeerManagerNotification::LostPeer(
+        send_notification_await_delivery(
+            &mut peer_mgr_notifs_tx,
+            seed_peer_id,
+            PeerManagerNotification::LostPeer(
                 seed_peer_id,
                 seed_address.clone(),
-            ))
-            .await
-            .unwrap();
+                DisconnectReason::ConnectionLost,
+            ),
+        )
+        .await;
 
         // Trigger connectivity check again. We don't expect connectivity manager to do
         // anything - if it does, the task should panic. That may not fail the test (right
@@ -628,13 +649,12 @@ fn backoff_on_failure() {
 
         // Send NewPeer notification for peer_b.
         info!("Sending NewPeer notification for peer b");
-        peer_mgr_notifs_tx
-            .send(PeerManagerNotification::NewPeer(
-                peer_b,
-                peer_b_address.clone(),
-            ))
-            .await
-            .unwrap();
+        send_notification_await_delivery(
+            &mut peer_mgr_notifs_tx,
+            peer_b,
+            PeerManagerNotification::NewPeer(peer_b, peer_b_address.clone()),
+        )
+        .await;
 
         // We fail 10 attempts and ensure that the elapsed duration between successive attempts is
         // always greater than 100ms (the fixed backoff). In production, an exponential backoff

@@ -10,6 +10,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum PeerManagerError {
+    #[error("Error: {0}")]
+    Error(#[from] anyhow::Error),
+
     #[error("IO error: {0}")]
     IoError(#[from] ::std::io::Error),
 
