@@ -22,8 +22,12 @@ pub struct SafetyRulesManagerConfig {
 impl SafetyRulesManagerConfig {
     pub fn new(config: &mut NodeConfig) -> Self {
         let private_key = config
-            .consensus
+            .test
+            .as_mut()
+            .expect("Missing test config")
             .consensus_keypair
+            .as_mut()
+            .expect("Missing consensus keypair in test config")
             .take_private()
             .expect("Failed to take Consensus private key, key absent or already read");
 

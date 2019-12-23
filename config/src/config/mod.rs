@@ -158,7 +158,7 @@ impl NodeConfig {
         Self {
             admission_control: self.admission_control.clone(),
             base: self.base.clone(),
-            consensus: self.consensus.clone_for_template(),
+            consensus: self.consensus.clone(),
             debug_interface: self.debug_interface.clone(),
             execution: self.execution.clone(),
             full_node_networks: self
@@ -264,7 +264,7 @@ impl NodeConfig {
         let mut test = TestConfig::new_with_temp_dir();
 
         if self.base.role == RoleType::Validator {
-            test.random(rng);
+            test.random_account_key(rng);
             let peer_id = PeerId::from_public_key(test.account_keypair.as_ref().unwrap().public());
 
             if self.validator_network.is_none() {
@@ -273,7 +273,7 @@ impl NodeConfig {
 
             let validator_network = self.validator_network.as_mut().unwrap();
             validator_network.random_with_peer_id(rng, Some(peer_id));
-            self.consensus.random(rng, peer_id);
+            test.random_consensus_key(rng);
         } else {
             self.validator_network = None;
             if self.full_node_networks.is_empty() {
@@ -361,9 +361,6 @@ mod test {
 
         // These are randomly generated, so let's force them to be the same, perhaps we can use a
         // random seed so that these can be made uniform...
-        expected.consensus.consensus_keypair = actual.consensus.consensus_keypair.clone();
-        expected.consensus.consensus_peers = actual.consensus.consensus_peers.clone();
-
         let actual_network = actual
             .validator_network
             .as_mut()
@@ -394,6 +391,8 @@ mod test {
         expected.save(&path).expect("Unable to save config");
 
         let actual = NodeConfig::load(RANDOM_COMPLETE).expect("Unable to load config");
+        // @TODO this generation is broken and about to be deleted
+        expected.consensus.consensus_peers = actual.consensus.consensus_peers.clone();
         expected.set_data_dir(actual.data_dir().clone());
         compare_configs(&actual, &expected);
     }
@@ -409,6 +408,8 @@ mod test {
         expected.save(&path).expect("Unable to save config");
 
         let actual = NodeConfig::load(RANDOM_DEFAULT).expect("Unable to load config");
+        // @TODO this generation is broken and about to be deleted
+        expected.consensus.consensus_peers = actual.consensus.consensus_peers.clone();
         expected.set_data_dir(actual.data_dir().clone());
         compare_configs(&actual, &expected);
     }

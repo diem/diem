@@ -1,5 +1,4 @@
 [consensus]
-consensus_keypair_file = "consensus.keys.toml"
 consensus_peers_file = "consensus_peers.config.toml"
 
 [validator_network]
@@ -11,3 +10,6 @@ seed_peers_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa
 [test.account_keypair]
 private_key = "a9ccbb14534fa25b8e2c8062f82592ca4a6ecd228895ef48a21faf480f4fdb9f"
 public_key = "8a09af25da4e547c7192a0f7f05c2b8db94af316a5b599bd2cff8797c28ae68b"
+[test.consensus_keypair]
+private_key = "87572b6c1ac0bc9f5245d04f7963c35db0713f0f08685f038d55f8c22a5c45b9"
+public_key = "7fb83ee67e2b16f89510cdd7c061b32a482d68465d24df70acc65b074b3f7862"

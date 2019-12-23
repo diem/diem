@@ -9,12 +9,14 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 type AccountKeyPair = KeyPair<Ed25519PrivateKey>;
+type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct TestConfig {
     pub account_keypair: Option<AccountKeyPair>,
     // Used only to prevent a potentially temporary data_dir from being deleted. This should
     // eventually be moved to be owned by something outside the config.
+    pub consensus_keypair: Option<ConsensusKeyPair>,
     #[serde(skip)]
     temp_dir: Option<TempPath>,
 }
@@ -23,6 +25,7 @@ impl Clone for TestConfig {
     fn clone(&self) -> Self {
         Self {
             account_keypair: None,
+            consensus_keypair: None,
             temp_dir: None,
         }
     }
@@ -31,6 +34,7 @@ impl Clone for TestConfig {
 impl PartialEq for TestConfig {
     fn eq(&self, other: &Self) -> bool {
         self.account_keypair == other.account_keypair
+            && self.consensus_keypair == other.consensus_keypair
     }
 }
 
@@ -40,13 +44,19 @@ impl TestConfig {
         temp_dir.create_as_dir().expect("error creating tempdir");
         Self {
             account_keypair: None,
+            consensus_keypair: None,
             temp_dir: Some(temp_dir),
         }
     }
 
-    pub fn random(&mut self, rng: &mut StdRng) {
+    pub fn random_account_key(&mut self, rng: &mut StdRng) {
         let privkey = Ed25519PrivateKey::generate_for_testing(rng);
         self.account_keypair = Some(AccountKeyPair::load(privkey));
+    }
+
+    pub fn random_consensus_key(&mut self, rng: &mut StdRng) {
+        let privkey = Ed25519PrivateKey::generate_for_testing(rng);
+        self.consensus_keypair = Some(ConsensusKeyPair::load(privkey));
     }
 
     pub fn temp_dir(&self) -> Option<&Path> {

@@ -42,12 +42,12 @@ pub fn validator_swarm(
             .peers
             .insert(network.peer_id, network.network_keypairs.as_peer_info());
 
-        consensus_peers.peers.insert(
-            network.peer_id,
-            ConsensusPeerInfo {
-                consensus_pubkey: config.consensus.consensus_keypair.public().clone(),
-            },
-        );
+        let test = config.test.as_ref().unwrap();
+        let consensus_pubkey = test.consensus_keypair.as_ref().unwrap().public().clone();
+
+        consensus_peers
+            .peers
+            .insert(network.peer_id, ConsensusPeerInfo { consensus_pubkey });
 
         configs.push(config);
     }
