@@ -137,13 +137,7 @@ impl ValidatorConfig {
             }
         );
 
-        let consensus_peers = &validator_swarm.consensus_peers;
-        let network_peers = &validator_swarm.nodes[0]
-            .validator_network
-            .as_ref()
-            .ok_or(Error::MissingValidatorNetwork)?
-            .network_peers;
-        let validator_set = consensus_peers.get_validator_set(network_peers);
+        let validator_set = validator_swarm.validator_set.clone();
         let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
 
         let genesis = Some(Transaction::UserTransaction(

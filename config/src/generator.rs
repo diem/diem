@@ -11,11 +11,12 @@ use crate::{
     },
     utils,
 };
+use libra_types::crypto_proxies::ValidatorSet;
 use rand::{rngs::StdRng, SeedableRng};
 
 pub struct ValidatorSwarm {
     pub nodes: Vec<NodeConfig>,
-    pub consensus_peers: ConsensusPeersConfig,
+    pub validator_set: ValidatorSet,
 }
 
 pub fn validator_swarm(
@@ -65,13 +66,12 @@ pub fn validator_swarm(
 
     for node in &mut nodes {
         let network = node.validator_network.as_mut().unwrap();
-        network.network_peers = network_peers.clone();
         network.seed_peers = seed_peers.clone();
     }
 
     ValidatorSwarm {
         nodes,
-        consensus_peers,
+        validator_set: consensus_peers.get_validator_set(&network_peers),
     }
 }
 
