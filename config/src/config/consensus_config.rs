@@ -1,17 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    config::{NetworkPeersConfig, SafetyRulesConfig},
-    keys, utils,
-};
-use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_types::{
-    crypto_proxies::{ValidatorInfo, ValidatorPublicKeys, ValidatorSet, ValidatorVerifier},
-    PeerId,
-};
+use crate::config::SafetyRulesConfig;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -52,67 +44,4 @@ pub enum ConsensusProposerType {
     RotatingProposer,
     // Multiple ordered proposers per round (primary, secondary, etc.)
     MultipleOrderedProposers,
-}
-
-#[derive(Clone, Debug, Default, Serialize, PartialEq, Deserialize)]
-pub struct ConsensusPeersConfig {
-    #[serde(flatten)]
-    #[serde(serialize_with = "utils::serialize_ordered_map")]
-    pub peers: HashMap<PeerId, ConsensusPeerInfo>,
-}
-
-impl ConsensusPeersConfig {
-    /// Return a sorted vector of ValidatorPublicKey's
-    pub fn get_validator_set(&self, network_peers_config: &NetworkPeersConfig) -> ValidatorSet {
-        let mut keys: Vec<ValidatorPublicKeys> = self
-            .peers
-            .iter()
-            .map(|(peer_id, peer_info)| {
-                ValidatorPublicKeys::new(
-                    *peer_id,
-                    peer_info.consensus_pubkey.clone(),
-                    // TODO: Add support for dynamic voting weights in config
-                    1,
-                    network_peers_config
-                        .peers
-                        .get(peer_id)
-                        .unwrap()
-                        .signing_public_key
-                        .clone(),
-                    network_peers_config
-                        .peers
-                        .get(peer_id)
-                        .unwrap()
-                        .identity_public_key
-                        .clone(),
-                )
-            })
-            .collect();
-        // self.peers is a HashMap, so iterating over it produces a differently ordered vector each
-        // time. Sort by account address to produce a canonical ordering
-        keys.sort_by(|k1, k2| k1.account_address().cmp(k2.account_address()));
-        ValidatorSet::new(keys)
-    }
-
-    pub fn get_validator_verifier(&self) -> ValidatorVerifier {
-        ValidatorVerifier::new(
-            self.peers
-                .iter()
-                .map(|(peer_id, peer_info)| {
-                    (
-                        *peer_id,
-                        ValidatorInfo::new(peer_info.consensus_pubkey.clone(), 1),
-                    )
-                })
-                .collect(),
-        )
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct ConsensusPeerInfo {
-    #[serde(serialize_with = "keys::serialize_key")]
-    #[serde(deserialize_with = "keys::deserialize_key")]
-    #[serde(rename = "c")]
-    pub consensus_pubkey: Ed25519PublicKey,
 }

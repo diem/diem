@@ -6,12 +6,11 @@
 
 use crate::{
     config::{
-        ConsensusPeerInfo, ConsensusPeersConfig, NetworkPeersConfig, NodeConfig,
-        OnDiskStorageConfig, SafetyRulesBackend, SeedPeersConfig, VMPublishingOption,
+        NodeConfig, OnDiskStorageConfig, SafetyRulesBackend, SeedPeersConfig, VMPublishingOption,
     },
     utils,
 };
-use libra_types::crypto_proxies::ValidatorSet;
+use libra_types::crypto_proxies::{ValidatorPublicKeys, ValidatorSet};
 use rand::{rngs::StdRng, SeedableRng};
 
 pub struct ValidatorSwarm {
@@ -26,8 +25,7 @@ pub fn validator_swarm(
     randomize_ports: bool,
 ) -> ValidatorSwarm {
     let mut rng = StdRng::from_seed(seed);
-    let mut network_peers = NetworkPeersConfig::default();
-    let mut consensus_peers = ConsensusPeersConfig::default();
+    let mut validator_keys = Vec::new();
     let mut nodes = Vec::new();
 
     for _index in 0..count {
@@ -44,16 +42,16 @@ pub fn validator_swarm(
         network.listen_address = utils::get_available_port_in_multiaddr(true);
         network.advertised_address = network.listen_address.clone();
 
-        network_peers
-            .peers
-            .insert(network.peer_id, network.network_keypairs.as_peer_info());
-
         let test = node.test.as_ref().unwrap();
         let consensus_pubkey = test.consensus_keypair.as_ref().unwrap().public().clone();
 
-        consensus_peers
-            .peers
-            .insert(network.peer_id, ConsensusPeerInfo { consensus_pubkey });
+        validator_keys.push(ValidatorPublicKeys::new(
+            network.peer_id,
+            consensus_pubkey,
+            1, // @TODO: Add support for dynamic weights
+            network.network_keypairs.signing_keys.public().clone(),
+            network.network_keypairs.identity_keys.public().clone(),
+        ));
 
         nodes.push(node);
     }
@@ -69,9 +67,10 @@ pub fn validator_swarm(
         network.seed_peers = seed_peers.clone();
     }
 
+    validator_keys.sort_by(|k1, k2| k1.account_address().cmp(k2.account_address()));
     ValidatorSwarm {
         nodes,
-        validator_set: consensus_peers.get_validator_set(&network_peers),
+        validator_set: ValidatorSet::new(validator_keys),
     }
 }
 
