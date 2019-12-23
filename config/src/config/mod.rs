@@ -149,7 +149,7 @@ impl NodeConfig {
         self.base.data_dir = data_dir.clone();
         self.consensus.set_data_dir(data_dir.clone());
         self.metrics.set_data_dir(data_dir.clone());
-        self.storage.set_data_dir(data_dir.clone());
+        self.storage.set_data_dir(data_dir);
     }
 
     /// This clones the underlying data except for the keypair so that this config can be used as a
