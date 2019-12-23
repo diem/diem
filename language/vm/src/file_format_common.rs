@@ -20,9 +20,8 @@ use std::{io::Cursor, mem::size_of};
 pub enum BinaryConstants {}
 impl BinaryConstants {
     /// The blob that must start a binary.
-    pub const LIBRA_MAGIC_SIZE: usize = 8;
-    pub const LIBRA_MAGIC: [u8; BinaryConstants::LIBRA_MAGIC_SIZE] =
-        [b'L', b'I', b'B', b'R', b'A', b'V', b'M', b'\n'];
+    pub const LIBRA_MAGIC_SIZE: usize = 4;
+    pub const LIBRA_MAGIC: [u8; BinaryConstants::LIBRA_MAGIC_SIZE] = [0xA1, 0x1C, 0xEB, 0x0B];
     /// The `LIBRA_MAGIC` size, 1 byte for major version, 1 byte for minor version and 1 byte
     /// for table count.
     pub const HEADER_SIZE: usize = BinaryConstants::LIBRA_MAGIC_SIZE + 3;
