@@ -4611,6 +4611,8 @@ dependencies = [
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "language-e2e-tests 0.1.0",
+ "libra-config 0.1.0",
+ "libra-state-view 0.1.0",
  "libra-types 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
