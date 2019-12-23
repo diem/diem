@@ -25,6 +25,7 @@ use libra_types::{
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
+use rand::Rng;
 use std::convert::TryFrom;
 use std::sync::Mutex;
 use storage_proto::{
@@ -39,33 +40,43 @@ use storage_proto::{
     SaveTransactionsRequest, StartupInfo,
 };
 
+fn pick<T>(items: &[T]) -> &T {
+    let mut rng = rand::thread_rng();
+    let index = rng.gen_range(0, items.len());
+    &items[index]
+}
+
 /// This provides storage read interfaces backed by real storage service.
 pub struct StorageReadServiceClient {
     addr: String,
-    client: Mutex<Option<StorageClient<tonic::transport::Channel>>>,
+    clients: Vec<Mutex<Option<StorageClient<tonic::transport::Channel>>>>,
 }
 
 impl StorageReadServiceClient {
     /// Constructs a `StorageReadServiceClient` with given host and port.
     pub fn new(host: &str, port: u16) -> Self {
+        let mut clients = Vec::new();
+
+        for _ in 0..16 {
+            clients.push(Mutex::new(None));
+        }
+
         let addr = format!("http://{}:{}", host, port);
 
-        Self {
-            client: Mutex::new(None),
-            addr,
-        }
+        Self { clients, addr }
     }
 
     async fn client(&self) -> Result<StorageClient<tonic::transport::Channel>, tonic::Status> {
-        if self.client.lock().unwrap().is_none() {
-            let client = StorageClient::connect(self.addr.clone())
+        let client = pick(&self.clients);
+        if client.lock().unwrap().is_none() {
+            let c = StorageClient::connect(self.addr.clone())
                 .await
                 .map_err(|e| tonic::Status::new(tonic::Code::Unavailable, e.to_string()))?;
-            *self.client.lock().unwrap() = Some(client);
+            *client.lock().unwrap() = Some(c);
         }
 
         // client is guaranteed to be populated by the time we reach here
-        Ok(self.client.lock().unwrap().clone().unwrap())
+        Ok(client.lock().unwrap().clone().unwrap())
     }
 }
 
@@ -237,30 +248,34 @@ impl StorageRead for StorageReadServiceClient {
 /// This provides storage write interfaces backed by real storage service.
 pub struct StorageWriteServiceClient {
     addr: String,
-    client: Mutex<Option<StorageClient<tonic::transport::Channel>>>,
+    clients: Vec<Mutex<Option<StorageClient<tonic::transport::Channel>>>>,
 }
 
 impl StorageWriteServiceClient {
     /// Constructs a `StorageWriteServiceClient` with given host and port.
     pub fn new(host: &str, port: u16) -> Self {
+        let mut clients = Vec::new();
+
+        for _ in 0..16 {
+            clients.push(Mutex::new(None));
+        }
+
         let addr = format!("http://{}:{}", host, port);
 
-        Self {
-            client: Mutex::new(None),
-            addr,
-        }
+        Self { clients, addr }
     }
 
     async fn client(&self) -> Result<StorageClient<tonic::transport::Channel>, tonic::Status> {
-        if self.client.lock().unwrap().is_none() {
-            let client = StorageClient::connect(self.addr.clone())
+        let client = pick(&self.clients);
+        if client.lock().unwrap().is_none() {
+            let c = StorageClient::connect(self.addr.clone())
                 .await
                 .map_err(|e| tonic::Status::new(tonic::Code::Unavailable, e.to_string()))?;
-            *self.client.lock().unwrap() = Some(client);
+            *client.lock().unwrap() = Some(c);
         }
 
         // client is guaranteed to be populated by the time we reach here
-        Ok(self.client.lock().unwrap().clone().unwrap())
+        Ok(client.lock().unwrap().clone().unwrap())
     }
 }
 

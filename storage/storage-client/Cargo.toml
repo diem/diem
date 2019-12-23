@@ -15,6 +15,7 @@ async-trait = "0.1"
 futures = "0.3"
 tonic = "0.1"
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+rand = "0.6.5"
 scratchpad = { path = "../scratchpad", version = "0.1.0" }
 libra-state-view = { path = "../state-view", version = "0.1.0" }
 storage-proto = { path = "../storage-proto", version = "0.1.0" }
