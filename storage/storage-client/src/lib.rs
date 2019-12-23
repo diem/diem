@@ -189,7 +189,7 @@ impl StorageRead for StorageReadServiceClient {
         Ok(resp)
     }
 
-    async fn backup_account_state_async(
+    fn backup_account_state(
         &self,
         version: Version,
     ) -> Result<BoxStream<'_, Result<BackupAccountStateResponse, Error>>> {
@@ -333,11 +333,9 @@ pub trait StorageRead: Send + Sync {
 
     /// See [`LibraDB::backup_account_state`].
     ///
-    /// Due to the streaming nature of this API, only an async version is provided.
-    ///
     /// [`LibraDB::backup_account_state`]:
     /// ../libradb/struct.LibraDB.html#method.backup_account_state
-    async fn backup_account_state_async(
+    fn backup_account_state(
         &self,
         version: u64,
     ) -> Result<BoxStream<'_, Result<BackupAccountStateResponse, Error>>>;
