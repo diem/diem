@@ -14,7 +14,8 @@ fn main() {
     }
     dst.enable("libscrypt-kdf", None);
     dst.enable_shared();
+    let target = "/usr/local/lib/";
+    dst.target(target);
     dst.build();
-    let out_dir = env::var("OUT_DIR").unwrap();
-    println!("cargo:rustc-link-search=native={}/lib", out_dir);
+    println!("cargo:rustc-link-search=native={}", target);
 }
