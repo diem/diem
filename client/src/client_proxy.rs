@@ -294,6 +294,8 @@ impl ClientProxy {
         let receiver = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let num_coins = Self::convert_to_micro_libras(space_delim_strings[2])?;
 
+        ensure!(num_coins > 0, "Invalid number of coins to mint.");
+
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
                 transaction_builder::encode_mint_script(&receiver, num_coins),
