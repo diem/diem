@@ -57,11 +57,10 @@
 
 use crate::{
     counters,
-    peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
+    peer::{PeerHandle, PeerNotification},
     sink::NetworkSinkExt,
     ProtocolId,
 };
-use bounded_executor::BoundedExecutor;
 use bytes::Bytes;
 use channel;
 use error::RpcError;
@@ -74,22 +73,19 @@ use futures::{
     task::Context,
 };
 use libra_logger::prelude::*;
-use libra_types::PeerId;
 use netcore::compat::IoCompat;
 use std::{fmt::Debug, io, time::Duration};
 use tokio::runtime::Handle;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 pub mod error;
-pub mod utils;
-
-#[cfg(test)]
-mod test;
 
 #[cfg(any(feature = "fuzzing", test))]
 #[path = "fuzzing.rs"]
 /// fuzzing module for the rpc protocol
 pub mod fuzzing;
+#[cfg(test)]
+mod test;
 
 /// A wrapper struct for an inbound rpc request and its associated context.
 #[derive(Debug)]
@@ -141,7 +137,7 @@ pub struct OutboundRpcRequest {
 #[derive(Debug)]
 pub enum RpcRequest {
     /// Send an outbound rpc request to a remote peer.
-    SendRpc(PeerId, OutboundRpcRequest),
+    SendRpc(OutboundRpcRequest),
 }
 
 /// Events sent from the [`Rpc`] actor to the
@@ -149,19 +145,19 @@ pub enum RpcRequest {
 #[derive(Debug)]
 pub enum RpcNotification {
     /// A new inbound rpc request has been received from a remote peer.
-    RecvRpc(PeerId, InboundRpcRequest),
+    RecvRpc(InboundRpcRequest),
 }
 
 /// The rpc actor.
 pub struct Rpc<TSubstream> {
     /// Executor to spawn inbound and outbound handler tasks.
     executor: Handle,
+    /// Channel to send requests to Peer.
+    peer_handle: PeerHandle<TSubstream>,
     /// Channel to receive requests from other upstream actors.
     requests_rx: channel::Receiver<RpcRequest>,
-    /// Channel to receive notifications from [`PeerManager`](crate::peer_manager::PeerManager).
-    peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
-    /// Channel to send requests to [`PeerManager`](crate::peer_manager::PeerManager).
-    peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
+    /// Channel to receive notifications from Peer.
+    peer_notifs_rx: channel::Receiver<PeerNotification<TSubstream>>,
     /// Channels to send notifictions to upstream actors.
     rpc_handler_tx: channel::Sender<RpcNotification>,
     /// The timeout duration for inbound rpc calls.
@@ -171,8 +167,6 @@ pub struct Rpc<TSubstream> {
     max_concurrent_outbound_rpcs: u32,
     /// The maximum number of concurrent inbound rpc requests that we will
     /// service before back-pressure kicks in.
-    // TODO(philiphayes): partition inbound queue by peer to prevent one peer
-    // from starving other peers' rpcs?
     max_concurrent_inbound_rpcs: u32,
 }
 
@@ -183,9 +177,9 @@ where
     /// Create a new instance of the [`Rpc`] protocol actor.
     pub fn new(
         executor: Handle,
+        peer_handle: PeerHandle<TSubstream>,
         requests_rx: channel::Receiver<RpcRequest>,
-        peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
-        peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
+        peer_notifs_rx: channel::Receiver<PeerNotification<TSubstream>>,
         rpc_handler_tx: channel::Sender<RpcNotification>,
         inbound_rpc_timeout: Duration,
         max_concurrent_outbound_rpcs: u32,
@@ -193,9 +187,9 @@ where
     ) -> Self {
         Self {
             executor,
+            peer_handle,
             requests_rx,
-            peer_mgr_notifs_rx,
-            peer_mgr_reqs_tx,
+            peer_notifs_rx,
             rpc_handler_tx,
             inbound_rpc_timeout,
             max_concurrent_outbound_rpcs,
@@ -206,71 +200,27 @@ where
     /// Start the [`Rpc`] actor's event loop.
     pub async fn start(self) {
         // unpack self to satisfy borrow checker
-        let executor = self.executor;
-        let requests_rx = self.requests_rx;
-        let peer_mgr_notifs_rx = self.peer_mgr_notifs_rx;
-        let peer_mgr_reqs_tx = self.peer_mgr_reqs_tx;
         let rpc_handler_tx = self.rpc_handler_tx;
         let inbound_rpc_timeout = self.inbound_rpc_timeout;
-        let max_concurrent_outbound_rpcs = self.max_concurrent_outbound_rpcs;
-        let max_concurrent_inbound_rpcs = self.max_concurrent_inbound_rpcs;
 
-        // inbound and outbound requests use separate bounded executors to ensure
-        // backpressure propagates independently and doesn't starve the other
-        // handler.
+        // Start inbound RPC handler.
+        self.executor.spawn(self.peer_notifs_rx.for_each_concurrent(
+            self.max_concurrent_inbound_rpcs as usize,
+            move |notif| {
+                handle_inbound_substream(rpc_handler_tx.clone(), notif, inbound_rpc_timeout)
+            },
+        ));
 
-        let outbound_handler = handle_outbounds(
-            BoundedExecutor::new(max_concurrent_outbound_rpcs as usize, executor.clone()),
-            requests_rx,
-            peer_mgr_reqs_tx,
-        );
-
-        let inbound_handler = handle_inbounds(
-            BoundedExecutor::new(max_concurrent_inbound_rpcs as usize, executor),
-            peer_mgr_notifs_rx,
-            rpc_handler_tx,
-            inbound_rpc_timeout,
-        );
-
-        // drive inbound and outbound handlers to completion
-        future::join(outbound_handler, inbound_handler).await;
-
-        crit!("Rpc actor terminated");
-    }
-}
-
-/// Handle all outbound rpcs.
-async fn handle_outbounds<TSubstream>(
-    executor: BoundedExecutor,
-    mut requests_rx: channel::Receiver<RpcRequest>,
-    peer_mgr_tx: PeerManagerRequestSender<TSubstream>,
-) where
-    TSubstream: AsyncRead + AsyncWrite + Send + Unpin + 'static,
-{
-    while let Some(req) = requests_rx.next().await {
-        executor
-            .spawn(handle_outbound_rpc(peer_mgr_tx.clone(), req))
+        let peer_handle = self.peer_handle;
+        let peer_id = peer_handle.peer_id();
+        // Handle requests and terminate when all request senders are dropped.
+        self.requests_rx
+            .for_each_concurrent(self.max_concurrent_outbound_rpcs as usize, move |req| {
+                handle_outbound_rpc(peer_handle.clone(), req)
+            })
             .await;
-    }
-}
 
-/// Handle all inbound rpcs.
-async fn handle_inbounds<TSubstream>(
-    executor: BoundedExecutor,
-    mut peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
-    rpc_handler_tx: channel::Sender<RpcNotification>,
-    inbound_rpc_timeout: Duration,
-) where
-    TSubstream: AsyncRead + AsyncWrite + Debug + Send + Unpin + 'static,
-{
-    while let Some(notif) = peer_mgr_notifs_rx.next().await {
-        executor
-            .spawn(handle_inbound_substream(
-                rpc_handler_tx.clone(),
-                notif,
-                inbound_rpc_timeout,
-            ))
-            .await;
+        info!("Rpc actor terminated for peer: {}", peer_id.short_str());
     }
 }
 
@@ -284,23 +234,21 @@ async fn handle_inbounds<TSubstream>(
 /// sent over the muxer closing the substream.
 ///
 /// [`req.res_tx`]: OutboundRpcRequest::res_tx
-async fn handle_outbound_rpc<TSubstream>(
-    peer_mgr_tx: PeerManagerRequestSender<TSubstream>,
-    req: RpcRequest,
-) where
+async fn handle_outbound_rpc<TSubstream>(peer_handle: PeerHandle<TSubstream>, req: RpcRequest)
+where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin,
 {
     match req {
-        RpcRequest::SendRpc(peer_id, req) => {
+        RpcRequest::SendRpc(req) => {
             let protocol = req.protocol;
             let req_data = req.data;
             let mut res_tx = req.res_tx;
             let timeout = req.timeout;
-
+            let peer_id_str = peer_handle.peer_id().short_str();
             // Future to run the actual outbound rpc protocol and get the results.
             let mut f_rpc_res = tokio::time::timeout(
                 timeout,
-                handle_outbound_rpc_inner(peer_mgr_tx, peer_id, protocol, req_data),
+                handle_outbound_rpc_inner(peer_handle, protocol, req_data),
             )
             .map_err(Into::<RpcError>::into)
             .map(|r| r.and_then(|x| x))
@@ -321,7 +269,7 @@ async fn handle_outbound_rpc<TSubstream>(
                             .inc();
                         warn!(
                             "Error making outbound rpc request to {}: {:?}",
-                            peer_id.short_str(), err
+                            peer_id_str, err
                         );
                     }
 
@@ -330,7 +278,7 @@ async fn handle_outbound_rpc<TSubstream>(
                         counters::LIBRA_NETWORK_RPC_MESSAGES
                             .with_label_values(&["request", "cancelled"])
                             .inc();
-                        debug!("Rpc client canceled outbound rpc call to {}", peer_id.short_str());
+                        debug!("Rpc client canceled outbound rpc call to {}", peer_id_str);
                     }
                 },
                 // The rpc client canceled the request
@@ -338,7 +286,7 @@ async fn handle_outbound_rpc<TSubstream>(
                     counters::LIBRA_NETWORK_RPC_MESSAGES
                         .with_label_values(&["request", "cancelled"])
                         .inc();
-                    debug!("Rpc client canceled outbound rpc call to {}", peer_id.short_str());
+                    debug!("Rpc client canceled outbound rpc call to {}", peer_id_str);
                 },
             }
         }
@@ -346,8 +294,7 @@ async fn handle_outbound_rpc<TSubstream>(
 }
 
 async fn handle_outbound_rpc_inner<TSubstream>(
-    mut peer_mgr_tx: PeerManagerRequestSender<TSubstream>,
-    peer_id: PeerId,
+    mut peer_handle: PeerHandle<TSubstream>,
     protocol: ProtocolId,
     req_data: Bytes,
 ) -> Result<Bytes, RpcError>
@@ -356,7 +303,7 @@ where
 {
     let _timer = counters::LIBRA_NETWORK_RPC_LATENCY.start_timer();
     // Request a new substream with the peer.
-    let substream = peer_mgr_tx.open_substream(peer_id, protocol).await?;
+    let substream = peer_handle.open_substream(protocol).await?;
     // Rpc messages are length-prefixed.
     let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Send the rpc request data.
@@ -391,19 +338,18 @@ where
 /// substream.
 async fn handle_inbound_substream<TSubstream>(
     notification_tx: channel::Sender<RpcNotification>,
-    notif: PeerManagerNotification<TSubstream>,
+    notif: PeerNotification<TSubstream>,
     timeout: Duration,
 ) where
     TSubstream: AsyncRead + AsyncWrite + Debug + Send + Unpin,
 {
     match notif {
-        PeerManagerNotification::NewInboundSubstream(peer_id, substream) => {
+        PeerNotification::NewSubstream(peer_id, substream) => {
             // Run the actual inbound rpc protocol.
             let res = tokio::time::timeout(
                 timeout,
                 handle_inbound_substream_inner(
                     notification_tx,
-                    peer_id,
                     substream.protocol,
                     substream.substream,
                 ),
@@ -426,7 +372,7 @@ async fn handle_inbound_substream<TSubstream>(
         }
         notif => debug_assert!(
             false,
-            "Received unexpected event from PeerManager: {:?}, expected NewInboundSubstream",
+            "Received unexpected event from Peer: {:?}, expected NewInboundSubstream",
             notif
         ),
     }
@@ -434,7 +380,6 @@ async fn handle_inbound_substream<TSubstream>(
 
 async fn handle_inbound_substream_inner<TSubstream>(
     mut notification_tx: channel::Sender<RpcNotification>,
-    peer_id: PeerId,
     protocol: ProtocolId,
     substream: TSubstream,
 ) -> Result<(), RpcError>
@@ -451,6 +396,9 @@ where
     counters::LIBRA_NETWORK_RPC_MESSAGES
         .with_label_values(&["request", "received"])
         .inc();
+    counters::LIBRA_NETWORK_RPC_BYTES
+        .with_label_values(&["request", "received"])
+        .observe(req_data.len() as f64);
 
     // Wait for dialer to half-close their side.
     if substream.next().await.is_some() {
@@ -461,17 +409,13 @@ where
 
     // Build the event and context we push up to upper layers for handling.
     let (res_tx, res_rx) = oneshot::channel();
-    let notification = RpcNotification::RecvRpc(
-        peer_id,
-        InboundRpcRequest {
-            protocol,
-            data: req_data,
-            res_tx,
-        },
-    );
-    // TODO(philiphayes): impl correct shutdown process so this never panics
+    let notification = RpcNotification::RecvRpc(InboundRpcRequest {
+        protocol,
+        data: req_data,
+        res_tx,
+    });
     // Forward request to upper layer.
-    notification_tx.send(notification).await.unwrap();
+    notification_tx.send(notification).await?;
 
     // Wait for response from upper layer.
     let res_data = res_rx.await??;

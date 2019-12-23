@@ -41,8 +41,10 @@ libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true 
 storage-service = { path = "../storage/storage-service" }
 
 [dev-dependencies]
-rand = "0.6.5"
+channel = { path = "../common/channel", version = "0.1.0" }
 parity-multiaddr = { version = "0.6.0", default-features = false }
+rand = "0.6.5"
+storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 
 [build-dependencies]
 tonic-build = "0.1"

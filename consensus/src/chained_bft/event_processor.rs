@@ -243,12 +243,7 @@ impl<T: Payload> EventProcessor<T> {
     }
 
     /// In case some peer's round or HQC is stale, send a SyncInfo message to that peer.
-    async fn help_remote_if_stale(
-        &self,
-        peer: Author,
-        remote_round: Round,
-        remote_hqc_round: Round,
-    ) {
+    fn help_remote_if_stale(&self, peer: Author, remote_round: Round, remote_hqc_round: Round) {
         if self.proposal_generator.author() == peer {
             return;
         }
@@ -271,7 +266,7 @@ impl<T: Payload> EventProcessor<T> {
                 sync_info,
             );
             counters::SYNC_INFO_MSGS_SENT_COUNT.inc();
-            self.network.send_sync_info(sync_info, peer).await;
+            self.network.send_sync_info(sync_info, peer);
         }
     }
 
@@ -286,8 +281,7 @@ impl<T: Payload> EventProcessor<T> {
         help_remote: bool,
     ) -> anyhow::Result<()> {
         if help_remote {
-            self.help_remote_if_stale(author, sync_info.highest_round(), sync_info.hqc_round())
-                .await;
+            self.help_remote_if_stale(author, sync_info.highest_round(), sync_info.hqc_round());
         }
 
         let current_hqc_round = self

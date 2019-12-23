@@ -3,7 +3,7 @@
 
 use crate::{
     common::NegotiatedSubstream,
-    peer_manager::PeerManagerNotification,
+    peer::PeerNotification,
     protocols::rpc::{self, RpcNotification},
     ProtocolId,
 };
@@ -70,12 +70,11 @@ pub fn fuzzer(data: &[u8]) {
         protocol: ProtocolId::from_static(MOCK_PROTOCOL_ID),
         substream: listener_substream,
     };
-    let peer_mgr_notif =
-        PeerManagerNotification::NewInboundSubstream(MOCK_PEER_ID, listener_substream);
+    let peer_notif = PeerNotification::NewSubstream(MOCK_PEER_ID, listener_substream);
 
     // run the rpc inbound protocol using the in-memory substream
     let f_handle_inbound =
-        rpc::handle_inbound_substream(notification_tx, peer_mgr_notif, INBOUND_RPC_TIMEOUT)
+        rpc::handle_inbound_substream(notification_tx, peer_notif, INBOUND_RPC_TIMEOUT)
             .map(|_| io::Result::Ok(()));
 
     // mock the notification channel to echo the fuzzer data back to the dialer
@@ -83,12 +82,10 @@ pub fn fuzzer(data: &[u8]) {
     let f_respond_inbound = async move {
         if let Some(notif) = notification_rx.next().await {
             match notif {
-                RpcNotification::RecvRpc(peer_id, req) => {
+                RpcNotification::RecvRpc(req) => {
                     let protocol = req.protocol;
                     let data = req.data;
                     let res_tx = req.res_tx;
-
-                    assert_eq!(peer_id, MOCK_PEER_ID);
                     assert_eq!(protocol.as_ref(), MOCK_PROTOCOL_ID);
                     res_tx.send(Ok(data)).unwrap();
                 }

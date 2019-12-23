@@ -150,11 +150,11 @@ where
                     self.handle_ping_response(peer_id, round, nonce, ping_result).await;
                 }
                 complete => {
-                    crit!("Health checker actor terminated");
                     break;
                 }
             }
         }
+        crit!("Health checker actor terminated");
     }
 
     fn handle_ping_request(

@@ -5,7 +5,8 @@ use admission_control_proto::proto::admission_control::{
     SubmitTransactionRequest, SubmitTransactionResponse,
 };
 use anyhow::Result;
-use channel;
+use channel::libra_channel;
+use channel::message_queues::QueueStyle;
 use futures::channel::{
     mpsc::{self, unbounded},
     oneshot,
@@ -13,6 +14,7 @@ use futures::channel::{
 use libra_config::config::{NetworkConfig, NodeConfig};
 use libra_types::PeerId;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
+use std::num::NonZeroUsize;
 use std::sync::{Arc, Mutex};
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use tokio::runtime::{Builder, Runtime};
@@ -42,8 +44,10 @@ pub fn mock_shared_mempool() -> (
     config.validator_network = Some(validator_network_config);
 
     let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-    let (network_reqs_tx, _network_reqs_rx) = channel::new_test(8);
-    let (_network_notifs_tx, network_notifs_rx) = channel::new_test(8);
+    let (network_reqs_tx, _network_reqs_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let (_network_notifs_tx, network_notifs_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let network_sender = MempoolNetworkSender::new(network_reqs_tx);
     let network_events = MempoolNetworkEvents::new(network_notifs_rx);
     let (sender, _subscriber) = unbounded();

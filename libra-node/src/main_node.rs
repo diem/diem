@@ -90,7 +90,8 @@ pub fn setup_network(config: &mut NetworkConfig, role: RoleType) -> (Runtime, Ne
     );
     network_builder
         .enable_remote_authentication(config.enable_remote_authentication)
-        .advertised_address(config.advertised_address.clone());
+        .advertised_address(config.advertised_address.clone())
+        .add_connection_monitoring();
     if config.enable_remote_authentication {
         // If the node wants to run in permissioned mode, it should also have authentication and
         // encryption.
@@ -129,7 +130,8 @@ pub fn setup_network(config: &mut NetworkConfig, role: RoleType) -> (Runtime, Ne
             .seed_peers(seed_peers)
             .trusted_peers(trusted_peers)
             .signing_keys((signing_private, signing_public))
-            .discovery_interval_ms(config.discovery_interval_ms);
+            .discovery_interval_ms(config.discovery_interval_ms)
+            .add_discovery();
     } else if config.enable_noise {
         let identity_keys = &mut config
             .network_keypairs
@@ -187,7 +189,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         let (mempool_sender, mempool_events) =
             validator_network::mempool::add_to_network(&mut network_builder);
         mempool_network_handles.push((network.peer_id, mempool_sender, mempool_events));
-
         validator_network_provider = Some((network.peer_id, runtime, network_builder));
     }
 

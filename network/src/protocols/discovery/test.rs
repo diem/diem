@@ -2,16 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::interface::{NetworkNotification, NetworkRequest};
+use crate::peer_manager::{PeerManagerNotification, PeerManagerRequest};
 use crate::proto::DiscoveryMsg;
 use crate::protocols::direct_send::Message;
 use crate::validator_network::DISCOVERY_DIRECT_SEND_PROTOCOL;
 use crate::ProtocolId;
+use channel::libra_channel;
+use channel::message_queues::QueueStyle;
 use core::str::FromStr;
+use futures::channel::oneshot;
 use libra_config::config::RoleType;
 use libra_crypto::{test_utils::TEST_SEED, *};
 use prost::Message as _;
 use rand::{rngs::StdRng, SeedableRng};
+use std::num::NonZeroUsize;
 use tokio::runtime::Runtime;
 
 fn gen_peer_info() -> PeerInfo {
@@ -73,14 +77,16 @@ fn setup_discovery(
     signer: Signer,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
 ) -> (
-    channel::Receiver<NetworkRequest>,
+    libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     channel::Receiver<ConnectivityRequest>,
-    channel::Sender<NetworkNotification>,
+    libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
     channel::Sender<()>,
 ) {
-    let (network_reqs_tx, network_reqs_rx) = channel::new_test(0);
+    let (network_reqs_tx, network_reqs_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(1);
-    let (network_notifs_tx, network_notifs_rx) = channel::new_test(0);
+    let (network_notifs_tx, network_notifs_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let role = RoleType::Validator;
     let discovery = {
@@ -95,7 +101,6 @@ fn setup_discovery(
             DiscoveryNetworkSender::new(network_reqs_tx),
             DiscoveryNetworkEvents::new(network_notifs_rx),
             conn_mgr_reqs_tx,
-            Duration::from_secs(180),
         )
     };
     rt.spawn(discovery.start());
@@ -203,13 +208,19 @@ fn inbound() {
         let mut msg = DiscoveryMsg::default();
         msg.notes.push(note_other.clone());
         msg.notes.push(seed_note.clone());
+        let key = (
+            seed_peer_id,
+            ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
+        );
+        let (delivered_tx, delivered_rx) = oneshot::channel();
         network_notifs_tx
-            .send(NetworkNotification::RecvMessage(
-                seed_peer_id,
-                get_raw_message(msg),
-            ))
-            .await
+            .push_with_feedback(
+                key.clone(),
+                PeerManagerNotification::RecvMessage(seed_peer_id, get_raw_message(msg)),
+                Some(delivered_tx),
+            )
             .unwrap();
+        delivered_rx.await.unwrap();
 
         // Connectivity manager receives address of new peer.
         expect_address_update(&mut conn_mgr_reqs_rx, peer_id_other, &addrs_other[..]).await;
@@ -241,13 +252,19 @@ fn inbound() {
                 seed_peer_payload,
             );
             msg.notes.push(seed_note);
+            let key = (
+                seed_peer_id,
+                ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
+            );
+            let (delivered_tx, delivered_rx) = oneshot::channel();
             network_notifs_tx
-                .send(NetworkNotification::RecvMessage(
-                    peer_id_other,
-                    get_raw_message(msg),
-                ))
-                .await
+                .push_with_feedback(
+                    key.clone(),
+                    PeerManagerNotification::RecvMessage(peer_id_other, get_raw_message(msg)),
+                    Some(delivered_tx),
+                )
                 .unwrap();
+            delivered_rx.await.unwrap();
         }
 
         // The addrs sent to connectivity manager should also include the
@@ -294,7 +311,7 @@ fn outbound() {
             peer_id,
             addrs.clone(),
             seed_peer_id,
-            seed_peer_info,
+            seed_peer_info.clone(),
             self_signer,
             trusted_peers,
         );
@@ -302,17 +319,29 @@ fn outbound() {
     // Fake connectivity manager and dialer.
     let f_network = async move {
         // Notify discovery actor of connection to seed peer.
+        let key = (
+            seed_peer_id,
+            ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
+        );
+        let (delivered_tx, delivered_rx) = oneshot::channel();
         network_notifs_tx
-            .send(NetworkNotification::NewPeer(seed_peer_id))
-            .await
+            .push_with_feedback(
+                key.clone(),
+                PeerManagerNotification::NewPeer(
+                    seed_peer_id,
+                    Multiaddr::try_from(seed_peer_info.addrs.get(0).unwrap().clone()).unwrap(),
+                ),
+                Some(delivered_tx),
+            )
             .unwrap();
+        delivered_rx.await.unwrap();
 
         // Trigger outbound msg.
         ticker_tx.send(()).await.unwrap();
 
         // Check request sent as message over network.
-        match network_reqs_rx.next().await.unwrap() {
-            NetworkRequest::SendMessage(peer, raw_msg) => {
+        match network_reqs_rx.select_next_some().await {
+            PeerManagerRequest::SendMessage(peer, raw_msg) => {
                 assert_eq!(peer, seed_peer_id);
                 let msg = parse_raw_message(raw_msg).unwrap();
                 // Receive DiscoveryMsg from actor. The message should contain only a note for the
@@ -376,13 +405,19 @@ fn addr_update_includes_seed_addrs() {
         let seed_note = create_note(&seed_signer, seed_peer_id, new_seed_info, seed_peer_payload);
         let mut msg = DiscoveryMsg::default();
         msg.notes.push(seed_note.clone());
+        let key = (
+            seed_peer_id,
+            ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
+        );
+        let (delivered_tx, delivered_rx) = oneshot::channel();
         network_notifs_tx
-            .send(NetworkNotification::RecvMessage(
-                seed_peer_id,
-                get_raw_message(msg),
-            ))
-            .await
+            .push_with_feedback(
+                key.clone(),
+                PeerManagerNotification::RecvMessage(seed_peer_id, get_raw_message(msg)),
+                Some(delivered_tx),
+            )
             .unwrap();
+        delivered_rx.await.unwrap();
 
         // The addrs sent to connectivity manager should also include the
         // configured seed peer addrs for seed-peer-received notes.

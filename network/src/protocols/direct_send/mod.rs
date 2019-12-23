@@ -46,7 +46,7 @@
 use crate::{
     counters,
     error::NetworkError,
-    peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
+    peer::{PeerHandle, PeerNotification},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -72,13 +72,13 @@ mod test;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DirectSendRequest {
     /// A request to send out a message.
-    SendMessage(PeerId, Message),
+    SendMessage(Message),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DirectSendNotification {
     /// A notification that a DirectSend message is received.
-    RecvMessage(PeerId, Message),
+    RecvMessage(Message),
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -108,16 +108,16 @@ impl Debug for Message {
 pub struct DirectSend<TSubstream> {
     /// A handle to a tokio executor.
     executor: Handle,
+    /// Channel to send requests to Peer.
+    peer_handle: PeerHandle<TSubstream>,
     /// Channel to receive requests from other upstream actors.
     ds_requests_rx: channel::Receiver<DirectSendRequest>,
     /// Channels to send notifictions to upstream actors.
     ds_notifs_tx: channel::Sender<DirectSendNotification>,
-    /// Channel to receive notifications from PeerManager.
-    peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
-    /// Channel to send requests to PeerManager.
-    peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
-    /// Outbound message queues for each (PeerId, ProtocolId) pair.
-    message_queues: HashMap<(PeerId, ProtocolId), channel::Sender<Bytes>>,
+    /// Channel to receive notifications from Peer.
+    peer_notifs_rx: channel::Receiver<PeerNotification<TSubstream>>,
+    /// Outbound message queues for each protocol.
+    message_queues: HashMap<ProtocolId, channel::Sender<Bytes>>,
 }
 
 impl<TSubstream> DirectSend<TSubstream>
@@ -126,76 +126,101 @@ where
 {
     pub fn new(
         executor: Handle,
+        peer_handle: PeerHandle<TSubstream>,
         ds_requests_rx: channel::Receiver<DirectSendRequest>,
         ds_notifs_tx: channel::Sender<DirectSendNotification>,
-        peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
-        peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
+        peer_notifs_rx: channel::Receiver<PeerNotification<TSubstream>>,
     ) -> Self {
         Self {
             executor,
+            peer_handle,
             ds_requests_rx,
             ds_notifs_tx,
-            peer_mgr_notifs_rx,
-            peer_mgr_reqs_tx,
+            peer_notifs_rx,
             message_queues: HashMap::new(),
         }
     }
 
     pub async fn start(mut self) {
+        let peer_id = self.peer_handle.peer_id();
+        info!(
+            "Starting direct send actor for peer: {}",
+            peer_id.short_str()
+        );
+        // Outbound message queues for various protocols.
         loop {
-            futures::select! {
-                req = self.ds_requests_rx.select_next_some() => {
-                    self.handle_direct_send_request(req).await;
-                }
-                notif = self.peer_mgr_notifs_rx.select_next_some() => {
-                    self.handle_peer_mgr_notification(notif);
-                }
-                complete => {
-                    crit!("Direct send actor terminated");
-                    break;
+            ::futures::select! {
+                // Handle requests and terminate when all request senders are dropped.
+                maybe_req = self.ds_requests_rx.next() => {
+                    if let Some(req) = maybe_req {
+                        self.handle_direct_send_request(
+                            req,
+                        )
+                        .await;
+                    } else {
+                        break;
+                    }
+                },
+                // Handle inbound direct-send messages.
+                notif = self.peer_notifs_rx.select_next_some() => {
+                    self.handle_peer_notification(notif).await;
                 }
             }
         }
+        info!(
+            "Terminating direct send actor for peer: {}",
+            peer_id.short_str()
+        );
     }
 
-    // Handle PeerManagerNotification, which can only be NewInboundSubstream for now.
-    fn handle_peer_mgr_notification(&self, notif: PeerManagerNotification<TSubstream>) {
-        trace!("PeerManagerNotification::{:?}", notif);
+    // Handle PeerNotification, which can only be NewInboundSubstream for now.
+    async fn handle_peer_notification(&mut self, notif: PeerNotification<TSubstream>) {
+        trace!("PeerNotification::{:?}", notif);
         match notif {
-            PeerManagerNotification::NewInboundSubstream(peer_id, substream) => {
+            // TODO: Rate-limit number of substreams opened by a peer.
+            PeerNotification::NewSubstream(_peer_id, substream) => {
+                let ds_notifs_tx = self.ds_notifs_tx.clone();
                 self.executor.spawn(Self::handle_inbound_substream(
-                    peer_id,
+                    ds_notifs_tx,
+                    self.peer_handle.peer_id(),
                     substream.protocol,
                     substream.substream,
-                    self.ds_notifs_tx.clone(),
                 ));
             }
-            _ => unreachable!("Unexpected PeerManagerNotification"),
+            _ => unreachable!("Unexpected PeerNotification"),
         }
     }
 
     // Handle a new inbound substream. Keep forwarding the messages to the NetworkProvider.
     async fn handle_inbound_substream(
+        mut ds_notifs_tx: channel::Sender<DirectSendNotification>,
         peer_id: PeerId,
         protocol: ProtocolId,
         substream: TSubstream,
-        mut ds_notifs_tx: channel::Sender<DirectSendNotification>,
     ) {
+        info!(
+            "DirectSend inbound substream with peer {} for protocol {:?} opened",
+            peer_id.short_str(),
+            protocol
+        );
         let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
+        // TODO: Close inactive substreams after some duration.
         while let Some(item) = substream.next().await {
             match item {
                 Ok(data) => {
-                    let notif = DirectSendNotification::RecvMessage(
-                        peer_id,
-                        Message {
-                            protocol: protocol.clone(),
-                            mdata: data.freeze(),
-                        },
-                    );
-                    ds_notifs_tx
-                        .send(notif)
-                        .await
-                        .expect("DirectSendNotification send error");
+                    counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                        .with_label_values(&["received"])
+                        .inc();
+                    counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
+                        .with_label_values(&["received"])
+                        .observe(data.len() as f64);
+                    let notif = DirectSendNotification::RecvMessage(Message {
+                        protocol: protocol.clone(),
+                        mdata: data.freeze(),
+                    });
+                    if let Err(err) = ds_notifs_tx.send(notif).await {
+                        warn!("Failed to notify upstream actor about inbound DirectSend message. Error: {:?}", err);
+                    }
                 }
                 Err(e) => {
                     warn!(
@@ -208,8 +233,9 @@ where
             }
         }
         warn!(
-            "DirectSend inbound substream with peer {} closed",
-            peer_id.short_str()
+            "DirectSend inbound substream with peer {} for protocol {:?} closed",
+            peer_id.short_str(),
+            protocol
         );
     }
 
@@ -217,32 +243,56 @@ where
     // corresponding substream.
     async fn start_message_queue_handler(
         executor: Handle,
-        mut peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
-        peer_id: PeerId,
+        mut peer_handle: PeerHandle<TSubstream>,
         protocol: ProtocolId,
     ) -> Result<channel::Sender<Bytes>, NetworkError> {
-        // Create a channel for the (PeerId, ProtocolId) pair.
+        let peer_id_str = peer_handle.peer_id().short_str();
+        let raw_substream = peer_handle
+            .open_substream(protocol.clone())
+            .await
+            .map_err(|e| {
+                warn!(
+                    "Failed to open substream with peer {} for protocol {:?}",
+                    peer_id_str, protocol
+                );
+                e
+            })?;
+        // Create a channel for the ProtocolId.
+        // TODO: Add protocol dimension to metric.
         let (msg_tx, msg_rx) = channel::new::<Bytes>(
             1024,
             &counters::OP_COUNTERS.peer_gauge(
                 &counters::PENDING_DIRECT_SEND_OUTBOUND_MESSAGES,
-                &peer_id.short_str(),
+                &peer_handle.peer_id().short_str(),
             ),
         );
-
-        // Open a new substream for the (PeerId, ProtocolId) pair
-        let raw_substream = peer_mgr_reqs_tx.open_substream(peer_id, protocol).await?;
-        let substream = Framed::new(IoCompat::new(raw_substream), LengthDelimitedCodec::new());
-
         // Spawn a task to forward the messages from the queue to the substream.
         let f_substream = async move {
-            if let Err(e) = msg_rx.map(Ok).forward(substream).await {
-                warn!(
-                    "Forward messages to peer {} error {:?}",
-                    peer_id.short_str(),
-                    e
-                );
+            // Open a new substream for the ProtocolId.
+            debug!(
+                "Opened substream with peer {} for protocol {:?}",
+                peer_id_str, protocol
+            );
+            let substream = Framed::new(IoCompat::new(raw_substream), LengthDelimitedCodec::new());
+            if let Err(e) = msg_rx
+                .map(|b| {
+                    counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                        .with_label_values(&["sent"])
+                        .inc();
+                    counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
+                        .with_label_values(&["sent"])
+                        .observe(b.len() as f64);
+                    Ok(b)
+                })
+                .forward(substream)
+                .await
+            {
+                warn!("Forward messages to peer {} error {:?}", peer_id_str, e);
             }
+            warn!(
+                "No longer forwarding messages to peer {} for protocol: {:?}",
+                peer_id_str, protocol
+            );
             // The messages in queue will be dropped
             counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
                 .with_label_values(&["dropped"])
@@ -250,44 +300,35 @@ where
                     counters::OP_COUNTERS
                         .peer_gauge(
                             &counters::PENDING_DIRECT_SEND_OUTBOUND_MESSAGES,
-                            &peer_id.short_str(),
+                            &peer_id_str,
                         )
                         .get(),
                 );
         };
         executor.spawn(f_substream);
-
         Ok(msg_tx)
     }
 
     // Try to send a message to the message queue.
-    async fn try_send_msg(
-        &mut self,
-        peer_id: PeerId,
-        msg: Message,
-        peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
-    ) -> Result<(), NetworkError> {
+    // If the channel is full, simply drop the message on the floor;
+    // If the channel is disconnected, remove the message queue from the collection.
+    async fn try_send_msg(&mut self, msg: Message) -> Result<(), NetworkError> {
         let protocol = msg.protocol.clone();
-
-        let substream_queue_tx = match self.message_queues.entry((peer_id, protocol.clone())) {
+        let substream_queue_tx = match self.message_queues.entry(protocol.clone()) {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => {
                 let msg_tx = Self::start_message_queue_handler(
                     self.executor.clone(),
-                    peer_mgr_reqs_tx,
-                    peer_id,
+                    self.peer_handle.clone(),
                     protocol.clone(),
                 )
                 .await?;
                 entry.insert(msg_tx)
             }
         };
-
         substream_queue_tx.try_send(msg.mdata).map_err(|e| {
-            // If the channel is full, simply drop the message on the floor;
-            // If the channel is disconnected, remove the message queue from the collection.
             if e.is_disconnected() {
-                self.message_queues.remove(&(peer_id, protocol));
+                self.message_queues.remove(&protocol);
             }
             e.into()
         })
@@ -297,15 +338,16 @@ where
     async fn handle_direct_send_request(&mut self, req: DirectSendRequest) {
         trace!("DirectSendRequest::{:?}", req);
         match req {
-            DirectSendRequest::SendMessage(peer_id, msg) => {
-                if let Err(e) = self
-                    .try_send_msg(peer_id, msg.clone(), self.peer_mgr_reqs_tx.clone())
-                    .await
-                {
+            DirectSendRequest::SendMessage(msg) => {
+                if let Err(e) = self.try_send_msg(msg.clone()).await {
                     counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
                         .with_label_values(&["dropped"])
                         .inc();
-                    warn!("DirectSend to peer {} failed: {}", peer_id.short_str(), e);
+                    warn!(
+                        "DirectSend to peer {} failed: {}",
+                        self.peer_handle.peer_id().short_str(),
+                        e
+                    );
                 }
             }
         }

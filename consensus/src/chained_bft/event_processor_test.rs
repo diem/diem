@@ -22,7 +22,7 @@ use crate::{
     },
     util::time_service::{ClockTimeService, TimeService},
 };
-use channel;
+use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::block::block_test_utils::gen_test_certificate;
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
@@ -58,7 +58,7 @@ use network::{
 use prost::Message as _;
 use safety_rules::{ConsensusState, PersistentStorage as SafetyStorage, SafetyRulesManager};
 use std::sync::RwLock;
-use std::{collections::HashMap, convert::TryFrom, sync::Arc, time::Duration};
+use std::{collections::HashMap, convert::TryFrom, num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -126,13 +126,16 @@ impl NodeSetup {
         safety_rules_manager: SafetyRulesManager<TestPayload>,
     ) -> Self {
         let validators = initial_data.validators();
-        let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-        let (consensus_tx, consensus_rx) = channel::new_test(8);
-        let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
+        let (network_reqs_tx, network_reqs_rx) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (consensus_tx, consensus_rx) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
+        let network_sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
         let author = signer.author();
 
-        playground.add_node(author, consensus_tx, network_reqs_rx);
+        playground.add_node(author, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
 
         let (self_sender, self_receiver) = channel::new_test(8);
         let network = NetworkSender::new(

@@ -6,32 +6,31 @@
 use crate::{
     counters,
     error::NetworkError,
-    interface::NetworkRequest,
+    peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
     proto::{HealthCheckerMsg, HealthCheckerMsg_oneof, Ping, Pong},
     protocols::rpc::error::RpcError,
-    validator_network::{network_builder::NetworkBuilder, NetworkEvents, NetworkSender},
+    validator_network::network_builder::NetworkBuilder,
+    validator_network::{NetworkEvents, NetworkSender},
     ProtocolId,
 };
-use channel;
+use channel::{libra_channel, message_queues::QueueStyle};
 use libra_types::PeerId;
 use std::time::Duration;
 
 /// Protocol id for HealthChecker RPC calls
 pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/health-checker/0.1.0";
-pub const HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 
 /// The interface from Network to HealthChecker layer.
 ///
-/// `HealthCheckerNetworkEvents` is a `Stream` of `NetworkNotification` where the
+/// `HealthCheckerNetworkEvents` is a `Stream` of `PeerManagerNotification` where the
 /// raw `Bytes` rpc messages are deserialized into
 /// `HealthCheckerMsg` types. `HealthCheckerNetworkEvents` is a thin wrapper
-/// around an `channel::Receiver<NetworkNotification>`.
+/// around an `channel::Receiver<PeerManagerNotification>`.
 pub type HealthCheckerNetworkEvents = NetworkEvents<HealthCheckerMsg>;
 
 /// The interface from HealthChecker to Networking layer.
 ///
-/// This is a thin wrapper around a `NetworkSender<HealthCheckerMsg>`, which is
-/// in turn a thin wrapper around a `channel::Sender<NetworkRequest>`, so it is
+/// This is a thin wrapper around a `NetworkSender<HealthCheckerMsg>`, so it is
 /// easy to clone and send off to a separate task. For example, the rpc requests
 /// return Futures that encapsulate the whole flow, from sending the request to
 /// remote, to finally receiving the response and deserializing. It therefore
@@ -48,8 +47,8 @@ pub fn add_to_network(
     let (sender, receiver) = network.add_protocol_handler(
         vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)],
         vec![],
-        &counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS,
-        Duration::from_millis(HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS),
+        QueueStyle::LIFO,
+        Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
     );
     (
         HealthCheckerNetworkSender::new(sender),
@@ -58,9 +57,9 @@ pub fn add_to_network(
 }
 
 impl HealthCheckerNetworkSender {
-    pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
+    pub fn new(inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>) -> Self {
         Self {
-            inner: NetworkSender::new(inner),
+            inner: NetworkSender::new(PeerManagerRequestSender::new(inner)),
         }
     }
 
@@ -102,19 +101,21 @@ impl HealthCheckerNetworkSender {
 mod tests {
     use super::*;
     use crate::{
+        peer_manager::{PeerManagerNotification, PeerManagerRequest},
         protocols::rpc::InboundRpcRequest,
         utils::MessageExt,
-        validator_network::{Event, NetworkNotification},
+        validator_network::Event,
     };
-    use futures::{
-        channel::oneshot, executor::block_on, future::try_join, sink::SinkExt, stream::StreamExt,
-    };
+    use channel::libra_channel;
+    use futures::{channel::oneshot, executor::block_on, future::try_join, stream::StreamExt};
     use prost::Message as _;
+    use std::num::NonZeroUsize;
 
     // `HealthCheckerNetworkEvents` should deserialize inbound RPC requests
     #[test]
     fn test_health_checker_inbound_rpc() {
-        let (mut network_reqs_tx, network_reqs_rx) = channel::new_test(8);
+        let (mut network_reqs_tx, network_reqs_rx) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let mut stream = HealthCheckerNetworkEvents::new(network_reqs_rx);
 
         // build rpc request
@@ -133,8 +134,16 @@ mod tests {
 
         // mock receiving rpc request
         let peer_id = PeerId::random();
-        let event = NetworkNotification::RecvRpc(peer_id, rpc_req);
-        block_on(network_reqs_tx.send(event)).unwrap();
+        let event = PeerManagerNotification::RecvRpc(peer_id, rpc_req);
+        network_reqs_tx
+            .push(
+                (
+                    peer_id,
+                    ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL),
+                ),
+                event,
+            )
+            .unwrap();
 
         // request should be properly deserialized
         let (res_tx, _) = oneshot::channel();
@@ -144,10 +153,11 @@ mod tests {
     }
 
     // When health_checker sends an rpc request, network should get a
-    // `NetworkRequest::SendRpc` with the serialized request.
+    // `PeerManagerRequest::SendRpc` with the serialized request.
     #[test]
     fn test_health_checker_outbound_rpc() {
-        let (network_reqs_tx, mut network_reqs_rx) = channel::new_test(8);
+        let (network_reqs_tx, mut network_reqs_rx) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let mut sender = HealthCheckerNetworkSender::new(network_reqs_tx);
 
         // send ping rpc request
@@ -165,7 +175,7 @@ mod tests {
         // the future response
         let f_recv = async move {
             match network_reqs_rx.next().await.unwrap() {
-                NetworkRequest::SendRpc(recv_peer_id, req) => {
+                PeerManagerRequest::SendRpc(recv_peer_id, req) => {
                     assert_eq!(recv_peer_id, peer_id);
                     assert_eq!(req.protocol.as_ref(), HEALTH_CHECKER_RPC_PROTOCOL);
 

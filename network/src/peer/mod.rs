@@ -3,18 +3,11 @@
 
 //! The Peer actor owns the underlying connection and is responsible for listening for
 //!  and opening substreams as well as negotiating particular protocols on those substreams.
-use crate::{
-    common::NegotiatedSubstream, peer_manager::PeerManagerError, protocols::identity::Identity,
-    transport, ProtocolId,
-};
-use channel;
-use futures::{
-    channel::oneshot,
-    future::{BoxFuture, FutureExt},
-    sink::SinkExt,
-    stream::{FuturesUnordered, StreamExt},
-};
-use libra_config::config::RoleType;
+use crate::peer_manager::PeerManagerError;
+use crate::{common::NegotiatedSubstream, protocols::identity::Identity, transport, ProtocolId};
+use futures::channel::oneshot;
+use futures::stream::FuturesUnordered;
+use futures::{future::BoxFuture, stream::StreamExt, FutureExt, SinkExt};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{
@@ -23,6 +16,9 @@ use netcore::{
     transport::ConnectionOrigin,
 };
 use parity_multiaddr::Multiaddr;
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::iter::FromIterator;
 
 #[cfg(test)]
 mod test;
@@ -36,7 +32,7 @@ pub enum PeerRequest<TSubstream> {
     CloseConnection,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DisconnectReason {
     Requested,
     ConnectionLost,
@@ -45,7 +41,7 @@ pub enum DisconnectReason {
 #[derive(Debug)]
 pub enum PeerNotification<TSubstream> {
     NewSubstream(PeerId, NegotiatedSubstream<TSubstream>),
-    PeerDisconnected(PeerId, RoleType, ConnectionOrigin, DisconnectReason),
+    PeerDisconnected(Identity, Multiaddr, ConnectionOrigin, DisconnectReason),
 }
 
 pub struct Peer<TMuxer>
@@ -54,18 +50,29 @@ where
 {
     /// Identity of the remote peer
     identity: Identity,
-    /// Underlying connection.
-    connection: TMuxer,
-    /// Protocols supported by self.
-    own_supported_protocols: Vec<ProtocolId>,
-    /// channel to notify about new inbound substreams.
-    peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
-    /// channel to receive requests for opening new outbound substreams.
-    requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
+    /// Address at which we are connected to the remote peer.
+    address: Multiaddr,
     /// Origin of the connection.
     origin: ConnectionOrigin,
+    /// Underlying connection.
+    connection: TMuxer,
+    /// Channel to receive requests for opening new outbound substreams.
+    requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
+    /// Channel to send peer notifications to PeerManager.
+    peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+    /// RPC protocols supported by self.
+    rpc_protocols: HashSet<ProtocolId>,
+    /// Channel to notify about new inbound RPC substreams.
+    rpc_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+    /// DirectSend protocols supported by self.
+    direct_send_protocols: HashSet<ProtocolId>,
+    /// Channel to notify about new inbound DirectSend substreams.
+    direct_send_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+    /// All supported protocols. This is derived from `rpc_protocols` and `direct_send_protocols`
+    /// at the time this struct is constructed.
+    own_supported_protocols: Vec<ProtocolId>,
     /// Flag to indicate if the actor is being shut down.
-    shutdown: bool,
+    shutting_down: bool,
 }
 
 impl<TMuxer> Peer<TMuxer>
@@ -76,20 +83,35 @@ where
 {
     pub fn new(
         identity: Identity,
-        connection: TMuxer,
+        address: Multiaddr,
         origin: ConnectionOrigin,
-        own_supported_protocols: Vec<ProtocolId>,
-        peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+        connection: TMuxer,
         requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
+        peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+        rpc_protocols: HashSet<ProtocolId>,
+        rpc_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+        direct_send_protocols: HashSet<ProtocolId>,
+        direct_send_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
     ) -> Self {
+        let own_supported_protocols = Vec::from_iter(
+            rpc_protocols
+                .iter()
+                .chain(direct_send_protocols.iter())
+                .cloned(),
+        );
         Self {
             identity,
-            connection,
+            address,
             origin,
-            own_supported_protocols,
-            peer_notifs_tx,
+            connection,
             requests_rx,
-            shutdown: false,
+            peer_notifs_tx,
+            rpc_protocols,
+            rpc_notifs_tx,
+            direct_send_protocols,
+            direct_send_notifs_tx,
+            own_supported_protocols,
+            shutting_down: false,
         }
     }
 
@@ -97,65 +119,84 @@ where
         let mut substream_rx = self.connection.listen_for_inbound().fuse();
         let mut pending_outbound_substreams = FuturesUnordered::new();
         let mut pending_inbound_substreams = FuturesUnordered::new();
-        while !self.shutdown {
+        let self_peer_id = self.identity.peer_id();
+        while !self.shutting_down {
             futures::select! {
                 maybe_req = self.requests_rx.next() => {
                     if let Some(request) = maybe_req {
                         self.handle_request(&mut pending_outbound_substreams, request).await;
                     } else {
-                        // This branch will only be taken if the PeerRequest sender for this Peer
-                        // gets dropped.  This should never happen because PeerManager should also
-                        // issue a shutdown request before dropping the sender
-                        unreachable!(
-                            "Peer {} PeerRequest sender gets dropped",
-                            self.identity.peer_id().short_str()
-                        );
+                        // This branch will only be taken if all PeerRequest senders for this Peer
+                        // get dropped.
+                        break;
                     }
                 },
                 maybe_substream = substream_rx.next() => {
                     match maybe_substream {
                         Some(Ok(substream)) => {
+                            trace!("New inbound substream from peer: {}", self_peer_id.short_str());
                             self.handle_inbound_substream(&mut pending_inbound_substreams, substream);
                         }
                         Some(Err(e)) => {
                             warn!("Inbound substream error {:?} with peer {}",
-                                  e, self.identity.peer_id().short_str());
+                                e, self_peer_id.short_str());
                             self.close_connection(DisconnectReason::ConnectionLost).await;
                         }
                         None => {
                             warn!("Inbound substreams exhausted with peer {}",
-                                  self.identity.peer_id().short_str());
+                                self_peer_id.short_str());
                             self.close_connection(DisconnectReason::ConnectionLost).await;
                         }
                     }
                 },
-                inbound_substream = pending_inbound_substreams.select_next_some() => {
-                    match inbound_substream {
-                        Ok(negotiated_substream) => {
-                            let event = PeerNotification::NewSubstream(
-                                self.identity.peer_id(),
-                                negotiated_substream,
-                            );
-                            self.peer_notifs_tx.send(event).await.unwrap();
-                        }
-                        Err(e) => {
-                            error!(
-                                "Inbound substream negotiation for peer {} failed: {}",
-                                self.identity.peer_id().short_str(), e
-                            );
-                        }
-                    }
+                negotiated_subststream = pending_inbound_substreams.select_next_some() => {
+                    self.handle_negotiated_substream(negotiated_subststream).await;
                 },
                 _ = pending_outbound_substreams.select_next_some() => {
                     // Do nothing since these futures have an output of "()"
                 },
-                complete => unreachable!(),
             }
         }
         debug!(
             "Peer actor '{}' shutdown",
             self.identity.peer_id().short_str()
         );
+    }
+
+    async fn handle_negotiated_substream(
+        &mut self,
+        negotiated_subststream: Result<NegotiatedSubstream<TMuxer::Substream>, PeerManagerError>,
+    ) {
+        match negotiated_subststream {
+            Ok(negotiated_substream) => {
+                let protocol = negotiated_substream.protocol.clone();
+                let event =
+                    PeerNotification::NewSubstream(self.identity.peer_id(), negotiated_substream);
+                if self.rpc_protocols.contains(&protocol) {
+                    if let Err(err) = self.rpc_notifs_tx.send(event).await {
+                        warn!("Failed to send notification to RPC actor. Error: {:?}", err);
+                    }
+                } else if self.direct_send_protocols.contains(&protocol) {
+                    if let Err(err) = self.direct_send_notifs_tx.send(event).await {
+                        warn!(
+                            "Failed to send notification to DirectSend actor. Error: {:?}",
+                            err
+                        );
+                    }
+                } else {
+                    // We should only be able to negotiate supported protocols, and therefore this
+                    // branch is unreachable.
+                    unreachable!("Negotiated unsupported protocol");
+                }
+            }
+            Err(e) => {
+                error!(
+                    "Inbound substream negotiation for peer {} failed: {}",
+                    self.identity.peer_id().short_str(),
+                    e
+                );
+            }
+        }
     }
 
     async fn handle_request<'a>(
@@ -259,7 +300,6 @@ where
             "New inbound substream from peer '{}'",
             self.identity.peer_id().short_str()
         );
-
         let negotiate =
             Self::negotiate_inbound_substream(substream, self.own_supported_protocols.clone());
         pending.push(negotiate.boxed());
@@ -293,51 +333,58 @@ where
                 );
             }
         }
-        // If the graceful shutdown above fails, the connection will be forcefull terminated once
+        // If the graceful shutdown above fails, the connection will be forcefully terminated once
         // the connection struct is dropped. Setting the `shutdown` flag to true ensures that the
         // peer actor will terminate and close the connection in the process.
-        self.shutdown = true;
-        // We send a PeerDisconnected event to peer manager as a result (or in case of a failure
+        self.shutting_down = true;
+        // We send a PeerDisconnected event to NetworkProvider as a result (or in case of a failure
         // above, in anticipation of) closing the connection.
-
-        self.peer_notifs_tx
+        if let Err(e) = self
+            .peer_notifs_tx
             .send(PeerNotification::PeerDisconnected(
-                self.identity.peer_id(),
-                self.identity.role(),
+                self.identity.clone(),
+                self.address.clone(),
                 self.origin,
                 reason,
             ))
             .await
-            .unwrap();
+        {
+            warn!(
+                "Failed to notify upstream about disconnection of peer: {}; error: {:?}",
+                self.identity.peer_id().short_str(),
+                e
+            );
+        }
     }
 }
 
 pub struct PeerHandle<TSubstream> {
     peer_id: PeerId,
     sender: channel::Sender<PeerRequest<TSubstream>>,
-    origin: ConnectionOrigin,
     address: Multiaddr,
-    is_shutting_down: bool,
+}
+
+impl<TSubstream> Clone for PeerHandle<TSubstream> {
+    fn clone(&self) -> Self {
+        Self {
+            peer_id: self.peer_id,
+            sender: self.sender.clone(),
+            address: self.address.clone(),
+        }
+    }
 }
 
 impl<TSubstream> PeerHandle<TSubstream> {
     pub fn new(
         peer_id: PeerId,
         address: Multiaddr,
-        origin: ConnectionOrigin,
         sender: channel::Sender<PeerRequest<TSubstream>>,
     ) -> Self {
         Self {
             peer_id,
             address,
-            origin,
             sender,
-            is_shutting_down: false,
         }
-    }
-
-    pub fn is_shutting_down(&self) -> bool {
-        self.is_shutting_down
     }
 
     pub fn address(&self) -> &Multiaddr {
@@ -348,19 +395,15 @@ impl<TSubstream> PeerHandle<TSubstream> {
         self.peer_id
     }
 
-    pub fn origin(&self) -> ConnectionOrigin {
-        self.origin
-    }
-
     pub async fn open_substream(
         &mut self,
         protocol: ProtocolId,
-        response_tx: oneshot::Sender<Result<TSubstream, PeerManagerError>>,
-    ) {
+    ) -> Result<TSubstream, PeerManagerError> {
         // If we fail to send the request to the Peer, then it must have already been shutdown.
+        let (oneshot_tx, oneshot_rx) = oneshot::channel();
         if self
             .sender
-            .send(PeerRequest::OpenSubstream(protocol, response_tx))
+            .send(PeerRequest::OpenSubstream(protocol, oneshot_tx))
             .await
             .is_err()
         {
@@ -370,6 +413,11 @@ impl<TSubstream> PeerHandle<TSubstream> {
                 self.peer_id.short_str()
             );
         }
+        oneshot_rx
+            .await
+            // The open_substream request can get dropped/canceled if the peer
+            // connection is in the process of shutting down.
+            .map_err(|_| PeerManagerError::NotConnected(self.peer_id))?
     }
 
     pub async fn disconnect(&mut self) {
@@ -386,6 +434,5 @@ impl<TSubstream> PeerHandle<TSubstream> {
                 self.peer_id.short_str()
             );
         }
-        self.is_shutting_down = true;
     }
 }

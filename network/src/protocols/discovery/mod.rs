@@ -42,9 +42,8 @@ use crate::{
 use anyhow::anyhow;
 use channel;
 use futures::{
-    future::{Future, FutureExt},
     sink::SinkExt,
-    stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
+    stream::{FusedStream, Stream, StreamExt},
 };
 use libra_config::config::RoleType;
 use libra_crypto::{
@@ -57,12 +56,11 @@ use libra_types::{crypto_proxies::ValidatorSigner as Signer, PeerId};
 use parity_multiaddr::Multiaddr;
 use prost::Message;
 use rand::{rngs::SmallRng, FromEntropy, Rng};
-use std::pin::Pin;
 use std::{
     collections::{HashMap, HashSet},
     convert::{TryFrom, TryInto},
     sync::{Arc, RwLock},
-    time::{Duration, SystemTime},
+    time::SystemTime,
 };
 
 #[cfg(test)]
@@ -94,8 +92,6 @@ pub struct Discovery<TTicker> {
     network_notifs_rx: DiscoveryNetworkEvents,
     /// Channel to send requests to ConnectivityManager.
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
-    /// Message timeout duration.
-    msg_timeout: Duration,
     /// Random-number generator.
     rng: SmallRng,
 }
@@ -115,7 +111,6 @@ where
         network_reqs_tx: DiscoveryNetworkSender,
         network_notifs_rx: DiscoveryNetworkEvents,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
-        msg_timeout: Duration,
     ) -> Self {
         // TODO(philiphayes): wire through config
         let dns_seed_addr = b"example.com";
@@ -152,7 +147,6 @@ where
             network_reqs_tx,
             network_notifs_rx,
             conn_mgr_reqs_tx,
-            msg_timeout,
             rng: SmallRng::from_entropy(),
         }
     }
@@ -160,9 +154,8 @@ where
     // Connect with all the seed peers. If current node is also a seed peer, remove it from the
     // list.
     async fn connect_to_seed_peers(&mut self) {
-        debug!("Connecting to seed peers");
+        debug!("Connecting to {} seed peers", self.seed_peers.len());
         self.record_num_discovery_notes();
-
         let self_peer_id = self.peer_id;
         for (peer_id, peer_info) in self
             .seed_peers
@@ -193,16 +186,15 @@ where
     pub async fn start(mut self) {
         // Bootstrap by connecting to seed peers.
         self.connect_to_seed_peers().await;
-        let mut unprocessed_outbound = FuturesUnordered::new();
+        debug!("Starting Discovery actor event loop");
         loop {
             futures::select! {
                 notif = self.network_notifs_rx.select_next_some() => {
                     self.handle_network_event(notif).await;
                 },
                 _ = self.ticker.select_next_some() => {
-                    self.handle_tick(&mut unprocessed_outbound);
+                    self.handle_tick();
                 }
-                _ = unprocessed_outbound.select_next_some() => {}
                 complete => {
                     crit!("Discovery actor terminated");
                     break;
@@ -215,10 +207,8 @@ where
     // 1. Selecting a random peer to send state to.
     // 2. Compose the msg to send.
     // 3. Spawn off a new task to push the msg to the peer.
-    fn handle_tick<'a>(
-        &'a mut self,
-        unprocessed_outbound: &'a mut FuturesUnordered<Pin<Box<dyn Future<Output = ()> + Send>>>,
-    ) {
+    fn handle_tick(&mut self) {
+        debug!("Discovery interval tick");
         // On each tick, we choose a random neighbor and push our state to it.
         if let Some(peer) = self.choose_random_neighbor() {
             // We clone `peer_mgr_reqs_tx` member of Self, since using `self` inside fut below
@@ -226,17 +216,13 @@ where
             let mut sender = self.network_reqs_tx.clone();
             // Compose discovery msg to send.
             let msg = self.compose_discovery_msg();
-            let timeout = self.msg_timeout;
-            let fut = async move {
-                if let Err(err) = tokio::time::timeout(timeout, sender.send_to(peer, msg)).await {
-                    warn!(
-                        "Failed to send discovery msg to {}; error: {:?}",
-                        peer.short_str(),
-                        err
-                    );
-                }
+            if let Err(err) = sender.send_to(peer, msg) {
+                warn!(
+                    "Failed to send discovery msg to {}; error: {:?}",
+                    peer.short_str(),
+                    err
+                );
             };
-            unprocessed_outbound.push(fut.boxed());
         }
     }
 
