@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::{NetworkPeersConfig, PersistableConfig, RootPath, SafetyRulesConfig},
+    config::{NetworkPeersConfig, SafetyRulesConfig},
     keys, utils,
 };
-use anyhow::Result;
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_types::{
     crypto_proxies::{ValidatorInfo, ValidatorPublicKeys, ValidatorSet, ValidatorVerifier},
@@ -13,8 +12,6 @@ use libra_types::{
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
-
-const CONSENSUS_PEERS_DEFAULT: &str = "consensus_peers.config.toml";
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -24,9 +21,6 @@ pub struct ConsensusConfig {
     pub contiguous_rounds: u32,
     pub max_pruned_blocks_in_mem: Option<u64>,
     pub pacemaker_initial_timeout_ms: Option<u64>,
-    #[serde(skip)]
-    pub consensus_peers: ConsensusPeersConfig,
-    pub consensus_peers_file: PathBuf,
     pub safety_rules: SafetyRulesConfig,
 }
 
@@ -38,10 +32,14 @@ impl Default for ConsensusConfig {
             contiguous_rounds: 2,
             max_pruned_blocks_in_mem: None,
             pacemaker_initial_timeout_ms: None,
-            consensus_peers: ConsensusPeersConfig::default(),
-            consensus_peers_file: PathBuf::new(),
             safety_rules: SafetyRulesConfig::default(),
         }
+    }
+}
+
+impl ConsensusConfig {
+    pub fn set_data_dir(&mut self, data_dir: PathBuf) {
+        self.safety_rules.set_data_dir(data_dir);
     }
 }
 
@@ -54,25 +52,6 @@ pub enum ConsensusProposerType {
     RotatingProposer,
     // Multiple ordered proposers per round (primary, secondary, etc.)
     MultipleOrderedProposers,
-}
-
-impl ConsensusConfig {
-    pub fn load(&mut self, root_dir: &RootPath) -> Result<()> {
-        if !self.consensus_peers_file.as_os_str().is_empty() {
-            let path = root_dir.full_path(&self.consensus_peers_file);
-            self.consensus_peers = ConsensusPeersConfig::load_config(path)?;
-        }
-        Ok(())
-    }
-
-    pub fn save(&mut self, root_dir: &RootPath) -> Result<()> {
-        if self.consensus_peers_file.as_os_str().is_empty() {
-            self.consensus_peers_file = PathBuf::from(CONSENSUS_PEERS_DEFAULT);
-        }
-        let path = root_dir.full_path(&self.consensus_peers_file);
-        self.consensus_peers.save_config(path)?;
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug, Default, Serialize, PartialEq, Deserialize)]

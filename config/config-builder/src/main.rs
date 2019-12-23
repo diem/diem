@@ -147,10 +147,7 @@ fn build_faucet(args: FaucetArgs) {
         config_builder.seed(seed[..32].try_into().expect("Invalid seed"));
     }
 
-    let (_, faucet_key) = config_builder
-        .build_faucet_client()
-        .expect("ConfigBuilder failed");
-
+    let faucet_key = config_builder.build_faucet_client();
     let key_path = args.output_dir.join("mint.key");
     let faucet_keypair = KeyPair::<Ed25519PrivateKey, Ed25519PublicKey>::from(faucet_key);
     let serialized_keys = lcs::to_bytes(&faucet_keypair).expect("Unable to serialize keys");

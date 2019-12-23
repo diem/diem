@@ -313,12 +313,12 @@ impl LibraSwarm {
             let upstream_config_dir = upstream_config_dir.expect("No upstream node for full nodes");
             let upstream_config_file = PathBuf::from(upstream_config_dir).join("node.config.toml");
             let mut validator_config = NodeConfig::load(&upstream_config_file)?;
-            let validator_nodes = validator_config.consensus.consensus_peers.peers.len();
+            let genesis = validator_config.execution.genesis.as_ref();
             let mut full_node_builder = FullNodeConfig::new();
             full_node_builder
-                .template(template)
                 .full_nodes(num_nodes)
-                .nodes(validator_nodes);
+                .genesis(genesis.expect("Missing genesis from validator").clone())
+                .template(template);
             full_node_builder.extend_validator(&mut validator_config)?;
             validator_config.save(&upstream_config_file)?;
             full_node_builder.bootstrap(

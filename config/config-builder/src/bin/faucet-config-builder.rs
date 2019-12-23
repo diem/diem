@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 
 use config_builder::ValidatorConfig;
-use libra_config::config::{NodeConfig, PersistableConfig};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
@@ -35,19 +34,13 @@ fn main() {
     let args = Args::from_args();
 
     let mut config_builder = ValidatorConfig::new();
-    config_builder
-        .nodes(args.nodes)
-        .template(NodeConfig::default());
-
     if let Some(seed) = args.seed.as_ref() {
         let seed = hex::decode(seed).expect("Invalid hex in seed.");
         config_builder.seed(seed[..32].try_into().expect("Invalid seed"));
     }
 
     fs::create_dir_all(&args.output_dir).expect("Unable to create output directory");
-    let (consensus_peers, faucet_key) = config_builder
-        .build_faucet_client()
-        .expect("ConfigBuilder failed");
+    let faucet_key = config_builder.build_faucet_client();
 
     let key_path = args.output_dir.join("mint.key");
     let faucet_keypair = KeyPair::<Ed25519PrivateKey, Ed25519PublicKey>::from(faucet_key);
@@ -56,9 +49,4 @@ fn main() {
     key_file
         .write_all(&serialized_keys)
         .expect("Unable to write to key file");
-
-    let consensus_peers_path = args.output_dir.join("consensus_peers.config.toml");
-    consensus_peers
-        .save_config(consensus_peers_path)
-        .expect("Unable to save consensus_peers.config");
 }

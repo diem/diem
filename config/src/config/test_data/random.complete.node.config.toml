@@ -16,7 +16,6 @@ role = "validator"
 max_block_size = 100
 proposer_type = "multiple_ordered_proposers"
 contiguous_rounds = 2
-consensus_peers_file = "consensus_peers.config.toml"
 
 [consensus.safety_rules.backend]
 type = "in_memory_storage"

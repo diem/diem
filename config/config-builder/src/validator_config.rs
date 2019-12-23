@@ -4,7 +4,7 @@
 use crate::{BuildSwarm, Error};
 use anyhow::{ensure, Result};
 use libra_config::{
-    config::{ConsensusPeersConfig, NodeConfig, SeedPeersConfig},
+    config::{NodeConfig, SeedPeersConfig},
     generator,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
@@ -111,9 +111,9 @@ impl ValidatorConfig {
         Ok(configs)
     }
 
-    pub fn build_faucet_client(&self) -> Result<(ConsensusPeersConfig, Ed25519PrivateKey)> {
-        let (configs, faucet_key) = self.build_common(false)?;
-        Ok((configs[0].consensus.consensus_peers.clone(), faucet_key))
+    pub fn build_faucet_client(&self) -> Ed25519PrivateKey {
+        let (faucet_key, _) = self.build_faucet();
+        faucet_key
     }
 
     fn build_common(&self, randomize_ports: bool) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
@@ -126,21 +126,19 @@ impl ValidatorConfig {
             }
         );
 
-        let mut faucet_rng = StdRng::from_seed(self.seed);
-        let faucet_key = Ed25519PrivateKey::generate_for_testing(&mut faucet_rng);
-        let config_seed: [u8; 32] = faucet_rng.gen();
-        let mut configs =
+        let (faucet_key, config_seed) = self.build_faucet();
+        let mut validator_swarm =
             generator::validator_swarm(&self.template, self.nodes, config_seed, randomize_ports);
 
         ensure!(
-            configs.len() == self.nodes,
+            validator_swarm.nodes.len() == self.nodes,
             Error::MissingConfigs {
-                found: configs.len()
+                found: validator_swarm.nodes.len()
             }
         );
 
-        let consensus_peers = &configs[0].consensus.consensus_peers;
-        let network_peers = &configs[0]
+        let consensus_peers = &validator_swarm.consensus_peers;
+        let network_peers = &validator_swarm.nodes[0]
             .validator_network
             .as_ref()
             .ok_or(Error::MissingValidatorNetwork)?
@@ -158,11 +156,18 @@ impl ValidatorConfig {
             .into_inner(),
         ));
 
-        for config in &mut configs {
-            config.execution.genesis = genesis.clone();
+        for node in &mut validator_swarm.nodes {
+            node.execution.genesis = genesis.clone();
         }
 
-        Ok((configs, faucet_key))
+        Ok((validator_swarm.nodes, faucet_key))
+    }
+
+    fn build_faucet(&self) -> (Ed25519PrivateKey, [u8; 32]) {
+        let mut faucet_rng = StdRng::from_seed(self.seed);
+        let faucet_key = Ed25519PrivateKey::generate_for_testing(&mut faucet_rng);
+        let config_seed: [u8; 32] = faucet_rng.gen();
+        (faucet_key, config_seed)
     }
 }
 
@@ -200,6 +205,5 @@ mod test {
             DEFAULT_LISTEN.parse::<Multiaddr>().unwrap()
         );
         assert!(config.execution.genesis.is_some());
-        assert_eq!(config.consensus.consensus_peers.peers.len(), 2);
     }
 }
