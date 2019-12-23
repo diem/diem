@@ -4,8 +4,6 @@
 use crate::vm_validator::{TransactionValidation, VMValidator};
 use config_builder;
 use executor::Executor;
-use grpc_helpers::ServerHandle;
-use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::*, PrivateKey};
 use libra_types::{
@@ -23,7 +21,7 @@ use transaction_builder::encode_transfer_script;
 use vm_runtime::LibraVM;
 
 struct TestValidator {
-    _storage: ServerHandle,
+    _storage: Runtime,
     vm_validator: VMValidator,
 }
 
@@ -33,28 +31,27 @@ impl TestValidator {
         let storage = start_storage_service(&config);
 
         // setup execution
-        let client_env = Arc::new(EnvBuilder::new().build());
         let storage_read_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-            Arc::clone(&client_env),
             &config.storage.address,
             config.storage.port,
         ));
+
         let storage_write_client = Arc::new(StorageWriteServiceClient::new(
-            Arc::clone(&client_env),
             &config.storage.address,
             config.storage.port,
-            None,
         ));
 
         // Create executor to initialize genesis state. Otherwise gprc will report error when
         // fetching data from storage.
-        let _executor = Executor::<LibraVM>::new(
-            Arc::clone(&storage_read_client) as Arc<dyn StorageRead>,
-            storage_write_client,
-            config,
-        );
+        let _executor = Executor::<LibraVM>::new(storage_read_client, storage_write_client, config);
 
-        let vm_validator = VMValidator::new(config, storage_read_client, rt.handle().clone());
+        // Create another client for the vm_validator since the one used for the executor will be
+        // run on another runtime which will be dropped before this function returns.
+        let read_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
+            &config.storage.address,
+            config.storage.port,
+        ));
+        let vm_validator = VMValidator::new(config, read_client, rt.handle().clone());
 
         (
             TestValidator {

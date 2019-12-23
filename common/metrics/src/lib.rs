@@ -13,9 +13,6 @@ mod json_metrics;
 pub mod metric_server;
 mod public_metrics;
 
-mod service_metrics;
-pub use service_metrics::ServiceMetrics;
-
 mod op_counters;
 pub use op_counters::{DurationHistogram, OpMetrics};
 
