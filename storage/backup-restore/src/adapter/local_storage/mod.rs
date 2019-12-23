@@ -33,8 +33,9 @@ impl LocalStorage {
 impl Adapter for LocalStorage {
     async fn write_new_file(
         &self,
-        mut content: impl StreamExt<Item = Vec<u8>> + Send + Unpin + 'async_trait,
+        content: impl StreamExt<Item = Vec<u8>> + Send + 'async_trait,
     ) -> Result<FileHandle> {
+        let mut content = Box::pin(content);
         let (mut file, handle) = create_random_file(&self.dir)?;
         while let Some(bytes) = content.next().await {
             file.write_all(&bytes)?;
@@ -43,7 +44,7 @@ impl Adapter for LocalStorage {
         Ok(handle)
     }
 
-    fn read_file_content(&self, file_handle: &FileHandle) -> BoxStream<Result<Vec<u8>>> {
+    fn read_file_content(file_handle: &FileHandle) -> BoxStream<Result<Vec<u8>>> {
         let file = match std::fs::File::open(&file_handle) {
             Ok(f) => f,
             Err(e) => return futures::stream::once(async { Err(e.into()) }).boxed(),
