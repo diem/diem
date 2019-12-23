@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{libra_channel, message_queues::QueueStyle};
+use crate::{libra_channel, libra_channel::ElementStatus, message_queues::QueueStyle};
 use futures::{
+    channel::oneshot,
     executor::block_on,
     future::join,
     future::FutureExt,
@@ -123,4 +124,31 @@ fn test_multiple_validators_fifo() {
 #[test]
 fn test_multiple_validators_lifo() {
     test_multiple_validators_helper(QueueStyle::LIFO, 1024, 1023);
+}
+
+#[test]
+fn test_feedback_on_drop() {
+    let (mut sender, mut receiver) = libra_channel::new(QueueStyle::FIFO, 3, None);
+    sender.push(0, 'a').unwrap();
+    sender.push(0, 'b').unwrap();
+    let (c_status_tx, c_status_rx) = oneshot::channel();
+    sender
+        .push_with_feedback(0, 'c', Some(c_status_tx))
+        .unwrap();
+    let (d_status_tx, d_status_rx) = oneshot::channel();
+    sender
+        .push_with_feedback(0, 'd', Some(d_status_tx))
+        .unwrap();
+    let task = async move {
+        // Ensure that the remaining messages are received in order
+        assert_eq!(receiver.select_next_some().await, 'a');
+        assert_eq!(receiver.select_next_some().await, 'b');
+        assert_eq!(receiver.select_next_some().await, 'c');
+        // Ensure that we receive confirmation about 'd' being dropped and 'c' being delivered.
+        assert_eq!(ElementStatus::Dropped('d'), d_status_rx.await.unwrap());
+        assert_eq!(ElementStatus::Dequeued, c_status_rx.await.unwrap());
+        // Ensures that there is no other value which is ready
+        assert_eq!(receiver.select_next_some().now_or_never(), None);
+    };
+    block_on(task);
 }
