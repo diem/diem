@@ -18,7 +18,6 @@ pub mod test_helper;
 pub mod errors;
 pub mod schema;
 
-mod block_index_store;
 mod change_set;
 mod event_store;
 mod ledger_counters;
@@ -32,7 +31,6 @@ mod transaction_store;
 mod libradb_test;
 
 use crate::{
-    block_index_store::BlockIndexStore,
     change_set::{ChangeSet, SealedChangeSet},
     errors::LibraDbError,
     event_store::EventStore,
@@ -51,11 +49,11 @@ use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_logger::prelude::*;
 use libra_metrics::OpMetrics;
 use libra_types::account_config::channel_global_events_address;
-use libra_types::block_index::BlockIndex;
 use libra_types::channel::{
     channel_global_events_resource_path, channel_resource_path, ChannelGlobalEventsResource,
     ChannelResource,
 };
+use libra_types::transaction::Transaction;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -104,7 +102,6 @@ pub struct LibraDB {
     state_store: StateStore,
     event_store: EventStore,
     system_store: SystemStore,
-    block_index_store: BlockIndexStore,
     pruner: Pruner,
 }
 
@@ -140,7 +137,6 @@ impl LibraDB {
                 ColumnFamilyOptions::default(),
             ),
             (TRANSACTION_INFO_CF_NAME, ColumnFamilyOptions::default()),
-            (BLOCK_INDEX_CF_NAME, ColumnFamilyOptions::default()),
         ]
         .iter()
         .cloned()
@@ -163,7 +159,6 @@ impl LibraDB {
             state_store: StateStore::new(Arc::clone(&db)),
             transaction_store: TransactionStore::new(Arc::clone(&db)),
             system_store: SystemStore::new(Arc::clone(&db)),
-            block_index_store: BlockIndexStore::new(Arc::clone(&db)),
             pruner: Pruner::new(Arc::clone(&db), Self::NUM_HISTORICAL_VERSIONS_TO_KEEP),
         }
     }
@@ -337,7 +332,7 @@ impl LibraDB {
     }
 
     /// Gets the latest version number available in the ledger.
-    fn get_latest_version(&self) -> Result<Version> {
+    pub fn get_latest_version(&self) -> Result<Version> {
         Ok(self
             .ledger_store
             .get_latest_ledger_info()?
@@ -871,17 +866,14 @@ impl LibraDB {
         self.commit(sealed_cs)
     }
 
-    pub fn insert_block_index(&self, height: &u64, block_index: &BlockIndex) -> Result<()> {
-        self.block_index_store
-            .insert_block_index(height, block_index)
+    pub fn transactions(&self, start_version: u64, end_version: u64) -> Result<Vec<Transaction>> {
+        (start_version..end_version)
+            .map(|version| Ok(self.transaction_store.get_transaction(version)?))
+            .collect::<Result<Vec<_>>>()
     }
 
-    pub fn query_block_index_list_by_height(
-        &self,
-        height: Option<u64>,
-        size: usize,
-    ) -> Result<Vec<BlockIndex>> {
-        self.block_index_store.query_block_index(height, size)
+    pub fn get_transaction_by_version(&self, version: u64) -> Result<Transaction> {
+        self.transaction_store.get_transaction(version)
     }
 }
 

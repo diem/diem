@@ -20,23 +20,24 @@ use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_metrics::counters::SVC_COUNTERS;
-use libra_types::block_index::BlockIndex;
-use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
+use libra_types::proto::types::{
+    GetTransactionByVersionResponse, GetTransactionListRequest, GetTransactionListResponse,
+    LatestVersionResponse, Transaction as TransactionProto, UpdateToLatestLedgerRequest,
+    UpdateToLatestLedgerResponse, Version,
+};
 use libradb::LibraDB;
 use std::{
-    convert::TryFrom,
+    convert::{From, TryFrom},
     ops::Deref,
     path::Path,
     sync::{mpsc, Arc, Mutex},
 };
 use storage_proto::proto::storage::{
-    create_storage, EmptyResponse, GetAccountStateWithProofByVersionRequest,
+    create_storage, GetAccountStateWithProofByVersionRequest,
     GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
     GetEpochChangeLedgerInfosResponse, GetHistoryStartupInfoByBlockIdRequest,
     GetStartupInfoRequest, GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    InsertBlockIndexRequest, QueryBlockIndexListByHeightRequest,
-    QueryBlockIndexListByHeightResponse, RollbackRequest, SaveTransactionsRequest,
-    SaveTransactionsResponse, Storage,
+    RollbackRequest, SaveTransactionsRequest, SaveTransactionsResponse, Storage,
 };
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
@@ -248,19 +249,6 @@ impl StorageService {
     fn rollback_by_block_id_inner(&self, block_id: &HashValue) -> Result<()> {
         self.db.rollback_by_block_id(block_id)
     }
-
-    fn insert_block_index_inner(&self, height: &u64, block_index: &BlockIndex) -> Result<()> {
-        self.db.insert_block_index(height, block_index)
-    }
-
-    fn query_block_index_list_by_height_inner(
-        &self,
-        height: Option<u64>,
-        size: u64,
-    ) -> Result<Vec<BlockIndex>> {
-        self.db
-            .query_block_index_list_by_height(height, size as usize)
-    }
 }
 
 impl Storage for StorageService {
@@ -354,56 +342,99 @@ impl Storage for StorageService {
         &mut self,
         ctx: grpcio::RpcContext,
         req: RollbackRequest,
-        sink: grpcio::UnarySink<EmptyResponse>,
+        sink: grpcio::UnarySink<()>,
     ) {
         debug!("[GRPC] Storage::rollback_by_block_id");
         self.rollback_by_block_id_inner(
             &HashValue::from_slice(req.block_id.as_ref()).expect("parse err."),
         )
         .expect("rollback err.");
-        let resp = EmptyResponse {};
+        provide_grpc_response(Ok(()), ctx, sink);
+    }
+
+    fn latest_version(
+        &mut self,
+        ctx: ::grpcio::RpcContext,
+        _req: (),
+        sink: ::grpcio::UnarySink<LatestVersionResponse>,
+    ) {
+        debug!("[GRPC] Storage::latest_version");
+        let ver = self.db.get_latest_version();
+        let mut resp = LatestVersionResponse::default();
+        match ver {
+            Ok(version) => {
+                let mut v = Version::default();
+                v.ver = version;
+                resp.version = Some(v);
+            }
+            Err(e) => {
+                warn!("{:?}", e);
+            }
+        }
+
         provide_grpc_response(Ok(resp), ctx, sink);
     }
 
-    fn insert_block_index(
+    fn get_transaction_list(
         &mut self,
-        ctx: grpcio::RpcContext,
-        req: InsertBlockIndexRequest,
-        sink: grpcio::UnarySink<EmptyResponse>,
+        ctx: ::grpcio::RpcContext,
+        req: GetTransactionListRequest,
+        sink: ::grpcio::UnarySink<GetTransactionListResponse>,
     ) {
-        debug!("[GRPC] Storage::insert_block_index");
-        let req = storage_proto::InsertBlockIndexRequest::try_from(req)
-            .expect("InsertBlockIndexRequest err.");
-        self.insert_block_index_inner(&req.height, &req.block_index.expect("block index is none."))
-            .expect("rollback err.");
-        let resp = EmptyResponse {};
-        provide_grpc_response(Ok(resp), ctx, sink);
-    }
-
-    // Query Block Index
-    fn query_block_index_list_by_height(
-        &mut self,
-        ctx: grpcio::RpcContext,
-        req: QueryBlockIndexListByHeightRequest,
-        sink: grpcio::UnarySink<QueryBlockIndexListByHeightResponse>,
-    ) {
-        debug!("[GRPC] Storage::query_block_index_list_by_height");
-        let req = storage_proto::QueryBlockIndexListByHeightRequest::try_from(req)
-            .expect("QueryBlockIndexListByHeightRequest err.");
-
-        let size = if req.size > 100 { 100 } else { req.size };
-
-        let height = match req.begin {
-            Some(b) => Some(b.height),
-            None => None,
+        debug!("[GRPC] Storage::get_transaction_list");
+        let version = match req.version {
+            Some(v) => v.ver,
+            None => {
+                self.db
+                    .get_latest_version()
+                    .expect("get latest version err.")
+                    + 1
+            }
         };
 
-        let block_index_list = self
-            .query_block_index_list_by_height_inner(height, size)
-            .expect("query block index err.");
+        let end_version = if version > 0 { version - 1 } else { version };
+        let start_version = if end_version > 10 {
+            end_version - 10
+        } else {
+            0
+        };
+        let txn_vec = self.db.transactions(start_version, end_version);
 
-        let resp = storage_proto::QueryBlockIndexListByHeightResponse { block_index_list };
-        provide_grpc_response(Ok(resp.into()), ctx, sink);
+        let mut resp = GetTransactionListResponse::default();
+        match txn_vec {
+            Ok(txns) => {
+                let tmp = txns
+                    .iter()
+                    .map(|txn| TransactionProto::from(txn.clone()))
+                    .collect();
+                resp.transactions = tmp;
+            }
+            Err(e) => {
+                warn!("{:?}", e);
+            }
+        }
+
+        provide_grpc_response(Ok(resp), ctx, sink);
+    }
+
+    fn get_transaction_by_version(
+        &mut self,
+        ctx: ::grpcio::RpcContext,
+        req: Version,
+        sink: ::grpcio::UnarySink<GetTransactionByVersionResponse>,
+    ) {
+        debug!("[GRPC] Storage::get_transaction_by_version");
+        let mut resp = GetTransactionByVersionResponse::default();
+        match self.db.get_transaction_by_version(req.ver) {
+            Ok(txn) => {
+                resp.txn = Some(TransactionProto::from(txn));
+            }
+            Err(e) => {
+                warn!("{:?}", e);
+            }
+        }
+
+        provide_grpc_response(Ok(resp), ctx, sink);
     }
 }
 

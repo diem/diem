@@ -11,6 +11,8 @@ import "transaction.proto";
 import "account_state_blob.proto";
 import "proof.proto";
 import "block_index.proto";
+import "google/protobuf/empty.proto";
+import "explorer.proto";
 
 // -----------------------------------------------------------------------------
 // ---------------- Service definition for storage
@@ -57,15 +59,16 @@ service Storage {
 
     // Rollback
     rpc RollbackByBlockId(RollbackRequest)
-    returns (EmptyResponse);
+    returns (google.protobuf.Empty);
 
-    // Block Index
-    rpc InsertBlockIndex(InsertBlockIndexRequest)
-    returns (EmptyResponse);
+    // Latest version
+    rpc LatestVersion(google.protobuf.Empty) returns (types.LatestVersionResponse);
 
-    // Query Block Index
-    rpc QueryBlockIndexListByHeight(QueryBlockIndexListByHeightRequest)
-    returns (QueryBlockIndexListByHeightResponse);
+    // Transaction list
+    rpc GetTransactionList(types.GetTransactionListRequest) returns (types.GetTransactionListResponse);
+
+    // Get transaction by version
+    rpc GetTransactionByVersion(types.Version) returns (types.GetTransactionByVersionResponse);
 }
 
 message SaveTransactionsRequest {
@@ -164,26 +167,4 @@ message GetEpochChangeLedgerInfosResponse {
 
 message RollbackRequest {
     bytes block_id = 1;
-}
-
-message EmptyResponse {
-
-}
-
-message InsertBlockIndexRequest {
-    uint64 height = 1;
-    types.BlockIndex block_index = 2;
-}
-
-message BlockHeight {
-    uint64 height = 1;
-}
-
-message QueryBlockIndexListByHeightRequest {
-    BlockHeight begin = 1;
-    uint64 size = 2;
-}
-
-message QueryBlockIndexListByHeightResponse {
-    repeated types.BlockIndex block_index_list = 1;
 }

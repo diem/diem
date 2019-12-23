@@ -230,7 +230,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
     is_pow: bool,
 ) -> SignatureCheckedTransaction {
     const INIT_BALANCE: u64 = 1_000_000_000;
-    const SUBSIDY_BALANCE: u64 = 1_000_000_000;
+    const SUBSIDY_BALANCE: u64 = 2_100_000_000_000;
 
     // Compile the needed stdlib modules.
     let modules = stdlib_modules();
@@ -291,7 +291,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                         vec![
                             Value::bool(true),
                             Value::u64(1000 as u64),
-                            Value::u64(50 as u64),
+                            Value::u64(50_000_000 as u64),
                             Value::u64(2 as u64),
                         ],
                     )

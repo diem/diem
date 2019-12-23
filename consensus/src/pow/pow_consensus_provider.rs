@@ -1,4 +1,9 @@
-use crate::pow::event_processor::EventProcessor;
+use crate::chained_bft::consensusdb::ConsensusDB;
+use crate::pow::{
+    block_storage_service::make_block_storage_service,
+    event_processor::EventProcessor,
+    mine_state::{BlockIndex, MineStateManager},
+};
 use crate::{
     consensus_provider::ConsensusProvider, state_computer::ExecutionProxy,
     txn_manager::MempoolProxy, MineClient,
@@ -11,7 +16,7 @@ use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::account_address::AccountAddress;
-use miner::{server::setup_minerproxy_service, types::MineStateManager};
+use miner::server::setup_minerproxy_service;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::convert::TryFrom;
@@ -24,6 +29,7 @@ pub struct PowConsensusProvider {
     runtime: tokio::runtime::Runtime,
     event_handle: Option<EventProcessor>,
     miner_proxy: Option<Server>,
+    _block_storage_server: Server,
 }
 
 impl PowConsensusProvider {
@@ -55,8 +61,15 @@ impl PowConsensusProvider {
             .clone();
         let author = AccountAddress::try_from(peer_id_str.clone())
             .expect("Failed to parse peer id of a validator");
+        // block store
+        let block_store = Arc::new(ConsensusDB::new(&node_config.storage.dir()));
+
+        //BlockStorageService
+        let block_storage_server =
+            make_block_storage_service(node_config, &Arc::clone(&block_store));
+
         //Start miner proxy server
-        let mine_state = MineStateManager::new();
+        let mine_state = MineStateManager::new(BlockIndex::new(block_store.clone()));
         let miner_rpc_addr = String::from(&node_config.consensus.miner_rpc_address);
         let mut miner_proxy = setup_minerproxy_service(mine_state.clone(), miner_rpc_addr.clone());
         miner_proxy.start();
@@ -71,18 +84,14 @@ impl PowConsensusProvider {
             });
         }
 
-        let self_pri_key = node_config
-            .consensus
-            .consensus_keypair
-            .take_private()
-            .expect("private key is none.");
+        let self_pri_key = node_config.consensus.take_and_set_key();
         let event_handle = EventProcessor::new(
             network_sender,
             network_events,
             txn_manager,
             state_computer,
             author,
-            node_config.storage.dir(),
+            block_store,
             rollback_flag,
             mine_state,
             read_storage,
@@ -93,12 +102,18 @@ impl PowConsensusProvider {
             runtime,
             event_handle: Some(event_handle),
             miner_proxy: Some(miner_proxy),
+            _block_storage_server: block_storage_server,
         }
     }
 
     pub fn event_handle(&mut self, executor: Handle) {
         match self.event_handle.take() {
             Some(mut handle) => {
+                let block_cache_receiver = handle
+                    .block_cache_receiver
+                    .take()
+                    .expect("block_cache_receiver is none.");
+
                 //mint
                 handle.mint_manager.borrow_mut().mint(executor.clone());
 
@@ -109,7 +124,7 @@ impl PowConsensusProvider {
                 handle
                     .chain_manager
                     .borrow_mut()
-                    .save_block(executor.clone());
+                    .save_block(block_cache_receiver, executor.clone());
 
                 //sync
                 handle

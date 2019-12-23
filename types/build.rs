@@ -18,6 +18,7 @@ fn main() {
         "src/proto/validator_set.proto",
         "src/proto/vm_errors.proto",
         "src/proto/block_index.proto",
+        "src/proto/explorer.proto",
     ];
 
     let includes = ["src/proto"];

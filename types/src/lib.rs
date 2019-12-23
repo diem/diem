@@ -13,6 +13,7 @@ pub mod channel;
 pub mod contract_event;
 pub mod crypto_proxies;
 pub mod event;
+pub mod explorer;
 pub mod get_with_proof;
 pub mod identifier;
 pub mod language_storage;

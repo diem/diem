@@ -19,6 +19,10 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
+    explorer::{
+        GetTransactionByVersionResponse, GetTransactionListRequest, GetTransactionListResponse,
+        LatestVersionResponse, Version as TxnVersion,
+    },
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
@@ -31,17 +35,14 @@ use std::convert::TryFrom;
 use std::{pin::Pin, sync::Arc};
 use storage_proto::{
     proto::storage::{GetStartupInfoRequest, StorageClient},
-    BlockHeight, GetAccountStateWithProofByVersionRequest,
-    GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
-    GetEpochChangeLedgerInfosResponse, GetHistoryStartupInfoByBlockIdRequest,
-    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    InsertBlockIndexRequest, QueryBlockIndexListByHeightRequest,
-    QueryBlockIndexListByHeightResponse, RollbackRequest, SaveTransactionsRequest, StartupInfo,
+    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse,
+    GetHistoryStartupInfoByBlockIdRequest, GetStartupInfoResponse, GetTransactionsRequest,
+    GetTransactionsResponse, RollbackRequest, SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;
 use libra_crypto::HashValue;
-use libra_types::block_index::BlockIndex;
 
 fn pick<T>(items: &[T]) -> &T {
     let mut rng = rand::thread_rng();
@@ -252,31 +253,24 @@ impl StorageRead for StorageReadServiceClient {
         .boxed()
     }
 
-    fn query_block_index_list_by_height(
-        &self,
-        height: Option<u64>,
-        size: u64,
-    ) -> Result<Vec<BlockIndex>> {
-        let block_height = match height {
-            Some(h) => Some(BlockHeight { height: h }),
-            None => None,
-        };
-        let req = QueryBlockIndexListByHeightRequest {
-            begin: block_height,
-            size,
-        };
+    fn latest_version(&self) -> Result<LatestVersionResponse> {
+        let resp = self.client().latest_version(&())?;
+        LatestVersionResponse::try_from(resp)
+    }
 
-        block_on(
-            convert_grpc_response(
-                self.client()
-                    .query_block_index_list_by_height_async(&req.into()),
-            )
-            .map(|resp| {
-                let resp = QueryBlockIndexListByHeightResponse::try_from(resp?)?;
-                Ok(resp.block_index_list)
-            })
-            .boxed(),
-        )
+    fn get_transaction_list(
+        &self,
+        req: GetTransactionListRequest,
+    ) -> Result<GetTransactionListResponse> {
+        let resp = self.client().get_transaction_list(&req.into())?;
+        GetTransactionListResponse::try_from(resp)
+    }
+
+    fn get_transaction_by_version(&self, req: Version) -> Result<GetTransactionByVersionResponse> {
+        let resp = self
+            .client()
+            .get_transaction_by_version(&TxnVersion { ver: req }.into())?;
+        GetTransactionByVersionResponse::try_from(resp)
     }
 }
 
@@ -331,17 +325,6 @@ impl StorageWrite for StorageWriteServiceClient {
         self.client()
             .rollback_by_block_id(&req.into())
             .expect("rollback err.");
-    }
-
-    /// BlockIndex
-    fn insert_block_index(&self, height: u64, block_index: BlockIndex) {
-        let req = InsertBlockIndexRequest {
-            height,
-            block_index: Some(block_index),
-        };
-        convert_grpc_response(self.client().insert_block_index_async(&req.into()))
-            .map_ok(|_| ())
-            .boxed();
     }
 }
 
@@ -467,11 +450,14 @@ pub trait StorageRead: Send + Sync {
         start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>>;
 
-    fn query_block_index_list_by_height(
+    fn latest_version(&self) -> Result<LatestVersionResponse>;
+
+    fn get_transaction_list(
         &self,
-        height: Option<u64>,
-        size: u64,
-    ) -> Result<Vec<BlockIndex>>;
+        req: GetTransactionListRequest,
+    ) -> Result<GetTransactionListResponse>;
+
+    fn get_transaction_by_version(&self, req: Version) -> Result<GetTransactionByVersionResponse>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.
@@ -502,9 +488,6 @@ pub trait StorageWrite: Send + Sync {
 
     /// Rollback
     fn rollback_by_block_id(&self, block_id: HashValue);
-
-    /// BlockIndex
-    fn insert_block_index(&self, height: u64, block_index: BlockIndex);
 }
 
 fn convert_grpc_err(e: grpcio::Error) -> Error {

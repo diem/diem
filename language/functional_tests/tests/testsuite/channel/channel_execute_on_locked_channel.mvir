@@ -1,0 +1,79 @@
+//! account: alice, 10000000
+//! account: bob, 10000000
+//! channel: ch1, alice|bob
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1, alice
+//! args: {{bob}},50000,40000
+
+0x0.ChannelScript.open
+
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+import 0x0.Hash;
+main() {
+   let hash_lock: bytearray;
+   hash_lock = Hash.sha3_256(h"aa");
+   ChannelScript.send_payment({{bob}}, 10000, move(hash_lock), 10);
+   return;
+}
+
+// bob execute channel transaction without alice signature, and locked channel.
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob,false
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+import 0x0.Hash;
+main() {
+   ChannelScript.receive_payment(h"aa");
+   return;
+}
+
+// try execute a channel txn on locked channel.
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob,false
+import 0x0.LibraAccount;
+main() {
+   assert(LibraAccount.channel_is_locked(), 108);
+   return;
+}
+
+// check: ABORT
+// check: 1008
+
+// alice try execute a channel txn on locked channel, ant not to challenge.
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice,false
+import 0x0.LibraAccount;
+main() {
+   return;
+}
+
+// check: ABORT
+// check: 1016

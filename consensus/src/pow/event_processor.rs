@@ -1,6 +1,7 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::counters;
 use crate::pow::chain_manager::ChainManager;
+use crate::pow::mine_state::{BlockIndex, MineStateManager};
 use crate::pow::mint_manager::MintManager;
 use crate::pow::payload_ext::BlockPayloadExt;
 use crate::pow::sync_manager::SyncManager;
@@ -12,7 +13,8 @@ use consensus_types::block::Block;
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
-use cuckoo::consensus::{PowCuckoo, PowService, Proof};
+
+use cuckoo::Solution;
 use futures::channel::mpsc;
 use futures::{stream::select, SinkExt, StreamExt, TryStreamExt};
 use libra_crypto::ed25519::Ed25519PrivateKey;
@@ -24,7 +26,8 @@ use libra_prost_ext::MessageExt;
 use libra_types::account_address::AccountAddress;
 use libra_types::transaction::SignedTransaction;
 use libra_types::PeerId;
-use miner::types::{MineStateManager, CYCLE_LENGTH, MAX_EDGE};
+use miner::miner::verify;
+use miner::types::{from_slice, Algo, H256, U256};
 use network::{
     proto::{
         Block as BlockProto, ConsensusMsg,
@@ -32,9 +35,9 @@ use network::{
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event},
 };
+use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::sync::Arc;
-use std::{convert::TryFrom, path::PathBuf};
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
 
@@ -51,10 +54,9 @@ pub struct EventProcessor {
     sync_block_sender: mpsc::Sender<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>,
     sync_signal_sender: mpsc::Sender<(PeerId, (u64, HashValue))>,
     pub sync_manager: Arc<AtomicRefCell<SyncManager>>,
-
-    pow_srv: Arc<dyn PowService>,
     pub chain_manager: Arc<AtomicRefCell<ChainManager>>,
     pub mint_manager: Arc<AtomicRefCell<MintManager>>,
+    pub block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
 }
 
 impl EventProcessor {
@@ -64,9 +66,9 @@ impl EventProcessor {
         txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
         state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
         author: AccountAddress,
-        storage_dir: PathBuf,
+        block_store: Arc<ConsensusDB>,
         rollback_flag: bool,
-        mine_state: MineStateManager,
+        mine_state: MineStateManager<BlockIndex>,
         read_storage: Arc<dyn StorageRead>,
         write_storage: Arc<dyn StorageWrite>,
         pri_key: Ed25519PrivateKey,
@@ -77,10 +79,8 @@ impl EventProcessor {
         //sync
         let (sync_block_sender, sync_block_receiver) = mpsc::channel(10);
         let (sync_signal_sender, sync_signal_receiver) = mpsc::channel(1024);
-
-        let block_store = Arc::new(ConsensusDB::new(storage_dir));
         let chain_manager = Arc::new(AtomicRefCell::new(ChainManager::new(
-            Some(block_cache_receiver),
+            //            Some(block_cache_receiver),
             Arc::clone(&block_store),
             txn_manager.clone(),
             state_computer.clone(),
@@ -99,7 +99,6 @@ impl EventProcessor {
             Some(sync_signal_receiver),
             chain_manager.clone(),
         )));
-        let pow_srv = Arc::new(PowCuckoo::new(MAX_EDGE, CYCLE_LENGTH));
         let mint_manager = Arc::new(AtomicRefCell::new(MintManager::new(
             txn_manager.clone(),
             state_computer.clone(),
@@ -107,7 +106,6 @@ impl EventProcessor {
             author.clone(),
             self_sender.clone(),
             block_store.clone(),
-            pow_srv.clone(),
             chain_manager.clone(),
             mine_state,
             pri_key,
@@ -123,9 +121,9 @@ impl EventProcessor {
             sync_block_sender,
             sync_signal_sender,
             sync_manager,
-            pow_srv,
             chain_manager,
             mint_manager,
+            block_cache_receiver: Some(block_cache_receiver),
         }
     }
 
@@ -151,7 +149,6 @@ impl EventProcessor {
         let sync_signal_sender = self.sync_signal_sender.clone();
         let mut sync_block_sender = self.sync_block_sender.clone();
         let mut block_cache_sender = self.block_cache_sender.clone();
-        let pow_srv = self.pow_srv.clone();
         let fut = async move {
             while let Some(Ok(message)) = all_events.next().await {
                 match message {
@@ -178,18 +175,31 @@ impl EventProcessor {
                                 );
 
                                 let payload = block.payload().expect("payload is none");
-                                let verify = pow_srv.verify(
-                                    block
+                                let target: U256 = {
+                                    let target_h: H256 = from_slice(&payload.target).into();
+                                    target_h.into()
+                                };
+                                let algo: &Algo = &payload.algo.into();
+                                let solution = {
+                                    let s: Solution = payload.solve.clone().into();
+                                    if s == Solution::empty() {
+                                        None
+                                    } else {
+                                        Some(s)
+                                    }
+                                };
+                                let header_hash = {
+                                    let hash = block
                                         .quorum_cert()
                                         .ledger_info()
                                         .ledger_info()
                                         .hash()
-                                        .as_ref(),
-                                    payload.nonce,
-                                    Proof {
-                                        solve: payload.solve.clone(),
-                                    },
-                                );
+                                        .to_vec();
+                                    let hash_h: H256 = from_slice(&hash).into();
+                                    hash_h
+                                };
+                                let verify =
+                                    verify(&header_hash, payload.nonce, solution, algo, &target);
 
                                 if verify {
                                     if self_peer_id != peer_id {

@@ -6,12 +6,15 @@
 use anyhow::{Error, Result};
 use futures::prelude::*;
 use libra_crypto::{ed25519::*, HashValue};
-use libra_types::block_index::BlockIndex;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     event::EventHandle,
+    explorer::{
+        GetTransactionByVersionResponse, GetTransactionListRequest, GetTransactionListResponse,
+        LatestVersionResponse,
+    },
     get_with_proof::{RequestItem, ResponseItem},
     proof::AccumulatorConsistencyProof,
     proof::SparseMerkleProof,
@@ -161,11 +164,18 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
-    fn query_block_index_list_by_height(
+    fn latest_version(&self) -> Result<LatestVersionResponse> {
+        unimplemented!()
+    }
+
+    fn get_transaction_list(
         &self,
-        _height: Option<u64>,
-        _size: u64,
-    ) -> Result<Vec<BlockIndex>, Error> {
+        req: GetTransactionListRequest,
+    ) -> Result<GetTransactionListResponse> {
+        unimplemented!()
+    }
+
+    fn get_transaction_by_version(&self, req: Version) -> Result<GetTransactionByVersionResponse> {
         unimplemented!()
     }
 }

@@ -98,4 +98,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --tests --no-fail-fast --exclude consensus --exclude --exclude miner --exclude testsuite
+          args: --workspace --tests --no-fail-fast --exclude consensus --exclude --exclude testsuite

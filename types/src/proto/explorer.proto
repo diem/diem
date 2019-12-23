@@ -1,0 +1,110 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package types;
+
+import "transaction.proto";
+import "google/protobuf/empty.proto";
+
+////////////////////////////////////block
+
+message BlockRequestItem {
+    oneof block_requested_items {
+        BlockId block_id_item = 1;
+        GetBlockSummaryListRequest get_block_summary_list_request_item = 2;
+        google.protobuf.Empty latest_block_height_request_item = 3;
+        google.protobuf.Empty difficult_hash_rate_request_item = 4;
+    }
+}
+
+message BlockResponseItem {
+    oneof block_response_items {
+        GetBlockByBlockIdResponse get_block_by_block_id_response_item = 1;
+        GetBlockSummaryListResponse get_block_summary_list_response_item = 2;
+        LatestBlockHeightResponse latest_block_height_response_item = 3;
+        DifficultHashRate difficult_hash_rate_response_item = 4;
+    }
+}
+
+////////////////////////////////////
+message BlockSummary {
+    bytes block_id = 1;
+    uint64 height = 2;
+    bytes parent_id = 3;
+    bytes accumulator_root_hash = 4;
+    bytes state_root_hash = 5;
+    bytes miner = 6;
+    uint64 nonce = 7;
+    bytes target = 8;
+    uint32 algo = 9;
+}
+
+message GetBlockSummaryListRequest {
+    BlockId block_id = 1;
+}
+
+message BlockId {
+    bytes id = 1;
+}
+
+message GetBlockSummaryListResponse {
+    repeated BlockSummary blocks = 1;
+}
+
+message LatestBlockHeightResponse {
+    uint64 height = 1;
+}
+
+message DifficultHashRate {
+    uint64 difficulty = 1;
+}
+
+message BlockDetail {
+    bytes bytes = 1;
+}
+
+message GetBlockByBlockIdResponse {
+    BlockDetail block_detail = 1;
+}
+
+////////////////////////////////////transaction
+
+message TxnRequestItem {
+    oneof txn_requested_items {
+        google.protobuf.Empty latest_version_request_item = 1;
+        GetTransactionListRequest get_transaction_list_request_item = 2;
+        Version get_transaction_by_version_request_item = 3;
+    }
+}
+
+message TxnResponseItem {
+    oneof txn_response_items {
+        LatestVersionResponse latest_version_response_item = 1;
+        GetTransactionListResponse get_transaction_list_response_item = 2;
+        GetTransactionByVersionResponse get_transaction_by_version_response_item = 3;
+    }
+}
+
+/////////////////////////////////////
+
+message Version {
+    uint64 ver = 1;
+}
+
+message LatestVersionResponse {
+    Version version = 1;
+}
+
+message GetTransactionListRequest {
+    Version version = 1;
+}
+
+message GetTransactionListResponse {
+    repeated types.Transaction transactions = 1;
+}
+
+message GetTransactionByVersionResponse {
+    types.Transaction txn = 1;
+}

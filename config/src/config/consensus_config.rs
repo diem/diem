@@ -7,6 +7,7 @@ use crate::{
     utils,
 };
 use anyhow::Result;
+use base64::encode;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     Uniform,
@@ -20,6 +21,10 @@ use libra_types::{
 };
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 pub type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
@@ -40,6 +45,8 @@ pub struct ConsensusConfig {
     pub miner_client_enable: bool,
     pub consensus_type: ConsensusType,
     pub miner_rpc_address: String,
+    pub consensus_rpc_address: String,
+    pub consensus_rpc_port: u16,
 
     // consensus_keypair contains the node's consensus keypair.
     // it is filled later on from consensus_keypair_file.
@@ -74,6 +81,8 @@ impl Default for ConsensusConfig {
             consensus_type: ConsensusType::POW,
             miner_rpc_address: "127.0.0.1:4251".to_string(),
             miner_client_enable: true,
+            consensus_rpc_address: "0.0.0.0".to_string(),
+            consensus_rpc_port: 8008,
         }
     }
 }
@@ -115,6 +124,8 @@ impl ConsensusConfig {
             consensus_type: self.consensus_type.clone(),
             miner_rpc_address: self.miner_rpc_address.clone(),
             miner_client_enable: self.miner_client_enable,
+            consensus_rpc_address: self.consensus_rpc_address.clone(),
+            consensus_rpc_port: self.consensus_rpc_port.clone(),
         }
     }
 
@@ -170,6 +181,29 @@ impl ConsensusConfig {
             .save_config(self.consensus_peers_file());
     }
 
+    pub fn take_and_set_key(&mut self) -> Ed25519PrivateKey {
+        let pri_key = self
+            .consensus_keypair
+            .take_private()
+            .expect("pri key is none.");
+        let key_bytes = pri_key.to_bytes();
+        let pri = Ed25519PrivateKey::try_from(key_bytes.to_vec().as_ref())
+            .expect("Ed25519PrivateKey parse err.");
+        self.consensus_keypair = ConsensusKeyPair::load(pri);
+        Ed25519PrivateKey::try_from(key_bytes.to_vec().as_ref())
+            .expect("Ed25519PrivateKey parse err.")
+    }
+
+    pub fn save_key<P: AsRef<Path>>(&mut self, output_file: P) {
+        let pri_key = self.take_and_set_key();
+        let key_bytes = pri_key.to_bytes();
+        let key_base64 = encode(&key_bytes);
+        //let contents = toml::to_vec(&key_base64).expect("Error serializing");
+        let mut file = File::create(output_file).expect("Error opening file");
+        file.write_all(key_base64.as_bytes())
+            .expect("Error writing file");
+    }
+
     pub fn consensus_keypair_file(&self) -> PathBuf {
         self.base.full_path(&self.consensus_keypair_file)
     }
@@ -180,6 +214,7 @@ impl ConsensusConfig {
 
     pub fn randomize_ports(&mut self) {
         self.miner_rpc_address = format!("127.0.0.1:{}", utils::get_available_port());
+        self.consensus_rpc_port = utils::get_available_port();
     }
 
     fn default_peers(keypair: &ConsensusKeyPair, peer_id: PeerId) -> ConsensusPeersConfig {

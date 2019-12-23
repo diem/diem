@@ -2,13 +2,11 @@ use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::pow::block_tree::{BlockTree, CommitData};
 use crate::pow::payload_ext::BlockPayloadExt;
 use crate::state_replication::{StateComputer, TxnManager};
-use atomic_refcell::AtomicRefCell;
 use consensus_types::block::Block;
 use futures::compat::Future01CompatExt;
 use futures::{channel::mpsc, StreamExt};
 use futures_locks::{Mutex, RwLock};
 use itertools;
-use libra_crypto::hash::PRE_GENESIS_BLOCK_ID;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
@@ -23,7 +21,7 @@ use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
 
 pub struct ChainManager {
-    block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
+    //    block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
     block_store: Arc<ConsensusDB>,
     state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
     block_tree: Arc<RwLock<BlockTree>>,
@@ -34,7 +32,7 @@ pub struct ChainManager {
 
 impl ChainManager {
     pub fn new(
-        block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
+        //        block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
         block_store: Arc<ConsensusDB>,
         txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
         state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
@@ -43,39 +41,18 @@ impl ChainManager {
         read_storage: Arc<dyn StorageRead>,
         write_storage: Arc<dyn StorageWrite>,
     ) -> Self {
-        let genesis_block: Block<BlockPayloadExt> = Block::make_genesis_block();
-        let genesis_id = genesis_block.id();
-        let genesis_block_index = BlockIndex::new(&genesis_id, &PRE_GENESIS_BLOCK_ID);
-        let genesis_height = 0;
-
-        //init block_store
-        let mut genesis_qcs = Vec::new();
-        genesis_qcs.push(genesis_block.quorum_cert().clone());
-        block_store
-            .save_blocks_and_quorum_certificates(vec![genesis_block], genesis_qcs)
-            .expect("save blocks failed.");
-
-        //init main chain
-        let mut index_map = HashMap::new();
-        index_map.insert(genesis_height, vec![genesis_block_index.clone()]);
-        let mut hash_height_index = HashMap::new();
-        hash_height_index.insert(genesis_id, (genesis_height, 0));
-        let main_chain = AtomicRefCell::new(HashMap::new());
-        main_chain
-            .borrow_mut()
-            .insert(genesis_height, genesis_block_index);
-
         //orphan block
         let orphan_blocks = Arc::new(Mutex::new(HashMap::new()));
 
         //block tree
-        let block_tree = Arc::new(RwLock::new(BlockTree::new(
+        let block_tree = Arc::new(RwLock::new(BlockTree::new::<BlockPayloadExt>(
             write_storage,
             txn_manager,
             rollback_mode,
+            Arc::clone(&block_store),
         )));
         ChainManager {
-            block_cache_receiver,
+            //            block_cache_receiver,
             block_store,
             state_computer,
             block_tree,
@@ -89,13 +66,17 @@ impl ChainManager {
         //TODO:orphan
     }
 
-    pub fn save_block(&mut self, executor: Handle) {
+    pub fn save_block(
+        &self,
+        mut block_cache_receiver: mpsc::Receiver<Block<BlockPayloadExt>>,
+        executor: Handle,
+    ) {
         let block_db = self.block_store.clone();
         let orphan_blocks = self.orphan_blocks.clone();
-        let mut block_cache_receiver = self
-            .block_cache_receiver
-            .take()
-            .expect("block_cache_receiver is none.");
+        //        let mut block_cache_receiver = self
+        //            .block_cache_receiver
+        //            .take()
+        //            .expect("block_cache_receiver is none.");
         let state_computer = self.state_computer.clone();
         let author = self.author.clone();
         let block_tree = self.block_tree.clone();
@@ -113,7 +94,6 @@ impl ChainManager {
                     // 1. orphan block
                     let parent_block_id = block.parent_id();
                     let block_index = BlockIndex::new(&block.id(), &parent_block_id);
-                    let aa = block.id().clone();
                     let mut chain_lock = block_tree.write().compat().await.unwrap();
                     if chain_lock.block_exist(&parent_block_id) {
                         // 2. find ancestors
@@ -181,14 +161,7 @@ impl ChainManager {
                                         first_version: (txn_len - (commit_len as u64) + 1) as u64,
                                         ledger_info_with_sigs: Some(block.quorum_cert().ledger_info().clone())};
 
-                                    chain_lock.add_block_info(&block.id(), &parent_block_id, block.timestamp_usecs(), processed_vm_output, commit_data).await.expect("add_block_info failed.");
-
-                                    let mut blocks: Vec<Block<BlockPayloadExt>> = Vec::new();
-                                    blocks.push(block.clone());
-                                    let mut qcs = Vec::new();
-                                    qcs.push(block.quorum_cert().clone());
-                                    block_db.save_blocks_and_quorum_certificates(blocks, qcs).expect("save_blocks err.");
-
+                                    chain_lock.add_block_info(block, &parent_block_id, processed_vm_output, commit_data).await.expect("add_block_info failed.");
                                     chain_lock.print_block_chain_root(author);
                                 } else {
                                     warn!("Peer id {:?}, Drop block {:?}, block version is {}, vm output version is {}", author, block.id(),
