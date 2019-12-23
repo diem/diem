@@ -630,7 +630,7 @@ pub type TestAccumulatorRangeProof = AccumulatorRangeProof<TestOnlyHasher>;
 ///
 /// if the proof wants show that `[a, b, c, d, e]` exists in the tree, it would need the siblings
 /// `X` and `h` on the right.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SparseMerkleRangeProof {
     /// The vector of siblings on the right of the path from root to last leaf. The ones near the
     /// bottom are at the beginning of the vector. In the above example, it's `[X, h]`.

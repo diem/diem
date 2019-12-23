@@ -15,10 +15,10 @@ pub trait Adapter {
     /// finished.
     async fn write_new_file(
         &self,
-        content: impl StreamExt<Item = Vec<u8>> + Send + Unpin + 'async_trait,
+        content: impl StreamExt<Item = Vec<u8>> + Send + 'async_trait,
     ) -> Result<FileHandle>;
 
     /// Returns the content of the file in a stream.
     #[allow(clippy::ptr_arg)]
-    fn read_file_content(&self, file_handle: &FileHandle) -> BoxStream<Result<Vec<u8>>>;
+    fn read_file_content(file_handle: &FileHandle) -> BoxStream<Result<Vec<u8>>>;
 }

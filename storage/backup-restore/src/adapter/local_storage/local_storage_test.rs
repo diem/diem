@@ -21,7 +21,7 @@ proptest! {
 
         for (handle, expected_content) in itertools::zip_eq(file_handles, contents) {
             let mut actual_content = vec![];
-            for res in block_on_stream(adapter.read_file_content(&handle)) {
+            for res in block_on_stream(LocalStorage::read_file_content(&handle)) {
                 let bytes = res.unwrap();
                 actual_content.extend_from_slice(&bytes);
             }

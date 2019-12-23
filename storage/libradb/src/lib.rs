@@ -44,7 +44,7 @@ use crate::{
 };
 use anyhow::{bail, ensure, Result};
 use itertools::{izip, zip_eq};
-use jellyfish_merkle::iterator::JellyfishMerkleIterator;
+use jellyfish_merkle::{iterator::JellyfishMerkleIterator, restore::JellyfishMerkleRestore};
 use lazy_static::lazy_static;
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_logger::prelude::*;
@@ -782,6 +782,21 @@ impl LibraDB {
     ) -> Result<SparseMerkleRangeProof> {
         self.state_store
             .get_account_state_range_proof(rightmost_key, version)
+    }
+
+    pub fn restore_account_state(
+        &self,
+        iter: impl Iterator<Item = (Vec<(HashValue, AccountStateBlob)>, SparseMerkleRangeProof)>,
+        version: Version,
+        expected_root_hash: HashValue,
+    ) -> Result<()> {
+        let mut restore =
+            JellyfishMerkleRestore::new(&*self.state_store, version, expected_root_hash)?;
+        for (chunk, proof) in iter {
+            restore.add_chunk(chunk, proof)?;
+        }
+        restore.finish()?;
+        Ok(())
     }
 
     // ================================== Private APIs ==================================
