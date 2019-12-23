@@ -60,7 +60,6 @@ impl Default for NetworkConfig {
     fn default() -> Self {
         let keypair = NetworkKeyPairs::default();
         let peer_id = PeerId::try_from(keypair.identity_keys.public().to_bytes()).unwrap();
-        let peers = Self::default_peers(&keypair, &peer_id);
 
         Self {
             peer_id,
@@ -73,7 +72,7 @@ impl Default for NetworkConfig {
             network_keypairs_file: PathBuf::new(),
             network_keypairs: keypair,
             network_peers_file: PathBuf::new(),
-            network_peers: peers,
+            network_peers: NetworkPeersConfig::default(),
             seed_peers_file: PathBuf::new(),
             seed_peers: SeedPeersConfig::default(),
         }
@@ -132,10 +131,21 @@ impl NetworkConfig {
             self.peer_id = key_peer_id;
         }
 
-        ensure!(
-            network_role.is_validator() || !self.is_permissioned || self.peer_id == key_peer_id,
-            "For permissioned, full-node networks, the peer_id should be derived from the identity key.",
-        );
+        if network_role.is_validator() {
+            ensure!(
+                self.network_peers_file.as_os_str().is_empty(),
+                "Validators should not define network_peers_file"
+            );
+            ensure!(
+                self.network_peers.peers.is_empty(),
+                "Validators should not define network_peers"
+            );
+        } else if self.is_permissioned {
+            ensure!(
+                self.peer_id == key_peer_id,
+                "For permissioned, full-node networks, the peer_id must be derived from the identity key.",
+            );
+        }
         Ok(())
     }
 
@@ -153,12 +163,14 @@ impl NetworkConfig {
             self.network_keypairs.save_config(&path)?;
         }
 
-        if self.network_peers_file.as_os_str().is_empty() {
-            let file_name = self.default_path(NETWORK_PEERS_DEFAULT);
-            self.network_peers_file = PathBuf::from(file_name);
+        if self.network_peers != NetworkPeersConfig::default() {
+            if self.network_peers_file.as_os_str().is_empty() {
+                let file_name = self.default_path(NETWORK_PEERS_DEFAULT);
+                self.network_peers_file = PathBuf::from(file_name);
+            }
+            let path = root_dir.full_path(&self.network_peers_file);
+            self.network_peers.save_config(&path)?;
         }
-        let path = root_dir.full_path(&self.network_peers_file);
-        self.network_peers.save_config(&path)?;
 
         if self.seed_peers_file.as_os_str().is_empty() {
             let file_name = self.default_path(SEED_PEERS_DEFAULT);
@@ -183,24 +195,11 @@ impl NetworkConfig {
             PeerId::try_from(network_keypairs.identity_keys.public().to_bytes()).unwrap()
         };
         self.network_keypairs = network_keypairs;
-        self.network_peers = Self::default_peers(&self.network_keypairs, &self.peer_id);
     }
 
     pub fn set_default_peer_id(&mut self) {
         self.peer_id =
             PeerId::try_from(self.network_keypairs.identity_keys.public().to_bytes()).unwrap();
-    }
-
-    fn default_peers(keypair: &NetworkKeyPairs, peer_id: &PeerId) -> NetworkPeersConfig {
-        let mut peers = NetworkPeersConfig::default();
-        peers.peers.insert(
-            peer_id.clone(),
-            NetworkPeerInfo {
-                identity_public_key: keypair.identity_keys.public().clone(),
-                signing_public_key: keypair.signing_keys.public().clone(),
-            },
-        );
-        peers
     }
 }
 
@@ -275,7 +274,7 @@ mod test {
     fn test_with_defaults() {
         let keypair = NetworkKeyPairs::default();
         let peer_id = PeerId::try_from(keypair.identity_keys.public().to_bytes()).unwrap();
-        let peers = NetworkConfig::default_peers(&keypair, &peer_id);
+        let peers = default_network_peers(&keypair, peer_id);
 
         // Assert default exists
         let (mut config, path) = generate_config();
@@ -288,7 +287,7 @@ mod test {
 
         // Assert default loading doesn't affect paths and defaults remain in place
         let root_dir = RootPath::new_path(path.path());
-        config.load(&root_dir, RoleType::Validator).unwrap();
+        config.load(&root_dir, RoleType::FullNode).unwrap();
         assert_eq!(config.network_peers, peers);
         assert_eq!(config.network_peers_file, PathBuf::new());
         assert_eq!(config.network_keypairs, NetworkKeyPairs::default());
@@ -318,6 +317,7 @@ mod test {
     #[test]
     fn test_with_random() {
         let (mut config, path) = generate_config();
+        config.network_peers = NetworkPeersConfig::default();
         let mut rng = StdRng::from_seed([5u8; 32]);
         config.random(&mut rng);
         // This is default (empty) otherwise
@@ -341,10 +341,7 @@ mod test {
             PathBuf::from(config.default_path(NETWORK_KEYPAIRS_DEFAULT))
         );
         assert_eq!(config.network_peers, peers);
-        assert_eq!(
-            config.network_peers_file,
-            PathBuf::from(config.default_path(NETWORK_PEERS_DEFAULT))
-        );
+        assert_eq!(config.network_peers_file, PathBuf::new(),);
         assert_eq!(config.seed_peers, seed_peers);
         assert_eq!(
             config.seed_peers_file,
@@ -360,17 +357,14 @@ mod test {
         assert_eq!(new_config.seed_peers_file, PathBuf::new());
         // Loading populates things correctly
         let result = new_config.load(&root_dir, RoleType::Validator);
-        assert!(result.is_ok());
+        result.unwrap();
         assert_eq!(config.network_keypairs, keypairs);
         assert_eq!(
             config.network_keypairs_file,
             PathBuf::from(config.default_path(NETWORK_KEYPAIRS_DEFAULT))
         );
         assert_eq!(config.network_peers, peers);
-        assert_eq!(
-            config.network_peers_file,
-            PathBuf::from(config.default_path(NETWORK_PEERS_DEFAULT))
-        );
+        assert_eq!(config.network_peers_file, PathBuf::new(),);
         assert_eq!(config.seed_peers, seed_peers);
         assert_eq!(
             config.seed_peers_file,
@@ -404,7 +398,20 @@ mod test {
     fn generate_config() -> (NetworkConfig, TempPath) {
         let temp_dir = TempPath::new();
         temp_dir.create_as_dir().expect("error creating tempdir");
-        let network_config = NetworkConfig::default();
-        (network_config, temp_dir)
+        let mut config = NetworkConfig::default();
+        config.network_peers = default_network_peers(&config.network_keypairs, config.peer_id);
+        (config, temp_dir)
+    }
+
+    fn default_network_peers(keypair: &NetworkKeyPairs, peer_id: PeerId) -> NetworkPeersConfig {
+        let mut peers = NetworkPeersConfig::default();
+        peers.peers.insert(
+            peer_id,
+            NetworkPeerInfo {
+                identity_public_key: keypair.identity_keys.public().clone(),
+                signing_public_key: keypair.signing_keys.public().clone(),
+            },
+        );
+        peers
     }
 }
