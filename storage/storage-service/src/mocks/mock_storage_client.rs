@@ -110,7 +110,7 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
-    fn backup_account_state(
+    async fn backup_account_state(
         &self,
         _version: u64,
     ) -> Result<BoxStream<'_, Result<BackupAccountStateResponse, Error>>> {

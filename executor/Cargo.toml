@@ -34,12 +34,10 @@ libra-types = { path = "../types", version = "0.1.0" }
 vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
 
 [dev-dependencies]
-grpcio = { version = "=0.5.0-alpha.4", default-features = false }
 proptest = "0.9.2"
 rand = "0.6.5"
 rusty-fork = "0.2.1"
 
-grpc-helpers = { path = "../common/grpc-helpers", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }

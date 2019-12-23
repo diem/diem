@@ -5,7 +5,6 @@ use crate::{
     core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool,
     shared_mempool::start_shared_mempool,
 };
-use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
 use std::{
@@ -43,7 +42,6 @@ impl MempoolRuntime {
         };
         // setup shared mempool
         let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-            Arc::new(EnvBuilder::new().name_prefix("grpc-mem-sto-").build()),
             "localhost",
             config.storage.port,
         ));

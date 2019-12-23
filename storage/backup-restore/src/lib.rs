@@ -21,7 +21,7 @@ pub async fn backup_account_state(
     let mut chunk = vec![];
     let mut ret = vec![];
 
-    let mut account_stream = client.backup_account_state(version)?;
+    let mut account_stream = client.backup_account_state(version).await?;
     let mut prev_key = None;
     while let Some(resp) = account_stream.next().await.transpose()? {
         let key = resp.account_key;

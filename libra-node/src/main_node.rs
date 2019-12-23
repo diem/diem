@@ -9,8 +9,6 @@ use debug_interface::{
 };
 use executor::Executor;
 use futures::executor::block_on;
-use grpc_helpers::ServerHandle;
-use grpcio::EnvBuilder;
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
@@ -33,7 +31,7 @@ use state_synchronizer::StateSynchronizer;
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::{sync::Arc, thread, time::Instant};
-use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
+use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
 use vm_runtime::LibraVM;
@@ -44,7 +42,7 @@ pub struct LibraHandle {
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
     consensus: Option<Box<dyn ConsensusProvider>>,
-    _storage: ServerHandle,
+    _storage: Runtime,
     _debug: Runtime,
 }
 
@@ -57,21 +55,17 @@ impl Drop for LibraHandle {
 }
 
 fn setup_executor(config: &NodeConfig) -> Arc<Executor<LibraVM>> {
-    let client_env = Arc::new(EnvBuilder::new().name_prefix("grpc-exe-sto-").build());
     let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        Arc::clone(&client_env),
         &config.storage.address,
         config.storage.port,
     ));
     let storage_write_client = Arc::new(StorageWriteServiceClient::new(
-        Arc::clone(&client_env),
         &config.storage.address,
         config.storage.port,
-        config.storage.grpc_max_receive_len,
     ));
 
     Arc::new(Executor::new(
-        Arc::clone(&storage_read_client) as Arc<dyn StorageRead>,
+        storage_read_client,
         storage_write_client,
         config,
     ))
