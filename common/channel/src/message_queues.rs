@@ -95,8 +95,9 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
     }
 
     /// push a message to the appropriate queue in per_key_queue
-    /// add the key to round_robin_queue if it didnt already exist
-    pub(crate) fn push(&mut self, key: K, message: T) {
+    /// add the key to round_robin_queue if it didnt already exist.
+    /// Returns Some(T) if the new or an existing element was dropped. Returns None otherwise.
+    pub(crate) fn push(&mut self, key: K, message: T) -> Option<T> {
         if let Some(c) = self.counters.as_ref() {
             c.with_label_values(&["enqueued"]).inc();
         }
@@ -116,15 +117,17 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
             }
             match self.queue_style {
                 // Drop the newest message for FIFO
-                QueueStyle::FIFO => (),
+                QueueStyle::FIFO => Some(message),
                 // Drop the oldest message for LIFO
                 QueueStyle::LIFO => {
-                    key_message_queue.pop_front();
+                    let oldest = key_message_queue.pop_front();
                     key_message_queue.push_back(message);
+                    oldest
                 }
-            };
+            }
         } else {
             key_message_queue.push_back(message);
+            None
         }
     }
 
