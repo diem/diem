@@ -37,6 +37,9 @@ grpc_max_receive_len = 100000000
 [test.account_keypair]
 private_key = "82001573a003fd3b7fd72ffb0eaf63aac62f12deb629dca72785a66268ec758b"
 public_key = "664f6e8f36eacb1770fa879d86c2c1d0fafea145e84fa7d671ab7a011a54d509"
+[test.consensus_keypair]
+private_key = "f9e1b4bd35cff88f047043aebedfbd310bb6ca762040ac51c28203fb1873e539"
+public_key = "66535c0f4f9242ea8f9ff7f68b4f50b7c9d8e7961a41cf216124b33a325505ff"
 
 [validator_network]
 peer_id = "dde866d21d22926429919efe44436af450c69e62826119143baad55bb0319403"
@@ -54,8 +57,6 @@ seed_peers_file = ""
 max_block_size = 100
 proposer_type = "multiple_ordered_proposers"
 contiguous_rounds = 2
-consensus_keypair_file = ""
-consensus_peers_file = ""
 [consensus.safety_rules.backend]
 type = "in_memory_storage"
 
