@@ -41,7 +41,7 @@ struct SharedState<K: Eq + Hash + Clone, M> {
 }
 
 /// The sending end of the libra_channel.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Sender<K: Eq + Hash + Clone, M> {
     shared_state: Arc<Mutex<SharedState<K, M>>>,
 }
@@ -58,6 +58,14 @@ impl<K: Eq + Hash + Clone, M> Sender<K, M> {
             w.wake();
         }
         Ok(())
+    }
+}
+
+impl<K: Eq + Hash + Clone, M> Clone for Sender<K, M> {
+    fn clone(&self) -> Self {
+        Sender {
+            shared_state: self.shared_state.clone(),
+        }
     }
 }
 
