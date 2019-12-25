@@ -1,0 +1,1100 @@
+1
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 1 threads
+  50-cycle found at 0:92%
+ 930-cycle found at 0:99%
+ 786-cycle found at 0:99%
+ 132-cycle found at 0:99%
+ 2064-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 1 threads
+   6-cycle found at 0:99%
+  36-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 1 threads
+   8-cycle found at 0:68%
+   8-cycle found at 0:97%
+ 468-cycle found at 0:99%
+  98-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 1 threads
+ 188-cycle found at 0:99%
+ 146-cycle found at 0:99%
+ 126-cycle found at 0:99%
+ 2510-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 1 threads
+  14-cycle found at 0:98%
+  60-cycle found at 0:99%
+ 164-cycle found at 0:99%
+  28-cycle found at 0:99%
+ 316-cycle found at 0:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 1 threads
+  16-cycle found at 0:87%
+  14-cycle found at 0:97%
+  36-cycle found at 0:99%
+ 636-cycle found at 0:99%
+ 3050-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 1 threads
+   6-cycle found at 0:73%
+  20-cycle found at 0:99%
+  76-cycle found at 0:99%
+ 410-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 1 threads
+  16-cycle found at 0:94%
+ 854-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 1 threads
+ 968-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 1 threads
+   4-cycle found at 0:71%
+  46-cycle found at 0:98%
+ 198-cycle found at 0:99%
+ 150-cycle found at 0:99%
+ 1608-cycle found at 0:99%
+ 222-cycle found at 0:99%
+ 3158-cycle found at 0:99%
+
+real	160m51.398s
+user	159m41.163s
+sys	1m1.252s
+2
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 2 threads
+  50-cycle found at 0:92%
+ 786-cycle found at 0:99%
+ 930-cycle found at 0:99%
+ 132-cycle found at 0:99%
+ 2064-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 2 threads
+   6-cycle found at 0:99%
+  36-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 2 threads
+   8-cycle found at 1:68%
+   8-cycle found at 0:96%
+ 468-cycle found at 0:98%
+  98-cycle found at 0:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 2 threads
+ 146-cycle found at 0:95%
+ 188-cycle found at 0:99%
+ 126-cycle found at 0:99%
+ 2510-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 2 threads
+  14-cycle found at 0:81%
+  60-cycle found at 0:95%
+ 164-cycle found at 0:97%
+ 316-cycle found at 0:99%
+  28-cycle found at 0:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 2 threads
+  16-cycle found at 0:87%
+  14-cycle found at 0:97%
+ 636-cycle found at 0:99%
+  36-cycle found at 0:99%
+ 3538-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 2 threads
+   6-cycle found at 0:64%
+  20-cycle found at 0:82%
+ 410-cycle found at 0:99%
+  76-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 2 threads
+  16-cycle found at 1:94%
+ 854-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 2 threads
+ 968-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 2 threads
+   4-cycle found at 1:71%
+  46-cycle found at 0:98%
+ 198-cycle found at 0:98%
+ 150-cycle found at 0:98%
+ 222-cycle found at 0:99%
+ 1608-cycle found at 0:99%
+ 3158-cycle found at 0:99%
+
+real	91m48.945s
+user	125m41.291s
+sys	1m2.512s
+3
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 3 threads
+  50-cycle found at 0:92%
+ 930-cycle found at 2:99%
+ 132-cycle found at 2:99%
+ 786-cycle found at 2:99%
+ 2064-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 3 threads
+  36-cycle found at 2:98%
+   6-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 3 threads
+   8-cycle found at 2:68%
+  98-cycle found at 0:98%
+   8-cycle found at 2:97%
+ 468-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 3 threads
+ 146-cycle found at 2:94%
+ 126-cycle found at 2:96%
+ 188-cycle found at 2:97%
+ 2510-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 3 threads
+  28-cycle found at 0:99%
+  56-cycle found at 0:99%
+  60-cycle found at 2:95%
+  14-cycle found at 2:98%
+ 316-cycle found at 2:99%
+ 164-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 3 threads
+  16-cycle found at 0:85%
+  14-cycle found at 2:97%
+  36-cycle found at 0:96%
+ 3050-cycle found at 0:99%
+ 636-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 3 threads
+   6-cycle found at 1:73%
+  76-cycle found at 2:92%
+  20-cycle found at 0:99%
+ 410-cycle found at 2:97%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 3 threads
+  16-cycle found at 0:94%
+ 854-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 3 threads
+ 968-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 3 threads
+   4-cycle found at 2:71%
+  46-cycle found at 2:98%
+ 198-cycle found at 2:98%
+ 150-cycle found at 2:98%
+ 1608-cycle found at 2:99%
+ 222-cycle found at 2:99%
+ 3158-cycle found at 2:99%
+
+real	57m10.579s
+user	116m37.621s
+sys	1m1.620s
+4
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 4 threads
+  50-cycle found at 0:92%
+ 930-cycle found at 2:98%
+ 786-cycle found at 2:99%
+ 2064-cycle found at 2:99%
+ 132-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 4 threads
+   6-cycle found at 0:99%
+  36-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 4 threads
+   8-cycle found at 1:68%
+  98-cycle found at 2:93%
+   8-cycle found at 2:96%
+ 468-cycle found at 2:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 4 threads
+ 146-cycle found at 2:95%
+ 126-cycle found at 2:96%
+ 188-cycle found at 2:99%
+ 2510-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 4 threads
+  14-cycle found at 2:81%
+  60-cycle found at 2:95%
+ 164-cycle found at 2:97%
+  56-cycle found at 2:98%
+  28-cycle found at 2:98%
+ 316-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 4 threads
+  16-cycle found at 0:87%
+  14-cycle found at 0:97%
+  36-cycle found at 0:98%
+ 636-cycle found at 0:98%
+ 3050-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 4 threads
+   6-cycle found at 2:64%
+  20-cycle found at 2:82%
+  76-cycle found at 2:95%
+ 410-cycle found at 2:97%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 4 threads
+  16-cycle found at 1:94%
+ 854-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 4 threads
+ 968-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 4 threads
+   4-cycle found at 3:71%
+ 222-cycle found at 2:94%
+ 198-cycle found at 2:94%
+  46-cycle found at 2:98%
+ 150-cycle found at 2:98%
+ 3158-cycle found at 2:99%
+ 1608-cycle found at 2:99%
+
+real	46m46.757s
+user	113m34.450s
+sys	1m0.880s
+5
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 5 threads
+  50-cycle found at 0:92%
+ 930-cycle found at 2:99%
+ 786-cycle found at 4:99%
+ 2064-cycle found at 4:99%
+ 132-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 5 threads
+   6-cycle found at 1:99%
+  36-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 5 threads
+   8-cycle found at 4:68%
+   8-cycle found at 2:97%
+ 468-cycle found at 0:98%
+  98-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 5 threads
+ 126-cycle found at 4:94%
+ 146-cycle found at 0:99%
+ 188-cycle found at 2:99%
+ 2510-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 5 threads
+  14-cycle found at 4:98%
+  56-cycle found at 2:98%
+  28-cycle found at 0:99%
+  60-cycle found at 2:99%
+ 164-cycle found at 2:99%
+ 316-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 5 threads
+  16-cycle found at 2:87%
+  14-cycle found at 2:97%
+  36-cycle found at 4:98%
+ 3050-cycle found at 4:99%
+ 636-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 5 threads
+   6-cycle found at 1:73%
+  20-cycle found at 4:99%
+  76-cycle found at 0:99%
+ 410-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 5 threads
+  16-cycle found at 3:94%
+ 854-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 5 threads
+ 968-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 5 threads
+   4-cycle found at 1:71%
+  46-cycle found at 3:98%
+ 150-cycle found at 2:98%
+ 198-cycle found at 4:99%
+ 1608-cycle found at 4:99%
+ 222-cycle found at 4:99%
+ 3158-cycle found at 2:99%
+
+real	27m41.269s
+user	113m36.738s
+sys	1m10.672s
+6
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 6 threads
+  50-cycle found at 0:92%
+ 786-cycle found at 0:99%
+ 132-cycle found at 0:99%
+ 930-cycle found at 0:99%
+ 2064-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 6 threads
+  36-cycle found at 0:99%
+   6-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 6 threads
+   8-cycle found at 5:68%
+   8-cycle found at 2:96%
+  98-cycle found at 0:98%
+ 468-cycle found at 4:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 6 threads
+ 146-cycle found at 0:95%
+ 188-cycle found at 4:99%
+ 126-cycle found at 4:99%
+ 2510-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 6 threads
+  14-cycle found at 5:98%
+  60-cycle found at 0:95%
+ 164-cycle found at 2:97%
+  28-cycle found at 0:99%
+ 316-cycle found at 2:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 6 threads
+  16-cycle found at 2:87%
+  14-cycle found at 2:97%
+ 636-cycle found at 4:99%
+  36-cycle found at 2:99%
+ 3538-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 6 threads
+   6-cycle found at 1:73%
+  20-cycle found at 3:99%
+ 410-cycle found at 4:99%
+  76-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 6 threads
+  16-cycle found at 3:94%
+ 854-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 6 threads
+ 968-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 6 threads
+   4-cycle found at 5:71%
+  46-cycle found at 2:98%
+ 198-cycle found at 2:98%
+ 150-cycle found at 4:98%
+ 222-cycle found at 4:99%
+ 1608-cycle found at 4:99%
+ 3158-cycle found at 4:99%
+
+real	23m47.349s
+user	113m45.359s
+sys	1m11.532s
+7
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 7 threads
+  50-cycle found at 4:92%
+ 930-cycle found at 6:98%
+ 132-cycle found at 4:99%
+ 786-cycle found at 4:99%
+ 2064-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 7 threads
+  36-cycle found at 4:98%
+   6-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 7 threads
+   8-cycle found at 0:68%
+   8-cycle found at 6:97%
+ 468-cycle found at 0:98%
+  98-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 7 threads
+ 126-cycle found at 4:96%
+ 146-cycle found at 2:99%
+ 188-cycle found at 4:99%
+ 2510-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 7 threads
+  14-cycle found at 5:98%
+ 164-cycle found at 2:99%
+  28-cycle found at 6:99%
+  60-cycle found at 4:99%
+ 316-cycle found at 4:99%
+  56-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 7 threads
+  16-cycle found at 2:87%
+  14-cycle found at 6:97%
+  36-cycle found at 2:99%
+ 3050-cycle found at 2:99%
+ 636-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 7 threads
+   6-cycle found at 1:73%
+  20-cycle found at 5:99%
+  76-cycle found at 6:95%
+ 410-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 7 threads
+  16-cycle found at 4:94%
+ 854-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 7 threads
+ 968-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 7 threads
+   4-cycle found at 6:71%
+  46-cycle found at 6:98%
+ 150-cycle found at 0:98%
+ 198-cycle found at 2:99%
+ 1608-cycle found at 6:99%
+ 222-cycle found at 6:99%
+ 2956-cycle found at 2:99%
+
+real	20m48.188s
+user	115m35.125s
+sys	1m10.800s
+8
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 8 threads
+  50-cycle found at 4:92%
+ 132-cycle found at 2:99%
+ 786-cycle found at 4:99%
+ 930-cycle found at 4:99%
+ 2064-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 8 threads
+  36-cycle found at 2:99%
+   6-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 8 threads
+   8-cycle found at 5:68%
+   8-cycle found at 6:96%
+ 468-cycle found at 2:98%
+  98-cycle found at 4:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 8 threads
+ 146-cycle found at 2:95%
+ 126-cycle found at 0:99%
+ 188-cycle found at 2:99%
+ 2510-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 8 threads
+  14-cycle found at 5:98%
+  60-cycle found at 2:95%
+ 164-cycle found at 2:97%
+ 316-cycle found at 4:99%
+  28-cycle found at 0:99%
+  56-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 8 threads
+  16-cycle found at 0:87%
+  14-cycle found at 4:97%
+  36-cycle found at 2:99%
+ 636-cycle found at 6:99%
+ 3538-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 8 threads
+   6-cycle found at 7:73%
+  20-cycle found at 1:99%
+ 410-cycle found at 0:99%
+  76-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 8 threads
+  16-cycle found at 5:94%
+ 854-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 8 threads
+ 968-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 8 threads
+   4-cycle found at 3:71%
+  46-cycle found at 2:98%
+ 198-cycle found at 4:98%
+ 150-cycle found at 6:98%
+ 3158-cycle found at 6:99%
+ 2956-cycle found at 6:99%
+ 222-cycle found at 0:99%
+
+real	18m33.288s
+user	115m8.772s
+sys	1m10.628s
+9
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 9 threads
+  50-cycle found at 4:92%
+ 132-cycle found at 8:98%
+ 930-cycle found at 8:99%
+ 2064-cycle found at 2:99%
+ 786-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 9 threads
+   6-cycle found at 8:99%
+  36-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 9 threads
+   8-cycle found at 8:68%
+  98-cycle found at 4:95%
+   8-cycle found at 8:97%
+ 468-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 9 threads
+ 126-cycle found at 2:94%
+ 146-cycle found at 4:99%
+ 188-cycle found at 6:99%
+ 2510-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 9 threads
+  14-cycle found at 8:98%
+  28-cycle found at 4:99%
+  60-cycle found at 6:99%
+ 316-cycle found at 8:99%
+ 164-cycle found at 8:99%
+  56-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 9 threads
+  16-cycle found at 8:87%
+  14-cycle found at 5:97%
+ 636-cycle found at 2:99%
+ 3050-cycle found at 6:99%
+  36-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 9 threads
+   6-cycle found at 4:73%
+  76-cycle found at 0:97%
+ 410-cycle found at 2:97%
+  20-cycle found at 6:97%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 9 threads
+  16-cycle found at 0:94%
+ 854-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 9 threads
+ 968-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 9 threads
+   4-cycle found at 5:71%
+  46-cycle found at 8:98%
+ 198-cycle found at 0:99%
+ 222-cycle found at 8:99%
+ 2956-cycle found at 4:99%
+ 1608-cycle found at 4:99%
+ 150-cycle found at 4:99%
+
+real	16m40.611s
+user	116m1.555s
+sys	1m10.824s
+10
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 10 threads
+  50-cycle found at 0:92%
+ 930-cycle found at 0:99%
+ 786-cycle found at 9:99%
+ 2064-cycle found at 4:99%
+ 132-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 10 threads
+   6-cycle found at 6:99%
+  36-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 10 threads
+   8-cycle found at 9:68%
+   8-cycle found at 8:96%
+ 468-cycle found at 8:98%
+  98-cycle found at 8:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 10 threads
+ 146-cycle found at 8:95%
+ 188-cycle found at 6:99%
+ 2510-cycle found at 4:99%
+ 126-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 10 threads
+  14-cycle found at 9:98%
+  60-cycle found at 6:95%
+ 164-cycle found at 4:97%
+ 316-cycle found at 6:99%
+  28-cycle found at 8:99%
+  56-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 10 threads
+  16-cycle found at 2:87%
+  14-cycle found at 2:97%
+ 636-cycle found at 8:99%
+  36-cycle found at 6:99%
+ 3538-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 10 threads
+   6-cycle found at 1:73%
+  20-cycle found at 9:99%
+  76-cycle found at 0:99%
+ 410-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 10 threads
+  16-cycle found at 3:94%
+ 854-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 10 threads
+ 968-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 10 threads
+   4-cycle found at 1:71%
+ 198-cycle found at 0:98%
+  46-cycle found at 8:98%
+ 150-cycle found at 2:98%
+ 1608-cycle found at 6:99%
+ 2956-cycle found at 6:99%
+ 222-cycle found at 6:99%
+
+real	15m22.707s
+user	115m55.335s
+sys	1m12.709s
+11
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 11 threads
+  50-cycle found at 6:92%
+ 786-cycle found at 8:99%
+ 930-cycle found at 10:99%
+ 2064-cycle found at 10:99%
+ 132-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 11 threads
+  36-cycle found at 6:98%
+   6-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 11 threads
+   8-cycle found at 10:68%
+   8-cycle found at 2:96%
+ 468-cycle found at 10:98%
+  98-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 11 threads
+ 126-cycle found at 8:96%
+ 146-cycle found at 4:98%
+ 188-cycle found at 0:99%
+ 2510-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 11 threads
+  60-cycle found at 6:95%
+  14-cycle found at 8:98%
+ 316-cycle found at 0:99%
+  56-cycle found at 4:99%
+ 164-cycle found at 10:99%
+  28-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 11 threads
+  16-cycle found at 6:87%
+  14-cycle found at 9:97%
+  36-cycle found at 10:98%
+ 3050-cycle found at 10:99%
+ 636-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 11 threads
+   6-cycle found at 0:73%
+  20-cycle found at 5:99%
+ 410-cycle found at 10:98%
+  76-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 11 threads
+  16-cycle found at 10:94%
+ 854-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 11 threads
+ 968-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 11 threads
+   4-cycle found at 7:71%
+  46-cycle found at 8:97%
+ 198-cycle found at 4:99%
+ 150-cycle found at 8:99%
+ 222-cycle found at 8:99%
+ 1608-cycle found at 10:99%
+ 2956-cycle found at 4:99%
+
+real	14m10.501s
+user	117m14.428s
+sys	1m12.965s
+12
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 12 threads
+  50-cycle found at 0:92%
+ 930-cycle found at 0:99%
+ 786-cycle found at 10:99%
+ 2064-cycle found at 8:99%
+ 132-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 12 threads
+  36-cycle found at 6:99%
+   6-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 12 threads
+   8-cycle found at 5:68%
+   8-cycle found at 2:96%
+  98-cycle found at 0:98%
+ 468-cycle found at 10:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 12 threads
+ 146-cycle found at 6:95%
+ 126-cycle found at 2:96%
+ 188-cycle found at 10:99%
+ 2510-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 12 threads
+  14-cycle found at 5:98%
+  60-cycle found at 6:95%
+ 164-cycle found at 2:97%
+  28-cycle found at 0:99%
+ 316-cycle found at 8:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 12 threads
+  16-cycle found at 8:87%
+  14-cycle found at 8:97%
+  36-cycle found at 2:99%
+ 636-cycle found at 10:99%
+ 3538-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 12 threads
+   6-cycle found at 7:73%
+  20-cycle found at 9:99%
+ 410-cycle found at 4:99%
+  76-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 12 threads
+  16-cycle found at 9:94%
+ 854-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 12 threads
+ 968-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 12 threads
+   4-cycle found at 11:71%
+  46-cycle found at 2:98%
+ 198-cycle found at 8:98%
+ 150-cycle found at 10:98%
+ 222-cycle found at 4:99%
+ 3158-cycle found at 10:99%
+ 2956-cycle found at 10:99%
+
+real	13m19.178s
+user	117m27.916s
+sys	1m14.781s
+13
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 13 threads
+  50-cycle found at 11:92%
+ 132-cycle found at 0:99%
+ 930-cycle found at 12:99%
+ 786-cycle found at 12:99%
+ 2064-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 13 threads
+   6-cycle found at 9:99%
+  36-cycle found at 2:97%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 13 threads
+   8-cycle found at 11:68%
+   8-cycle found at 12:97%
+  98-cycle found at 0:99%
+ 468-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 13 threads
+ 146-cycle found at 6:98%
+ 126-cycle found at 2:99%
+ 188-cycle found at 4:99%
+ 2510-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 13 threads
+  14-cycle found at 1:98%
+ 164-cycle found at 8:99%
+  28-cycle found at 8:99%
+  60-cycle found at 10:99%
+  56-cycle found at 8:99%
+ 316-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 13 threads
+  16-cycle found at 10:87%
+  14-cycle found at 10:97%
+  36-cycle found at 6:98%
+ 636-cycle found at 12:99%
+ 3050-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 13 threads
+   6-cycle found at 5:73%
+  76-cycle found at 2:97%
+  20-cycle found at 4:99%
+ 410-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 13 threads
+  16-cycle found at 3:94%
+ 854-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 13 threads
+ 968-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 13 threads
+   4-cycle found at 11:71%
+  46-cycle found at 4:98%
+ 150-cycle found at 6:98%
+ 198-cycle found at 10:99%
+ 1608-cycle found at 12:99%
+ 222-cycle found at 6:99%
+ 2956-cycle found at 12:99%
+
+real	12m16.358s
+user	117m15.092s
+sys	1m13.257s
+14
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 14 threads
+  50-cycle found at 4:92%
+ 132-cycle found at 2:99%
+ 786-cycle found at 12:99%
+ 2064-cycle found at 4:99%
+ 930-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 14 threads
+   6-cycle found at 6:99%
+  36-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 14 threads
+   8-cycle found at 7:68%
+   8-cycle found at 4:96%
+ 468-cycle found at 0:98%
+  98-cycle found at 8:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 14 threads
+ 146-cycle found at 0:95%
+ 188-cycle found at 6:99%
+ 126-cycle found at 10:99%
+ 2510-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 14 threads
+  14-cycle found at 5:98%
+  60-cycle found at 4:95%
+ 164-cycle found at 6:97%
+ 316-cycle found at 4:99%
+  56-cycle found at 6:99%
+  28-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 14 threads
+  16-cycle found at 2:87%
+  14-cycle found at 6:97%
+ 636-cycle found at 2:99%
+  36-cycle found at 2:99%
+ 3538-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 14 threads
+   6-cycle found at 1:73%
+  20-cycle found at 5:99%
+ 410-cycle found at 8:99%
+  76-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 14 threads
+  16-cycle found at 11:94%
+ 854-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 14 threads
+ 968-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 14 threads
+   4-cycle found at 13:71%
+ 198-cycle found at 2:98%
+  46-cycle found at 6:98%
+ 150-cycle found at 0:98%
+ 1608-cycle found at 8:99%
+ 222-cycle found at 12:99%
+ 3158-cycle found at 12:99%
+
+real	11m46.399s
+user	118m53.774s
+sys	1m11.728s
+15
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 15 threads
+  50-cycle found at 0:92%
+ 930-cycle found at 0:99%
+ 132-cycle found at 4:99%
+ 786-cycle found at 12:99%
+ 2064-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 15 threads
+   6-cycle found at 11:99%
+  36-cycle found at 8:98%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 15 threads
+   8-cycle found at 14:68%
+  98-cycle found at 7:99%
+   8-cycle found at 2:97%
+ 468-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 15 threads
+ 126-cycle found at 8:96%
+ 188-cycle found at 6:99%
+ 146-cycle found at 10:99%
+ 2510-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 15 threads
+ 164-cycle found at 14:97%
+  14-cycle found at 14:98%
+  28-cycle found at 10:99%
+ 316-cycle found at 6:99%
+  60-cycle found at 12:99%
+  56-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 15 threads
+  16-cycle found at 2:87%
+  14-cycle found at 2:97%
+  36-cycle found at 4:98%
+ 636-cycle found at 6:99%
+ 3050-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 15 threads
+   6-cycle found at 1:73%
+  20-cycle found at 0:97%
+  76-cycle found at 10:99%
+ 410-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 15 threads
+  16-cycle found at 3:94%
+ 854-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 15 threads
+ 968-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 15 threads
+   4-cycle found at 11:71%
+ 150-cycle found at 0:96%
+ 198-cycle found at 12:97%
+  46-cycle found at 8:98%
+ 1608-cycle found at 14:99%
+ 222-cycle found at 14:99%
+ 3158-cycle found at 14:99%
+
+real	10m56.658s
+user	117m47.378s
+sys	1m11.372s
+16
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 16 threads
+  50-cycle found at 4:92%
+ 930-cycle found at 4:99%
+ 786-cycle found at 10:99%
+ 2064-cycle found at 14:99%
+ 132-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 16 threads
+   6-cycle found at 4:99%
+  36-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 16 threads
+   8-cycle found at 5:68%
+   8-cycle found at 6:96%
+  98-cycle found at 4:98%
+ 468-cycle found at 10:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 16 threads
+ 146-cycle found at 10:95%
+ 126-cycle found at 0:99%
+ 188-cycle found at 10:99%
+ 2510-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 16 threads
+  14-cycle found at 13:98%
+  60-cycle found at 2:95%
+ 164-cycle found at 2:97%
+  28-cycle found at 0:99%
+ 316-cycle found at 12:99%
+  56-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 16 threads
+  16-cycle found at 8:87%
+  14-cycle found at 4:97%
+ 636-cycle found at 6:99%
+ 3538-cycle found at 14:99%
+  36-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 16 threads
+   6-cycle found at 7:73%
+  20-cycle found at 1:99%
+ 410-cycle found at 0:99%
+  76-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 16 threads
+  16-cycle found at 13:94%
+ 854-cycle found at 10:98%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 16 threads
+ 968-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 16 threads
+   4-cycle found at 11:71%
+ 198-cycle found at 12:98%
+  46-cycle found at 10:98%
+ 150-cycle found at 14:98%
+ 222-cycle found at 0:99%
+ 3158-cycle found at 10:99%
+ 2956-cycle found at 2:99%
+
+real	10m28.214s
+user	117m59.454s
+sys	1m11.100s
+17
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 17 threads
+  50-cycle found at 16:92%
+ 930-cycle found at 12:98%
+ 132-cycle found at 6:99%
+ 786-cycle found at 8:99%
+ 2064-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 17 threads
+  36-cycle found at 12:98%
+   6-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 17 threads
+   8-cycle found at 5:68%
+   8-cycle found at 2:96%
+ 468-cycle found at 0:98%
+  98-cycle found at 8:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 17 threads
+ 126-cycle found at 8:94%
+ 188-cycle found at 14:99%
+ 146-cycle found at 8:99%
+ 2510-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 17 threads
+  14-cycle found at 15:98%
+  28-cycle found at 14:98%
+ 316-cycle found at 12:99%
+  60-cycle found at 12:99%
+ 164-cycle found at 16:99%
+  56-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 17 threads
+  16-cycle found at 4:87%
+  14-cycle found at 9:97%
+  36-cycle found at 14:99%
+ 636-cycle found at 16:99%
+ 3050-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 17 threads
+   6-cycle found at 2:73%
+  20-cycle found at 6:97%
+ 410-cycle found at 14:99%
+  76-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 17 threads
+  16-cycle found at 12:94%
+ 854-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 17 threads
+ 968-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 17 threads
+   4-cycle found at 12:71%
+  46-cycle found at 4:98%
+ 198-cycle found at 12:98%
+ 1608-cycle found at 16:99%
+ 222-cycle found at 6:99%
+ 150-cycle found at 6:99%
+ 3158-cycle found at 6:99%
+
+real	9m55.694s
+user	118m35.741s
+sys	1m11.024s
+18
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 18 threads
+  50-cycle found at 12:92%
+ 786-cycle found at 16:99%
+ 930-cycle found at 12:99%
+ 2064-cycle found at 12:99%
+ 132-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 18 threads
+  36-cycle found at 6:99%
+   6-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 18 threads
+   8-cycle found at 17:68%
+   8-cycle found at 2:96%
+ 468-cycle found at 16:98%
+  98-cycle found at 12:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 18 threads
+ 146-cycle found at 0:95%
+ 188-cycle found at 4:99%
+ 2510-cycle found at 12:99%
+ 126-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 18 threads
+  14-cycle found at 17:98%
+  60-cycle found at 0:95%
+ 164-cycle found at 2:97%
+  28-cycle found at 0:99%
+  56-cycle found at 6:99%
+ 316-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 18 threads
+  16-cycle found at 8:87%
+  14-cycle found at 14:97%
+ 636-cycle found at 10:99%
+  36-cycle found at 8:99%
+ 3538-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 18 threads
+   6-cycle found at 13:73%
+  20-cycle found at 3:99%
+ 410-cycle found at 10:99%
+  76-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 18 threads
+  16-cycle found at 9:94%
+ 854-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 18 threads
+ 968-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 18 threads
+   4-cycle found at 5:71%
+  46-cycle found at 8:98%
+ 198-cycle found at 8:98%
+ 150-cycle found at 14:98%
+ 222-cycle found at 16:99%
+ 1608-cycle found at 10:99%
+ 3158-cycle found at 16:99%
+
+real	9m40.619s
+user	120m23.551s
+sys	1m10.588s
+19
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 19 threads
+  50-cycle found at 17:92%
+ 132-cycle found at 2:99%
+ 930-cycle found at 6:99%
+ 786-cycle found at 16:99%
+ 2064-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 19 threads
+   6-cycle found at 4:99%
+  36-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 19 threads
+   8-cycle found at 11:68%
+   8-cycle found at 4:97%
+ 468-cycle found at 16:98%
+  98-cycle found at 8:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 19 threads
+ 146-cycle found at 2:99%
+ 188-cycle found at 10:99%
+ 126-cycle found at 10:99%
+ 2510-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 19 threads
+  28-cycle found at 15:99%
+  14-cycle found at 4:98%
+  60-cycle found at 0:99%
+ 164-cycle found at 16:99%
+ 316-cycle found at 2:99%
+  56-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 19 threads
+  16-cycle found at 10:85%
+  14-cycle found at 6:97%
+ 636-cycle found at 4:99%
+  36-cycle found at 6:99%
+ 3050-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 19 threads
+   6-cycle found at 4:73%
+  20-cycle found at 10:97%
+ 410-cycle found at 14:99%
+  76-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 19 threads
+  16-cycle found at 0:94%
+ 854-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 19 threads
+ 968-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 19 threads
+   4-cycle found at 2:71%
+  46-cycle found at 9:97%
+ 198-cycle found at 18:98%
+ 3158-cycle found at 10:99%
+ 150-cycle found at 9:99%
+ 2956-cycle found at 12:99%
+ 222-cycle found at 14:99%
+
+real	9m13.220s
+user	119m42.173s
+sys	1m10.904s
+20
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 20 threads
+  50-cycle found at 0:92%
+ 930-cycle found at 0:99%
+ 786-cycle found at 8:99%
+ 132-cycle found at 14:99%
+ 2064-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 20 threads
+  36-cycle found at 14:99%
+   6-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 20 threads
+   8-cycle found at 9:68%
+   8-cycle found at 17:97%
+ 468-cycle found at 12:97%
+  98-cycle found at 8:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 20 threads
+ 146-cycle found at 18:95%
+ 188-cycle found at 12:99%
+ 126-cycle found at 8:99%
+ 2510-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 20 threads
+  14-cycle found at 9:98%
+  60-cycle found at 6:95%
+ 164-cycle found at 14:97%
+ 316-cycle found at 10:99%
+  28-cycle found at 8:99%
+  56-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 20 threads
+  16-cycle found at 12:87%
+  14-cycle found at 12:97%
+ 636-cycle found at 19:99%
+  36-cycle found at 6:99%
+ 3050-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 20 threads
+   6-cycle found at 11:73%
+  20-cycle found at 9:99%
+ 410-cycle found at 12:99%
+  76-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 20 threads
+  16-cycle found at 13:94%
+ 854-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 20 threads
+ 968-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 20 threads
+   4-cycle found at 11:71%
+  46-cycle found at 18:98%
+ 150-cycle found at 2:98%
+ 198-cycle found at 19:99%
+ 222-cycle found at 16:99%
+ 1608-cycle found at 10:99%
+ 3158-cycle found at 12:99%
+
+real	8m50.094s
+user	119m30.584s
+sys	1m10.404s

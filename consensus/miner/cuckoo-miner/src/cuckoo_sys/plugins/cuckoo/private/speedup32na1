@@ -1,0 +1,3632 @@
+1
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 1 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 0:92%
+ 930-cycle found at 0:99%
+ 786-cycle found at 0:99%
+ 132-cycle found at 0:99%
+ 2064-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 1 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 0:99%
+  36-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 1 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 0:68%
+   8-cycle found at 0:97%
+ 468-cycle found at 0:99%
+  98-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 1 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 188-cycle found at 0:99%
+ 146-cycle found at 0:99%
+ 126-cycle found at 0:99%
+ 2510-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 1 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  14-cycle found at 0:98%
+  60-cycle found at 0:99%
+ 164-cycle found at 0:99%
+  28-cycle found at 0:99%
+ 316-cycle found at 0:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 1 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 0:87%
+  14-cycle found at 0:97%
+  36-cycle found at 0:99%
+ 636-cycle found at 0:99%
+ 3050-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 1 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 0:73%
+  20-cycle found at 0:99%
+  76-cycle found at 0:99%
+ 410-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 1 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 0:94%
+ 854-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 1 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 1 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 0:71%
+  46-cycle found at 0:98%
+ 198-cycle found at 0:99%
+ 150-cycle found at 0:99%
+ 1608-cycle found at 0:99%
+ 222-cycle found at 0:99%
+ 3158-cycle found at 0:99%
+
+real	119m48.888s
+user	119m38.913s
+sys	0m3.292s
+2
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 2 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 0:92%
+ 930-cycle found at 0:99%
+ 786-cycle found at 0:99%
+ 132-cycle found at 1:99%
+ 2064-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 2 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 0:99%
+  36-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 2 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 0:68%
+   8-cycle found at 1:97%
+ 468-cycle found at 1:99%
+  98-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 2 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 188-cycle found at 0:99%
+ 146-cycle found at 0:99%
+ 126-cycle found at 1:99%
+ 2510-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 2 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  14-cycle found at 1:98%
+  60-cycle found at 1:99%
+ 164-cycle found at 0:99%
+  28-cycle found at 1:99%
+ 316-cycle found at 1:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 2 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 1:87%
+  14-cycle found at 1:97%
+  36-cycle found at 1:99%
+ 636-cycle found at 1:99%
+ 3050-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 2 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 1:73%
+  20-cycle found at 0:99%
+  76-cycle found at 1:99%
+ 410-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 2 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 1:94%
+ 854-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 2 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 2 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 0:71%
+  46-cycle found at 0:98%
+ 198-cycle found at 0:99%
+ 150-cycle found at 0:99%
+ 1608-cycle found at 0:99%
+ 222-cycle found at 1:99%
+ 3158-cycle found at 1:99%
+
+real	66m54.296s
+user	127m38.695s
+sys	0m4.284s
+3
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 3 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 2:92%
+ 930-cycle found at 1:99%
+ 786-cycle found at 1:99%
+ 2064-cycle found at 1:99%
+ 132-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 3 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 2:99%
+  36-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 3 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 1:68%
+   8-cycle found at 1:96%
+ 468-cycle found at 1:99%
+  98-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 3 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 126-cycle found at 1:96%
+ 188-cycle found at 1:97%
+ 146-cycle found at 1:98%
+ 2510-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 3 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  14-cycle found at 0:98%
+  56-cycle found at 1:98%
+  60-cycle found at 1:99%
+ 164-cycle found at 1:99%
+  28-cycle found at 1:99%
+ 316-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 3 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 1:87%
+  14-cycle found at 2:97%
+  36-cycle found at 1:96%
+ 3050-cycle found at 1:99%
+ 636-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 3 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 1:73%
+  20-cycle found at 2:99%
+  76-cycle found at 1:97%
+ 410-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 3 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 1:94%
+ 854-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 3 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 3 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 0:71%
+ 150-cycle found at 1:96%
+  46-cycle found at 1:97%
+ 198-cycle found at 1:98%
+ 222-cycle found at 1:99%
+ 1608-cycle found at 1:99%
+ 3158-cycle found at 1:99%
+
+real	45m30.639s
+user	130m17.853s
+sys	0m4.488s
+4
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 4 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 0:92%
+ 930-cycle found at 0:99%
+ 786-cycle found at 0:99%
+ 132-cycle found at 1:99%
+ 2064-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 4 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 0:99%
+  36-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 4 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 2:68%
+   8-cycle found at 1:97%
+ 468-cycle found at 3:99%
+  98-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 4 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 188-cycle found at 0:99%
+ 146-cycle found at 0:99%
+ 126-cycle found at 3:99%
+ 2510-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 4 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  14-cycle found at 1:98%
+  60-cycle found at 3:99%
+  28-cycle found at 3:99%
+ 164-cycle found at 0:99%
+ 316-cycle found at 3:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 4 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 3:87%
+  14-cycle found at 1:97%
+  36-cycle found at 1:99%
+ 636-cycle found at 1:99%
+ 3050-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 4 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 1:73%
+  20-cycle found at 0:99%
+  76-cycle found at 3:99%
+ 410-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 4 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 1:94%
+ 854-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 4 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 4 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 2:71%
+  46-cycle found at 2:98%
+ 198-cycle found at 0:99%
+ 150-cycle found at 2:99%
+ 1608-cycle found at 0:99%
+ 222-cycle found at 3:99%
+ 3158-cycle found at 3:99%
+
+real	35m32.225s
+user	135m19.511s
+sys	0m5.108s
+5
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 5 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 0:92%
+ 930-cycle found at 1:99%
+ 786-cycle found at 1:99%
+ 2064-cycle found at 4:99%
+ 132-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 5 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 1:99%
+  36-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 5 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 4:68%
+   8-cycle found at 1:96%
+  98-cycle found at 4:99%
+ 468-cycle found at 1:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 5 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 146-cycle found at 1:98%
+ 188-cycle found at 3:99%
+ 2510-cycle found at 1:99%
+ 126-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 5 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  28-cycle found at 1:99%
+  14-cycle found at 0:98%
+  60-cycle found at 0:99%
+ 316-cycle found at 4:99%
+ 164-cycle found at 0:99%
+  56-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 5 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 4:87%
+  14-cycle found at 4:97%
+  36-cycle found at 3:99%
+ 636-cycle found at 3:99%
+ 3050-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 5 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 4:73%
+  76-cycle found at 3:99%
+ 410-cycle found at 1:98%
+  20-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 5 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 0:94%
+ 854-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 5 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 5 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 0:71%
+  46-cycle found at 4:98%
+ 150-cycle found at 3:98%
+ 222-cycle found at 4:98%
+ 198-cycle found at 3:99%
+ 1608-cycle found at 4:99%
+ 3158-cycle found at 4:99%
+
+real	28m52.725s
+user	139m1.169s
+sys	0m5.564s
+6
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 6 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 2:92%
+ 930-cycle found at 4:99%
+ 786-cycle found at 4:99%
+ 132-cycle found at 1:99%
+ 2064-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 6 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 2:99%
+  36-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 6 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 4:68%
+   8-cycle found at 3:97%
+ 468-cycle found at 1:99%
+  98-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 6 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 188-cycle found at 2:99%
+ 146-cycle found at 0:99%
+ 126-cycle found at 3:99%
+ 2510-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 6 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  14-cycle found at 3:98%
+  60-cycle found at 1:99%
+ 164-cycle found at 2:99%
+  28-cycle found at 1:99%
+ 316-cycle found at 1:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 6 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 1:87%
+  14-cycle found at 5:97%
+  36-cycle found at 5:99%
+ 636-cycle found at 1:99%
+ 3050-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 6 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 1:73%
+  20-cycle found at 2:99%
+  76-cycle found at 3:99%
+ 410-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 6 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 1:94%
+ 854-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 6 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 6 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 0:71%
+  46-cycle found at 2:98%
+ 198-cycle found at 2:99%
+ 150-cycle found at 0:99%
+ 3158-cycle found at 1:99%
+ 1608-cycle found at 4:99%
+ 222-cycle found at 5:99%
+
+real	25m5.583s
+user	143m5.601s
+sys	0m5.868s
+7
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 7 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 3:92%
+ 132-cycle found at 3:99%
+ 786-cycle found at 3:99%
+ 930-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 7 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 4:99%
+  36-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 7 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 0:68%
+   8-cycle found at 3:97%
+  98-cycle found at 5:98%
+ 468-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 7 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 146-cycle found at 4:99%
+ 126-cycle found at 2:99%
+ 188-cycle found at 1:99%
+ 2510-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 7 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  14-cycle found at 1:98%
+ 164-cycle found at 3:99%
+  60-cycle found at 5:99%
+  56-cycle found at 2:99%
+  28-cycle found at 6:99%
+ 316-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 7 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 5:87%
+  14-cycle found at 4:97%
+  36-cycle found at 5:99%
+ 636-cycle found at 6:99%
+ 3050-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 7 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 5:73%
+  20-cycle found at 4:99%
+  76-cycle found at 5:99%
+ 410-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 7 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 3:94%
+ 854-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 7 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 7 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 4:71%
+  46-cycle found at 6:98%
+ 198-cycle found at 2:99%
+ 1608-cycle found at 3:99%
+ 150-cycle found at 3:99%
+ 2956-cycle found at 5:99%
+ 222-cycle found at 5:99%
+
+real	21m50.001s
+user	147m14.932s
+sys	0m5.920s
+8
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 8 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 0:92%
+ 132-cycle found at 4:99%
+ 930-cycle found at 0:99%
+ 786-cycle found at 0:99%
+ 2064-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 8 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  36-cycle found at 1:99%
+   6-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 8 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 6:68%
+   8-cycle found at 5:97%
+  98-cycle found at 4:98%
+ 468-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 8 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 126-cycle found at 7:99%
+ 188-cycle found at 0:99%
+ 146-cycle found at 0:99%
+ 2510-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 8 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  14-cycle found at 5:98%
+  60-cycle found at 7:99%
+  28-cycle found at 7:99%
+ 316-cycle found at 5:99%
+ 164-cycle found at 4:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 8 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 7:87%
+  14-cycle found at 1:97%
+  36-cycle found at 5:99%
+ 636-cycle found at 5:99%
+ 3050-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 8 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 5:73%
+  76-cycle found at 7:99%
+  20-cycle found at 0:99%
+ 410-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 8 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 5:94%
+ 854-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 8 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 8 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 6:71%
+  46-cycle found at 2:98%
+ 150-cycle found at 6:99%
+ 198-cycle found at 4:99%
+ 222-cycle found at 4:99%
+ 1608-cycle found at 4:99%
+ 3158-cycle found at 1:99%
+
+real	19m35.888s
+user	150m13.471s
+sys	0m6.600s
+9
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 9 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 0:92%
+ 132-cycle found at 4:99%
+ 930-cycle found at 7:99%
+ 786-cycle found at 1:99%
+ 2064-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 9 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  36-cycle found at 3:99%
+   6-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 9 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 1:68%
+   8-cycle found at 3:97%
+ 468-cycle found at 7:99%
+  98-cycle found at 7:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 9 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 146-cycle found at 3:99%
+ 188-cycle found at 6:99%
+ 2510-cycle found at 1:99%
+ 126-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 9 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  14-cycle found at 3:98%
+  60-cycle found at 6:99%
+ 164-cycle found at 1:99%
+  28-cycle found at 4:99%
+ 316-cycle found at 4:99%
+  56-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 9 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 4:87%
+  14-cycle found at 2:97%
+  36-cycle found at 5:99%
+ 636-cycle found at 7:99%
+ 3050-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 9 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 7:73%
+  76-cycle found at 6:99%
+ 410-cycle found at 7:99%
+  20-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 9 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 1:94%
+ 854-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 9 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 9 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 6:71%
+  46-cycle found at 7:97%
+ 150-cycle found at 0:99%
+ 198-cycle found at 8:99%
+ 3158-cycle found at 8:99%
+ 1608-cycle found at 7:99%
+ 222-cycle found at 8:99%
+
+real	17m42.386s
+user	152m25.432s
+sys	0m6.904s
+10
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 10 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 0:92%
+ 930-cycle found at 1:99%
+ 132-cycle found at 0:99%
+ 786-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 10 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 6:99%
+  36-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 10 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 4:68%
+   8-cycle found at 9:97%
+  98-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 10 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 188-cycle found at 4:99%
+ 146-cycle found at 4:99%
+ 126-cycle found at 1:99%
+ 2510-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 10 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  14-cycle found at 5:98%
+  60-cycle found at 3:99%
+ 164-cycle found at 0:99%
+  28-cycle found at 1:99%
+ 316-cycle found at 1:99%
+  56-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 10 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 9:87%
+  14-cycle found at 9:97%
+  36-cycle found at 3:99%
+ 636-cycle found at 1:99%
+ 3050-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 10 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 9:73%
+  20-cycle found at 6:99%
+  76-cycle found at 3:99%
+ 410-cycle found at 0:98%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 10 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 5:94%
+ 854-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 10 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 10 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 0:71%
+  46-cycle found at 1:97%
+ 198-cycle found at 0:99%
+ 222-cycle found at 0:99%
+ 1608-cycle found at 0:99%
+ 150-cycle found at 0:99%
+ 2956-cycle found at 1:99%
+
+real	16m11.786s
+user	155m5.042s
+sys	0m7.288s
+11
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 11 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 2:92%
+ 786-cycle found at 4:99%
+ 132-cycle found at 5:99%
+ 930-cycle found at 6:99%
+ 2064-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 11 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 0:99%
+  36-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 11 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 0:68%
+   8-cycle found at 4:97%
+ 468-cycle found at 0:99%
+  98-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 11 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 188-cycle found at 9:99%
+ 126-cycle found at 7:99%
+ 146-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 11 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  14-cycle found at 10:98%
+  60-cycle found at 0:99%
+ 164-cycle found at 4:99%
+  28-cycle found at 8:99%
+ 316-cycle found at 5:99%
+  56-cycle found at 8:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 11 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 7:87%
+  14-cycle found at 6:97%
+  36-cycle found at 9:99%
+ 636-cycle found at 3:99%
+ 3050-cycle found at 7:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 11 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 1:73%
+  20-cycle found at 1:99%
+  76-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 11 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 3:94%
+ 854-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 11 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 11 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 4:71%
+  46-cycle found at 9:98%
+ 198-cycle found at 4:99%
+ 150-cycle found at 1:99%
+ 1608-cycle found at 4:99%
+ 222-cycle found at 2:99%
+
+real	15m1.394s
+user	157m38.427s
+sys	0m7.544s
+12
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 12 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 3:92%
+ 930-cycle found at 10:99%
+ 132-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 12 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 8:99%
+  36-cycle found at 9:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 12 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 10:68%
+   8-cycle found at 9:97%
+ 468-cycle found at 8:98%
+  98-cycle found at 0:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 12 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 126-cycle found at 3:99%
+ 146-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 12 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  14-cycle found at 9:98%
+ 164-cycle found at 11:96%
+  28-cycle found at 2:98%
+  60-cycle found at 3:99%
+ 316-cycle found at 0:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 12 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 2:85%
+  14-cycle found at 5:97%
+  36-cycle found at 11:98%
+ 3050-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 12 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 1:73%
+  20-cycle found at 8:99%
+  76-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 12 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 1:94%
+ 854-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 12 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 12 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 6:71%
+  46-cycle found at 2:98%
+ 198-cycle found at 8:99%
+ 222-cycle found at 0:99%
+ 1608-cycle found at 0:99%
+ 150-cycle found at 6:99%
+ 2956-cycle found at 7:99%
+
+real	13m52.762s
+user	158m27.278s
+sys	0m7.944s
+13
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 13 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 6:92%
+ 930-cycle found at 12:99%
+ 132-cycle found at 11:99%
+ 2064-cycle found at 6:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 13 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  36-cycle found at 12:98%
+   6-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 13 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 7:68%
+   8-cycle found at 8:97%
+  98-cycle found at 6:99%
+ 468-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 13 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 126-cycle found at 2:99%
+ 188-cycle found at 0:99%
+ 146-cycle found at 0:99%
+ 2510-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 13 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  14-cycle found at 4:98%
+ 164-cycle found at 8:99%
+  56-cycle found at 12:98%
+  60-cycle found at 10:99%
+  28-cycle found at 3:99%
+ 316-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 13 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 2:87%
+  14-cycle found at 1:97%
+  36-cycle found at 2:99%
+ 636-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 13 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 10:73%
+  76-cycle found at 7:99%
+  20-cycle found at 0:99%
+ 410-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 13 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 7:94%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 13 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 13 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 0:71%
+  46-cycle found at 12:98%
+ 150-cycle found at 6:98%
+ 198-cycle found at 0:99%
+ 222-cycle found at 12:99%
+
+real	13m4.841s
+user	160m59.348s
+sys	0m8.301s
+14
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 14 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 10:92%
+ 132-cycle found at 10:99%
+ 786-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 14 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 4:99%
+  36-cycle found at 0:98%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 14 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   8-cycle found at 0:68%
+   8-cycle found at 3:97%
+ 468-cycle found at 11:99%
+  98-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 14 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 126-cycle found at 11:96%
+ 146-cycle found at 11:97%
+ 188-cycle found at 13:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 14 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  14-cycle found at 1:98%
+ 316-cycle found at 0:99%
+  28-cycle found at 1:99%
+  60-cycle found at 1:99%
+ 164-cycle found at 10:99%
+  56-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 14 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 11:85%
+  14-cycle found at 11:97%
+  36-cycle found at 13:98%
+ 3050-cycle found at 10:99%
+ 636-cycle found at 11:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 14 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 5:73%
+  20-cycle found at 4:99%
+ 410-cycle found at 5:99%
+  76-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 14 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 12:92%
+ 854-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 14 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 14 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 4:71%
+  46-cycle found at 12:96%
+ 198-cycle found at 1:98%
+ 222-cycle found at 1:99%
+ 1608-cycle found at 10:99%
+
+real	12m25.057s
+user	163m36.177s
+sys	0m8.993s
+15
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 15 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 11:91%
+ 786-cycle found at 10:99%
+ 132-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 15 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  36-cycle found at 12:98%
+   6-cycle found at 11:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 15 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   8-cycle found at 4:68%
+   8-cycle found at 1:96%
+  98-cycle found at 0:98%
+ 468-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 15 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 126-cycle found at 6:99%
+ 188-cycle found at 14:99%
+ 146-cycle found at 9:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 15 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  28-cycle found at 1:99%
+ 164-cycle found at 13:97%
+ 316-cycle found at 14:97%
+  14-cycle found at 0:98%
+  60-cycle found at 10:99%
+  56-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 15 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 4:87%
+  36-cycle found at 8:99%
+  14-cycle found at 14:97%
+ 3050-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 15 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 4:73%
+  20-cycle found at 11:99%
+  76-cycle found at 3:99%
+ 410-cycle found at 13:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 15 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  16-cycle found at 10:94%
+ 854-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 15 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 968-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 15 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 0:71%
+  46-cycle found at 14:98%
+ 198-cycle found at 11:98%
+ 222-cycle found at 0:99%
+ 150-cycle found at 0:99%
+ 2956-cycle found at 1:99%
+
+real	11m47.196s
+user	165m54.098s
+sys	0m9.013s
+16
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 16 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  50-cycle found at 0:92%
+ 132-cycle found at 12:98%
+ 786-cycle found at 0:99%
+ 2064-cycle found at 14:99%
+ 930-cycle found at 14:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 16 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 0:99%
+  36-cycle found at 11:98%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 16 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   8-cycle found at 14:68%
+   8-cycle found at 13:97%
+ 468-cycle found at 11:99%
+  98-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 16 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+ 126-cycle found at 15:99%
+ 146-cycle found at 3:97%
+ 188-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 16 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  14-cycle found at 13:98%
+  60-cycle found at 15:99%
+ 164-cycle found at 15:99%
+  28-cycle found at 15:99%
+  56-cycle found at 5:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 16 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  16-cycle found at 15:87%
+  14-cycle found at 9:97%
+  36-cycle found at 13:99%
+ 636-cycle found at 13:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 16 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 13:73%
+  20-cycle found at 8:99%
+ 410-cycle found at 15:99%
+  76-cycle found at 15:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 16 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  16-cycle found at 12:92%
+ 854-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 16 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 16 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   4-cycle found at 14:71%
+  46-cycle found at 10:98%
+ 150-cycle found at 10:98%
+ 198-cycle found at 5:98%
+ 222-cycle found at 0:99%
+ 1608-cycle found at 10:99%
+ 3158-cycle found at 9:99%
+
+real	11m15.204s
+user	167m40.817s
+sys	0m9.537s
+17
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 17 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+ 132-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 17 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+  36-cycle found at 15:98%
+   6-cycle found at 13:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 17 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   8-cycle found at 8:68%
+   8-cycle found at 2:96%
+  98-cycle found at 11:98%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 17 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+ 146-cycle found at 2:98%
+ 188-cycle found at 10:99%
+ 126-cycle found at 15:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 17 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  14-cycle found at 7:98%
+  60-cycle found at 13:97%
+ 316-cycle found at 0:99%
+ 164-cycle found at 13:99%
+  28-cycle found at 15:99%
+  56-cycle found at 13:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 17 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  16-cycle found at 10:87%
+  14-cycle found at 6:97%
+  36-cycle found at 15:99%
+ 636-cycle found at 2:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 17 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 2:73%
+  76-cycle found at 15:95%
+  20-cycle found at 2:99%
+ 410-cycle found at 13:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 17 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  16-cycle found at 9:94%
+ 854-cycle found at 15:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 17 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 17 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   4-cycle found at 8:71%
+  46-cycle found at 3:98%
+ 150-cycle found at 1:98%
+ 198-cycle found at 1:99%
+ 222-cycle found at 14:99%
+
+real	10m40.881s
+user	169m15.231s
+sys	0m9.965s
+18
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 18 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  50-cycle found at 2:92%
+ 132-cycle found at 12:99%
+ 930-cycle found at 16:99%
+ 2064-cycle found at 11:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 18 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 8:99%
+  36-cycle found at 0:98%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 18 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   8-cycle found at 10:68%
+   8-cycle found at 3:97%
+ 468-cycle found at 2:98%
+  98-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 18 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+ 188-cycle found at 12:99%
+ 126-cycle found at 15:99%
+ 146-cycle found at 12:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 18 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  14-cycle found at 3:98%
+  56-cycle found at 1:98%
+  60-cycle found at 15:99%
+ 164-cycle found at 2:99%
+  28-cycle found at 13:99%
+ 316-cycle found at 13:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 18 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  16-cycle found at 13:87%
+  14-cycle found at 11:97%
+  36-cycle found at 11:98%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 18 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 7:73%
+  20-cycle found at 8:99%
+  76-cycle found at 1:97%
+ 410-cycle found at 12:98%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 18 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  16-cycle found at 1:94%
+ 854-cycle found at 11:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 18 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+ 968-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 18 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   4-cycle found at 6:71%
+  46-cycle found at 14:98%
+ 198-cycle found at 17:99%
+
+real	10m14.047s
+user	171m54.233s
+sys	0m10.265s
+19
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 19 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  50-cycle found at 15:91%
+ 132-cycle found at 11:98%
+ 786-cycle found at 1:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 19 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  36-cycle found at 0:98%
+   6-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 19 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   8-cycle found at 8:68%
+   8-cycle found at 14:96%
+ 468-cycle found at 15:99%
+  98-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 19 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+ 188-cycle found at 18:99%
+ 146-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 19 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  14-cycle found at 1:98%
+  60-cycle found at 0:99%
+ 164-cycle found at 14:99%
+ 316-cycle found at 0:99%
+  28-cycle found at 16:99%
+  56-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 19 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  16-cycle found at 16:85%
+  14-cycle found at 6:97%
+  36-cycle found at 10:98%
+ 636-cycle found at 10:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 19 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 45%
+12 trims: load 38%
+   6-cycle found at 0:73%
+  76-cycle found at 5:99%
+  20-cycle found at 0:97%
+ 410-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 19 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  16-cycle found at 18:94%
+ 854-cycle found at 0:99%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 19 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 19 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   4-cycle found at 11:71%
+  46-cycle found at 15:98%
+ 198-cycle found at 10:99%
+ 222-cycle found at 17:99%
+ 150-cycle found at 10:99%
+
+real	9m49.555s
+user	174m15.961s
+sys	0m10.557s
+20
+Looking for 42-cycle on cuckoo32("0") with 50% edges, 12 trims, and 20 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  50-cycle found at 0:92%
+ 132-cycle found at 0:99%
+ 930-cycle found at 18:99%
+ 786-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("1") with 50% edges, 12 trims, and 20 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  36-cycle found at 12:98%
+   6-cycle found at 16:99%
+Looking for 42-cycle on cuckoo32("2") with 50% edges, 12 trims, and 20 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   8-cycle found at 14:68%
+   8-cycle found at 9:97%
+ 468-cycle found at 15:99%
+  98-cycle found at 4:99%
+Looking for 42-cycle on cuckoo32("3") with 50% edges, 12 trims, and 20 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+ 188-cycle found at 4:99%
+ 146-cycle found at 4:99%
+ 126-cycle found at 11:99%
+Looking for 42-cycle on cuckoo32("4") with 50% edges, 12 trims, and 20 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 134%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  14-cycle found at 5:98%
+  60-cycle found at 15:99%
+ 164-cycle found at 11:99%
+  28-cycle found at 11:99%
+  56-cycle found at 9:99%
+ 316-cycle found at 11:99%
+Looking for 42-cycle on cuckoo32("5") with 50% edges, 12 trims, and 20 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  16-cycle found at 19:87%
+  14-cycle found at 9:97%
+  36-cycle found at 13:99%
+ 636-cycle found at 3:99%
+Looking for 42-cycle on cuckoo32("6") with 50% edges, 12 trims, and 20 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   6-cycle found at 9:73%
+  76-cycle found at 1:95%
+  20-cycle found at 16:99%
+ 410-cycle found at 15:99%
+Looking for 42-cycle on cuckoo32("7") with 50% edges, 12 trims, and 20 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+  16-cycle found at 5:94%
+Looking for 42-cycle on cuckoo32("8") with 50% edges, 12 trims, and 20 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+Looking for 42-cycle on cuckoo32("9") with 50% edges, 12 trims, and 20 threads
+initial load 6400%
+1 trims: load 1880%
+2 trims: load 792%
+3 trims: load 432%
+4 trims: load 270%
+5 trims: load 185%
+6 trims: load 135%
+7 trims: load 102%
+8 trims: load 80%
+9 trims: load 65%
+10 trims: load 53%
+11 trims: load 44%
+12 trims: load 38%
+   4-cycle found at 10:71%
+  46-cycle found at 11:97%
+ 150-cycle found at 3:98%
+ 222-cycle found at 15:99%
+
+real	9m34.368s
+user	177m57.155s
+sys	0m10.865s

@@ -1,0 +1,368 @@
+
+--- Testing SipHash (SipHash - SSSE3 optimized)
+
+[[[ Sanity Tests ]]]
+
+Verification value 0xC58D7F9C : Passed!
+Running sanity check 1..........PASS
+Running sanity check 2..........PASS
+
+[[[ Speed Tests ]]]
+
+Bulk speed test - 262144-byte keys
+Alignment  0 -  0.273 bytes/cycle -  779.74 MiB/sec @ 3 ghz
+Alignment  1 -  0.271 bytes/cycle -  775.84 MiB/sec @ 3 ghz
+Alignment  2 -  0.272 bytes/cycle -  776.88 MiB/sec @ 3 ghz
+Alignment  3 -  0.271 bytes/cycle -  775.41 MiB/sec @ 3 ghz
+Alignment  4 -  0.271 bytes/cycle -  775.94 MiB/sec @ 3 ghz
+Alignment  5 -  0.272 bytes/cycle -  777.26 MiB/sec @ 3 ghz
+Alignment  6 -  0.271 bytes/cycle -  774.34 MiB/sec @ 3 ghz
+Alignment  7 -  0.272 bytes/cycle -  777.36 MiB/sec @ 3 ghz
+
+Small key speed test -    1-byte keys -   122.80 cycles/hash
+Small key speed test -    2-byte keys -   122.09 cycles/hash
+Small key speed test -    3-byte keys -   123.49 cycles/hash
+Small key speed test -    4-byte keys -   124.16 cycles/hash
+Small key speed test -    5-byte keys -   123.61 cycles/hash
+Small key speed test -    6-byte keys -   124.48 cycles/hash
+Small key speed test -    7-byte keys -   125.28 cycles/hash
+Small key speed test -    8-byte keys -   153.62 cycles/hash
+Small key speed test -    9-byte keys -   152.13 cycles/hash
+Small key speed test -   10-byte keys -   154.68 cycles/hash
+Small key speed test -   11-byte keys -   157.77 cycles/hash
+Small key speed test -   12-byte keys -   159.69 cycles/hash
+Small key speed test -   13-byte keys -   160.39 cycles/hash
+Small key speed test -   14-byte keys -   163.49 cycles/hash
+Small key speed test -   15-byte keys -   164.04 cycles/hash
+Small key speed test -   16-byte keys -   182.05 cycles/hash
+Small key speed test -   17-byte keys -   181.47 cycles/hash
+Small key speed test -   18-byte keys -   184.87 cycles/hash
+Small key speed test -   19-byte keys -   186.99 cycles/hash
+Small key speed test -   20-byte keys -   189.20 cycles/hash
+Small key speed test -   21-byte keys -   190.92 cycles/hash
+Small key speed test -   22-byte keys -   191.47 cycles/hash
+Small key speed test -   23-byte keys -   193.35 cycles/hash
+Small key speed test -   24-byte keys -   211.55 cycles/hash
+Small key speed test -   25-byte keys -   212.31 cycles/hash
+Small key speed test -   26-byte keys -   214.18 cycles/hash
+Small key speed test -   27-byte keys -   216.26 cycles/hash
+Small key speed test -   28-byte keys -   217.19 cycles/hash
+Small key speed test -   29-byte keys -   219.18 cycles/hash
+Small key speed test -   30-byte keys -   221.11 cycles/hash
+Small key speed test -   31-byte keys -   222.27 cycles/hash
+
+[[[ Differential Tests ]]]
+
+Testing 8303632 up-to-5-bit differentials in 64-bit keys -> 64 bit hashes.
+1000 reps, 8303632000 total tests, expecting 0.00 random collisions..........
+0 total collisions, of which 0 single collisions were ignored
+
+Testing 11017632 up-to-4-bit differentials in 128-bit keys -> 64 bit hashes.
+1000 reps, 11017632000 total tests, expecting 0.00 random collisions..........
+0 total collisions, of which 0 single collisions were ignored
+
+Testing 2796416 up-to-3-bit differentials in 256-bit keys -> 64 bit hashes.
+1000 reps, 2796416000 total tests, expecting 0.00 random collisions..........
+0 total collisions, of which 0 single collisions were ignored
+
+
+[[[ Avalanche Tests ]]]
+
+Testing  32-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.630667%
+Testing  40-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.624667%
+Testing  48-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.722667%
+Testing  56-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.643333%
+Testing  64-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.672000%
+Testing  72-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.625333%
+Testing  80-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.687333%
+Testing  88-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.750667%
+Testing  96-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.718667%
+Testing 104-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.685333%
+Testing 112-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.776000%
+Testing 120-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.759333%
+Testing 128-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.751333%
+Testing 136-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.766000%
+Testing 144-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.667333%
+Testing 152-bit keys ->  64-bit hashes,   300000 reps.......... worst bias is 0.712667%
+
+[[[ Keyset 'Cyclic' Tests ]]]
+
+Keyset 'Cyclic' - 8 cycles of 8 bytes - 10000000 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  39 - 0.039%
+
+Keyset 'Cyclic' - 8 cycles of 9 bytes - 10000000 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  29 - 0.033%
+
+Keyset 'Cyclic' - 8 cycles of 10 bytes - 10000000 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  12 - 0.029%
+
+Keyset 'Cyclic' - 8 cycles of 11 bytes - 10000000 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  49 - 0.037%
+
+Keyset 'Cyclic' - 8 cycles of 12 bytes - 10000000 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  49 - 0.033%
+
+
+[[[ Keyset 'TwoBytes' Tests ]]]
+
+Keyset 'TwoBytes' - up-to-4-byte keys, 652545 total keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  16-bit window at bit  44 - 0.186%
+
+Keyset 'TwoBytes' - up-to-8-byte keys, 5471025 total keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  12 - 0.076%
+
+Keyset 'TwoBytes' - up-to-12-byte keys, 18616785 total keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  25 - 0.022%
+
+Keyset 'TwoBytes' - up-to-16-byte keys, 44251425 total keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  62 - 0.008%
+
+Keyset 'TwoBytes' - up-to-20-byte keys, 86536545 total keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  61 - 0.005%
+
+
+[[[ Keyset 'Sparse' Tests ]]]
+
+Keyset 'Sparse' - 32-bit keys with up to 6 bits set - 1149017 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  17-bit window at bit  44 - 0.098%
+
+Keyset 'Sparse' - 40-bit keys with up to 6 bits set - 4598479 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  19-bit window at bit  40 - 0.057%
+
+Keyset 'Sparse' - 48-bit keys with up to 5 bits set - 1925357 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  18-bit window at bit  18 - 0.104%
+
+Keyset 'Sparse' - 56-bit keys with up to 5 bits set - 4216423 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  19-bit window at bit   4 - 0.048%
+
+Keyset 'Sparse' - 64-bit keys with up to 5 bits set - 8303633 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit   5 - 0.036%
+
+Keyset 'Sparse' - 96-bit keys with up to 4 bits set - 3469497 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  19-bit window at bit  21 - 0.062%
+
+Keyset 'Sparse' - 256-bit keys with up to 3 bits set - 2796417 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  19-bit window at bit   9 - 0.096%
+
+Keyset 'Sparse' - 2048-bit keys with up to 2 bits set - 2098177 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  17-bit window at bit  44 - 0.045%
+
+
+[[[ Keyset 'Combination Lowbits' Tests ]]]
+
+Keyset 'Combination' - up to 8 blocks from a set of 8 - 19173960 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  61 - 0.017%
+
+
+[[[ Keyset 'Combination Highbits' Tests ]]]
+
+Keyset 'Combination' - up to 8 blocks from a set of 8 - 19173960 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  18 - 0.012%
+
+
+[[[ Keyset 'Combination 0x8000000' Tests ]]]
+
+Keyset 'Combination' - up to 20 blocks from a set of 2 - 2097150 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  18-bit window at bit  28 - 0.090%
+
+
+[[[ Keyset 'Combination 0x0000001' Tests ]]]
+
+Keyset 'Combination' - up to 20 blocks from a set of 2 - 2097150 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  18-bit window at bit   0 - 0.080%
+
+
+[[[ Keyset 'Combination Hi-Lo' Tests ]]]
+
+Keyset 'Combination' - up to 6 blocks from a set of 15 - 12204240 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  27 - 0.027%
+
+
+[[[ Keyset 'Window' Tests ]]]
+
+Keyset 'Windowed' - 128-bit key,  20-bit window - 128 tests, 1048576 keys per test
+Window at   0 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at   1 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at   2 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at   3 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at   4 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at   5 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at   6 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at   7 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at   8 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at   9 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  10 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  11 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  12 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  13 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  14 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  15 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  16 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  17 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  18 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  19 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  20 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  21 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  22 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  23 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  24 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  25 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  26 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  27 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  28 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  29 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  30 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  31 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  32 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  33 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  34 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  35 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  36 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  37 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  38 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  39 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  40 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  41 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  42 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  43 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  44 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  45 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  46 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  47 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  48 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  49 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  50 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  51 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  52 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  53 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  54 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  55 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  56 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  57 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  58 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  59 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  60 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  61 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  62 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  63 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  64 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  65 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  66 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  67 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  68 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  69 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  70 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  71 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  72 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  73 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  74 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  75 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  76 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  77 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  78 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  79 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  80 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  81 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  82 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  83 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  84 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  85 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  86 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  87 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  88 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  89 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  90 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  91 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  92 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  93 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  94 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  95 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  96 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  97 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  98 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at  99 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 100 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 101 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 102 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 103 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 104 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 105 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 106 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 107 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 108 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 109 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 110 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 111 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 112 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 113 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 114 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 115 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 116 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 117 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 118 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 119 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 120 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 121 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 122 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 123 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 124 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 125 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 126 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 127 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Window at 128 - Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+
+[[[ Keyset 'Text' Tests ]]]
+
+Keyset 'Text' - keys of form "Foo[XXXX]Bar" - 14776336 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  40 - 0.024%
+
+Keyset 'Text' - keys of form "FooBar[XXXX]" - 14776336 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit  50 - 0.032%
+
+Keyset 'Text' - keys of form "[XXXX]FooBar" - 14776336 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  20-bit window at bit   1 - 0.016%
+
+
+[[[ Keyset 'Zeroes' Tests ]]]
+
+Keyset 'Zeroes' - 65536 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  13-bit window at bit  35 - 0.406%
+
+
+[[[ Keyset 'Seed' Tests ]]]
+
+Keyset 'Seed' - 1000000 keys
+Testing collisions   - Expected     0.00, actual     0.00 ( 0.00x)
+Testing distribution - Worst bias is the  17-bit window at bit  51 - 0.130%
+
+
+
+Input vcode 0x00000001, Output vcode 0x00000001, Result vcode 0x00000001
+Verification value is 0x00000001 - Testing took -1829.781133 seconds

@@ -1,0 +1,51 @@
+Nanocoin author Colin Lemahieu recently made available [1] a newly developed proof of work scheme "Nano PoW"
+whose solutions are pairs (x,y) satisfying
+
+ H0(x) + H1(y) = 0 mod D
+
+where H0,H1 are two different hash functions and D = 2^d is a difficulty parameter.
+
+It is claimed to be memory-hard, requiring on the order of sqrt(D) = 2^(d/2) memory for efficient solving.
+
+However, a simple variation of rho search [2] can efficiently find solutions without any use of memory.
+First, note that by defining H2(y) = -H1(y), the above equation simplifies to
+
+ H0(x) = H2(y) mod D
+
+Next, define a chain of values
+
+x_{2k}   = H0( x_{2k-1} ) mod D
+x_{2k+1} = H2( x_{2k  } ) mod D
+
+starting at some arbitrary x_0.
+
+This chain is expected to have repeating values x_i = x_j, i < j, within O(sqrt(D)) steps,
+which can be found efficiently using the before mentioned rho search in time O(sqrt(D)) and zero memory.
+
+EDIT: PlasmaPower pointed out [3] that the chain almost certainly diverges again at x_{i+1} and x_{j+1},
+preventing rho search from cycling around the loop more than once.
+
+So instead let's consider a chain of values
+
+x_{i+1} = min( H0(x_i), H2(x_i) ) mod D
+
+starting at some arbitrary x_0.
+
+This chain is expected to have repeating values x_i = x_j, i < j, within O(sqrt(D)) steps,
+which this time can be found efficiently with rho search.
+
+With some probability, x_i and x_j will result from different hash functions of x_{i-1} and x_{j-1} respectively, e.g.
+
+ H0(x_{i-1}) = x_i = x_j = H2(x_{j-1}) mod D
+
+yielding a solution (x,y) = (x_{i-1}, x_{j-1}) to the PoW.
+
+Btw, another chain of values that should work is
+
+x_{i+1} = if H3(x_i) < P * 2^64 then H0(x_i) else H2(x_i)
+
+where H3 is another arbitrary (64-bit output) hash function, and P is the probability of taking an H0 step.
+
+[1] https://github.com/nanocurrency/nano-pow
+[2] Parallel Collision Search with Cryptanalytic Applications: https://people.scs.carleton.ca/~paulv/papers/JoC97.pdf
+[3] https://www.reddit.com/r/nanocurrency/comments/dces6e/nanopow_the_details/f2aw6bx/

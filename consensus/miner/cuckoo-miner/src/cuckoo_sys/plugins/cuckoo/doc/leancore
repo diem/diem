@@ -1,0 +1,53 @@
+struct bitmap {
+  u32 *bits;
+  __device__ void reset() {
+    memset(bits, 0, BITMAP_WORDS * sizeof(u32));
+  }
+  __device__ void set(edge_t n) {
+    bits[n/32] |= 1 << (n%32);
+  }
+  __device__ bool test(node_t n) const {
+    return (bits[n/32] >> (n%32)) & 1;
+  }
+  __device__ u32 block(node_t n) const {
+    return bits[n/32];
+  }
+};
+
+__global__ void count_node_deg(cuckoo_ctx *ctx, u32 uorv, u32 part) {
+  int id = blockIdx.x * blockDim.x + threadIdx.x;
+  for (edge_t block = id*32; block < NEDGES; block += ctx->nthreads*32) {
+    u32 alive32 = ctx->alive.block(block);
+    for (edge_t nonce = block-1; alive32; ) {
+      u32 ffs = __ffs(alive32);
+      nonce += ffs; alive32 >>= ffs;
+      node_t u = dipnode(ctx->sip_keys, nonce, uorv);
+      if ((u & PART_MASK) == part)
+        ctx->nonleaf.set(u >> PART_BITS);
+    }
+  }
+}
+
+__global__ void kill_leaf_edges(cuckoo_ctx *ctx, u32 uorv, u32 part) {
+  int id = blockIdx.x * blockDim.x + threadIdx.x;
+  for (edge_t block = id*32; block < NEDGES; block += ctx->nthreads*32) {
+    u32 alive32 = ctx->alive.block(block);
+    for (edge_t nonce = block-1; alive32; ) {
+      u32 ffs = __ffs(alive32);
+      nonce += ffs; alive32 >>= ffs;
+      node_t u = dipnode(ctx->sip_keys, nonce, uorv) ^ 1;
+      if ((u & PART_MASK) == part && !ctx->nonleaf.test(u >> PART_BITS))
+        ctx->alive.reset(nonce);
+    }
+  }
+}
+
+    for (u32 round=0; round < trims; round++) {
+      for (u32 uorv = 0; uorv < 2; uorv++) {
+        for (u32 part = 0; part <= PART_MASK; part++) {
+          checkCudaErrors(cudaMemset(ctx.nonleaf.bits, 0, nodeBytes));
+          count_node_deg<<<nthreads/tpb,tpb >>>(device_ctx, uorv, part);
+          kill_leaf_edges<<<nthreads/tpb,tpb >>>(device_ctx, uorv, part);
+        }
+      }
+    }
