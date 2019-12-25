@@ -23,7 +23,7 @@ struct Args {
     )]
     swarm: bool,
 
-    #[structopt(long, group = "action")]
+    #[structopt(short = "e", long = "emit_tx")]
     emit_tx: bool,
 
     // emit_tx options
