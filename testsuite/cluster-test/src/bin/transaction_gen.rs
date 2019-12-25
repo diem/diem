@@ -13,6 +13,7 @@ use cluster_test::{cluster::Cluster, tx_emitter::TxEmitter};
 
 #[derive(StructOpt, Debug)]
 #[structopt(group = ArgGroup::with_name("action"))]
+// example: transaction_gen -p 39.98.196.244:8001 --emit_tx=true --mint-file=sgterraform/sgchain/dev/mint.key
 struct Args {
     #[structopt(short = "p", long, use_delimiter = true)]
     peers: Vec<String>,
