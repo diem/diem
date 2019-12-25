@@ -22,6 +22,7 @@ mod common;
 mod connectivity_manager;
 mod counters;
 mod error;
+mod peer;
 mod peer_manager;
 mod sink;
 mod transport;
