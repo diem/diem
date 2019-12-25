@@ -6,10 +6,9 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 
 lazy_static! {
     // Channel
@@ -125,6 +124,44 @@ pub fn user_channels_struct_tag() -> StructTag {
         module: channel_module_name().to_owned(),
         name: user_channels_struct_name().to_owned(),
         type_params: vec![],
+    }
+}
+
+pub trait LibraResource {
+    fn struct_tag() -> StructTag;
+}
+
+pub fn make_resource<'a, T>(value: &'a [u8]) -> Result<T>
+where
+    T: LibraResource + Deserialize<'a>,
+{
+    lcs::from_bytes(value).map_err(|e| Into::into(e))
+}
+
+impl LibraResource for ChannelResource {
+    fn struct_tag() -> StructTag {
+        channel_struct_tag()
+    }
+}
+
+impl LibraResource for ChannelMirrorResource {
+    fn struct_tag() -> StructTag {
+        channel_mirror_struct_tag()
+    }
+}
+impl LibraResource for ChannelParticipantAccountResource {
+    fn struct_tag() -> StructTag {
+        channel_participant_struct_tag()
+    }
+}
+impl LibraResource for UserChannelsResource {
+    fn struct_tag() -> StructTag {
+        user_channels_struct_tag()
+    }
+}
+impl LibraResource for ChannelEvent {
+    fn struct_tag() -> StructTag {
+        channel_event_struct_tag()
     }
 }
 
@@ -279,14 +316,6 @@ impl UserChannelsResource {
 
     pub fn channels(&self) -> &[AccountAddress] {
         &self.channels
-    }
-}
-
-impl TryFrom<&[u8]> for UserChannelsResource {
-    type Error = Error;
-
-    fn try_from(value: &[u8]) -> Result<Self> {
-        lcs::from_bytes(value).map_err(|e| Into::into(e))
     }
 }
 
