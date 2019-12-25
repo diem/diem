@@ -16,5 +16,6 @@ fn main() {
     dst.enable_shared();
     dst.build();
     let out_dir = env::var("OUT_DIR").unwrap();
+    println!("cargo:rustc-link-lib=static=scrypt-kdf");
     println!("cargo:rustc-link-search=native={}/lib", out_dir);
 }

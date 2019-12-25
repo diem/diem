@@ -1,6 +1,6 @@
 use std::{mem::size_of, os::raw::c_int};
 
-#[link(name = "scrypt-kdf")]
+#[link(name = "scrypt-kdf", kind = "static")]
 extern "C" {
     fn crypto_scrypt(
         passwd: *const u8,
