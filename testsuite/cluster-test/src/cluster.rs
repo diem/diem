@@ -159,6 +159,10 @@ impl Cluster {
         self.validator_instances
     }
 
+    pub fn into_fullnode_instances(self) -> Vec<Instance> {
+        self.fullnode_instances
+    }
+
     pub fn prometheus_ip(&self) -> Option<&String> {
         self.prometheus_ip.as_ref()
     }
@@ -194,10 +198,35 @@ impl Cluster {
         )
     }
 
+    pub fn split_n_fullnodes_random(&self, c: usize) -> (Self, Self) {
+        assert!(c <= self.fullnode_instances.len());
+        let mut rng = ThreadRng::default();
+        let mut sub = vec![];
+        let mut rem = self.fullnode_instances.clone();
+        for _ in 0..c {
+            let idx_remove = rng.gen_range(0, rem.len());
+            let instance = rem.remove(idx_remove);
+            sub.push(instance);
+        }
+        (
+            self.new_fullnode_sub_cluster(sub),
+            self.new_fullnode_sub_cluster(rem),
+        )
+    }
+
     fn new_validator_sub_cluster(&self, instances: Vec<Instance>) -> Self {
         Cluster {
             validator_instances: instances,
             fullnode_instances: vec![],
+            prometheus_ip: self.prometheus_ip.clone(),
+            mint_key_pair: self.mint_key_pair.clone(),
+        }
+    }
+
+    fn new_fullnode_sub_cluster(&self, instances: Vec<Instance>) -> Self {
+        Cluster {
+            validator_instances: vec![],
+            fullnode_instances: instances,
             prometheus_ip: self.prometheus_ip.clone(),
             mint_key_pair: self.mint_key_pair.clone(),
         }
