@@ -3,15 +3,18 @@
 
 //! Protobuf based interface between Discovery and Network layers.
 use crate::{
+    counters,
     error::NetworkError,
     interface::NetworkRequest,
     proto::DiscoveryMsg,
-    validator_network::{NetworkEvents, NetworkSender},
+    validator_network::{network_builder::NetworkBuilder, NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use libra_types::PeerId;
+use std::time::Duration;
 
 pub const DISCOVERY_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/discovery/0.1.0";
+pub const DISCOVERY_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds.
 
 /// The interface from Network to Discovery module.
 ///
@@ -33,6 +36,21 @@ pub type DiscoveryNetworkEvents = NetworkEvents<DiscoveryMsg>;
 #[derive(Clone)]
 pub struct DiscoveryNetworkSender {
     inner: NetworkSender<DiscoveryMsg>,
+}
+
+pub fn add_to_network(
+    network: &mut NetworkBuilder,
+) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
+    let (sender, receiver) = network.add_protocol_handler(
+        vec![],
+        vec![ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL)],
+        &counters::PENDING_DISCOVERY_NETWORK_EVENTS,
+        Duration::from_millis(DISCOVERY_INBOUND_MSG_TIMEOUT_MS),
+    );
+    (
+        DiscoveryNetworkSender::new(sender),
+        DiscoveryNetworkEvents::new(receiver),
+    )
 }
 
 impl DiscoveryNetworkSender {
