@@ -19,3 +19,4 @@ pub mod vote;
 pub mod vote_data;
 pub mod vote_msg;
 pub mod vote_proposal;
+pub mod payload_ext;

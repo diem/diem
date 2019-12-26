@@ -1,5 +1,5 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
-use crate::pow::payload_ext::BlockPayloadExt;
+use consensus_types::payload_ext::BlockPayloadExt;
 use crate::pow::target::{difficult_1_target, get_next_work_required, BlockInfo, TBlockIndex};
 use async_std::{
     sync::{channel, Receiver, Sender},

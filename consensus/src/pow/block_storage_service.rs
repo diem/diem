@@ -1,8 +1,7 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
-use crate::pow::payload_ext::BlockPayloadExt;
 use crate::pow::target::current_hash_rate;
 use block_storage_proto::proto::block_storage::{create_block_storage, BlockStorage};
-use consensus_types::block::Block;
+use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
 use grpc_helpers::provide_grpc_response;
 use grpcio::{EnvBuilder, RpcContext, Server, ServerBuilder, UnarySink};
 use libra_config::config::NodeConfig;

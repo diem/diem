@@ -24,6 +24,7 @@ use network::{
         CONSENSUS_RPC_PROTOCOL,
         MEMPOOL_DIRECT_SEND_PROTOCOL,
         STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
+        CHAIN_STATE_DIRECT_SEND_PROTOCOL,
     },
     ProtocolId,
 };
@@ -113,6 +114,7 @@ pub fn setup_network(
             ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
+            ProtocolId::from_static(CHAIN_STATE_DIRECT_SEND_PROTOCOL),
         ])
         .rpc_protocols(vec![
             ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
@@ -300,6 +302,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     let mut mempool = None;
     let mut consensus = None;
+    let (mut cs_network_sender, mut cs_network_events) = (None, None);
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {
         // Note: We need to start network provider before consensus, because the consensus
         // initialization is blocked on state synchronizer to sync to the initial root ledger
@@ -317,6 +320,18 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
                 ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ]);
+
+        if node_config.consensus.consensus_type == POW {
+            //add chain state protocol
+            let(chain_state_network_sender, chain_state_network_events) =
+            network_provider.add_chain_state(vec![
+                ProtocolId::from_static(CHAIN_STATE_DIRECT_SEND_PROTOCOL),
+            ]);
+
+            cs_network_sender = Some(chain_state_network_sender);
+            cs_network_events = Some(chain_state_network_events);
+        }
+
         runtime.handle().spawn(network_provider.start());
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);
@@ -340,6 +355,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 executor,
                 state_synchronizer.create_client(),
                 false,
+                cs_network_sender.expect("cs_network_sender is none."),
+                cs_network_events.expect("cs_network_events is none."),
             ),
             _ => make_consensus_provider(
                 node_config,

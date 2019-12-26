@@ -1,8 +1,7 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::pow::block_tree::{BlockTree, CommitData};
-use crate::pow::payload_ext::BlockPayloadExt;
 use crate::state_replication::{StateComputer, TxnManager};
-use consensus_types::block::Block;
+use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
 use futures::compat::Future01CompatExt;
 use futures::{channel::mpsc, StreamExt};
 use futures_locks::{Mutex, RwLock};
@@ -21,7 +20,6 @@ use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
 
 pub struct ChainManager {
-    //    block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
     block_store: Arc<ConsensusDB>,
     state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
     block_tree: Arc<RwLock<BlockTree>>,
@@ -32,7 +30,6 @@ pub struct ChainManager {
 
 impl ChainManager {
     pub fn new(
-        //        block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
         block_store: Arc<ConsensusDB>,
         txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
         state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
@@ -51,8 +48,8 @@ impl ChainManager {
             rollback_mode,
             Arc::clone(&block_store),
         )));
+
         ChainManager {
-            //            block_cache_receiver,
             block_store,
             state_computer,
             block_tree,
@@ -73,10 +70,6 @@ impl ChainManager {
     ) {
         let block_db = self.block_store.clone();
         let orphan_blocks = self.orphan_blocks.clone();
-        //        let mut block_cache_receiver = self
-        //            .block_cache_receiver
-        //            .take()
-        //            .expect("block_cache_receiver is none.");
         let state_computer = self.state_computer.clone();
         let author = self.author.clone();
         let block_tree = self.block_tree.clone();

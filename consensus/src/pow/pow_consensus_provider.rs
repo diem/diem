@@ -17,7 +17,7 @@ use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::account_address::AccountAddress;
 use miner::server::setup_minerproxy_service;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, ChainStateNetworkSender, ChainStateNetworkEvents};
 use state_synchronizer::StateSyncClient;
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -30,6 +30,8 @@ pub struct PowConsensusProvider {
     event_handle: Option<EventProcessor>,
     miner_proxy: Option<Server>,
     _block_storage_server: Server,
+    chain_state_network_sender: Option<ChainStateNetworkSender>,
+    chain_state_network_events: Option<ChainStateNetworkEvents>,
 }
 
 impl PowConsensusProvider {
@@ -43,6 +45,8 @@ impl PowConsensusProvider {
         rollback_flag: bool,
         read_storage: Arc<dyn StorageRead>,
         write_storage: Arc<dyn StorageWrite>,
+        chain_state_network_sender: ChainStateNetworkSender,
+        chain_state_network_events: ChainStateNetworkEvents,
     ) -> Self {
         let runtime = runtime::Builder::new()
             .threaded_scheduler()
@@ -103,10 +107,14 @@ impl PowConsensusProvider {
             event_handle: Some(event_handle),
             miner_proxy: Some(miner_proxy),
             _block_storage_server: block_storage_server,
+            chain_state_network_sender: Some(chain_state_network_sender),
+            chain_state_network_events: Some(chain_state_network_events),
         }
     }
 
-    pub fn event_handle(&mut self, executor: Handle) {
+    pub fn event_handle(&mut self, executor: Handle,
+                        chain_state_network_sender: ChainStateNetworkSender,
+                        chain_state_network_events: ChainStateNetworkEvents) {
         match self.event_handle.take() {
             Some(mut handle) => {
                 let block_cache_receiver = handle
@@ -118,6 +126,9 @@ impl PowConsensusProvider {
                 handle.mint_manager.borrow_mut().mint(executor.clone());
 
                 //msg
+                handle.chain_state_handle(executor.clone(),
+                                          chain_state_network_sender,
+                                          chain_state_network_events);
                 handle.event_process(executor.clone());
 
                 //save
@@ -142,7 +153,11 @@ impl PowConsensusProvider {
 impl ConsensusProvider for PowConsensusProvider {
     fn start(&mut self) -> Result<()> {
         let executor = self.runtime.handle().clone();
-        self.event_handle(executor);
+        let chain_state_network_sender = self.chain_state_network_sender
+            .take().expect("chain_state_network_sender is none.");
+        let chain_state_network_events = self.chain_state_network_events
+            .take().expect("chain_state_network_events is none.");
+        self.event_handle(executor, chain_state_network_sender, chain_state_network_events);
         info!("PowConsensusProvider start succ.");
         Ok(())
     }

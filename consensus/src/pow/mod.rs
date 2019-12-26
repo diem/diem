@@ -6,6 +6,6 @@ mod chain_manager;
 mod event_processor;
 pub mod mine_state;
 mod mint_manager;
-mod payload_ext;
 mod sync_manager;
 mod target;
+pub(crate) mod chain_state_request_handle;

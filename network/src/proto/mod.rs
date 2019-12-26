@@ -20,6 +20,9 @@ mod state_synchronizer {
 mod health_checker {
     include!(concat!(env!("OUT_DIR"), "/health_checker.rs"));
 }
+mod chain_state {
+    include!(concat!(env!("OUT_DIR"), "/chain_state.rs"));
+}
 
 use ::libra_types::proto::types;
 
@@ -39,5 +42,8 @@ pub use self::{
     state_synchronizer::{
         state_synchronizer_msg::Message as StateSynchronizerMsg_oneof, GetChunkRequest,
         GetChunkResponse, StateSynchronizerMsg,
+    },
+    chain_state::{
+        ChainStateMsg, chain_state_msg::Message as ChainStateMsg_oneof, ChainStateRequest, ChainStateResponse,
     },
 };

@@ -63,6 +63,7 @@ cuckoo = { path = "crypto/cuckoo" }
 scrypt = { path = "crypto/scrypt" }
 miner = { path = "miner" }
 block-storage-proto = { path = "block-storage-proto" }
+chain-state = { path = "chain-state" }
 
 [dev-dependencies]
 cached = "0.9.0"
