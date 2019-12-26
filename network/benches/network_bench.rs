@@ -26,10 +26,11 @@ use network::{
     proto::{ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock},
     protocols::rpc::error::RpcError,
     validator_network::{
+        self,
         network_builder::{NetworkBuilder, TransportType},
-        ConsensusNetworkSender, Event, CONSENSUS_DIRECT_SEND_PROTOCOL, CONSENSUS_RPC_PROTOCOL,
+        ConsensusNetworkSender, Event,
     },
-    NetworkPublicKeys, ProtocolId,
+    NetworkPublicKeys,
 };
 use parity_multiaddr::Multiaddr;
 
@@ -41,7 +42,7 @@ use tokio::runtime::Runtime;
 const KiB: usize = 1 << 10;
 const MiB: usize = 1 << 20;
 const NUM_MSGS: u32 = 100;
-const TOLERANCE: u32 = 5;
+const TOLERANCE: u32 = 20;
 const HOUR_IN_MS: u64 = 60 * 60 * 1000;
 
 fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
@@ -89,62 +90,56 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     .collect();
 
     // Set up the listener network
-    let (listen_addr, mut network_provider) = NetworkBuilder::new(
+    let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         listener_peer_id,
         listener_addr,
         RoleType::Validator,
-    )
-    .transport(TransportType::TcpNoise(Some((
-        listener_identity_private_key,
-        listener_identity_public_key,
-    ))))
-    .trusted_peers(trusted_peers.clone())
-    .signing_keys((listener_signing_private_key, listener_signing_public_key))
-    .discovery_interval_ms(HOUR_IN_MS)
-    .direct_send_protocols(vec![ProtocolId::from_static(
-        CONSENSUS_DIRECT_SEND_PROTOCOL,
-    )])
-    .build();
+    );
+    network_builder
+        .transport(TransportType::TcpNoise(Some((
+            listener_identity_private_key,
+            listener_identity_public_key,
+        ))))
+        .trusted_peers(trusted_peers.clone())
+        .signing_keys((listener_signing_private_key, listener_signing_public_key))
+        .discovery_interval_ms(HOUR_IN_MS);
     let (_listener_sender, mut listener_events) =
-        network_provider.add_consensus(vec![ProtocolId::from_static(
-            CONSENSUS_DIRECT_SEND_PROTOCOL,
-        )]);
-    runtime.handle().clone().spawn(network_provider.start());
+        validator_network::consensus::add_to_network(&mut network_builder);
+    let listen_addr = network_builder.build();
 
     // Set up the dialer network
-    let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
+    let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         dialer_peer_id,
         dialer_addr,
         RoleType::Validator,
-    )
-    .transport(TransportType::TcpNoise(Some((
-        dialer_identity_private_key,
-        dialer_identity_public_key,
-    ))))
-    .trusted_peers(trusted_peers)
-    .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
-    .seed_peers(
-        [(listener_peer_id, vec![listen_addr])]
-            .iter()
-            .cloned()
-            .collect(),
-    )
-    .discovery_interval_ms(HOUR_IN_MS)
-    .direct_send_protocols(vec![ProtocolId::from_static(
-        CONSENSUS_DIRECT_SEND_PROTOCOL,
-    )])
-    .build();
+    );
+    network_builder
+        .transport(TransportType::TcpNoise(Some((
+            dialer_identity_private_key,
+            dialer_identity_public_key,
+        ))))
+        .trusted_peers(trusted_peers)
+        .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
+        .seed_peers(
+            [(listener_peer_id, vec![listen_addr])]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .discovery_interval_ms(HOUR_IN_MS);
     let (mut dialer_sender, mut dialer_events) =
-        network_provider.add_consensus(vec![ProtocolId::from_static(
-            CONSENSUS_DIRECT_SEND_PROTOCOL,
-        )]);
-    runtime.handle().clone().spawn(network_provider.start());
+        validator_network::consensus::add_to_network(&mut network_builder);
+    let _dialer_addr = network_builder.build();
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
     assert_eq!(first_dialer_event, Event::NewPeer(listener_peer_id));
+    let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
+    assert_eq!(first_dialer_event, Event::NewPeer(listener_peer_id));
+    let first_listener_event = block_on(listener_events.next()).unwrap().unwrap();
+    assert_eq!(first_listener_event, Event::NewPeer(dialer_peer_id));
     let first_listener_event = block_on(listener_events.next()).unwrap().unwrap();
     assert_eq!(first_listener_event, Event::NewPeer(dialer_peer_id));
 
@@ -231,50 +226,48 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     .collect();
 
     // Set up the listener network
-    let (listen_addr, mut network_provider) = NetworkBuilder::new(
+    let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         listener_peer_id,
         listener_addr,
         RoleType::Validator,
-    )
-    .transport(TransportType::TcpNoise(Some((
-        listener_identity_private_key,
-        listener_identity_public_key,
-    ))))
-    .trusted_peers(trusted_peers.clone())
-    .signing_keys((listener_signing_private_key, listener_signing_public_key))
-    .discovery_interval_ms(HOUR_IN_MS)
-    .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
-    .build();
+    );
+    network_builder
+        .transport(TransportType::TcpNoise(Some((
+            listener_identity_private_key,
+            listener_identity_public_key,
+        ))))
+        .trusted_peers(trusted_peers.clone())
+        .signing_keys((listener_signing_private_key, listener_signing_public_key))
+        .discovery_interval_ms(HOUR_IN_MS);
     let (_listener_sender, mut listener_events) =
-        network_provider.add_consensus(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
-    runtime.handle().clone().spawn(network_provider.start());
+        validator_network::consensus::add_to_network(&mut network_builder);
+    let listen_addr = network_builder.build();
 
     // Set up the dialer network
-    let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
+    let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         dialer_peer_id,
         dialer_addr,
         RoleType::Validator,
-    )
-    .transport(TransportType::TcpNoise(Some((
-        dialer_identity_private_key,
-        dialer_identity_public_key,
-    ))))
-    .trusted_peers(trusted_peers)
-    .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
-    .seed_peers(
-        [(listener_peer_id, vec![listen_addr])]
-            .iter()
-            .cloned()
-            .collect(),
-    )
-    .discovery_interval_ms(HOUR_IN_MS)
-    .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
-    .build();
+    );
+    network_builder
+        .transport(TransportType::TcpNoise(Some((
+            dialer_identity_private_key,
+            dialer_identity_public_key,
+        ))))
+        .trusted_peers(trusted_peers)
+        .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
+        .seed_peers(
+            [(listener_peer_id, vec![listen_addr])]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .discovery_interval_ms(HOUR_IN_MS);
     let (dialer_sender, mut dialer_events) =
-        network_provider.add_consensus(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
-    runtime.handle().clone().spawn(network_provider.start());
+        validator_network::consensus::add_to_network(&mut network_builder);
+    let _dialer_addr = network_builder.build();
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();

@@ -4,14 +4,16 @@
 //! Interface between StateSynchronizer and Network layers.
 
 use crate::{
+    counters,
     error::NetworkError,
     interface::NetworkRequest,
     proto::StateSynchronizerMsg,
-    validator_network::{NetworkEvents, NetworkSender},
+    validator_network::{network_builder::NetworkBuilder, NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use channel;
 use libra_types::PeerId;
+use std::time::Duration;
 
 /// Protocol id for state-synchronizer direct-send calls
 pub const STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL: &[u8] =
@@ -24,6 +26,7 @@ pub const STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL: &[u8] =
 /// types. `StateSynchronizerEvents` is a thin wrapper around an
 /// `channel::Receiver<NetworkNotification>`.
 pub type StateSynchronizerEvents = NetworkEvents<StateSynchronizerMsg>;
+pub const STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 
 /// The interface from StateSynchronizer to Networking layer.
 ///
@@ -37,6 +40,23 @@ pub type StateSynchronizerEvents = NetworkEvents<StateSynchronizerMsg>;
 #[derive(Clone)]
 pub struct StateSynchronizerSender {
     inner: NetworkSender<StateSynchronizerMsg>,
+}
+
+pub fn add_to_network(
+    network: &mut NetworkBuilder,
+) -> (StateSynchronizerSender, StateSynchronizerEvents) {
+    let (sender, receiver) = network.add_protocol_handler(
+        vec![],
+        vec![ProtocolId::from_static(
+            STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
+        )],
+        &counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS,
+        Duration::from_millis(STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS),
+    );
+    (
+        StateSynchronizerSender::new(sender),
+        StateSynchronizerEvents::new(receiver),
+    )
 }
 
 impl StateSynchronizerSender {

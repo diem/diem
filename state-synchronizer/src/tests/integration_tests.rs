@@ -27,10 +27,10 @@ use libra_types::{
 };
 use network::{
     validator_network::{
+        self,
         network_builder::{NetworkBuilder, TransportType},
-        STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
     },
-    NetworkPublicKeys, ProtocolId,
+    NetworkPublicKeys,
 };
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
@@ -257,10 +257,6 @@ impl SynchronizerEnv {
 
         // setup network
         let addr: Multiaddr = "/memory/0".parse().unwrap();
-        let protocols = vec![ProtocolId::from_static(
-            STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
-        )];
-
         let mut seed_peers = HashMap::new();
         if new_peer_idx > 0 {
             seed_peers.insert(
@@ -268,26 +264,26 @@ impl SynchronizerEnv {
                 vec![self.peer_addresses[new_peer_idx - 1].clone()],
             );
         }
-        let (peer_addr, mut network_provider) = NetworkBuilder::new(
+        let mut network_builder = NetworkBuilder::new(
             self.runtime.handle().clone(),
             self.peer_ids[new_peer_idx],
             addr,
             RoleType::Validator,
-        )
-        .signing_keys((
-            self.network_signers[new_peer_idx].clone(),
-            self.public_keys[new_peer_idx]
-                .network_signing_public_key()
-                .clone(),
-        ))
-        .trusted_peers(trusted_peers)
-        .seed_peers(seed_peers)
-        .transport(TransportType::Memory)
-        .direct_send_protocols(protocols.clone())
-        .build();
+        );
+        network_builder
+            .signing_keys((
+                self.network_signers[new_peer_idx].clone(),
+                self.public_keys[new_peer_idx]
+                    .network_signing_public_key()
+                    .clone(),
+            ))
+            .trusted_peers(trusted_peers)
+            .seed_peers(seed_peers)
+            .transport(TransportType::Memory);
 
-        let (sender, events) = network_provider.add_state_synchronizer(protocols);
-        self.runtime.handle().spawn(network_provider.start());
+        let (sender, events) =
+            validator_network::state_synchronizer::add_to_network(&mut network_builder);
+        let peer_addr = network_builder.build();
 
         let mut config = config_builder::test_config().0;
         if !role.is_validator() {

@@ -25,19 +25,17 @@ use pin_project::pin_project;
 use prost::Message;
 use std::{collections::HashMap, default::Default, marker::PhantomData, pin::Pin, time::Duration};
 
+pub mod consensus;
+pub mod discovery;
+pub mod health_checker;
+pub mod mempool;
 pub mod network_builder;
-
-mod consensus;
-mod discovery;
-mod health_checker;
-mod mempool;
-mod state_synchronizer;
+pub mod state_synchronizer;
 
 #[cfg(test)]
 mod test;
 
 // Public re-exports
-pub use crate::interface::LibraNetworkProvider;
 pub use consensus::{
     ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
     CONSENSUS_RPC_PROTOCOL,

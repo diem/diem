@@ -4,17 +4,20 @@
 //! Interface between Mempool and Network layers.
 
 use crate::{
+    counters,
     error::NetworkError,
     interface::NetworkRequest,
     proto::MempoolSyncMsg,
-    validator_network::{NetworkEvents, NetworkSender},
+    validator_network::{network_builder::NetworkBuilder, NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use channel;
 use libra_types::PeerId;
+use std::time::Duration;
 
 /// Protocol id for mempool direct-send calls
 pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/mempool/0.1.0";
+pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 
 /// The interface from Network to Mempool layer.
 ///
@@ -36,6 +39,21 @@ pub type MempoolNetworkEvents = NetworkEvents<MempoolSyncMsg>;
 #[derive(Clone)]
 pub struct MempoolNetworkSender {
     inner: NetworkSender<MempoolSyncMsg>,
+}
+
+pub fn add_to_network(
+    network: &mut NetworkBuilder,
+) -> (MempoolNetworkSender, MempoolNetworkEvents) {
+    let (sender, receiver) = network.add_protocol_handler(
+        vec![],
+        vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)],
+        &counters::PENDING_MEMPOOL_NETWORK_EVENTS,
+        Duration::from_millis(MEMPOOL_INBOUND_MSG_TIMEOUT_MS),
+    );
+    (
+        MempoolNetworkSender::new(sender),
+        MempoolNetworkEvents::new(receiver),
+    )
 }
 
 impl MempoolNetworkSender {

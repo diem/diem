@@ -4,11 +4,12 @@
 //! Interface between Consensus and Network layers.
 
 use crate::{
+    counters,
     error::NetworkError,
     interface::NetworkRequest,
     proto::{ConsensusMsg, ConsensusMsg_oneof, RequestBlock, RespondBlock},
     protocols::rpc::error::RpcError,
-    validator_network::{NetworkEvents, NetworkSender},
+    validator_network::{network_builder::NetworkBuilder, NetworkEvents, NetworkSender},
     NetworkPublicKeys, ProtocolId,
 };
 use channel;
@@ -19,6 +20,7 @@ use std::time::Duration;
 pub const CONSENSUS_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/consensus/0.1.0";
 /// Protocol id for consensus direct-send calls
 pub const CONSENSUS_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/consensus/0.1.0";
+pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 
 /// The interface from Network to Consensus layer.
 ///
@@ -40,6 +42,21 @@ pub type ConsensusNetworkEvents = NetworkEvents<ConsensusMsg>;
 #[derive(Clone)]
 pub struct ConsensusNetworkSender {
     inner: NetworkSender<ConsensusMsg>,
+}
+
+pub fn add_to_network(
+    network: &mut NetworkBuilder,
+) -> (ConsensusNetworkSender, ConsensusNetworkEvents) {
+    let (sender, receiver) = network.add_protocol_handler(
+        vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)],
+        vec![ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL)],
+        &counters::PENDING_CONSENSUS_NETWORK_EVENTS,
+        Duration::from_millis(CONSENSUS_INBOUND_MSG_TIMEOUT_MS),
+    );
+    (
+        ConsensusNetworkSender::new(sender),
+        ConsensusNetworkEvents::new(receiver),
+    )
 }
 
 impl ConsensusNetworkSender {

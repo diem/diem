@@ -4,11 +4,12 @@
 //! Interface between HealthChecker and Network layers.
 
 use crate::{
+    counters,
     error::NetworkError,
     interface::NetworkRequest,
     proto::{HealthCheckerMsg, HealthCheckerMsg_oneof, Ping, Pong},
     protocols::rpc::error::RpcError,
-    validator_network::{NetworkEvents, NetworkSender},
+    validator_network::{network_builder::NetworkBuilder, NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use channel;
@@ -17,6 +18,7 @@ use std::time::Duration;
 
 /// Protocol id for HealthChecker RPC calls
 pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/health-checker/0.1.0";
+pub const HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 
 /// The interface from Network to HealthChecker layer.
 ///
@@ -38,6 +40,21 @@ pub type HealthCheckerNetworkEvents = NetworkEvents<HealthCheckerMsg>;
 #[derive(Clone)]
 pub struct HealthCheckerNetworkSender {
     inner: NetworkSender<HealthCheckerMsg>,
+}
+
+pub fn add_to_network(
+    network: &mut NetworkBuilder,
+) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
+    let (sender, receiver) = network.add_protocol_handler(
+        vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)],
+        vec![],
+        &counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS,
+        Duration::from_millis(HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS),
+    );
+    (
+        HealthCheckerNetworkSender::new(sender),
+        HealthCheckerNetworkEvents::new(receiver),
+    )
 }
 
 impl HealthCheckerNetworkSender {
