@@ -3,8 +3,10 @@
 
 use anyhow::Result;
 use libra_config::config::NodeConfig;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender,
-                                 ChainStateNetworkSender, ChainStateNetworkEvents};
+use network::validator_network::{
+    ChainStateNetworkEvents, ChainStateNetworkSender, ConsensusNetworkEvents,
+    ConsensusNetworkSender,
+};
 
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
 use crate::pow::pow_consensus_provider::PowConsensusProvider;

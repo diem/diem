@@ -21,11 +21,11 @@ use crate::{
         rpc::{InboundRpcRequest, OutboundRpcRequest, RpcNotification, RpcRequest},
     },
     validator_network::{
-        AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ConsensusNetworkEvents,
-        ConsensusNetworkSender, DiscoveryNetworkEvents, DiscoveryNetworkSender,
-        HealthCheckerNetworkEvents, HealthCheckerNetworkSender, MempoolNetworkEvents,
-        MempoolNetworkSender, StateSynchronizerEvents, StateSynchronizerSender,
-        ChainStateNetworkEvents, ChainStateNetworkSender
+        AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ChainStateNetworkEvents,
+        ChainStateNetworkSender, ConsensusNetworkEvents, ConsensusNetworkSender,
+        DiscoveryNetworkEvents, DiscoveryNetworkSender, HealthCheckerNetworkEvents,
+        HealthCheckerNetworkSender, MempoolNetworkEvents, MempoolNetworkSender,
+        StateSynchronizerEvents, StateSynchronizerSender,
     },
     ProtocolId,
 };

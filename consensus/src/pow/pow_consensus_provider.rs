@@ -17,7 +17,10 @@ use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::account_address::AccountAddress;
 use miner::server::setup_minerproxy_service;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, ChainStateNetworkSender, ChainStateNetworkEvents};
+use network::validator_network::{
+    ChainStateNetworkEvents, ChainStateNetworkSender, ConsensusNetworkEvents,
+    ConsensusNetworkSender,
+};
 use state_synchronizer::StateSyncClient;
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -112,9 +115,12 @@ impl PowConsensusProvider {
         }
     }
 
-    pub fn event_handle(&mut self, executor: Handle,
-                        chain_state_network_sender: ChainStateNetworkSender,
-                        chain_state_network_events: ChainStateNetworkEvents) {
+    pub fn event_handle(
+        &mut self,
+        executor: Handle,
+        chain_state_network_sender: ChainStateNetworkSender,
+        chain_state_network_events: ChainStateNetworkEvents,
+    ) {
         match self.event_handle.take() {
             Some(mut handle) => {
                 let block_cache_receiver = handle
@@ -126,9 +132,11 @@ impl PowConsensusProvider {
                 handle.mint_manager.borrow_mut().mint(executor.clone());
 
                 //msg
-                handle.chain_state_handle(executor.clone(),
-                                          chain_state_network_sender,
-                                          chain_state_network_events);
+                handle.chain_state_handle(
+                    executor.clone(),
+                    chain_state_network_sender,
+                    chain_state_network_events,
+                );
                 handle.event_process(executor.clone());
 
                 //save
@@ -153,11 +161,19 @@ impl PowConsensusProvider {
 impl ConsensusProvider for PowConsensusProvider {
     fn start(&mut self) -> Result<()> {
         let executor = self.runtime.handle().clone();
-        let chain_state_network_sender = self.chain_state_network_sender
-            .take().expect("chain_state_network_sender is none.");
-        let chain_state_network_events = self.chain_state_network_events
-            .take().expect("chain_state_network_events is none.");
-        self.event_handle(executor, chain_state_network_sender, chain_state_network_events);
+        let chain_state_network_sender = self
+            .chain_state_network_sender
+            .take()
+            .expect("chain_state_network_sender is none.");
+        let chain_state_network_events = self
+            .chain_state_network_events
+            .take()
+            .expect("chain_state_network_events is none.");
+        self.event_handle(
+            executor,
+            chain_state_network_sender,
+            chain_state_network_events,
+        );
         info!("PowConsensusProvider start succ.");
         Ok(())
     }

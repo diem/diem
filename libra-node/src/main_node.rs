@@ -20,11 +20,11 @@ use network::{
         // when you add a new protocol const, you must add this in either
         // .direct_send_protocols or .rpc_protocols vector of network_builder in setup_network()
         ADMISSION_CONTROL_RPC_PROTOCOL,
+        CHAIN_STATE_DIRECT_SEND_PROTOCOL,
         CONSENSUS_DIRECT_SEND_PROTOCOL,
         CONSENSUS_RPC_PROTOCOL,
         MEMPOOL_DIRECT_SEND_PROTOCOL,
         STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
-        CHAIN_STATE_DIRECT_SEND_PROTOCOL,
     },
     ProtocolId,
 };
@@ -323,10 +323,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
         if node_config.consensus.consensus_type == POW {
             //add chain state protocol
-            let(chain_state_network_sender, chain_state_network_events) =
-            network_provider.add_chain_state(vec![
-                ProtocolId::from_static(CHAIN_STATE_DIRECT_SEND_PROTOCOL),
-            ]);
+            let (chain_state_network_sender, chain_state_network_events) = network_provider
+                .add_chain_state(vec![ProtocolId::from_static(
+                    CHAIN_STATE_DIRECT_SEND_PROTOCOL,
+                )]);
 
             cs_network_sender = Some(chain_state_network_sender);
             cs_network_events = Some(chain_state_network_events);

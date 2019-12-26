@@ -1,18 +1,18 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::counters;
 use crate::pow::chain_manager::ChainManager;
+use crate::pow::chain_state_request_handle::ChainStateRequestHandle;
 use crate::pow::mine_state::{BlockIndex, MineStateManager};
 use crate::pow::mint_manager::MintManager;
 use crate::pow::sync_manager::SyncManager;
-use crate::pow::chain_state_request_handle::ChainStateRequestHandle;
 use crate::state_replication::{StateComputer, TxnManager};
 use anyhow::{Error, Result};
 use atomic_refcell::AtomicRefCell;
 use channel;
-use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
+use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
 
 use cuckoo::Solution;
 use futures::channel::mpsc;
@@ -28,6 +28,7 @@ use libra_types::transaction::SignedTransaction;
 use libra_types::PeerId;
 use miner::miner::verify;
 use miner::types::{from_slice, Algo, H256, U256};
+use network::validator_network::{ChainStateNetworkEvents, ChainStateNetworkSender};
 use network::{
     proto::{
         Block as BlockProto, ConsensusMsg,
@@ -40,7 +41,6 @@ use std::convert::TryInto;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
-use network::validator_network::{ChainStateNetworkSender, ChainStateNetworkEvents};
 
 pub struct EventProcessor {
     block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
@@ -127,11 +127,17 @@ impl EventProcessor {
         }
     }
 
-    pub fn chain_state_handle(&self, executor: Handle,
-                              chain_state_network_sender: ChainStateNetworkSender,
-                              chain_state_network_events: ChainStateNetworkEvents,) {
-        let cs_req_handle = ChainStateRequestHandle::new(chain_state_network_sender,
-                                               chain_state_network_events, self.block_store.clone());
+    pub fn chain_state_handle(
+        &self,
+        executor: Handle,
+        chain_state_network_sender: ChainStateNetworkSender,
+        chain_state_network_events: ChainStateNetworkEvents,
+    ) {
+        let cs_req_handle = ChainStateRequestHandle::new(
+            chain_state_network_sender,
+            chain_state_network_events,
+            self.block_store.clone(),
+        );
         executor.spawn(cs_req_handle.start());
     }
 

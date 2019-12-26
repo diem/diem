@@ -6,7 +6,12 @@ use crate::state_replication::{StateComputer, TxnManager};
 use anyhow::Result;
 use atomic_refcell::AtomicRefCell;
 use chrono::prelude::*;
-use consensus_types::{block::Block, payload_ext::{genesis_id, BlockPayloadExt}, quorum_cert::QuorumCert, vote_data::VoteData};
+use consensus_types::{
+    block::Block,
+    payload_ext::{genesis_id, BlockPayloadExt},
+    quorum_cert::QuorumCert,
+    vote_data::VoteData,
+};
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_crypto::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
 use libra_crypto::HashValue;

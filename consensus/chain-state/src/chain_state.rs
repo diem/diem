@@ -1,9 +1,9 @@
-use anyhow::{Result, format_err};
-use lcs;
-use std::convert::{TryFrom, TryInto};
-use serde::{Deserialize, Serialize};
+use anyhow::{format_err, Result};
 use consensus_types::block::Block;
 use consensus_types::common::Payload;
+use lcs;
+use serde::{Deserialize, Serialize};
+use std::convert::{TryFrom, TryInto};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ChainStateRequest {
@@ -12,9 +12,7 @@ pub struct ChainStateRequest {
 
 impl ChainStateRequest {
     pub fn new(nonce: u64) -> Self {
-        Self {
-            nonce
-        }
+        Self { nonce }
     }
 
     pub fn nonce(&self) -> u64 {
@@ -22,8 +20,7 @@ impl ChainStateRequest {
     }
 }
 
-impl TryFrom<network::proto::ChainStateRequest> for ChainStateRequest
-{
+impl TryFrom<network::proto::ChainStateRequest> for ChainStateRequest {
     type Error = anyhow::Error;
 
     fn try_from(proto: network::proto::ChainStateRequest) -> anyhow::Result<Self> {
@@ -31,8 +28,7 @@ impl TryFrom<network::proto::ChainStateRequest> for ChainStateRequest
     }
 }
 
-impl TryFrom<ChainStateRequest> for network::proto::ChainStateRequest
-{
+impl TryFrom<ChainStateRequest> for network::proto::ChainStateRequest {
     type Error = anyhow::Error;
 
     fn try_from(req: ChainStateRequest) -> anyhow::Result<Self> {
@@ -60,8 +56,7 @@ impl<T> ChainStateResponse<T> {
     }
 }
 
-impl<T: Payload> TryFrom<network::proto::ChainStateResponse> for ChainStateResponse<T>
-{
+impl<T: Payload> TryFrom<network::proto::ChainStateResponse> for ChainStateResponse<T> {
     type Error = anyhow::Error;
 
     fn try_from(proto: network::proto::ChainStateResponse) -> anyhow::Result<Self> {
@@ -69,8 +64,7 @@ impl<T: Payload> TryFrom<network::proto::ChainStateResponse> for ChainStateRespo
     }
 }
 
-impl<T: Payload> TryFrom<ChainStateResponse<T>> for network::proto::ChainStateResponse
-{
+impl<T: Payload> TryFrom<ChainStateResponse<T>> for network::proto::ChainStateResponse {
     type Error = anyhow::Error;
 
     fn try_from(req: ChainStateResponse<T>) -> anyhow::Result<Self> {
@@ -96,12 +90,12 @@ impl<T: Payload> TryFrom<network::proto::ChainStateMsg> for ChainStateMsg<T> {
             .ok_or_else(|| format_err!("Missing message"))?;
 
         let response = match item {
-            ::network::proto::ChainStateMsg_oneof::CsReq(r) => ChainStateMsg::CsReq(
-                ChainStateRequest::try_from(r)?,
-            ),
-            ::network::proto::ChainStateMsg_oneof::CsResp(r) => ChainStateMsg::CsResp(
-                ChainStateResponse::try_from(r)?,
-            ),
+            ::network::proto::ChainStateMsg_oneof::CsReq(r) => {
+                ChainStateMsg::CsReq(ChainStateRequest::try_from(r)?)
+            }
+            ::network::proto::ChainStateMsg_oneof::CsResp(r) => {
+                ChainStateMsg::CsResp(ChainStateResponse::try_from(r)?)
+            }
         };
 
         Ok(response)
@@ -113,12 +107,8 @@ impl<T: Payload> TryFrom<ChainStateMsg<T>> for network::proto::ChainStateMsg {
 
     fn try_from(response: ChainStateMsg<T>) -> Result<Self> {
         let resp = match response {
-            ChainStateMsg::CsReq(r) => {
-                network::proto::ChainStateMsg_oneof::CsReq(r.try_into()?)
-            }
-            ChainStateMsg::CsResp(r) => {
-                network::proto::ChainStateMsg_oneof::CsResp(r.try_into()?)
-            }
+            ChainStateMsg::CsReq(r) => network::proto::ChainStateMsg_oneof::CsReq(r.try_into()?),
+            ChainStateMsg::CsResp(r) => network::proto::ChainStateMsg_oneof::CsResp(r.try_into()?),
         };
 
         Ok(Self {

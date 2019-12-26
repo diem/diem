@@ -6,15 +6,15 @@
 use crate::{
     error::NetworkError,
     interface::NetworkRequest,
-    proto::{ChainStateMsg},
-    protocols::{direct_send::Message},
+    proto::ChainStateMsg,
+    protocols::direct_send::Message,
     validator_network::{NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use bytes05::Bytes;
 use channel;
 use futures::SinkExt;
-use libra_types::{PeerId};
+use libra_types::PeerId;
 
 /// Protocol id for chain_state direct-send calls
 pub const CHAIN_STATE_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/chain_state/0.1.0";

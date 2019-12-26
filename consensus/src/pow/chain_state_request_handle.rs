@@ -1,18 +1,14 @@
-use network::validator_network::{ChainStateNetworkSender, ChainStateNetworkEvents, Event};
-use std::sync::Arc;
 use crate::chained_bft::consensusdb::ConsensusDB;
-use futures::StreamExt;
-use libra_logger::prelude::*;
-use std::convert::TryInto;
 use chain_state::{ChainStateMsg, ChainStateRequest, ChainStateResponse};
-use network::{
-    proto::{
-        ChainStateMsg as ChainStateMsgProto, ChainStateMsg_oneof
-    }
-};
-use std::convert::TryFrom;
 use consensus_types::block::Block;
 use consensus_types::payload_ext::BlockPayloadExt;
+use futures::StreamExt;
+use libra_logger::prelude::*;
+use network::proto::{ChainStateMsg as ChainStateMsgProto, ChainStateMsg_oneof};
+use network::validator_network::{ChainStateNetworkEvents, ChainStateNetworkSender, Event};
+use std::convert::TryFrom;
+use std::convert::TryInto;
+use std::sync::Arc;
 
 pub struct ChainStateRequestHandle {
     chain_state_network_sender: ChainStateNetworkSender,
@@ -21,9 +17,11 @@ pub struct ChainStateRequestHandle {
 }
 
 impl ChainStateRequestHandle {
-    pub fn new(chain_state_network_sender: ChainStateNetworkSender,
-               chain_state_network_events: ChainStateNetworkEvents,
-               block_store: Arc<ConsensusDB>) -> Self {
+    pub fn new(
+        chain_state_network_sender: ChainStateNetworkSender,
+        chain_state_network_events: ChainStateNetworkEvents,
+        block_store: Arc<ConsensusDB>,
+    ) -> Self {
         Self {
             chain_state_network_sender,
             chain_state_network_events: Some(chain_state_network_events),
@@ -32,8 +30,10 @@ impl ChainStateRequestHandle {
     }
 
     pub async fn start(mut self) {
-        let mut chain_state_network_events = self.chain_state_network_events
-            .take().expect("chain_state_network_events is none.");
+        let mut chain_state_network_events = self
+            .chain_state_network_events
+            .take()
+            .expect("chain_state_network_events is none.");
         let chain_state_network_sender = self.chain_state_network_sender.clone();
         let block_store = self.block_store.clone();
         loop {

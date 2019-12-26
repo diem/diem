@@ -27,6 +27,10 @@ mod chain_state {
 use ::libra_types::proto::types;
 
 pub use self::{
+    chain_state::{
+        chain_state_msg::Message as ChainStateMsg_oneof, ChainStateMsg, ChainStateRequest,
+        ChainStateResponse,
+    },
     consensus::{
         consensus_msg::Message as ConsensusMsg_oneof, Block, BlockPayloadExt, ConsensusMsg,
         Proposal, RequestBlock, RequestEpoch, RespondBlock, SyncInfo, VoteMsg, VoteProposal,
@@ -42,8 +46,5 @@ pub use self::{
     state_synchronizer::{
         state_synchronizer_msg::Message as StateSynchronizerMsg_oneof, GetChunkRequest,
         GetChunkResponse, StateSynchronizerMsg,
-    },
-    chain_state::{
-        ChainStateMsg, chain_state_msg::Message as ChainStateMsg_oneof, ChainStateRequest, ChainStateResponse,
     },
 };

@@ -1,24 +1,22 @@
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 mod chain_state;
 pub use chain_state::{ChainStateMsg, ChainStateRequest, ChainStateResponse};
 
-use tokio::runtime::Handle;
-use futures::{future, StreamExt};
-use tokio::runtime::{Builder, Runtime};
-use tokio::time::{interval};
-use network::{
-    proto::{
-        ChainStateMsg_oneof,
-    },
-    validator_network::{ChainStateNetworkSender, ChainStateNetworkEvents, Event},
-};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use libra_prost_ext::MessageExt;
-use std::convert::TryInto;
-use libra_logger::prelude::*;
 use consensus_types::payload_ext::BlockPayloadExt;
+use futures::{future, StreamExt};
 use libra_logger::prelude::*;
+use libra_logger::prelude::*;
+use libra_prost_ext::MessageExt;
+use network::{
+    proto::ChainStateMsg_oneof,
+    validator_network::{ChainStateNetworkEvents, ChainStateNetworkSender, Event},
+};
 use std::convert::TryFrom;
+use std::convert::TryInto;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::runtime::Handle;
+use tokio::runtime::{Builder, Runtime};
+use tokio::time::interval;
 
 pub struct ChainStateRuntime {
     _rt: Runtime,
@@ -44,30 +42,37 @@ impl ChainStateRuntime {
         let f = async move {
             interval(Duration::from_secs(30))
                 .for_each(move |_| {
-                    Self::chain_state_network_task(task_executor.clone(), chain_state_network_sender.clone());
+                    Self::chain_state_network_task(
+                        task_executor.clone(),
+                        chain_state_network_sender.clone(),
+                    );
                     future::ready(())
                 })
                 .await;
         };
         executor.spawn(f);
 
-        Self {
-            _rt:runtime,
-        }
+        Self { _rt: runtime }
     }
 
-    fn chain_state_network_task(handle:Handle, chain_state_network_sender: ChainStateNetworkSender) {
+    fn chain_state_network_task(
+        handle: Handle,
+        chain_state_network_sender: ChainStateNetworkSender,
+    ) {
         info!("chain_state begin.");
         let f = async move {
             let current = SystemTime::now();
-            let nonce = current.duration_since(UNIX_EPOCH)
-                .expect("Time went backwards").as_micros() as u64;
+            let nonce = current
+                .duration_since(UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_micros() as u64;
             let req = ChainStateRequest::new(nonce);
             let msg: ChainStateMsg<BlockPayloadExt> = ChainStateMsg::CsReq(req);
-            let proto:network::proto::ChainStateMsg = msg.clone().try_into().expect("into err.");
+            let proto: network::proto::ChainStateMsg = msg.clone().try_into().expect("into err.");
             let msg_raw = proto.to_bytes().unwrap();
             if let Err(err) = chain_state_network_sender
-                .clone().broadcast_bytes(msg_raw, vec![])
+                .clone()
+                .broadcast_bytes(msg_raw, vec![])
                 .await
             {
                 error!(
@@ -92,8 +97,10 @@ impl ChainStateResponseHandle {
     }
 
     pub async fn start(mut self) {
-        let mut chain_state_network_events = self.chain_state_network_events
-            .take().expect("chain_state_network_events is none.");
+        let mut chain_state_network_events = self
+            .chain_state_network_events
+            .take()
+            .expect("chain_state_network_events is none.");
         loop {
             ::futures::select! {
                 network_event = chain_state_network_events.select_next_some() => {
