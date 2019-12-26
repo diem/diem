@@ -157,19 +157,6 @@ pub fn setup_network(
             .trusted_peers(trusted_peers)
             .signing_keys((signing_private, signing_public))
             .discovery_interval_ms(config.discovery_interval_ms);
-    } else if config.enable_encryption_and_authentication {
-        let identity_private = config
-            .network_keypairs
-            .identity_keys
-            .take_private()
-            .expect("Failed to take Network identity private key, key absent or already read");
-        let identity_public = config.network_keypairs.identity_keys.public().clone();
-        // Even if a network end-point is permissionless, it might want to prove its identity to
-        // another peer it connects to. For this, we use TCP + Noise but in a permission-less way.
-        network_builder.transport(TransportType::TcpNoise(Some((
-            identity_private,
-            identity_public,
-        ))));
     } else if config.is_public_network {
         let seed_peers = config
             .seed_peers
@@ -199,6 +186,19 @@ pub fn setup_network(
             .seed_peers(seed_peers)
             .signing_keys((signing_private, signing_public))
             .discovery_interval_ms(config.discovery_interval_ms);
+    } else if config.enable_encryption_and_authentication {
+        let identity_private = config
+            .network_keypairs
+            .identity_keys
+            .take_private()
+            .expect("Failed to take Network identity private key, key absent or already read");
+        let identity_public = config.network_keypairs.identity_keys.public().clone();
+        // Even if a network end-point is permissionless, it might want to prove its identity to
+        // another peer it connects to. For this, we use TCP + Noise but in a permission-less way.
+        network_builder.transport(TransportType::TcpNoise(Some((
+            identity_private,
+            identity_public,
+        ))));
     } else {
         network_builder.transport(TransportType::Tcp);
     }

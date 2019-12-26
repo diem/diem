@@ -64,11 +64,15 @@ pub fn verify(
     let mut pow_hash = [0u8; 32];
     match *algo {
         Algo::CUCKOO => {
-            pow_hash = blake2b_256(pow_input(header_hash.as_bytes(), nonce).as_ref());
+            let input_hash = blake2b_256(pow_input(header_hash.as_bytes(), nonce).as_ref());
             let cuckoo = Cuckoo::new();
-            if cuckoo.verify(&pow_hash, &solution.unwrap()) == false {
+            if solution.is_none() {
                 return false;
             }
+            if cuckoo.verify(&input_hash, &solution.clone().unwrap()) == false {
+                return false;
+            }
+            pow_hash = blake2b_256(solution.unwrap().0.as_ref()).into();
         }
         Algo::SCRYPT => {
             scrypt_1024_1_1_256(&pow_input(header_hash.as_bytes(), nonce), &mut pow_hash);

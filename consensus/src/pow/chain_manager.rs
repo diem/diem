@@ -88,7 +88,7 @@ impl ChainManager {
                     let parent_block_id = block.parent_id();
                     let block_index = BlockIndex::new(&block.id(), &parent_block_id);
                     let mut chain_lock = block_tree.write().compat().await.unwrap();
-                    if chain_lock.block_exist(&parent_block_id) {
+                    if chain_lock.block_exist(&parent_block_id) && !chain_lock.block_exist(&block.id()) {
                         // 2. find ancestors
                         let (ancestors, pre_block_index) = chain_lock.find_ancestor_until_main_chain(&parent_block_id).expect("find ancestors err.");
                         // 3. find blocks
