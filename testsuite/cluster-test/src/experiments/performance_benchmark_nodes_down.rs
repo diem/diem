@@ -44,11 +44,22 @@ pub struct PerformanceBenchmarkNodesDown {
 impl ExperimentParam for PerformanceBenchmarkNodesDownParams {
     type E = PerformanceBenchmarkNodesDown;
     fn build(self, cluster: &Cluster) -> Self::E {
-        let (down_instances, up_instances) = cluster.split_n_validators_random(self.num_nodes_down);
-        Self::E {
-            down_instances: down_instances.into_validator_instances(),
-            up_instances: up_instances.into_validator_instances(),
-            num_nodes_down: self.num_nodes_down,
+        if self.is_fullnode {
+            let (down_instances, up_instances) =
+                cluster.split_n_fullnodes_random(self.num_nodes_down);
+            Self::E {
+                down_instances: down_instances.into_fullnode_instances(),
+                up_instances: up_instances.into_fullnode_instances(),
+                num_nodes_down: self.num_nodes_down,
+            }
+        } else {
+            let (down_instances, up_instances) =
+                cluster.split_n_validators_random(self.num_nodes_down);
+            Self::E {
+                down_instances: down_instances.into_validator_instances(),
+                up_instances: up_instances.into_validator_instances(),
+                num_nodes_down: self.num_nodes_down,
+            }
         }
     }
 }
