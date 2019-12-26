@@ -1,18 +1,18 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::counters;
 use crate::pow::chain_manager::ChainManager;
+use crate::pow::chain_state_request_handle::ChainStateRequestHandle;
 use crate::pow::mine_state::{BlockIndex, MineStateManager};
 use crate::pow::mint_manager::MintManager;
-use crate::pow::payload_ext::BlockPayloadExt;
 use crate::pow::sync_manager::SyncManager;
 use crate::state_replication::{StateComputer, TxnManager};
 use anyhow::{Error, Result};
 use atomic_refcell::AtomicRefCell;
 use channel;
-use consensus_types::block::Block;
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
+use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
 
 use cuckoo::Solution;
 use futures::channel::mpsc;
@@ -28,6 +28,7 @@ use libra_types::transaction::SignedTransaction;
 use libra_types::PeerId;
 use miner::miner::verify;
 use miner::types::{from_slice, Algo, H256, U256};
+use network::validator_network::{ChainStateNetworkEvents, ChainStateNetworkSender};
 use network::{
     proto::{
         Block as BlockProto, ConsensusMsg,
@@ -80,7 +81,6 @@ impl EventProcessor {
         let (sync_block_sender, sync_block_receiver) = mpsc::channel(10);
         let (sync_signal_sender, sync_signal_receiver) = mpsc::channel(1024);
         let chain_manager = Arc::new(AtomicRefCell::new(ChainManager::new(
-            //            Some(block_cache_receiver),
             Arc::clone(&block_store),
             txn_manager.clone(),
             state_computer.clone(),
@@ -125,6 +125,20 @@ impl EventProcessor {
             mint_manager,
             block_cache_receiver: Some(block_cache_receiver),
         }
+    }
+
+    pub fn chain_state_handle(
+        &self,
+        executor: Handle,
+        chain_state_network_sender: ChainStateNetworkSender,
+        chain_state_network_events: ChainStateNetworkEvents,
+    ) {
+        let cs_req_handle = ChainStateRequestHandle::new(
+            chain_state_network_sender,
+            chain_state_network_events,
+            self.block_store.clone(),
+        );
+        executor.spawn(cs_req_handle.start());
     }
 
     pub fn event_process(&mut self, executor: Handle) {
@@ -352,7 +366,7 @@ impl EventProcessor {
                         debug!("RpcRequest from {:?} ", peer_id);
                     }
                     Event::NewPeer(peer_id) => {
-                        debug!("Peer {:?} connected111", peer_id);
+                        debug!("Peer {:?} connected", peer_id);
                     }
                     Event::LostPeer(peer_id) => {
                         debug!("Peer {:?} disconnected", peer_id);

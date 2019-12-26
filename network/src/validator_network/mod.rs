@@ -28,6 +28,7 @@ use std::{collections::HashMap, default::Default, marker::PhantomData, pin::Pin,
 pub mod network_builder;
 
 mod admission_control;
+mod chain_state;
 mod consensus;
 mod discovery;
 mod health_checker;
@@ -41,6 +42,9 @@ mod test;
 pub use crate::interface::LibraNetworkProvider;
 pub use admission_control::{
     AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ADMISSION_CONTROL_RPC_PROTOCOL,
+};
+pub use chain_state::{
+    ChainStateNetworkEvents, ChainStateNetworkSender, CHAIN_STATE_DIRECT_SEND_PROTOCOL,
 };
 pub use consensus::{
     ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,

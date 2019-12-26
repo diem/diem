@@ -1,13 +1,12 @@
 use crate::pow::chain_manager::ChainManager;
 use crate::pow::event_processor::EventProcessor;
-use crate::pow::payload_ext::BlockPayloadExt;
 use anyhow::Result;
 use atomic_refcell::AtomicRefCell;
 use channel;
-use consensus_types::block::Block;
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
+use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
 use futures::compat::Future01CompatExt;
 use futures::SinkExt;
 use futures::{channel::mpsc, StreamExt};
