@@ -15,13 +15,13 @@ use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
-use libra_types::transaction::TransactionPayload;
 use libra_types::{
     block_metadata::BlockMetadata,
     byte_array::ByteArray,
     transaction::{
         ChangeSet, SignatureCheckedTransaction, SignedTransaction, Transaction,
-        TransactionArgument, TransactionOutput, TransactionStatus, MAX_TRANSACTION_SIZE_IN_BYTES,
+        TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
+        MAX_TRANSACTION_SIZE_IN_BYTES,
     },
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::WriteSet,
@@ -113,6 +113,11 @@ impl LibraVM {
     }
 
     fn check_gas(&self, txn: &SignedTransaction) -> VMResult<()> {
+        // Do not check gas limit for writeset transaction.
+        if let TransactionPayload::WriteSet(_) = txn.payload() {
+            return Ok(());
+        }
+
         let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
         // The transaction is too large.
         if txn.raw_txn_bytes_len() > MAX_TRANSACTION_SIZE_IN_BYTES {
@@ -224,12 +229,12 @@ impl LibraVM {
         remote_cache: &dyn RemoteCache,
     ) -> VMResult<VerifiedTranscationPayload> {
         let mut ctx = GasFreeContext::new(remote_cache, GasUnits::new(0));
+        self.check_gas(transaction)?;
         self.check_payload(transaction.payload(), state_view)?;
         let txn_data = TransactionMetadata::new(transaction);
         match transaction.payload() {
             TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
             TransactionPayload::Script(script) => {
-                self.check_gas(transaction)?;
                 self.run_prologue(state_view, gas_schedule, &mut ctx, &txn_data)?;
                 Ok(VerifiedTranscationPayload::Script(
                     script.code().to_vec(),
@@ -237,7 +242,6 @@ impl LibraVM {
                 ))
             }
             TransactionPayload::Module(module) => {
-                self.check_gas(transaction)?;
                 self.run_prologue(state_view, gas_schedule, &mut ctx, &txn_data)?;
                 Ok(VerifiedTranscationPayload::Module(module.code().to_vec()))
             }
