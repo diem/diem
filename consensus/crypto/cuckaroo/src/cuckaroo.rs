@@ -1,12 +1,12 @@
 // Copyright 2018 The Grin Developers
+
 //! Implementation of Cuckaroo Cycle, based on Cuckoo Cycle designed by
 //! John Tromp. Ported to Rust from https://github.com/tromp/cuckoo.
 
-use crate::global;
-use crate::pow::common::{CuckooParams, EdgeType};
-use crate::pow::error::{Error, ErrorKind};
-use crate::pow::siphash::siphash_block;
-use crate::pow::{PoWContext, Proof};
+use crate::error::{Error, ErrorKind};
+use crate::siphash::siphash_block;
+use crate::types::{CuckooParams, EdgeType, PROOF_SIZE};
+use crate::types::{PoWContext, Proof};
 
 /// Instantiate a new CuckarooContext as a PowContext. Note that this can't
 /// be moved in the PoWContext trait as this particular trait needs to be
@@ -48,7 +48,7 @@ where
     }
 
     fn verify(&self, proof: &Proof) -> Result<(), Error> {
-        if proof.proof_size() != global::proofsize() {
+        if proof.proof_size() != PROOF_SIZE {
             return Err(ErrorKind::Verification("wrong cycle length".to_owned()))?;
         }
         let nonces = &proof.nonces;

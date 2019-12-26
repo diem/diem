@@ -14,7 +14,6 @@ use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
 
-use cuckoo::Solution;
 use futures::channel::mpsc;
 use futures::{stream::select, SinkExt, StreamExt, TryStreamExt};
 use libra_crypto::ed25519::Ed25519PrivateKey;
@@ -27,7 +26,7 @@ use libra_types::account_address::AccountAddress;
 use libra_types::transaction::SignedTransaction;
 use libra_types::PeerId;
 use miner::miner::verify;
-use miner::types::{from_slice, Algo, H256, U256};
+use miner::types::{from_slice, Algo, Solution, H256, U256};
 use network::{
     proto::{
         Block as BlockProto, ConsensusMsg,
@@ -180,26 +179,17 @@ impl EventProcessor {
                                     target_h.into()
                                 };
                                 let algo: &Algo = &payload.algo.into();
-                                let solution = {
-                                    let s: Solution = payload.solve.clone().into();
-                                    if s == Solution::empty() {
-                                        None
-                                    } else {
-                                        Some(s)
-                                    }
-                                };
-                                let header_hash = {
-                                    let hash = block
-                                        .quorum_cert()
-                                        .ledger_info()
-                                        .ledger_info()
-                                        .hash()
-                                        .to_vec();
-                                    let hash_h: H256 = from_slice(&hash).into();
-                                    hash_h
-                                };
+                                let solution: Solution = payload.solve.clone().into();
+
+                                let header = block
+                                    .quorum_cert()
+                                    .ledger_info()
+                                    .ledger_info()
+                                    .hash()
+                                    .to_vec();
+
                                 let verify =
-                                    verify(&header_hash, payload.nonce, solution, algo, &target);
+                                    verify(&header, payload.nonce, solution, algo, &target);
 
                                 if verify {
                                     if self_peer_id != peer_id {

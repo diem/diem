@@ -17,8 +17,8 @@ grpcio = { version = "=0.5.0-alpha.4", default-features = false }
 futures03 = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await", "io-compat", "compat"] }
 futures = "0.1.28"
 byteorder = "1.3.1"
-cuckoo = {path = "../crypto/cuckoo" }
 cuckoo_miner = {path = "./cuckoo-miner"}
+cuckaroo = {path = "../crypto/cuckaroo"}
 scrypt = {path = "../crypto/scrypt"}
 util = {path = "../crypto/util"}
 rand = { version = "0.6.5", default-features = false }

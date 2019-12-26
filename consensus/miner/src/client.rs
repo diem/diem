@@ -1,12 +1,11 @@
 use crate::miner;
-use crate::types::{Algo, MineCtx, U256};
+use crate::types::{Algo, MineCtx, Solution, U256};
 use async_std::{
     prelude::*,
     stream::Stream,
     task,
     task::{Context, Poll},
 };
-use cuckoo::Solution;
 use grpcio::{self, ChannelBuilder, EnvBuilder};
 use proto::miner::{MineCtxRequest, MinedBlockRequest, MinerProxyClient};
 use std::{pin::Pin, sync::Arc};
@@ -82,13 +81,11 @@ impl MineClient {
         let mut ctx_stream = MineCtxStream::new(self.rpc_client.clone());
         while let Some(ctx) = ctx_stream.next().await {
             let target: U256 = ctx.target.clone().unwrap().into();
-            let (nonce, solution) =
-                miner::solve(&ctx.header.into(), &ctx.algo.clone().unwrap(), &target);
-            let solution_ser = solution.map_or(Solution::empty().0.to_vec(), |s| s.0.to_vec());
+            let (nonce, solution) = miner::solve(&ctx.header, &ctx.algo.clone().unwrap(), &target);
             let req = MinedBlockRequest {
                 mine_ctx: Some(ctx.into()),
                 nonce,
-                solution: solution_ser,
+                solution: solution.into(),
             };
             let _resp = self.rpc_client.mined(&req);
         }

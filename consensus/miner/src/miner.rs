@@ -1,55 +1,38 @@
-use crate::types::{Algo, H256, U256};
-use cuckoo::{Cuckoo, Solution};
+use crate::cuckoo;
+use crate::types::{blake2b, set_header_nonce, Algo, Solution, H256, U256};
 use rand::Rng;
 use scrypt::scrypt_1024_1_1_256;
 
-fn calculate_pow_hash(
-    header_hash: &H256,
-    algo: &Algo,
-    nonce: u64,
-) -> (Option<H256>, Option<Solution>) {
-    /*
+fn calculate_pow_hash(header: &[u8], algo: &Algo, nonce: u32) -> (H256, Solution) {
     match algo {
         &Algo::CUCKOO => {
-            let cuckoo = Cuckoo::new();
-            //let input = blake2b_256(pow_input(header_hash.as_bytes(), nonce).as_ref());
-            let input = vec![];
-            let solution = cuckoo.solve(&input);
-            match solution {
-                Some(solution) => (
-                    //Some(blake2b_256(solution.0.as_ref()).into()),
-                    None,
-                    Some(solution),
-                ),
-                None => (None, None),
-            }
+            let solution = cuckoo::mine(&header, nonce);
+            return (solution.hash(), solution);
         }
-        &Algo::SCRYPT => {
+        _ => {
             let mut output = [0u8; 32];
-            //scrypt_1024_1_1_256(&pow_input(header_hash.as_bytes(), nonce), &mut output);
+            scrypt_1024_1_1_256(&set_header_nonce(header, nonce), &mut output);
             let hash: H256 = output.into();
-            (Some(hash), None)
+            return (hash, Solution::default());
         }
     }
-    */
-    return (None, None);
 }
 
-fn generate_nonce() -> u64 {
+fn generate_nonce() -> u32 {
     let mut rng = rand::thread_rng();
-    rng.gen::<u64>();
-    rng.gen_range(0, u64::max_value())
+    rng.gen::<u32>();
+    rng.gen_range(0, u32::max_value())
 }
 
-pub fn solve(header_hash: &H256, algo: &Algo, target: &U256) -> (u64, Option<Solution>) {
+pub fn solve(header: &[u8], algo: &Algo, target: &U256) -> (u32, Solution) {
     let mut nonce = generate_nonce();
     loop {
-        let (hash, solution) = calculate_pow_hash(header_hash, algo, nonce);
-        if *algo == Algo::CUCKOO && solution.is_none() {
+        let (hash, solution) = calculate_pow_hash(header, algo, nonce);
+        if *algo == Algo::CUCKOO && solution == Solution::default() {
             nonce += 1;
             continue;
         }
-        let hash_u256: U256 = hash.unwrap().into();
+        let hash_u256: U256 = hash.into();
         if hash_u256 > *target {
             nonce += 1;
             continue;
@@ -58,30 +41,17 @@ pub fn solve(header_hash: &H256, algo: &Algo, target: &U256) -> (u64, Option<Sol
     }
 }
 
-pub fn verify(
-    header_hash: &H256,
-    nonce: u64,
-    solution: Option<Solution>,
-    algo: &Algo,
-    target: &U256,
-) -> bool {
+pub fn verify(header: &[u8], nonce: u32, solution: Solution, algo: &Algo, target: &U256) -> bool {
     let mut pow_hash = [0u8; 32];
     match *algo {
         Algo::CUCKOO => {
-            return true;
-            //let input_hash = blake2b_256(pow_input(header_hash.as_bytes(), nonce).as_ref());
-            //let cuckoo = Cuckoo::new();
-            //if solution.is_none() {
-            //    return false;
-            //}
-            //if cuckoo.verify(&input_hash, &solution.clone().unwrap()) == false {
-            //    return false;
-            //}
-            //pow_hash = blake2b_256(solution.unwrap().0.as_ref()).into();
+            if !cuckoo::verify(&header, nonce, solution.clone()) {
+                return false;
+            }
+            pow_hash = solution.hash().into();
         }
         Algo::SCRYPT => {
-            //scrypt_1024_1_1_256(&pow_input(header_hash.as_bytes(), nonce), &mut pow_hash);
-            return true;
+            scrypt_1024_1_1_256(&set_header_nonce(&header, nonce), &mut pow_hash);
         }
     }
     let hash_h256: H256 = pow_hash.into();
@@ -95,18 +65,15 @@ pub fn verify(
 #[cfg(test)]
 mod test {
     use super::*;
-    /*
     #[test]
     fn test_solve() {
         let difficult: U256 = (1 as u32).into();
         let target = U256::max_value() / difficult;
         let header = "header is me".as_bytes();
-        let header_hash: H256 = blake2b_256(header.as_ref()).into();
-        let (nonce, solution) = solve(&header_hash, &Algo::CUCKOO, &target);
+        let (nonce, solution) = solve(&header, &Algo::CUCKOO, &target);
         assert_eq!(
             true,
-            verify(&header_hash, nonce, solution, &Algo::CUCKOO, &target)
+            verify(&header, nonce, solution, &Algo::CUCKOO, &target)
         );
     }
-    */
 }

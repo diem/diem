@@ -1,8 +1,8 @@
-use cuckoo_miner::{self, CuckooMinerError, PluginLibrary};
-
-use blake2_rfc::blake2b::blake2b;
+use crate::types::{set_header_nonce, Proof, Solution};
 use byteorder::{LittleEndian, WriteBytesExt};
-use cuckoo::Cuckoo;
+use cuckaroo::CuckarooProof;
+use cuckaroo::{new_cuckaroo_ctx, PoWContext as CuckooCtx};
+use cuckoo_miner::{self, CuckooMinerError, PluginLibrary};
 use std::convert::Into;
 use std::env;
 
@@ -29,7 +29,7 @@ fn load_plugin_lib(plugin: &str) -> Result<PluginLibrary, CuckooMinerError> {
     PluginLibrary::new(p_path.to_str().unwrap())
 }
 
-pub fn mine(header: Vec<u8>, nonce: u32) {
+pub fn mine(header: &[u8], nonce: u32) -> Solution {
     let plugin = CuckooPlugin::Cuckaroo19Cpu;
     let pl = load_plugin_lib(plugin.into()).unwrap();
     let mut params = pl.get_default_params();
@@ -38,32 +38,35 @@ pub fn mine(header: Vec<u8>, nonce: u32) {
     params.nthreads = 4;
     params.mutate_nonce = false;
     let ctx = pl.create_solver_ctx(&mut params);
-    let header = set_header_nonce(&header, nonce);
-    let _ = pl.run_solver(ctx, header.clone(), 0, 1, &mut solutions, &mut stats);
-    println!("{:?}", solutions.num_sols);
-    let proof = solutions.sols[0].proof;
-    let verifier = Cuckoo::new();
-    assert!(verifier.verify(&header, 143, proof.to_vec()));
+    let header = set_header_nonce(header, nonce);
+    let _ = pl.run_solver(ctx, header.to_owned(), 0, 1, &mut solutions, &mut stats);
+    if solutions.num_sols <= 0 {
+        return Solution::default();
+    }
+    let solution: Solution = solutions.sols[0].proof.into();
+    solution
 }
 
-pub fn set_header_nonce(header: &[u8], nonce: u32) -> Vec<u8> {
-    let len = header.len();
-    let mut header = header.to_owned();
-    header.truncate(len - 4); // drop last 4 bytes (u32) off the end
-    header.write_u32::<LittleEndian>(nonce);
-    //let h = blake2b(32, &[], &header);
-    //h.as_bytes().to_vec()
-    header
+pub fn verify(header: &[u8], nonce: u32, solution: Solution) -> bool {
+    let mut ctx = new_cuckaroo_ctx::<u64>(19, 42).unwrap();
+
+    let _ = ctx.set_header_nonce(header.to_owned(), Some(nonce), true);
+    let proof = CuckarooProof::new(solution.into());
+    ctx.verify(&proof).is_ok()
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use cuckaroo::PROOF_SIZE;
 
     #[test]
     fn test_mine() {
         let header = vec![0u8; 80];
         let nonce = 143;
-        mine(header, nonce);
+        let solution = mine(&header, nonce);
+        let s64: [u64; PROOF_SIZE] = solution.clone().into();
+        assert!(verify(&header, nonce, solution.clone()));
+        println!("solution:{:?},{:?}", s64.to_vec(), solution.hash());
     }
 }

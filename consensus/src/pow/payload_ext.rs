@@ -10,7 +10,7 @@ use std::fmt;
 #[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize)]
 pub struct BlockPayloadExt {
     pub txns: Vec<SignedTransaction>,
-    pub nonce: u64,
+    pub nonce: u32,
     pub solve: Vec<u8>,
     pub target: Vec<u8>,
     pub algo: u32,
