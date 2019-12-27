@@ -130,26 +130,13 @@ impl fmt::Display for Tok {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Token<'input>(pub Tok, pub &'input str);
-
-impl<'a> fmt::Display for Token<'a> {
-    fn fmt<'f>(&self, formatter: &mut fmt::Formatter<'f>) -> Result<(), fmt::Error> {
-        match self.0 {
-            Tok::AddressValue | Tok::U64Value | Tok::NameValue | Tok::NameBeginArgsValue => {
-                fmt::Display::fmt(self.1, formatter)
-            }
-            _ => fmt::Display::fmt(&self.0.to_string(), formatter),
-        }
-    }
-}
-
 pub struct Lexer<'input> {
     text: &'input str,
     file: &'static str,
-    consumed: usize,
-    previous_end: usize,
-    token: (usize, Token<'input>, usize),
+    prev_end: usize,
+    cur_start: usize,
+    cur_end: usize,
+    token: Tok,
 }
 
 impl<'input> Lexer<'input> {
@@ -157,18 +144,19 @@ impl<'input> Lexer<'input> {
         Lexer {
             text: s,
             file: f,
-            consumed: 0,
-            previous_end: 0,
-            token: (0, Token(Tok::EOF, ""), 0),
+            prev_end: 0,
+            cur_start: 0,
+            cur_end: 0,
+            token: Tok::EOF,
         }
     }
 
     pub fn peek(&self) -> Tok {
-        (self.token.1).0
+        self.token
     }
 
     pub fn content(&self) -> &str {
-        (self.token.1).1
+        &self.text[self.cur_start..self.cur_end]
     }
 
     pub fn file_name(&self) -> &'static str {
@@ -176,33 +164,27 @@ impl<'input> Lexer<'input> {
     }
 
     pub fn start_loc(&self) -> usize {
-        self.token.0
+        self.cur_start
     }
 
     pub fn previous_end_loc(&self) -> usize {
-        self.previous_end
+        self.prev_end
     }
 
     pub fn lookahead(&self) -> Result<Tok, Error> {
-        let text = self.text.trim_start();
-        let whitespace = self.text.len() - text.len();
-        let start_offset = self.consumed + whitespace;
-        let (tok, _) = find_token(self.file, text, start_offset)?;
+        let text = self.text[self.cur_end..].trim_start();
+        let offset = self.text.len() - text.len();
+        let (tok, _) = find_token(self.file, text, offset)?;
         Ok(tok)
     }
 
     pub fn advance(&mut self) -> Result<(), Error> {
-        self.previous_end = self.token.2;
-        let text = self.text.trim_start();
-        let whitespace = self.text.len() - text.len();
-        let start_offset = self.consumed + whitespace;
-        let (tok, len) = find_token(self.file, text, start_offset)?;
-        let result = &text[..len];
-        let remaining = &text[len..];
-        let end_offset = start_offset + len;
-        self.text = remaining;
-        self.consumed = end_offset;
-        self.token = (start_offset, Token(tok, result), end_offset);
+        self.prev_end = self.cur_end;
+        let text = self.text[self.cur_end..].trim_start();
+        self.cur_start = self.text.len() - text.len();
+        let (token, len) = find_token(self.file, text, self.cur_start)?;
+        self.cur_end = self.cur_start + len;
+        self.token = token;
         Ok(())
     }
 }
