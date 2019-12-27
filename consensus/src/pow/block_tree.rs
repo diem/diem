@@ -9,7 +9,7 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::block_index::BlockIndex;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
-use libra_types::transaction::{SignedTransaction, Transaction, TransactionToCommit, Version};
+use libra_types::transaction::{SignedTransaction, Transaction, TransactionToCommit, Version, TransactionStatus};
 use libra_types::PeerId;
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
@@ -191,7 +191,7 @@ impl BlockTree {
 
     async fn commit_block(&self, block_info: &BlockInfo) {
         let timestamp_usecs = block_info.timestamp_usecs();
-        let vm_output = block_info.output().expect("output is none.");
+        let vm_output_status = block_info.output_status().expect("output is none.");
         let commit_data = block_info.commit_data().expect("commit_data is none.");
         let height = block_info.height();
         let block_index = block_info.block_index();
@@ -199,12 +199,12 @@ impl BlockTree {
         if commit_data.txns_len() > 0 {
             let signed_txns = commit_data.signed_txns();
             let signed_txns_len = signed_txns.len();
-            let txns_status_len = vm_output.state_compute_result().status().len();
+            let txns_status_len = vm_output_status.len();
 
             let mut txns_status = vec![];
             for i in 0..signed_txns_len {
                 txns_status.push(
-                    vm_output.state_compute_result().status()
+                    vm_output_status
                         [txns_status_len - signed_txns_len + i]
                         .clone(),
                 );
@@ -265,7 +265,7 @@ impl BlockTree {
             parent_id,
             height,
             block.timestamp_usecs(),
-            vm_output,
+            vm_output.state_compute_result().status().clone(),
             commit_data,
         );
         self.add_block_info_inner(block, new_block_info, new_root)
@@ -366,7 +366,7 @@ impl BlockTree {
 pub struct BlockInfo {
     block_index: BlockIndex,
     height: BlockHeight,
-    output_commit_data: Option<(ProcessedVMOutput, CommitData)>,
+    output_commit_data: Option<(Vec<TransactionStatus>, CommitData)>,
     timestamp_usecs: u64,
 }
 
@@ -401,7 +401,7 @@ impl BlockInfo {
         parent_id: &HashValue,
         height: BlockHeight,
         timestamp_usecs: u64,
-        vm_output: ProcessedVMOutput,
+        vm_output_status: Vec<TransactionStatus>,
         commit_data: CommitData,
     ) -> Self {
         Self::new_inner(
@@ -409,7 +409,7 @@ impl BlockInfo {
             parent_id,
             height,
             timestamp_usecs,
-            Some((vm_output, commit_data)),
+            Some((vm_output_status, commit_data)),
         )
     }
 
@@ -418,7 +418,7 @@ impl BlockInfo {
         parent_id: &HashValue,
         height: BlockHeight,
         timestamp_usecs: u64,
-        output_commit_data: Option<(ProcessedVMOutput, CommitData)>,
+        output_commit_data: Option<(Vec<TransactionStatus>, CommitData)>,
     ) -> Self {
         let block_index = BlockIndex::new(id, parent_id);
         BlockInfo {
@@ -460,7 +460,7 @@ impl BlockInfo {
         }
     }
 
-    fn output(&self) -> Option<ProcessedVMOutput> {
+    fn output_status(&self) -> Option<Vec<TransactionStatus>> {
         match &self.output_commit_data {
             Some(output_commit_data) => Some(output_commit_data.0.clone()),
             None => None,
