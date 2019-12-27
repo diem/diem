@@ -9,4 +9,3 @@ pub mod global_state;
 pub mod module_generator;
 pub mod natives;
 pub mod stack_generator;
-pub mod vm_runner;

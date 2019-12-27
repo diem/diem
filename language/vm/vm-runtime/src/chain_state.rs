@@ -33,6 +33,13 @@ pub trait ChainState {
     // organized as a tree of GlobalRefs.
     /// Get a mutable reference to a resource stored on chain.
     fn load_data(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalRef>;
+
+    /// Get the serialized format of a `CompiledModule` from chain given a `ModuleId`.
+    fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>>;
+
+    /// Publish a module to be stored on chain.
+    fn publish_module(&mut self, module_id: ModuleId, module: Vec<u8>) -> VMResult<()>;
+
     /// Publish a resource to be stored on chain.
     fn publish_resource(&mut self, ap: &AccessPath, root: GlobalRef) -> VMResult<()>;
 
@@ -83,17 +90,13 @@ impl<'txn> TransactionExecutionContext<'txn> {
     }
 
     /// Generate a `WriteSet` as a result of an execution.
-    pub fn make_write_set(
-        &mut self,
-        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
-    ) -> VMResult<WriteSet> {
-        self.data_view.make_write_set(to_be_published_modules)
+    pub fn make_write_set(&mut self) -> VMResult<WriteSet> {
+        self.data_view.make_write_set()
     }
 
     pub fn get_transaction_output(
         &mut self,
         txn_data: &TransactionMetadata,
-        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
         result: VMResult<()>,
     ) -> VMResult<TransactionOutput> {
         let gas_used: u64 = txn_data
@@ -101,7 +104,7 @@ impl<'txn> TransactionExecutionContext<'txn> {
             .sub(self.gas_left())
             .mul(txn_data.gas_unit_price())
             .get();
-        let write_set = self.make_write_set(to_be_published_modules)?;
+        let write_set = self.make_write_set()?;
         record_stats!(observe | TXN_TOTAL_GAS_USAGE | gas_used);
 
         Ok(TransactionOutput::new(
@@ -131,10 +134,6 @@ impl<'txn> ChainState for TransactionExecutionContext<'txn> {
         }
     }
 
-    fn publish_resource(&mut self, ap: &AccessPath, root: GlobalRef) -> VMResult<()> {
-        self.data_view.publish_resource(ap, root)
-    }
-
     fn remaining_gas(&self) -> GasUnits<GasCarrier> {
         self.gas_left
     }
@@ -142,6 +141,19 @@ impl<'txn> ChainState for TransactionExecutionContext<'txn> {
     fn load_data(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalRef> {
         self.data_view.load_data(ap, def)
     }
+
+    fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>> {
+        self.data_view.load_module(module)
+    }
+
+    fn publish_module(&mut self, module_id: ModuleId, module: Vec<u8>) -> VMResult<()> {
+        self.data_view.publish_module(module_id, module)
+    }
+
+    fn publish_resource(&mut self, ap: &AccessPath, root: GlobalRef) -> VMResult<()> {
+        self.data_view.publish_resource(ap, root)
+    }
+
     fn exists_module(&self, key: &ModuleId) -> bool {
         self.data_view.exists_module(key)
     }
@@ -169,21 +181,16 @@ impl<'txn> SystemExecutionContext<'txn> {
     }
 
     /// Generate a `WriteSet` as a result of an execution.
-    pub fn make_write_set(
-        &mut self,
-        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
-    ) -> VMResult<WriteSet> {
-        self.0.make_write_set(to_be_published_modules)
+    pub fn make_write_set(&mut self) -> VMResult<WriteSet> {
+        self.0.make_write_set()
     }
 
     pub fn get_transaction_output(
         &mut self,
         txn_data: &TransactionMetadata,
-        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
         result: VMResult<()>,
     ) -> VMResult<TransactionOutput> {
-        self.0
-            .get_transaction_output(txn_data, to_be_published_modules, result)
+        self.0.get_transaction_output(txn_data, result)
     }
 }
 
@@ -203,8 +210,17 @@ impl<'txn> ChainState for SystemExecutionContext<'txn> {
     fn load_data(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalRef> {
         self.0.load_data(ap, def)
     }
+
+    fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>> {
+        self.0.load_module(module)
+    }
+
     fn exists_module(&self, key: &ModuleId) -> bool {
         self.0.exists_module(key)
+    }
+
+    fn publish_module(&mut self, module_id: ModuleId, module: Vec<u8>) -> VMResult<()> {
+        self.0.publish_module(module_id, module)
     }
 
     fn emit_event(&mut self, event: ContractEvent) {

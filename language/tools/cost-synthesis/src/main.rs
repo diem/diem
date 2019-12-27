@@ -13,7 +13,6 @@ use cost_synthesis::{
     module_generator::generate_padded_modules,
     natives::StackAccessorMocker,
     stack_generator::RandomStackGenerator,
-    with_loaded_vm,
 };
 use csv;
 use language_e2e_tests::data_store::FakeDataStore;
@@ -27,18 +26,20 @@ use std::{
 };
 use structopt::StructOpt;
 use vm::{
+    access::ModuleAccess,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex,
         FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, NO_TYPE_ACTUALS,
     },
-    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier},
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
 use vm_runtime::{
-    code_cache::module_cache::{ModuleCache, VMModuleCache},
+    chain_state::SystemExecutionContext,
     interpreter::InterpreterForCostSynthesis,
     loaded_data::function::{FunctionRef, FunctionReference},
+    runtime::VMRuntime,
 };
 use vm_runtime_types::{native_functions::hash, value::Value};
 
@@ -157,49 +158,91 @@ fn stack_instructions(options: &Opt) {
     ];
 
     let mut account = Account::new();
-    with_loaded_vm! (3, options.num_iters as usize, account => vm, loaded_module, module_cache);
+
+    // create a set of modules to work with on top of stdlib.
+    // The root module is the module based upon how we generate modules.
+    let mut modules = ::stdlib::stdlib_modules().to_vec();
+    let (root, mut callee_modules) = generate_padded_modules(3, options.num_iters as usize);
+    modules.append(&mut callee_modules);
+    let module_id = root.self_id();
+    modules.push(root);
+
+    // create a VMRuntime and populate it with generated modules
+    let allocator = Arena::new();
+    let mut runtime = VMRuntime::new(&allocator);
+    for m in modules.clone() {
+        runtime.cache_module(m);
+    }
+
+    // create an InterpreterContext for runtime operations
+    let mut data_cache = FakeDataStore::default();
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
+
+    // get the root LoadedModule
+    let loaded_module = runtime
+        .get_loaded_module(&module_id, &ctx)
+        .expect("[Module Lookup] Runtime error while looking up module");
+
+    // create the inhabitor to build the resources to be published
+    let mut inhabitor = RandomInhabitor::new(&loaded_module, &runtime, &ctx);
+    account.modules = modules;
+    for (access_path, blob) in account.generate_resources(&mut inhabitor).into_iter() {
+        data_cache.set(access_path, blob);
+    }
+
+    // make an Interpreter for execution
+    let gas_schedule = CostTable::zero();
+    let txn_data = TransactionMetadata::default();
+    let mut vm = InterpreterForCostSynthesis::new(&txn_data, &gas_schedule);
+
+    // load the entry point
+    let entry_idx = FunctionDefinitionIndex::new(0);
+    let entry_func = FunctionRef::new(&loaded_module, entry_idx);
+    vm.push_frame(entry_func, vec![]);
+
     let costs: HashMap<String, Vec<u64>> = stack_opcodes
         .into_iter()
         .map(|instruction| {
             println!("Running: {:?}", instruction);
-            let stack_gen = RandomStackGenerator::new(
+            let mut stack_gen = RandomStackGenerator::new(
                 &account.addr,
                 &loaded_module,
-                &module_cache,
+                &runtime,
+                SystemExecutionContext::new(&data_cache, GasUnits::new(0)),
                 &instruction,
                 options.max_stack_size,
                 options.num_iters,
             );
-            let instr_costs: Vec<u64> = stack_gen
-                .map(|stack_state| {
-                    let (instr, size) =
-                        RandomStackGenerator::stack_transition(&mut vm, stack_state);
-                    // Clear the VM's data cache -- otherwise we'll windup grabbing the data from
-                    // the cache on subsequent iterations and across future instructions that
-                    // effect global memory.
-                    vm.clear_writes();
-                    let before = Instant::now();
-                    let ignore = vm.execute_code_snippet(&[instr]);
-                    let time = before.elapsed().as_nanos();
-                    // Check to make sure we didn't error. Need to special case the abort bytecode.
-                    if instruction != Bytecode::Abort {
-                        // We want any errors here to bubble up to us with the actual VM error.
-                        ignore.unwrap();
-                    } else {
-                        // In the case of the Abort bytecode we want to only make sure that we
-                        // don't have a VMInvariantViolation error, and then make sure that the any
-                        // error generated was an abort failure.
-                        match ignore {
-                            Ok(_) => (),
-                            Err(err) => match err.major_status {
-                                StatusCode::ABORTED => (),
-                                _ => panic!("Abort bytecode failed"),
-                            },
-                        }
+
+            let mut instr_costs: Vec<u64> = vec![];
+            while let Some(stack_state) = stack_gen.next_stack() {
+                let (instr, size) = RandomStackGenerator::stack_transition(&mut vm, stack_state);
+                let before = Instant::now();
+                let ignore = stack_gen.execute_code_snippet(&mut vm, &[instr]);
+                //let ignore = vm.execute_code_snippet(&runtime, &mut ctx, &[instr]);
+                let time = before.elapsed().as_nanos();
+                // Check to make sure we didn't error. Need to special case the abort bytecode.
+                if instruction != Bytecode::Abort {
+                    // We want any errors here to bubble up to us with the actual VM error.
+                    ignore.unwrap();
+                } else {
+                    // In the case of the Abort bytecode we want to only make sure that we
+                    // don't have a VMInvariantViolation error, and then make sure that the any
+                    // error generated was an abort failure.
+                    match ignore {
+                        Ok(_) => (),
+                        Err(err) => match err.major_status {
+                            StatusCode::ABORTED => (),
+                            _ => panic!("Abort bytecode failed"),
+                        },
                     }
-                    size_normalize_cost(&instruction, u64::try_from(time).unwrap(), size)
-                })
-                .collect();
+                }
+                instr_costs.push(size_normalize_cost(
+                    &instruction,
+                    u64::try_from(time).unwrap(),
+                    size,
+                ));
+            }
             (format!("{:?}", instruction), instr_costs)
         })
         .collect();

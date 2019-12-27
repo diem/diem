@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::data_cache::RemoteCache;
 use crate::{
-    chain_state::TransactionExecutionContext,
-    code_cache::{
-        module_adapter::FakeFetcher,
-        module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
-    },
+    chain_state::{SystemExecutionContext, TransactionExecutionContext},
+    code_cache::module_cache::VMModuleCache,
     data_cache::BlockDataCache,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
@@ -24,6 +22,8 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, StatusType},
 };
+use std::collections::HashMap;
+use vm::errors::VMResult;
 use vm::{
     access::ModuleAccess,
     file_format::*,
@@ -31,6 +31,46 @@ use vm::{
 };
 use vm_cache_map::Arena;
 use vm_runtime_types::loaded_data::{struct_def::StructDef, types::Type};
+
+struct NullStateView;
+
+impl StateView for NullStateView {
+    fn get(&self, _ap: &AccessPath) -> Result<Option<Vec<u8>>> {
+        Err(format_err!("no get on null state view"))
+    }
+
+    fn multi_get(&self, _ap: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {
+        Err(format_err!("no get on null state view"))
+    }
+
+    fn is_genesis(&self) -> bool {
+        false
+    }
+}
+
+#[derive(Debug, Default)]
+struct FakeDataCache {
+    data: HashMap<AccessPath, Vec<u8>>,
+}
+
+impl FakeDataCache {
+    fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
+        Ok(self.data.get(access_path).cloned())
+    }
+
+    fn set(&mut self, module: CompiledModule) {
+        let ap: AccessPath = (&module.self_id()).into();
+        let mut blob: Vec<u8> = vec![];
+        module.serialize(&mut blob).expect("Module must serialize");
+        self.data.insert(ap, blob);
+    }
+}
+
+impl RemoteCache for FakeDataCache {
+    fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
+        FakeDataCache::get(self, access_path)
+    }
+}
 
 fn test_module(name: &'static str) -> VerifiedModule {
     let compiled_module = CompiledModuleMut {
@@ -173,17 +213,20 @@ fn test_loader_one_module() {
     let module = test_module("module");
     let mod_id = module.self_id();
 
+    let data_cache = FakeDataCache::default();
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
+
     let allocator = Arena::new();
     let loaded_program = VMModuleCache::new(&allocator);
     loaded_program.cache_module(module);
-    let module_ref = loaded_program.get_loaded_module(&mod_id).unwrap();
+    let module_ref = loaded_program.get_loaded_module(&mod_id, &ctx).unwrap();
 
     // Get the function reference of the first two function handles.
     let func1_ref = loaded_program
-        .resolve_function_ref(module_ref, FunctionHandleIndex::new(0))
+        .resolve_function_ref(module_ref, FunctionHandleIndex::new(0), &ctx)
         .unwrap();
     let func2_ref = loaded_program
-        .resolve_function_ref(module_ref, FunctionHandleIndex::new(1))
+        .resolve_function_ref(module_ref, FunctionHandleIndex::new(1), &ctx)
         .unwrap();
 
     // The two references should refer to the same module
@@ -213,15 +256,18 @@ fn test_loader_cross_modules() {
     let loaded_program = VMModuleCache::new(&allocator);
     loaded_program.cache_module(module);
 
+    let data_cache = FakeDataCache::default();
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
+
     let owned_entry_module = script.into_module();
     let loaded_main = LoadedModule::new(owned_entry_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let entry_module = entry_func.module();
     let func1 = loaded_program
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1), &ctx)
         .unwrap();
     let func2 = loaded_program
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2), &ctx)
         .unwrap();
 
     assert_eq!(
@@ -253,72 +299,51 @@ fn test_cache_with_storage() {
 
     let vm_cache = VMModuleCache::new(&allocator);
 
+    let data_cache = FakeDataCache::default();
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
+
     // Function is not defined locally.
     assert!(vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1), &ctx)
         .is_err());
-    {
-        let fetcher = FakeFetcher::new(vec![test_module("module").into_inner()]);
-        let mut block_cache = BlockModuleCache::new(&vm_cache, fetcher);
 
-        // Make sure the block cache fetches the code from the view.
-        let func1 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-            .unwrap();
-        let func2 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-            .unwrap();
+    let mut data_cache = FakeDataCache::default();
+    data_cache.set(test_module("module").into_inner());
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
 
-        assert_eq!(
-            func2.module() as *const LoadedModule,
-            func1.module() as *const LoadedModule
-        );
-
-        assert_eq!(func1.arg_count(), 0);
-        assert_eq!(func1.return_count(), 0);
-        assert_eq!(
-            func1.code_definition(),
-            vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret].as_slice()
-        );
-
-        assert_eq!(func2.arg_count(), 1);
-        assert_eq!(func2.return_count(), 0);
-        assert_eq!(func2.code_definition(), vec![Bytecode::Ret].as_slice());
-
-        // Clean the fetcher so that there's nothing in the fetcher.
-        block_cache.clear();
-
-        let func1 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-            .unwrap();
-        let func2 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-            .unwrap();
-
-        assert_eq!(
-            func2.module() as *const LoadedModule,
-            func1.module() as *const LoadedModule
-        );
-
-        assert_eq!(func1.arg_count(), 0);
-        assert_eq!(func1.return_count(), 0);
-        assert_eq!(
-            func1.code_definition(),
-            vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret].as_slice()
-        );
-
-        assert_eq!(func2.arg_count(), 1);
-        assert_eq!(func2.return_count(), 0);
-        assert_eq!(func2.code_definition(), vec![Bytecode::Ret].as_slice());
-    }
-
-    // Even if the block cache goes out of scope, we should still be able to read the fetched
-    // definition
+    // Make sure the block cache fetches the code from the view.
     let func1 = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1), &ctx)
         .unwrap();
     let func2 = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2), &ctx)
+        .unwrap();
+
+    assert_eq!(
+        func2.module() as *const LoadedModule,
+        func1.module() as *const LoadedModule
+    );
+
+    assert_eq!(func1.arg_count(), 0);
+    assert_eq!(func1.return_count(), 0);
+    assert_eq!(
+        func1.code_definition(),
+        vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret].as_slice()
+    );
+
+    assert_eq!(func2.arg_count(), 1);
+    assert_eq!(func2.return_count(), 0);
+    assert_eq!(func2.code_definition(), vec![Bytecode::Ret].as_slice());
+
+    // Clean the fetcher so that there's nothing in the fetcher.
+    let data_cache = FakeDataCache::default();
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
+
+    let func1 = vm_cache
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1), &ctx)
+        .unwrap();
+    let func2 = vm_cache
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2), &ctx)
         .unwrap();
 
     assert_eq!(
@@ -433,9 +458,11 @@ fn test_multi_level_cache_write_back() {
 
     vm_cache.cache_module(test_module("module"));
 
-    // After reclaiming we should see it from the
+    // After reclaiming we should see it from the cache
+    let data_cache = FakeDataCache::default();
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
     let func2_ref = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1), &ctx)
         .unwrap();
     assert_eq!(func2_ref.arg_count(), 1);
     assert_eq!(func2_ref.return_count(), 0);
@@ -451,22 +478,6 @@ fn parse_and_compile_modules(s: impl AsRef<str>) -> Vec<CompiledModule> {
         .into_compiled_program(s.as_ref())
         .expect("Failed to compile program")
         .modules
-}
-
-struct NullStateView;
-
-impl StateView for NullStateView {
-    fn get(&self, _ap: &AccessPath) -> Result<Option<Vec<u8>>> {
-        Err(format_err!("no get on null state view"))
-    }
-
-    fn multi_get(&self, _ap: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {
-        Err(format_err!("no get on null state view"))
-    }
-
-    fn is_genesis(&self) -> bool {
-        false
-    }
 }
 
 #[test]
@@ -486,30 +497,32 @@ fn test_same_module_struct_resolution() {
         }
         ";
 
-    let module = parse_and_compile_modules(code);
-    let fetcher = FakeFetcher::new(module);
-    let block_data_cache = BlockDataCache::new(&NullStateView);
-    let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
-    {
-        let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
-        let module_ref = block_cache.get_loaded_module(&module_id).unwrap();
-        let mut context =
-            TransactionExecutionContext::new(GasUnits::new(100_000_000), &block_data_cache);
-        let struct_x = block_cache
-            .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &mut context)
-            .unwrap();
-        let struct_t = block_cache
-            .resolve_struct_def(module_ref, StructDefinitionIndex::new(1), &mut context)
-            .unwrap();
-        assert_eq!(struct_x, StructDef::new(vec![Type::Bool]));
-        assert_eq!(
-            struct_t,
-            StructDef::new(vec![
-                Type::U64,
-                Type::Struct(StructDef::new(vec![Type::Bool]))
-            ]),
-        );
+    let mut data_cache = FakeDataCache::default();
+    let modules = parse_and_compile_modules(code);
+    for module in modules {
+        data_cache.set(module);
     }
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
+
+    let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
+    let module_ref = vm_cache.get_loaded_module(&module_id, &ctx).unwrap();
+
+    let block_data_cache = BlockDataCache::new(&NullStateView);
+    let context = TransactionExecutionContext::new(GasUnits::new(100_000_000), &block_data_cache);
+    let struct_x = vm_cache
+        .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &context)
+        .unwrap();
+    let struct_t = vm_cache
+        .resolve_struct_def(module_ref, StructDefinitionIndex::new(1), &context)
+        .unwrap();
+    assert_eq!(struct_x, StructDef::new(vec![Type::Bool]));
+    assert_eq!(
+        struct_t,
+        StructDef::new(vec![
+            Type::U64,
+            Type::Struct(StructDef::new(vec![Type::Bool]))
+        ]),
+    );
 }
 
 #[test]
@@ -535,27 +548,36 @@ fn test_multi_module_struct_resolution() {
         hex::encode(AccountAddress::default())
     );
 
-    let module = parse_and_compile_modules(&code);
-    let fetcher = FakeFetcher::new(module);
-    let block_data_cache = BlockDataCache::new(&NullStateView);
-    let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
-    {
-        let module_id_2 = ModuleId::new(AccountAddress::default(), ident("M2"));
-        let module2_ref = block_cache.get_loaded_module(&module_id_2).unwrap();
-
-        let mut context =
-            TransactionExecutionContext::new(GasUnits::new(100_000_000), &block_data_cache);
-        let struct_t = block_cache
-            .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &mut context)
-            .unwrap();
-        assert_eq!(
-            struct_t,
-            StructDef::new(vec![
-                Type::U64,
-                Type::Struct(StructDef::new(vec![Type::Bool]))
-            ]),
-        );
+    let mut data_cache = FakeDataCache::default();
+    let modules = parse_and_compile_modules(&code);
+    for module in modules {
+        data_cache.set(module);
     }
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
+
+    // load both modules in the cache
+    let module_id_1 = ModuleId::new(AccountAddress::default(), ident("M1"));
+    vm_cache
+        .get_loaded_module(&module_id_1, &ctx)
+        .expect("M1 must be found");
+    let module_id_2 = ModuleId::new(AccountAddress::default(), ident("M2"));
+    let module2_ref = vm_cache
+        .get_loaded_module(&module_id_2, &ctx)
+        .expect("M2 must be found");
+
+    let block_data_cache = BlockDataCache::new(&NullStateView);
+    let context = TransactionExecutionContext::new(GasUnits::new(100_000_000), &block_data_cache);
+
+    let struct_t = vm_cache
+        .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &context)
+        .unwrap();
+    assert_eq!(
+        struct_t,
+        StructDef::new(vec![
+            Type::U64,
+            Type::Struct(StructDef::new(vec![Type::Bool]))
+        ]),
+    );
 }
 
 #[test]
@@ -575,28 +597,30 @@ fn test_field_offset_resolution() {
         }
         ";
 
-    let module = parse_and_compile_modules(code);
-    let fetcher = FakeFetcher::new(module);
-    let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
-    {
-        let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
-        let module_ref = block_cache.get_loaded_module(&module_id).unwrap();
-
-        let f_idx = module_ref.field_defs_table.get(&ident("f")).unwrap();
-        assert_eq!(module_ref.get_field_offset(*f_idx).unwrap(), 0);
-
-        let g_idx = module_ref.field_defs_table.get(&ident("g")).unwrap();
-        assert_eq!(module_ref.get_field_offset(*g_idx).unwrap(), 1);
-
-        let i_idx = module_ref.field_defs_table.get(&ident("i")).unwrap();
-        assert_eq!(module_ref.get_field_offset(*i_idx).unwrap(), 0);
-
-        let x_idx = module_ref.field_defs_table.get(&ident("x")).unwrap();
-        assert_eq!(module_ref.get_field_offset(*x_idx).unwrap(), 1);
-
-        let y_idx = module_ref.field_defs_table.get(&ident("y")).unwrap();
-        assert_eq!(module_ref.get_field_offset(*y_idx).unwrap(), 2);
+    let mut data_cache = FakeDataCache::default();
+    let modules = parse_and_compile_modules(code);
+    for module in modules {
+        data_cache.set(module);
     }
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
+
+    let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
+    let module_ref = vm_cache.get_loaded_module(&module_id, &ctx).unwrap();
+
+    let f_idx = module_ref.field_defs_table.get(&ident("f")).unwrap();
+    assert_eq!(module_ref.get_field_offset(*f_idx).unwrap(), 0);
+
+    let g_idx = module_ref.field_defs_table.get(&ident("g")).unwrap();
+    assert_eq!(module_ref.get_field_offset(*g_idx).unwrap(), 1);
+
+    let i_idx = module_ref.field_defs_table.get(&ident("i")).unwrap();
+    assert_eq!(module_ref.get_field_offset(*i_idx).unwrap(), 0);
+
+    let x_idx = module_ref.field_defs_table.get(&ident("x")).unwrap();
+    assert_eq!(module_ref.get_field_offset(*x_idx).unwrap(), 1);
+
+    let y_idx = module_ref.field_defs_table.get(&ident("y")).unwrap();
+    assert_eq!(module_ref.get_field_offset(*y_idx).unwrap(), 2);
 }
 
 #[test]
@@ -627,12 +651,15 @@ fn test_dependency_fails_verification() {
     }
     ";
 
-    let module = parse_and_compile_modules(code);
-    let fetcher = FakeFetcher::new(module);
-    let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
+    let mut data_cache = FakeDataCache::default();
+    let modules = parse_and_compile_modules(code);
+    for module in modules {
+        data_cache.set(module);
+    }
+    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
 
     let module_id = ModuleId::new(AccountAddress::default(), ident("Test"));
-    let err = block_cache.get_loaded_module(&module_id).unwrap_err();
+    let err = vm_cache.get_loaded_module(&module_id, &ctx).unwrap_err();
     assert!(err.is(StatusType::Verification));
     assert!(err.major_status == StatusCode::INVALID_RESOURCE_FIELD);
 }

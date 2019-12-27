@@ -6,7 +6,6 @@ use crate::{
     txn_executor::TransactionExecutor,
 };
 use lazy_static::lazy_static;
-use libra_state_view::StateView;
 use libra_types::{
     block_metadata::BlockMetadata,
     identifier::Identifier,
@@ -26,7 +25,6 @@ lazy_static! {
 pub(crate) fn process_block_metadata(
     block_metadata: BlockMetadata,
     runtime: &VMRuntime,
-    state_view: &dyn StateView,
     data_cache: &mut BlockDataCache<'_>,
 ) -> Result<TransactionOutput, VMStatus> {
     // TODO: How should we setup the metadata here? A couple of thoughts here:
@@ -51,18 +49,12 @@ pub(crate) fn process_block_metadata(
             Value::byte_array(previous_vote),
             Value::address(proposer),
         ];
-        txn_executor.execute_function(
-            runtime,
-            state_view,
-            &LIBRA_SYSTEM_MODULE,
-            &BLOCK_PROLOGUE,
-            args,
-        )
+        txn_executor.execute_function(runtime, &LIBRA_SYSTEM_MODULE, &BLOCK_PROLOGUE, args)
     } else {
         Err(VMStatus::new(StatusCode::MALFORMED))
     };
     result
-        .and_then(|_| txn_executor.make_write_set(vec![], Ok(())))
+        .and_then(|_| txn_executor.make_write_set(Ok(())))
         .and_then(|output| {
             data_cache.push_write_set(output.write_set());
             Ok(output)

@@ -16,7 +16,8 @@ use vm::{
         StructFieldInformation, StructHandleIndex, TableIndex,
     },
 };
-use vm_runtime::{code_cache::module_cache::ModuleCache, loaded_data::loaded_module::LoadedModule};
+use vm_runtime::chain_state::SystemExecutionContext;
+use vm_runtime::{loaded_data::loaded_module::LoadedModule, runtime::VMRuntime};
 use vm_runtime_types::value::*;
 
 /// A wrapper around state that is used to generate random valid inhabitants for types.
@@ -33,9 +34,12 @@ where
     /// root module that has pointers to all other modules.
     root_module: &'txn LoadedModule,
 
-    /// The module cache for all of the other modules in the universe. We need this in order to
+    /// The VMRuntime for all the modules in the universe. We need this in order to
     /// resolve struct and function handles to other modules other then the root module.
-    module_cache: &'txn dyn ModuleCache<'alloc>,
+    runtime: &'txn VMRuntime<'alloc>,
+
+    /// Context for resolution
+    ctx: &'txn SystemExecutionContext<'txn>,
 
     /// A reverse lookup table to find the struct definition for a struct handle. Needed for
     /// generating an inhabitant for a struct SignatureToken. This is lazily populated.
@@ -52,13 +56,15 @@ where
     /// be empty.
     pub fn new(
         root_module: &'txn LoadedModule,
-        module_cache: &'txn dyn ModuleCache<'alloc>,
+        runtime: &'txn VMRuntime<'alloc>,
+        ctx: &'txn SystemExecutionContext<'txn>,
     ) -> Self {
         let seed: [u8; 32] = [0; 32];
         Self {
             gen: StdRng::from_seed(seed),
             root_module,
-            module_cache,
+            runtime,
+            ctx,
             struct_handle_table: HashMap::new(),
         }
     }
@@ -109,8 +115,8 @@ where
         let module_handle = self.root_module.module_handle_at(struct_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
-            .module_cache
-            .get_loaded_module(&module_id)
+            .runtime
+            .get_loaded_module(&module_id, self.ctx)
             .expect("[Module Lookup] Runtime error while looking up module");
         let struct_def_idx = self
             .struct_handle_table

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Processor for a single transaction.
 
+use crate::chain_state::ChainState;
 use crate::{
     chain_state::TransactionExecutionContext, counters::*, data_cache::RemoteCache,
     runtime::VMRuntime,
 };
-use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
@@ -22,9 +22,6 @@ use vm::{
 use vm_runtime_types::value::Value;
 
 /// A struct that executes one single transaction.
-/// 'alloc is the lifetime for the code cache, which is the argument type P here. Hence the P should
-/// live as long as alloc.
-/// 'txn is the lifetime of one single transaction.
 pub struct TransactionExecutor<'txn> {
     interpreter_context: TransactionExecutionContext<'txn>,
     txn_data: TransactionMetadata,
@@ -32,10 +29,7 @@ pub struct TransactionExecutor<'txn> {
 }
 
 impl<'txn> TransactionExecutor<'txn> {
-    /// Create a new `TransactionExecutor` to execute a single transaction. `module_cache` is the
-    /// cache that stores the modules previously read from the blockchain. `data_cache` is the cache
-    /// that holds read-only connection to the state store as well as the changes made by previous
-    /// transactions within the same block.
+    /// Create a new `TransactionExecutor` to execute a single transaction.
     pub fn new(
         gas_schedule: &'txn CostTable,
         data_cache: &'txn dyn RemoteCache,
@@ -52,14 +46,8 @@ impl<'txn> TransactionExecutor<'txn> {
 
     /// Create an account on the blockchain by calling into `CREATE_ACCOUNT_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
-    pub fn create_account(
-        &mut self,
-        runtime: &VMRuntime,
-        state_view: &dyn StateView,
-        addr: AccountAddress,
-    ) -> VMResult<()> {
+    pub fn create_account(&mut self, runtime: &VMRuntime, addr: AccountAddress) -> VMResult<()> {
         runtime.create_account(
-            state_view,
             &mut self.interpreter_context,
             &self.txn_data,
             &self.gas_schedule,
@@ -75,13 +63,11 @@ impl<'txn> TransactionExecutor<'txn> {
     pub fn execute_function(
         &mut self,
         runtime: &VMRuntime,
-        state_view: &dyn StateView,
         module: &ModuleId,
         function_name: &IdentStr,
         args: Vec<Value>,
     ) -> VMResult<()> {
         runtime.execute_function(
-            state_view,
             &mut self.interpreter_context,
             &self.txn_data,
             &self.gas_schedule,
@@ -91,13 +77,21 @@ impl<'txn> TransactionExecutor<'txn> {
         )
     }
 
+    #[allow(non_snake_case)]
+    pub fn publish_module_FOR_GENESIS_ONLY(
+        &mut self,
+        module_id: ModuleId,
+        module: Vec<u8>,
+    ) -> VMResult<()> {
+        self.interpreter_context.publish_module(module_id, module)
+    }
+
     /// Execute a function with the sender set to `sender`, restoring the original sender afterward.
     /// This should only be used in the logic for generating the genesis block.
     #[allow(non_snake_case)]
     pub fn execute_function_with_sender_FOR_GENESIS_ONLY(
         &mut self,
         runtime: &VMRuntime,
-        state_view: &dyn StateView,
         address: AccountAddress,
         module: &ModuleId,
         function_name: &IdentStr,
@@ -105,18 +99,14 @@ impl<'txn> TransactionExecutor<'txn> {
     ) -> VMResult<()> {
         let old_sender = self.txn_data.sender;
         self.txn_data.sender = address;
-        let res = self.execute_function(runtime, state_view, module, function_name, args);
+        let res = self.execute_function(runtime, module, function_name, args);
         self.txn_data.sender = old_sender;
         res
     }
 
     /// Produce a write set at the end of a transaction. This will clear all the local states in
     /// the TransactionProcessor and turn them into a writeset.
-    pub fn make_write_set(
-        &mut self,
-        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
-        result: VMResult<()>,
-    ) -> VMResult<TransactionOutput> {
+    pub fn make_write_set(&mut self, result: VMResult<()>) -> VMResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
         let gas_used: u64 = self
@@ -125,9 +115,7 @@ impl<'txn> TransactionExecutor<'txn> {
             .sub(self.interpreter_context.gas_left())
             .mul(self.txn_data.gas_unit_price())
             .get();
-        let write_set = self
-            .interpreter_context
-            .make_write_set(to_be_published_modules)?;
+        let write_set = self.interpreter_context.make_write_set()?;
 
         record_stats!(observe | TXN_TOTAL_GAS_USAGE | gas_used);
 

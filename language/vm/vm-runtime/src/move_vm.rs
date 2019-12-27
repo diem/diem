@@ -5,7 +5,6 @@ use crate::{
     chain_state::ChainState, data_cache::RemoteCache, loaded_data::loaded_module::LoadedModule,
     runtime::VMRuntime,
 };
-use libra_state_view::StateView;
 use libra_types::{identifier::IdentStr, language_storage::ModuleId};
 use move_vm_definition::MoveVMImpl;
 use vm::{errors::VMResult, gas_schedule::CostTable, transaction_metadata::TransactionMetadata};
@@ -48,14 +47,12 @@ impl MoveVM {
         module: &ModuleId,
         function_name: &IdentStr,
         gas_schedule: &CostTable,
-        state_view: &dyn StateView,
         chain_state: &mut S,
         txn_data: &TransactionMetadata,
         args: Vec<Value>,
     ) -> VMResult<()> {
         self.0.rent(|runtime| {
             runtime.execute_function(
-                state_view,
                 chain_state,
                 txn_data,
                 gas_schedule,
@@ -71,40 +68,32 @@ impl MoveVM {
         &self,
         script: Vec<u8>,
         gas_schedule: &CostTable,
-        state_view: &dyn StateView,
         chain_state: &mut S,
         txn_data: &TransactionMetadata,
         args: Vec<Value>,
     ) -> VMResult<()> {
         self.0.rent(|runtime| {
-            runtime.execute_script(
-                state_view,
-                chain_state,
-                txn_data,
-                gas_schedule,
-                script,
-                args,
-            )
+            runtime.execute_script(chain_state, txn_data, gas_schedule, script, args)
         })
     }
 
     #[allow(unused)]
     pub fn publish_module<S: ChainState>(
         &self,
-        module: &[u8],
+        module: Vec<u8>,
         chain_state: &mut S,
         txn_data: &TransactionMetadata,
-    ) -> VMResult<ModuleId> {
+    ) -> VMResult<()> {
         self.0
-            .rent(|runtime| runtime.publish_module(&module, chain_state, txn_data))
+            .rent(|runtime| runtime.publish_module(module, chain_state, txn_data))
     }
 
-    pub(crate) fn load_gas_schedule(
+    pub(crate) fn load_gas_schedule<S: ChainState>(
         &self,
-        state_view: &dyn StateView,
+        chain_state: &mut S,
         data_view: &dyn RemoteCache,
     ) -> VMResult<CostTable> {
         self.0
-            .rent(|runtime| runtime.load_gas_schedule(data_view, state_view))
+            .rent(|runtime| runtime.load_gas_schedule(chain_state, data_view))
     }
 }
