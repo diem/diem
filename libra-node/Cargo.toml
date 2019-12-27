@@ -37,6 +37,7 @@ storage-client = { path = "../storage/storage-client", version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
+chain-state = { path = "../consensus/chain-state" }
 
 [features]
 default = []

@@ -21,10 +21,11 @@ use crate::{
         rpc::{InboundRpcRequest, OutboundRpcRequest, RpcNotification, RpcRequest},
     },
     validator_network::{
-        AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ConsensusNetworkEvents,
-        ConsensusNetworkSender, DiscoveryNetworkEvents, DiscoveryNetworkSender,
-        HealthCheckerNetworkEvents, HealthCheckerNetworkSender, MempoolNetworkEvents,
-        MempoolNetworkSender, StateSynchronizerEvents, StateSynchronizerSender,
+        AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ChainStateNetworkEvents,
+        ChainStateNetworkSender, ConsensusNetworkEvents, ConsensusNetworkSender,
+        DiscoveryNetworkEvents, DiscoveryNetworkSender, HealthCheckerNetworkEvents,
+        HealthCheckerNetworkSender, MempoolNetworkEvents, MempoolNetworkSender,
+        StateSynchronizerEvents, StateSynchronizerSender,
     },
     ProtocolId,
 };
@@ -46,6 +47,7 @@ pub const STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seco
 pub const ADMISSION_CONTROL_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 pub const HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 pub const DISCOVERY_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds.
+pub const CHAIN_STATE_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds.
 
 /// Requests [`NetworkProvider`] receives from the network interface.
 #[derive(Debug)]
@@ -113,6 +115,10 @@ pub trait LibraNetworkProvider {
         &mut self,
         discovery_protocols: Vec<ProtocolId>,
     ) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents);
+    fn add_chain_state(
+        &mut self,
+        chain_state_protocols: Vec<ProtocolId>,
+    ) -> (ChainStateNetworkSender, ChainStateNetworkEvents);
     fn start(self: Box<Self>) -> BoxFuture<'static, ()>;
 }
 
@@ -261,6 +267,24 @@ where
             .map(|p| (p.clone(), discovery_tx.clone()));
         self.upstream_handlers.extend(discovery_handlers);
         (discovery_network_sender, discovery_network_events)
+    }
+
+    fn add_chain_state(
+        &mut self,
+        chain_state_protocols: Vec<ProtocolId>,
+    ) -> (ChainStateNetworkSender, ChainStateNetworkEvents) {
+        let (chain_state_tx, chain_state_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::TEST_NETWORK_REQUESTS,
+            Duration::from_millis(CHAIN_STATE_INBOUND_MSG_TIMEOUT_MS),
+        );
+        let chain_state_network_sender = ChainStateNetworkSender::new(self.requests_tx.clone());
+        let chain_state_network_events = ChainStateNetworkEvents::new(chain_state_rx);
+        let chain_state_handlers = chain_state_protocols
+            .iter()
+            .map(|p| (p.clone(), chain_state_tx.clone()));
+        self.upstream_handlers.extend(chain_state_handlers);
+        (chain_state_network_sender, chain_state_network_events)
     }
 
     fn start(self: Box<Self>) -> BoxFuture<'static, ()> {
