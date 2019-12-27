@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::core_mempool::{CoreMempool, TimelineState};
+use crate::{
+    core_mempool::{CoreMempool, TimelineState},
+    counters,
+};
 use anyhow::{format_err, Result};
 use bounded_executor::BoundedExecutor;
 use bytes05::Bytes;
@@ -32,7 +35,7 @@ use std::{
     convert::{TryFrom, TryInto},
     sync::{Arc, Mutex},
     thread::sleep,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use storage_client::StorageRead;
 use tokio::{
@@ -66,6 +69,17 @@ enum WorkerState {
     START,
     PAUSE,
     KILL,
+}
+
+impl ToString for WorkerState {
+    #[inline]
+    fn to_string(&self) -> String {
+        match &self {
+            WorkerState::PAUSE => String::from("PAUSE"),
+            WorkerState::START => String::from("START"),
+            WorkerState::KILL => String::from("KILL"),
+        }
+    }
 }
 
 type PeerInfo = HashMap<PeerId, PeerSyncState>;
@@ -110,6 +124,7 @@ async fn process_rpc_submit_transactions_request<V>(
 ) where
     V: TransactionValidation,
 {
+    let start_time = Instant::now();
     // the RPC response object that will be returned to sender via callback
     let resp = match submit_transactions_to_mempool(smp.clone(), peer_id, request).await {
         Ok(response) => response,
@@ -124,21 +139,31 @@ async fn process_rpc_submit_transactions_request<V>(
             response
         }
     };
+    counters::TXN_SUBMISSION_PROCESSING_TIME
+        .with_label_values(&[&peer_id.to_string()])
+        .observe(start_time.elapsed().as_millis() as f64);
     let response_msg = MempoolSyncMsg {
         message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsResponse(resp)),
     };
 
     // send response to callback
     let response_data = response_msg.to_bytes().expect("failed to serialize proto");
+    let start_callback = Instant::now();
     if let Err(err) = callback
         .send(Ok(response_data))
         .map_err(|_| format_err!("[shared mempool] handling inbound RPC call timed out"))
     {
+        counters::TIMEOUT
+            .with_label_values(&[&peer_id.to_string(), "callback"])
+            .inc();
         error!(
             "[shared mempool] failed to process batched transaction request, error: {:?}",
             err
         );
     }
+    counters::SUBMIT_TXNS_MEMPOOL_TIME_BREAKDOWN
+        .with_label_values(&[&peer_id.to_string(), "callback"])
+        .observe(start_callback.elapsed().as_millis() as f64);
     notify_subscribers(SharedMempoolNotification::NewTransactions, &smp.subscribers);
 }
 
@@ -156,6 +181,7 @@ where
     /////////////////////////////////////////////
     // convert from proto to SignedTransaction //
     /////////////////////////////////////////////
+    let start_convert_proto = Instant::now();
     let transactions: Vec<_> = request
         .transactions
         .clone()
@@ -174,9 +200,14 @@ where
         })
         .collect();
 
+    counters::SUBMIT_TXNS_MEMPOOL_TIME_BREAKDOWN
+        .with_label_values(&[&peer_id.to_string(), "convert_proto"])
+        .observe(start_convert_proto.elapsed().as_millis() as f64);
+
     //////////////////////////////////
     // validate transactions via VM //
     //////////////////////////////////
+    let start_vm_validation = Instant::now();
     let account_states = join_all(
         transactions
             .iter()
@@ -202,6 +233,10 @@ where
     )
     .await;
 
+    counters::SUBMIT_TXNS_MEMPOOL_TIME_BREAKDOWN
+        .with_label_values(&[&peer_id.to_string(), "vm_validation"])
+        .observe(start_vm_validation.elapsed().as_millis() as f64);
+
     ///////////////////////////////
     // add txns to local mempool //
     ///////////////////////////////
@@ -216,11 +251,17 @@ where
         TimelineState::NotReady
     };
 
+    let start_mempool_lock = Instant::now();
     let mut mempool = smp
         .mempool
         .lock()
         .expect("[shared mempool] failed to acquire mempool lock");
+    counters::SUBMIT_TXNS_MEMPOOL_TIME_BREAKDOWN
+        .with_label_values(&[&peer_id.to_string(), "mempool_lock"])
+        .observe(start_mempool_lock.elapsed().as_millis() as f64);
 
+    let start_add_txn = Instant::now();
+    let num_txns = transactions.len();
     for (idx, (transaction, sequence_number, balance)) in transactions.into_iter().enumerate() {
         if let Ok(None) = validations[idx] {
             let gas_cost = transaction.max_gas_amount();
@@ -239,6 +280,9 @@ where
             // TODO log/update counters for failed vm validation VMStatus
         }
     }
+    counters::SUBMIT_TXNS_MEMPOOL_TIME_BREAKDOWN
+        .with_label_values(&[&peer_id.to_string(), "add_txn"])
+        .observe((start_add_txn.elapsed().as_millis() / (num_txns as u128)) as f64);
 
     // return RPC response for this request
     // TODO currently this is a dummy response - need to add real backpressure
@@ -283,6 +327,9 @@ async fn inbound_network_task<V>(
                         Ok(event) => match event {
                             Event::NewPeer(peer_id) => {
                                 // TODO log event
+                                counters::PEER_NOTIFICATION
+                                    .with_label_values(&["NEW", &peer_id.to_string()])
+                                    .inc();
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                                 let mut timeline_id = 0;
 
@@ -332,6 +379,9 @@ async fn inbound_network_task<V>(
                             }
                             Event::LostPeer(peer_id) => {
                                 // TODO log event
+                                counters::PEER_NOTIFICATION
+                                    .with_label_values(&["LOST", &peer_id.to_string()])
+                                    .inc();
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
 
                                 if let Some(peer_sync_state) = peer_info.get_mut(&peer_id) {
@@ -361,6 +411,7 @@ async fn inbound_network_task<V>(
                                 if let Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(request)) =
                                     msg.message
                                 {
+                                    let start_time = Instant::now();
                                     bounded_executor
                                         .spawn(process_rpc_submit_transactions_request(
                                             smp.clone(),
@@ -369,6 +420,10 @@ async fn inbound_network_task<V>(
                                             callback,
                                         ))
                                         .await;
+
+                                    counters::RPC_PROCESS_SPAWN_TIME
+                                        .with_label_values(&[&peer_id.to_string()])
+                                        .observe(start_time.elapsed().as_millis() as f64);
                                 }
                             }
                             _ => {}
@@ -424,6 +479,9 @@ async fn worker<'a>(
     timeline_id: u64,
     batch_size: usize,
 ) {
+    counters::WORKERS
+        .with_label_values(&["START", &peer_id.to_string()])
+        .inc();
     let mut state = WorkerState::START;
     let current_sleep_duration_ms = 50; // TODO this is hard coded, get from config instead
     let timeout = Duration::from_secs(1); // TODO hardcoded, get from config instead
@@ -432,17 +490,45 @@ async fn worker<'a>(
     while state != WorkerState::KILL {
         ::futures::select! {
             new_state = from_master.select_next_some() => {
+                if new_state != state {
+                    counters::WORKERS
+                        .with_label_values(&[
+                            &state.to_string(),
+                            &peer_id.to_string(),
+                        ])
+                        .dec();
+                    counters::WORKERS
+                        .with_label_values(&[
+                            &new_state.to_string(),
+                            &peer_id.to_string(),
+                        ])
+                        .inc()
+                }
                 state = new_state;
             },
             default => {}
             complete => {
                 // channel `from_master` terminated, so should close
                 // TODO log
+                counters::WORKERS
+                    .with_label_values(&[
+                        &state.to_string(),
+                        &peer_id.to_string(),
+                    ])
+                    .dec();
+
                 state = WorkerState::KILL;
+                counters::WORKERS
+                    .with_label_values(&[
+                        &state.to_string(),
+                        &peer_id.to_string()
+                    ])
+                    .inc()
             }
         }
         if state == WorkerState::START {
             let to_master_clone = to_master.clone();
+            let broadcast_start = Instant::now();
             let (result_timeline_id, result_state) = broadcast_transactions(
                 mempool,
                 network_sender,
@@ -454,6 +540,9 @@ async fn worker<'a>(
                 timeout,
             )
             .await;
+            counters::OUTBOUND_TXN_BROADCAST_TIME
+                .with_label_values(&[&peer_id.to_string()])
+                .observe(broadcast_start.elapsed().as_millis() as f64);
             state = result_state;
             curr_timeline_id = result_timeline_id;
         }
@@ -471,10 +560,14 @@ async fn broadcast_transactions(
     timeout: Duration,
 ) -> (u64, WorkerState) {
     // broadcast transactions to peer
+    let start_mempool_lock = Instant::now();
     let (transactions, new_timeline_id) = mempool
         .lock()
         .expect("[shared mempool] failed to acquire mempool lock")
         .read_timeline(curr_timeline_id, batch_size);
+    counters::BROADCAST_TXNS_TIME_BREAKDOWN
+        .with_label_values(&[&peer_id.to_string(), "mempool_lock"])
+        .observe(start_mempool_lock.elapsed().as_millis() as f64);
 
     if !transactions.is_empty() {
         let mut req = BroadcastTransactionsRequest::default();
@@ -484,9 +577,14 @@ async fn broadcast_transactions(
             .map(|txn| txn.try_into().unwrap())
             .collect();
 
+        let start_network_send = Instant::now();
         let result = network_sender
             .broadcast_transactions(peer_id.clone(), req, timeout)
             .await;
+        counters::BROADCAST_TXNS_TIME_BREAKDOWN
+            .with_label_values(&[&peer_id.to_string(), "network_send"])
+            .observe(start_network_send.elapsed().as_millis() as f64);
+
         match result {
             Ok(_res) => {
                 // TODO update timeline_id/sleep from response
@@ -495,10 +593,14 @@ async fn broadcast_transactions(
             }
             Err(_e) => {
                 // TODO log and handle RPC error
+                counters::TIMEOUT
+                    .with_label_values(&[&peer_id.to_string(), "outbound"])
+                    .inc();
             }
         }
 
         // send back timeline_id to master
+        let start_master_push = Instant::now();
         if to_master
             .push(
                 peer_id,
@@ -516,6 +618,9 @@ async fn broadcast_transactions(
         } else {
             // TODO log
         }
+        counters::BROADCAST_TXNS_TIME_BREAKDOWN
+            .with_label_values(&[&peer_id.to_string(), "master_push"])
+            .observe(start_master_push.elapsed().as_millis() as f64);
     } else {
         // TODO log
     }

@@ -56,10 +56,14 @@
 //! every Consensus commit request. We use a separate system TTL to ensure that a transaction won't
 //! remain stuck in Mempool forever, even if Consensus doesn't make progress
 
+#[macro_use]
+extern crate prometheus;
+
 pub mod proto;
 pub use runtime::MempoolRuntime;
 
 mod core_mempool;
+mod counters;
 mod mempool_service;
 mod runtime;
 mod shared_mempool;
