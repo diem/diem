@@ -3,7 +3,7 @@
 
 use crate::txn_executor::convert_txn_args;
 use crate::{
-    chain_state::{ChainState, GasFreeContext, TransactionExecutionContext},
+    chain_state::{ChainState, SystemExecutionContext, TransactionExecutionContext},
     counters::*,
     data_cache::{BlockDataCache, RemoteCache},
     move_vm::MoveVM,
@@ -228,7 +228,7 @@ impl LibraVM {
         state_view: &dyn StateView,
         remote_cache: &dyn RemoteCache,
     ) -> VMResult<VerifiedTranscationPayload> {
-        let mut ctx = GasFreeContext::new(remote_cache, GasUnits::new(0));
+        let mut ctx = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
         self.check_gas(transaction)?;
         self.check_payload(transaction.payload(), state_view)?;
         let txn_data = TransactionMetadata::new(transaction);
@@ -294,14 +294,14 @@ impl LibraVM {
         })
         .and_then(|_| {
             failed_gas_left = ctx.gas_left();
-            let mut gas_free_ctx = GasFreeContext::from(ctx);
+            let mut gas_free_ctx = SystemExecutionContext::from(ctx);
             self.run_epilogue(state_view, &mut gas_free_ctx, txn_data)
                 .and_then(|_| {
                     gas_free_ctx.get_transaction_output(txn_data, to_be_published_modules, Ok(()))
                 })
         })
         .unwrap_or_else(|err| {
-            let mut gas_free_ctx = GasFreeContext::new(remote_cache, failed_gas_left);
+            let mut gas_free_ctx = SystemExecutionContext::new(remote_cache, failed_gas_left);
             self.run_epilogue(state_view, &mut gas_free_ctx, txn_data)
                 .and_then(|_| gas_free_ctx.get_transaction_output(txn_data, vec![], Err(err)))
                 .unwrap_or_else(discard_error_output)
