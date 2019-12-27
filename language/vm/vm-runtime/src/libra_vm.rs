@@ -54,8 +54,9 @@ impl LibraVM {
         }
     }
 
-    fn load_gas_schedule(&mut self, state_view: &dyn StateView, data_cache: &dyn RemoteCache) {
-        self.gas_schedule = self.move_vm.load_gas_schedule(state_view, data_cache).ok();
+    fn load_gas_schedule(&mut self, data_cache: &dyn RemoteCache) {
+        let mut ctx = SystemExecutionContext::new(data_cache, GasUnits::new(0));
+        self.gas_schedule = self.move_vm.load_gas_schedule(&mut ctx, data_cache).ok();
     }
 
     fn get_gas_schedule(&self) -> VMResult<&CostTable> {
@@ -235,14 +236,14 @@ impl LibraVM {
         match transaction.payload() {
             TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
             TransactionPayload::Script(script) => {
-                self.run_prologue(state_view, gas_schedule, &mut ctx, &txn_data)?;
+                self.run_prologue(gas_schedule, &mut ctx, &txn_data)?;
                 Ok(VerifiedTranscationPayload::Script(
                     script.code().to_vec(),
                     script.args().to_vec(),
                 ))
             }
             TransactionPayload::Module(module) => {
-                self.run_prologue(state_view, gas_schedule, &mut ctx, &txn_data)?;
+                self.run_prologue(gas_schedule, &mut ctx, &txn_data)?;
                 Ok(VerifiedTranscationPayload::Module(module.code().to_vec()))
             }
             TransactionPayload::WriteSet(change_set) => {
@@ -253,23 +254,17 @@ impl LibraVM {
 
     fn execute_verified_payload(
         &mut self,
-        state_view: &dyn StateView,
         remote_cache: &mut BlockDataCache<'_>,
         txn_data: &TransactionMetadata,
         payload: VerifiedTranscationPayload,
     ) -> TransactionOutput {
         let mut ctx = TransactionExecutionContext::new(txn_data.max_gas_amount(), remote_cache);
-        let mut to_be_published_modules = vec![];
         // TODO: The logic for handling falied transaction fee is pretty ugly right now. Fix it later.
         let mut failed_gas_left = GasUnits::new(0);
         match payload {
-            VerifiedTranscationPayload::Module(m) => self
-                .move_vm
-                .publish_module(&m, &mut ctx, txn_data)
-                .and_then(|id| {
-                    to_be_published_modules.push((id, m));
-                    Ok(())
-                }),
+            VerifiedTranscationPayload::Module(m) => {
+                self.move_vm.publish_module(m, &mut ctx, txn_data)
+            }
             VerifiedTranscationPayload::Script(s, args) => {
                 let gas_schedule = match self.get_gas_schedule() {
                     Ok(s) => s,
@@ -278,14 +273,13 @@ impl LibraVM {
                 self.move_vm.execute_script(
                     s,
                     gas_schedule,
-                    state_view,
                     &mut ctx,
                     txn_data,
                     convert_txn_args(args),
                 )
             }
             VerifiedTranscationPayload::ChangeSet(change_set) => {
-                return self.process_change_set(remote_cache, state_view, change_set);
+                return self.process_change_set(remote_cache, change_set);
             }
         }
         .map_err(|err| {
@@ -295,15 +289,13 @@ impl LibraVM {
         .and_then(|_| {
             failed_gas_left = ctx.gas_left();
             let mut gas_free_ctx = SystemExecutionContext::from(ctx);
-            self.run_epilogue(state_view, &mut gas_free_ctx, txn_data)
-                .and_then(|_| {
-                    gas_free_ctx.get_transaction_output(txn_data, to_be_published_modules, Ok(()))
-                })
+            self.run_epilogue(&mut gas_free_ctx, txn_data)
+                .and_then(|_| gas_free_ctx.get_transaction_output(txn_data, Ok(())))
         })
         .unwrap_or_else(|err| {
             let mut gas_free_ctx = SystemExecutionContext::new(remote_cache, failed_gas_left);
-            self.run_epilogue(state_view, &mut gas_free_ctx, txn_data)
-                .and_then(|_| gas_free_ctx.get_transaction_output(txn_data, vec![], Err(err)))
+            self.run_epilogue(&mut gas_free_ctx, txn_data)
+                .and_then(|_| gas_free_ctx.get_transaction_output(txn_data, Err(err)))
                 .unwrap_or_else(discard_error_output)
         })
     }
@@ -322,7 +314,6 @@ impl LibraVM {
             .and_then(|verified_payload| {
                 record_stats! {time_hist | TXN_EXECUTION_TIME_TAKEN | {
                 Ok(self.execute_verified_payload(
-                    state_view,
                     remote_cache,
                     &txn_data,
                     verified_payload,
@@ -339,12 +330,11 @@ impl LibraVM {
     fn process_change_set(
         &mut self,
         remote_cache: &mut BlockDataCache<'_>,
-        state_view: &dyn StateView,
         change_set: ChangeSet,
     ) -> TransactionOutput {
         let (write_set, events) = change_set.into_inner();
         remote_cache.push_write_set(&write_set);
-        self.load_gas_schedule(state_view, remote_cache);
+        self.load_gas_schedule(remote_cache);
         TransactionOutput::new(
             write_set,
             events,
@@ -357,7 +347,6 @@ impl LibraVM {
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_prologue<T: ChainState>(
         &self,
-        state_view: &dyn StateView,
         gas_schedule: VMResult<&CostTable>,
         chain_state: &mut T,
         txn_data: &TransactionMetadata,
@@ -372,7 +361,6 @@ impl LibraVM {
                         &ACCOUNT_MODULE,
                         &PROLOGUE_NAME,
                         gas_schedule?,
-                        state_view,
                         chain_state,
                         &txn_data,
                         vec![
@@ -391,7 +379,6 @@ impl LibraVM {
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_epilogue<T: ChainState>(
         &self,
-        state_view: &dyn StateView,
         chain_state: &mut T,
         txn_data: &TransactionMetadata,
     ) -> VMResult<()> {
@@ -404,7 +391,6 @@ impl LibraVM {
                     &ACCOUNT_MODULE,
                     &EPILOGUE_NAME,
                     self.get_gas_schedule()?,
-                    state_view,
                     chain_state,
                     &txn_data,
                     vec![
@@ -427,7 +413,7 @@ impl LibraVM {
         let mut result = vec![];
         let blocks = chunk_block_transactions(transactions);
         let mut data_cache = BlockDataCache::new(state_view);
-        self.load_gas_schedule(state_view, &data_cache);
+        self.load_gas_schedule(&data_cache);
         for block in blocks {
             match block {
                 TransactionBlock::UserTransaction(txns) => {
@@ -437,7 +423,7 @@ impl LibraVM {
                 }
                 TransactionBlock::BlockPrologue(block_metadata) => {
                     result.push(self.move_vm.execute_runtime(|runtime| {
-                        process_block_metadata(block_metadata, runtime, state_view, &mut data_cache)
+                        process_block_metadata(block_metadata, runtime, &mut data_cache)
                     })?)
                 }
                 // TODO: Implement the logic for processing writeset transactions.
@@ -512,7 +498,8 @@ impl VMVerifier for LibraVM {
     ) -> Option<VMStatus> {
         let data_cache = BlockDataCache::new(state_view);
         record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
-                let gas_schedule = self.move_vm.load_gas_schedule(state_view, &data_cache);
+                let mut ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
+                let gas_schedule = self.move_vm.load_gas_schedule(&mut ctx, &data_cache);
                 let signature_verified_txn = match transaction.check_signature() {
                     Ok(t) => t,
                     Err(_) => return Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),

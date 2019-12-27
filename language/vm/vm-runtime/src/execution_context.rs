@@ -18,8 +18,8 @@ use vm_runtime_types::{
     value::{GlobalRef, Struct, Value},
 };
 
-/// The InterpreterContext context trait speficies the mutations that are allowed to the
-/// TransactionExecutionContext within the interpreter.
+/// The `InterpreterContext` context trait specifies the mutations that are allowed to the
+/// `TransactionExecutionContext` within the interpreter.
 pub trait InterpreterContext {
     fn move_resource_to(
         &mut self,
@@ -45,6 +45,10 @@ pub trait InterpreterContext {
     fn remaining_gas(&self) -> GasUnits<GasCarrier>;
 
     fn exists_module(&self, m: &ModuleId) -> bool;
+
+    fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>>;
+
+    fn publish_module(&mut self, module_id: ModuleId, module: Vec<u8>) -> VMResult<()>;
 }
 
 impl<T: ChainState> InterpreterContext for T {
@@ -145,5 +149,13 @@ impl<T: ChainState> InterpreterContext for T {
 
     fn exists_module(&self, m: &ModuleId) -> bool {
         self.exists_module(m)
+    }
+
+    fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>> {
+        self.load_module(module)
+    }
+
+    fn publish_module(&mut self, module_id: ModuleId, module: Vec<u8>) -> VMResult<()> {
+        self.publish_module(module_id, module)
     }
 }

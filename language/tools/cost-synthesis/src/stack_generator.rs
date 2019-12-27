@@ -30,8 +30,8 @@ use vm::{
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
 };
 use vm_runtime::{
-    code_cache::module_cache::ModuleCache, interpreter::InterpreterForCostSynthesis,
-    loaded_data::loaded_module::LoadedModule,
+    chain_state::SystemExecutionContext, interpreter::InterpreterForCostSynthesis,
+    loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
 };
 use vm_runtime_types::value::*;
 
@@ -102,9 +102,12 @@ where
     /// root module that has pointers to all other modules.
     root_module: &'txn LoadedModule,
 
-    /// The module cache for all of the other modules in the universe. We need this in order to
-    /// resolve struct and function handles to other modules other then the root module.
-    module_cache: &'txn dyn ModuleCache<'alloc>,
+    /// The VMRuntime, It contains all of the modules in the universe and used for
+    /// runtime and loading operations.
+    runtime: &'txn VMRuntime<'alloc>,
+
+    /// Context for resolution
+    ctx: SystemExecutionContext<'txn>,
 
     /// The bytecode instruction for which stack states are generated.
     op: Bytecode,
@@ -141,7 +144,8 @@ where
     pub fn new(
         account_address: &'txn AccountAddress,
         root_module: &'txn LoadedModule,
-        module_cache: &'txn dyn ModuleCache<'alloc>,
+        runtime: &'txn VMRuntime<'alloc>,
+        ctx: SystemExecutionContext<'txn>,
         op: &Bytecode,
         max_stack_size: u64,
         iters: u16,
@@ -153,7 +157,8 @@ where
             account_address,
             max_stack_size,
             root_module,
-            module_cache,
+            runtime,
+            ctx,
             iters,
             table_size: iters,
             address_pool_index: 0,
@@ -409,8 +414,8 @@ where
         let module_handle = self.root_module.module_handle_at(struct_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
-            .module_cache
-            .get_loaded_module(&module_id)
+            .runtime
+            .get_loaded_module(&module_id, &self.ctx)
             .expect("[Module Lookup] Runtime error while looking up module");
         let struct_def_idx = self
             .struct_handle_table
@@ -454,8 +459,8 @@ where
         let module_handle = self.root_module.module_handle_at(function_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
-            .module_cache
-            .get_loaded_module(&module_id)
+            .runtime
+            .get_loaded_module(&module_id, &self.ctx)
             .expect("[Module Lookup] Runtime error while looking up module");
         let function_def_idx = *self
             .function_handle_table
@@ -801,6 +806,10 @@ where
         if self.iters == 0 {
             return None;
         }
+        // Clear the VM's data cache -- otherwise we'll windup grabbing the data from
+        // the cache on subsequent iterations and across future instructions that
+        // effect global memory.
+        self.ctx.clear();
         self.iters -= 1;
         Some(if self.is_module_specific_op() {
             self.generate_from_module_info()
@@ -831,18 +840,23 @@ where
         })
     }
 
+    pub fn execute_code_snippet(
+        &mut self,
+        interp: &mut InterpreterForCostSynthesis<'txn>,
+        code: &[Bytecode],
+    ) -> VMResult<()> {
+        interp.execute_code_snippet(self.runtime, &mut self.ctx, code)
+    }
+
     /// Applies the `stack_state` to the VM's execution stack.
     ///
     /// We don't use the `instr` in the stack state within this function. We therefore pull it out
     /// since we are grabbing ownership of the other fields of the struct and return it to be
     /// used elsewhere.
-    pub fn stack_transition<P>(
-        interpreter: &mut InterpreterForCostSynthesis<'alloc, 'txn, P>,
-        stack_state: StackState<'alloc>,
-    ) -> (Bytecode, AbstractMemorySize<GasCarrier>)
-    where
-        P: ModuleCache<'alloc>,
-    {
+    pub fn stack_transition(
+        interpreter: &mut InterpreterForCostSynthesis<'txn>,
+        stack_state: StackState<'txn>,
+    ) -> (Bytecode, AbstractMemorySize<GasCarrier>) {
         // Set the value stack
         // This needs to happen before the frame transition.
         interpreter.set_stack(stack_state.stack);
@@ -853,15 +867,5 @@ where
         // Populate the locals of the frame
         interpreter.load_call(stack_state.local_mapping);
         (stack_state.instr, stack_state.size)
-    }
-}
-
-impl<'alloc, 'txn> Iterator for RandomStackGenerator<'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
-    type Item = StackState<'txn>;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.next_stack()
     }
 }

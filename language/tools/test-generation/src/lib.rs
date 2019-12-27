@@ -30,9 +30,11 @@ use vm::{
     access::ModuleAccess,
     errors::VMResult,
     file_format::{CompiledModule, FunctionDefinitionIndex, SignatureToken},
+    gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS,
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
+use vm_runtime::chain_state::TransactionExecutionContext;
 use vm_runtime::{
     data_cache::BlockDataCache, runtime::VMRuntime, txn_executor::TransactionExecutor,
 };
@@ -98,11 +100,13 @@ fn execute_function_in_module(
         let mut runtime = VMRuntime::new(&arena);
         runtime.cache_module(module.clone());
 
-        let mut data_cache = BlockDataCache::new(state_view);
-        let gas_schedule = runtime.load_gas_schedule(&mut data_cache, state_view)?;
+        let data_cache = BlockDataCache::new(state_view);
+        let mut context =
+            TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, &data_cache);
+        let gas_schedule = runtime.load_gas_schedule(&mut context, &data_cache)?;
         let mut txn_executor =
             TransactionExecutor::new(&gas_schedule, &data_cache, TransactionMetadata::default());
-        txn_executor.execute_function(&runtime, state_view, &module_id, &entry_name, args)
+        txn_executor.execute_function(&runtime, &module_id, &entry_name, args)
     }
 }
 

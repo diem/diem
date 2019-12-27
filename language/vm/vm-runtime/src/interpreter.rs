@@ -1,12 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(any(test, feature = "instruction_synthesis"))]
-use crate::chain_state::TransactionExecutionContext;
-#[cfg(any(test, feature = "instruction_synthesis"))]
-use crate::data_cache::RemoteCache;
 use crate::{
-    code_cache::module_cache::ModuleCache,
     counters::*,
     execution_context::InterpreterContext,
     gas,
@@ -15,6 +10,7 @@ use crate::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
     },
+    runtime::VMRuntime,
     system_module_names::{
         ACCOUNT_MODULE, ACCOUNT_STRUCT_NAME, CREATE_ACCOUNT_NAME, EMIT_EVENT_NAME,
         SAVE_ACCOUNT_NAME,
@@ -35,8 +31,6 @@ use libra_types::{
 #[cfg(any(test, feature = "instruction_synthesis"))]
 use std::collections::HashMap;
 use std::{collections::VecDeque, convert::TryFrom, marker::PhantomData};
-#[cfg(any(test, feature = "instruction_synthesis"))]
-use vm::gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS;
 use vm::{
     access::ModuleAccess,
     errors::*,
@@ -113,11 +107,7 @@ fn derive_type_tag(
 // REVIEW: abstract the data store better (maybe a single Trait for both data and event?)
 // The ModuleCache should be a Loader with a proper API.
 // Resolve where GasMeter should live.
-pub struct Interpreter<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
+pub struct Interpreter<'txn> {
     /// Operand stack, where Move `Value`s are stored for stack operations.
     operand_stack: Stack,
     /// The stack of active functions.
@@ -125,17 +115,10 @@ where
     /// Transaction data to resolve special bytecodes (e.g. GetTxnSequenceNumber, GetTxnPublicKey,
     /// GetTxnSenderAddress, ...)
     txn_data: &'txn TransactionMetadata,
-    /// Code cache, this is effectively the loader.
-    module_cache: &'txn P,
     gas_schedule: &'txn CostTable,
-    phantom: PhantomData<&'alloc ()>,
 }
 
-impl<'alloc, 'txn, P> Interpreter<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
+impl<'txn> Interpreter<'txn> {
     /// Execute a function.
     /// `module` is an identifier for the name the module is stored in. `function_name` is the name
     /// of the function. If such function is found, the VM will execute this function with arguments
@@ -145,31 +128,31 @@ where
     // `execute_function` and `entrypoint` should exist. It's a bit messy at
     // the moment given tooling and testing. Once we remove Program transactions and we
     // clean up the loader we will have a better time cleaning this up.
-    pub fn execute_function(
+    pub(crate) fn execute_function(
         context: &mut dyn InterpreterContext,
-        module_cache: &'txn P,
+        runtime: &'txn VMRuntime<'_>,
         txn_data: &'txn TransactionMetadata,
         gas_schedule: &'txn CostTable,
         module: &ModuleId,
         function_name: &IdentStr,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        let mut interp = Self::new(module_cache, txn_data, gas_schedule);
-        let loaded_module = interp.module_cache.get_loaded_module(module)?;
+        let mut interp = Self::new(txn_data, gas_schedule);
+        let loaded_module = runtime.get_loaded_module(module, context)?;
         let func_idx = loaded_module
             .function_defs_table
             .get(function_name)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         let func = FunctionRef::new(loaded_module, *func_idx);
 
-        interp.execute(context, func, args)
+        interp.execute(runtime, context, func, args)
     }
 
     /// Entrypoint into the interpreter. All external calls need to be routed through this
     /// function.
     pub(crate) fn entrypoint(
         context: &mut dyn InterpreterContext,
-        module_cache: &'txn P,
+        runtime: &'txn VMRuntime<'_>,
         txn_data: &'txn TransactionMetadata,
         gas_schedule: &'txn CostTable,
         func: FunctionRef<'txn>,
@@ -183,10 +166,10 @@ where
         assume!(txn_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
-        let mut interp = Self::new(module_cache, txn_data, gas_schedule);
+        let mut interp = Self::new(txn_data, gas_schedule);
         let starting_gas = context.remaining_gas();
         gas!(consume: context, calculate_intrinsic_gas(txn_size))?;
-        let ret = interp.execute(context, func, args);
+        let ret = interp.execute(runtime, context, func, args);
         record_stats!(
             observe | TXN_EXECUTION_GAS_USAGE | starting_gas.sub(context.remaining_gas()).get()
         );
@@ -198,14 +181,15 @@ where
     // REVIEW: this should not live here
     pub(crate) fn create_account_entry(
         context: &mut dyn InterpreterContext,
-        module_cache: &'txn P,
+        runtime: &'txn VMRuntime<'_>,
         txn_data: &'txn TransactionMetadata,
         gas_schedule: &'txn CostTable,
         addr: AccountAddress,
     ) -> VMResult<()> {
-        let account_module = module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
-        let mut interp = Self::new(module_cache, txn_data, gas_schedule);
+        let account_module = runtime.get_loaded_module(&ACCOUNT_MODULE, context)?;
+        let mut interp = Self::new(txn_data, gas_schedule);
         interp.execute_function_call(
+            runtime,
             context,
             &ACCOUNT_MODULE,
             &CREATE_ACCOUNT_NAME,
@@ -213,23 +197,17 @@ where
         )?;
 
         let account_resource = interp.operand_stack.pop_as::<Struct>()?;
-        interp.save_account(context, account_module, addr, account_resource)
+        interp.save_account(runtime, context, account_module, addr, account_resource)
     }
 
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
     /// given module cache and gas schedule.
-    fn new(
-        module_cache: &'txn P,
-        txn_data: &'txn TransactionMetadata,
-        gas_schedule: &'txn CostTable,
-    ) -> Self {
+    fn new(txn_data: &'txn TransactionMetadata, gas_schedule: &'txn CostTable) -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
             gas_schedule,
             txn_data,
-            module_cache,
-            phantom: PhantomData,
         }
     }
 
@@ -244,31 +222,33 @@ where
     // clean up the loader we will have a better time cleaning this up.
     fn execute_function_call(
         &mut self,
+        runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         module: &ModuleId,
         function_name: &IdentStr,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        let loaded_module = self.module_cache.get_loaded_module(module)?;
+        let loaded_module = runtime.get_loaded_module(module, context)?;
         let func_idx = loaded_module
             .function_defs_table
             .get(function_name)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         let func = FunctionRef::new(loaded_module, *func_idx);
 
-        self.execute(context, func, args)
+        self.execute(runtime, context, func, args)
     }
 
     /// Internal execution entry point.
     fn execute(
         &mut self,
+        runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         function: FunctionRef<'txn>,
         args: Vec<Value>,
     ) -> VMResult<()> {
         // No unwinding of the call stack and value stack need to be done here -- the context will
         // take care of that.
-        self.execute_main(context, function, args, 0)
+        self.execute_main(runtime, context, function, args, 0)
     }
 
     /// Main loop for the execution of a function.
@@ -281,6 +261,7 @@ where
     // we can simplify this code quite a bit.
     fn execute_main(
         &mut self,
+        runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         function: FunctionRef<'txn>,
         args: Vec<Value>,
@@ -295,7 +276,7 @@ where
         loop {
             let code = current_frame.code_definition();
             let exit_code = self
-                .execute_code_unit(context, &mut current_frame, code)
+                .execute_code_unit(runtime, context, &mut current_frame, code)
                 .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
             match exit_code {
                 ExitCode::Return => {
@@ -332,7 +313,13 @@ where
                         .collect::<VMResult<Vec<_>>>()?;
 
                     let opt_frame = self
-                        .make_call_frame(context, current_frame.module(), idx, type_actual_tags)
+                        .make_call_frame(
+                            runtime,
+                            context,
+                            current_frame.module(),
+                            idx,
+                            type_actual_tags,
+                        )
                         .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
                     if let Some(frame) = opt_frame {
                         self.call_stack.push(current_frame).or_else(|frame| {
@@ -349,6 +336,7 @@ where
     /// Execute a Move function until a return or a call opcode is found.
     fn execute_code_unit(
         &mut self,
+        runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         frame: &mut Frame<'txn, FunctionRef<'txn>>,
         code: &[Bytecode],
@@ -618,6 +606,7 @@ where
                     Bytecode::MutBorrowGlobal(idx, _) | Bytecode::ImmBorrowGlobal(idx, _) => {
                         let addr = self.operand_stack.pop_as::<AccountAddress>()?;
                         let size = self.global_data_op(
+                            runtime,
                             context,
                             addr,
                             *idx,
@@ -628,13 +617,20 @@ where
                     }
                     Bytecode::Exists(idx, _) => {
                         let addr = self.operand_stack.pop_as::<AccountAddress>()?;
-                        let size =
-                            self.global_data_op(context, addr, *idx, frame.module(), Self::exists)?;
+                        let size = self.global_data_op(
+                            runtime,
+                            context,
+                            addr,
+                            *idx,
+                            frame.module(),
+                            Self::exists,
+                        )?;
                         gas!(instr: context, self, Opcodes::EXISTS, size)?;
                     }
                     Bytecode::MoveFrom(idx, _) => {
                         let addr = self.operand_stack.pop_as::<AccountAddress>()?;
                         let size = self.global_data_op(
+                            runtime,
                             context,
                             addr,
                             *idx,
@@ -648,6 +644,7 @@ where
                     Bytecode::MoveToSender(idx, _) => {
                         let addr = self.txn_data.sender();
                         let size = self.global_data_op(
+                            runtime,
                             context,
                             addr,
                             *idx,
@@ -700,14 +697,15 @@ where
     /// function are incorrectly attributed to the caller.
     fn make_call_frame(
         &mut self,
+        runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         module: &LoadedModule,
         idx: FunctionHandleIndex,
         type_actual_tags: Vec<TypeTag>,
     ) -> VMResult<Option<Frame<'txn, FunctionRef<'txn>>>> {
-        let func = self.module_cache.resolve_function_ref(module, idx)?;
+        let func = runtime.resolve_function_ref(module, idx, context)?;
         if func.is_native() {
-            self.call_native(context, func, type_actual_tags)?;
+            self.call_native(runtime, context, func, type_actual_tags)?;
             Ok(None)
         } else {
             let mut locals = Locals::new(func.local_count());
@@ -722,6 +720,7 @@ where
     /// Call a native functions.
     fn call_native(
         &mut self,
+        runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         function: FunctionRef<'txn>,
         type_actual_tags: Vec<TypeTag>,
@@ -735,7 +734,7 @@ where
             self.call_emit_event(context, type_actual_tags)
         } else if module_id == *ACCOUNT_MODULE && function_name == SAVE_ACCOUNT_NAME.as_ident_str()
         {
-            self.call_save_account(context)
+            self.call_save_account(runtime, context)
         } else {
             let mut arguments = VecDeque::new();
             let expected_args = native_function.num_args();
@@ -791,11 +790,15 @@ where
     }
 
     /// Save an account into the data store.
-    fn call_save_account(&mut self, context: &mut dyn InterpreterContext) -> VMResult<()> {
-        let account_module = self.module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
+    fn call_save_account(
+        &mut self,
+        runtime: &'txn VMRuntime<'_>,
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<()> {
+        let account_module = runtime.get_loaded_module(&ACCOUNT_MODULE, context)?;
         let account_resource = self.operand_stack.pop_as::<Struct>()?;
         let address = self.operand_stack.pop_as::<AccountAddress>()?;
-        self.save_account(context, account_module, address, account_resource)
+        self.save_account(runtime, context, account_module, address, account_resource)
     }
 
     /// Perform a binary operation to two values at the top of the stack.
@@ -839,6 +842,7 @@ where
     /// opcode.
     fn global_data_op<F>(
         &mut self,
+        runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         address: AccountAddress,
         idx: StructDefinitionIndex,
@@ -854,7 +858,7 @@ where
         ) -> VMResult<AbstractMemorySize<GasCarrier>>,
     {
         let ap = Self::make_access_path(module, idx, address);
-        let struct_def = self.module_cache.resolve_struct_def(module, idx, context)?;
+        let struct_def = runtime.resolve_struct_def(module, idx, context)?;
         op(self, context, ap, struct_def)
     }
 
@@ -921,6 +925,7 @@ where
 
     fn save_account(
         &mut self,
+        runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         account_module: &LoadedModule,
         addr: AccountAddress,
@@ -937,8 +942,7 @@ where
             .get(&*ACCOUNT_STRUCT_NAME)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         let account_struct_def =
-            self.module_cache
-                .resolve_struct_def(account_module, *account_struct_id, context)?;
+            runtime.resolve_struct_def(account_module, *account_struct_id, context)?;
 
         // TODO: Adding the freshly created account's expiration date to the TransactionOutput here.
         let account_path = Self::make_access_path(account_module, *account_struct_id, addr);
@@ -1184,37 +1188,15 @@ where
 // to determine what the needs of gas logic has to be.
 //
 #[cfg(any(test, feature = "instruction_synthesis"))]
-pub struct InterpreterForCostSynthesis<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
-    interpreter: Interpreter<'alloc, 'txn, P>,
-    context: TransactionExecutionContext<'txn>,
+pub struct InterpreterForCostSynthesis<'txn> {
+    interpreter: Interpreter<'txn>,
 }
 
 #[cfg(any(test, feature = "instruction_synthesis"))]
-impl<'alloc, 'txn, P> InterpreterForCostSynthesis<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
-    pub fn new(
-        module_cache: &'txn P,
-        txn_data: &'txn TransactionMetadata,
-        data_cache: &'txn dyn RemoteCache,
-        gas_schedule: &'txn CostTable,
-    ) -> Self {
-        let interpreter = Interpreter::new(module_cache, txn_data, gas_schedule);
-        let context = TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, data_cache);
-        InterpreterForCostSynthesis {
-            interpreter,
-            context,
-        }
-    }
-
-    pub fn clear_writes(&mut self) {
-        self.context.clear();
+impl<'txn> InterpreterForCostSynthesis<'txn> {
+    pub fn new(txn_data: &'txn TransactionMetadata, gas_schedule: &'txn CostTable) -> Self {
+        let interpreter = Interpreter::new(txn_data, gas_schedule);
+        InterpreterForCostSynthesis { interpreter }
     }
 
     pub fn set_stack(&mut self, stack: Vec<Value>) {
@@ -1253,10 +1235,15 @@ where
             .expect("Call stack limit reached");
     }
 
-    pub fn execute_code_snippet(&mut self, code: &[Bytecode]) -> VMResult<()> {
+    pub fn execute_code_snippet(
+        &mut self,
+        runtime: &'txn VMRuntime<'_>,
+        context: &mut dyn InterpreterContext,
+        code: &[Bytecode],
+    ) -> VMResult<()> {
         let mut current_frame = self.interpreter.call_stack.pop().expect("frame must exist");
         self.interpreter
-            .execute_code_unit(&mut self.context, &mut current_frame, code)?;
+            .execute_code_unit(runtime, context, &mut current_frame, code)?;
         self.interpreter
             .call_stack
             .push(current_frame)

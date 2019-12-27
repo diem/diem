@@ -124,7 +124,7 @@ lazy_static! {
 
 pub(crate) fn initial_gas_schedule(runtime: &VMRuntime, data_view: &dyn RemoteCache) -> Value {
     let struct_def = runtime
-        .resolve_struct_def(
+        .resolve_struct_def_by_name(
             &GAS_SCHEDULE_MODULE,
             &GAS_SCHEDULE_NAME,
             &mut TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, data_view),

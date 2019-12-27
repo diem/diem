@@ -4,7 +4,6 @@
 //! Frame transition rules for the execution stack.
 use vm::file_format::{Bytecode, FunctionDefinitionIndex};
 use vm_runtime::{
-    code_cache::module_cache::ModuleCache,
     interpreter::InterpreterForCostSynthesis,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
@@ -19,14 +18,11 @@ fn should_push_frame(instr: &Bytecode) -> bool {
 /// Certain instructions require specific frame configurations. In particular, Ret requires that
 /// there be at least one frame on the stack. This function makes sure
 /// that the execution stack has the number and/or requested frames at the top.
-pub(crate) fn frame_transitions<'alloc, 'txn, P>(
-    interpreter: &mut InterpreterForCostSynthesis<'alloc, 'txn, P>,
+pub(crate) fn frame_transitions<'txn>(
+    interpreter: &mut InterpreterForCostSynthesis<'txn>,
     instr: &Bytecode,
     module_info: (&'txn LoadedModule, Option<FunctionDefinitionIndex>),
-) where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
+) {
     while interpreter.call_stack_height() > 1 {
         interpreter.pop_call();
     }

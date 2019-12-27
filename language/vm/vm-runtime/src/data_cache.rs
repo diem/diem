@@ -90,6 +90,7 @@ pub struct TransactionDataCache<'txn> {
     // case moving forward, so we need to review this.
     // Also need to relate this to a ResourceKey.
     data_map: BTreeMap<AccessPath, GlobalRef>,
+    module_map: BTreeMap<ModuleId, Vec<u8>>,
     data_cache: &'txn dyn RemoteCache,
 }
 
@@ -98,17 +99,36 @@ impl<'txn> TransactionDataCache<'txn> {
         TransactionDataCache {
             data_cache,
             data_map: BTreeMap::new(),
+            module_map: BTreeMap::new(),
         }
     }
 
     pub fn exists_module(&self, m: &ModuleId) -> bool {
-        let ap = AccessPath::from(m);
-        self.data_map.contains_key(&ap) || {
+        self.module_map.contains_key(m) || {
+            let ap = AccessPath::from(m);
             match self.data_cache.get(&ap) {
                 Ok(Some(_)) => true,
                 _ => false,
             }
         }
+    }
+
+    pub fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>> {
+        match self.module_map.get(module) {
+            Some(bytes) => Ok(bytes.clone()),
+            None => {
+                let ap = AccessPath::from(module);
+                self.data_cache.get(&ap).and_then(|data| match data {
+                    Some(bytes) => Ok(bytes),
+                    None => Err(VMStatus::new(StatusCode::LINKER_ERROR)),
+                })
+            }
+        }
+    }
+
+    pub fn publish_module(&mut self, m: ModuleId, bytes: Vec<u8>) -> VMResult<()> {
+        self.module_map.insert(m, bytes);
+        Ok(())
     }
 
     pub fn publish_resource(&mut self, ap: &AccessPath, root: GlobalRef) -> VMResult<()> {
@@ -147,11 +167,13 @@ impl<'txn> TransactionDataCache<'txn> {
     /// Consume the TransactionDataCache and must be called at the end of a transaction.
     /// This also ends up checking that reference count around global resources is correct
     /// at the end of the transactions (all ReleaseRef are properly called)
-    pub fn make_write_set(
-        &mut self,
-        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
-    ) -> VMResult<WriteSet> {
-        let mut write_set = WriteSetMut::new(Vec::new());
+    pub fn make_write_set(&mut self) -> VMResult<WriteSet> {
+        if self.data_map.len() + self.module_map.len() > usize::max_value() {
+            return Err(vm_error(Location::new(), StatusCode::INVALID_DATA));
+        }
+
+        let mut sorted_ws: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
+
         let data_map = replace(&mut self.data_map, BTreeMap::new());
         for (key, global_ref) in data_map {
             if !global_ref.is_clean() {
@@ -164,14 +186,12 @@ impl<'txn> TransactionDataCache<'txn> {
                         // The write set will not grow to this size due to the gas limit.
                         // Expressing the bound in terms of the gas limit is impractical
                         // for MIRAI to check to we set a safe upper bound.
-                        assume!(write_set.len() < usize::max_value());
-                        write_set.push((key, WriteOp::Deletion));
+                        sorted_ws.insert(key, WriteOp::Deletion);
                     } else if let Some(blob) = data.simple_serialize() {
                         // The write set will not grow to this size due to the gas limit.
                         // Expressing the bound in terms of the gas limit is impractical
                         // for MIRAI to check to we set a safe upper bound.
-                        assume!(write_set.len() < usize::max_value());
-                        write_set.push((key, WriteOp::Value(blob)));
+                        sorted_ws.insert(key, WriteOp::Value(blob));
                     } else {
                         return Err(vm_error(
                             Location::new(),
@@ -187,15 +207,15 @@ impl<'txn> TransactionDataCache<'txn> {
             }
         }
 
-        // Insert the code blob to the writeset.
-        if write_set.len() <= usize::max_value() - to_be_published_modules.len() {
-            for (key, blob) in to_be_published_modules.into_iter() {
-                write_set.push(((&key).into(), WriteOp::Value(blob)));
-            }
-        } else {
-            return Err(vm_error(Location::new(), StatusCode::INVALID_DATA));
+        let module_map = replace(&mut self.module_map, BTreeMap::new());
+        for (module_id, module) in module_map {
+            sorted_ws.insert((&module_id).into(), WriteOp::Value(module));
         }
 
+        let mut write_set = WriteSetMut::new(Vec::new());
+        for (key, value) in sorted_ws {
+            write_set.push((key, value));
+        }
         write_set
             .freeze()
             .map_err(|_| vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR))
@@ -203,6 +223,7 @@ impl<'txn> TransactionDataCache<'txn> {
 
     /// Flush out the cache and restart from a clean state
     pub fn clear(&mut self) {
-        self.data_map.clear()
+        self.data_map.clear();
+        self.module_map.clear();
     }
 }

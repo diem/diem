@@ -1,24 +1,22 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::identifier::{create_access_path, resource_storage_key};
+use crate::loaded_data::function::FunctionRef;
 use crate::{
-    code_cache::{
-        module_adapter::ModuleFetcherImpl,
-        module_cache::ModuleCache,
-        module_cache::{BlockModuleCache, VMModuleCache},
-        script_cache::ScriptCache,
-    },
+    code_cache::{module_cache::VMModuleCache, script_cache::ScriptCache},
     data_cache::RemoteCache,
     execution_context::InterpreterContext,
-    gas_meter::load_gas_schedule,
     interpreter::Interpreter,
     loaded_data::{function::FunctionReference, loaded_module::LoadedModule},
+    system_module_names::GAS_SCHEDULE_MODULE,
 };
 use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
-use libra_state_view::StateView;
+use libra_types::vm_error::sub_status;
 use libra_types::{
     account_address::AccountAddress,
+    account_config,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
@@ -26,8 +24,8 @@ use libra_types::{
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
-    file_format::FunctionSignature,
-    gas_schedule::CostTable,
+    file_format::{FunctionHandleIndex, FunctionSignature, StructDefinitionIndex},
+    gas_schedule::{CostTable, GAS_SCHEDULE_NAME},
     transaction_metadata::TransactionMetadata,
     CompiledModule, IndexKind,
 };
@@ -59,21 +57,46 @@ impl<'alloc> VMRuntime<'alloc> {
 
     pub fn load_gas_schedule(
         &self,
-        data_cache: &dyn RemoteCache,
-        state_view: &dyn StateView,
+        context: &dyn InterpreterContext,
+        data_view: &dyn RemoteCache,
     ) -> VMResult<CostTable> {
-        let code_cache =
-            BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(state_view));
-        load_gas_schedule(&code_cache, data_cache)
+        let address = account_config::association_address();
+        let gas_module = self
+            .code_cache
+            .get_loaded_module(&GAS_SCHEDULE_MODULE, context)
+            .map_err(|_| {
+                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
+                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_MODULE)
+            })?;
+
+        let gas_struct_def_idx = gas_module.get_struct_def_index(&GAS_SCHEDULE_NAME)?;
+        let struct_tag = resource_storage_key(gas_module, *gas_struct_def_idx);
+        let access_path = create_access_path(&address, struct_tag);
+
+        let data_blob = data_view
+            .get(&access_path)
+            .map_err(|_| {
+                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
+                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_RESOURCE)
+            })?
+            .ok_or_else(|| {
+                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
+                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_RESOURCE)
+            })?;
+        let table: CostTable = lcs::from_bytes(&data_blob).map_err(|_| {
+            VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
+                .with_sub_status(sub_status::GSE_UNABLE_TO_DESERIALIZE)
+        })?;
+        Ok(table)
     }
 
     pub(crate) fn publish_module(
         &self,
-        module: &[u8],
+        module: Vec<u8>,
         context: &mut dyn InterpreterContext,
         txn_data: &TransactionMetadata,
-    ) -> VMResult<ModuleId> {
-        let compiled_module = match CompiledModule::deserialize(module) {
+    ) -> VMResult<()> {
+        let compiled_module = match CompiledModule::deserialize(&module) {
             Ok(module) => module,
             Err(err) => {
                 warn!("[VM] module deserialization failed {:?}", err);
@@ -115,25 +138,21 @@ impl<'alloc> VMRuntime<'alloc> {
             }
         };
 
-        Ok(module_id)
+        context.publish_module(module_id, module)
     }
 
     pub fn create_account(
         &self,
-        state_view: &dyn StateView,
         context: &mut dyn InterpreterContext,
         txn_data: &TransactionMetadata,
         gas_schedule: &CostTable,
         addr: AccountAddress,
     ) -> VMResult<()> {
-        let code_cache =
-            BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(state_view));
-        Interpreter::create_account_entry(context, &code_cache, txn_data, gas_schedule, addr)
+        Interpreter::create_account_entry(context, self, txn_data, gas_schedule, addr)
     }
 
     pub fn execute_script(
         &self,
-        state_view: &dyn StateView,
         context: &mut dyn InterpreterContext,
         txn_data: &TransactionMetadata,
         gas_schedule: &CostTable,
@@ -147,14 +166,11 @@ impl<'alloc> VMRuntime<'alloc> {
                 .with_message("Actual Type Mismatch".to_string()));
         }
 
-        let code_cache =
-            BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(state_view));
-        Interpreter::entrypoint(context, &code_cache, txn_data, gas_schedule, main, args)
+        Interpreter::entrypoint(context, self, txn_data, gas_schedule, main, args)
     }
 
     pub fn execute_function(
         &self,
-        state_view: &dyn StateView,
         context: &mut dyn InterpreterContext,
         txn_data: &TransactionMetadata,
         gas_schedule: &CostTable,
@@ -162,11 +178,9 @@ impl<'alloc> VMRuntime<'alloc> {
         function_name: &IdentStr,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        let code_cache =
-            BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(state_view));
         Interpreter::execute_function(
             context,
-            &code_cache,
+            self,
             txn_data,
             gas_schedule,
             module,
@@ -179,16 +193,46 @@ impl<'alloc> VMRuntime<'alloc> {
         self.code_cache.cache_module(module);
     }
 
-    pub fn resolve_struct_def(
+    pub fn resolve_struct_def_by_name(
         &self,
         module_id: &ModuleId,
         name: &Identifier,
         context: &mut dyn InterpreterContext,
     ) -> VMResult<StructDef> {
-        let gas_module = self.code_cache.get_loaded_module(module_id).unwrap();
-        let struct_idx = gas_module.get_struct_def_index(name).unwrap();
+        let module = self
+            .code_cache
+            .get_loaded_module(module_id, context)
+            .unwrap();
+        let struct_idx = module.get_struct_def_index(name).unwrap();
         self.code_cache
-            .resolve_struct_def(gas_module, *struct_idx, context)
+            .resolve_struct_def(module, *struct_idx, context)
+    }
+
+    pub fn resolve_struct_def(
+        &self,
+        module: &LoadedModule,
+        idx: StructDefinitionIndex,
+        data_view: &dyn InterpreterContext,
+    ) -> VMResult<StructDef> {
+        self.code_cache.resolve_struct_def(module, idx, data_view)
+    }
+
+    pub fn resolve_function_ref(
+        &self,
+        caller_module: &LoadedModule,
+        idx: FunctionHandleIndex,
+        data_view: &dyn InterpreterContext,
+    ) -> VMResult<FunctionRef<'alloc>> {
+        self.code_cache
+            .resolve_function_ref(caller_module, idx, data_view)
+    }
+
+    pub fn get_loaded_module(
+        &self,
+        id: &ModuleId,
+        data_view: &dyn InterpreterContext,
+    ) -> VMResult<&'alloc LoadedModule> {
+        self.code_cache.get_loaded_module(id, data_view)
     }
 }
 
