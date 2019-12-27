@@ -445,7 +445,11 @@ fn save_witness(
 ) {
     let witness_data = WitnessData::new(channel_sequence_number + 1, write_set);
     let data_hash = witness_data.hash();
-    let signatures = channel_txn_config.channel.sign_by_participants(&data_hash);
+    let signatures = if witness_data.write_set().is_empty() {
+        vec![]
+    } else {
+        channel_txn_config.channel.sign_by_participants(&data_hash)
+    };
     let witness = Witness::new(witness_data, signatures);
     channel_txn_config
         .channel
