@@ -98,6 +98,9 @@ impl ChainStateRequestHandle {
                         }
                     }
                 },
+                complete => {
+                   break;
+                }
             }
         }
     }
