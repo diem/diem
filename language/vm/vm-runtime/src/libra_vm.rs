@@ -495,14 +495,16 @@ pub(crate) fn discard_error_output(err: VMStatus) -> TransactionOutput {
 // Validators external API
 impl VMVerifier for LibraVM {
     /// Determine if a transaction is valid. Will return `None` if the transaction is accepted,
-    /// `Some(Err)` if the VM rejects it, with `Err` as an error code. We verify the following
-    /// items:
+    /// `Some(Err)` if the VM rejects it, with `Err` as an error code. Verification performs the
+    /// following steps:
     /// 1. The signature on the `SignedTransaction` matches the public key included in the
     ///    transaction
-    /// 2. The script to be executed is in the whitelist.
+    /// 2. The script to be executed is under given specific configuration.
     /// 3. Invokes `LibraAccount.prologue`, which checks properties such as the transaction has the
     /// right sequence number and the sender has enough balance to pay for the gas.
-    /// 4. Transaction arguments matches the main function's type signature.
+    /// TBD:
+    /// 1. Transaction arguments matches the main function's type signature.
+    ///    We don't check this item for now and would execute the check at execution time.
     fn validate_transaction(
         &self,
         transaction: SignedTransaction,

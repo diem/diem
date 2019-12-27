@@ -151,11 +151,11 @@ impl<'txn> ChainState for TransactionExecutionContext<'txn> {
     }
 }
 
-pub struct GasFreeContext<'txn>(TransactionExecutionContext<'txn>);
+pub struct SystemExecutionContext<'txn>(TransactionExecutionContext<'txn>);
 
-impl<'txn> GasFreeContext<'txn> {
+impl<'txn> SystemExecutionContext<'txn> {
     pub fn new(data_cache: &'txn dyn RemoteCache, gas_left: GasUnits<GasCarrier>) -> Self {
-        GasFreeContext(TransactionExecutionContext::new(gas_left, data_cache))
+        SystemExecutionContext(TransactionExecutionContext::new(gas_left, data_cache))
     }
 
     /// Clear all the writes local to this execution.
@@ -187,7 +187,7 @@ impl<'txn> GasFreeContext<'txn> {
     }
 }
 
-impl<'txn> ChainState for GasFreeContext<'txn> {
+impl<'txn> ChainState for SystemExecutionContext<'txn> {
     fn deduct_gas(&mut self, _amount: GasUnits<GasCarrier>) -> VMResult<()> {
         Ok(())
     }
@@ -212,7 +212,7 @@ impl<'txn> ChainState for GasFreeContext<'txn> {
     }
 }
 
-impl<'txn> From<TransactionExecutionContext<'txn>> for GasFreeContext<'txn> {
+impl<'txn> From<TransactionExecutionContext<'txn>> for SystemExecutionContext<'txn> {
     fn from(ctx: TransactionExecutionContext<'txn>) -> Self {
         Self(ctx)
     }
