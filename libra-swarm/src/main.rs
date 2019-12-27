@@ -43,7 +43,7 @@ fn main() {
         num_nodes,
         RoleType::Validator,
         args.config_dir.clone(),
-        None, /* template_path */
+        None, /* template config */
         None, /* upstream_config_dir */
     )
     .expect("Failed to configure validator swarm");
@@ -54,7 +54,7 @@ fn main() {
                 num_full_nodes,
                 RoleType::FullNode,
                 None, /* config dir */
-                None, /* template_path */
+                None, /* template config */
                 Some(String::from(
                     validator_swarm
                         .dir
