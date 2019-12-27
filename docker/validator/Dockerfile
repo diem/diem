@@ -23,6 +23,8 @@ RUN cargo build --release -p libra-node -p client -p config-builder && cd target
 ### Production Image ###
 FROM debian:buster AS prod
 
+RUN addgroup --system --gid 6180 libra && adduser --system --ingroup libra --no-create-home --uid 6180 libra
+
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY docker/install-tools.sh /root
 COPY --from=builder /libra/target/release/libra-node /opt/libra/bin
