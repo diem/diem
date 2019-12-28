@@ -21,12 +21,13 @@ use futures::{
 };
 use libra_config::config::{MempoolConfig, NodeConfig};
 use libra_logger::prelude::*;
+use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_prost_ext::MessageExt;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     proto::{
-        BroadcastTransactionsRequest, BroadcastTransactionsResponse, MempoolSyncMsg,
-        MempoolSyncMsg_oneof,
+        BroadcastTransactionsRequest, BroadcastTransactionsResponse,
+        BroadcastTransactionsStatusCode, MempoolSyncMsg, MempoolSyncMsg_oneof,
     },
     validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender, RpcError},
 };
@@ -135,7 +136,7 @@ async fn process_rpc_submit_transactions_request<V>(
             );
             // TODO return error in response
             let mut response = BroadcastTransactionsResponse::default();
-            response.backpressure_ms = 0; // TODO this is placeholder
+            response.set_code(BroadcastTransactionsStatusCode::SharedMempoolError);
             response
         }
     };
@@ -178,6 +179,8 @@ async fn submit_transactions_to_mempool<V>(
 where
     V: TransactionValidation,
 {
+    let mut response = BroadcastTransactionsResponse::default();
+    response.set_code(BroadcastTransactionsStatusCode::Success);
     /////////////////////////////////////////////
     // convert from proto to SignedTransaction //
     /////////////////////////////////////////////
@@ -265,7 +268,7 @@ where
     for (idx, (transaction, sequence_number, balance)) in transactions.into_iter().enumerate() {
         if let Ok(None) = validations[idx] {
             let gas_cost = transaction.max_gas_amount();
-            mempool.add_txn(
+            let mempool_status = mempool.add_txn(
                 transaction,
                 gas_cost,
                 sequence_number,
@@ -273,8 +276,11 @@ where
                 // peer validator SMP network or from FN
                 timeline_state,
             );
-        // TODO log/update counters for MempoolAddTransactionStatus
-        // TODO check for MempoolAddTransactionStatus::MempoolIsFull and calculate backpressure
+
+            if mempool_status.code == MempoolAddTransactionStatusCode::MempoolIsFull {
+                response.set_code(BroadcastTransactionsStatusCode::MempoolIsFull);
+                break;
+            }
         } else {
             // txn vm validation failed
             // TODO log/update counters for failed vm validation VMStatus
@@ -284,11 +290,6 @@ where
         .with_label_values(&[&peer_id.to_string(), "add_txn"])
         .observe((start_add_txn.elapsed().as_millis() / (num_txns as u128)) as f64);
 
-    // return RPC response for this request
-    // TODO currently this is a dummy response - need to add real backpressure
-    // and potentially more info on individual txn failures
-    let mut response = BroadcastTransactionsResponse::default();
-    response.backpressure_ms = 0;
     Ok(response)
 }
 

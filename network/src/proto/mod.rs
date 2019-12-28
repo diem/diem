@@ -33,7 +33,7 @@ pub use self::{
     },
     mempool::{
         mempool_sync_msg::Message as MempoolSyncMsg_oneof, BroadcastTransactionsRequest,
-        BroadcastTransactionsResponse, MempoolSyncMsg,
+        BroadcastTransactionsResponse, BroadcastTransactionsStatusCode, MempoolSyncMsg,
     },
     network::{
         identity_msg::Role as IdentityMsg_Role, DiscoveryMsg, FullNodePayload, IdentityMsg, Note,

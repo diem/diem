@@ -5,8 +5,9 @@
 use crate::{
     common::NetworkPublicKeys,
     proto::{
-        BroadcastTransactionsRequest, BroadcastTransactionsResponse, ConsensusMsg,
-        ConsensusMsg_oneof, MempoolSyncMsg, MempoolSyncMsg_oneof, RequestBlock, RespondBlock,
+        BroadcastTransactionsRequest, BroadcastTransactionsResponse,
+        BroadcastTransactionsStatusCode, ConsensusMsg, ConsensusMsg_oneof, MempoolSyncMsg,
+        MempoolSyncMsg_oneof, RequestBlock, RespondBlock,
     },
     utils::MessageExt,
     validator_network::{
@@ -211,7 +212,7 @@ fn test_mempool_sync() {
 
                 // send response back to callback
                 let mut resp = BroadcastTransactionsResponse::default();
-                resp.backpressure_ms = 0;
+                resp.set_code(BroadcastTransactionsStatusCode::Success);
                 let response_msg = MempoolSyncMsg {
                     message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsResponse(resp)),
                 };
@@ -367,7 +368,7 @@ fn test_permissionless_mempool_sync() {
 
                 // send response back to callback
                 let mut resp = BroadcastTransactionsResponse::default();
-                resp.backpressure_ms = 0;
+                resp.set_code(BroadcastTransactionsStatusCode::Success);
                 let response_msg = MempoolSyncMsg {
                     message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsResponse(resp)),
                 };

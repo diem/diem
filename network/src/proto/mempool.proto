@@ -28,6 +28,12 @@ message BroadcastTransactionsRequest {
   repeated types.SignedTransaction transactions = 2;
 }
 
+enum BroadcastTransactionsStatusCode {
+  Success = 0;
+  MempoolIsFull = 1;
+  SharedMempoolError = 2;
+}
+
 message BroadcastTransactionsResponse {
-  uint64 backpressure_ms = 1;
+  BroadcastTransactionsStatusCode code = 1;
 }
