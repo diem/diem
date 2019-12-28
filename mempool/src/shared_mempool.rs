@@ -32,6 +32,7 @@ use network::{
     validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender, RpcError},
 };
 use std::{
+    cmp::{max, min},
     collections::{HashMap, HashSet},
     convert::{TryFrom, TryInto},
     sync::{Arc, Mutex},
@@ -47,6 +48,8 @@ use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 
 const WORKER_CHANNEL_BUFFER_SIZE: usize = 1;
 const MASTER_CHANNEL_KEY: i64 = 1;
+const MAX_BACKPRESSURE_MS: i32 = 100;
+const INCR_BACKPRESSURE_MS: i32 = 10;
 
 /// state of last sync with peer
 /// `timeline_id`: the timeline ID of the last transaction broadcast to and successfully processed this peer
@@ -485,6 +488,7 @@ async fn worker<'a>(
         .inc();
     let mut state = WorkerState::START;
     let current_sleep_duration_ms = 50; // TODO this is hard coded, get from config instead
+    let mut backpressure_sleep_duration_ms = 0;
     let timeout = Duration::from_secs(1); // TODO hardcoded, get from config instead
     let mut curr_timeline_id = timeline_id; // TODO check for valid timeline_id (e.g. no negative)
 
@@ -530,13 +534,14 @@ async fn worker<'a>(
         if state == WorkerState::START {
             let to_master_clone = to_master.clone();
             let broadcast_start = Instant::now();
-            let (result_timeline_id, result_state) = broadcast_transactions(
+            let (result_timeline_id, result_state, next_backpressure_ms) = broadcast_transactions(
                 mempool,
                 network_sender,
                 to_master_clone,
                 curr_timeline_id,
                 peer_id,
                 current_sleep_duration_ms,
+                backpressure_sleep_duration_ms,
                 batch_size,
                 timeout,
             )
@@ -546,6 +551,7 @@ async fn worker<'a>(
                 .observe(broadcast_start.elapsed().as_millis() as f64);
             state = result_state;
             curr_timeline_id = result_timeline_id;
+            backpressure_sleep_duration_ms = next_backpressure_ms;
         }
     }
 }
@@ -557,9 +563,10 @@ async fn broadcast_transactions(
     mut curr_timeline_id: u64,
     peer_id: PeerId,
     current_sleep_duration_ms: i32,
+    mut backpressure_sleep_duration_ms: i32,
     batch_size: usize,
     timeout: Duration,
-) -> (u64, WorkerState) {
+) -> (u64, WorkerState, i32) {
     // broadcast transactions to peer
     let start_mempool_lock = Instant::now();
     let (transactions, new_timeline_id) = mempool
@@ -587,10 +594,22 @@ async fn broadcast_transactions(
             .observe(start_network_send.elapsed().as_millis() as f64);
 
         match result {
-            Ok(_res) => {
-                // TODO update timeline_id/sleep from response
+            Ok(res) => {
                 // TODO log
-                curr_timeline_id = new_timeline_id;
+                match res.code() {
+                    BroadcastTransactionsStatusCode::Success => {
+                        curr_timeline_id = new_timeline_id;
+                        backpressure_sleep_duration_ms = 0;
+                    }
+                    BroadcastTransactionsStatusCode::MempoolIsFull => {
+                        // calculate backpressure
+                        backpressure_sleep_duration_ms =
+                            calculate_backpressure(backpressure_sleep_duration_ms);
+                    }
+                    BroadcastTransactionsStatusCode::SharedMempoolError => {
+                        backpressure_sleep_duration_ms = 0;
+                    }
+                }
             }
             Err(_e) => {
                 // TODO log and handle RPC error
@@ -615,7 +634,11 @@ async fn broadcast_transactions(
             // TODO log this
             // this will shut down channels to/from this worker thread, so master will know
             // this is dead and needs to start new worker for this peer
-            return (curr_timeline_id, WorkerState::KILL);
+            return (
+                curr_timeline_id,
+                WorkerState::KILL,
+                backpressure_sleep_duration_ms,
+            );
         } else {
             // TODO log
         }
@@ -626,9 +649,22 @@ async fn broadcast_transactions(
         // TODO log
     }
     sleep(Duration::from_millis(
-        current_sleep_duration_ms.try_into().unwrap(),
+        (current_sleep_duration_ms + backpressure_sleep_duration_ms)
+            .try_into()
+            .unwrap(),
     ));
-    (curr_timeline_id, WorkerState::START)
+    (
+        curr_timeline_id,
+        WorkerState::START,
+        backpressure_sleep_duration_ms,
+    )
+}
+
+fn calculate_backpressure(curr_backpressure_ms: i32) -> i32 {
+    min(
+        MAX_BACKPRESSURE_MS,
+        max(0, curr_backpressure_ms) + INCR_BACKPRESSURE_MS,
+    )
 }
 
 /// bootstrap of SharedMempool
