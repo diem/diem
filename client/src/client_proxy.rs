@@ -95,7 +95,7 @@ pub struct ClientProxy {
     pub faucet_account: Option<AccountData>,
     /// Wallet library managing user accounts.
     wallet: WalletLibrary,
-    /// Whether to sync with validator on account creation.
+    /// Whether to sync with validator on wallet recovery.
     sync_on_wallet_recovery: bool,
     /// temp files (alive for duration of program)
     temp_files: Vec<PathBuf>,
