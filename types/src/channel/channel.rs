@@ -231,6 +231,10 @@ impl ChannelResource {
         self.participants.as_slice()
     }
 
+    pub fn event_handle(&self) -> &EventHandle {
+        &self.events
+    }
+
     pub fn make_from(bytes: Vec<u8>) -> Result<Self> {
         lcs::from_bytes(bytes.as_slice()).map_err(|e| Into::into(e))
     }
