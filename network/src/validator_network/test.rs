@@ -4,11 +4,15 @@
 //! Integration tests for validator_network.
 use crate::{
     common::NetworkPublicKeys,
-    proto::{ConsensusMsg, ConsensusMsg_oneof, MempoolSyncMsg, RequestBlock, RespondBlock},
+    proto::{
+        ConsensusMsg, ConsensusMsg_oneof, DiscoveryMsg, MempoolSyncMsg, Note, RequestBlock,
+        RespondBlock,
+    },
     utils::MessageExt,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
-        Event, CONSENSUS_RPC_PROTOCOL, MEMPOOL_DIRECT_SEND_PROTOCOL,
+        Event, CONSENSUS_RPC_PROTOCOL, DISCOVERY_DIRECT_SEND_PROTOCOL,
+        MEMPOOL_DIRECT_SEND_PROTOCOL,
     },
     ProtocolId,
 };
@@ -71,6 +75,135 @@ fn test_network_builder() {
     let (_state_sync_network_sender, _state_sync_network_events) =
         network_provider.add_state_synchronizer(vec![synchronizer_get_chunks_protocol.clone()]);
     runtime.spawn(network_provider.start());
+}
+
+#[test]
+fn test_discovery_direct_send() {
+    ::libra_logger::try_init_for_testing();
+    let mut runtime = Runtime::new().unwrap();
+    let discovery_direct_send_protocol = ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL);
+
+    // Setup peer ids.
+    let listener_peer_id = PeerId::random();
+    let dialer_peer_id = PeerId::random();
+    // Setup signing public keys.
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (listener_signing_private_key, listener_signing_public_key) =
+        compat::generate_keypair(&mut rng);
+    let (dialer_signing_private_key, dialer_signing_public_key) =
+        compat::generate_keypair(&mut rng);
+    // Setup identity public keys.
+    let (_listener_identity_private_key, listener_identity_public_key) =
+        x25519::compat::generate_keypair(&mut rng);
+    let (_dialer_identity_private_key, dialer_identity_public_key) =
+        x25519::compat::generate_keypair(&mut rng);
+
+    let trusted_peers: HashMap<_, _> = vec![
+        (
+            listener_peer_id,
+            NetworkPublicKeys {
+                signing_public_key: listener_signing_public_key.clone(),
+                identity_public_key: listener_identity_public_key.clone(),
+            },
+        ),
+        (
+            dialer_peer_id,
+            NetworkPublicKeys {
+                signing_public_key: dialer_signing_public_key.clone(),
+                identity_public_key: dialer_identity_public_key.clone(),
+            },
+        ),
+    ]
+    .into_iter()
+    .collect();
+
+    // Set up the listener network
+    let listener_addr: Multiaddr = "/memory/0".parse().unwrap();
+    let (listener_addr, mut network_provider) = NetworkBuilder::new(
+        runtime.handle().clone(),
+        listener_peer_id,
+        listener_addr,
+        RoleType::Validator,
+    )
+    .signing_keys((listener_signing_private_key, listener_signing_public_key))
+    .trusted_peers(trusted_peers.clone())
+    .transport(TransportType::Memory)
+    .channel_size(8)
+    .direct_send_protocols(vec![discovery_direct_send_protocol.clone()])
+    .build();
+    let (_, mut listener_disc_net_events) =
+        network_provider.add_discovery(vec![discovery_direct_send_protocol.clone()]);
+    runtime.handle().spawn(network_provider.start());
+
+    // Set up the dialer network
+    let dialer_addr: Multiaddr = "/memory/0".parse().unwrap();
+    let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
+        runtime.handle().clone(),
+        dialer_peer_id,
+        dialer_addr,
+        RoleType::Validator,
+    )
+    .transport(TransportType::Memory)
+    .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
+    .trusted_peers(trusted_peers.clone())
+    .seed_peers(
+        [(listener_peer_id, vec![listener_addr])]
+            .iter()
+            .cloned()
+            .collect(),
+    )
+    .channel_size(8)
+    .direct_send_protocols(vec![discovery_direct_send_protocol.clone()])
+    .build();
+    let (mut dialer_disc_net_sender, mut dialer_disc_net_events) =
+        network_provider.add_discovery(vec![discovery_direct_send_protocol.clone()]);
+
+    runtime.handle().spawn(network_provider.start());
+
+    // The dialer dials the listener and sends a mempool sync message
+    let mut discovery_msg = DiscoveryMsg::default();
+    discovery_msg.notes = vec![Note {
+        peer_id: dialer_peer_id.into(),
+        ..Default::default()
+    }];
+
+    let f_dialer = async move {
+        // Wait until dialing finished and NewPeer event received
+        match dialer_disc_net_events.next().await.unwrap().unwrap() {
+            Event::NewPeer(peer_id) => {
+                assert_eq!(peer_id, listener_peer_id);
+            }
+            event => panic!("Unexpected event {:?}", event),
+        }
+
+        // Dialer sends a discovery message
+        dialer_disc_net_sender
+            .send_to(listener_peer_id, discovery_msg)
+            .await
+            .unwrap();
+    };
+
+    // The listener receives a discovery message
+    let f_listener = async move {
+        // The listener receives a NewPeer event first
+        match listener_disc_net_events.next().await.unwrap().unwrap() {
+            Event::NewPeer(peer_id) => {
+                assert_eq!(peer_id, dialer_peer_id);
+            }
+            event => panic!("Unexpected event {:?}", event),
+        }
+
+        // The listener then receives the discovery message
+        match listener_disc_net_events.next().await.unwrap().unwrap() {
+            Event::Message((peer_id, msg)) => {
+                assert_eq!(peer_id, dialer_peer_id);
+                let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
+                assert_eq!(msg.notes[0].peer_id, dialer_peer_id_bytes);
+            }
+            event => panic!("Unexpected event {:?}", event),
+        }
+    };
+    runtime.block_on(join(f_dialer, f_listener));
 }
 
 #[test]
