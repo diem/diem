@@ -1,0 +1,90 @@
+module TestAbortIf {
+
+       // succeeds. Very basic test.
+       public abort1(x: u64, y: u64)
+       aborts_if x <= y
+       {
+                      assert(copy(x) > copy(y), 1);
+                      return;
+       }
+
+       // fails, because it does not abort when x <= y
+       public abort2(x: u64, y: u64)
+       aborts_if x <= y  //! postcondition might not hold
+       {
+                      return;
+       }
+
+       // fails, because it aborts when not x<=y
+       public abort3(x: u64, y: u64)
+       aborts_if x <= y //! postcondition might not hold
+       {
+              assert(false, 2);
+                      return;
+       }
+
+       // fails. Violates implicit succeeds_if x >= y when x == y
+       public abort4(x: u64, y: u64)
+       aborts_if x < y //! postcondition might not hold
+       {
+                      assert(copy(x) > copy(y), 1);
+                      return;
+       }
+
+
+       // succeeds, redundant succeeds_if
+       public abort5(x: u64, y: u64)
+       succeeds_if x > y
+       aborts_if x <= y
+       {
+                      assert(copy(x) > copy(y), 1);
+                      return;
+       }
+
+       // succeeds. Don't care whether it aborts if x = y
+       public abort6(x: u64, y: u64)
+       succeeds_if x > y
+       aborts_if x < y
+       {
+                      assert(copy(x) > copy(y), 1);
+                      return;
+       }
+
+       // fails. (aborts when x == y)
+       public abort7(x: u64, y: u64)
+       succeeds_if x >= y      //! postcondition might not hold
+       aborts_if x < y
+       {
+                      assert(copy(x) > copy(y), 1);
+                      return;
+       }
+
+       // succeeds. Don't care whether it aborts if x = y
+       public abort8(x: u64, y: u64): bool
+       succeeds_if x > y
+       aborts_if x < y
+       ensures return == true
+       {
+                      assert(copy(x) > copy(y), 1);
+                      y = copy(x);
+                      return (copy(x) == copy(y));
+       }
+
+       // fails. It doesn't abort when x > y
+       // Boogie also (correctly) complains because it doesn't SUCCEED on x==y
+       // Need to have two diagnostics here because of two errors. It doesn't matter
+       // where they occur.
+       public abort9(x: u64, y: u64)
+       aborts_if x > y //! postcondition might not hold
+       aborts_if x < y //! postcondition might not hold
+       ensures x == y
+       {
+                      assert(copy(x) > copy(y), 1);
+                      return;
+       }
+
+       // try 0 abort_ifs, 2 succeeds_ifs, various combinations.
+       // ensures holds whenever it doesn't abort?
+
+
+}

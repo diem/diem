@@ -29,7 +29,8 @@ procedure {:inline 1} Unpack_TestSpecs_R(v: Value) returns (v0: Value)
 procedure {:inline 1} TestSpecs_create_resource () returns ()
 requires ExistsTxnSenderAccount(m, txn);
 ensures !abort_flag ==> b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(TxnSenderAddress(txn)))));
-ensures !(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(TxnSenderAddress(txn)))))) ==> !abort_flag;
+ensures old(!(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(TxnSenderAddress(txn))))))) ==> !abort_flag;
+ensures old(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(TxnSenderAddress(txn)))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -92,7 +93,8 @@ procedure TestSpecs_create_resource_verify () returns ()
 procedure {:inline 1} TestSpecs_create_resource_error () returns ()
 requires ExistsTxnSenderAccount(m, txn);
 ensures !abort_flag ==> b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(TxnSenderAddress(txn)))));
-ensures !(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(TxnSenderAddress(txn)))))) ==> !abort_flag;
+ensures old(!(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(TxnSenderAddress(txn))))))) ==> !abort_flag;
+ensures old(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(TxnSenderAddress(txn)))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -141,8 +143,7 @@ procedure TestSpecs_create_resource_error_verify () returns ()
 
 procedure {:inline 1} TestSpecs_div_by_zero (arg0: Value, arg1: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
-ensures !old(b#Boolean(Boolean((arg1) != (Integer(0))))) ==> abort_flag;
-ensures (b#Boolean(Boolean((arg1) != (Integer(0))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean((arg1) != (Integer(0))))) ==> !abort_flag;
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -202,8 +203,7 @@ procedure TestSpecs_div_by_zero_verify (arg0: Value, arg1: Value) returns (ret0:
 
 procedure {:inline 1} TestSpecs_div_by_zero_error (arg0: Value, arg1: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
-ensures !old(b#Boolean(Boolean(true))) ==> abort_flag;
-ensures (b#Boolean(Boolean(true))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
 {
     // declare local variables
     var t0: Value; // IntegerType()

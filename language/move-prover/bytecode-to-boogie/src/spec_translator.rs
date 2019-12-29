@@ -69,6 +69,11 @@ impl<'a> SpecTranslator<'a> {
         let mut res = String::new();
 
         // Generate pre-conditions
+        // For this transaction to be executed, it MUST have had
+        // a valid signature for the sender's account. Therefore,
+        // the senders account resource (which contains the pubkey)
+        // must have existed! So we can assume txn_sender account
+        // exists in pre-condition.
         for cond in &self.function_info.specification {
             if let Condition::Requires(expr) = cond {
                 res.push_str(&format!(
@@ -80,7 +85,9 @@ impl<'a> SpecTranslator<'a> {
         res.push_str("requires ExistsTxnSenderAccount(m, txn);\n");
 
         // Generate succeeds_if and aborts_if setup (for post conditions)
-        let succeeds_if_string = self
+
+        // When all succeeds_if conditions hold, function must not abort.
+        let mut succeeds_if_string = self
             .function_info
             .specification
             .iter()
@@ -91,13 +98,9 @@ impl<'a> SpecTranslator<'a> {
                 _ => None,
             })
             .join(" && ");
-        if !succeeds_if_string.is_empty() {
-            // Ensure that violation of condition at entry leads to abort.
-            res.push_str(&format!(
-                "ensures !old({}) ==> abort_flag;\n",
-                succeeds_if_string
-            ));
-        }
+
+        // abort_if P means function MUST abort if P holds.
+        // multiple abort_if conditions are "or"ed.
         let aborts_if_string = self
             .function_info
             .specification
@@ -110,9 +113,28 @@ impl<'a> SpecTranslator<'a> {
             })
             .join(" || ");
 
-        // Generate post conditions.
+        // negation of abort_if condition is an implicit succeeds_if condition.
+        // So, if no explicit succeeds_if specifications exist, the function must
+        // succeed whenever the aborts_if condition does not hold.
+        // If there are explicit succeeds_if conditions, there may be cases where
+        // no aborts_if holds and not all succeeds_if conditions hold.  In that case,
+        // the function may or may not abort. If it does not abort, it must meet all
+        // explicit ensures conditions.
+        // NOTE: It's not yet clear that succeeds_if is useful, or if this is the most
+        // useful interpretation.
+        if !aborts_if_string.is_empty() {
+            if !succeeds_if_string.is_empty() {
+                succeeds_if_string = format!("!({}) && ({})", aborts_if_string, succeeds_if_string);
+            } else {
+                succeeds_if_string = format!("!({})", aborts_if_string);
+            }
+        }
+
+        // Generate explicit ensures conditions
         for cond in &self.function_info.specification {
             if let Condition::Ensures(expr) = cond {
+                // FIXME: Do we really need to check whether succeeds_if & aborts_if are
+                // empty, below?
                 res.push_str(&format!(
                     "ensures {}b#Boolean({});\n",
                     if !succeeds_if_string.is_empty() || !aborts_if_string.is_empty() {
@@ -126,18 +148,20 @@ impl<'a> SpecTranslator<'a> {
             }
         }
 
-        // Emit aborts_if/succeeds_if.
-        let mut no_abort_cond = vec![];
+        // emit the Boogie ensures condition for succeeds_if
         if !succeeds_if_string.is_empty() {
-            no_abort_cond.push(format!("({})", succeeds_if_string));
-        }
-        if !aborts_if_string.is_empty() {
-            no_abort_cond.push(format!("!({})", aborts_if_string));
-        }
-        if !no_abort_cond.is_empty() {
+            // If succeeds_if condition is met, function must NOT abort.
             res.push_str(&format!(
-                "ensures {} ==> !abort_flag;\n",
-                no_abort_cond.iter().join(" && ")
+                "ensures old({}) ==> !abort_flag;\n",
+                succeeds_if_string
+            ));
+        }
+
+        // emit Boogie ensures condition for aborts_if
+        if !aborts_if_string.is_empty() {
+            res.push_str(&format!(
+                "ensures old({}) ==> abort_flag;\n",
+                aborts_if_string
             ));
         }
 

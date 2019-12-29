@@ -53,9 +53,9 @@ procedure {:inline 1} Unpack_TestSpecs_R(v: Value) returns (v0: Value, v1: Value
 procedure {:inline 1} TestSpecs_div (arg0: Value, arg1: Value) returns (ret0: Value)
 requires b#Boolean(Boolean(i#Integer(arg1) > i#Integer(Integer(0))));
 requires ExistsTxnSenderAccount(m, txn);
-ensures !old(b#Boolean(Boolean(i#Integer(arg0) > i#Integer(Integer(1))))) ==> abort_flag;
 ensures !abort_flag ==> b#Boolean(Boolean((ret0) == (Integer(i#Integer(arg0) * i#Integer(arg1)))));
-ensures (b#Boolean(Boolean(i#Integer(arg0) > i#Integer(Integer(1))))) && !(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(Integer(0))))) ==> !abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(Integer(0))))) && (b#Boolean(Boolean(i#Integer(arg0) > i#Integer(Integer(1)))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(Integer(0))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -116,7 +116,8 @@ procedure TestSpecs_div_verify (arg0: Value, arg1: Value) returns (ret0: Value)
 procedure {:inline 1} TestSpecs_create_resource () returns ()
 requires ExistsTxnSenderAccount(m, txn);
 ensures !abort_flag ==> b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(1))));
-ensures !(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(1))))) ==> !abort_flag;
+ensures old(!(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(1)))))) ==> !abort_flag;
+ensures old(b#Boolean(ExistsResource(m, TestSpecs_R_type_value(), a#Address(Address(1))))) ==> abort_flag;
 {
     // declare local variables
 
