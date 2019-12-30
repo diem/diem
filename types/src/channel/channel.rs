@@ -226,6 +226,9 @@ impl ChannelResource {
     pub fn locked(&self) -> bool {
         self.stage == 1
     }
+    pub fn opened(&self) -> bool {
+        self.stage == 0
+    }
 
     pub fn participants(&self) -> &[AccountAddress] {
         self.participants.as_slice()
