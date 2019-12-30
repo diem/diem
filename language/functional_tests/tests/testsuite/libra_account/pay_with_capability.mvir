@@ -51,5 +51,4 @@ main() {
     return;
 }
 
-//! check: SentPaymentEvent
-//! check: {{alice}}
+// check: SentPaymentEvent
