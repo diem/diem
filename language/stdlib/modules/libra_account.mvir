@@ -268,7 +268,7 @@ module LibraAccount {
             move(payee),
             *&copy(cap).account_address,
             Self.withdraw_with_capability(move(cap), move(amount)),
-            h""
+            move(metadata),
         );
         return;
     }
