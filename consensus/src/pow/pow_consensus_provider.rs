@@ -104,7 +104,9 @@ impl PowConsensusProvider {
             read_storage,
             write_storage,
             self_pri_key,
+            node_config.storage.dir(),
         );
+        //node_config.base().data_dir.clone()
         Self {
             runtime,
             event_handle: Some(event_handle),

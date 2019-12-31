@@ -38,6 +38,7 @@ use network::{
 };
 use std::convert::TryFrom;
 use std::convert::TryInto;
+use std::path::PathBuf;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
@@ -73,6 +74,7 @@ impl EventProcessor {
         read_storage: Arc<dyn StorageRead>,
         write_storage: Arc<dyn StorageWrite>,
         pri_key: Ed25519PrivateKey,
+        dump_path: PathBuf,
     ) -> Self {
         let (block_cache_sender, block_cache_receiver) = mpsc::channel(10);
 
@@ -88,6 +90,7 @@ impl EventProcessor {
             author.clone(),
             read_storage,
             write_storage,
+            dump_path,
         )));
 
         let sync_manager = Arc::new(AtomicRefCell::new(SyncManager::new(
@@ -217,49 +220,55 @@ impl EventProcessor {
 
                                 if verify {
                                     if self_peer_id != peer_id {
-                                        let (height, block_index) =
-                                            chain_manager.borrow().chain_height_and_root().await;
-
-                                        debug!(
-                                            "Self is {:?}, height is {}, Peer Id is {:?}, Block Id is {:?}, verify {}, height {}",
-                                            self_peer_id,
-                                            height,
-                                            peer_id,
-                                            block.id(),
-                                            verify,
-                                            block.round()
-                                        );
-
-                                        if height < block.round()
-                                            && block.parent_id() != block_index.id()
+                                        if let Some((height, block_index)) =
+                                            chain_manager.borrow().chain_height_and_root().await
                                         {
-                                            if let Err(err) = sync_signal_sender
-                                                .clone()
-                                                .send((peer_id, (block.round(), HashValue::zero())))
-                                                .await
+                                            debug!(
+                                                "Self is {:?}, height is {}, Peer Id is {:?}, Block Id is {:?}, verify {}, height {}",
+                                                self_peer_id,
+                                                height,
+                                                peer_id,
+                                                block.id(),
+                                                verify,
+                                                block.round()
+                                            );
+
+                                            if height < block.round()
+                                                && block.parent_id() != block_index.id()
                                             {
-                                                error!("send sync signal err: {:?}", err);
+                                                if let Err(err) = sync_signal_sender
+                                                    .clone()
+                                                    .send((
+                                                        peer_id,
+                                                        (block.round(), HashValue::zero()),
+                                                    ))
+                                                    .await
+                                                {
+                                                    error!("send sync signal err: {:?}", err);
+                                                }
                                             }
+
+                                            //broadcast new block
+                                            let block_pb =
+                                                TryInto::<BlockProto>::try_into(block.clone())
+                                                    .expect("parse block err.");
+
+                                            // send block
+                                            let msg = ConsensusMsg {
+                                                message: Some(ConsensusMsg_oneof::NewBlock(
+                                                    block_pb,
+                                                )),
+                                            };
+                                            Self::broadcast_consensus_msg_but(
+                                                &mut network_sender,
+                                                false,
+                                                self_peer_id,
+                                                &mut self_sender,
+                                                msg,
+                                                vec![peer_id],
+                                            )
+                                            .await;
                                         }
-
-                                        //broadcast new block
-                                        let block_pb =
-                                            TryInto::<BlockProto>::try_into(block.clone())
-                                                .expect("parse block err.");
-
-                                        // send block
-                                        let msg = ConsensusMsg {
-                                            message: Some(ConsensusMsg_oneof::NewBlock(block_pb)),
-                                        };
-                                        Self::broadcast_consensus_msg_but(
-                                            &mut network_sender,
-                                            false,
-                                            self_peer_id,
-                                            &mut self_sender,
-                                            msg,
-                                            vec![peer_id],
-                                        )
-                                        .await;
                                     }
 
                                     if let Err(err) = (&mut block_cache_sender).send(block).await {
@@ -304,11 +313,17 @@ impl EventProcessor {
                                                     }
                                                 }
                                             }
-                                            None => block_db
-                                                .get_block_by_hash::<BlockPayloadExt>(
-                                                    &chain_manager.borrow().chain_root().await,
-                                                )
-                                                .expect("root not exist"),
+                                            None => {
+                                                match chain_manager.borrow().chain_root().await {
+                                                    Some(tmp) => block_db
+                                                        .get_block_by_hash::<BlockPayloadExt>(&tmp)
+                                                        .expect("root not exist"),
+                                                    None => {
+                                                        not_exist_flag = true;
+                                                        break;
+                                                    }
+                                                }
+                                            }
                                         };
 
                                         latest_block = Some(block.parent_id());
