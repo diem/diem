@@ -9,9 +9,16 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::block_index::BlockIndex;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
-use libra_types::transaction::{SignedTransaction, Transaction, TransactionToCommit, Version};
+use libra_types::transaction::{
+    SignedTransaction, Transaction, TransactionStatus, TransactionToCommit, Version,
+};
 use libra_types::PeerId;
-use std::collections::{HashMap, LinkedList};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use storage_client::StorageWrite;
 
@@ -30,85 +37,173 @@ pub type BlockHeight = u64;
 pub struct BlockTree {
     height: BlockHeight,
     id_to_block: HashMap<HashValue, BlockInfo>,
-    indexes: HashMap<BlockHeight, LinkedList<HashValue>>,
+    indexes: HashMap<BlockHeight, Vec<HashValue>>,
     main_chain: AtomicRefCell<HashMap<BlockHeight, BlockIndex>>,
     write_storage: Arc<dyn StorageWrite>,
     tail_height: BlockHeight,
     txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
     rollback_mode: bool,
     block_store: Arc<ConsensusDB>,
+    dump_path: PathBuf,
+}
+
+impl Drop for BlockTree {
+    fn drop(&mut self) {
+        let dump = self.to_dump();
+        let bytes: Vec<u8> = dump.into();
+        let mut file =
+            File::create(self.dump_path.clone()).expect("Unable to create blocktree.blob");
+        file.write_all(bytes.as_ref())
+            .expect("Unable to dump block tree.");
+        file.flush().expect("flush block tree file err.");
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
+pub struct BlockTree4Dump {
+    height: BlockHeight,
+    id_to_block: HashMap<HashValue, BlockInfo>,
+    indexes: HashMap<BlockHeight, Vec<HashValue>>,
+    main_chain: HashMap<BlockHeight, BlockIndex>,
+    tail_height: BlockHeight,
+    rollback_mode: bool,
+}
+
+impl From<BlockTree4Dump> for Vec<u8> {
+    fn from(dump: BlockTree4Dump) -> Vec<u8> {
+        lcs::to_bytes(&dump).expect("BlockTree4Dump to bytes err.")
+    }
+}
+
+impl TryFrom<Vec<u8>> for BlockTree4Dump {
+    type Error = anyhow::Error;
+
+    fn try_from(bytes: Vec<u8>) -> Result<BlockTree4Dump> {
+        lcs::from_bytes(bytes.as_ref())
+            .map_err(|error| format_err!("Deserialize BlockTree4Dump error: {:?}", error,))
+    }
+}
+
+fn from_dump(
+    dump: BlockTree4Dump,
+    write_storage: Arc<dyn StorageWrite>,
+    txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
+    block_store: Arc<ConsensusDB>,
+    dump_path: PathBuf,
+) -> BlockTree {
+    BlockTree {
+        height: dump.height,
+        id_to_block: dump.id_to_block,
+        indexes: dump.indexes,
+        main_chain: AtomicRefCell::new(dump.main_chain),
+        write_storage,
+        tail_height: dump.tail_height,
+        txn_manager,
+        rollback_mode: dump.rollback_mode,
+        block_store,
+        dump_path,
+    }
 }
 
 impl BlockTree {
+    fn to_dump(&self) -> BlockTree4Dump {
+        BlockTree4Dump {
+            height: self.height.clone(),
+            id_to_block: self.id_to_block.clone(),
+            indexes: self.indexes.clone(),
+            main_chain: self.main_chain.borrow().clone(),
+            tail_height: self.tail_height.clone(),
+            rollback_mode: self.rollback_mode.clone(),
+        }
+    }
+
     pub fn new<T: Payload>(
         write_storage: Arc<dyn StorageWrite>,
         txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
         rollback_mode: bool,
         block_store: Arc<ConsensusDB>,
+        dump_path: PathBuf,
     ) -> Self {
-        let genesis_height = 0;
-        let genesis_block: Block<T> = Block::make_genesis_block();
-        let genesis_id = genesis_block.id();
-        let genesis_block_info =
-            BlockInfo::new_inner(&genesis_id, &PRE_GENESIS_BLOCK_ID, genesis_height, 0, None);
+        //dump path
+        let tmp: &Path = dump_path.as_ref();
+        let path = tmp.join("block_tree.blob");
+        info!("Dump path : {:?}", path);
 
-        //init block_store
-        let mut genesis_qcs = Vec::new();
-        genesis_qcs.push(genesis_block.quorum_cert().clone());
-        block_store
-            .save_blocks_and_quorum_certificates(vec![genesis_block], genesis_qcs)
-            .expect("save blocks failed.");
+        if !path.exists() {
+            let genesis_height = 0;
+            let genesis_block: Block<T> = Block::make_genesis_block();
+            let genesis_id = genesis_block.id();
+            let genesis_block_info =
+                BlockInfo::new_inner(&genesis_id, &PRE_GENESIS_BLOCK_ID, genesis_height, 0, None);
 
-        // indexes
-        let mut genesis_indexes = LinkedList::new();
-        genesis_indexes.push_front(genesis_id.clone());
-        let mut indexes = HashMap::new();
-        indexes.insert(genesis_height, genesis_indexes);
+            //init block_store
+            let mut genesis_qcs = Vec::new();
+            genesis_qcs.push(genesis_block.quorum_cert().clone());
+            block_store
+                .save_blocks_and_quorum_certificates(vec![genesis_block], genesis_qcs)
+                .expect("save blocks failed.");
 
-        // main chain
-        let main_chain = AtomicRefCell::new(HashMap::new());
-        main_chain
-            .borrow_mut()
-            .insert(genesis_height, genesis_block_info.block_index().clone());
+            // indexes
+            let mut genesis_indexes = Vec::new();
+            genesis_indexes.push(genesis_id.clone());
+            let mut indexes = HashMap::new();
+            indexes.insert(genesis_height, genesis_indexes);
 
-        // id to block
-        let mut id_to_block = HashMap::new();
-        id_to_block.insert(genesis_id.clone(), genesis_block_info);
+            // main chain
+            let main_chain = AtomicRefCell::new(HashMap::new());
+            main_chain
+                .borrow_mut()
+                .insert(genesis_height, genesis_block_info.block_index().clone());
 
-        BlockTree {
-            height: genesis_height,
-            id_to_block,
-            indexes,
-            main_chain,
-            write_storage,
-            tail_height: genesis_height,
-            txn_manager,
-            rollback_mode,
-            block_store,
+            // id to block
+            let mut id_to_block = HashMap::new();
+            id_to_block.insert(genesis_id.clone(), genesis_block_info);
+
+            BlockTree {
+                height: genesis_height,
+                id_to_block,
+                indexes,
+                main_chain,
+                write_storage,
+                tail_height: genesis_height,
+                txn_manager,
+                rollback_mode,
+                block_store,
+                dump_path: path,
+            }
+        } else {
+            let mut file = File::open(path.clone()).expect("open genesis err.");
+            let mut buffer = vec![];
+            file.read_to_end(&mut buffer).expect("reload genesis err.");
+            let block_tree_dump =
+                BlockTree4Dump::try_from(buffer).expect("BlockTree4Dump try_from err.");
+            from_dump(
+                block_tree_dump,
+                write_storage,
+                txn_manager,
+                block_store,
+                path,
+            )
         }
     }
 
-    pub fn _init(&mut self) {
-        //TODO
+    fn prune(&mut self) {
+        let ct = 10;
+        if self.tail_height + ct < self.height {
+            let times = self.height - self.tail_height - ct;
+            for _i in 0..times {
+                let tmp_height = self.tail_height;
+                //1. indexes
+                let tmp_indexes = self.indexes.remove(&tmp_height).expect("indexes is none.");
+                //2. id_to_block
+                for block_id in tmp_indexes {
+                    self.id_to_block.remove(&block_id);
+                }
+                //3. tail_height
+                self.tail_height = tmp_height + 1;
+            }
+        }
     }
-
-    //    fn prune(&mut self) {
-    //        let ct = 1000;
-    //        if self.tail_height + ct < self.height {
-    //            let times = self.height - self.tail_height - ct;
-    //            for _i in 0..times {
-    //                let tmp_height = self.tail_height;
-    //                //1. indexes
-    //                let tmp_indexes = self.indexes.remove(&tmp_height).expect("indexes is none.");
-    //                //2. id_to_block
-    //                for block_id in tmp_indexes {
-    //                    self.id_to_block.remove(&block_id);
-    //                }
-    //                //3. tail_height
-    //                self.tail_height = tmp_height + 1;
-    //            }
-    //        }
-    //    }
 
     async fn add_block_info_inner<T: Payload>(
         &mut self,
@@ -118,7 +213,7 @@ impl BlockTree {
     ) {
         //4. new root, rollback, commit
         if new_root {
-            let old_root = self.root_hash();
+            let old_root = self.root_hash().unwrap();
 
             //rollback
             if old_root != new_block_info.parent_id() {
@@ -165,14 +260,16 @@ impl BlockTree {
             self.commit_block(&new_block_info).await;
 
             self.height = new_block_info.height();
-            let mut hash_list = LinkedList::new();
-            hash_list.push_front(new_block_info.id().clone());
+            let mut hash_list = Vec::new();
+            hash_list.push(new_block_info.id().clone());
             self.indexes.insert(new_block_info.height(), hash_list);
+
+            self.prune();
         } else {
             self.indexes
                 .get_mut(&new_block_info.height())
                 .unwrap()
-                .push_back(new_block_info.id().clone());
+                .push(new_block_info.id().clone());
         }
 
         //5. add new block info
@@ -191,7 +288,7 @@ impl BlockTree {
 
     async fn commit_block(&self, block_info: &BlockInfo) {
         let timestamp_usecs = block_info.timestamp_usecs();
-        let vm_output = block_info.output().expect("output is none.");
+        let vm_output_status = block_info.output_status().expect("output is none.");
         let commit_data = block_info.commit_data().expect("commit_data is none.");
         let height = block_info.height();
         let block_index = block_info.block_index();
@@ -199,15 +296,11 @@ impl BlockTree {
         if commit_data.txns_len() > 0 {
             let signed_txns = commit_data.signed_txns();
             let signed_txns_len = signed_txns.len();
-            let txns_status_len = vm_output.state_compute_result().status().len();
+            let txns_status_len = vm_output_status.len();
 
             let mut txns_status = vec![];
             for i in 0..signed_txns_len {
-                txns_status.push(
-                    vm_output.state_compute_result().status()
-                        [txns_status_len - signed_txns_len + i]
-                        .clone(),
-                );
+                txns_status.push(vm_output_status[txns_status_len - signed_txns_len + i].clone());
             }
             if let Err(e) = self
                 .txn_manager
@@ -265,7 +358,7 @@ impl BlockTree {
             parent_id,
             height,
             block.timestamp_usecs(),
-            vm_output,
+            vm_output.state_compute_result().status().clone(),
             commit_data,
         );
         self.add_block_info_inner(block, new_block_info, new_root)
@@ -277,23 +370,24 @@ impl BlockTree {
         self.id_to_block.get(block_id)
     }
 
-    pub fn chain_height_and_root(&self) -> (BlockHeight, BlockIndex) {
+    pub fn chain_height_and_root(&self) -> Option<(BlockHeight, BlockIndex)> {
         let height = self.height;
-        let root_index = self
-            .main_chain
-            .borrow()
-            .get(&height)
-            .expect("root is none.")
-            .clone();
-        (height, root_index)
+        match self.main_chain.borrow().get(&height) {
+            Some(i) => Some((height, i.clone())),
+            None => None,
+        }
     }
 
     pub fn block_exist(&self, block_hash: &HashValue) -> bool {
         self.id_to_block.contains_key(block_hash)
     }
 
-    pub fn root_hash(&self) -> HashValue {
-        self.chain_height_and_root().1.id()
+    pub fn root_hash(&self) -> Option<HashValue> {
+        let a = self.chain_height_and_root();
+        match a {
+            Some(b) => Some(b.1.id()),
+            None => None,
+        }
     }
 
     fn find_height_and_index_by_block_id(
@@ -363,14 +457,15 @@ impl BlockTree {
 }
 
 /// Can find parent block or children block by BlockInfo
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct BlockInfo {
     block_index: BlockIndex,
     height: BlockHeight,
-    output_commit_data: Option<(ProcessedVMOutput, CommitData)>,
+    output_commit_data: Option<(Vec<TransactionStatus>, CommitData)>,
     timestamp_usecs: u64,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct CommitData {
     pub txns_to_commit: Vec<TransactionToCommit>,
     pub first_version: Version,
@@ -401,7 +496,7 @@ impl BlockInfo {
         parent_id: &HashValue,
         height: BlockHeight,
         timestamp_usecs: u64,
-        vm_output: ProcessedVMOutput,
+        vm_output_status: Vec<TransactionStatus>,
         commit_data: CommitData,
     ) -> Self {
         Self::new_inner(
@@ -409,7 +504,7 @@ impl BlockInfo {
             parent_id,
             height,
             timestamp_usecs,
-            Some((vm_output, commit_data)),
+            Some((vm_output_status, commit_data)),
         )
     }
 
@@ -418,7 +513,7 @@ impl BlockInfo {
         parent_id: &HashValue,
         height: BlockHeight,
         timestamp_usecs: u64,
-        output_commit_data: Option<(ProcessedVMOutput, CommitData)>,
+        output_commit_data: Option<(Vec<TransactionStatus>, CommitData)>,
     ) -> Self {
         let block_index = BlockIndex::new(id, parent_id);
         BlockInfo {
@@ -460,7 +555,7 @@ impl BlockInfo {
         }
     }
 
-    fn output(&self) -> Option<ProcessedVMOutput> {
+    fn output_status(&self) -> Option<Vec<TransactionStatus>> {
         match &self.output_commit_data {
             Some(output_commit_data) => Some(output_commit_data.0.clone()),
             None => None,
@@ -473,4 +568,18 @@ impl BlockInfo {
     fn new_for_test(id: &HashValue, parent_id: &HashValue, height: BlockHeight) -> Self {
         Self::new_inner(id, parent_id, height, 0, None)
     }
+}
+
+#[test]
+fn test_hash() {
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+    struct HashTest {
+        hash: HashValue,
+    }
+
+    let a = HashTest {
+        hash: HashValue::random(),
+    };
+    let json = lcs::to_bytes(&a).expect("HashTest to bytes err.");
+    let obj: HashTest = lcs::from_bytes(json.as_ref()).expect("Deserialize HashTest error.");
 }
