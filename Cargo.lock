@@ -1580,6 +1580,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "genesis-viewer"
+version = "0.1.0"
+dependencies = [
+ "libra-canonical-serialization 0.1.0",
+ "libra-types 0.1.0",
+ "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm 0.1.0",
+]
+
+[[package]]
 name = "get_if_addrs"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
