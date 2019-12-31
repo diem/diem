@@ -1,11 +1,9 @@
 [package]
 name = "cuckoo_miner"
-version = "3.0.0-beta.1"
+version = "0.1.0"
 authors = ["yeastplume"]
 license = "MIT/Apache-2.0/BSD-3-Clause"
 description = "Rust bindings to John Tromp's Cuckoo Cycle Implementations"
-repository = "https://github.com/mimblewimble/grin-miner"
-readme = "../README.md"
 build = "src/build.rs"
 
 [features]
@@ -18,8 +16,9 @@ test-avx2 = []
 build-cuda-plugins = []
 
 [dependencies]
-grin_miner_util = { path = "util", version = "3.0.0-beta.1" }
-grin_miner_plugin = { path = "plugin", version = "3.0.0-beta.1" }
+cuckoo_plugin = { path = "plugin", version = "0.1.0" }
+ocl_cuckaroo = {path = "./ocl_cuckaroo", version = "0.1.0"}
+ocl_cuckatoo = {path = "./ocl_cuckatoo", version = "0.1.0"}
 time = "^0.1"
 rust-crypto = "0.2.36"
 log = "^0.3"

@@ -6,107 +6,107 @@ const LOCAL_WORK_SIZE: usize = 256;
 const GLOBAL_WORK_SIZE: usize = 1024 * LOCAL_WORK_SIZE;
 
 enum Mode {
-	SetCnt = 1,
-	Trim = 2,
-	Extract = 3,
+    SetCnt = 1,
+    Trim = 2,
+    Extract = 3,
 }
 
 pub struct Trimmer {
-	edge_bits: u8,
-	q: Queue,
-	program: Program,
-	edges: Buffer<u32>,
-	counters: Buffer<u32>,
-	result: Buffer<u32>,
-	res_buf: Vec<u32>,
-	pub device_name: String,
-	pub device_id: usize,
+    edge_bits: u8,
+    q: Queue,
+    program: Program,
+    edges: Buffer<u32>,
+    counters: Buffer<u32>,
+    result: Buffer<u32>,
+    res_buf: Vec<u32>,
+    pub device_name: String,
+    pub device_id: usize,
 }
 
 impl Trimmer {
-	pub fn build(
-		platform_name: Option<&str>,
-		device_id: Option<usize>,
-		edge_bits: u8,
-	) -> ocl::Result<Trimmer> {
-		let platform = find_platform(platform_name)
-			.ok_or::<ocl::Error>("Can't find OpenCL platform".into())?;
-		let device = find_device(&platform, device_id)?;
+    pub fn build(
+        platform_name: Option<&str>,
+        device_id: Option<usize>,
+        edge_bits: u8,
+    ) -> ocl::Result<Trimmer> {
+        let platform = find_platform(platform_name)
+            .ok_or::<ocl::Error>("Can't find OpenCL platform".into())?;
+        let device = find_device(&platform, device_id)?;
 
-		let el_count = (1024 * 1024 * 16) << (edge_bits - 29);
-		let res_buf: Vec<u32> = vec![0; RES_BUFFER_SIZE];
+        let el_count = (1024 * 1024 * 16) << (edge_bits - 29);
+        let res_buf: Vec<u32> = vec![0; RES_BUFFER_SIZE];
 
-		let context = Context::builder()
-			.platform(platform)
-			.devices(device)
-			.build()?;
+        let context = Context::builder()
+            .platform(platform)
+            .devices(device)
+            .build()?;
 
-		let q = Queue::new(&context, device, None)?;
+        let q = Queue::new(&context, device, None)?;
 
-		let program = Program::builder()
-			.devices(device)
-			.src(SRC)
-			.cmplr_def("EDGEBITS", edge_bits as i32)
-			.build(&context)?;
+        let program = Program::builder()
+            .devices(device)
+            .src(SRC)
+            .cmplr_def("EDGEBITS", edge_bits as i32)
+            .build(&context)?;
 
-		let edges = Buffer::<u32>::builder()
-			.queue(q.clone())
-			.len(el_count)
-			.fill_val(0xFFFFFFFF)
-			.build()?;
-		let counters = Buffer::<u32>::builder()
-			.queue(q.clone())
-			.len(el_count)
-			.fill_val(0)
-			.build()?;
-		let result = unsafe {
-			Buffer::<u32>::builder()
-				.queue(q.clone())
-				.len(RES_BUFFER_SIZE)
-				.fill_val(0)
-				.use_host_slice(&res_buf[..])
-				.build()?
-		};
+        let edges = Buffer::<u32>::builder()
+            .queue(q.clone())
+            .len(el_count)
+            .fill_val(0xFFFFFFFF)
+            .build()?;
+        let counters = Buffer::<u32>::builder()
+            .queue(q.clone())
+            .len(el_count)
+            .fill_val(0)
+            .build()?;
+        let result = unsafe {
+            Buffer::<u32>::builder()
+                .queue(q.clone())
+                .len(RES_BUFFER_SIZE)
+                .fill_val(0)
+                .use_host_slice(&res_buf[..])
+                .build()?
+        };
 
-		Ok(Trimmer {
-			edge_bits,
-			q,
-			program,
-			edges,
-			counters,
-			result,
-			res_buf,
-			device_name: device.name()?,
-			device_id: device_id.unwrap_or(0),
-		})
-	}
+        Ok(Trimmer {
+            edge_bits,
+            q,
+            program,
+            edges,
+            counters,
+            result,
+            res_buf,
+            device_name: device.name()?,
+            device_id: device_id.unwrap_or(0),
+        })
+    }
 
-	pub fn run(&self, k: &[u64; 4]) -> ocl::Result<Vec<u32>> {
-		let mut current_mode = Mode::SetCnt;
-		let mut current_uorv: u32 = 0;
-		let trims = if self.edge_bits >= 29 { 128 } else { 256 };
-		let enqs = 8 << (self.edge_bits - 29);
+    pub fn run(&self, k: &[u64; 4]) -> ocl::Result<Vec<u32>> {
+        let mut current_mode = Mode::SetCnt;
+        let mut current_uorv: u32 = 0;
+        let trims = if self.edge_bits >= 29 { 128 } else { 256 };
+        let enqs = 8 << (self.edge_bits - 29);
 
-		let mut kernel = Kernel::builder()
-			.name("LeanRound")
-			.program(&self.program)
-			.queue(self.q.clone())
-			.global_work_size(GLOBAL_WORK_SIZE)
-			.local_work_size(SpatialDims::One(LOCAL_WORK_SIZE))
-			.arg(k[0])
-			.arg(k[1])
-			.arg(k[2])
-			.arg(k[3])
-			.arg(&self.edges)
-			.arg(&self.counters)
-			.arg(&self.result)
-			.arg(current_mode as u32)
-			.arg(current_uorv)
-			.build()?;
+        let mut kernel = Kernel::builder()
+            .name("LeanRound")
+            .program(&self.program)
+            .queue(self.q.clone())
+            .global_work_size(GLOBAL_WORK_SIZE)
+            .local_work_size(SpatialDims::One(LOCAL_WORK_SIZE))
+            .arg(k[0])
+            .arg(k[1])
+            .arg(k[2])
+            .arg(k[3])
+            .arg(&self.edges)
+            .arg(&self.counters)
+            .arg(&self.result)
+            .arg(current_mode as u32)
+            .arg(current_uorv)
+            .build()?;
 
-		let mut offset;
+        let mut offset;
 
-		macro_rules! kernel_enq (
+        macro_rules! kernel_enq (
         ($num:expr) => (
         for i in 0..$num {
             offset = i * GLOBAL_WORK_SIZE;
@@ -118,53 +118,53 @@ impl Trimmer {
         }
         ));
 
-		for l in 0..trims {
-			current_uorv = l & 1 as u32;
-			current_mode = Mode::SetCnt;
-			kernel.set_arg(7, current_mode as u32)?;
-			kernel.set_arg(8, current_uorv)?;
-			kernel_enq!(enqs);
+        for l in 0..trims {
+            current_uorv = l & 1 as u32;
+            current_mode = Mode::SetCnt;
+            kernel.set_arg(7, current_mode as u32)?;
+            kernel.set_arg(8, current_uorv)?;
+            kernel_enq!(enqs);
 
-			current_mode = if l == (trims - 1) {
-				Mode::Extract
-			} else {
-				Mode::Trim
-			};
-			kernel.set_arg(7, current_mode as u32)?;
-			kernel_enq!(enqs);
-			// prepare for the next round
-			self.counters.cmd().fill(0, None).enq()?;
-		}
-		unsafe {
-			self.result.map().enq()?;
-		}
-		self.q.finish()?;
-		let ret = self.res_buf.clone();
-		self.edges.cmd().fill(0xFFFFFFFF, None).enq()?;
-		self.result.cmd().fill(0, None).enq()?;
-		self.q.finish()?;
-		Ok(ret)
-	}
+            current_mode = if l == (trims - 1) {
+                Mode::Extract
+            } else {
+                Mode::Trim
+            };
+            kernel.set_arg(7, current_mode as u32)?;
+            kernel_enq!(enqs);
+            // prepare for the next round
+            self.counters.cmd().fill(0, None).enq()?;
+        }
+        unsafe {
+            self.result.map().enq()?;
+        }
+        self.q.finish()?;
+        let ret = self.res_buf.clone();
+        self.edges.cmd().fill(0xFFFFFFFF, None).enq()?;
+        self.result.cmd().fill(0, None).enq()?;
+        self.q.finish()?;
+        Ok(ret)
+    }
 }
 
 fn find_platform(selector: Option<&str>) -> Option<Platform> {
-	match selector {
-		None => Some(Platform::default()),
-		Some(sel) => Platform::list().into_iter().find(|p| {
-			if let Ok(vendor) = p.name() {
-				vendor.contains(sel)
-			} else {
-				false
-			}
-		}),
-	}
+    match selector {
+        None => Some(Platform::default()),
+        Some(sel) => Platform::list().into_iter().find(|p| {
+            if let Ok(vendor) = p.name() {
+                vendor.contains(sel)
+            } else {
+                false
+            }
+        }),
+    }
 }
 
 fn find_device(platform: &Platform, selector: Option<usize>) -> ocl::Result<Device> {
-	match selector {
-		None => Device::first(platform),
-		Some(index) => Device::by_idx_wrap(platform, index),
-	}
+    match selector {
+        None => Device::first(platform),
+        Some(index) => Device::by_idx_wrap(platform, index),
+    }
 }
 
 const SRC: &str = r#"

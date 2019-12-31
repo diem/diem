@@ -1,10 +1,6 @@
 [package]
-name = "grin_miner_plugin"
-version = "3.0.0-beta.1"
-authors = ["Grin Developers <mimblewimble@lists.launchpad.net>"]
-repository = "https://github.com/mimblewimble/grin-miner"
-description = "Device specific plugins for the grin miner"
-license = "Apache-2.0"
+name = "cuckoo_plugin"
+version = "0.1.0"
 
 [dependencies]
 byteorder = "^0.5"

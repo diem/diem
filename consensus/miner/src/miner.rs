@@ -1,5 +1,5 @@
 use crate::cuckoo;
-use crate::types::{blake2b, set_header_nonce, Algo, Solution, H256, U256};
+use crate::types::{set_header_nonce, Algo, Solution, H256, U256};
 use rand::Rng;
 use scrypt::scrypt_1024_1_1_256;
 

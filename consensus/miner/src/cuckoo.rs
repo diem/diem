@@ -1,14 +1,14 @@
-use crate::types::{set_header_nonce, Proof, Solution};
-use byteorder::{LittleEndian, WriteBytesExt};
+use crate::types::{set_header_nonce, Solution};
+use cuckaroo::new_cuckaroo_ctx;
 use cuckaroo::CuckarooProof;
-use cuckaroo::{new_cuckaroo_ctx, PoWContext as CuckooCtx};
 use cuckoo_miner::{self, CuckooMinerError, PluginLibrary};
 use std::convert::Into;
 use std::env;
-
+#[allow(dead_code)]
 enum CuckooPlugin {
     Cuckaroo29Cpu,
     Cuckaroo19Cpu,
+    OclCuckatoo,
 }
 
 impl Into<&str> for CuckooPlugin {
@@ -16,6 +16,7 @@ impl Into<&str> for CuckooPlugin {
         match self {
             CuckooPlugin::Cuckaroo29Cpu => "cuckaroo_cpu_compat_29.cuckooplugin",
             CuckooPlugin::Cuckaroo19Cpu => "cuckaroo_cpu_compat_19.cuckooplugin",
+            CuckooPlugin::OclCuckatoo => "ocl_cuckatoo.cuckooplugin",
         }
     }
 }
@@ -30,13 +31,14 @@ fn load_plugin_lib(plugin: &str) -> Result<PluginLibrary, CuckooMinerError> {
 }
 
 pub fn mine(header: &[u8], nonce: u32) -> Solution {
-    let plugin = CuckooPlugin::Cuckaroo19Cpu;
+    let plugin = CuckooPlugin::OclCuckatoo;
     let pl = load_plugin_lib(plugin.into()).unwrap();
     let mut params = pl.get_default_params();
     let mut solutions = cuckoo_miner::SolverSolutions::default();
     let mut stats = cuckoo_miner::SolverStats::default();
     params.nthreads = 4;
     params.mutate_nonce = false;
+    params.device = 2; // my gpu
     let ctx = pl.create_solver_ctx(&mut params);
     let header = set_header_nonce(header, nonce);
     let _ = pl.run_solver(ctx, header.to_owned(), 0, 1, &mut solutions, &mut stats);

@@ -1,6 +1,6 @@
 [package]
 name = "ocl_cuckaroo"
-version = "1.0.2"
+version = "0.1.0"
 edition = "2018"
 
 [features]
@@ -8,7 +8,7 @@ profile = []
 
 
 [dependencies]
-grin_miner_plugin = { path = "../plugin", version = "3.0.0-beta.1" }
+cuckoo_plugin = { path = "../plugin", version = "0.1.0" }
 ocl = "0.19"
 hashbrown = "0.1"
 libc = "0.2.24"

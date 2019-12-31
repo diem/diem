@@ -1,5 +1,5 @@
 use crate::miner;
-use crate::types::{Algo, MineCtx, Solution, U256};
+use crate::types::{Algo, MineCtx, U256};
 use async_std::{
     prelude::*,
     stream::Stream,
