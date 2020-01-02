@@ -34,7 +34,7 @@ configuration from many of the services.
 ## Building a Test Network
 
 config-builder builds a single nodes configuration within a network or swarm of
-nodes. This can be used to create a LIbra TestNet or to add a FullNetwork to an
+nodes. This can be used to create a Libra TestNet or to add a FullNetwork to an
 existing Network. In addition, it enables generation of a mint / faucet client
 capable of performing mint transactions / creating accounts.
 
