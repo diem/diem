@@ -333,7 +333,7 @@ impl BlockTree {
         parent_id: &HashValue,
         vm_output: ProcessedVMOutput,
         commit_data: CommitData,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         //1. new_block_info not exist
         let id_exist = self.id_to_block.contains_key(&block.id());
         ensure!(!id_exist, "block already exist in block tree.");
@@ -363,7 +363,7 @@ impl BlockTree {
         );
         self.add_block_info_inner(block, new_block_info, new_root)
             .await;
-        Ok(())
+        Ok(new_root)
     }
 
     fn find_block_info_by_block_id(&self, block_id: &HashValue) -> Option<&BlockInfo> {

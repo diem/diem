@@ -157,8 +157,10 @@ impl ChainManager {
                                         first_version: (txn_len - (commit_len as u64) + 1) as u64,
                                         ledger_info_with_sigs: Some(block.quorum_cert().ledger_info().clone())};
 
-                                    chain_lock.add_block_info(block, &parent_block_id, processed_vm_output, commit_data).await.expect("add_block_info failed.");
-                                    chain_lock.print_block_chain_root(author);
+                                    let new_root = chain_lock.add_block_info(block, &parent_block_id, processed_vm_output, commit_data).await.expect("add_block_info failed.");
+                                    if new_root {
+                                        chain_lock.print_block_chain_root(author);
+                                    }
                                 } else {
                                     warn!("Peer id {:?}, Drop block {:?}, block version is {}, vm output version is {}", author, block.id(),
                                     block.quorum_cert().ledger_info().ledger_info().commit_info().version(), txn_len);
