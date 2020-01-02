@@ -70,12 +70,8 @@ impl Witness {
     }
 
     pub fn verify(&self, public_keys: &[Ed25519PublicKey]) -> Result<()> {
-        if self.data.channel_sequence_number == 0 {
-            ensure!(
-                self.data.write_set().is_empty(),
-                "witness write_set must empty at channel_sequence_number 0"
-            );
-        } else {
+        // only validate signature when write_set is not empty.
+        if !self.data.write_set.is_empty() {
             ensure!(
                 self.signatures.len() == public_keys.len(),
                 "witness signature len must equals public_keys."
@@ -85,6 +81,7 @@ impl Witness {
                 public_key.verify_signature(&hash, signature)?;
             }
         }
+
         return Ok(());
     }
 }
