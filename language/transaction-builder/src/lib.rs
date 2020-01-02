@@ -238,25 +238,34 @@ pub fn get_transaction_name(code: &[u8]) -> String {
         return "rotate_authentication_key_transaction".to_string();
     } else if code == &ROTATE_CONSENSUS_PUBKEY_TXN[..] {
         return "rotate_consensus_pubkey_transaction".to_string();
+    } else if code == &REGISTER_VALIDATOR_TXN[..] {
+        return "register_validator_transaction".to_string();
     }
     "<unknown transaction>".to_string()
 }
 
+#[macro_export]
+macro_rules! allowing_scripts {
+    () => {
+        vec![
+            ADD_VALIDATOR_TXN.clone(),
+            MINT_TXN.clone(),
+            PEER_TO_PEER_TXN.clone(),
+            PEER_TO_PEER_WITH_METADATA_TXN.clone(),
+            REMOVE_VALIDATOR_TXN.clone(),
+            REGISTER_VALIDATOR_TXN.clone(),
+            ROTATE_AUTHENTICATION_KEY_TXN.clone(),
+            ROTATE_CONSENSUS_PUBKEY_TXN.clone(),
+            CREATE_ACCOUNT_TXN.clone(),
+        ]
+    };
+}
+
 pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
-    vec![
-        ADD_VALIDATOR_TXN.clone(),
-        MINT_TXN.clone(),
-        PEER_TO_PEER_TXN.clone(),
-        PEER_TO_PEER_WITH_METADATA_TXN.clone(),
-        REMOVE_VALIDATOR_TXN.clone(),
-        REGISTER_VALIDATOR_TXN.clone(),
-        ROTATE_AUTHENTICATION_KEY_TXN.clone(),
-        ROTATE_CONSENSUS_PUBKEY_TXN.clone(),
-        CREATE_ACCOUNT_TXN.clone(),
-    ]
-    .into_iter()
-    .map(|s| *HashValue::from_sha3_256(&s).as_ref())
-    .collect()
+    allowing_scripts!()
+        .into_iter()
+        .map(|s| *HashValue::from_sha3_256(&s).as_ref())
+        .collect()
 }
 
 pub fn default_config() -> VMConfig {
@@ -264,5 +273,30 @@ pub fn default_config() -> VMConfig {
         publishing_options: VMPublishingOption::Locked(HashSet::from_iter(
             allowing_script_hashes().into_iter(),
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_transaction_name() {
+        let transaction_names: Vec<String> = allowing_scripts!()
+            .into_iter()
+            .map(|s| get_transaction_name(&s))
+            .collect();
+        let expected_names = vec![
+            "add_validator_transaction",
+            "mint_transaction",
+            "peer_to_peer_transaction",
+            "peer_to_peer_with_metadata_transaction",
+            "remove_validator_transaction",
+            "register_validator_transaction",
+            "rotate_authentication_key_transaction",
+            "rotate_consensus_pubkey_transaction",
+            "create_account_transaction",
+        ];
+        assert_eq!(transaction_names, expected_names);
     }
 }
