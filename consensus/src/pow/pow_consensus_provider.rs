@@ -1,4 +1,5 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
+use crate::counters;
 use crate::pow::{
     block_storage_service::make_block_storage_service,
     event_processor::EventProcessor,
@@ -10,16 +11,23 @@ use crate::{
 };
 use anyhow::Result;
 use async_std::task;
+use consensus_types::block_retrieval::BlockRetrievalResponse;
+use consensus_types::payload_ext::BlockPayloadExt;
 use executor::Executor;
+use futures::channel::mpsc;
 use grpcio::Server;
 use libra_config::config::NodeConfig;
+use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::account_address::AccountAddress;
+use libra_types::PeerId;
 use miner::server::setup_minerproxy_service;
+use network::proto::ConsensusMsg;
 use network::validator_network::{
     ChainStateNetworkEvents, ChainStateNetworkSender, ConsensusNetworkEvents,
-    ConsensusNetworkSender,
+    ConsensusNetworkSender, Event,
 };
 use state_synchronizer::StateSyncClient;
 use std::convert::TryFrom;
@@ -35,6 +43,11 @@ pub struct PowConsensusProvider {
     _block_storage_server: Server,
     chain_state_network_sender: Option<ChainStateNetworkSender>,
     chain_state_network_events: Option<ChainStateNetworkEvents>,
+    mint_key: Option<Ed25519PrivateKey>,
+    event_handle_network_events: Option<ConsensusNetworkEvents>,
+    event_handle_receiver: Option<channel::Receiver<Result<Event<ConsensusMsg>>>>,
+    sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>>,
+    sync_signal_receiver: Option<mpsc::Receiver<(PeerId, (u64, HashValue))>>,
 }
 
 impl PowConsensusProvider {
@@ -92,9 +105,12 @@ impl PowConsensusProvider {
         }
 
         let self_pri_key = node_config.consensus.take_and_set_key();
+        let (event_handle_sender, event_handle_receiver) =
+            channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
+        let (sync_block_sender, sync_block_receiver) = mpsc::channel(10);
+        let (sync_signal_sender, sync_signal_receiver) = mpsc::channel(1024);
         let event_handle = EventProcessor::new(
             network_sender,
-            network_events,
             txn_manager,
             state_computer,
             author,
@@ -103,7 +119,9 @@ impl PowConsensusProvider {
             mine_state,
             read_storage,
             write_storage,
-            self_pri_key,
+            event_handle_sender,
+            sync_block_sender,
+            sync_signal_sender,
             node_config.storage.dir(),
         );
         //node_config.base().data_dir.clone()
@@ -114,6 +132,11 @@ impl PowConsensusProvider {
             _block_storage_server: block_storage_server,
             chain_state_network_sender: Some(chain_state_network_sender),
             chain_state_network_events: Some(chain_state_network_events),
+            mint_key: Some(self_pri_key),
+            event_handle_network_events: Some(network_events),
+            event_handle_receiver: Some(event_handle_receiver),
+            sync_block_receiver: Some(sync_block_receiver),
+            sync_signal_receiver: Some(sync_signal_receiver),
         }
     }
 
@@ -122,6 +145,11 @@ impl PowConsensusProvider {
         executor: Handle,
         chain_state_network_sender: ChainStateNetworkSender,
         chain_state_network_events: ChainStateNetworkEvents,
+        self_key: Ed25519PrivateKey,
+        event_handle_network_events: ConsensusNetworkEvents,
+        event_handle_receiver: channel::Receiver<Result<Event<ConsensusMsg>>>,
+        sync_block_receiver: mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>,
+        sync_signal_receiver: mpsc::Receiver<(PeerId, (u64, HashValue))>,
     ) {
         match self.event_handle.take() {
             Some(mut handle) => {
@@ -131,7 +159,10 @@ impl PowConsensusProvider {
                     .expect("block_cache_receiver is none.");
 
                 //mint
-                handle.mint_manager.borrow_mut().mint(executor.clone());
+                handle
+                    .mint_manager
+                    .borrow()
+                    .mint(executor.clone(), self_key);
 
                 //msg
                 handle.chain_state_handle(
@@ -139,19 +170,24 @@ impl PowConsensusProvider {
                     chain_state_network_sender,
                     chain_state_network_events,
                 );
-                handle.event_process(executor.clone());
+                handle.event_process(
+                    executor.clone(),
+                    event_handle_network_events,
+                    event_handle_receiver,
+                );
 
                 //save
                 handle
                     .chain_manager
-                    .borrow_mut()
+                    .borrow()
                     .save_block(block_cache_receiver, executor.clone());
 
                 //sync
-                handle
-                    .sync_manager
-                    .borrow_mut()
-                    .sync_block_msg(executor.clone());
+                handle.sync_manager.borrow().sync_block_msg(
+                    executor.clone(),
+                    sync_block_receiver,
+                    sync_signal_receiver,
+                );
 
                 //TODO:orphan
             }
@@ -171,10 +207,33 @@ impl ConsensusProvider for PowConsensusProvider {
             .chain_state_network_events
             .take()
             .expect("chain_state_network_events is none.");
+        let mint_key = self.mint_key.take().expect("self_key is none.");
+        let event_handle_network_events = self
+            .event_handle_network_events
+            .take()
+            .expect("[consensus] Failed to start; network_events stream is already taken");
+        let event_handle_receiver = self
+            .event_handle_receiver
+            .take()
+            .expect("[consensus]: self receiver is already taken");
+        let sync_block_receiver = self
+            .sync_block_receiver
+            .take()
+            .expect("sync_block_receiver is none.");
+        let sync_signal_receiver = self
+            .sync_signal_receiver
+            .take()
+            .expect("sync_signal_receiver is none.");
+
         self.event_handle(
             executor,
             chain_state_network_sender,
             chain_state_network_events,
+            mint_key,
+            event_handle_network_events,
+            event_handle_receiver,
+            sync_block_receiver,
+            sync_signal_receiver,
         );
         info!("PowConsensusProvider start succ.");
         Ok(())
