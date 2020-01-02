@@ -15,6 +15,7 @@ use libra_types::transaction::TransactionStatus;
 use libra_types::transaction::TransactionToCommit;
 use libra_types::transaction::{SignedTransaction, Transaction};
 use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
@@ -37,6 +38,7 @@ impl ChainManager {
         author: AccountAddress,
         read_storage: Arc<dyn StorageRead>,
         write_storage: Arc<dyn StorageWrite>,
+        dump_path: PathBuf,
     ) -> Self {
         //orphan block
         let orphan_blocks = Arc::new(Mutex::new(HashMap::new()));
@@ -47,6 +49,7 @@ impl ChainManager {
             txn_manager,
             rollback_mode,
             Arc::clone(&block_store),
+            dump_path,
         )));
 
         ChainManager {
@@ -182,7 +185,7 @@ impl ChainManager {
         executor.spawn(chain_fut);
     }
 
-    pub async fn chain_root(&self) -> HashValue {
+    pub async fn chain_root(&self) -> Option<HashValue> {
         self.block_tree
             .clone()
             .read()
@@ -202,7 +205,7 @@ impl ChainManager {
             .block_exist(block_hash)
     }
 
-    pub async fn chain_height_and_root(&self) -> (u64, BlockIndex) {
+    pub async fn chain_height_and_root(&self) -> Option<(u64, BlockIndex)> {
         self.block_tree
             .clone()
             .read()

@@ -122,7 +122,9 @@ impl PowConsensusProvider {
             event_handle_sender,
             sync_block_sender,
             sync_signal_sender,
+            node_config.storage.dir(),
         );
+        //node_config.base().data_dir.clone()
         Self {
             runtime,
             event_handle: Some(event_handle),
