@@ -99,22 +99,7 @@ main() {
    // channel is unlocked
    assert(!LibraAccount.channel_is_locked(), 109);
    return;
-   // channel will be locked by alice in channel_epilogue()
-}
-
-//! new-transaction
-//! sender: bob
-//! txn-channel: ch1,bob
-import 0x0.ChannelTransaction;
-import 0x0.ChannelScript;
-import 0x0.LibraAccount;
-import 0x0.Hash;
-main() {
-   assert(LibraAccount.channel_is_locked(), 108);
-   LibraAccount.resolve();
-   assert(!LibraAccount.channel_is_locked(), 109);
-   return;
-   // channel is unlocked
+   // channel will be unlocked by alice in channel_epilogue()
 }
 
 // bob execute channel transaction without alice signature.
