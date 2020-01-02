@@ -102,6 +102,7 @@ impl SMRNode {
             safety_rules_manager_config: Some(safety_rules_manager_config),
         };
         let mut smr = ChainedBftSMR::new(
+            signer.author(),
             initial_setup,
             runtime,
             config,

@@ -1,37 +1,51 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::block_storage::{BlockReader, BlockStore};
-use crate::chained_bft::chained_bft_smr::ChainedBftSMRConfig;
-use crate::chained_bft::event_processor::EventProcessor;
-use crate::chained_bft::liveness::multi_proposer_election::MultiProposer;
-use crate::chained_bft::liveness::pacemaker::{ExponentialTimeInterval, Pacemaker};
-use crate::chained_bft::liveness::proposal_generator::ProposalGenerator;
-use crate::chained_bft::liveness::proposer_election::ProposerElection;
-use crate::chained_bft::liveness::rotating_proposer_election::{choose_leader, RotatingProposer};
-use crate::chained_bft::network::NetworkSender;
-use crate::chained_bft::persistent_storage::{PersistentStorage, RecoveryData};
-use crate::counters;
-use crate::state_replication::{StateComputer, TxnManager};
-use crate::util::time_service::{ClockTimeService, TimeService};
-use consensus_types::common::{Payload, Round};
-use consensus_types::epoch_retrieval::EpochRetrievalRequest;
+use crate::{
+    chained_bft::{
+        block_storage::{BlockReader, BlockStore},
+        chained_bft_smr::ChainedBftSMRConfig,
+        event_processor::EventProcessor,
+        liveness::{
+            multi_proposer_election::MultiProposer,
+            pacemaker::{ExponentialTimeInterval, Pacemaker},
+            proposal_generator::ProposalGenerator,
+            proposer_election::ProposerElection,
+            rotating_proposer_election::{choose_leader, RotatingProposer},
+        },
+        network::NetworkSender,
+        persistent_storage::{PersistentStorage, RecoveryData},
+    },
+    counters,
+    state_replication::{StateComputer, TxnManager},
+    util::time_service::{ClockTimeService, TimeService},
+};
+use consensus_types::{
+    common::{Author, Payload, Round},
+    epoch_retrieval::EpochRetrievalRequest,
+};
 use futures::executor::block_on;
 use libra_config::config::ConsensusProposerType;
 use libra_logger::prelude::*;
-use libra_types::account_address::AccountAddress;
-use libra_types::crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorVerifier};
-use network::proto::ConsensusMsg;
-use network::proto::ConsensusMsg_oneof;
-use network::validator_network::{ConsensusNetworkSender, Event};
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorVerifier},
+};
+use network::{
+    proto::{ConsensusMsg, ConsensusMsg_oneof},
+    validator_network::{ConsensusNetworkSender, Event},
+};
 use safety_rules::SafetyRulesManager;
-use std::cmp::Ordering;
-use std::convert::TryInto;
-use std::sync::{Arc, RwLock};
+use std::{
+    cmp::Ordering,
+    convert::TryInto,
+    sync::{Arc, RwLock},
+};
 
 // Manager the components that shared across epoch and spawn per-epoch EventProcessor with
 // epoch-specific input.
 pub struct EpochManager<T> {
+    author: Author,
     epoch_info: Arc<RwLock<EpochInfo>>,
     config: ChainedBftSMRConfig,
     time_service: Arc<ClockTimeService>,
@@ -46,6 +60,7 @@ pub struct EpochManager<T> {
 
 impl<T: Payload> EpochManager<T> {
     pub fn new(
+        author: Author,
         epoch_info: Arc<RwLock<EpochInfo>>,
         config: ChainedBftSMRConfig,
         time_service: Arc<ClockTimeService>,
@@ -58,6 +73,7 @@ impl<T: Payload> EpochManager<T> {
         safety_rules_manager: SafetyRulesManager<T>,
     ) -> Self {
         Self {
+            author,
             epoch_info,
             config,
             time_service,
@@ -236,7 +252,7 @@ impl<T: Payload> EpochManager<T> {
         // txn manager is required both by proposal generator (to pull the proposers)
         // and by event processor (to update their status).
         let proposal_generator = ProposalGenerator::new(
-            self.config.author,
+            self.author,
             block_store.clone(),
             self.txn_manager.clone(),
             self.time_service.clone(),
@@ -248,7 +264,7 @@ impl<T: Payload> EpochManager<T> {
 
         let proposer_election = self.create_proposer_election(epoch, &validators);
         let network_sender = NetworkSender::new(
-            self.config.author,
+            self.author,
             self.network_sender.clone(),
             self.self_sender.clone(),
             validators.clone(),

@@ -1,13 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::chained_bft_consensus_provider::InitialSetup;
-use crate::chained_bft::epoch_manager::EpochManager;
-use crate::chained_bft::network::{NetworkReceivers, NetworkTask};
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
+        chained_bft_consensus_provider::InitialSetup,
+        epoch_manager::EpochManager,
         event_processor::EventProcessor,
+        network::{NetworkReceivers, NetworkTask},
         persistent_storage::{PersistentStorage, RecoveryData},
     },
     counters,
@@ -64,6 +64,7 @@ impl ChainedBftSMRConfig {
 /// driver. ChainedBftSMR implements the StateMachineReplication, it is going to be used by
 /// ConsensusProvider for the e2e flow.
 pub struct ChainedBftSMR<T> {
+    author: Author,
     initial_setup: Option<InitialSetup>,
     runtime: Option<Runtime>,
     block_store: Option<Arc<BlockStore<T>>>,
@@ -74,6 +75,7 @@ pub struct ChainedBftSMR<T> {
 
 impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
+        author: Author,
         initial_setup: InitialSetup,
         runtime: Runtime,
         config: ChainedBftSMRConfig,
@@ -81,6 +83,7 @@ impl<T: Payload> ChainedBftSMR<T> {
         initial_data: RecoveryData<T>,
     ) -> Self {
         Self {
+            author,
             initial_setup: Some(initial_setup),
             runtime: Some(runtime),
             block_store: None,
@@ -199,6 +202,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         let safety_rules_manager = SafetyRulesManager::new(safety_rules_manager_config);
 
         let mut epoch_mgr = EpochManager::new(
+            self.author,
             Arc::clone(&epoch_info),
             self.config.take().expect("already started, config is None"),
             time_service,
