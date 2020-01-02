@@ -5,6 +5,7 @@ use crate::{
     account_config::core_code_address,
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
+    libra_resource::LibraResource,
 };
 use anyhow::{bail, Result};
 use lazy_static::lazy_static;
@@ -149,17 +150,6 @@ pub fn user_channels_struct_tag() -> StructTag {
         name: user_channels_struct_name().to_owned(),
         type_params: vec![],
     }
-}
-
-pub trait LibraResource {
-    fn struct_tag() -> StructTag;
-}
-
-pub fn make_resource<'a, T>(value: &'a [u8]) -> Result<T>
-where
-    T: LibraResource + Deserialize<'a>,
-{
-    lcs::from_bytes(value).map_err(|e| Into::into(e))
 }
 
 impl LibraResource for ChannelResource {
