@@ -37,7 +37,7 @@ use tokio::runtime::{self, Handle};
 use vm_runtime::MoveVM;
 
 pub struct PowConsensusProvider {
-    runtime: tokio::runtime::Runtime,
+    runtime: Option<tokio::runtime::Runtime>,
     event_handle: Option<EventProcessor>,
     miner_proxy: Option<Server>,
     _block_storage_server: Server,
@@ -124,9 +124,8 @@ impl PowConsensusProvider {
             sync_signal_sender,
             node_config.storage.dir(),
         );
-        //node_config.base().data_dir.clone()
         Self {
-            runtime,
+            runtime: Some(runtime),
             event_handle: Some(event_handle),
             miner_proxy: Some(miner_proxy),
             _block_storage_server: block_storage_server,
@@ -198,7 +197,9 @@ impl PowConsensusProvider {
 
 impl ConsensusProvider for PowConsensusProvider {
     fn start(&mut self) -> Result<()> {
-        let executor = self.runtime.handle().clone();
+        let executor = self.runtime.as_ref()
+            .expect("Consensus start: No valid runtime found!")
+            .handle().clone();
         let chain_state_network_sender = self
             .chain_state_network_sender
             .take()
@@ -240,12 +241,12 @@ impl ConsensusProvider for PowConsensusProvider {
     }
 
     fn stop(&mut self) {
-        //TODO
-        // 1. stop mint
-        // 2. stop process event
-        // Stop Miner proxy
         if let Some(miner_proxy) = self.miner_proxy.take() {
             drop(miner_proxy);
+        }
+
+        if let Some(runtime) = self.runtime.take() {
+            drop(runtime);
         }
     }
 }
