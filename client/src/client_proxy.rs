@@ -802,7 +802,7 @@ impl ClientProxy {
         Ok(())
     }
 
-    /// Recover wallet accounts from file and return vec<(account_address, index)>.
+    /// Recover wallet accounts from command 'recover <file>' and return vec<(account_address, index)>.
     pub fn recover_wallet_accounts(
         &mut self,
         space_delim_strings: &[&str],
@@ -811,9 +811,14 @@ impl ClientProxy {
             space_delim_strings.len() == 2,
             "Invalid number of arguments for recovering wallets"
         );
-
         let wallet = WalletLibrary::recover(&Path::new(space_delim_strings[1]))?;
-        let wallet_addresses = wallet.get_addresses()?;
+        self.set_wallet(wallet);
+        self.recover_accounts_in_wallet()
+    }
+
+    /// Recover accounts in wallets and sync state if sync_on_wallet_recovery is true.
+    pub fn recover_accounts_in_wallet(&mut self) -> Result<Vec<AddressAndIndex>> {
+        let wallet_addresses = self.wallet.get_addresses()?;
         let mut account_data = Vec::new();
         for address in wallet_addresses {
             account_data.push(Self::get_account_data_from_address(
@@ -823,7 +828,6 @@ impl ClientProxy {
                 None,
             )?);
         }
-        self.set_wallet(wallet);
         // Clear current cached AccountData as we always swap the entire wallet completely.
         Ok(self.set_accounts(account_data))
     }
