@@ -197,9 +197,12 @@ impl PowConsensusProvider {
 
 impl ConsensusProvider for PowConsensusProvider {
     fn start(&mut self) -> Result<()> {
-        let executor = self.runtime.as_ref()
+        let executor = self
+            .runtime
+            .as_ref()
             .expect("Consensus start: No valid runtime found!")
-            .handle().clone();
+            .handle()
+            .clone();
         let chain_state_network_sender = self
             .chain_state_network_sender
             .take()
