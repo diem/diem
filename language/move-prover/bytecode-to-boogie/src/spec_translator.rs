@@ -196,7 +196,7 @@ impl<'a> SpecTranslator<'a> {
             SpecExp::Not(expr) => {
                 let BoogieExpr(s, t) = self.translate_expr(expr);
                 BoogieExpr(
-                    format!("Boolean(!(b#Boolean({}))", s),
+                    format!("Boolean(!(b#Boolean({})))", s),
                     self.require_type(t, &SignatureToken::Bool),
                 )
             }
