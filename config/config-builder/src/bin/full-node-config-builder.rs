@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use config_builder::FullNodeConfig;
-use libra_config::config::{NodeConfig, PersistableConfig};
+use libra_config::config::NodeConfig;
 use parity_multiaddr::Multiaddr;
 use std::{convert::TryInto, fs, path::PathBuf};
 use structopt::StructOpt;
@@ -95,7 +95,7 @@ fn main() {
 
     let config_file = args.output_dir.join("node.config.toml");
 
-    let orig_config = NodeConfig::load_config(&config_file);
+    let orig_config = NodeConfig::load(&config_file);
     let mut node_config = if let Ok(mut orig_config) = orig_config {
         if orig_config.base.role.is_validator() {
             config_builder
