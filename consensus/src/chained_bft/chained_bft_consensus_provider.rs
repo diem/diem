@@ -54,9 +54,10 @@ impl ChainedBftProvider {
             .build()
             .expect("Failed to create Tokio runtime!");
 
+        let author = node_config.validator_network.as_ref().unwrap().peer_id;
+        debug!("[Consensus] My peer: {:?}", author);
         let initial_setup = Self::initialize_setup(network_sender, network_events, node_config);
         let config = ChainedBftSMRConfig::from_node_config(&node_config);
-        debug!("[Consensus] My peer: {:?}", config.author);
         let storage = Arc::new(StorageWriteProxy::new(node_config));
         let initial_data = runtime.block_on(storage.start());
 
@@ -65,7 +66,14 @@ impl ChainedBftProvider {
         let txn_manager = MempoolProxy::new(mempool_client);
 
         let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client));
-        let smr = ChainedBftSMR::new(initial_setup, runtime, config, storage, initial_data);
+        let smr = ChainedBftSMR::new(
+            author,
+            initial_setup,
+            runtime,
+            config,
+            storage,
+            initial_data,
+        );
         Self {
             smr,
             txn_manager,
