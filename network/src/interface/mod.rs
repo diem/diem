@@ -396,15 +396,12 @@ where
         trace!("NetworkRequest::{:?}", req);
         match req {
             NetworkRequest::SendRpc(peer_id, req) => {
-                match rpc_reqs_tx
-                    .send(RpcRequest::SendRpc(peer_id, req))
-                    .await {
-                    Ok(_) => {},
+                match rpc_reqs_tx.send(RpcRequest::SendRpc(peer_id, req)).await {
+                    Ok(_) => {}
                     Err(e) => {
                         error!(
                             "handle_network_request: peer :{:?} send rpc err: {:?}",
-                            peer_id,
-                            e,
+                            peer_id, e,
                         );
                     }
                 };
@@ -418,13 +415,13 @@ where
                     .observe(msg.mdata.len() as f64);
                 match ds_reqs_tx
                     .send(DirectSendRequest::SendMessage(peer_id, msg))
-                    .await {
-                    Ok(_) => {},
+                    .await
+                {
+                    Ok(_) => {}
                     Err(e) => {
                         error!(
                             "handle_network_request: peer :{:?} send msg err: {:?}",
-                            peer_id,
-                            e,
+                            peer_id, e,
                         );
                     }
                 };
@@ -435,13 +432,13 @@ where
                     if !ignore_peers.contains(&peer_id) {
                         match ds_reqs_tx
                             .send(DirectSendRequest::SendMessage(peer_id.clone(), msg.clone()))
-                            .await {
-                            Ok(_) => {},
+                            .await
+                        {
+                            Ok(_) => {}
                             Err(e) => {
                                 error!(
                                     "handle_network_request: peer :{:?} broadcast msg err: {:?}",
-                                    peer_id,
-                                    e,
+                                    peer_id, e,
                                 );
                             }
                         };
@@ -453,26 +450,24 @@ where
                     .expect("Received requst to update eligible nodes in permissionless network");
                 match conn_mgr_reqs_tx
                     .send(ConnectivityRequest::UpdateEligibleNodes(nodes))
-                    .await {
-                    Ok(_) => {},
+                    .await
+                {
+                    Ok(_) => {}
                     Err(e) => {
-                        error!(
-                            "handle_network_request: update eligible nodes err: {:?}",
-                            e,
-                        );
+                        error!("handle_network_request: update eligible nodes err: {:?}", e,);
                     }
                 };
             }
             NetworkRequest::DialPeer(peer_id, addr, sender) => {
                 match peer_mgr_reqs_tx
                     .send(PeerManagerRequest::DialPeer(peer_id, addr, sender))
-                    .await {
-                    Ok(_) => {},
+                    .await
+                {
+                    Ok(_) => {}
                     Err(e) => {
                         error!(
                             "handle_network_request: peer :{:?} dial peer err: {:?}",
-                            peer_id,
-                            e,
+                            peer_id, e,
                         );
                     }
                 };
@@ -480,13 +475,13 @@ where
             NetworkRequest::DisconnectPeer(peer_id, sender) => {
                 match peer_mgr_reqs_tx
                     .send(PeerManagerRequest::DisconnectPeer(peer_id, sender))
-                    .await {
-                    Ok(_) => {},
+                    .await
+                {
+                    Ok(_) => {}
                     Err(e) => {
                         error!(
                             "handle_network_request: peer :{:?} disconnect peer err: {:?}",
-                            peer_id,
-                            e,
+                            peer_id, e,
                         );
                     }
                 };
@@ -502,14 +497,12 @@ where
         match notif {
             PeerManagerNotification::NewPeer(peer_id, _addr) => {
                 for ch in upstream_handlers.values_mut() {
-                    match ch.send(NetworkNotification::NewPeer(peer_id))
-                        .await {
-                        Ok(_) => {},
+                    match ch.send(NetworkNotification::NewPeer(peer_id)).await {
+                        Ok(_) => {}
                         Err(e) => {
                             error!(
                                 "handle_peer_mgr_notification: peer :{:?} new peer err: {:?}",
-                                peer_id,
-                                e,
+                                peer_id, e,
                             );
                         }
                     };
@@ -517,14 +510,12 @@ where
             }
             PeerManagerNotification::LostPeer(peer_id, _addr) => {
                 for ch in upstream_handlers.values_mut() {
-                    match ch.send(NetworkNotification::LostPeer(peer_id))
-                        .await {
-                        Ok(_) => {},
+                    match ch.send(NetworkNotification::LostPeer(peer_id)).await {
+                        Ok(_) => {}
                         Err(e) => {
                             error!(
                                 "handle_ds_notification: peer :{:?} lost peer err: {:?}",
-                                peer_id,
-                                e,
+                                peer_id, e,
                             );
                         }
                     };
@@ -544,14 +535,12 @@ where
         match notif {
             RpcNotification::RecvRpc(peer_id, req) => {
                 if let Some(ch) = upstream_handlers.get_mut(&req.protocol) {
-                    match ch.send(NetworkNotification::RecvRpc(peer_id, req))
-                        .await {
-                        Ok(_) => {},
+                    match ch.send(NetworkNotification::RecvRpc(peer_id, req)).await {
+                        Ok(_) => {}
                         Err(e) => {
                             error!(
                                 "handle_rpc_notification: peer :{:?} send msg err: {:?}",
-                                peer_id,
-                                e,
+                                peer_id, e,
                             );
                         }
                     };
@@ -578,14 +567,15 @@ where
                 let ch = upstream_handlers
                     .get_mut(&msg.protocol)
                     .expect("DirectSend protocol not registered");
-                match ch.send(NetworkNotification::RecvMessage(peer_id, msg))
-                    .await {
-                    Ok(_) => {},
+                match ch
+                    .send(NetworkNotification::RecvMessage(peer_id, msg))
+                    .await
+                {
+                    Ok(_) => {}
                     Err(e) => {
                         error!(
                             "handle_ds_notification: peer :{:?} send msg err: {:?}",
-                            peer_id,
-                            e,
+                            peer_id, e,
                         );
                     }
                 };

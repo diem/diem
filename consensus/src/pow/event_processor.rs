@@ -260,7 +260,7 @@ impl EventProcessor {
                                                                 TryInto::<BlockProto>::try_into(
                                                                     block.clone(),
                                                                 )
-                                                                    .expect("parse block err.");
+                                                                .expect("parse block err.");
 
                                                             // send block
                                                             let msg = ConsensusMsg {
@@ -278,7 +278,7 @@ impl EventProcessor {
                                                                 msg,
                                                                 vec![peer_id],
                                                             )
-                                                                .await;
+                                                            .await;
                                                         }
                                                     }
                                                 }
