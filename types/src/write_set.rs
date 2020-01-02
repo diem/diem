@@ -75,6 +75,7 @@ impl WriteSet {
         self.0
     }
 
+    /// FIXME: delete it, it is flawed.
     /// Check whether the write set modifies the `participant_address`'s private channel resources.
     pub fn contains_channel_resource(&self, participant_address: &AccountAddress) -> bool {
         for (ap, _op) in self {
