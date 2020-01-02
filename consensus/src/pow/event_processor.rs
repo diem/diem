@@ -254,32 +254,32 @@ impl EventProcessor {
                                                                     err
                                                                 );
                                                             }
-                                                        }
 
-                                                        //broadcast new block
-                                                        let block_pb =
-                                                            TryInto::<BlockProto>::try_into(
-                                                                block.clone(),
-                                                            )
-                                                            .expect("parse block err.");
+                                                            //broadcast new block
+                                                            let block_pb =
+                                                                TryInto::<BlockProto>::try_into(
+                                                                    block.clone(),
+                                                                )
+                                                                    .expect("parse block err.");
 
-                                                        // send block
-                                                        let msg = ConsensusMsg {
-                                                            message: Some(
-                                                                ConsensusMsg_oneof::NewBlock(
-                                                                    block_pb,
+                                                            // send block
+                                                            let msg = ConsensusMsg {
+                                                                message: Some(
+                                                                    ConsensusMsg_oneof::NewBlock(
+                                                                        block_pb,
+                                                                    ),
                                                                 ),
-                                                            ),
-                                                        };
-                                                        Self::broadcast_consensus_msg_but(
-                                                            &mut network_sender,
-                                                            false,
-                                                            self_peer_id,
-                                                            &mut self_sender,
-                                                            msg,
-                                                            vec![peer_id],
-                                                        )
-                                                        .await;
+                                                            };
+                                                            Self::broadcast_consensus_msg_but(
+                                                                &mut network_sender,
+                                                                false,
+                                                                self_peer_id,
+                                                                &mut self_sender,
+                                                                msg,
+                                                                vec![peer_id],
+                                                            )
+                                                                .await;
+                                                        }
                                                     }
                                                 }
 

@@ -5,7 +5,6 @@ pub use chain_state::{ChainStateMsg, ChainStateRequest, ChainStateResponse};
 use consensus_types::payload_ext::BlockPayloadExt;
 use futures::{future, StreamExt};
 use libra_logger::prelude::*;
-use libra_logger::prelude::*;
 use libra_prost_ext::MessageExt;
 use network::{
     proto::ChainStateMsg_oneof,
