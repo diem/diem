@@ -63,14 +63,14 @@ fn main() -> std::io::Result<()> {
     let (commands, alias_to_cmd) = get_commands(args.faucet_account_file.is_some());
 
     let faucet_account_file = args.faucet_account_file.unwrap_or_else(|| "".to_string());
-
+    let mnemonic_file = args.mnemonic_file.clone();
     let mut client_proxy = ClientProxy::new(
         &args.host,
         args.port.get(),
         &faucet_account_file,
         args.sync,
         args.faucet_server,
-        args.mnemonic_file,
+        mnemonic_file,
         args.waypoint,
     )
     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, &format!("{}", e)[..]))?;
@@ -97,6 +97,20 @@ fn main() -> std::io::Result<()> {
         "Connected to validator at: {}:{}, {}",
         args.host, args.port, ledger_info_str
     );
+    if args.mnemonic_file.is_some() {
+        match client_proxy.recover_accounts_in_wallet() {
+            Ok(account_data) => {
+                println!(
+                    "Wallet recovered and the first {} child accounts were derived",
+                    account_data.len()
+                );
+                for data in account_data {
+                    println!("#{} address {}", data.index, hex::encode(data.address));
+                }
+            }
+            Err(e) => report_error("Error recovering Libra wallet", e),
+        }
+    }
     print_help(&cli_info, &commands);
     println!("Please, input commands: \n");
 
