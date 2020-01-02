@@ -22,7 +22,7 @@ use std::collections::BTreeMap;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BlockMetadata {
     id: HashValue,
-    timestamp_usec: u64,
+    timestamp_usecs: u64,
     // Since Move doesn't support hashmaps, this vote map would be stored as a vector of key value
     // pairs in the Move module. Thus we need a BTreeMap here to define how the values are being
     // ordered.
@@ -33,13 +33,13 @@ pub struct BlockMetadata {
 impl BlockMetadata {
     pub fn new(
         id: HashValue,
-        timestamp_usec: u64,
+        timestamp_usecs: u64,
         previous_block_votes: BTreeMap<AccountAddress, Ed25519Signature>,
         proposer: AccountAddress,
     ) -> Self {
         Self {
             id,
-            timestamp_usec,
+            timestamp_usecs,
             previous_block_votes,
             proposer,
         }
@@ -48,6 +48,6 @@ impl BlockMetadata {
     pub fn into_inner(self) -> Result<(ByteArray, u64, ByteArray, AccountAddress)> {
         let id = ByteArray::new(self.id.to_vec());
         let vote_maps = ByteArray::new(lcs::to_bytes(&self.previous_block_votes)?);
-        Ok((id, self.timestamp_usec, vote_maps, self.proposer))
+        Ok((id, self.timestamp_usecs, vote_maps, self.proposer))
     }
 }
