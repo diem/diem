@@ -53,7 +53,6 @@ pub struct MintManager {
     block_store: Arc<ConsensusDB>,
     chain_manager: Arc<AtomicRefCell<ChainManager>>,
     mine_state: MineStateManager<BlockIndex>,
-    self_key: Option<Ed25519PrivateKey>,
 }
 
 impl MintManager {
@@ -66,7 +65,6 @@ impl MintManager {
         block_store: Arc<ConsensusDB>,
         chain_manager: Arc<AtomicRefCell<ChainManager>>,
         mine_state: MineStateManager<BlockIndex>,
-        pri_key: Ed25519PrivateKey,
     ) -> Self {
         MintManager {
             txn_manager,
@@ -77,11 +75,10 @@ impl MintManager {
             block_store,
             chain_manager,
             mine_state,
-            self_key: Some(pri_key),
         }
     }
 
-    pub fn mint(&mut self, executor: Handle) {
+    pub fn mint(&self, executor: Handle, self_pri_key: Ed25519PrivateKey) {
         let mint_txn_manager = self.txn_manager.clone();
         let mint_state_computer = self.state_computer.clone();
         let mut mint_network_sender = self.network_sender.clone();
@@ -90,7 +87,6 @@ impl MintManager {
         let block_db = self.block_store.clone();
         let chain_manager = self.chain_manager.clone();
         let mut mine_state = self.mine_state.clone();
-        let self_pri_key = self.self_key.take().expect("self_key is none.");
         let self_pub_key = self_pri_key.public_key();
         let self_signer_address = AccountAddress::from_public_key(&self_pub_key);
         let (_tmp_pri_key, tmp_pub_key) = network_keypair();
