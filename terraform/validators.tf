@@ -191,7 +191,10 @@ data "template_file" "ecs_task_definition" {
     cfg_num_validators = var.cfg_num_validators_override == 0 ? var.num_validators : var.cfg_num_validators_override
     cfg_seed         = var.config_seed
     cfg_seed_peer_ip = local.seed_peer_ip
-    cfg_upstream_node_index = ""
+
+    cfg_fullnode_seed = count.index < var.num_fullnode_networks ? var.fullnode_seed : ""
+    cfg_num_fullnodes = var.num_fullnodes
+
     log_level        = var.validator_log_level
     log_group        = var.cloudwatch_logs ? aws_cloudwatch_log_group.testnet.name : ""
     log_region       = var.region

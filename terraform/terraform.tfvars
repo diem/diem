@@ -1,5 +1,7 @@
-num_validators = 4
-num_fullnodes = 0
+# This file contains commonly used variables you may wish to override
+#num_validators = 4
+#num_fullnodes = 1
+#num_fullnode_networks = 1
 
 
 #api_sources_ipv4 = []  # Specify a list of IPv4 IPs/CIDRs which can access API load balancers

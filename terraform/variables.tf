@@ -58,7 +58,17 @@ variable "cfg_num_validators_override" {
 
 variable "num_fullnodes" {
   default     = 1
-  description = "Number of full nodes to run on validators"
+  description = "Number of full nodes to run per fullnode network"
+}
+
+variable "num_fullnode_networks" {
+  default     = 1
+  description = "Number of full nodes networks to run (must be <= num_validators)"
+}
+
+variable "fullnode_seed" {
+  default     = 2674267426742674267426742674267426742674267426742674267426742674
+  description = "Default seed for fullnode network"
 }
 
 variable "fullnode_distribution" {

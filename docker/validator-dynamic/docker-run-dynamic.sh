@@ -31,4 +31,23 @@ fi
     --output-dir /opt/libra/etc/ \
     ${params[@]}
 
+
+if [ -n "${CFG_FULLNODE_SEED}" ]; then # We have a full node seed, add fullnode network
+	declare -a fullnode_params
+	    fullnode_params+="-s ${CFG_FULLNODE_SEED} "
+	    fullnode_params+="-a /ip4/${CFG_LISTEN_ADDR}/tcp/6181 "
+	    fullnode_params+="-l /ip4/0.0.0.0/tcp/6181 "
+	    fullnode_params+="-b /ip4/127.0.0.1/tcp/6180 "
+	    fullnode_params+="-n ${CFG_NUM_VALIDATORS} "
+	    fullnode_params+="-f ${CFG_NUM_FULLNODES} "
+	    fullnode_params+="-c ${CFG_FULLNODE_SEED} "
+
+
+	/opt/libra/bin/config-builder full-node extend \
+	    --data-dir /opt/libra/data/common \
+	    --output-dir /opt/libra/etc/ \
+	    ${fullnode_params[@]}
+
+fi
+
 exec /opt/libra/bin/libra-node -f /opt/libra/etc/node.config.toml
