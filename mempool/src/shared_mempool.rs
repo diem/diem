@@ -12,7 +12,7 @@ use channel::{
 };
 use futures::{
     channel::{mpsc::UnboundedSender, oneshot},
-    executor::ThreadPool,
+    executor::ThreadPoolBuilder,
     future::join_all,
     StreamExt,
 };
@@ -27,12 +27,13 @@ use network::{
     },
     validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender, RpcError},
 };
+use num_cpus;
 use std::{
     collections::{HashMap, HashSet},
     convert::{TryFrom, TryInto},
     sync::{Arc, Mutex},
     thread::sleep,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use storage_client::StorageRead;
 use tokio::{
@@ -111,6 +112,11 @@ async fn process_rpc_submit_transactions_request<V>(
     V: TransactionValidation,
 {
     // the RPC response object that will be returned to sender via callback
+    debug!(
+        "[shared mempool] in process_rpc_submit_transactions_req from {:?}",
+        peer_id
+    );
+    let start_submit = Instant::now();
     let resp = match submit_transactions_to_mempool(smp.clone(), peer_id, request).await {
         Ok(response) => response,
         Err(e) => {
@@ -124,12 +130,18 @@ async fn process_rpc_submit_transactions_request<V>(
             response
         }
     };
+    let finish_submit = start_submit.elapsed().as_millis();
+    debug!(
+        "[shared mempool] finished submit_transactions_to_mempool for peer {:?} in {:?} ms",
+        peer_id, finish_submit
+    );
     let response_msg = MempoolSyncMsg {
         message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsResponse(resp)),
     };
 
     // send response to callback
     let response_data = response_msg.to_bytes().expect("failed to serialize proto");
+    let start_callback = Instant::now();
     if let Err(err) = callback
         .send(Ok(response_data))
         .map_err(|_| format_err!("[shared mempool] handling inbound RPC call timed out"))
@@ -139,6 +151,11 @@ async fn process_rpc_submit_transactions_request<V>(
             err
         );
     }
+    let end_callback = start_callback.elapsed().as_millis();
+    debug!(
+        "[shared mempool] finished callback to peer {:?} in {:?} ms",
+        peer_id, end_callback
+    );
     notify_subscribers(SharedMempoolNotification::NewTransactions, &smp.subscribers);
 }
 
@@ -153,9 +170,15 @@ async fn submit_transactions_to_mempool<V>(
 where
     V: TransactionValidation,
 {
+    debug!(
+        "[shared mempool] submit {:?} txns to mempool for {:?}",
+        request.transactions.len(),
+        peer_id
+    );
     /////////////////////////////////////////////
     // convert from proto to SignedTransaction //
     /////////////////////////////////////////////
+    let start_proto = Instant::now();
     let transactions: Vec<_> = request
         .transactions
         .clone()
@@ -173,16 +196,28 @@ where
             }
         })
         .collect();
+    let end_proto = start_proto.elapsed().as_millis();
+    debug!(
+        "[shared mempool] finished proto convert for {:?} in {:?} ms",
+        peer_id, end_proto
+    );
 
     //////////////////////////////////
     // validate transactions via VM //
     //////////////////////////////////
+
+    let start_get_account_state = Instant::now();
     let account_states = join_all(
         transactions
             .iter()
             .map(|t| get_account_state(smp.storage_read_client.clone(), t.sender())),
     )
     .await;
+    let finish_get_account_state = start_get_account_state.elapsed().as_millis();
+    debug!(
+        "[shared mempool] finished get_account_state for {:?} in {:?} ms",
+        peer_id, finish_get_account_state
+    );
 
     let transactions: Vec<_> = transactions
         .into_iter()
@@ -195,12 +230,20 @@ where
         })
         .collect();
 
+    debug!("[shared mempool] finished txn filter for {:?}", peer_id);
+
+    let start_validate = Instant::now();
     let validations = join_all(
         transactions
             .iter()
             .map(|t| smp.validator.validate_transaction(t.0.clone())),
     )
     .await;
+    let finish_validate = start_validate.elapsed().as_millis();
+    debug!(
+        "[shared mempool] finished vm validate for {:?} in {:?} ms",
+        peer_id, finish_validate
+    );
 
     ///////////////////////////////
     // add txns to local mempool //
@@ -213,6 +256,7 @@ where
     let timeline_state = if smp.validator_peers.contains(&peer_id) {
         TimelineState::NonQualified
     } else {
+        debug!("[shared mempool] timelinestate error");
         TimelineState::NotReady
     };
 
@@ -224,7 +268,7 @@ where
     for (idx, (transaction, sequence_number, balance)) in transactions.into_iter().enumerate() {
         if let Ok(None) = validations[idx] {
             let gas_cost = transaction.max_gas_amount();
-            mempool.add_txn(
+            let status = mempool.add_txn(
                 transaction,
                 gas_cost,
                 sequence_number,
@@ -232,10 +276,18 @@ where
                 // peer validator SMP network or from FN
                 timeline_state,
             );
+            debug!(
+                "[shared mempool] mp add txn status for peer {:?}: {:?}",
+                peer_id, status
+            );
         // TODO log/update counters for MempoolAddTransactionStatus
         // TODO check for MempoolAddTransactionStatus::MempoolIsFull and calculate backpressure
         } else {
             // txn vm validation failed
+            debug!(
+                "[shared mempool] txn vm validation failed for peer {:?}",
+                peer_id
+            );
             // TODO log/update counters for failed vm validation VMStatus
         }
     }
@@ -265,8 +317,14 @@ async fn inbound_network_task<V>(
     let bounded_executor = BoundedExecutor::new(workers_available, executor.clone());
 
     // Create a threadpool that manages concurrent worker processes
-    let worker_pool = ThreadPool::new()
+    //    let worker_pool = ThreadPool::new()
+    //        .expect("[shared mempool] failed to create threadpool for worker processes");
+    let worker_pool = ThreadPoolBuilder::new()
+        .pool_size(99)
+        .create()
         .expect("[shared mempool] failed to create threadpool for worker processes");
+
+    debug!("old worker pool size: {:?}", num_cpus::get());
     let (worker_sender, mut receiver) =
         libra_channel::new(QueueStyle::LIFO, WORKER_CHANNEL_BUFFER_SIZE, None);
     let batch_size = smp.config.shared_mempool_batch_size;
@@ -277,12 +335,14 @@ async fn inbound_network_task<V>(
                 match maybe_network_event {
                     None => {
                         // TODO log termination of network events stream
+                        debug!("[shared mempool] network events stream terminated");
                         return;
                     }
                     Some(network_event) => match network_event {
                         Ok(event) => match event {
                             Event::NewPeer(peer_id) => {
                                 // TODO log event
+                                debug!("[shared mempool] received NewPeer notif from peer {:?}", peer_id);
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                                 let mut timeline_id = 0;
 
@@ -290,9 +350,11 @@ async fn inbound_network_task<V>(
                                 // check if this brand new peer
                                 if let Some(mut peer_sync_state) = peer_info.get_mut(&peer_id) {
                                     // try restarting paused worker
+                                    debug!("[shared mempool] restarting paused peer {:?}", peer_id);
+                                    let start_restart_peer = Instant::now();
                                     if peer_sync_state.to_worker.push(MASTER_CHANNEL_KEY, WorkerState::START).is_err() {
                                         // TODO log this
-
+                                        debug!("[shared mempool] failed to restart paused peer {:?} in {:?} ms", peer_id, start_restart_peer.elapsed().as_millis());
                                         // restart worker process for this peer
                                         timeline_id = peer_sync_state.timeline_id;
                                     } else {
@@ -317,6 +379,8 @@ async fn inbound_network_task<V>(
                                 let worker_sender_clone = worker_sender.clone();
 
                                 // TODO log
+                                debug!("[shared mempool] starting new worker for {:?}", peer_id);
+                                let start_worker = Instant::now();
                                 worker_pool.spawn_ok(async move {
                                     worker(
                                         worker_receiver,
@@ -329,9 +393,12 @@ async fn inbound_network_task<V>(
                                     )
                                     .await;
                                 });
+                                let finished_worker_spawn = start_worker.elapsed().as_millis();
+                                debug!("[shared mempool] finished spawning new worker for {:?} in {:?} ms", peer_id, finished_worker_spawn);
                             }
                             Event::LostPeer(peer_id) => {
                                 // TODO log event
+                                debug!("[shared mempool] received LostPeer for {:?}", peer_id);
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
 
                                 if let Some(peer_sync_state) = peer_info.get_mut(&peer_id) {
@@ -343,13 +410,13 @@ async fn inbound_network_task<V>(
                                         }
                                         peer_sync_state.is_alive = false;
                                     } else {
-                                        error!(
+                                        debug!(
                                             "[shared mempool] received LostPeer event for peer {} which was already lost",
                                             peer_id
                                         );
                                     }
                                 } else {
-                                    error!(
+                                    debug!(
                                         "[shared mempool] received LostPeer event for non-existent peer {}",
                                         peer_id
                                     );
@@ -358,9 +425,11 @@ async fn inbound_network_task<V>(
                             }
                             Event::RpcRequest((peer_id, msg, callback)) => {
                                 // handle rpc events for transactions
+                                debug!("[shared mempool] received Broadcast from {:?}", peer_id);
                                 if let Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(request)) =
                                     msg.message
                                 {
+                                    let spawn_start = Instant::now();
                                     bounded_executor
                                         .spawn(process_rpc_submit_transactions_request(
                                             smp.clone(),
@@ -369,6 +438,10 @@ async fn inbound_network_task<V>(
                                             callback,
                                         ))
                                         .await;
+
+                                    let spawn_finish = spawn_start.elapsed().as_millis();
+                                    debug!("[shared mempool] spawned process_rpc_submit_transactions_request from peer {:?} in {:?} ms",
+                                    peer_id, spawn_finish);
                                 }
                             }
                             _ => {}
@@ -387,6 +460,7 @@ async fn inbound_network_task<V>(
                     Some(peer_sync_update) => {
                         notify_subscribers(SharedMempoolNotification::SyncUpdate {worker_peer: peer_sync_update.peer_id}, &subscribers);
                         if let Some(sync_state) = peer_info.get_mut(&peer_sync_update.peer_id) {
+                            debug!("[shared mempool] received worker update from peer {:?}", peer_sync_update.peer_id);
                             sync_state.timeline_id = peer_sync_update.timeline_id;
                         } else {
                             error!("[shared mempool] unexpectedly got peer sync update from a worker for unknown peer");
@@ -396,6 +470,7 @@ async fn inbound_network_task<V>(
             },
             complete => {
                 // TODO log
+                debug!("[shared mempool] worker update channel terminated");
                 break;
             }
         }
@@ -424,6 +499,7 @@ async fn worker<'a>(
     timeline_id: u64,
     batch_size: usize,
 ) {
+    debug!("[shared mempool] start new worker for {:?}", peer_id);
     let mut state = WorkerState::START;
     let current_sleep_duration_ms = 50; // TODO this is hard coded, get from config instead
     let timeout = Duration::from_secs(1); // TODO hardcoded, get from config instead
@@ -432,17 +508,22 @@ async fn worker<'a>(
     while state != WorkerState::KILL {
         ::futures::select! {
             new_state = from_master.select_next_some() => {
+                debug!("[shared mempool] got received new state for peer {:?}: {:?}", peer_id, new_state);
                 state = new_state;
             },
             default => {}
             complete => {
                 // channel `from_master` terminated, so should close
                 // TODO log
+                debug!("[shared mempool] channel from master terminated for worker {:?}", peer_id);
                 state = WorkerState::KILL;
             }
         }
         if state == WorkerState::START {
             let to_master_clone = to_master.clone();
+
+            debug!("[shared mempool] worker {:?} broadcasting txns", peer_id);
+            let start_broadcast = Instant::now();
             let (result_timeline_id, result_state) = broadcast_transactions(
                 mempool,
                 network_sender,
@@ -454,6 +535,11 @@ async fn worker<'a>(
                 timeout,
             )
             .await;
+            let end_broadcast = start_broadcast.elapsed().as_millis();
+            debug!(
+                "[shared mempool] worker {:?} finished broadcast in {:?} ms",
+                peer_id, end_broadcast
+            );
             state = result_state;
             curr_timeline_id = result_timeline_id;
         }
@@ -471,10 +557,17 @@ async fn broadcast_transactions(
     timeout: Duration,
 ) -> (u64, WorkerState) {
     // broadcast transactions to peer
+
+    let start_lock = Instant::now();
     let (transactions, new_timeline_id) = mempool
         .lock()
         .expect("[shared mempool] failed to acquire mempool lock")
         .read_timeline(curr_timeline_id, batch_size);
+    let end_lock = start_lock.elapsed().as_millis();
+    debug!(
+        "[shared mempool] read_timeline for worker {:?} took {:?} ms",
+        peer_id, end_lock
+    );
 
     if !transactions.is_empty() {
         let mut req = BroadcastTransactionsRequest::default();
@@ -484,9 +577,16 @@ async fn broadcast_transactions(
             .map(|txn| txn.try_into().unwrap())
             .collect();
 
+        debug!("[shared mempool] start RPC send to {:?}", peer_id);
+        let start_broadcast = Instant::now();
         let result = network_sender
             .broadcast_transactions(peer_id.clone(), req, timeout)
             .await;
+        let end_broadcast = start_broadcast.elapsed().as_millis();
+        debug!(
+            "[shared mempool] broadcast to {:?} took {:?} ms",
+            peer_id, end_broadcast
+        );
         match result {
             Ok(_res) => {
                 // TODO update timeline_id/sleep from response
@@ -499,6 +599,7 @@ async fn broadcast_transactions(
         }
 
         // send back timeline_id to master
+        let start_master_push = Instant::now();
         if to_master
             .push(
                 peer_id,
@@ -509,6 +610,10 @@ async fn broadcast_transactions(
             )
             .is_err()
         {
+            debug!(
+                "[shared mempool] failed to send to master from {:?}",
+                peer_id
+            );
             // TODO log this
             // this will shut down channels to/from this worker thread, so master will know
             // this is dead and needs to start new worker for this peer
@@ -516,6 +621,11 @@ async fn broadcast_transactions(
         } else {
             // TODO log
         }
+        let end_master_push = start_master_push.elapsed().as_millis();
+        debug!(
+            "[shared mempool] master push from {:?} took {:?} ms",
+            peer_id, end_master_push,
+        );
     } else {
         // TODO log
     }
