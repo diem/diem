@@ -4,7 +4,7 @@
 use crate::state_replication::StateComputer;
 use crate::{
     chained_bft::{
-        chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
+        chained_bft_smr::ChainedBftSMR,
         persistent_storage::{PersistentStorage, StorageWriteProxy},
     },
     consensus_provider::ConsensusProvider,
@@ -57,7 +57,7 @@ impl ChainedBftProvider {
         let author = node_config.validator_network.as_ref().unwrap().peer_id;
         debug!("[Consensus] My peer: {:?}", author);
         let initial_setup = Self::initialize_setup(network_sender, network_events, node_config);
-        let config = ChainedBftSMRConfig::from_node_config(&node_config);
+        let config = node_config.consensus.clone();
         let storage = Arc::new(StorageWriteProxy::new(node_config));
         let initial_data = runtime.block_on(storage.start());
 

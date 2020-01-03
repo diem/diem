@@ -4,7 +4,6 @@
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
-        chained_bft_smr::ChainedBftSMRConfig,
         event_processor::EventProcessor,
         liveness::{
             multi_proposer_election::MultiProposer,
@@ -25,7 +24,7 @@ use consensus_types::{
     epoch_retrieval::EpochRetrievalRequest,
 };
 use futures::executor::block_on;
-use libra_config::config::ConsensusProposerType;
+use libra_config::config::{ConsensusConfig, ConsensusProposerType};
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
@@ -40,6 +39,7 @@ use std::{
     cmp::Ordering,
     convert::TryInto,
     sync::{Arc, RwLock},
+    time::Duration,
 };
 
 // Manager the components that shared across epoch and spawn per-epoch EventProcessor with
@@ -47,7 +47,7 @@ use std::{
 pub struct EpochManager<T> {
     author: Author,
     epoch_info: Arc<RwLock<EpochInfo>>,
-    config: ChainedBftSMRConfig,
+    config: ConsensusConfig,
     time_service: Arc<ClockTimeService>,
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
     network_sender: ConsensusNetworkSender,
@@ -62,7 +62,7 @@ impl<T: Payload> EpochManager<T> {
     pub fn new(
         author: Author,
         epoch_info: Arc<RwLock<EpochInfo>>,
-        config: ChainedBftSMRConfig,
+        config: ConsensusConfig,
         time_service: Arc<ClockTimeService>,
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
         network_sender: ConsensusNetworkSender,
@@ -99,7 +99,7 @@ impl<T: Payload> EpochManager<T> {
         // 1.5^6 ~= 11
         // Timeout goes from initial_timeout to initial_timeout*11 in 6 steps
         let time_interval = Box::new(ExponentialTimeInterval::new(
-            self.config.pacemaker_initial_timeout,
+            Duration::from_millis(self.config.pacemaker_initial_timeout_ms),
             1.5,
             6,
         ));

@@ -5,7 +5,7 @@ use crate::{
     chained_bft::{
         block_storage::BlockReader,
         chained_bft_consensus_provider::InitialSetup,
-        chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
+        chained_bft_smr::ChainedBftSMR,
         network_tests::NetworkPlayground,
         persistent_storage::RecoveryData,
         test_utils::{
@@ -22,6 +22,7 @@ use consensus_types::{
 };
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use libra_config::config::{
+    ConsensusConfig,
     ConsensusProposerType::{self, FixedProposer, MultipleOrderedProposers, RotatingProposer},
     SafetyRulesConfig,
 };
@@ -38,7 +39,7 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use safety_rules::SafetyRulesManagerConfig;
-use std::{convert::TryFrom, path::PathBuf, sync::Arc, time::Duration};
+use std::{convert::TryFrom, path::PathBuf, sync::Arc};
 use tempfile::NamedTempFile;
 use tokio::runtime;
 
@@ -83,13 +84,13 @@ impl SMRNode {
             .build()
             .expect("Failed to create Tokio runtime!");
 
-        let config = ChainedBftSMRConfig {
+        let config = ConsensusConfig {
             max_pruned_blocks_in_mem: 10000,
-            pacemaker_initial_timeout: Duration::from_secs(3),
+            pacemaker_initial_timeout_ms: 3000,
             proposer_type,
             contiguous_rounds: 2,
             max_block_size: 50,
-            author: signer.author(),
+            safety_rules: SafetyRulesConfig::default(),
         };
 
         let safety_rules_manager_config = SafetyRulesManagerConfig::new_with_signer(

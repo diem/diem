@@ -11,8 +11,8 @@ pub struct ConsensusConfig {
     pub max_block_size: u64,
     pub proposer_type: ConsensusProposerType,
     pub contiguous_rounds: u32,
-    pub max_pruned_blocks_in_mem: Option<u64>,
-    pub pacemaker_initial_timeout_ms: Option<u64>,
+    pub max_pruned_blocks_in_mem: usize,
+    pub pacemaker_initial_timeout_ms: u64,
     pub safety_rules: SafetyRulesConfig,
 }
 
@@ -22,8 +22,8 @@ impl Default for ConsensusConfig {
             max_block_size: 100,
             proposer_type: ConsensusProposerType::MultipleOrderedProposers,
             contiguous_rounds: 2,
-            max_pruned_blocks_in_mem: None,
-            pacemaker_initial_timeout_ms: None,
+            max_pruned_blocks_in_mem: 10000,
+            pacemaker_initial_timeout_ms: 1000,
             safety_rules: SafetyRulesConfig::default(),
         }
     }
