@@ -3,7 +3,7 @@ use crate::pow::block_tree::{BlockTree, CommitData};
 use crate::state_replication::{StateComputer, TxnManager};
 use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
 use futures::compat::Future01CompatExt;
-use futures::{channel::mpsc, StreamExt, SinkExt};
+use futures::{channel::mpsc, SinkExt, StreamExt};
 use futures_locks::{Mutex, RwLock};
 use itertools;
 use libra_crypto::HashValue;
@@ -82,6 +82,10 @@ impl ChainManager {
         let _read_storage = self.read_storage.clone();
         let mut new_block_sender = self.new_block_sender.clone();
         let chain_fut = async move {
+            new_block_sender
+                .send(0)
+                .await
+                .expect("new_block_sender send msg err.");
             loop {
                 ::futures::select! {
                 block = block_cache_receiver.select_next_some() => {
@@ -188,7 +192,6 @@ impl ChainManager {
                 }
             }
         };
-
         executor.spawn(chain_fut);
     }
 
