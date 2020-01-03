@@ -140,13 +140,12 @@ impl MintManager {
                             .await;
                     }
                     latest_height = new_block_receiver.select_next_some() => {
-                        {
-                            for key in proof_sender_map.keys() {
-                                if let Some(tmp_tx) = proof_sender_map.get(key) {
-                                    tmp_tx.send(None).await;
-                                }
+                        for key in proof_sender_map.keys() {
+                            if let Some(tmp_tx) = proof_sender_map.get(key) {
+                                tmp_tx.send(None).await;
                             }
                         }
+                        proof_sender_map.clear();
 
                         match mint_txn_manager.pull_txns(100, vec![]).await {
                             Ok(txns) => {
@@ -228,10 +227,7 @@ impl MintManager {
                                             //mint
                                             mine_state.set_latest_block(parent_block_id);
                                             let (rx, tx) = mine_state.mine_block(li.hash().to_vec());
-                                            {
-                                                proof_sender_map.clear();
-                                                proof_sender_map.insert(latest_height, tx);
-                                            }
+                                            proof_sender_map.insert(latest_height, tx);
                                             let wait_mint_network_sender = mint_network_sender.clone();
                                             let wait_self_sender = self_sender.clone();
                                             let mut wait_block_data_sender = block_data_sender.clone();
