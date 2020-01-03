@@ -18,47 +18,12 @@ use anyhow::Result;
 use channel;
 use consensus_types::common::{Author, Payload, Round};
 use futures::{select, stream::StreamExt};
-use libra_config::config::{ConsensusProposerType, NodeConfig};
+use libra_config::config::ConsensusConfig;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::EpochInfo;
 use safety_rules::SafetyRulesManager;
-use std::{
-    sync::Arc,
-    sync::RwLock,
-    time::{Duration, Instant},
-};
+use std::{sync::Arc, sync::RwLock, time::Instant};
 use tokio::runtime::{Handle, Runtime};
-
-/// Consensus configuration derived from ConsensusConfig
-pub struct ChainedBftSMRConfig {
-    /// Keep up to this number of committed blocks before cleaning them up from the block store.
-    pub max_pruned_blocks_in_mem: usize,
-    /// Initial timeout for pacemaker
-    pub pacemaker_initial_timeout: Duration,
-    /// Consensus proposer type
-    pub proposer_type: ConsensusProposerType,
-    /// Contiguous rounds for proposer
-    pub contiguous_rounds: u32,
-    /// Max block size (number of transactions) that consensus pulls from mempool
-    pub max_block_size: u64,
-    /// Validator's PeerId / Account Address
-    pub author: Author,
-}
-
-impl ChainedBftSMRConfig {
-    pub fn from_node_config(node_cfg: &NodeConfig) -> ChainedBftSMRConfig {
-        let cfg = &node_cfg.consensus;
-        let pacemaker_initial_timeout_ms = cfg.pacemaker_initial_timeout_ms.unwrap_or(1000);
-        ChainedBftSMRConfig {
-            max_pruned_blocks_in_mem: cfg.max_pruned_blocks_in_mem.unwrap_or(10000) as usize,
-            pacemaker_initial_timeout: Duration::from_millis(pacemaker_initial_timeout_ms),
-            proposer_type: cfg.proposer_type,
-            contiguous_rounds: cfg.contiguous_rounds,
-            max_block_size: cfg.max_block_size,
-            author: node_cfg.validator_network.as_ref().unwrap().peer_id,
-        }
-    }
-}
 
 /// ChainedBFTSMR is the one to generate the components (BlockStore, Proposer, etc.) and start the
 /// driver. ChainedBftSMR implements the StateMachineReplication, it is going to be used by
@@ -68,7 +33,7 @@ pub struct ChainedBftSMR<T> {
     initial_setup: Option<InitialSetup>,
     runtime: Option<Runtime>,
     block_store: Option<Arc<BlockStore<T>>>,
-    config: Option<ChainedBftSMRConfig>,
+    config: Option<ConsensusConfig>,
     storage: Arc<dyn PersistentStorage<T>>,
     initial_data: Option<RecoveryData<T>>,
 }
@@ -78,7 +43,7 @@ impl<T: Payload> ChainedBftSMR<T> {
         author: Author,
         initial_setup: InitialSetup,
         runtime: Runtime,
-        config: ChainedBftSMRConfig,
+        config: ConsensusConfig,
         storage: Arc<dyn PersistentStorage<T>>,
         initial_data: RecoveryData<T>,
     ) -> Self {
