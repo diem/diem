@@ -1,6 +1,6 @@
 [
     {
-        "name": "validator",
+        "name": "fullnode",
         "image": "${image}${image_version}",
         "cpu": ${cpu},
         %{ if command != "" }
@@ -19,14 +19,12 @@
             {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
         ],
         "environment": [
-        %{ if cfg_fullnode_seed != "" }
-	    {"name": "CFG_FULLNODE_SEED", "value": "${cfg_fullnode_seed}"},
-	    {"name": "CFG_NUM_FULLNODES", "value": "${cfg_num_fullnodes}"},
-	%{ endif }
 	    {"name": "CFG_LISTEN_ADDR", "value": "${cfg_listen_addr}"},
-            {"name": "CFG_NODE_INDEX", "value": "${cfg_node_index}"},
+            {"name": "CFG_FULLNODE_INDEX", "value": "${cfg_fullnode_index}"},
             {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},
+            {"name": "CFG_NUM_FULLNODES", "value": "${cfg_num_fullnodes}"},
             {"name": "CFG_SEED", "value": "${cfg_seed}"},
+            {"name": "CFG_FULLNODE_SEED", "value": "${cfg_fullnode_seed}"},
             {"name": "CFG_SEED_PEER_IP", "value": "${cfg_seed_peer_ip}"},
             {"name": "RUST_LOG", "value": "${log_level}"}
         ],
