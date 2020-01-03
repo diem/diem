@@ -72,8 +72,9 @@ impl EventProcessor {
         sync_block_sender: mpsc::Sender<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>,
         sync_signal_sender: mpsc::Sender<(PeerId, (u64, HashValue))>,
         dump_path: PathBuf,
+        new_block_sender: mpsc::Sender<u64>,
     ) -> Self {
-        let (block_cache_sender, block_cache_receiver) = mpsc::channel(10);
+        let (block_cache_sender, block_cache_receiver) = mpsc::channel(1024);
         let chain_manager = Arc::new(AtomicRefCell::new(ChainManager::new(
             Arc::clone(&block_store),
             txn_manager.clone(),
@@ -83,6 +84,7 @@ impl EventProcessor {
             read_storage,
             write_storage,
             dump_path,
+            new_block_sender,
         )));
 
         let sync_manager = Arc::new(AtomicRefCell::new(SyncManager::new(
@@ -297,7 +299,6 @@ impl EventProcessor {
                                             }
                                         }
                                         Err(e) => {
-                                            println!("--------44444---------");
                                             warn!(
                                                 "block : {:?} from : {:?} verify err: {:?}.",
                                                 block.id(),

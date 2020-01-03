@@ -48,6 +48,7 @@ pub struct PowConsensusProvider {
     event_handle_receiver: Option<channel::Receiver<Result<Event<ConsensusMsg>>>>,
     sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>>,
     sync_signal_receiver: Option<mpsc::Receiver<(PeerId, (u64, HashValue))>>,
+    new_block_receiver: Option<mpsc::Receiver<u64>>,
 }
 
 impl PowConsensusProvider {
@@ -107,8 +108,9 @@ impl PowConsensusProvider {
         let self_pri_key = node_config.consensus.take_and_set_key();
         let (event_handle_sender, event_handle_receiver) =
             channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
-        let (sync_block_sender, sync_block_receiver) = mpsc::channel(10);
+        let (sync_block_sender, sync_block_receiver) = mpsc::channel(1024);
         let (sync_signal_sender, sync_signal_receiver) = mpsc::channel(1024);
+        let (new_block_sender, new_block_receiver) = mpsc::channel(1);
         let event_handle = EventProcessor::new(
             network_sender,
             txn_manager,
@@ -123,6 +125,7 @@ impl PowConsensusProvider {
             sync_block_sender,
             sync_signal_sender,
             node_config.storage.dir(),
+            new_block_sender,
         );
         Self {
             runtime: Some(runtime),
@@ -136,6 +139,7 @@ impl PowConsensusProvider {
             event_handle_receiver: Some(event_handle_receiver),
             sync_block_receiver: Some(sync_block_receiver),
             sync_signal_receiver: Some(sync_signal_receiver),
+            new_block_receiver: Some(new_block_receiver),
         }
     }
 
@@ -149,6 +153,7 @@ impl PowConsensusProvider {
         event_handle_receiver: channel::Receiver<Result<Event<ConsensusMsg>>>,
         sync_block_receiver: mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>,
         sync_signal_receiver: mpsc::Receiver<(PeerId, (u64, HashValue))>,
+        new_block_receiver: mpsc::Receiver<u64>,
     ) {
         match self.event_handle.take() {
             Some(mut handle) => {
@@ -161,7 +166,7 @@ impl PowConsensusProvider {
                 handle
                     .mint_manager
                     .borrow()
-                    .mint(executor.clone(), self_key);
+                    .mint(executor.clone(), self_key, new_block_receiver);
 
                 //msg
                 handle.chain_state_handle(
@@ -228,6 +233,10 @@ impl ConsensusProvider for PowConsensusProvider {
             .sync_signal_receiver
             .take()
             .expect("sync_signal_receiver is none.");
+        let new_block_receiver = self
+            .new_block_receiver
+            .take()
+            .expect("new_block_receiver is none.");
 
         self.event_handle(
             executor,
@@ -238,6 +247,7 @@ impl ConsensusProvider for PowConsensusProvider {
             event_handle_receiver,
             sync_block_receiver,
             sync_signal_receiver,
+            new_block_receiver,
         );
         info!("PowConsensusProvider start succ.");
         Ok(())
