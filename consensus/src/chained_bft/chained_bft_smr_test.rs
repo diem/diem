@@ -4,7 +4,6 @@
 use crate::{
     chained_bft::{
         block_storage::BlockReader,
-        chained_bft_consensus_provider::InitialSetup,
         chained_bft_smr::ChainedBftSMR,
         network_tests::NetworkPlayground,
         persistent_storage::RecoveryData,
@@ -97,14 +96,11 @@ impl SMRNode {
             signer.clone(),
             &SafetyRulesConfig::default(),
         );
-        let initial_setup = InitialSetup {
-            network_sender,
-            network_events,
-            safety_rules_manager_config: Some(safety_rules_manager_config),
-        };
         let mut smr = ChainedBftSMR::new(
             signer.author(),
-            initial_setup,
+            network_sender,
+            network_events,
+            safety_rules_manager_config,
             runtime,
             config,
             storage.clone(),
