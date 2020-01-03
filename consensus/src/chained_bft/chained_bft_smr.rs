@@ -4,7 +4,6 @@
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        chained_bft_consensus_provider::InitialSetup,
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         network::{NetworkReceivers, NetworkTask},
@@ -21,40 +20,58 @@ use futures::{select, stream::StreamExt};
 use libra_config::config::ConsensusConfig;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::EpochInfo;
+use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use safety_rules::SafetyRulesManager;
+use safety_rules::SafetyRulesManagerConfig;
 use std::{sync::Arc, sync::RwLock, time::Instant};
 use tokio::runtime::{Handle, Runtime};
+
+/// All these structures need to be moved into EpochManager. Rather than make each one an option
+/// and perform ugly unwraps, they are bundled here.
+pub struct ChainedBftSMRInput<T> {
+    network_sender: ConsensusNetworkSender,
+    network_events: ConsensusNetworkEvents,
+    safety_rules_manager_config: SafetyRulesManagerConfig,
+    config: ConsensusConfig,
+    initial_data: RecoveryData<T>,
+}
 
 /// ChainedBFTSMR is the one to generate the components (BlockStore, Proposer, etc.) and start the
 /// driver. ChainedBftSMR implements the StateMachineReplication, it is going to be used by
 /// ConsensusProvider for the e2e flow.
 pub struct ChainedBftSMR<T> {
     author: Author,
-    initial_setup: Option<InitialSetup>,
     runtime: Option<Runtime>,
     block_store: Option<Arc<BlockStore<T>>>,
-    config: Option<ConsensusConfig>,
     storage: Arc<dyn PersistentStorage<T>>,
-    initial_data: Option<RecoveryData<T>>,
+    input: Option<ChainedBftSMRInput<T>>,
 }
 
 impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
         author: Author,
-        initial_setup: InitialSetup,
+        network_sender: ConsensusNetworkSender,
+        network_events: ConsensusNetworkEvents,
+        safety_rules_manager_config: SafetyRulesManagerConfig,
         runtime: Runtime,
         config: ConsensusConfig,
         storage: Arc<dyn PersistentStorage<T>>,
         initial_data: RecoveryData<T>,
     ) -> Self {
+        let input = ChainedBftSMRInput {
+            network_sender,
+            network_events,
+            safety_rules_manager_config,
+            config,
+            initial_data,
+        };
+
         Self {
             author,
-            initial_setup: Some(initial_setup),
             runtime: Some(runtime),
             block_store: None,
-            config: Some(config),
             storage,
-            initial_data: Some(initial_data),
+            input: Some(input),
         }
     }
 
@@ -137,14 +154,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         txn_manager: Box<dyn TxnManager<Payload = Self::Payload>>,
         state_computer: Arc<dyn StateComputer<Payload = Self::Payload>>,
     ) -> Result<()> {
-        let mut initial_setup = self
-            .initial_setup
-            .take()
-            .expect("already started, initial setup is None");
-        let initial_data = self
-            .initial_data
-            .take()
-            .expect("already started, initial data is None");
+        let input = self.input.take().expect("already started, input is None");
         let executor = self
             .runtime
             .as_mut()
@@ -156,23 +166,19 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         let epoch_info = Arc::new(RwLock::new(EpochInfo {
-            epoch: initial_data.epoch(),
-            verifier: initial_data.validators(),
+            epoch: input.initial_data.epoch(),
+            verifier: input.initial_data.validators(),
         }));
 
-        let safety_rules_manager_config = initial_setup
-            .safety_rules_manager_config
-            .take()
-            .expect("already started, safety_rules_manager is None");
-        let safety_rules_manager = SafetyRulesManager::new(safety_rules_manager_config);
+        let safety_rules_manager = SafetyRulesManager::new(input.safety_rules_manager_config);
 
         let mut epoch_mgr = EpochManager::new(
             self.author,
             Arc::clone(&epoch_info),
-            self.config.take().expect("already started, config is None"),
+            input.config,
             time_service,
             self_sender,
-            initial_setup.network_sender,
+            input.network_sender,
             timeout_sender,
             txn_manager,
             state_computer,
@@ -181,13 +187,13 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         );
 
         // Step 2
-        let event_processor = epoch_mgr.start_epoch(initial_data);
+        let event_processor = epoch_mgr.start_epoch(input.initial_data);
 
         // TODO: this is test only, we should remove this
         self.block_store = Some(event_processor.block_store());
 
         let (network_task, network_receiver) =
-            NetworkTask::new(epoch_info, initial_setup.network_events, self_receiver);
+            NetworkTask::new(epoch_info, input.network_events, self_receiver);
 
         Self::start_event_processing(
             executor.clone(),
