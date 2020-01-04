@@ -23,7 +23,8 @@ module TestStruct {
         return move(a), move(c);
     }
 
-    public module_builtins(a: address):  bool acquires T  {
+    public module_builtins(a: address):  bool acquires T
+    {
         let t: Self.T;
         let t_ref1: &mut Self.T;
         let t_ref2: &mut Self.T;
@@ -40,6 +41,7 @@ module TestStruct {
     }
 
     public nested_struct(a: address) : Self.B
+    aborts_if false
     {
         let var_a: Self.A;
         let var_b: Self.B;
@@ -59,7 +61,9 @@ module TestStruct {
         return move(var_b);
     }
 
-    public try_unpack(a: address): u64 {
+    public try_unpack(a: address): u64
+    aborts_if false
+    {
         let v: u64;
         let b: Self.B;
         let aa: address;

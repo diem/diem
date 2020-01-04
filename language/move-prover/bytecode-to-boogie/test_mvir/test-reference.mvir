@@ -8,7 +8,9 @@ module TestReference {
         return;
     }
 
-    public mut_ref() {
+    public mut_ref()
+    aborts_if false
+    {
         let b: u64;
         let b_ref: &mut u64;
 

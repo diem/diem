@@ -5,7 +5,9 @@ module Test3 {
 		g: u64,
 	}
 
-	public test3(flag: bool) {
+	public test3(flag: bool)
+	aborts_if false
+	{
 		let x: Self.T;
 		let x_ref: &mut Self.T;
 		let f_or_g_ref: &mut u64;

@@ -9,7 +9,9 @@ module TestFuncCall {
 		return move(x)+2;
 	}
 
-	public h(b: bool) : u64 {
+	public h(b: bool) : u64
+	aborts_if false
+	{
 		let x: u64;
 		let y: u64;
 		x = 3;
