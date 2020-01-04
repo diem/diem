@@ -25,7 +25,9 @@ module Option {
         return Vector.pop_back<E>(&mut v);
     }
 
-    public test_u64() {
+    public test_u64()
+    aborts_if false
+    {
         let n: Self.T<u64>;
         let s: Self.T<u64>;
         n = Self.none<u64>();
@@ -35,7 +37,9 @@ module Option {
         return;
     }
 
-    public test_append_reverse() {
+    public test_append_reverse()
+    aborts_if false
+    {
         let vec: Vector.T<u64>;
         let other_vec: Vector.T<u64>;
 
