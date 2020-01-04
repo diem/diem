@@ -117,6 +117,7 @@ impl Tok {
 }
 
 pub struct Lexer<'input> {
+    pub spec_mode: bool,
     text: &'input str,
     prev_end: usize,
     cur_start: usize,
@@ -127,6 +128,7 @@ pub struct Lexer<'input> {
 impl<'input> Lexer<'input> {
     pub fn new(s: &'input str) -> Lexer {
         Lexer {
+            spec_mode: false, // read tokens without trailing punctuation during specs.
             text: s,
             prev_end: 0,
             cur_start: 0,
@@ -154,7 +156,7 @@ impl<'input> Lexer<'input> {
     pub fn lookahead(&self) -> Result<Tok, ParseError<usize, anyhow::Error>> {
         let text = self.text[self.cur_end..].trim_start();
         let offset = self.text.len() - text.len();
-        let (tok, _) = find_token(text, offset)?;
+        let (tok, _) = find_token(text, offset, self.spec_mode)?;
         Ok(tok)
     }
 
@@ -162,7 +164,7 @@ impl<'input> Lexer<'input> {
         self.prev_end = self.cur_end;
         let text = self.text[self.cur_end..].trim_start();
         self.cur_start = self.text.len() - text.len();
-        let (token, len) = find_token(text, self.cur_start)?;
+        let (token, len) = find_token(text, self.cur_start, self.spec_mode)?;
         self.cur_end = self.cur_start + len;
         self.token = token;
         Ok(())
@@ -183,6 +185,7 @@ impl<'input> Lexer<'input> {
 fn find_token(
     text: &str,
     start_offset: usize,
+    spec_mode: bool,
 ) -> Result<(Tok, usize), ParseError<usize, anyhow::Error>> {
     let c: char = match text.chars().next() {
         Some(next_char) => next_char,
@@ -207,49 +210,51 @@ fn find_token(
         'a'..='z' | 'A'..='Z' | '$' | '_' => {
             let len = get_name_len(&text);
             let name = &text[..len];
-            match &text[len..].chars().next() {
-                Some('"') => {
-                    // Special case for ByteArrayValue: h\"[0-9A-Fa-f]*\"
-                    let mut bvlen = 0;
-                    if name == "h" && {
-                        bvlen = get_byte_array_value_len(&text[(len + 1)..]);
-                        bvlen > 0
-                    } {
-                        (Tok::ByteArrayValue, 2 + bvlen)
-                    } else {
-                        (get_name_token(name), len)
+            if !spec_mode {
+                match &text[len..].chars().next() {
+                    Some('"') => {
+                        // Special case for ByteArrayValue: h\"[0-9A-Fa-f]*\"
+                        let mut bvlen = 0;
+                        if name == "h" && {
+                            bvlen = get_byte_array_value_len(&text[(len + 1)..]);
+                            bvlen > 0
+                        } {
+                            (Tok::ByteArrayValue, 2 + bvlen)
+                        } else {
+                            (get_name_token(name), len)
+                        }
                     }
-                }
-                Some('.') => {
-                    let len2 = get_name_len(&text[(len + 1)..]);
-                    if len2 > 0 {
-                        (Tok::DotNameValue, len + 1 + len2)
-                    } else {
-                        (get_name_token(name), len)
+                    Some('.') => {
+                        let len2 = get_name_len(&text[(len + 1)..]);
+                        if len2 > 0 {
+                            (Tok::DotNameValue, len + 1 + len2)
+                        } else {
+                            (get_name_token(name), len)
+                        }
                     }
+                    Some('<') => match name {
+                        "borrow_global" => (Tok::BorrowGlobal, len + 1),
+                        "borrow_global_mut" => (Tok::BorrowGlobalMut, len + 1),
+                        "exists" => (Tok::Exists, len + 1),
+                        "move_from" => (Tok::MoveFrom, len + 1),
+                        "move_to_sender" => (Tok::MoveToSender, len + 1),
+                        _ => (Tok::NameBeginTyValue, len + 1),
+                    },
+                    Some('(') => match name {
+                        "assert" => (Tok::Assert, len + 1),
+                        "copy" => (Tok::Copy, len + 1),
+                        "move" => (Tok::Move, len + 1),
+                        _ => (get_name_token(name), len),
+                    },
+                    Some(':') => match name {
+                        "modules" => (Tok::Modules, len + 1),
+                        "script" => (Tok::Script, len + 1),
+                        _ => (get_name_token(name), len),
+                    },
+                    _ => (get_name_token(name), len),
                 }
-                Some('<') => match name {
-                    "borrow_global" => (Tok::BorrowGlobal, len + 1),
-                    "borrow_global_mut" => (Tok::BorrowGlobalMut, len + 1),
-                    "global" => (Tok::Global, len + 1),
-                    "global_exists" => (Tok::GlobalExists, len + 1),
-                    "exists" => (Tok::Exists, len + 1),
-                    "move_from" => (Tok::MoveFrom, len + 1),
-                    "move_to_sender" => (Tok::MoveToSender, len + 1),
-                    _ => (Tok::NameBeginTyValue, len + 1),
-                },
-                Some('(') => match name {
-                    "assert" => (Tok::Assert, len + 1),
-                    "copy" => (Tok::Copy, len + 1),
-                    "move" => (Tok::Move, len + 1),
-                    _ => (get_name_token(name), len),
-                },
-                Some(':') => match name {
-                    "modules" => (Tok::Modules, len + 1),
-                    "script" => (Tok::Script, len + 1),
-                    _ => (get_name_token(name), len),
-                },
-                _ => (get_name_token(name), len),
+            } else {
+                (get_name_token(name), len) // just return the name in spec_mode
             }
         }
         '&' => {
@@ -397,6 +402,8 @@ fn get_name_token(name: &str) -> Tok {
         "false" => Tok::False,
         "freeze" => Tok::Freeze,
         "get_txn_sender" => Tok::GetTxnSender,
+        "global" => Tok::Global,              // spec language
+        "global_exists" => Tok::GlobalExists, // spec language
         "to_u8" => Tok::ToU8,
         "to_u64" => Tok::ToU64,
         "to_u128" => Tok::ToU128,

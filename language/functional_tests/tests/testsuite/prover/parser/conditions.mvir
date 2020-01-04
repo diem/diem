@@ -1,5 +1,9 @@
 // Tests for parsing specifications
 
+// TODO: (DD, 1/6/20) This file could be integrated with the prover test framework
+// in language/move-prover/byte-code-to-boogie/tests
+// so we could run these through boogie.
+
 // Test parsing the conditions themselves relative to return values, acquires clauses
 //! no-run: runtime
 module TestConditions {
@@ -19,7 +23,7 @@ module TestConditions {
   }
 
   public aborts_if_alone()
-  aborts_if true
+  aborts_if true   //! postcondition might not hold
   {
       return;
   }
@@ -166,37 +170,37 @@ module TestEnsuresAccessPath {
 
 
   public ensures_access_path(t: Self.T): Self.T
-  ensures t/b
+  ensures t.b
   {
       return move(t);
   }
 
   public ensures_access_path2(t: Self.T1): Self.T1
-  ensures t/y/b
+  ensures t.y.b
   {
       return move(t);
   }
 
   public ensures_access_path3(t: Self.T2): Self.T2
-  ensures t/x/y/b
+  ensures t.x.y.b
   {
       return move(t);
   }
 
   public ensures_old_access_path(t: Self.T): Self.T
-  ensures old(t/b)
+  ensures old(t.b)
   {
       return move(t);
   }
 
   public ensures_exists_access_path(t: Self.T): Self.T
-  ensures global_exists<Self.T>(t/a)
+  ensures global_exists<Self.T>(t.a)
   {
       return move(t);
   }
 
   public ensures_global_access_path(t: Self.T): Self.T
-  ensures global<Self.T>(t/a)
+  ensures global<Self.T>(t.a)
   {
       return move(t);
   }
@@ -240,7 +244,7 @@ module TestBinaryOps {
   }
 
   public ret_access_path_exp(p: &Self.Pair): u64
-  ensures RET == p/x + p/y
+  ensures RET == p.x + p.y
   {
       return *&copy(p).x + *&move(p).y;
   }
