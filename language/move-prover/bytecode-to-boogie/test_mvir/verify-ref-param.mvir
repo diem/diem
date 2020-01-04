@@ -5,7 +5,7 @@ module TestSpecs {
     }
 
     public value(ref: &Self.T): u64
-    ensures RET == ref/value
+    ensures RET == ref.value
     {
         return *&move(ref).value;
     }

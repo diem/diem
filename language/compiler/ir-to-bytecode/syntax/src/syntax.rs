@@ -1333,7 +1333,26 @@ fn parse_acquire_list<'input>(
     Ok(al)
 }
 
-//// Spec langauge parsing ////
+//// Spec language parsing ////
+
+// parses Name '.' Name and returns pair of strings.
+fn spec_parse_dot_name<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<(String, String), ParseError<usize, anyhow::Error>> {
+    let name1 = parse_name(tokens)?;
+    consume_token(tokens, Tok::Period)?;
+    let name2 = parse_name(tokens)?;
+    Ok((name1, name2))
+}
+
+fn spec_parse_qualified_struct_ident<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<QualifiedStructIdent, ParseError<usize, anyhow::Error>> {
+    let (m_string, n_string) = spec_parse_dot_name(tokens)?;
+    let m: ModuleName = ModuleName::parse(m_string)?;
+    let n: StructName = StructName::parse(n_string)?;
+    Ok(QualifiedStructIdent::new(m, n))
+}
 
 fn parse_storage_location<'input>(
     tokens: &mut Lexer<'input>,
@@ -1363,8 +1382,9 @@ fn parse_storage_location<'input>(
         }
         Tok::AccountAddressValue => StorageLocation::Address(parse_account_address(tokens)?),
         Tok::Global => {
-            tokens.advance()?; // this consumes 'global<' due to parser funkiness
-            let type_ = parse_qualified_struct_ident(tokens)?;
+            consume_token(tokens, Tok::Global)?;
+            consume_token(tokens, Tok::Less)?;
+            let type_ = spec_parse_qualified_struct_ident(tokens)?;
             let type_actuals = parse_type_actuals(tokens)?;
             consume_token(tokens, Tok::Greater)?;
             consume_token(tokens, Tok::LParen)?;
@@ -1388,10 +1408,7 @@ fn parse_storage_location<'input>(
 
     // parsed the storage location base. now parse its fields (if any)
     let mut fields = vec![];
-    // TODO: in the long term, using slash is a bad choice because of the conflict with division
-    // (e.g., x/f / y == 7 is ambiguous), but the current parser has a hangup with our desired
-    // syntax '.' (see DotNameValue)
-    while tokens.peek() == Tok::Slash {
+    while tokens.peek() == Tok::Period {
         tokens.advance()?;
         fields.push(parse_field_(tokens)?.value);
     }
@@ -1417,8 +1434,9 @@ fn parse_unary_spec_exp<'input>(
         | Tok::U128Value
         | Tok::ByteArrayValue => SpecExp::Constant(parse_copyable_val_(tokens)?.value),
         Tok::GlobalExists => {
-            tokens.advance()?; // this consumes 'global_exists<' due to parser funkiness
-            let type_ = parse_qualified_struct_ident(tokens)?;
+            consume_token(tokens, Tok::GlobalExists)?;
+            consume_token(tokens, Tok::Less)?;
+            let type_ = spec_parse_qualified_struct_ident(tokens)?;
             let type_actuals = parse_type_actuals(tokens)?;
             consume_token(tokens, Tok::Greater)?;
             consume_token(tokens, Tok::LParen)?;
@@ -1473,7 +1491,6 @@ fn parse_rhs_of_spec_exp<'input>(
             rhs = parse_rhs_of_spec_exp(tokens, rhs, this_prec + 1)?;
             next_tok_prec = get_precedence(&tokens.peek());
         }
-
         let op = match op_token {
             Tok::EqualEqual => BinOp::Eq,
             Tok::ExclaimEqual => BinOp::Neq,
@@ -1505,10 +1522,16 @@ fn parse_spec_exp<'input>(
     parse_rhs_of_spec_exp(tokens, lhs, /* min_prec */ 1)
 }
 
+// Parse a top-level requires, ensures, aborts_if, or succeeds_if spec
+// in a function decl.  This has to set the lexer into "spec_mode" to
+// return names without eating trailing punctuation such as '<' or '.'.
+// That is needed to parse paths with dots separating field names.
 fn parse_spec_condition<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<Condition, ParseError<usize, anyhow::Error>> {
-    Ok(match tokens.peek() {
+    // Set lexer to read names without trailing punctuation
+    tokens.spec_mode = true;
+    let retval = Ok(match tokens.peek() {
         Tok::AbortsIf => {
             tokens.advance()?;
             Condition::AbortsIf(parse_spec_exp(tokens)?)
@@ -1526,11 +1549,14 @@ fn parse_spec_condition<'input>(
             Condition::SucceedsIf(parse_spec_exp(tokens)?)
         }
         _ => {
+            tokens.spec_mode = false;
             return Err(ParseError::InvalidToken {
                 location: tokens.start_loc(),
-            })
+            });
         }
-    })
+    });
+    tokens.spec_mode = false;
+    retval
 }
 
 // FunctionDecl : (FunctionName, Function_) = {

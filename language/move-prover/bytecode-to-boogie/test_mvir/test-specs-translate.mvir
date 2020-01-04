@@ -31,32 +31,32 @@ module TestSpecs {
     }
 
     public select_from_global_resource()
-      requires global<Self.R>(0x1)/x > 0
+      requires global<Self.R>(0x1).x > 0
     {
       return;
     }
 
     public select_from_resource(r: Self.R): Self.R
-      requires r/x > 0
+      requires r.x > 0
     {
       return move(r);
     }
 
     public select_from_resource_nested(r: Self.R): Self.R
-      requires r/s/a == 0x1
+      requires r.s.a == 0x1
     {
       return move(r);
     }
 
     public select_from_global_resource_dynamic_address(r: Self.R): Self.R
-      requires global<Self.R>(r/s/a)/x > 0
+      requires global<Self.R>(r.s.a).x > 0
     {
       return move(r);
     }
 
     public select_from_reference(r: &Self.R)
-        requires r/s/a == 0x1
-        ensures r/s/a == old(r/s/a)
+        requires r.s.a == 0x1
+        ensures r.s.a == old(r.s.a)
     {
       return;
     }
