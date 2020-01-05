@@ -926,20 +926,23 @@ impl ClientProxy {
     }
 
     fn get_libra_wallet(mnemonic_file: Option<String>) -> Result<WalletLibrary> {
+        let mut default_path = std::env::current_dir()?;
+        default_path.push(CLIENT_WALLET_MNEMONIC_FILE);
+
         let wallet_recovery_file_path = if let Some(input_mnemonic_word) = mnemonic_file {
             Path::new(&input_mnemonic_word).to_path_buf()
         } else {
-            let mut file_path = std::env::current_dir()?;
-            file_path.push(CLIENT_WALLET_MNEMONIC_FILE);
-            file_path
+            default_path.clone()
         };
 
         let wallet = if let Ok(recovered_wallet) = io_utils::recover(&wallet_recovery_file_path) {
             recovered_wallet
-        } else {
+        } else if wallet_recovery_file_path == default_path {
             let new_wallet = WalletLibrary::new();
-            new_wallet.write_recovery(&wallet_recovery_file_path)?;
+            new_wallet.write_recovery(&default_path)?;
             new_wallet
+        } else {
+            bail!("Can't parse mnemonic file: {:?}", wallet_recovery_file_path);
         };
         Ok(wallet)
     }
@@ -1155,7 +1158,7 @@ impl fmt::Display for AccountEntry {
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
     use libra_temppath::TempPath;
-    use libra_wallet::io_utils;
+    use libra_wallet::{io_utils, WalletLibrary};
     use proptest::prelude::*;
 
     fn generate_accounts_from_wallet(count: usize) -> (ClientProxy, Vec<AddressAndIndex>) {
@@ -1163,6 +1166,8 @@ mod tests {
         accounts.reserve(count);
         let file = TempPath::new();
         let mnemonic_path = file.path().to_str().unwrap().to_string();
+        let new_wallet = WalletLibrary::new();
+        io_utils::write_recovery(&new_wallet, &mnemonic_path).expect("failed to write to file");
 
         // We don't need to specify host/port since the client won't be used to connect, only to
         // generate random accounts
@@ -1181,6 +1186,23 @@ mod tests {
         }
 
         (client_proxy, accounts)
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_illegal_mnemonic_file() {
+        let file = TempPath::new();
+        let mnemonic_path = file.path().to_str().unwrap().to_string();
+        ClientProxy::new(
+            "", /* host */
+            0,  /* port */
+            &"",
+            false,
+            None,
+            Some(mnemonic_path),
+            None,
+        )
+        .unwrap();
     }
 
     #[test]

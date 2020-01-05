@@ -4598,6 +4598,7 @@ dependencies = [
  "libra-swarm 0.1.0",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
+ "libra-wallet 0.1.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust_decimal 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",

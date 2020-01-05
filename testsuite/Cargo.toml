@@ -21,6 +21,7 @@ workspace-builder = { path = "../common/workspace-builder", version = "0.1.0" }
 # running tests all binaries which are being tested under this testsuite
 # should have their crates listed as dev-dependencies.
 cli = { path = "../client/cli", version = "0.1.0", features = ["fuzzing"] }
+libra-wallet = { path = "../client/libra_wallet", version = "0.1.0" }
 generate-keypair = { path = "../config/generate-keypair", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-swarm = { path = "../libra-swarm", version = "0.1.0" }

@@ -16,6 +16,7 @@ use libra_types::{
     transaction::{TransactionArgument, TransactionPayload},
     waypoint::Waypoint,
 };
+use libra_wallet::{io_utils, WalletLibrary};
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::fs::{self, File};
@@ -51,6 +52,8 @@ impl TestEnvironment {
         mnemonic_file
             .create_as_file()
             .expect("could not create temporary mnemonic_file_path");
+        let new_wallet = WalletLibrary::new();
+        io_utils::write_recovery(&new_wallet, &mnemonic_file).expect("failed to write to file");
 
         let mut key_file = File::open(&validator_swarm.config.faucet_key_path)
             .expect("Unable to create faucet key file");
