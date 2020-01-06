@@ -110,7 +110,7 @@ impl Deref for LibraDBWrapper {
     type Target = LibraDB;
 
     fn deref(&self) -> &Self::Target {
-        self.db.as_ref().expect("LibraDB is dropped unexptectedly")
+        self.db.as_ref().expect("LibraDB is dropped unexpectedly")
     }
 }
 
