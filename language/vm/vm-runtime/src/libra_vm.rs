@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::txn_executor::convert_txn_args;
 use crate::{
     chain_state::{ChainState, SystemExecutionContext, TransactionExecutionContext},
     counters::*,
@@ -590,6 +589,18 @@ pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8])
             whitelist.contains(hash_value.as_ref())
         }
     }
+}
+
+/// Convert the transaction arguments into move values.
+fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
+    args.into_iter()
+        .map(|arg| match arg {
+            TransactionArgument::U64(i) => Value::u64(i),
+            TransactionArgument::Address(a) => Value::address(a),
+            TransactionArgument::Bool(b) => Value::bool(b),
+            TransactionArgument::ByteArray(b) => Value::byte_array(b),
+        })
+        .collect()
 }
 
 #[test]

@@ -46,6 +46,7 @@ members = [
     "language/tools/genesis-viewer",
     "language/tools/utils",
     "language/tools/test-generation",
+    "language/tools/vm-genesis",
     "language/compiler/bytecode-source-map",
     "language/move-prover/bytecode-to-boogie",
     "language/move-prover/stackless-bytecode-generator",
@@ -55,7 +56,6 @@ members = [
     "language/vm/vm-runtime",
     "language/vm/vm-runtime/vm-cache-map",
     "language/vm/vm-runtime/vm-runtime-types",
-    "language/vm/vm-genesis",
     "libra-node",
     "libra-swarm",
     "network",
@@ -90,7 +90,7 @@ members = [
 default-members = [
     "client",
     "language/compiler",
-    "language/vm/vm-genesis",
+    "language/tools/vm-genesis",
     "libra-node",
     "storage/storage-service",
 ]

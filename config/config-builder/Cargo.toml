@@ -24,4 +24,4 @@ generate-keypair = { path = "../generate-keypair", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
-vm-genesis = { path = "../../language/vm/vm-genesis", version = "0.1.0" }
+vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }

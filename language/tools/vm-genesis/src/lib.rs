@@ -1,0 +1,597 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+#![forbid(unsafe_code)]
+
+mod genesis_gas_schedule;
+
+use crate::genesis_gas_schedule::initial_gas_schedule;
+use anyhow::Result;
+use bytecode_verifier::VerifiedModule;
+use lazy_static::lazy_static;
+use libra_crypto::{
+    ed25519::*,
+    traits::ValidKey,
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+};
+use libra_state_view::StateView;
+use libra_types::contract_event::ContractEvent;
+use libra_types::{
+    access_path::AccessPath,
+    account_address::AccountAddress,
+    account_config,
+    byte_array::ByteArray,
+    crypto_proxies::ValidatorSet,
+    discovery_info::DiscoveryInfo,
+    discovery_set::DiscoverySet,
+    identifier::Identifier,
+    transaction::{ChangeSet, RawTransaction, SignatureCheckedTransaction},
+};
+use parity_multiaddr::Multiaddr;
+use rand::{rngs::StdRng, SeedableRng};
+use std::str::FromStr;
+use stdlib::stdlib_modules;
+use vm::{
+    access::ModuleAccess,
+    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    transaction_metadata::TransactionMetadata,
+};
+use vm_cache_map::Arena;
+use vm_runtime::chain_state::{ChainState, TransactionExecutionContext};
+use vm_runtime::{data_cache::BlockDataCache, runtime::VMRuntime, system_module_names::*};
+use vm_runtime_types::value::Value;
+
+// The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
+const GENESIS_SEED: [u8; 32] = [42; 32];
+
+lazy_static! {
+    pub static ref GENESIS_KEYPAIR: (Ed25519PrivateKey, Ed25519PublicKey) = {
+        let mut rng = StdRng::from_seed(GENESIS_SEED);
+        compat::generate_keypair(&mut rng)
+    };
+    // TODO(philiphayes): remove this when we add discovery set to genesis config.
+    static ref PLACEHOLDER_PUBKEY: X25519StaticPublicKey = {
+        let salt = None;
+        let seed = [69u8; 32];
+        let app_info = None;
+        let (_, pubkey) = X25519StaticPrivateKey::derive_keypair_from_seed(salt, &seed, app_info);
+        pubkey
+    };
+}
+
+// Identifiers for well-known functions.
+lazy_static! {
+    static ref ADD_VALIDATOR: Identifier = Identifier::new("add_validator").unwrap();
+    static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
+    static ref INITIALIZE_BLOCK: Identifier = Identifier::new("initialize_block_metadata").unwrap();
+    static ref INITIALIZE_TXN_FEES: Identifier =
+        Identifier::new("initialize_transaction_fees").unwrap();
+    static ref INITIALIZE_VALIDATOR_SET: Identifier =
+        Identifier::new("initialize_validator_set").unwrap();
+    static ref INITIALIZE_DISCOVERY_SET: Identifier =
+        Identifier::new("initialize_discovery_set").unwrap();
+    static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
+    static ref RECONFIGURE: Identifier = Identifier::new("reconfigure").unwrap();
+    static ref REGISTER_CANDIDATE_VALIDATOR: Identifier =
+        Identifier::new("register_candidate_validator").unwrap();
+    static ref ROTATE_AUTHENTICATION_KEY: Identifier =
+        { Identifier::new("rotate_authentication_key").unwrap() };
+    static ref EPILOGUE: Identifier = Identifier::new("epilogue").unwrap();
+}
+
+struct FakeStateView;
+
+impl StateView for FakeStateView {
+    fn get(&self, _access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
+        Ok(None)
+    }
+
+    fn multi_get(&self, _access_paths: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {
+        unimplemented!()
+    }
+
+    fn is_genesis(&self) -> bool {
+        true
+    }
+}
+
+// TODO(philiphayes): remove this after integrating on-chain discovery with config.
+/// Make a placeholder `DiscoverySet` from the `ValidatorSet`.
+pub fn make_placeholder_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
+    let discovery_set = validator_set
+        .iter()
+        .map(|validator_pubkeys| {
+            DiscoveryInfo::new(
+                *validator_pubkeys.account_address(),
+                // validator_network_identity_pubkey
+                validator_pubkeys.network_identity_public_key().clone(),
+                // validator_network_address PLACEHOLDER
+                Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap(),
+                // fullnodes_network_identity_pubkey PLACEHOLDER
+                PLACEHOLDER_PUBKEY.clone(),
+                // fullnodes_network_address PLACEHOLDER
+                Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
+    DiscoverySet::new(discovery_set)
+}
+
+pub fn encode_genesis_transaction_with_validator(
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    validator_set: ValidatorSet,
+    discovery_set: DiscoverySet,
+) -> SignatureCheckedTransaction {
+    // Compile the needed stdlib modules.
+    let modules = stdlib_modules();
+
+    // create a VMRuntime
+    let arena = Arena::new();
+    let mut runtime = VMRuntime::new(&arena);
+    for module in modules {
+        // TODO: publish module first so we don't need this call
+        runtime.cache_module(module.clone());
+    }
+
+    // create execution data for the runtime
+    let state_view = FakeStateView;
+    let gas_schedule = CostTable::zero();
+    let data_cache = BlockDataCache::new(&state_view);
+    // the interpreter context will contain the WriteSet after execution
+    let mut interpreter_context =
+        TransactionExecutionContext::new(GasUnits::new(100_000_000), &data_cache);
+
+    // generate the genesis WriteSet
+    let genesis_write_set = {
+        {
+            create_and_initialize_main_accounts(
+                &runtime,
+                &gas_schedule,
+                &mut interpreter_context,
+                &public_key,
+                initial_gas_schedule(&runtime, &data_cache),
+            );
+            create_and_initialize_validator_and_discovery_set(
+                &runtime,
+                &gas_schedule,
+                &mut interpreter_context,
+                &validator_set,
+                &discovery_set,
+            );
+            reconfigure(&runtime, &gas_schedule, &mut interpreter_context);
+            publish_stdlib(&mut interpreter_context, modules);
+
+            verify_genesis_write_set(interpreter_context.events(), &validator_set, &discovery_set);
+            ChangeSet::new(
+                interpreter_context
+                    .make_write_set()
+                    .expect("Genesis WriteSet failure"),
+                interpreter_context.events().to_vec(),
+            )
+        }
+    };
+    let transaction =
+        RawTransaction::new_change_set(account_config::association_address(), 0, genesis_write_set);
+    transaction.sign(private_key, public_key).unwrap()
+}
+
+/// Create an initialize Association, Transaction Fee and Core Code accounts.
+fn create_and_initialize_main_accounts(
+    runtime: &VMRuntime,
+    gas_schedule: &CostTable,
+    interpreter_context: &mut TransactionExecutionContext,
+    public_key: &Ed25519PublicKey,
+    initial_gas_schedule: Value,
+) {
+    const INIT_BALANCE: u64 = 1_000_000_000;
+
+    let association_addr = account_config::association_address();
+    let mut txn_data = TransactionMetadata::default();
+    txn_data.sender = association_addr;
+
+    // create the association account
+    runtime
+        .create_account(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            association_addr,
+        )
+        .unwrap_or_else(|_| {
+            panic!(
+                "Failure creating association account {:?}",
+                association_addr
+            )
+        });
+
+    // create the transaction fee account
+    let transaction_fee_address = account_config::transaction_fee_address();
+    runtime
+        .create_account(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            transaction_fee_address,
+        )
+        .unwrap_or_else(|_| {
+            panic!(
+                "Failure creating transaction fee account {:?}",
+                transaction_fee_address
+            )
+        });
+
+    // create the core code account
+    let core_code_address = account_config::core_code_address();
+    runtime
+        .create_account(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            core_code_address,
+        )
+        .unwrap_or_else(|_| panic!("Failure creating core code account {:?}", core_code_address));
+
+    runtime
+        .execute_function(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            &COIN_MODULE,
+            &INITIALIZE,
+            vec![],
+        )
+        .expect("Failure initializing LibraCoin");
+
+    runtime
+        .execute_function(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            &LIBRA_SYSTEM_MODULE,
+            &INITIALIZE_BLOCK,
+            vec![],
+        )
+        .expect("Failure initializing block metadata");
+
+    runtime
+        .execute_function(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            &GAS_SCHEDULE_MODULE,
+            &INITIALIZE,
+            vec![initial_gas_schedule],
+        )
+        .expect("Failure initializing gas module");
+
+    runtime
+        .execute_function(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            &ACCOUNT_MODULE,
+            &MINT_TO_ADDRESS,
+            vec![Value::address(association_addr), Value::u64(INIT_BALANCE)],
+        )
+        .expect("Failure minting to association");
+
+    let genesis_auth_key = ByteArray::new(AccountAddress::from_public_key(public_key).to_vec());
+    runtime
+        .execute_function(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            &ACCOUNT_MODULE,
+            &ROTATE_AUTHENTICATION_KEY,
+            vec![Value::byte_array(genesis_auth_key)],
+        )
+        .expect("Failure rotating association key");
+
+    // Bump the sequence number for the Association account. If we don't do this and a
+    // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem
+    // arises: both the genesis transaction and the subsequent transaction have sequence
+    // number 0
+    runtime
+        .execute_function(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            &ACCOUNT_MODULE,
+            &EPILOGUE,
+            vec![
+                Value::u64(/* txn_sequence_number */ 0),
+                Value::u64(/* txn_gas_price */ 0),
+                Value::u64(/* txn_max_gas_units */ 0),
+                Value::u64(/* gas_units_remaining */ 0),
+            ],
+        )
+        .expect("Failure running epilogue for association account");
+
+    txn_data.sender = account_config::transaction_fee_address();
+    runtime
+        .execute_function(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            &LIBRA_SYSTEM_MODULE,
+            &INITIALIZE_TXN_FEES,
+            vec![],
+        )
+        .expect("Failure initializing transaction fee");
+}
+
+/// Create and initialize validator and discovery set.
+fn create_and_initialize_validator_and_discovery_set(
+    runtime: &VMRuntime,
+    gas_schedule: &CostTable,
+    interpreter_context: &mut TransactionExecutionContext,
+    validator_set: &ValidatorSet,
+    discovery_set: &DiscoverySet,
+) {
+    create_and_initialize_validator_set(runtime, gas_schedule, interpreter_context);
+    create_and_initialize_discovery_set(runtime, gas_schedule, interpreter_context);
+    initialize_validators(
+        runtime,
+        gas_schedule,
+        interpreter_context,
+        validator_set,
+        discovery_set,
+    );
+}
+
+/// Create and initialize the validator set.
+fn create_and_initialize_validator_set(
+    runtime: &VMRuntime,
+    gas_schedule: &CostTable,
+    interpreter_context: &mut TransactionExecutionContext,
+) {
+    let mut txn_data = TransactionMetadata::default();
+    let validator_set_address = account_config::validator_set_address();
+    txn_data.sender = validator_set_address;
+
+    runtime
+        .create_account(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            validator_set_address,
+        )
+        .unwrap_or_else(|_| {
+            panic!(
+                "Failure creating validator set account {:?}",
+                validator_set_address
+            )
+        });
+
+    runtime
+        .execute_function(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            &LIBRA_SYSTEM_MODULE,
+            &INITIALIZE_VALIDATOR_SET,
+            vec![],
+        )
+        .expect("Failure initializing validator set");
+}
+
+/// Create and initialize the discovery set.
+fn create_and_initialize_discovery_set(
+    runtime: &VMRuntime,
+    gas_schedule: &CostTable,
+    interpreter_context: &mut TransactionExecutionContext,
+) {
+    let mut txn_data = TransactionMetadata::default();
+    let discovery_set_address = account_config::discovery_set_address();
+    txn_data.sender = discovery_set_address;
+
+    runtime
+        .create_account(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            discovery_set_address,
+        )
+        .unwrap_or_else(|_| {
+            panic!(
+                "Failure creating discovery set account {:?}",
+                discovery_set_address
+            )
+        });
+
+    runtime
+        .execute_function(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            &LIBRA_SYSTEM_MODULE,
+            &INITIALIZE_DISCOVERY_SET,
+            vec![],
+        )
+        .expect("Failure initializing discovery set");
+}
+
+/// Initialize each validator.
+fn initialize_validators(
+    runtime: &VMRuntime,
+    gas_schedule: &CostTable,
+    interpreter_context: &mut TransactionExecutionContext,
+    validator_set: &ValidatorSet,
+    discovery_set: &DiscoverySet,
+) {
+    let mut txn_data = TransactionMetadata::default();
+    txn_data.sender = account_config::association_address();
+
+    for (validator_keys, discovery_info) in validator_set.iter().zip(discovery_set.iter()).rev() {
+        // First, add a ValidatorConfig resource under each account
+        let validator_address = *validator_keys.account_address();
+        runtime
+            .create_account(
+                interpreter_context,
+                &txn_data,
+                &gas_schedule,
+                validator_address,
+            )
+            .unwrap_or_else(|_| {
+                panic!("Failure creating validator account {:?}", validator_address)
+            });
+
+        let mut validator_txn_data = TransactionMetadata::default();
+        validator_txn_data.sender = validator_address;
+        runtime
+            .execute_function(
+                interpreter_context,
+                &validator_txn_data,
+                &gas_schedule,
+                &VALIDATOR_CONFIG_MODULE,
+                &REGISTER_CANDIDATE_VALIDATOR,
+                vec![
+                    // consensus_pubkey
+                    Value::byte_array(ByteArray::new(
+                        validator_keys.consensus_public_key().to_bytes().to_vec(),
+                    )),
+                    // network_signing_pubkey
+                    Value::byte_array(ByteArray::new(
+                        validator_keys
+                            .network_signing_public_key()
+                            .to_bytes()
+                            .to_vec(),
+                    )),
+                    // validator_network_identity_pubkey
+                    Value::byte_array(ByteArray::new(
+                        discovery_info
+                            .validator_network_identity_pubkey()
+                            .to_bytes()
+                            .to_vec(),
+                    )),
+                    // validator_network_address placeholder
+                    Value::byte_array(ByteArray::new(
+                        discovery_info.validator_network_address().to_vec(),
+                    )),
+                    // fullnodes_network_identity_pubkey placeholder
+                    Value::byte_array(ByteArray::new(
+                        discovery_info
+                            .fullnodes_network_identity_pubkey()
+                            .to_bytes()
+                            .to_vec(),
+                    )),
+                    // fullnodes_network_address placeholder
+                    Value::byte_array(ByteArray::new(
+                        discovery_info.fullnodes_network_address().to_vec(),
+                    )),
+                ],
+            )
+            .unwrap_or_else(|_| panic!("Failure initializing validator {:?}", validator_address));
+        // Then, add the account to the validator set
+        runtime
+            .execute_function(
+                interpreter_context,
+                &txn_data,
+                &gas_schedule,
+                &LIBRA_SYSTEM_MODULE,
+                &ADD_VALIDATOR,
+                vec![Value::address(validator_address)],
+            )
+            .unwrap_or_else(|_| panic!("Failure adding validator {:?}", validator_address));
+    }
+}
+
+/// Publish the standard library.
+fn publish_stdlib(interpreter_context: &mut dyn ChainState, stdlib: &[VerifiedModule]) {
+    for module in stdlib {
+        let mut module_vec = vec![];
+        module.serialize(&mut module_vec).unwrap();
+        interpreter_context
+            .publish_module(module.self_id(), module_vec)
+            .unwrap_or_else(|_| panic!("Failure publishing module {:?}", module.self_id()));
+    }
+}
+
+/// Trigger a reconfiguration. This emits an event that will be passed along to the storage layer.
+fn reconfigure(
+    runtime: &VMRuntime,
+    gas_schedule: &CostTable,
+    interpreter_context: &mut TransactionExecutionContext,
+) {
+    let mut txn_data = TransactionMetadata::default();
+    txn_data.sender = account_config::validator_set_address();
+
+    // TODO: Direct write set transactions cannot specify emitted events, so this currently
+    // will not work.
+    runtime
+        .execute_function(
+            interpreter_context,
+            &txn_data,
+            &gas_schedule,
+            &LIBRA_SYSTEM_MODULE,
+            &RECONFIGURE,
+            vec![],
+        )
+        .expect("Failure reconfiguring the system");
+}
+
+/// Verify the consistency of the genesis `WriteSet`
+fn verify_genesis_write_set(
+    events: &[ContractEvent],
+    validator_set: &ValidatorSet,
+    discovery_set: &DiscoverySet,
+) {
+    // Sanity checks on emitted events:
+    // (1) The genesis tx should emit 4 events: a pair of payment sent/received events for
+    // minting to the genesis address, a ValidatorSetChangeEvent, and a
+    // DiscoverySetChangeEvent.
+    assert_eq!(
+        events.len(),
+        4,
+        "Genesis transaction should emit four events, but found {} events: {:?}",
+        events.len(),
+        events,
+    );
+
+    // (2) The third event should be the validator set change event
+    let validator_set_change_event = &events[2];
+    assert_eq!(
+        *validator_set_change_event.key(),
+        ValidatorSet::change_event_key(),
+        "Key of emitted event {:?} does not match change event key {:?}",
+        *validator_set_change_event.key(),
+        ValidatorSet::change_event_key()
+    );
+    // (3) This should be the first validator set change event
+    assert_eq!(
+        validator_set_change_event.sequence_number(),
+        0,
+        "Expected sequence number 0 for validator set change event but got {}",
+        validator_set_change_event.sequence_number()
+    );
+    // (4) It should emit the validator set we fed into the genesis tx
+    assert_eq!(
+        &ValidatorSet::from_bytes(validator_set_change_event.event_data()).unwrap(),
+        validator_set,
+        "Validator set in emitted event does not match validator set fed into genesis transaction"
+    );
+
+    // (5) The fourth event should be the discovery set change event
+    let discovery_set_change_event = &events[3];
+    assert_eq!(
+        *discovery_set_change_event.key(),
+        DiscoverySet::change_event_key(),
+        "Key of emitted event {:?} does not match change event key {:?}",
+        *discovery_set_change_event.key(),
+        DiscoverySet::change_event_key()
+    );
+    // (6) This should be the first discovery set change event
+    assert_eq!(
+        discovery_set_change_event.sequence_number(),
+        0,
+        "Expected sequence number 0 for discovery set change event but got {}",
+        discovery_set_change_event.sequence_number()
+    );
+    // (7) It should emit the discovery set we fed into the genesis tx
+    assert_eq!(
+        &DiscoverySet::from_bytes(discovery_set_change_event.event_data()).unwrap(),
+        discovery_set,
+        "Discovery set in emitted event does not match discovery set fed into genesis transaction",
+    );
+}
