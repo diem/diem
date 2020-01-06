@@ -59,5 +59,5 @@ fn genesis_blob_unchanged() {
     let mut old_genesis_bytes = vec![];
     genesis_file.read_to_end(&mut old_genesis_bytes).unwrap();
     assert!(old_genesis_bytes == generate_genesis_blob(),
-            format!("The freshly generated genesis file is different from the one on disk at {}. Did you forget to regenerate the genesis file via `cargo run` inside libra/language/vm/vm-genesis?", GENESIS_LOCATION));
+            format!("The freshly generated genesis file is different from the one on disk at {}. Did you forget to regenerate the genesis file via `cargo run` inside libra/language/tools/vm-genesis?", GENESIS_LOCATION));
 }

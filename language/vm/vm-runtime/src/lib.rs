@@ -131,7 +131,6 @@ pub mod interpreter;
 pub mod loaded_data;
 pub mod runtime;
 pub mod system_module_names;
-pub mod txn_executor;
 
 pub use libra_vm::LibraVM;
 

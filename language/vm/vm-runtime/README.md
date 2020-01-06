@@ -72,8 +72,6 @@ visible to subsequent transactions within each block.
   code.
 * The transaction flow is implemented in the [`process_txn`](./src/process_txn.rs)
   module.
-* The interpreter is implemented within the [transaction
-  executor](./src/txn_executor.rs).
 * Code caching logic and policies are defined under the [code
   cache](./src/code_cache/) directory.
 * Runtime loaded code and the type system view for the runtime is defined
