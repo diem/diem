@@ -3,7 +3,7 @@ use ocl::enums::{ArgVal, DeviceInfo, DeviceInfoResult};
 use ocl::flags::{CommandQueueProperties, MemFlags};
 use ocl::prm::{Uint2, Ulong4};
 use ocl::{
-	Buffer, Context, Device, Event, EventList, Kernel, Platform, Program, Queue, SpatialDims,
+    Buffer, Context, Device, Event, EventList, Kernel, Platform, Program, Queue, SpatialDims,
 };
 use std::collections::HashMap;
 use std::env;
@@ -16,23 +16,23 @@ const BUFFER_SIZE_B: usize = DUCK_SIZE_B * 1024 * 4096 * 2;
 const INDEX_SIZE: usize = 256 * 256 * 4;
 
 pub struct Trimmer {
-	q: Queue,
-	program: Program,
-	buffer_a1: Buffer<u32>,
-	buffer_a2: Buffer<u32>,
-	buffer_b: Buffer<u32>,
-	buffer_i1: Buffer<u32>,
-	buffer_i2: Buffer<u32>,
-	buffer_r: Buffer<u32>,
-	buffer_nonces: Buffer<u32>,
-	pub device_name: String,
-	pub device_id: usize,
-	is_nvidia: bool,
+    q: Queue,
+    program: Program,
+    buffer_a1: Buffer<u32>,
+    buffer_a2: Buffer<u32>,
+    buffer_b: Buffer<u32>,
+    buffer_i1: Buffer<u32>,
+    buffer_i2: Buffer<u32>,
+    buffer_r: Buffer<u32>,
+    buffer_nonces: Buffer<u32>,
+    pub device_name: String,
+    pub device_id: usize,
+    is_nvidia: bool,
 }
 
 struct ClBufferParams {
-	size: usize,
-	flags: MemFlags,
+    size: usize,
+    flags: MemFlags,
 }
 
 macro_rules! clear_buffer (
@@ -54,22 +54,22 @@ macro_rules! kernel_enq(
 	));
 
 macro_rules! get_device_info {
-	($dev:ident, $name:ident) => {{
-		match $dev.info(DeviceInfo::$name) {
-			Ok(DeviceInfoResult::$name(value)) => value,
-			_ => panic!("Failed to retrieve device {}", stringify!($name)),
-			}
-		}};
+    ($dev:ident, $name:ident) => {{
+        match $dev.info(DeviceInfo::$name) {
+            Ok(DeviceInfoResult::$name(value)) => value,
+            _ => panic!("Failed to retrieve device {}", stringify!($name)),
+        }
+    }};
 }
 
 #[cfg(feature = "profile")]
 fn queue_props() -> Option<CommandQueueProperties> {
-	Some(CommandQueueProperties::PROFILING_ENABLE)
+    Some(CommandQueueProperties::PROFILING_ENABLE)
 }
 
 #[cfg(not(feature = "profile"))]
 fn queue_props() -> Option<CommandQueueProperties> {
-	None
+    None
 }
 
 macro_rules! kernel_builder(
@@ -82,413 +82,413 @@ macro_rules! kernel_builder(
 ));
 
 impl Trimmer {
-	pub fn build(platform_name: Option<&str>, device_id: Option<usize>) -> ocl::Result<Trimmer> {
-		env::set_var("GPU_MAX_HEAP_SIZE", "100");
-		env::set_var("GPU_USE_SYNC_OBJECTS", "1");
-		env::set_var("GPU_MAX_ALLOC_PERCENT", "100");
-		env::set_var("GPU_SINGLE_ALLOC_PERCENT", "100");
-		env::set_var("GPU_64BIT_ATOMICS", "1");
-		env::set_var("GPU_MAX_WORKGROUP_SIZE", "1024");
-		let platform = find_platform(platform_name)
-			.ok_or::<ocl::Error>("Can't find OpenCL platform".into())?;
-		let p_name = platform.name()?;
-		let device = find_device(&platform, device_id)?;
-		let mut buffers = HashMap::new();
-		buffers.insert(
-			"A1".to_string(),
-			ClBufferParams {
-				size: BUFFER_SIZE_A1,
-				flags: MemFlags::empty(),
-			},
-		);
-		buffers.insert(
-			"A2".to_string(),
-			ClBufferParams {
-				size: BUFFER_SIZE_A2,
-				flags: MemFlags::empty(),
-			},
-		);
-		buffers.insert(
-			"B".to_string(),
-			ClBufferParams {
-				size: BUFFER_SIZE_B,
-				flags: MemFlags::empty(),
-			},
-		);
-		buffers.insert(
-			"I1".to_string(),
-			ClBufferParams {
-				size: INDEX_SIZE,
-				flags: MemFlags::empty(),
-			},
-		);
-		buffers.insert(
-			"I2".to_string(),
-			ClBufferParams {
-				size: INDEX_SIZE,
-				flags: MemFlags::empty(),
-			},
-		);
-		buffers.insert(
-			"R".to_string(),
-			ClBufferParams {
-				size: 42 * 2,
-				flags: MemFlags::READ_ONLY,
-			},
-		);
-		buffers.insert(
-			"NONCES".to_string(),
-			ClBufferParams {
-				size: INDEX_SIZE,
-				flags: MemFlags::empty(),
-			},
-		);
+    pub fn build(platform_name: Option<&str>, device_id: Option<usize>) -> ocl::Result<Trimmer> {
+        env::set_var("GPU_MAX_HEAP_SIZE", "100");
+        env::set_var("GPU_USE_SYNC_OBJECTS", "1");
+        env::set_var("GPU_MAX_ALLOC_PERCENT", "100");
+        env::set_var("GPU_SINGLE_ALLOC_PERCENT", "100");
+        env::set_var("GPU_64BIT_ATOMICS", "1");
+        env::set_var("GPU_MAX_WORKGROUP_SIZE", "1024");
+        let platform = find_platform(platform_name)
+            .ok_or::<ocl::Error>("Can't find OpenCL platform".into())?;
+        let p_name = platform.name()?;
+        let device = find_device(&platform, device_id)?;
+        let mut buffers = HashMap::new();
+        buffers.insert(
+            "A1".to_string(),
+            ClBufferParams {
+                size: BUFFER_SIZE_A1,
+                flags: MemFlags::empty(),
+            },
+        );
+        buffers.insert(
+            "A2".to_string(),
+            ClBufferParams {
+                size: BUFFER_SIZE_A2,
+                flags: MemFlags::empty(),
+            },
+        );
+        buffers.insert(
+            "B".to_string(),
+            ClBufferParams {
+                size: BUFFER_SIZE_B,
+                flags: MemFlags::empty(),
+            },
+        );
+        buffers.insert(
+            "I1".to_string(),
+            ClBufferParams {
+                size: INDEX_SIZE,
+                flags: MemFlags::empty(),
+            },
+        );
+        buffers.insert(
+            "I2".to_string(),
+            ClBufferParams {
+                size: INDEX_SIZE,
+                flags: MemFlags::empty(),
+            },
+        );
+        buffers.insert(
+            "R".to_string(),
+            ClBufferParams {
+                size: 42 * 2,
+                flags: MemFlags::READ_ONLY,
+            },
+        );
+        buffers.insert(
+            "NONCES".to_string(),
+            ClBufferParams {
+                size: INDEX_SIZE,
+                flags: MemFlags::empty(),
+            },
+        );
 
-		check_device_compatibility(&device, &buffers)?;
+        check_device_compatibility(&device, &buffers)?;
 
-		let context = Context::builder()
-			.platform(platform)
-			.devices(device)
-			.build()?;
+        let context = Context::builder()
+            .platform(platform)
+            .devices(device)
+            .build()?;
 
-		let q = Queue::new(&context, device, queue_props())?;
+        let q = Queue::new(&context, device, queue_props())?;
 
-		let program = Program::builder()
-			.devices(device)
-			.src(SRC)
-			.build(&context)?;
+        let program = Program::builder()
+            .devices(device)
+            .src(SRC)
+            .build(&context)?;
 
-		let buffer_a1 = build_buffer(buffers.get("A1"), &q)?;
-		let buffer_a2 = build_buffer(buffers.get("A2"), &q)?;
-		let buffer_b = build_buffer(buffers.get("B"), &q)?;
-		let buffer_i1 = build_buffer(buffers.get("I1"), &q)?;
-		let buffer_i2 = build_buffer(buffers.get("I2"), &q)?;
-		let buffer_r = build_buffer(buffers.get("R"), &q)?;
-		let buffer_nonces = build_buffer(buffers.get("NONCES"), &q)?;
+        let buffer_a1 = build_buffer(buffers.get("A1"), &q)?;
+        let buffer_a2 = build_buffer(buffers.get("A2"), &q)?;
+        let buffer_b = build_buffer(buffers.get("B"), &q)?;
+        let buffer_i1 = build_buffer(buffers.get("I1"), &q)?;
+        let buffer_i2 = build_buffer(buffers.get("I2"), &q)?;
+        let buffer_r = build_buffer(buffers.get("R"), &q)?;
+        let buffer_nonces = build_buffer(buffers.get("NONCES"), &q)?;
 
-		Ok(Trimmer {
-			q,
-			program,
-			buffer_a1,
-			buffer_a2,
-			buffer_b,
-			buffer_i1,
-			buffer_i2,
-			buffer_r,
-			buffer_nonces,
-			device_name: device.name()?,
-			device_id: device_id.unwrap_or(0),
-			is_nvidia: p_name.to_lowercase().contains("nvidia"),
-		})
-	}
+        Ok(Trimmer {
+            q,
+            program,
+            buffer_a1,
+            buffer_a2,
+            buffer_b,
+            buffer_i1,
+            buffer_i2,
+            buffer_r,
+            buffer_nonces,
+            device_name: device.name()?,
+            device_id: device_id.unwrap_or(0),
+            is_nvidia: p_name.to_lowercase().contains("nvidia"),
+        })
+    }
 
-	pub unsafe fn recover(
-		&self,
-		mut nodes: Vec<u32>,
-		k: &[u64; 4],
-	) -> ocl::Result<(Vec<u32>, bool)> {
-		let event_list = EventList::new();
-		let names = vec![];
+    pub unsafe fn recover(
+        &self,
+        mut nodes: Vec<u32>,
+        k: &[u64; 4],
+    ) -> ocl::Result<(Vec<u32>, bool)> {
+        let event_list = EventList::new();
+        let names = vec![];
 
-		let mut kernel_recovery = kernel_builder!(self, "FluffyRecovery", 2048 * 256)
-			.arg(k[0])
-			.arg(k[1])
-			.arg(k[2])
-			.arg(k[3])
-			.arg(None::<&Buffer<u64>>)
-			.arg(None::<&Buffer<i32>>)
-			.build()?;
+        let mut kernel_recovery = kernel_builder!(self, "FluffyRecovery", 2048 * 256)
+            .arg(k[0])
+            .arg(k[1])
+            .arg(k[2])
+            .arg(k[3])
+            .arg(None::<&Buffer<u64>>)
+            .arg(None::<&Buffer<i32>>)
+            .build()?;
 
-		if self.is_nvidia {
-			kernel_recovery.set_default_local_work_size(SpatialDims::One(256));
-		}
+        if self.is_nvidia {
+            kernel_recovery.set_default_local_work_size(SpatialDims::One(256));
+        }
 
-		kernel_recovery.set_arg_unchecked(4, ArgVal::mem(&self.buffer_r))?;
-		kernel_recovery.set_arg_unchecked(5, ArgVal::mem(&self.buffer_nonces))?;
+        kernel_recovery.set_arg_unchecked(4, ArgVal::mem(&self.buffer_r))?;
+        kernel_recovery.set_arg_unchecked(5, ArgVal::mem(&self.buffer_nonces))?;
 
-		nodes.push(nodes[0]);
+        nodes.push(nodes[0]);
 
-		let edges = nodes.windows(2).flatten().map(|v| *v).collect::<Vec<u32>>();
-		self.buffer_r.cmd().write(edges.as_slice()).enq()?;
-		self.buffer_nonces.cmd().fill(0, None).enq()?;
-		kernel_enq!(kernel_recovery, event_list, names, "recovery");
-		let mut nonces: Vec<u32> = vec![0; 42];
+        let edges = nodes.windows(2).flatten().map(|v| *v).collect::<Vec<u32>>();
+        self.buffer_r.cmd().write(edges.as_slice()).enq()?;
+        self.buffer_nonces.cmd().fill(0, None).enq()?;
+        kernel_enq!(kernel_recovery, event_list, names, "recovery");
+        let mut nonces: Vec<u32> = vec![0; 42];
 
-		self.buffer_nonces.cmd().read(&mut nonces).enq()?;
-		self.q.finish()?;
-		for i in 0..names.len() {
-			print_event(names[i], &event_list[i]);
-		}
-		nonces.sort();
-		let valid = nonces.windows(2).all(|entry| match entry {
-			[p, n] => p < n,
-			_ => true,
-		});
-		Ok((nonces, valid))
-	}
+        self.buffer_nonces.cmd().read(&mut nonces).enq()?;
+        self.q.finish()?;
+        for i in 0..names.len() {
+            print_event(names[i], &event_list[i]);
+        }
+        nonces.sort();
+        let valid = nonces.windows(2).all(|entry| match entry {
+            [p, n] => p < n,
+            _ => true,
+        });
+        Ok((nonces, valid))
+    }
 
-	pub unsafe fn run(&self, k: &[u64; 4]) -> ocl::Result<Vec<u32>> {
-		let mut kernel_seed_a = kernel_builder!(self, "FluffySeed2A", 2048 * 128)
-			.arg(k[0])
-			.arg(k[1])
-			.arg(k[2])
-			.arg(k[3])
-			.arg(None::<&Buffer<Ulong4>>)
-			.arg(None::<&Buffer<Ulong4>>)
-			.arg(None::<&Buffer<u32>>)
-			.build()?;
-		if self.is_nvidia {
-			kernel_seed_a.set_default_local_work_size(SpatialDims::One(128));
-		}
-		kernel_seed_a.set_arg_unchecked(4, ArgVal::mem(&self.buffer_b))?;
-		kernel_seed_a.set_arg_unchecked(5, ArgVal::mem(&self.buffer_a1))?;
-		kernel_seed_a.set_arg_unchecked(6, ArgVal::mem(&self.buffer_i1))?;
+    pub unsafe fn run(&self, k: &[u64; 4]) -> ocl::Result<Vec<u32>> {
+        let mut kernel_seed_a = kernel_builder!(self, "FluffySeed2A", 2048 * 128)
+            .arg(k[0])
+            .arg(k[1])
+            .arg(k[2])
+            .arg(k[3])
+            .arg(None::<&Buffer<Ulong4>>)
+            .arg(None::<&Buffer<Ulong4>>)
+            .arg(None::<&Buffer<u32>>)
+            .build()?;
+        if self.is_nvidia {
+            kernel_seed_a.set_default_local_work_size(SpatialDims::One(128));
+        }
+        kernel_seed_a.set_arg_unchecked(4, ArgVal::mem(&self.buffer_b))?;
+        kernel_seed_a.set_arg_unchecked(5, ArgVal::mem(&self.buffer_a1))?;
+        kernel_seed_a.set_arg_unchecked(6, ArgVal::mem(&self.buffer_i1))?;
 
-		let mut kernel_seed_b1 = kernel_builder!(self, "FluffySeed2B", 1024 * 128)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<Ulong4>>)
-			.arg(None::<&Buffer<Ulong4>>)
-			.arg(None::<&Buffer<i32>>)
-			.arg(None::<&Buffer<i32>>)
-			.arg(32)
-			.build()?;
-		if self.is_nvidia {
-			kernel_seed_b1.set_default_local_work_size(SpatialDims::One(128));
-		}
-		kernel_seed_b1.set_arg_unchecked(0, ArgVal::mem(&self.buffer_a1))?;
-		kernel_seed_b1.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a1))?;
-		kernel_seed_b1.set_arg_unchecked(2, ArgVal::mem(&self.buffer_a2))?;
-		kernel_seed_b1.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i1))?;
-		kernel_seed_b1.set_arg_unchecked(4, ArgVal::mem(&self.buffer_i2))?;
+        let mut kernel_seed_b1 = kernel_builder!(self, "FluffySeed2B", 1024 * 128)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<Ulong4>>)
+            .arg(None::<&Buffer<Ulong4>>)
+            .arg(None::<&Buffer<i32>>)
+            .arg(None::<&Buffer<i32>>)
+            .arg(32)
+            .build()?;
+        if self.is_nvidia {
+            kernel_seed_b1.set_default_local_work_size(SpatialDims::One(128));
+        }
+        kernel_seed_b1.set_arg_unchecked(0, ArgVal::mem(&self.buffer_a1))?;
+        kernel_seed_b1.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a1))?;
+        kernel_seed_b1.set_arg_unchecked(2, ArgVal::mem(&self.buffer_a2))?;
+        kernel_seed_b1.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i1))?;
+        kernel_seed_b1.set_arg_unchecked(4, ArgVal::mem(&self.buffer_i2))?;
 
-		let mut kernel_seed_b2 = kernel_builder!(self, "FluffySeed2B", 1024 * 128)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<Ulong4>>)
-			.arg(None::<&Buffer<Ulong4>>)
-			.arg(None::<&Buffer<i32>>)
-			.arg(None::<&Buffer<i32>>)
-			.arg(0)
-			.build()?;
-		if self.is_nvidia {
-			kernel_seed_b2.set_default_local_work_size(SpatialDims::One(128));
-		}
+        let mut kernel_seed_b2 = kernel_builder!(self, "FluffySeed2B", 1024 * 128)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<Ulong4>>)
+            .arg(None::<&Buffer<Ulong4>>)
+            .arg(None::<&Buffer<i32>>)
+            .arg(None::<&Buffer<i32>>)
+            .arg(0)
+            .build()?;
+        if self.is_nvidia {
+            kernel_seed_b2.set_default_local_work_size(SpatialDims::One(128));
+        }
 
-		kernel_seed_b2.set_arg_unchecked(0, ArgVal::mem(&self.buffer_b))?;
-		kernel_seed_b2.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a1))?;
-		kernel_seed_b2.set_arg_unchecked(2, ArgVal::mem(&self.buffer_a2))?;
-		kernel_seed_b2.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i1))?;
-		kernel_seed_b2.set_arg_unchecked(4, ArgVal::mem(&self.buffer_i2))?;
+        kernel_seed_b2.set_arg_unchecked(0, ArgVal::mem(&self.buffer_b))?;
+        kernel_seed_b2.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a1))?;
+        kernel_seed_b2.set_arg_unchecked(2, ArgVal::mem(&self.buffer_a2))?;
+        kernel_seed_b2.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i1))?;
+        kernel_seed_b2.set_arg_unchecked(4, ArgVal::mem(&self.buffer_i2))?;
 
-		let mut kernel_round1 = kernel_builder!(self, "FluffyRound1", 4096 * 1024)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<i32>>)
-			.arg(None::<&Buffer<i32>>)
-			.arg((DUCK_SIZE_A * 1024) as i32)
-			.arg((DUCK_SIZE_B * 1024) as i32)
-			.build()?;
-		if self.is_nvidia {
-			kernel_round1.set_default_local_work_size(SpatialDims::One(1024));
-		}
+        let mut kernel_round1 = kernel_builder!(self, "FluffyRound1", 4096 * 1024)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<i32>>)
+            .arg(None::<&Buffer<i32>>)
+            .arg((DUCK_SIZE_A * 1024) as i32)
+            .arg((DUCK_SIZE_B * 1024) as i32)
+            .build()?;
+        if self.is_nvidia {
+            kernel_round1.set_default_local_work_size(SpatialDims::One(1024));
+        }
 
-		kernel_round1.set_arg_unchecked(0, ArgVal::mem(&self.buffer_a1))?;
-		kernel_round1.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a2))?;
-		kernel_round1.set_arg_unchecked(2, ArgVal::mem(&self.buffer_b))?;
-		kernel_round1.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i2))?;
-		kernel_round1.set_arg_unchecked(4, ArgVal::mem(&self.buffer_i1))?;
+        kernel_round1.set_arg_unchecked(0, ArgVal::mem(&self.buffer_a1))?;
+        kernel_round1.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a2))?;
+        kernel_round1.set_arg_unchecked(2, ArgVal::mem(&self.buffer_b))?;
+        kernel_round1.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i2))?;
+        kernel_round1.set_arg_unchecked(4, ArgVal::mem(&self.buffer_i1))?;
 
-		let mut kernel_round0 = kernel_builder!(self, "FluffyRoundNO1", 4096 * 1024)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<i32>>)
-			.arg(None::<&Buffer<i32>>)
-			.build()?;
-		if self.is_nvidia {
-			kernel_round0.set_default_local_work_size(SpatialDims::One(1024));
-		}
-		kernel_round0.set_arg_unchecked(0, ArgVal::mem(&self.buffer_b))?;
-		kernel_round0.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a1))?;
-		kernel_round0.set_arg_unchecked(2, ArgVal::mem(&self.buffer_i1))?;
-		kernel_round0.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i2))?;
+        let mut kernel_round0 = kernel_builder!(self, "FluffyRoundNO1", 4096 * 1024)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<i32>>)
+            .arg(None::<&Buffer<i32>>)
+            .build()?;
+        if self.is_nvidia {
+            kernel_round0.set_default_local_work_size(SpatialDims::One(1024));
+        }
+        kernel_round0.set_arg_unchecked(0, ArgVal::mem(&self.buffer_b))?;
+        kernel_round0.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a1))?;
+        kernel_round0.set_arg_unchecked(2, ArgVal::mem(&self.buffer_i1))?;
+        kernel_round0.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i2))?;
 
-		let mut kernel_round_na = kernel_builder!(self, "FluffyRoundNON", 4096 * 1024)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<i32>>)
-			.arg(None::<&Buffer<i32>>)
-			.build()?;
-		if self.is_nvidia {
-			kernel_round_na.set_default_local_work_size(SpatialDims::One(1024));
-		}
-		kernel_round_na.set_arg_unchecked(0, ArgVal::mem(&self.buffer_b))?;
-		kernel_round_na.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a1))?;
-		kernel_round_na.set_arg_unchecked(2, ArgVal::mem(&self.buffer_i1))?;
-		kernel_round_na.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i2))?;
+        let mut kernel_round_na = kernel_builder!(self, "FluffyRoundNON", 4096 * 1024)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<i32>>)
+            .arg(None::<&Buffer<i32>>)
+            .build()?;
+        if self.is_nvidia {
+            kernel_round_na.set_default_local_work_size(SpatialDims::One(1024));
+        }
+        kernel_round_na.set_arg_unchecked(0, ArgVal::mem(&self.buffer_b))?;
+        kernel_round_na.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a1))?;
+        kernel_round_na.set_arg_unchecked(2, ArgVal::mem(&self.buffer_i1))?;
+        kernel_round_na.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i2))?;
 
-		let mut kernel_round_nb = kernel_builder!(self, "FluffyRoundNON", 4096 * 1024)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<i32>>)
-			.arg(None::<&Buffer<i32>>)
-			.build()?;
-		if self.is_nvidia {
-			kernel_round_nb.set_default_local_work_size(SpatialDims::One(1024));
-		}
-		kernel_round_nb.set_arg_unchecked(0, ArgVal::mem(&self.buffer_a1))?;
-		kernel_round_nb.set_arg_unchecked(1, ArgVal::mem(&self.buffer_b))?;
-		kernel_round_nb.set_arg_unchecked(2, ArgVal::mem(&self.buffer_i2))?;
-		kernel_round_nb.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i1))?;
+        let mut kernel_round_nb = kernel_builder!(self, "FluffyRoundNON", 4096 * 1024)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<i32>>)
+            .arg(None::<&Buffer<i32>>)
+            .build()?;
+        if self.is_nvidia {
+            kernel_round_nb.set_default_local_work_size(SpatialDims::One(1024));
+        }
+        kernel_round_nb.set_arg_unchecked(0, ArgVal::mem(&self.buffer_a1))?;
+        kernel_round_nb.set_arg_unchecked(1, ArgVal::mem(&self.buffer_b))?;
+        kernel_round_nb.set_arg_unchecked(2, ArgVal::mem(&self.buffer_i2))?;
+        kernel_round_nb.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i1))?;
 
-		let mut kernel_tail = kernel_builder!(self, "FluffyTailO", 4096 * 1024)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<Uint2>>)
-			.arg(None::<&Buffer<i32>>)
-			.arg(None::<&Buffer<i32>>)
-			.build()?;
-		if self.is_nvidia {
-			kernel_tail.set_default_local_work_size(SpatialDims::One(1024));
-		}
-		kernel_tail.set_arg_unchecked(0, ArgVal::mem(&self.buffer_b))?;
-		kernel_tail.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a1))?;
-		kernel_tail.set_arg_unchecked(2, ArgVal::mem(&self.buffer_i1))?;
-		kernel_tail.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i2))?;
+        let mut kernel_tail = kernel_builder!(self, "FluffyTailO", 4096 * 1024)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<Uint2>>)
+            .arg(None::<&Buffer<i32>>)
+            .arg(None::<&Buffer<i32>>)
+            .build()?;
+        if self.is_nvidia {
+            kernel_tail.set_default_local_work_size(SpatialDims::One(1024));
+        }
+        kernel_tail.set_arg_unchecked(0, ArgVal::mem(&self.buffer_b))?;
+        kernel_tail.set_arg_unchecked(1, ArgVal::mem(&self.buffer_a1))?;
+        kernel_tail.set_arg_unchecked(2, ArgVal::mem(&self.buffer_i1))?;
+        kernel_tail.set_arg_unchecked(3, ArgVal::mem(&self.buffer_i2))?;
 
-		let event_list = EventList::new();
-		let names = vec![];
+        let event_list = EventList::new();
+        let names = vec![];
 
-		let mut edges_count: Vec<u32> = vec![0; 1];
-		clear_buffer!(self.buffer_i1);
-		clear_buffer!(self.buffer_i2);
-		kernel_enq!(kernel_seed_a, event_list, names, "seedA");
-		kernel_enq!(kernel_seed_b1, event_list, names, "seedB1");
-		kernel_enq!(kernel_seed_b2, event_list, names, "seedB2");
-		clear_buffer!(self.buffer_i1);
-		kernel_enq!(kernel_round1, event_list, names, "round1");
-		clear_buffer!(self.buffer_i2);
-		kernel_enq!(kernel_round0, event_list, names, "roundN0");
-		clear_buffer!(self.buffer_i1);
-		kernel_enq!(kernel_round_nb, event_list, names, "roundNB");
-		for _ in 0..120 {
-			clear_buffer!(self.buffer_i2);
-			kernel_enq!(kernel_round_na, event_list, names, "roundNA");
-			clear_buffer!(self.buffer_i1);
-			kernel_enq!(kernel_round_nb, event_list, names, "roundNB");
-		}
-		clear_buffer!(self.buffer_i2);
-		kernel_enq!(kernel_tail, event_list, names, "tail");
+        let mut edges_count: Vec<u32> = vec![0; 1];
+        clear_buffer!(self.buffer_i1);
+        clear_buffer!(self.buffer_i2);
+        kernel_enq!(kernel_seed_a, event_list, names, "seedA");
+        kernel_enq!(kernel_seed_b1, event_list, names, "seedB1");
+        kernel_enq!(kernel_seed_b2, event_list, names, "seedB2");
+        clear_buffer!(self.buffer_i1);
+        kernel_enq!(kernel_round1, event_list, names, "round1");
+        clear_buffer!(self.buffer_i2);
+        kernel_enq!(kernel_round0, event_list, names, "roundN0");
+        clear_buffer!(self.buffer_i1);
+        kernel_enq!(kernel_round_nb, event_list, names, "roundNB");
+        for _ in 0..120 {
+            clear_buffer!(self.buffer_i2);
+            kernel_enq!(kernel_round_na, event_list, names, "roundNA");
+            clear_buffer!(self.buffer_i1);
+            kernel_enq!(kernel_round_nb, event_list, names, "roundNB");
+        }
+        clear_buffer!(self.buffer_i2);
+        kernel_enq!(kernel_tail, event_list, names, "tail");
 
-		self.buffer_i2.cmd().read(&mut edges_count).enq()?;
+        self.buffer_i2.cmd().read(&mut edges_count).enq()?;
 
-		let mut edges_left: Vec<u32> = vec![0; (edges_count[0] * 2) as usize];
+        let mut edges_left: Vec<u32> = vec![0; (edges_count[0] * 2) as usize];
 
-		self.buffer_a1.cmd().read(&mut edges_left).enq()?;
-		self.q.finish()?;
-		for i in 0..names.len() {
-			print_event(names[i], &event_list[i]);
-		}
-		clear_buffer!(self.buffer_i1);
-		clear_buffer!(self.buffer_i2);
-		self.q.finish()?;
-		Ok(edges_left)
-	}
+        self.buffer_a1.cmd().read(&mut edges_left).enq()?;
+        self.q.finish()?;
+        for i in 0..names.len() {
+            print_event(names[i], &event_list[i]);
+        }
+        clear_buffer!(self.buffer_i1);
+        clear_buffer!(self.buffer_i2);
+        self.q.finish()?;
+        Ok(edges_left)
+    }
 }
 
 #[cfg(feature = "profile")]
 fn print_event(name: &str, ev: &Event) {
-	let submit = ev
-		.profiling_info(ProfilingInfo::Submit)
-		.unwrap()
-		.time()
-		.unwrap();
-	let queued = ev
-		.profiling_info(ProfilingInfo::Queued)
-		.unwrap()
-		.time()
-		.unwrap();
-	let start = ev
-		.profiling_info(ProfilingInfo::Start)
-		.unwrap()
-		.time()
-		.unwrap();
-	let end = ev
-		.profiling_info(ProfilingInfo::End)
-		.unwrap()
-		.time()
-		.unwrap();
-	println!(
-		"{}\t total {}ms \t queued->submit {}mc \t submit->start {}ms \t start->end {}ms",
-		name,
-		(end - queued) / 1_000_000,
-		(submit - queued) / 1_000,
-		(start - submit) / 1_000_000,
-		(end - start) / 1_000_000
-	);
+    let submit = ev
+        .profiling_info(ProfilingInfo::Submit)
+        .unwrap()
+        .time()
+        .unwrap();
+    let queued = ev
+        .profiling_info(ProfilingInfo::Queued)
+        .unwrap()
+        .time()
+        .unwrap();
+    let start = ev
+        .profiling_info(ProfilingInfo::Start)
+        .unwrap()
+        .time()
+        .unwrap();
+    let end = ev
+        .profiling_info(ProfilingInfo::End)
+        .unwrap()
+        .time()
+        .unwrap();
+    println!(
+        "{}\t total {}ms \t queued->submit {}mc \t submit->start {}ms \t start->end {}ms",
+        name,
+        (end - queued) / 1_000_000,
+        (submit - queued) / 1_000,
+        (start - submit) / 1_000_000,
+        (end - start) / 1_000_000
+    );
 }
 
 #[cfg(not(feature = "profile"))]
 fn print_event(_name: &str, _ev: &Event) {}
 
 fn find_platform(selector: Option<&str>) -> Option<Platform> {
-	match selector {
-		None => Some(Platform::default()),
-		Some(sel) => Platform::list().into_iter().find(|p| {
-			if let Ok(vendor) = p.name() {
-				vendor.contains(sel)
-			} else {
-				false
-			}
-		}),
-	}
+    match selector {
+        None => Some(Platform::default()),
+        Some(sel) => Platform::list().into_iter().find(|p| {
+            if let Ok(vendor) = p.name() {
+                vendor.contains(sel)
+            } else {
+                false
+            }
+        }),
+    }
 }
 
 fn find_device(platform: &Platform, selector: Option<usize>) -> ocl::Result<Device> {
-	match selector {
-		None => Device::first(platform),
-		Some(index) => Device::by_idx_wrap(platform, index),
-	}
+    match selector {
+        None => Device::first(platform),
+        Some(index) => Device::by_idx_wrap(platform, index),
+    }
 }
 
 fn check_device_compatibility(
-	device: &Device,
-	buffers: &HashMap<String, ClBufferParams>,
+    device: &Device,
+    buffers: &HashMap<String, ClBufferParams>,
 ) -> ocl::Result<()> {
-	let max_alloc_size: u64 = get_device_info!(device, MaxMemAllocSize);
-	let global_memory_size: u64 = get_device_info!(device, GlobalMemSize);
-	let mut total_alloc: u64 = 0;
+    let max_alloc_size: u64 = get_device_info!(device, MaxMemAllocSize);
+    let global_memory_size: u64 = get_device_info!(device, GlobalMemSize);
+    let mut total_alloc: u64 = 0;
 
-	// Check that no buffer is bigger than the max memory allocation size
-	for (k, v) in buffers {
-		total_alloc += v.size as u64;
-		if v.size as u64 > max_alloc_size {
-			return Err(ocl::Error::from(format!(
-				"Buffer {} is bigger than maximum alloc size ({})",
-				k, max_alloc_size
-			)));
-		}
-	}
+    // Check that no buffer is bigger than the max memory allocation size
+    for (k, v) in buffers {
+        total_alloc += v.size as u64;
+        if v.size as u64 > max_alloc_size {
+            return Err(ocl::Error::from(format!(
+                "Buffer {} is bigger than maximum alloc size ({})",
+                k, max_alloc_size
+            )));
+        }
+    }
 
-	// Check that total buffer allocation does not exceed global memory size
-	if total_alloc > global_memory_size {
-		return Err(ocl::Error::from(format!(
-			"Total needed memory is bigger than device's capacity ({})",
-			global_memory_size
-		)));
-	}
+    // Check that total buffer allocation does not exceed global memory size
+    if total_alloc > global_memory_size {
+        return Err(ocl::Error::from(format!(
+            "Total needed memory is bigger than device's capacity ({})",
+            global_memory_size
+        )));
+    }
 
-	Ok(())
+    Ok(())
 }
 
 fn build_buffer(params: Option<&ClBufferParams>, q: &Queue) -> ocl::Result<Buffer<u32>> {
-	match params {
-		None => Err(ocl::Error::from("Invalid parameters")),
-		Some(p) => Buffer::<u32>::builder()
-			.queue(q.clone())
-			.len(p.size)
-			.flags(p.flags)
-			.fill_val(0)
-			.build(),
-	}
+    match params {
+        None => Err(ocl::Error::from("Invalid parameters")),
+        Some(p) => Buffer::<u32>::builder()
+            .queue(q.clone())
+            .len(p.size)
+            .flags(p.flags)
+            .fill_val(0)
+            .build(),
+    }
 }
 
 const SRC: &str = r#"

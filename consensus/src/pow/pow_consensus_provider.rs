@@ -16,6 +16,7 @@ use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::account_address::AccountAddress;
+use miner::config::MinerConfig;
 use miner::server::setup_minerproxy_service;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
@@ -79,7 +80,9 @@ impl PowConsensusProvider {
         // Start miner client.
         if node_config.consensus.miner_client_enable {
             task::spawn(async move {
-                let mine_client = MineClient::new(miner_rpc_addr);
+                let mut cfg = MinerConfig::default();
+                cfg.miner_server_addr = miner_rpc_addr;
+                let mine_client = MineClient::new(cfg);
                 mine_client.start().await
             });
         }

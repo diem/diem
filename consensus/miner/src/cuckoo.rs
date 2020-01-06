@@ -61,13 +61,13 @@ pub fn verify(header: &[u8], nonce: u32, solution: Solution) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use cuckoo::PROOF_SIZE;
     use crate::config::MinerConfig;
+    use cuckoo::PROOF_SIZE;
     #[test]
     fn test_mine() {
         let header = vec![0u8; 80];
         let nonce = 99;
-        let solution = mine(&header, nonce,1,2);
+        let solution = mine(&header, nonce, 1, 2);
         let s64: [u64; PROOF_SIZE] = solution.clone().into();
         println!("solution:{:?},{:?}", s64.to_vec(), solution.hash());
         assert!(verify(&header, nonce, solution.clone()));

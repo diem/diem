@@ -1,8 +1,8 @@
+use crate::config::MinerConfig;
 use crate::cuckoo;
 use crate::types::{set_header_nonce, Algo, Solution, H256, U256};
 use rand::Rng;
 use scrypt::scrypt_1024_1_1_256;
-use crate::config::MinerConfig;
 
 fn calculate_pow_hash(header: &[u8], nonce: u32, cfg: &MinerConfig) -> (H256, Solution) {
     match cfg.algorithm {
@@ -66,7 +66,7 @@ pub fn verify(header: &[u8], nonce: u32, solution: Solution, algo: &Algo, target
 #[cfg(test)]
 mod test {
     use super::*;
-    
+
     #[ignore] // Too slow, ignore it
     #[test]
     fn test_solve() {

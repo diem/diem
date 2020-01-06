@@ -72,12 +72,12 @@ pub unsafe extern "C" fn fill_default_params(params: *mut SolverParams) {
 pub unsafe extern "C" fn run_solver(
     ctx: *mut SolverCtx,
     header_ptr: *const c_uchar,
-    header_length: uint32_t,
-    nonce: uint64_t,
-    _range: uint32_t,
+    header_length: u32,
+    nonce: u64,
+    _range: u32,
     solutions: *mut SolverSolutions,
     stats: *mut SolverStats,
-) -> uint32_t {
+) -> u32 {
     let start = SystemTime::now();
     let solver_ptr = mem::transmute::<*mut SolverCtx, *mut Solver>(ctx);
     let solver = &*solver_ptr;

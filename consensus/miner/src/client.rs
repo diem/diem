@@ -1,6 +1,6 @@
+use crate::config::MinerConfig;
 use crate::miner;
 use crate::types::{Algo, MineCtx, U256};
-use crate::config::MinerConfig;
 use async_std::{
     prelude::*,
     stream::Stream,
@@ -31,7 +31,11 @@ impl MineCtxStream {
                 }
             }
         });
-        MineCtxStream { client, waker, algo }
+        MineCtxStream {
+            client,
+            waker,
+            algo,
+        }
     }
 }
 
@@ -44,20 +48,20 @@ impl Stream for MineCtxStream {
         match self
             .client
             .get_mine_ctx(&MineCtxRequest { algo: algo.into() })
-            {
-                Ok(resp) => {
-                    if let Some(mine_ctx_rpc) = resp.mine_ctx {
-                        Poll::Ready(Some(mine_ctx_rpc.into()))
-                    } else {
-                        *waker = Some(cx.waker().clone());
-                        Poll::Pending
-                    }
-                }
-                Err(_e) => {
+        {
+            Ok(resp) => {
+                if let Some(mine_ctx_rpc) = resp.mine_ctx {
+                    Poll::Ready(Some(mine_ctx_rpc.into()))
+                } else {
                     *waker = Some(cx.waker().clone());
                     Poll::Pending
                 }
             }
+            Err(_e) => {
+                *waker = Some(cx.waker().clone());
+                Poll::Pending
+            }
+        }
     }
 }
 
@@ -81,10 +85,11 @@ impl MineClient {
     }
 
     pub async fn start(&self) {
-        let mut ctx_stream = MineCtxStream::new(self.rpc_client.clone(), self.cfg.algorithm.clone());
+        let mut ctx_stream =
+            MineCtxStream::new(self.rpc_client.clone(), self.cfg.algorithm.clone());
         while let Some(ctx) = ctx_stream.next().await {
             let target: U256 = ctx.target.clone().unwrap().into();
-            let (nonce, solution) = miner::solve(&ctx.header,  &target,&self.cfg);
+            let (nonce, solution) = miner::solve(&ctx.header, &target, &self.cfg);
             let req = MinedBlockRequest {
                 mine_ctx: Some(ctx.into()),
                 nonce,
