@@ -1,14 +1,15 @@
 use crate::types::{set_header_nonce, Solution};
-use cuckaroo::new_cuckaroo_ctx;
-use cuckaroo::CuckarooProof;
+use cuckoo::{CuckarooProof, CuckatooContext, PoWContext};
 use cuckoo_miner::{self, CuckooMinerError, PluginLibrary};
 use std::convert::Into;
 use std::env;
+
 #[allow(dead_code)]
 enum CuckooPlugin {
     Cuckaroo29Cpu,
     Cuckaroo19Cpu,
     OclCuckatoo,
+    Cuckatoo31Cpu,
 }
 
 impl Into<&str> for CuckooPlugin {
@@ -17,6 +18,7 @@ impl Into<&str> for CuckooPlugin {
             CuckooPlugin::Cuckaroo29Cpu => "cuckaroo_cpu_compat_29.cuckooplugin",
             CuckooPlugin::Cuckaroo19Cpu => "cuckaroo_cpu_compat_19.cuckooplugin",
             CuckooPlugin::OclCuckatoo => "ocl_cuckatoo.cuckooplugin",
+            CuckooPlugin::Cuckatoo31Cpu => "cuckatoo_mean_cpu_compat_31.cuckooplugin",
         }
     }
 }
@@ -31,7 +33,7 @@ fn load_plugin_lib(plugin: &str) -> Result<PluginLibrary, CuckooMinerError> {
 }
 
 pub fn mine(header: &[u8], nonce: u32) -> Solution {
-    let plugin = CuckooPlugin::OclCuckatoo;
+    let plugin = CuckooPlugin::Cuckatoo31Cpu;
     let pl = load_plugin_lib(plugin.into()).unwrap();
     let mut params = pl.get_default_params();
     let mut solutions = cuckoo_miner::SolverSolutions::default();
@@ -50,9 +52,8 @@ pub fn mine(header: &[u8], nonce: u32) -> Solution {
 }
 
 pub fn verify(header: &[u8], nonce: u32, solution: Solution) -> bool {
-    let mut ctx = new_cuckaroo_ctx::<u64>(19, 42).unwrap();
-
-    let _ = ctx.set_header_nonce(header.to_owned(), Some(nonce), true);
+    let mut ctx = CuckatooContext::<u64>::new_impl(31, 42, 1).unwrap();
+    let _ = ctx.set_header_nonce(header.to_owned(), Some(nonce), false);
     let proof = CuckarooProof::new(solution.into());
     ctx.verify(&proof).is_ok()
 }
@@ -60,15 +61,15 @@ pub fn verify(header: &[u8], nonce: u32, solution: Solution) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use cuckaroo::PROOF_SIZE;
+    use cuckoo::PROOF_SIZE;
 
     #[test]
     fn test_mine() {
         let header = vec![0u8; 80];
-        let nonce = 143;
+        let nonce = 99;
         let solution = mine(&header, nonce);
         let s64: [u64; PROOF_SIZE] = solution.clone().into();
-        assert!(verify(&header, nonce, solution.clone()));
         println!("solution:{:?},{:?}", s64.to_vec(), solution.hash());
+        assert!(verify(&header, nonce, solution.clone()));
     }
 }

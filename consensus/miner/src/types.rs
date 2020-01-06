@@ -2,7 +2,7 @@ use async_std::sync::{Receiver, Sender};
 
 pub use blake2_rfc::blake2b::blake2b;
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use cuckaroo::PROOF_SIZE;
+use cuckoo::PROOF_SIZE;
 pub use numext_fixed_hash::H256;
 pub use numext_fixed_uint::U256;
 use proto::miner::MineCtx as MineCtxRpc;

@@ -59,7 +59,7 @@ futures_locks = { version = "0.5.0", package = "futures-locks", features=["tokio
 tokio-timer = "0.2.11"
 async-std = { version = "1.0.1", features = ["unstable"]}
 itertools = { version = "0.8.0", default-features = false }
-cuckaroo = { path = "crypto/cuckaroo" }
+cuckoo = { path = "crypto/cuckoo" }
 scrypt = { path = "crypto/scrypt" }
 miner = { path = "miner" }
 block-storage-proto = { path = "block-storage-proto" }
