@@ -7,7 +7,7 @@ use std::convert::{From, Into};
 pub trait MineState: Send + Sync {
     fn get_current_mine_ctx(&self, algo: Algo) -> Option<MineCtx>;
     fn mine_accept(&self, mine_ctx: &MineCtx, solution: Vec<u8>, nonce: u64) -> bool;
-    fn mine_block(&mut self, header: Vec<u8>) -> (Receiver<Proof>, Sender<Proof>);
+    fn mine_block(&mut self, header: Vec<u8>) -> (Receiver<Option<Proof>>, Sender<Option<Proof>>);
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
