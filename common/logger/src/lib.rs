@@ -10,10 +10,8 @@
 //! ```rust, no_run
 //! use libra_logger::prelude::*;
 //!
-//! pub fn main() {
-//!     let _g = libra_logger::set_default_global_logger(false /* async */, Some(256));
-//!     info!("Starting...");
-//! }
+//! let _g = libra_logger::set_default_global_logger(false /* async */, Some(256));
+//! info!("Starting...");
 //! ```
 
 // This is really annoying. The `error!` and other macros in `slog_scope` depend on the

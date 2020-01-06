@@ -528,7 +528,7 @@ impl Arbitrary for SignatureToken {
             Just(ByteArray),
             Just(Address),
             // TODO: generate type actuals when generics is implemented
-            any::<(StructHandleIndex)>().prop_map(|sh_idx| Struct(sh_idx, vec![])),
+            any::<StructHandleIndex>().prop_map(|sh_idx| Struct(sh_idx, vec![])),
             any::<TypeParameterIndex>().prop_map(TypeParameter),
         ];
         leaf.prop_recursive(
