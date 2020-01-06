@@ -32,15 +32,15 @@ fn load_plugin_lib(plugin: &str) -> Result<PluginLibrary, CuckooMinerError> {
     PluginLibrary::new(p_path.to_str().unwrap())
 }
 
-pub fn mine(header: &[u8], nonce: u32) -> Solution {
+pub fn mine(header: &[u8], nonce: u32, nthread: u32, device: u32) -> Solution {
     let plugin = CuckooPlugin::Cuckatoo31Cpu;
     let pl = load_plugin_lib(plugin.into()).unwrap();
     let mut params = pl.get_default_params();
     let mut solutions = cuckoo_miner::SolverSolutions::default();
     let mut stats = cuckoo_miner::SolverStats::default();
-    params.nthreads = 4;
+    params.nthreads = nthread;
     params.mutate_nonce = false;
-    params.device = 2; // my gpu
+    params.device = device;
     let ctx = pl.create_solver_ctx(&mut params);
     let header = set_header_nonce(header, nonce);
     let _ = pl.run_solver(ctx, header.to_owned(), 0, 1, &mut solutions, &mut stats);
@@ -62,12 +62,12 @@ pub fn verify(header: &[u8], nonce: u32, solution: Solution) -> bool {
 mod test {
     use super::*;
     use cuckoo::PROOF_SIZE;
-
+    use crate::config::MinerConfig;
     #[test]
     fn test_mine() {
         let header = vec![0u8; 80];
         let nonce = 99;
-        let solution = mine(&header, nonce);
+        let solution = mine(&header, nonce,1,2);
         let s64: [u64; PROOF_SIZE] = solution.clone().into();
         println!("solution:{:?},{:?}", s64.to_vec(), solution.hash());
         assert!(verify(&header, nonce, solution.clone()));

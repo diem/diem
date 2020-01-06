@@ -1,5 +1,7 @@
 pub mod client;
-mod cuckoo;
 pub mod miner;
 pub mod server;
 pub mod types;
+pub mod config;
+
+mod cuckoo;

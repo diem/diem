@@ -2,11 +2,12 @@ use crate::cuckoo;
 use crate::types::{set_header_nonce, Algo, Solution, H256, U256};
 use rand::Rng;
 use scrypt::scrypt_1024_1_1_256;
+use crate::config::MinerConfig;
 
-fn calculate_pow_hash(header: &[u8], algo: &Algo, nonce: u32) -> (H256, Solution) {
-    match algo {
-        &Algo::CUCKOO => {
-            let solution = cuckoo::mine(&header, nonce);
+fn calculate_pow_hash(header: &[u8], nonce: u32, cfg: &MinerConfig) -> (H256, Solution) {
+    match cfg.algorithm {
+        Algo::CUCKOO => {
+            let solution = cuckoo::mine(&header, nonce, cfg.nthread, cfg.device);
             return (solution.hash(), solution);
         }
         _ => {
@@ -24,11 +25,11 @@ fn generate_nonce() -> u32 {
     rng.gen_range(0, u32::max_value())
 }
 
-pub fn solve(header: &[u8], algo: &Algo, target: &U256) -> (u32, Solution) {
+pub fn solve(header: &[u8], target: &U256, cfg: &MinerConfig) -> (u32, Solution) {
     let mut nonce = generate_nonce();
     loop {
-        let (hash, solution) = calculate_pow_hash(header, algo, nonce);
-        if *algo == Algo::CUCKOO && solution == Solution::default() {
+        let (hash, solution) = calculate_pow_hash(header, nonce, cfg);
+        if cfg.algorithm == Algo::CUCKOO && solution == Solution::default() {
             nonce += 1;
             continue;
         }
@@ -65,12 +66,17 @@ pub fn verify(header: &[u8], nonce: u32, solution: Solution, algo: &Algo, target
 #[cfg(test)]
 mod test {
     use super::*;
+    
+    #[ignore] // Too slow, ignore it
     #[test]
     fn test_solve() {
         let difficult: U256 = (1 as u32).into();
         let target = U256::max_value() / difficult;
         let header = "header is me".as_bytes();
-        let (nonce, solution) = solve(&header, &Algo::CUCKOO, &target);
+        let mut cfg = MinerConfig::default();
+        cfg.algorithm = Algo::CUCKOO;
+        cfg.device = 2;
+        let (nonce, solution) = solve(&header, &target, &cfg);
         assert_eq!(
             true,
             verify(&header, nonce, solution, &Algo::CUCKOO, &target)
