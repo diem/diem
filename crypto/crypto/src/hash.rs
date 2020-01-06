@@ -249,12 +249,12 @@ impl HashValue {
 
     /// Returns first SHORT_STRING_LENGTH bytes as String in hex
     pub fn short_str(&self) -> String {
-        hex::encode(&self.hash[0..SHORT_STRING_LENGTH]).to_string()
+        hex::encode(&self.hash[0..SHORT_STRING_LENGTH])
     }
 
     /// Full hex representation of a given hash value.
     pub fn to_hex(&self) -> String {
-        hex::encode(self.hash).to_string()
+        hex::encode(self.hash)
     }
 
     /// Parse a given hex string to a hash value.

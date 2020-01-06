@@ -161,11 +161,11 @@ impl NodeSetup {
         let block_store = Arc::new(BlockStore::new(
             storage.clone(),
             initial_data,
-            state_computer.clone(),
+            state_computer,
             10, // max pruned blocks in mem
         ));
 
-        let time_service = Arc::new(ClockTimeService::new(executor.clone()));
+        let time_service = Arc::new(ClockTimeService::new(executor));
 
         let proposal_generator = ProposalGenerator::new(
             author,
@@ -384,7 +384,7 @@ fn process_old_proposal_test() {
     let genesis_qc = certificate_for_genesis();
     let new_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let new_block_id = new_block.id();
-    let old_block = Block::new_proposal(vec![1], 1, 2, genesis_qc.clone(), &node.signer);
+    let old_block = Block::new_proposal(vec![1], 1, 2, genesis_qc, &node.signer);
     let old_block_id = old_block.id();
     block_on(async move {
         node.event_processor.process_proposed_block(new_block).await;
@@ -690,7 +690,7 @@ fn process_block_retrieval() {
         .unwrap();
 
     let genesis_qc = certificate_for_genesis();
-    let block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
+    let block = Block::new_proposal(vec![1], 1, 1, genesis_qc, &node.signer);
     let block_id = block.id();
 
     block_on(async move {

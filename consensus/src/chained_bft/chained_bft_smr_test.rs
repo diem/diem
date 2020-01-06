@@ -114,7 +114,7 @@ impl SMRNode {
         smr.start(
             Box::new(mempool.clone()),
             Arc::new(MockStateComputer::new(
-                commit_cb_sender.clone(),
+                commit_cb_sender,
                 Arc::clone(&storage),
                 executor_with_reconfig,
             )),

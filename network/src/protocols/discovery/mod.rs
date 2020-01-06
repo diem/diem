@@ -126,7 +126,7 @@ where
             &signer,
             self_peer_id,
             self_peer_info.clone(),
-            self_full_node_payload.clone(),
+            self_full_node_payload,
         );
         // We don't verify the self note because trusted_peers may not be populated yet
         let self_verified_note = VerifiedNote {

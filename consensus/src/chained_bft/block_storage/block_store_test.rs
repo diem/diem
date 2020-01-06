@@ -235,7 +235,7 @@ fn test_path_from_root() {
 
     assert_eq!(
         block_store.path_from_root(b3.id()),
-        Some(vec![b1.clone(), b2.clone(), b3.clone()])
+        Some(vec![b1, b2.clone(), b3.clone()])
     );
     assert_eq!(block_store.path_from_root(genesis.id()), Some(vec![]));
 
@@ -341,11 +341,11 @@ fn test_highest_qc() {
     // genesis <- a1 <- a2 <- a3
     let genesis = block_store.root();
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
-    assert_eq!(block_store.highest_certified_block(), genesis.clone());
+    assert_eq!(block_store.highest_certified_block(), genesis);
     let a2 = inserter.insert_block(&a1, 2, None);
-    assert_eq!(block_store.highest_certified_block(), a1.clone());
+    assert_eq!(block_store.highest_certified_block(), a1);
     let _a3 = inserter.insert_block(&a2, 3, None);
-    assert_eq!(block_store.highest_certified_block(), a2.clone());
+    assert_eq!(block_store.highest_certified_block(), a2);
 }
 
 #[test]

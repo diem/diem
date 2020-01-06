@@ -101,7 +101,7 @@ impl ValidatorConfig {
         let mut seed_peers = HashMap::new();
         seed_peers.insert(first_peer_id, vec![self.bootstrap.clone()]);
         let seed_peers_config = SeedPeersConfig { seed_peers };
-        validator_network.seed_peers = seed_peers_config.clone();
+        validator_network.seed_peers = seed_peers_config;
 
         Ok(config)
     }

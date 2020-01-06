@@ -333,7 +333,7 @@ fn test_validate_balance_below_gas_fee() {
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone().clone(),
+        key.clone(),
         key.public_key(),
         Some(program),
         0,

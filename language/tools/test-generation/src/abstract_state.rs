@@ -169,7 +169,7 @@ impl AbstractState {
 
     /// Set the register value and set it to `None`
     pub fn register_set(&mut self, value: AbstractValue) {
-        self.register = Some(value.clone());
+        self.register = Some(value);
     }
 
     /// Add a `AbstractValue` to the stack
@@ -314,7 +314,7 @@ impl AbstractState {
     pub fn local_place(&mut self, i: usize) -> Result<(), VMError> {
         if let Some(abstract_value) = self.register_move() {
             self.locals
-                .insert(i, (abstract_value.clone(), BorrowState::Available));
+                .insert(i, (abstract_value, BorrowState::Available));
             Ok(())
         } else {
             Err(VMError::new(

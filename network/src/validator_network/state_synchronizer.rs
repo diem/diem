@@ -124,7 +124,7 @@ mod tests {
         block_on(state_sync_tx.send(event)).unwrap();
 
         // request should be properly deserialized
-        let expected_event = Event::Message((peer_id, state_sync_msg.clone()));
+        let expected_event = Event::Message((peer_id, state_sync_msg));
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, expected_event);
     }

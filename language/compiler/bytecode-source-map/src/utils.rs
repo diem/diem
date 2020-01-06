@@ -57,5 +57,5 @@ pub fn render_errors(source_mapper: &SourceMapping<Loc>, errors: Errors) -> Resu
 
 pub fn create_diagnostic(error: Error) -> Diagnostic {
     let label = Label::new_primary(error.0);
-    Diagnostic::new_error(error.1.clone()).with_label(label)
+    Diagnostic::new_error(error.1).with_label(label)
 }

@@ -260,7 +260,7 @@ fn verify_simple_payment() {
 
         let txn = sender.account().create_signed_txn_with_args(
             PEER_TO_PEER.clone(),
-            args.clone(),
+            args,
             10,
             gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
             gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),

@@ -1208,7 +1208,7 @@ fn assign(
             context.add_copyable_constraint(
                 aloc,
                 "Cannot ignore resource values. The value must be used",
-                rvalue_ty.clone(),
+                rvalue_ty,
             );
             TA::Ignore
         }
@@ -1675,7 +1675,7 @@ fn builtin_call(
         }
         NB::Exists(ty_arg_opt) => {
             let ty_arg = mk_ty_arg(ty_arg_opt);
-            b_ = TB::Exists(ty_arg.clone());
+            b_ = TB::Exists(ty_arg);
             params_ty = vec![SingleType_::address(bloc)];
             ret_ty = Type_::bool(loc);
         }

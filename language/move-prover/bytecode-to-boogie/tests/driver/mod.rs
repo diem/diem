@@ -17,7 +17,7 @@ pub fn test(flags: &[&str], sources: &[&str]) {
     args.extend_from_slice(flags);
     args.extend(sources.iter());
     let mut options = Options::default();
-    options.initialize_from_args(&args.iter().map(|s| s.to_string()).collect_vec());
+    options.initialize_from_args(&args.iter().map(|s| (*s).to_string()).collect_vec());
     options.setup_logging_for_test();
 
     // Run the translator.

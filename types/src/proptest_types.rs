@@ -722,7 +722,7 @@ impl Arbitrary for TypeTag {
                     any::<AccountAddress>(),
                     any::<Identifier>(),
                     any::<Identifier>(),
-                    vec(inner.clone(), 0..4),
+                    vec(inner, 0..4),
                 )
                     .prop_map(|(address, module, name, type_params)| {
                         Struct(StructTag {

@@ -362,7 +362,7 @@ impl<'a> Context<'a> {
         let sidx = get_or_add_item(fname.loc(), &mut self.function_signatures, signature)?;
         let signature_index = FunctionSignatureIndex(sidx);
 
-        let m_f = (mname.clone(), fname.clone());
+        let m_f = (mname, fname.clone());
         let handle = FunctionHandle {
             module,
             name,

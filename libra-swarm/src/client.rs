@@ -129,7 +129,7 @@ impl InteractiveClient {
     pub fn send_instructions(&mut self, instructions: &[&str]) -> io::Result<()> {
         let input = self.client.as_mut().unwrap().stdin.as_mut().unwrap();
         for i in instructions {
-            input.write_all((i.to_string() + "\n").as_bytes())?;
+            input.write_all(((*i).to_string() + "\n").as_bytes())?;
             input.flush()?;
         }
         Ok(())
@@ -165,8 +165,8 @@ impl InProcessTestClient {
 
     pub fn execute_instructions(&mut self, instructions: &[&str]) {
         for instr in instructions {
-            let to_parse = &instr.to_string();
-            let params = commands::parse_cmd(to_parse);
+            let to_parse = (*instr).to_string();
+            let params = commands::parse_cmd(&to_parse);
             // filter out empty lines
             if params.is_empty() || params[0].is_empty() {
                 continue;

@@ -36,7 +36,7 @@ fn test_root_node() {
     assert_eq!(*cache.get_root_node_key(), NodeKey::new_empty_path(0));
 
     let (node, node_key) = random_leaf_with_key(next_version);
-    db.put_node(node_key.clone(), node.clone()).unwrap();
+    db.put_node(node_key.clone(), node).unwrap();
     cache.set_root_node_key(node_key.clone());
 
     assert_eq!(*cache.get_root_node_key(), node_key);

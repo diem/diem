@@ -322,7 +322,7 @@ mod tests {
         }
 
         let ledger_info_with_signatures_reversed =
-            LedgerInfoWithSignatures::new(ledger_info.clone(), author_to_signature_map);
+            LedgerInfoWithSignatures::new(ledger_info, author_to_signature_map);
 
         let ledger_info_with_signatures_bytes =
             lcs::to_bytes(&ledger_info_with_signatures).expect("block serialization failed");

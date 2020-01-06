@@ -62,7 +62,7 @@ fn make_pacemaker() -> (Pacemaker, channel::Receiver<Round>) {
     let simulated_time = SimulatedTimeService::auto_advance_until(Duration::from_millis(4));
     let (timeout_tx, timeout_rx) = channel::new_test(1_024);
     (
-        Pacemaker::new(time_interval, Arc::new(simulated_time.clone()), timeout_tx),
+        Pacemaker::new(time_interval, Arc::new(simulated_time), timeout_tx),
         timeout_rx,
     )
 }

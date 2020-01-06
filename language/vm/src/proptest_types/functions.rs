@@ -84,7 +84,7 @@ impl FunctionDefinitionGen {
         (
             any::<PropIndex>(),
             FunctionSignatureGen::strategy(
-                return_count.clone(),
+                return_count,
                 arg_count.clone(),
                 kind_count.into(),
             ),

@@ -77,7 +77,7 @@ impl StateComputer for MockStateComputer {
         self.consensus_db
             .commit_to_storage(commit.ledger_info().clone());
         self.commit_callback
-            .unbounded_send(commit.clone())
+            .unbounded_send(commit)
             .expect("Fail to notify about sync");
         Ok(())
     }

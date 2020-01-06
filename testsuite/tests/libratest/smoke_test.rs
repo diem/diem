@@ -777,7 +777,7 @@ fn test_client_waypoints() {
         .expect("Failed to generate waypoint from genesis LI");
 
     // Start another client with the genesis waypoint and make sure it successfully connects
-    let mut client_with_waypoint = env.get_validator_ac_client(0, Some(genesis_waypoint.clone()));
+    let mut client_with_waypoint = env.get_validator_ac_client(0, Some(genesis_waypoint));
     client_with_waypoint.test_validator_connection().unwrap();
     assert_eq!(
         client_with_waypoint.latest_epoch_change_li().unwrap(),
@@ -810,7 +810,7 @@ fn test_client_waypoints() {
         .expect("Failed to generate waypoint from end of epoch 1");
 
     // Start a client with the waypoint for end of epoch 1 and make sure it successfully connects
-    client_with_waypoint = env.get_validator_ac_client(1, Some(epoch_1_waypoint.clone()));
+    client_with_waypoint = env.get_validator_ac_client(1, Some(epoch_1_waypoint));
     client_with_waypoint.test_validator_connection().unwrap();
     assert_eq!(
         client_with_waypoint.latest_epoch_change_li().unwrap(),

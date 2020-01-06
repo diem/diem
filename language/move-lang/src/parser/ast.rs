@@ -90,8 +90,8 @@ pub struct ModuleIdent(pub Spanned<ModuleIdent_>);
 pub struct ModuleDefinition {
     pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
     pub name: ModuleName,
-    pub structs: Vec<(StructDefinition)>,
-    pub functions: Vec<(Function)>,
+    pub structs: Vec<StructDefinition>,
+    pub functions: Vec<Function>,
 }
 
 //**************************************************************************************************

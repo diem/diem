@@ -651,7 +651,7 @@ mod test {
         let dialer_session = Builder::new(parameters.clone())
             .local_private_key(&dialer_keypair.private)
             .build_initiator()?;
-        let listener_session = Builder::new(parameters.clone())
+        let listener_session = Builder::new(parameters)
             .local_private_key(&listener_keypair.private)
             .build_responder()?;
 

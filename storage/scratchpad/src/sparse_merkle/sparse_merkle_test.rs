@@ -488,7 +488,7 @@ fn test_update() {
     assert_eq!(smt2.get(key3), AccountState::Unknown);
     assert_eq!(
         smt2.get(key4),
-        AccountState::ExistsInScratchPad(value4.clone())
+        AccountState::ExistsInScratchPad(value4)
     );
 
     // Verify root hash.
@@ -522,7 +522,7 @@ fn test_update() {
     // key1.
     assert_eq!(
         smt2.get(key1),
-        AccountState::ExistsInScratchPad(value1.clone())
+        AccountState::ExistsInScratchPad(value1)
     );
     assert_eq!(smt2.get(key2), AccountState::Unknown);
     assert_eq!(smt2.get(key3), AccountState::Unknown);
@@ -535,6 +535,6 @@ fn test_update() {
     assert_eq!(smt22.get(key3), AccountState::Unknown);
     assert_eq!(
         smt22.get(key4),
-        AccountState::ExistsInScratchPad(value4.clone())
+        AccountState::ExistsInScratchPad(value4)
     );
 }

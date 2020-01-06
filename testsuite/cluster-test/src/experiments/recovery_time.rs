@@ -37,7 +37,7 @@ pub struct RecoveryTime {
 impl ExperimentParam for RecoveryTimeParams {
     type E = RecoveryTime;
     fn build(self, cluster: &Cluster) -> Self::E {
-        let instance = cluster.random_validator_instance().clone();
+        let instance = cluster.random_validator_instance();
         Self::E {
             params: self,
             instance,

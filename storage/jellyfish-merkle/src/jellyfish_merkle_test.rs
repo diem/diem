@@ -244,13 +244,13 @@ fn test_batch_insertion() {
     let value6 = AccountStateBlob::from(vec![6u8]);
 
     let batches = vec![
-        vec![(key1, value1.clone())],
-        vec![(key2, value2.clone())],
-        vec![(key3, value3.clone())],
-        vec![(key4, value4.clone())],
-        vec![(key5, value5.clone())],
-        vec![(key6, value6.clone())],
-        vec![(key2, value2_update.clone())],
+        vec![(key1, value1)],
+        vec![(key2, value2)],
+        vec![(key3, value3)],
+        vec![(key4, value4)],
+        vec![(key5, value5)],
+        vec![(key6, value6)],
+        vec![(key2, value2_update)],
     ];
     let one_batch = batches.iter().flatten().cloned().collect::<Vec<_>>();
 

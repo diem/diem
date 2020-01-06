@@ -65,11 +65,11 @@ fn test_network_builder() {
             ])
             .build();
     let (_mempool_network_sender, _mempool_network_events) =
-        network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
+        network_provider.add_mempool(vec![mempool_sync_protocol]);
     let (_consensus_network_sender, _consensus_network_events) =
-        network_provider.add_consensus(vec![consensus_get_blocks_protocol.clone()]);
+        network_provider.add_consensus(vec![consensus_get_blocks_protocol]);
     let (_state_sync_network_sender, _state_sync_network_events) =
-        network_provider.add_state_synchronizer(vec![synchronizer_get_chunks_protocol.clone()]);
+        network_provider.add_state_synchronizer(vec![synchronizer_get_chunks_protocol]);
     runtime.spawn(network_provider.start());
 }
 
@@ -99,14 +99,14 @@ fn test_mempool_sync() {
             listener_peer_id,
             NetworkPublicKeys {
                 signing_public_key: listener_signing_public_key.clone(),
-                identity_public_key: listener_identity_public_key.clone(),
+                identity_public_key: listener_identity_public_key,
             },
         ),
         (
             dialer_peer_id,
             NetworkPublicKeys {
                 signing_public_key: dialer_signing_public_key.clone(),
-                identity_public_key: dialer_identity_public_key.clone(),
+                identity_public_key: dialer_identity_public_key,
             },
         ),
     ]
@@ -141,7 +141,7 @@ fn test_mempool_sync() {
     )
     .transport(TransportType::Memory)
     .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
-    .trusted_peers(trusted_peers.clone())
+    .trusted_peers(trusted_peers)
     .seed_peers(
         [(listener_peer_id, vec![listener_addr])]
             .iter()
@@ -152,7 +152,7 @@ fn test_mempool_sync() {
     .direct_send_protocols(vec![mempool_sync_protocol.clone()])
     .build();
     let (mut dialer_mp_net_sender, mut dialer_mp_net_events) =
-        network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
+        network_provider.add_mempool(vec![mempool_sync_protocol]);
     runtime.handle().spawn(network_provider.start());
 
     // The dialer dials the listener and sends a mempool sync message
@@ -281,7 +281,7 @@ fn test_permissionless_mempool_sync() {
         dialer_identity_private_key,
         dialer_identity_public_key,
     ))))
-    .trusted_peers(trusted_peers.clone())
+    .trusted_peers(trusted_peers)
     .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
     .seed_peers(
         [(listener_peer_id, vec![listener_addr])]
@@ -293,7 +293,7 @@ fn test_permissionless_mempool_sync() {
     .direct_send_protocols(vec![mempool_sync_protocol.clone()])
     .build();
     let (mut dialer_mp_net_sender, mut dialer_mp_net_events) =
-        network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
+        network_provider.add_mempool(vec![mempool_sync_protocol]);
     runtime.handle().spawn(network_provider.start());
 
     // The dialer dials the listener and sends a mempool sync message
@@ -374,14 +374,14 @@ fn test_consensus_rpc() {
             listener_peer_id,
             NetworkPublicKeys {
                 signing_public_key: listener_signing_public_key.clone(),
-                identity_public_key: listener_identity_public_key.clone(),
+                identity_public_key: listener_identity_public_key,
             },
         ),
         (
             dialer_peer_id,
             NetworkPublicKeys {
                 signing_public_key: dialer_signing_public_key.clone(),
-                identity_public_key: dialer_identity_public_key.clone(),
+                identity_public_key: dialer_identity_public_key,
             },
         ),
     ]
@@ -416,7 +416,7 @@ fn test_consensus_rpc() {
     )
     .transport(TransportType::Memory)
     .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
-    .trusted_peers(trusted_peers.clone())
+    .trusted_peers(trusted_peers)
     .seed_peers(
         [(listener_peer_id, vec![listener_addr])]
             .iter()
@@ -427,7 +427,7 @@ fn test_consensus_rpc() {
     .rpc_protocols(vec![rpc_protocol.clone()])
     .build();
     let (mut dialer_con_net_sender, mut dialer_con_net_events) =
-        network_provider.add_consensus(vec![rpc_protocol.clone()]);
+        network_provider.add_consensus(vec![rpc_protocol]);
     runtime.handle().spawn(network_provider.start());
 
     let req_block_msg = RequestBlock::default();
@@ -460,8 +460,6 @@ fn test_consensus_rpc() {
 
     // The listener receives a RequestBlock rpc request and sends a RespondBlock
     // rpc response.
-    let req_block_msg_clone = req_block_msg.clone();
-    let res_block_msg_clone = res_block_msg.clone();
     let f_listener = async move {
         // The listener receives a NewPeer event first
         match listener_con_net_events.next().await.unwrap().unwrap() {
@@ -479,12 +477,12 @@ fn test_consensus_rpc() {
                 // Check the request
                 assert_eq!(
                     req_msg.message,
-                    Some(ConsensusMsg_oneof::RequestBlock(req_block_msg_clone))
+                    Some(ConsensusMsg_oneof::RequestBlock(req_block_msg))
                 );
 
                 // Send the serialized response back.
                 let res_msg = ConsensusMsg {
-                    message: Some(ConsensusMsg_oneof::RespondBlock(res_block_msg_clone)),
+                    message: Some(ConsensusMsg_oneof::RespondBlock(res_block_msg)),
                 };
                 let res_data = res_msg.to_bytes().unwrap();
                 res_tx.send(Ok(res_data)).unwrap();

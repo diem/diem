@@ -136,7 +136,7 @@ impl ClientProxy {
         };
 
         let faucet_server = match faucet_server {
-            Some(server) => server.to_string(),
+            Some(server) => server,
             None => host.replace("ac", "faucet"),
         };
 
@@ -587,7 +587,7 @@ impl ClientProxy {
         public_key: Ed25519PublicKey,
         signature: Ed25519Signature,
     ) -> Result<()> {
-        let transaction = SignedTransaction::new(raw_txn, public_key.clone(), signature);
+        let transaction = SignedTransaction::new(raw_txn, public_key, signature);
 
         let mut req = SubmitTransactionRequest::default();
         let sender_address = transaction.sender();

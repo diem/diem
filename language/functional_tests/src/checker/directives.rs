@@ -15,7 +15,7 @@ enum Token {
 }
 
 /// Find the next token at the beginning of the input char stream.
-fn next_token<I>(input: &mut Peekable<I>) -> Result<Option<(Token)>>
+fn next_token<I>(input: &mut Peekable<I>) -> Result<Option<Token>>
 where
     I: Iterator<Item = (usize, char)>,
 {

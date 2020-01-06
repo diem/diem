@@ -121,7 +121,7 @@ mod tests {
 
         // request should be properly deserialized
         let (res_tx, _) = oneshot::channel();
-        let expected_event = Event::RpcRequest((peer_id, req_msg_enum.clone(), res_tx));
+        let expected_event = Event::RpcRequest((peer_id, req_msg_enum, res_tx));
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, expected_event);
     }

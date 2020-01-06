@@ -56,7 +56,7 @@ pub fn load_faucet_key_or_create_default(
     // isn't one, then create a temp directory and generate the keypair
     if let Some(faucet_account_file) = file_path {
         match load_key_from_file(faucet_account_file.clone()) {
-            Ok(keypair) => (keypair, faucet_account_file.to_string(), None),
+            Ok(keypair) => (keypair, faucet_account_file, None),
             Err(e) => {
                 panic!(
                     "Unable to read faucet account file: {}, {}",

@@ -217,7 +217,7 @@ impl Options {
     /// Returns command line to call boogie.
     pub fn get_boogie_command(&self, boogie_file: &str) -> Vec<String> {
         let mut result = vec![self.boogie_exe.clone()];
-        let mut add = |sl: &[&str]| result.extend(sl.iter().map(|s| s.to_string()));
+        let mut add = |sl: &[&str]| result.extend(sl.iter().map(|s| (*s).to_string()));
         add(DEFAULT_BOOGIE_FLAGS);
         if self.use_cvc4 {
             add(&[

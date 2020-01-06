@@ -382,7 +382,7 @@ fn test_network_api() {
     let previous_qc = certificate_for_genesis();
     let proposal = ProposalMsg::new(
         Block::new_proposal(0, 1, 1, previous_qc.clone(), &signers[0]),
-        SyncInfo::new(previous_qc.clone(), previous_qc.clone(), None),
+        SyncInfo::new(previous_qc.clone(), previous_qc, None),
     );
     block_on(async move {
         nodes[0]

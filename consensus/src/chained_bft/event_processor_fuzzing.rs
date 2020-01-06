@@ -139,7 +139,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         Box::new(safety_rules),
         Box::new(MockTransactionManager::new().0),
         network,
-        storage.clone(),
+        storage,
         time_service,
         validators,
     )

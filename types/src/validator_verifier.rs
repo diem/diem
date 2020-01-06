@@ -188,7 +188,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
                 .flat_map(|(address, signature)| {
                     let sig: PublicKey::SignatureMaterial = signature.clone().into();
                     self.get_public_key(&address)
-                        .map(|pub_key| (pub_key.clone(), sig))
+                        .map(|pub_key| (pub_key, sig))
                 })
                 .collect();
         // Fallback is required to identify the source of the problem if batching fails.

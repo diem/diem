@@ -111,7 +111,7 @@ async fn test_consensus_callbacks() {
 
     // remove: transaction is committed
     let mut transaction = CommittedTransaction::default();
-    let signed_txn = SignedTransaction::try_from(add_req.transaction.unwrap().clone()).unwrap();
+    let signed_txn = SignedTransaction::try_from(add_req.transaction.unwrap()).unwrap();
     let sender = signed_txn.sender().as_ref().to_vec();
     transaction.sender = sender;
     transaction.sequence_number = 0;

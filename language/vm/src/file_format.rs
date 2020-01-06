@@ -538,9 +538,7 @@ impl Arbitrary for SignatureToken {
             |inner| {
                 prop_oneof![
                     inner.clone().prop_map(|token| Reference(Box::new(token))),
-                    inner
-                        .clone()
-                        .prop_map(|token| MutableReference(Box::new(token))),
+                    inner.prop_map(|token| MutableReference(Box::new(token))),
                 ]
             },
         )

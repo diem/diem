@@ -62,7 +62,7 @@ fn test_nil_block() {
         payload,
         2,
         get_current_timestamp().as_micros() as u64,
-        nil_block_qc.clone(),
+        nil_block_qc,
         &signer,
     );
     assert_eq!(nil_block_child.is_nil_block(), false);

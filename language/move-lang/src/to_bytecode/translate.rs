@@ -176,7 +176,7 @@ pub fn program(prog: G::Program) -> std::result::Result<Vec<CompiledUnit>, Error
         .iter()
         .flat_map(|(m, mdef)| {
             mdef.structs.iter().map(move |(s, sdef)| {
-                let key = (m.clone(), s.clone());
+                let key = (m.clone(), s);
                 let is_nominal_resource = sdef.resource_opt.is_some();
                 let kinds = kinds(sdef.type_parameters.iter().map(|tp| &tp.kind));
                 (key, (is_nominal_resource, kinds))
@@ -188,7 +188,7 @@ pub fn program(prog: G::Program) -> std::result::Result<Vec<CompiledUnit>, Error
         .iter()
         .flat_map(|(m, mdef)| {
             mdef.functions.iter().map(move |(f, fdef)| {
-                let key = (m.clone(), f.clone());
+                let key = (m.clone(), f);
                 (key, fdef.signature.clone())
             })
         })

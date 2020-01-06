@@ -536,7 +536,6 @@ where
             OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
             assert_eq!(first_version_to_commit, version + 1 - num_txns_to_commit);
             let write_client = self.storage_write_client.clone();
-            let ledger_info_with_sigs = ledger_info_with_sigs.clone();
             block_on(self.rt.spawn(async move {
                 write_client
                     .save_transactions_async(

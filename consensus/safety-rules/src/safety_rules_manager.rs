@@ -42,10 +42,10 @@ impl SafetyRulesManagerConfig {
             SafetyRulesBackend::InMemoryStorage => InMemoryStorage::default_storage(),
             SafetyRulesBackend::OnDiskStorage(config) => {
                 if config.default {
-                    OnDiskStorage::default_storage(config.path().clone())
+                    OnDiskStorage::default_storage(config.path())
                         .expect("Unable to allocate SafetyRules storage")
                 } else {
-                    OnDiskStorage::new_storage(config.path().clone())
+                    OnDiskStorage::new_storage(config.path())
                         .expect("Unable to instantiate SafetyRules storage")
                 }
             }

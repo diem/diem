@@ -21,7 +21,7 @@ fn lsr(mut safety_rules: Box<dyn TSafetyRules<Vec<u8>>>, signer: ValidatorSigner
     let mut round = genesis_block.round();
 
     round += 1;
-    let mut b0 = test_utils::make_proposal_with_qc(round, genesis_qc.clone(), &signer);
+    let mut b0 = test_utils::make_proposal_with_qc(round, genesis_qc, &signer);
     safety_rules.update(b0.block().quorum_cert()).unwrap();
     safety_rules.construct_and_sign_vote(&b0).unwrap();
 
@@ -59,7 +59,7 @@ fn in_memory(n: u64) {
 fn on_disk(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
-    let storage = OnDiskStorage::default_storage(file_path.clone()).unwrap();
+    let storage = OnDiskStorage::default_storage(file_path).unwrap();
     let safety_rules_manager = SafetyRulesManager::new_local(storage, signer.clone());
     lsr(safety_rules_manager.client(), signer, n);
 }
@@ -67,7 +67,7 @@ fn on_disk(n: u64) {
 fn serializer(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
-    let storage = OnDiskStorage::default_storage(file_path.clone()).unwrap();
+    let storage = OnDiskStorage::default_storage(file_path).unwrap();
     let safety_rules_manager = SafetyRulesManager::new_local(storage, signer.clone());
     lsr(safety_rules_manager.client(), signer, n);
 }
@@ -75,7 +75,7 @@ fn serializer(n: u64) {
 fn thread(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
-    let storage = OnDiskStorage::default_storage(file_path.clone()).unwrap();
+    let storage = OnDiskStorage::default_storage(file_path).unwrap();
     let safety_rules_manager = SafetyRulesManager::new_local(storage, signer.clone());
     lsr(safety_rules_manager.client(), signer, n);
 }

@@ -93,7 +93,7 @@ fn create_struct_value(module: &CompiledModule) -> AbstractValue {
             })
     };
     AbstractValue::new_struct(
-        SignatureToken::Struct(struct_def.struct_handle, tokens.clone()),
+        SignatureToken::Struct(struct_def.struct_handle, tokens),
         struct_kind,
     )
 }

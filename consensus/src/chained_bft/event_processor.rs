@@ -679,7 +679,6 @@ impl<T: Payload> EventProcessor<T> {
                 .compute_result()
                 .executed_state
                 .validators
-                .clone(),
         );
 
         let vote = self

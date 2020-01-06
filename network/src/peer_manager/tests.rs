@@ -296,11 +296,11 @@ fn build_test_peer_manager(
     let (peer_manager_request_tx, peer_manager_request_rx) = channel::new_test(0);
     let (hello_tx, hello_rx) = channel::new_test(0);
     let mut protocol_handlers = HashMap::new();
-    protocol_handlers.insert(protocol.clone(), hello_tx);
+    protocol_handlers.insert(protocol, hello_tx);
 
     let peer_manager = PeerManager::new(
         build_test_transport(Identity::new(peer_id, vec![], RoleType::Validator)),
-        executor.clone(),
+        executor,
         peer_id,
         "/memory/0".parse().unwrap(),
         peer_manager_request_rx,
