@@ -64,7 +64,7 @@ impl ChainedBftProvider {
             MempoolClientWrapper::new("localhost", node_config.mempool.mempool_service_port);
         let txn_manager = MempoolProxy::new(mempool_client);
 
-        let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
+        let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client));
         let smr = ChainedBftSMR::new(initial_setup, runtime, config, storage, initial_data);
         Self {
             smr,

@@ -791,7 +791,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let operand2 = self.stack.pop().unwrap();
                 if operand1.signature.is_integer() && operand1.signature == operand2.signature {
                     self.stack.push(TypedAbstractValue {
-                        signature: operand1.signature.clone(),
+                        signature: operand1.signature,
                         value: AbstractValue::Value(Kind::Unrestricted),
                     });
                     Ok(())
@@ -808,7 +808,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let operand2 = self.stack.pop().unwrap();
                 if operand1.signature.is_integer() && operand2.signature.is_integer() {
                     self.stack.push(TypedAbstractValue {
-                        signature: operand2.signature.clone(),
+                        signature: operand2.signature,
                         value: AbstractValue::Value(Kind::Unrestricted),
                     });
                     Ok(())

@@ -126,7 +126,7 @@ impl GRPCClient {
         let current_state = Arc::clone(&self.state);
         let req = UpdateToLatestLedgerRequest::new(
             current_state.lock().unwrap().version,
-            requested_items.clone(),
+            requested_items,
         );
         debug!("get_with_proof with request: {:?}", req);
         let proto_req = req.clone().into();

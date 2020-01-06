@@ -160,10 +160,10 @@ fn test_submit_txn_inner_vm() {
     let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
     let test_key = compat::generate_keypair(&mut rng);
     req.transaction =
-        Some(get_test_signed_txn(sender, 0, keypair.0.clone(), test_key.1.clone(), None).into());
+        Some(get_test_signed_txn(sender, 0, keypair.0, test_key.1, None).into());
     let response = block_on(upstream_proxy::submit_transaction_to_mempool(
-        upstream_proxy_data.clone(),
-        req.clone(),
+        upstream_proxy_data,
+        req,
     ))
     .unwrap();
     assert_status(response, VMStatus::new(StatusCode::INVALID_SIGNATURE));
@@ -267,8 +267,8 @@ fn test_submit_txn_inner_mempool() {
         Some(get_test_signed_txn(accepted_add, 0, keypair.0.clone(), keypair.1, None).into());
     let response = SubmitTransactionResponse::try_from(
         block_on(upstream_proxy::submit_transaction_to_mempool(
-            upstream_proxy_data.clone(),
-            req.clone(),
+            upstream_proxy_data,
+            req,
         ))
         .unwrap(),
     )

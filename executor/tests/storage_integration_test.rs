@@ -174,8 +174,8 @@ fn test_reconfiguration() {
     let txn4 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 1,
-        validator_privkey.clone(),
-        validator_pubkey.clone(),
+        validator_privkey,
+        validator_pubkey,
         Some(encode_rotate_consensus_pubkey_script(
             new_pubkey.to_bytes().to_vec(),
         )),
@@ -271,8 +271,8 @@ fn test_execution_with_storage() {
     let txn5 = get_test_signed_transaction(
         account2,
         /* sequence_number = */ 0,
-        privkey2.clone(),
-        pubkey2.clone(),
+        privkey2,
+        pubkey2,
         Some(encode_transfer_script(&account3, 10_000)),
     );
 

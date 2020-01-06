@@ -38,7 +38,7 @@ pub fn write_recovery<P: AsRef<Path>>(wallet: &WalletLibrary, path: &P) -> Resul
     writeln!(
         output,
         "{}{}{}",
-        wallet.mnemonic().to_string(),
+        wallet.mnemonic(),
         DELIMITER,
         wallet.key_leaf()
     )?;

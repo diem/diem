@@ -808,7 +808,7 @@ proptest! {
 
         let mut synced_trees = committed_trees.clone();
         // Commit the first chunk without committing the ledger info.
-        executor.execute_and_commit_chunk(txn_list_with_proof_to_commit, ledger_info.clone(), None, &mut synced_trees)
+        executor.execute_and_commit_chunk(txn_list_with_proof_to_commit, ledger_info, None, &mut synced_trees)
             .unwrap();
 
         let parent_block_id = HashValue::zero();

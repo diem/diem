@@ -204,7 +204,7 @@ fn test_get_events_by_access_path_impl(event_batches: Vec<Vec<ContractEvent>>) {
                 .entry(e.key().clone())
                 .or_insert_with(Vec::new);
             assert_eq!(events.len() as u64, e.sequence_number());
-            events.push(e.clone());
+            events.push(e);
         })
     });
 

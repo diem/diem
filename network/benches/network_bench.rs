@@ -123,7 +123,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         dialer_identity_private_key,
         dialer_identity_public_key,
     ))))
-    .trusted_peers(trusted_peers.clone())
+    .trusted_peers(trusted_peers)
     .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
     .seed_peers(
         [(listener_peer_id, vec![listen_addr])]
@@ -261,7 +261,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
         dialer_identity_private_key,
         dialer_identity_public_key,
     ))))
-    .trusted_peers(trusted_peers.clone())
+    .trusted_peers(trusted_peers)
     .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
     .seed_peers(
         [(listener_peer_id, vec![listen_addr])]

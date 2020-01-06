@@ -129,7 +129,7 @@ fn generate_network_pub_keys_and_signer(peer_id: PeerId) -> (NetworkPublicKeys, 
     let (_, identity_pub_key) = x25519::compat::generate_keypair(&mut rng);
     (
         NetworkPublicKeys {
-            signing_public_key: signing_priv_key.public_key().clone(),
+            signing_public_key: signing_priv_key.public_key(),
             identity_public_key: identity_pub_key,
         },
         Signer::new(peer_id, signing_priv_key),
@@ -294,9 +294,9 @@ fn outbound() {
             peer_id,
             addrs.clone(),
             seed_peer_id,
-            seed_peer_info.clone(),
+            seed_peer_info,
             self_signer,
-            trusted_peers.clone(),
+            trusted_peers,
         );
 
     // Fake connectivity manager and dialer.

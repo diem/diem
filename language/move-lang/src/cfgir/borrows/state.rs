@@ -223,7 +223,7 @@ impl BorrowState {
                 if borrowers.is_empty() {
                     None
                 } else {
-                    Some((f.clone(), borrowers))
+                    Some((f, borrowers))
                 }
             })
             .collect();

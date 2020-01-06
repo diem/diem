@@ -560,27 +560,31 @@ impl<'a> SpecTranslator<'a> {
     /// Translate a function return value.
     fn translate_return(&mut self) -> BoogieExpr {
         let sig = self.get_function_signature();
-        if sig.return_count() > 1 {
-            // TODO: the parser currently only handles `return` for single value. Need to
-            //   generalize for multiple ret0, ret1, ...
-            self.error(
-                "cannt handle more than one return value as of now",
-                BoogieExpr("<ret>".to_string(), SignatureToken::U64),
-            )
-        } else if sig.return_count() < 1 {
-            self.error(
-                "function does not return a value",
-                BoogieExpr("<ret>".to_string(), SignatureToken::U64),
-            )
-        } else {
-            BoogieExpr(
-                "ret0".to_string(),
-                sig.return_tokens()
-                    .nth(0)
-                    .expect("non-empty return")
-                    .signature_token()
-                    .clone(),
-            )
+        match sig.return_count().cmp(&1usize) {
+            std::cmp::Ordering::Greater => {
+                // TODO: the parser currently only handles `return` for single value. Need to
+                //   generalize for multiple ret0, ret1, ...
+                self.error(
+                    "cannt handle more than one return value as of now",
+                    BoogieExpr("<ret>".to_string(), SignatureToken::U64),
+                )
+            },
+            std::cmp::Ordering::Less => {
+                self.error(
+                    "function does not return a value",
+                    BoogieExpr("<ret>".to_string(), SignatureToken::U64),
+                )
+            },
+            _ => {
+                BoogieExpr(
+                    "ret0".to_string(),
+                    sig.return_tokens()
+                        .nth(0)
+                        .expect("non-empty return")
+                        .signature_token()
+                        .clone(),
+                )
+            }
         }
     }
 

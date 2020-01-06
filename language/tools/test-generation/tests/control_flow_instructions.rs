@@ -37,7 +37,7 @@ fn generate_module_with_function() -> CompiledModuleMut {
             module: ModuleHandleIndex::new(0),
         })
         .collect();
-    let (local_sigs, mut function_sigs): (Vec<_>, Vec<_>) = sigs.clone().into_iter().unzip();
+    let (local_sigs, mut function_sigs): (Vec<_>, Vec<_>) = sigs.into_iter().unzip();
     module.function_signatures.append(&mut function_sigs);
     module
         .locals_signatures

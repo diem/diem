@@ -70,7 +70,7 @@ fn test_preferred_block_rule(func: RoundCallback) {
     let round = genesis_block.round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
-    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc.clone(), &signer);
+    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc, &signer);
     let b2 = make_proposal_with_parent(round + 3, &a1, None, &signer);
     let a2 = make_proposal_with_parent(round + 4, &b1, None, &signer);
     let b3 = make_proposal_with_parent(round + 5, &b2, None, &signer);
@@ -137,7 +137,7 @@ fn test_voting_potential_commit_id(func: RoundCallback) {
     let round = genesis_block.round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
-    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc.clone(), &signer);
+    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc, &signer);
     let a2 = make_proposal_with_parent(round + 3, &a1, None, &signer);
     let a3 = make_proposal_with_parent(round + 4, &a2, None, &signer);
     let a4 = make_proposal_with_parent(round + 5, &a3, Some(&a2), &signer);
@@ -196,7 +196,7 @@ fn test_voting(func: RoundCallback) {
     let round = genesis_block.round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
-    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc.clone(), &signer);
+    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc, &signer);
     let b2 = make_proposal_with_parent(round + 3, &a1, None, &signer);
     let a2 = make_proposal_with_parent(round + 4, &b1, None, &signer);
     let a3 = make_proposal_with_parent(round + 5, &a2, None, &signer);
@@ -269,7 +269,7 @@ fn test_commit_rule_consecutive_rounds(func: RoundCallback) {
     let round = genesis_block.round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
-    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc.clone(), &signer);
+    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc, &signer);
     let b2 = make_proposal_with_parent(round + 3, &b1, None, &signer);
     let a2 = make_proposal_with_parent(round + 4, &a1, None, &signer);
     let a3 = make_proposal_with_parent(round + 5, &a2, None, &signer);
@@ -297,7 +297,7 @@ fn test_bad_execution_output(func: RoundCallback) {
     let genesis_qc = block_test_utils::certificate_for_genesis();
     let round = genesis_block.round();
 
-    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
     let a2 = make_proposal_with_parent(round + 2, &a1, None, &signer);
     let a3 = make_proposal_with_parent(round + 3, &a2, None, &signer);
 
@@ -341,7 +341,7 @@ fn test_end_to_end(func: ByteArrayCallback) {
     let mut rng = rand::thread_rng();
     let data: Vec<u8> = (0..2048).map(|_| rng.gen::<u8>()).collect();
 
-    let p0 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
+    let p0 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
     let p1 = test_utils::make_proposal_with_parent(data.clone(), round + 2, &p0, None, &signer);
     let p2 = test_utils::make_proposal_with_parent(data.clone(), round + 3, &p1, None, &signer);
     let p3 = test_utils::make_proposal_with_parent(data, round + 4, &p2, Some(&p0), &signer);

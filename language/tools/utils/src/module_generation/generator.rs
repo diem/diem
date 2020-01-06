@@ -67,7 +67,7 @@ pub fn generate_verified_modules(
     number: usize,
     options: ModuleGeneratorOptions,
 ) -> (VerifiedModule, Vec<VerifiedModule>) {
-    let (root, callees) = generate_modules(number, options.clone());
+    let (root, callees) = generate_modules(number, options);
     let verified_modules = callees
         .into_iter()
         .map(|m| VerifiedModule::new(m).unwrap())
@@ -129,7 +129,7 @@ impl ModuleGenerator {
                     init!(num_typ_params, self.base_type(ty_param_context))
                 };
                 let struct_ident = {
-                    let struct_name = struct_def.name.clone();
+                    let struct_name = struct_def.name;
                     let module_name = ModuleName::module_self();
                     QualifiedStructIdent::new(module_name, struct_name)
                 };

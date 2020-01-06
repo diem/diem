@@ -195,7 +195,7 @@ impl MockStorage {
     // The validator set is different only in the consensus public / private keys, network data
     // remains the same.
     pub fn move_to_next_epoch(&mut self, signer: ValidatorSigner, validator_set: ValidatorSet) {
-        self.add_li(Some(validator_set.clone()));
+        self.add_li(Some(validator_set));
         self.epoch_num += 1;
         self.signer = signer;
         self.verifier = self

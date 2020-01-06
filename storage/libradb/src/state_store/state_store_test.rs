@@ -159,7 +159,7 @@ fn test_retired_records() {
     // ```
     let root0 = put_account_state_set(
         store,
-        vec![(address1, value1.clone()), (address2, value2.clone())],
+        vec![(address1, value1.clone()), (address2, value2)],
         0, /* version */
         3, /* expected_nodes_created */
         0, /* expected_nodes_retired */
@@ -301,7 +301,6 @@ proptest! {
         restore.add_chunk(batch1, proof_of_batch1).unwrap();
 
         let batch2: Vec<_> = ordered_input
-            .clone()
             .into_iter()
             .skip(batch1_size)
             .collect();
@@ -348,7 +347,6 @@ proptest! {
         ordered_input.sort_unstable_by_key(|(key, _value)| *key);
 
         let batch1: Vec<_> = ordered_input
-            .clone()
             .into_iter()
             .take(batch1_size)
             .collect();

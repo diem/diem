@@ -432,7 +432,7 @@ impl NetworkBuilder {
                 self.channel_size,
                 &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
             );
-            net_conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx.clone());
+            net_conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx);
             let (pm_conn_mgr_notifs_tx, pm_conn_mgr_notifs_rx) = channel::new(
                 self.channel_size,
                 &counters::PENDING_PEER_MANAGER_CONNECTIVITY_MANAGER_NOTIFICATIONS,
@@ -458,7 +458,7 @@ impl NetworkBuilder {
             debug!("Started connection manager");
         }
 
-        let pm_net_reqs_tx = pm_reqs_tx.clone();
+        let pm_net_reqs_tx = pm_reqs_tx;
         let (pm_net_notifs_tx, pm_net_notifs_rx) = channel::new(
             self.channel_size,
             &counters::PENDING_PEER_MANAGER_NET_NOTIFICATIONS,

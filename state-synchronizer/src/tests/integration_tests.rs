@@ -271,7 +271,7 @@ impl SynchronizerEnv {
         let (peer_addr, mut network_provider) = NetworkBuilder::new(
             self.runtime.handle().clone(),
             self.peer_ids[new_peer_idx],
-            addr.clone(),
+            addr,
             RoleType::Validator,
         )
         .signing_keys((
@@ -280,13 +280,13 @@ impl SynchronizerEnv {
                 .network_signing_public_key()
                 .clone(),
         ))
-        .trusted_peers(trusted_peers.clone())
+        .trusted_peers(trusted_peers)
         .seed_peers(seed_peers)
         .transport(TransportType::Memory)
         .direct_send_protocols(protocols.clone())
         .build();
 
-        let (sender, events) = network_provider.add_state_synchronizer(protocols.clone());
+        let (sender, events) = network_provider.add_state_synchronizer(protocols);
         self.runtime.handle().spawn(network_provider.start());
 
         let mut config = config_builder::test_config().0;

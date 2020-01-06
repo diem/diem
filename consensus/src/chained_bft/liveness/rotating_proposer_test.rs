@@ -26,12 +26,12 @@ fn test_rotating_proposer() {
         Block::new_proposal(1, 1, 1, quorum_cert.clone(), &another_validator_signer);
     let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &chosen_validator_signer);
     let next_good_proposal =
-        Block::new_proposal(3, 2, 3, quorum_cert.clone(), &chosen_validator_signer);
+        Block::new_proposal(3, 2, 3, quorum_cert, &chosen_validator_signer);
     assert_eq!(
         pe.process_proposal(good_proposal.clone()),
         Some(good_proposal)
     );
-    assert_eq!(pe.process_proposal(bad_proposal.clone()), None);
+    assert_eq!(pe.process_proposal(bad_proposal), None);
     assert_eq!(
         pe.process_proposal(next_good_proposal.clone()),
         Some(next_good_proposal)
@@ -65,12 +65,12 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     let good_proposal = Block::new_proposal(1, 1, 1, quorum_cert.clone(), &chosen_validator_signer);
     let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &another_validator_signer);
     let next_good_proposal =
-        Block::new_proposal(3, 2, 3, quorum_cert.clone(), &chosen_validator_signer);
+        Block::new_proposal(3, 2, 3, quorum_cert, &chosen_validator_signer);
     assert_eq!(
         pe.process_proposal(good_proposal.clone()),
         Some(good_proposal)
     );
-    assert_eq!(pe.process_proposal(bad_proposal.clone()), None);
+    assert_eq!(pe.process_proposal(bad_proposal), None);
     assert_eq!(
         pe.process_proposal(next_good_proposal.clone()),
         Some(next_good_proposal)
@@ -101,12 +101,12 @@ fn test_fixed_proposer() {
     let good_proposal = Block::new_proposal(1, 1, 1, quorum_cert.clone(), &chosen_validator_signer);
     let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &another_validator_signer);
     let next_good_proposal =
-        Block::new_proposal(2, 2, 3, quorum_cert.clone(), &chosen_validator_signer);
+        Block::new_proposal(2, 2, 3, quorum_cert, &chosen_validator_signer);
     assert_eq!(
         pe.process_proposal(good_proposal.clone()),
         Some(good_proposal)
     );
-    assert_eq!(pe.process_proposal(bad_proposal.clone()), None);
+    assert_eq!(pe.process_proposal(bad_proposal), None);
     assert_eq!(
         pe.process_proposal(next_good_proposal.clone()),
         Some(next_good_proposal)

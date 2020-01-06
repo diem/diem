@@ -19,7 +19,7 @@ proptest! {
 
     #[test]
     fn account_state_blob_hash(blob in vec(any::<u8>(), 1..100)) {
-        prop_assert_eq!(hash_blob(&blob), AccountStateBlob::from(blob.clone()).hash());
+        prop_assert_eq!(hash_blob(&blob), AccountStateBlob::from(blob).hash());
     }
 
     #[test]

@@ -482,7 +482,7 @@ fn test_internal_hash_and_proof() {
         assert_eq!(
             internal_node.get_child_with_siblings(&internal_node_key, index1),
             (
-                Some(child1_node_key.clone()),
+                Some(child1_node_key),
                 vec![
                     hash_x6,
                     *SPARSE_MERKLE_PLACEHOLDER_HASH,
@@ -545,7 +545,7 @@ fn test_internal_hash_and_proof() {
         assert_eq!(
             internal_node.get_child_with_siblings(&internal_node_key, index2),
             (
-                Some(child2_node_key.clone()),
+                Some(child2_node_key),
                 vec![
                     hash_x3,
                     *SPARSE_MERKLE_PLACEHOLDER_HASH,
@@ -608,7 +608,7 @@ fn test_internal_hash_and_proof() {
         assert_eq!(
             internal_node.get_child_with_siblings(&internal_node_key, 0.into()),
             (
-                Some(child1_node_key.clone()),
+                Some(child1_node_key),
                 vec![
                     *SPARSE_MERKLE_PLACEHOLDER_HASH,
                     hash_x4,
@@ -667,7 +667,7 @@ fn test_internal_hash_and_proof() {
         assert_eq!(
             internal_node.get_child_with_siblings(&internal_node_key, 7.into()),
             (
-                Some(child2_node_key.clone()),
+                Some(child2_node_key),
                 vec![
                     *SPARSE_MERKLE_PLACEHOLDER_HASH,
                     hash_x2,

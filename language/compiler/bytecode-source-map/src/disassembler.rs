@@ -140,7 +140,7 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
             field_type_sig.0.clone(),
             &struct_source_info.type_parameters,
         )?;
-        Ok(ty.to_string())
+        Ok(ty)
     }
 
     fn struct_type_info(
@@ -576,7 +576,7 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
             .map(|sig_token| {
                 let sig_tok_str =
                     self.disassemble_sig_tok(sig_token, &function_source_map.type_parameters)?;
-                Ok(sig_tok_str.to_string())
+                Ok(sig_tok_str)
             })
             .collect::<Result<Vec<String>>>()?;
         let (args, locals) =

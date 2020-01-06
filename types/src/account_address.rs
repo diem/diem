@@ -41,7 +41,7 @@ impl AccountAddress {
 
     // Helpful in log messages
     pub fn short_str(&self) -> String {
-        hex::encode(&self.0[0..SHORT_STRING_LENGTH]).to_string()
+        hex::encode(&self.0[0..SHORT_STRING_LENGTH])
     }
 
     pub fn to_vec(&self) -> Vec<u8> {

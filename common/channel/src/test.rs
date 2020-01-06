@@ -57,7 +57,7 @@ fn test_send_backpressure_multi_senders() {
     block_on(tx1.send(1)).unwrap();
     assert_eq!(TEST_COUNTER.get(), 1);
 
-    let mut tx2 = tx1.clone();
+    let mut tx2 = tx1;
     let mut task = tx2.send(2);
     assert_eq!(task.poll_unpin(&mut cx), Poll::Pending);
     let item = block_on(rx.next()).unwrap();

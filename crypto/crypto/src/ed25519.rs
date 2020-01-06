@@ -36,6 +36,7 @@ use ed25519_dalek;
 use libra_crypto_derive::{SilentDebug, SilentDisplay};
 use serde::{de, ser};
 use std::fmt;
+use std::cmp::Ordering;
 
 /// The length of the Ed25519PrivateKey
 pub const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
@@ -381,10 +382,10 @@ impl Eq for Ed25519Signature {}
 /// Check if S < L to capture invalid signatures.
 fn check_s_lt_l(s: &[u8]) -> bool {
     for i in (0..32).rev() {
-        if s[i] < L[i] {
-            return true;
-        } else if s[i] > L[i] {
-            return false;
+        match s[i].cmp(&L[i]) {
+            Ordering::Less => return true,
+            Ordering::Greater => return false,
+            _ => {},
         }
     }
     // As this stage S == L which implies a non canonical S.

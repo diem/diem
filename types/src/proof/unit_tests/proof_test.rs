@@ -422,8 +422,8 @@ fn test_verify_account_state_and_event() {
 
     let transaction_info_to_event_proof = EventAccumulatorProof::new(vec![event1_hash]);
     let event_proof = EventProof::new(
-        ledger_info_to_transaction_info_proof.clone(),
-        txn_info2.clone(),
+        ledger_info_to_transaction_info_proof,
+        txn_info2,
         transaction_info_to_event_proof,
     );
 

@@ -75,7 +75,7 @@ fn test_get_bit() {
 #[test]
 fn test_bit_iter() {
     let bytes = vec![0xc3, 0xa0];
-    let nibble_path = NibblePath::new_odd(bytes.clone());
+    let nibble_path = NibblePath::new_odd(bytes);
     let mut iter = nibble_path.bits();
     // c: 0b1100
     assert_eq!(iter.next(), Some(true));
@@ -99,7 +99,7 @@ fn test_bit_iter() {
 #[test]
 fn test_visited_nibble_iter() {
     let bytes = vec![0x12, 0x34, 0x56];
-    let nibble_path = NibblePath::new(bytes.clone());
+    let nibble_path = NibblePath::new(bytes);
     let mut iter = nibble_path.nibbles();
     assert_eq!(iter.next().unwrap(), 0x01.into());
     assert_eq!(iter.next().unwrap(), 0x02.into());

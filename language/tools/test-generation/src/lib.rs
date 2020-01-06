@@ -74,7 +74,7 @@ fn run_vm(module: VerifiedModule) -> Result<(), String> {
     let executor = FakeExecutor::from_genesis_file();
     execute_function_in_module(
         executor.get_state_view(),
-        module.clone(),
+        module,
         entry_idx,
         main_args,
     )

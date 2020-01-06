@@ -121,18 +121,22 @@ impl<T: Payload> ProposerElection<T> for MultiProposer<T> {
                     "Secondary proposal {}: will process it if no primary available.",
                     proposal
                 );
-                if round > self.backup_proposal_round {
-                    self.backup_proposal = Some((rank, proposal));
-                    self.backup_proposal_round = round;
-                } else if round == self.backup_proposal_round {
-                    // Already have some backup for the given round: choose the best (lowest) rank.
-                    let current_rank = self
-                        .backup_proposal
-                        .as_ref()
-                        .map_or(std::usize::MAX, |(r, _)| *r);
-                    if rank < current_rank {
+                match round.cmp(&self.backup_proposal_round) {
+                    std::cmp::Ordering::Greater => {
                         self.backup_proposal = Some((rank, proposal));
-                    }
+                        self.backup_proposal_round = round;
+                    },
+                    std::cmp::Ordering::Equal => {
+                        // Already have some backup for the given round: choose the best (lowest) rank.
+                        let current_rank = self
+                            .backup_proposal
+                            .as_ref()
+                            .map_or(std::usize::MAX, |(r, _)| *r);
+                        if rank < current_rank {
+                            self.backup_proposal = Some((rank, proposal));
+                        }
+                    },
+                    _ => {},
                 }
                 return None;
             }
