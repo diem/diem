@@ -3,7 +3,6 @@
 
 use crate::core_mempool::{CoreMempool, TimelineState, TxnPointer};
 use anyhow::{format_err, Result};
-use lazy_static::lazy_static;
 use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::*;
 use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
@@ -11,6 +10,7 @@ use libra_types::{
     account_address::AccountAddress,
     transaction::{RawTransaction, Script, SignedTransaction},
 };
+use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashSet, iter::FromIterator};
 
@@ -21,10 +21,8 @@ pub(crate) fn setup_mempool() -> (CoreMempool, ConsensusMock) {
     )
 }
 
-lazy_static! {
-    static ref ACCOUNTS: Vec<AccountAddress> =
-        vec![AccountAddress::random(), AccountAddress::random()];
-}
+static ACCOUNTS: Lazy<Vec<AccountAddress>> =
+    Lazy::new(|| vec![AccountAddress::random(), AccountAddress::random()]);
 
 #[derive(Clone)]
 pub struct TestTransaction {

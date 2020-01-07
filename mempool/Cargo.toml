@@ -15,7 +15,7 @@ bytes = "0.4.12"
 chrono = "0.4.7"
 futures = { version = "0.3.0", package = "futures", features = ["compat"] }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
-lazy_static = "1.3.0"
+once_cell = "1.2.0"
 lru-cache = "0.1.1"
 prost = "0.5.0"
 tokio = { version = "0.2", features = ["full"] }
