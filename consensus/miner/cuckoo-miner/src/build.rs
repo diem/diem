@@ -3,6 +3,7 @@
 extern crate cmake;
 extern crate fs_extra;
 
+#[allow(dead_code)]
 mod sanity;
 use cmake::Config;
 use fs_extra::dir::*;
