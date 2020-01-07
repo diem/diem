@@ -12,8 +12,8 @@ use crate::file_format::{
     NUMBER_OF_NATIVE_FUNCTIONS,
 };
 pub use crate::file_format_common::Opcodes;
-use lazy_static::lazy_static;
 use libra_types::{identifier::Identifier, transaction::MAX_TRANSACTION_SIZE_IN_BYTES};
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
     ops::{Add, Div, Mul, Sub},
@@ -136,56 +136,63 @@ define_gas_unit! {
     doc: "A newtype wrapper around the gas price for each unit of gas consumed."
 }
 
-lazy_static! {
-    /// The cost per-byte written to global storage.
-    /// TODO: Fill this in with a proper number once it's determined.
-    pub static ref GLOBAL_MEMORY_PER_BYTE_COST: GasUnits<GasCarrier> = GasUnits::new(8);
+/// The cost per-byte written to global storage.
+/// TODO: Fill this in with a proper number once it's determined.
+pub static GLOBAL_MEMORY_PER_BYTE_COST: Lazy<GasUnits<GasCarrier>> = Lazy::new(|| GasUnits::new(8));
 
-    /// The cost per-byte written to storage.
-    /// TODO: Fill this in with a proper number once it's determined.
-    pub static ref GLOBAL_MEMORY_PER_BYTE_WRITE_COST: GasUnits<GasCarrier> = GasUnits::new(8);
+/// The cost per-byte written to storage.
+/// TODO: Fill this in with a proper number once it's determined.
+pub static GLOBAL_MEMORY_PER_BYTE_WRITE_COST: Lazy<GasUnits<GasCarrier>> =
+    Lazy::new(|| GasUnits::new(8));
 
-    /// The maximum size representable by AbstractMemorySize
-    pub static ref MAX_ABSTRACT_MEMORY_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(std::u64::MAX);
+/// The maximum size representable by AbstractMemorySize
+pub static MAX_ABSTRACT_MEMORY_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
+    Lazy::new(|| AbstractMemorySize::new(std::u64::MAX));
 
-    /// The units of gas that should be charged per byte for every transaction.
-    pub static ref INTRINSIC_GAS_PER_BYTE: GasUnits<GasCarrier> = GasUnits::new(8);
+/// The units of gas that should be charged per byte for every transaction.
+pub static INTRINSIC_GAS_PER_BYTE: Lazy<GasUnits<GasCarrier>> = Lazy::new(|| GasUnits::new(8));
 
-    /// The minimum gas price that a transaction can be submitted with.
-    pub static ref MIN_PRICE_PER_GAS_UNIT: GasPrice<GasCarrier> = GasPrice::new(0);
+/// The minimum gas price that a transaction can be submitted with.
+pub static MIN_PRICE_PER_GAS_UNIT: Lazy<GasPrice<GasCarrier>> = Lazy::new(|| GasPrice::new(0));
 
-    /// The maximum gas unit price that a transaction can be submitted with.
-    pub static ref MAX_PRICE_PER_GAS_UNIT: GasPrice<GasCarrier> = GasPrice::new(10_000);
+/// The maximum gas unit price that a transaction can be submitted with.
+pub static MAX_PRICE_PER_GAS_UNIT: Lazy<GasPrice<GasCarrier>> = Lazy::new(|| GasPrice::new(10_000));
 
-    /// 1 nanosecond should equal one unit of computational gas. We bound the maximum
-    /// computational time of any given transaction at 10 milliseconds. We want this number and
-    /// `MAX_PRICE_PER_GAS_UNIT` to always satisfy the inequality that
-    ///         MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
-    pub static ref MAXIMUM_NUMBER_OF_GAS_UNITS: GasUnits<GasCarrier> = GasUnits::new(1_000_000);
+/// 1 nanosecond should equal one unit of computational gas. We bound the maximum
+/// computational time of any given transaction at 10 milliseconds. We want this number and
+/// `MAX_PRICE_PER_GAS_UNIT` to always satisfy the inequality that
+///         MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
+pub static MAXIMUM_NUMBER_OF_GAS_UNITS: Lazy<GasUnits<GasCarrier>> =
+    Lazy::new(|| GasUnits::new(1_000_000));
 
-    /// We charge one unit of gas per-byte for the first 600 bytes
-    pub static ref MIN_TRANSACTION_GAS_UNITS: GasUnits<GasCarrier> = GasUnits::new(600);
+/// We charge one unit of gas per-byte for the first 600 bytes
+pub static MIN_TRANSACTION_GAS_UNITS: Lazy<GasUnits<GasCarrier>> = Lazy::new(|| GasUnits::new(600));
 
-    /// The word size that we charge by
-    pub static ref WORD_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(8);
+/// The word size that we charge by
+pub static WORD_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
+    Lazy::new(|| AbstractMemorySize::new(8));
 
-    /// The size in words for a non-string or address constant on the stack
-    pub static ref CONST_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(1);
+/// The size in words for a non-string or address constant on the stack
+pub static CONST_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
+    Lazy::new(|| AbstractMemorySize::new(1));
 
-    /// The size in words for a reference on the stack
-    pub static ref REFERENCE_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(8);
+/// The size in words for a reference on the stack
+pub static REFERENCE_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
+    Lazy::new(|| AbstractMemorySize::new(8));
 
-    /// The size of a struct in words
-    pub static ref STRUCT_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(2);
+/// The size of a struct in words
+pub static STRUCT_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
+    Lazy::new(|| AbstractMemorySize::new(2));
 
-    /// For V1 all accounts will be 32 words
-    pub static ref DEFAULT_ACCOUNT_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(32);
+/// For V1 all accounts will be 32 words
+pub static DEFAULT_ACCOUNT_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
+    Lazy::new(|| AbstractMemorySize::new(32));
 
-    /// Any transaction over this size will be charged `INTRINSIC_GAS_PER_BYTE` per byte
-    pub static ref LARGE_TRANSACTION_CUTOFF: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(600);
+/// Any transaction over this size will be charged `INTRINSIC_GAS_PER_BYTE` per byte
+pub static LARGE_TRANSACTION_CUTOFF: Lazy<AbstractMemorySize<GasCarrier>> =
+    Lazy::new(|| AbstractMemorySize::new(600));
 
-    pub static ref GAS_SCHEDULE_NAME: Identifier = Identifier::new("T").unwrap();
-}
+pub static GAS_SCHEDULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 
 /// The encoding of the instruction is the serialized form of it, but disregarding the
 /// serialization of the instruction's argument(s).

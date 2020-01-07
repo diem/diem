@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0"
 byteorder = "1.3.2"
 hex = "0.3.2"
-lazy_static = "1.3.0"
+once_cell = "1.2.0"
 mirai-annotations = "1.4.0"
 proptest = { version = "0.9", optional = true }
 proptest-derive = { version = "0.1.1", optional = true }
