@@ -1,12 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use lazy_static;
 use libra_metrics::OpMetrics;
 use libra_types::{
     transaction::TransactionStatus,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
+use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge};
 use std::{convert::TryFrom, time::Instant};
 
@@ -25,13 +25,12 @@ pub const TXN_EPILOGUE_TIME_TAKEN: &str = "txn_gas_epilogue_time_taken";
 pub const TXN_EXECUTION_GAS_USAGE: &str = "txn_gas_execution_gas_usage";
 pub const TXN_TOTAL_GAS_USAGE: &str = "txn_gas_total_gas_usage";
 
-lazy_static::lazy_static! {
-    // the main metric (move_vm)
-    pub static ref VM_COUNTERS: OpMetrics = OpMetrics::new_and_registered("move_vm");
+// the main metric (move_vm)
+pub static VM_COUNTERS: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("move_vm"));
 
-    static ref VERIFIED_TRANSACTION: IntCounter = VM_COUNTERS.counter(TXN_VERIFICATION_SUCCESS);
-    static ref BLOCK_TRANSACTION_COUNT: IntGauge = VM_COUNTERS.gauge(TXN_BLOCK_COUNT);
-}
+static VERIFIED_TRANSACTION: Lazy<IntCounter> =
+    Lazy::new(|| VM_COUNTERS.counter(TXN_VERIFICATION_SUCCESS));
+static BLOCK_TRANSACTION_COUNT: Lazy<IntGauge> = Lazy::new(|| VM_COUNTERS.gauge(TXN_BLOCK_COUNT));
 
 /// Wrapper around time::Instant.
 pub fn start_profile() -> Instant {
