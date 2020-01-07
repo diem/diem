@@ -24,37 +24,38 @@ use crate::{
     account::{Account, AccountData},
     gas_costs,
 };
-use lazy_static::lazy_static;
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
+use once_cell::sync::Lazy;
 use proptest::{prelude::*, strategy::Union};
 use std::{fmt, sync::Arc};
 
-lazy_static! {
-    static ref UNIVERSE_SIZE: usize = {
-        use std::{env, process::abort};
+static UNIVERSE_SIZE: Lazy<usize> = Lazy::new(|| {
+    use std::{env, process::abort};
 
-        match env::var("UNIVERSE_SIZE") {
-            Ok(s) => match s.parse::<usize>() {
-                Ok(val) => val,
-                Err(err) => {
-                    println!("Could not parse universe size, aborting: {:?}", err);
-                    // Abort because lazy_static with panics causes poisoning and isn't very
-                    // helpful overall.
-                    abort();
-                }
-            }
-            Err(env::VarError::NotPresent) => 20,
+    match env::var("UNIVERSE_SIZE") {
+        Ok(s) => match s.parse::<usize>() {
+            Ok(val) => val,
             Err(err) => {
-                println!("Could not read universe size from the environment, aborting: {:?}", err);
+                println!("Could not parse universe size, aborting: {:?}", err);
+                // Abort because Lazy with panics causes poisoning and isn't very
+                // helpful overall.
                 abort();
             }
+        },
+        Err(env::VarError::NotPresent) => 20,
+        Err(err) => {
+            println!(
+                "Could not read universe size from the environment, aborting: {:?}",
+                err
+            );
+            abort();
         }
-    };
-}
+    }
+});
 
 /// The number of accounts to run universe-based proptests with. Set with the `UNIVERSE_SIZE`
 /// environment variable.

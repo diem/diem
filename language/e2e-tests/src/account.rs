@@ -3,7 +3,6 @@
 
 //! Test infrastructure for modeling Libra accounts.
 
-use lazy_static::lazy_static;
 use libra_crypto::ed25519::*;
 use libra_types::{
     access_path::AccessPath,
@@ -20,11 +19,6 @@ use std::time::Duration;
 use vm_genesis::GENESIS_KEYPAIR;
 use vm_runtime::identifier::create_access_path;
 use vm_runtime_types::value::{Struct, Value};
-
-// StdLib account, it is where the code is and needed to make access path to Account resources
-lazy_static! {
-    static ref STDLIB_ADDRESS: AccountAddress = { account_config::core_code_address() };
-}
 
 /// Details about a Libra account.
 ///

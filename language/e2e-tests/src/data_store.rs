@@ -5,7 +5,6 @@
 
 use crate::account::AccountData;
 use anyhow::Result;
-use lazy_static::lazy_static;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -13,20 +12,19 @@ use libra_types::{
     transaction::{Transaction, TransactionPayload},
     write_set::{WriteOp, WriteSet},
 };
+use once_cell::sync::Lazy;
 use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 use vm::{errors::*, CompiledModule};
 use vm_runtime::data_cache::RemoteCache;
 
-lazy_static! {
-    /// The write set encoded in the genesis transaction.
-    pub static ref GENESIS_WRITE_SET: WriteSet = {
-        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        path.pop();
-        path.push("tools/vm-genesis/genesis/genesis.blob");
+/// The write set encoded in the genesis transaction.
+pub static GENESIS_WRITE_SET: Lazy<WriteSet> = Lazy::new(|| {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.pop();
+    path.push("tools/vm-genesis/genesis/genesis.blob");
 
-        load_genesis(path)
-    };
-}
+    load_genesis(path)
+});
 
 fn load_genesis(path: PathBuf) -> WriteSet {
     let mut f = File::open(&path).unwrap();
