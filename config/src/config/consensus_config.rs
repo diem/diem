@@ -81,7 +81,7 @@ impl Default for ConsensusConfig {
             consensus_type: ConsensusType::POW,
             miner_rpc_address: "127.0.0.1:4251".to_string(),
             miner_client_enable: true,
-            consensus_rpc_address: "0.0.0.0".to_string(),
+            consensus_rpc_address: "127.0.0.1".to_string(),
             consensus_rpc_port: 8008,
         }
     }

@@ -2,7 +2,7 @@ use libra_crypto::HashValue;
 use miner::types::{from_slice, Algo, H256, U256};
 
 pub const BLOCK_WINDOW: u32 = 12;
-pub const BLOCK_TIME_SEC: u64 = 30;
+pub const BLOCK_TIME_SEC: u64 = 15;
 
 pub fn difficult_1_target() -> H256 {
     (U256::max_value() / DIFF_1_HASH_TIMES).into()
