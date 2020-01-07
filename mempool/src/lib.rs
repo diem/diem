@@ -63,11 +63,9 @@ mod runtime;
 mod shared_mempool;
 
 // module op counters
-use lazy_static::lazy_static;
 use libra_metrics::OpMetrics;
-lazy_static! {
-    static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("mempool");
-}
+use once_cell::sync::Lazy;
+static OP_COUNTERS: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("mempool"));
 
 #[cfg(test)]
 mod unit_tests;
