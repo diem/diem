@@ -4688,7 +4688,6 @@ version = "0.1.0"
 dependencies = [
  "client 0.1.0",
  "generate-keypair 0.1.0",
- "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
