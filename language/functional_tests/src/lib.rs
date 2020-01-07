@@ -3,9 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-#[macro_use]
-extern crate lazy_static;
-
 pub mod checker;
 pub mod common;
 pub mod config;
