@@ -236,7 +236,7 @@ impl MintManager {
                                                     let mint_data = BlockPayloadExt {
                                                         txns,
                                                         nonce: proof.nonce,
-                                                        solve: proof.solution,
+                                                        solve: proof.solution.into(),
                                                         target: proof.target.to_vec(),
                                                         algo: proof.algo.into(),
                                                     };

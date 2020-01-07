@@ -1,0 +1,36 @@
+dist: trusty
+sudo: false
+language: cpp
+env:
+  - JOB=cuckoo
+  - JOB=cuckatoo
+  - JOB=java
+  - JOB=doc
+matrix:
+  include:
+    - os: osx
+      osx_image: xcode8.3 # [`xcode8.3` is Xcode 8.3.3 on OS X 10.12](https://docs.travis-ci.com/user/reference/osx#OS-X-Version)
+      language: generic
+      env: JOB=java
+addons:
+  apt:
+    packages:
+      - texlive-latex-base
+      - texlive-pictures
+      - pgf
+before_script:
+  - case "${TRAVIS_OS_NAME:?}" in linux) LIBV=LD_LIBRARY_PATH;; osx) LIBV=DYLD_LIBRARY_PATH;; esac
+  - echo "The library path variable name is ${LIBV:?}"
+  - LIBP="$(pwd)/src"
+  - echo "The library path variable value is ${LIBP:?}"
+script:
+  - if test cuckoo = "${JOB:?}"; then ( cd src/cuckoo && make; ); fi
+  - if test cuckatoo = "${JOB:?}"; then ( cd src/cuckatoo && make; ); fi
+  - if test java = "${JOB:?}"; then ( cd src/java && make; ); fi
+  - if test doc = "${JOB:?}"; then ( cd doc && make cuckoo.pdf; ); fi
+after_success:
+  - |
+    if test doc = "${JOB:?}"; then
+      echo "Below is the generated PDF encoded as base64. You can decode it using 'openssl base64 -d'."
+      cat doc/cuckoo.pdf | openssl base64
+    fi

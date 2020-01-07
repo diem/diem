@@ -23,7 +23,7 @@ message MineCtx{
 
 message MinedBlockRequest{
     MineCtx mine_ctx=1;
-    uint64 nonce=2;
+    uint32 nonce=2;
     bytes solution=3;
 }
 

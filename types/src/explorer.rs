@@ -65,7 +65,7 @@ pub struct BlockSummary {
     pub accumulator_root_hash: HashValue,
     pub state_root_hash: HashValue,
     pub miner: AccountAddress,
-    pub nonce: u64,
+    pub nonce: u32,
     pub target: HashValue,
     pub algo: u32,
 }
