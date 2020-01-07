@@ -429,7 +429,6 @@ dependencies = [
  "ir-to-bytecode 0.1.0",
  "ir-to-bytecode-syntax 0.1.0",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-tools 0.1.0",
  "libra-types 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
