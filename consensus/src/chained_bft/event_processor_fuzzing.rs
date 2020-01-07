@@ -18,10 +18,10 @@ use crate::{
 };
 use consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures};
 use futures::{channel::mpsc, executor::block_on};
-use lazy_static::lazy_static;
 use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use network::{proto::Proposal, validator_network::ConsensusNetworkSender};
+use once_cell::sync::Lazy;
 use prost::Message as _;
 use safety_rules::{InMemoryStorage, SafetyRules};
 use std::convert::TryFrom;
@@ -50,10 +50,8 @@ pub fn generate_corpus_proposal() -> Vec<u8> {
 }
 
 // optimization for the fuzzer
-lazy_static! {
-    static ref STATIC_RUNTIME: Runtime = Runtime::new().unwrap();
-    static ref FUZZING_SIGNER: ValidatorSigner = ValidatorSigner::from_int(1);
-}
+static STATIC_RUNTIME: Lazy<Runtime> = Lazy::new(|| Runtime::new().unwrap());
+static FUZZING_SIGNER: Lazy<ValidatorSigner> = Lazy::new(|| ValidatorSigner::from_int(1));
 
 // helpers
 fn build_empty_store(
