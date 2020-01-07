@@ -10,6 +10,7 @@ use libra_types::{
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use vm::file_format::{Kind, StructHandleIndex};
 
@@ -59,19 +60,17 @@ macro_rules! add {
 
 type NativeStructMap = HashMap<ModuleId, HashMap<Identifier, NativeStruct>>;
 
-lazy_static! {
-    static ref NATIVE_STRUCT_MAP: NativeStructMap = {
-        let mut m: NativeStructMap = HashMap::new();
-        let addr = account_config::core_code_address();
-        add!(
-            m,
-            addr,
-            "Vector",
-            "T",
-            false,
-            vec![Kind::All],
-            NativeStructTag::Vector
-        );
-        m
-    };
-}
+static NATIVE_STRUCT_MAP: Lazy<NativeStructMap> = Lazy::new(|| {
+    let mut m: NativeStructMap = HashMap::new();
+    let addr = account_config::core_code_address();
+    add!(
+        m,
+        addr,
+        "Vector",
+        "T",
+        false,
+        vec![Kind::All],
+        NativeStructTag::Vector
+    );
+    m
+});

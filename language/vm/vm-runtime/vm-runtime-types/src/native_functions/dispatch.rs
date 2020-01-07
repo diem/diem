@@ -13,6 +13,7 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+use once_cell::sync::Lazy;
 use std::collections::{HashMap, VecDeque};
 use vm::{
     errors::VMResult,
@@ -130,160 +131,252 @@ fn tstruct(
 
 type NativeFunctionMap = HashMap<ModuleId, HashMap<Identifier, NativeFunction>>;
 
-lazy_static! {
-    static ref NATIVE_FUNCTION_MAP: NativeFunctionMap = {
-        use SignatureToken::*;
-        let mut m: NativeFunctionMap = HashMap::new();
-        let addr = account_config::core_code_address();
-        // Hash
-        add!(m, addr, "Hash", "sha2_256",
-            hash::native_sha2_256,
-            vec![ByteArray],
-            vec![ByteArray]
-        );
-        add!(m, addr, "Hash", "sha3_256",
-            hash::native_sha3_256,
-            vec![ByteArray],
-            vec![ByteArray]
-        );
-        // Signature
-        add!(m, addr, "Signature", "ed25519_verify",
-            signature::native_ed25519_signature_verification,
-            vec![ByteArray, ByteArray, ByteArray],
-            vec![Bool]
-        );
-        add!(m, addr, "Signature", "ed25519_threshold_verify",
-            signature::native_ed25519_threshold_signature_verification,
-            vec![ByteArray, ByteArray, ByteArray, ByteArray],
-            vec![U64]
-        );
-        // AddressUtil
-        add!(m, addr, "AddressUtil", "address_to_bytes",
-            primitive_helpers::native_address_to_bytes,
-            vec![Address],
-            vec![ByteArray]
-        );
-        // U64Util
-        add!(m, addr, "U64Util", "u64_to_bytes",
-            primitive_helpers::native_u64_to_bytes,
-            vec![U64],
-            vec![ByteArray]
-        );
-        // BytearrayUtil
-        add!(m, addr, "BytearrayUtil", "bytearray_concat",
-            primitive_helpers::native_bytearray_concat,
-            vec![ByteArray, ByteArray],
-            vec![ByteArray]
-        );
-        // Vector
-        add!(m, addr, "Vector", "length",
-            NativeVector::native_length,
-            vec![Kind::All],
-            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)])))],
-            vec![U64]
-        );
-        add!(m, addr, "Vector", "empty",
-            NativeVector::native_empty,
-            vec![Kind::All],
-            vec![],
-            vec![
-                tstruct(addr, "Vector", "T", vec![TypeParameter(0)]),
-            ]
-        );
-        add!(m, addr, "Vector", "borrow",
-            NativeVector::native_borrow,
-            vec![Kind::All],
-            vec![
-                Reference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
-                U64],
-            vec![
-                Reference(Box::new(TypeParameter(0)))
-            ]
-        );
-        add!(m, addr, "Vector", "borrow_mut",
-            NativeVector::native_borrow,
-            vec![Kind::All],
-            vec![
-                MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
-                 U64],
-            vec![
-                MutableReference(Box::new(TypeParameter(0)))
-            ]
-        );
-        add!(m, addr, "Vector", "push_back",
-            NativeVector::native_push_back,
-            vec![Kind::All],
-            vec![
-                MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
-                TypeParameter(0),
-            ],
-            vec![]
-        );
-        add!(m, addr, "Vector", "pop_back",
-            NativeVector::native_pop,
-            vec![Kind::All],
-            vec![MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)])))],
+static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
+    use SignatureToken::*;
+    let mut m: NativeFunctionMap = HashMap::new();
+    let addr = account_config::core_code_address();
+    // Hash
+    add!(
+        m,
+        addr,
+        "Hash",
+        "sha2_256",
+        hash::native_sha2_256,
+        vec![ByteArray],
+        vec![ByteArray]
+    );
+    add!(
+        m,
+        addr,
+        "Hash",
+        "sha3_256",
+        hash::native_sha3_256,
+        vec![ByteArray],
+        vec![ByteArray]
+    );
+    // Signature
+    add!(
+        m,
+        addr,
+        "Signature",
+        "ed25519_verify",
+        signature::native_ed25519_signature_verification,
+        vec![ByteArray, ByteArray, ByteArray],
+        vec![Bool]
+    );
+    add!(
+        m,
+        addr,
+        "Signature",
+        "ed25519_threshold_verify",
+        signature::native_ed25519_threshold_signature_verification,
+        vec![ByteArray, ByteArray, ByteArray, ByteArray],
+        vec![U64]
+    );
+    // AddressUtil
+    add!(
+        m,
+        addr,
+        "AddressUtil",
+        "address_to_bytes",
+        primitive_helpers::native_address_to_bytes,
+        vec![Address],
+        vec![ByteArray]
+    );
+    // U64Util
+    add!(
+        m,
+        addr,
+        "U64Util",
+        "u64_to_bytes",
+        primitive_helpers::native_u64_to_bytes,
+        vec![U64],
+        vec![ByteArray]
+    );
+    // BytearrayUtil
+    add!(
+        m,
+        addr,
+        "BytearrayUtil",
+        "bytearray_concat",
+        primitive_helpers::native_bytearray_concat,
+        vec![ByteArray, ByteArray],
+        vec![ByteArray]
+    );
+    // Vector
+    add!(
+        m,
+        addr,
+        "Vector",
+        "length",
+        NativeVector::native_length,
+        vec![Kind::All],
+        vec![Reference(Box::new(tstruct(
+            addr,
+            "Vector",
+            "T",
             vec![TypeParameter(0)]
-        );
-        add!(m, addr, "Vector", "destroy_empty",
-            NativeVector::native_destroy_empty,
-            vec![Kind::All],
-            vec![tstruct(addr, "Vector", "T", vec![TypeParameter(0)])],
-            vec![]
-        );
-        add!(m, addr, "Vector", "swap",
-            NativeVector::native_swap,
-            vec![Kind::All],
-            vec![
-                MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
-                U64,
-                U64,
-            ],
-            vec![]
-        );
+        )))],
+        vec![U64]
+    );
+    add!(
+        m,
+        addr,
+        "Vector",
+        "empty",
+        NativeVector::native_empty,
+        vec![Kind::All],
+        vec![],
+        vec![tstruct(addr, "Vector", "T", vec![TypeParameter(0)]),]
+    );
+    add!(
+        m,
+        addr,
+        "Vector",
+        "borrow",
+        NativeVector::native_borrow,
+        vec![Kind::All],
+        vec![
+            Reference(Box::new(tstruct(
+                addr,
+                "Vector",
+                "T",
+                vec![TypeParameter(0)]
+            ))),
+            U64
+        ],
+        vec![Reference(Box::new(TypeParameter(0)))]
+    );
+    add!(
+        m,
+        addr,
+        "Vector",
+        "borrow_mut",
+        NativeVector::native_borrow,
+        vec![Kind::All],
+        vec![
+            MutableReference(Box::new(tstruct(
+                addr,
+                "Vector",
+                "T",
+                vec![TypeParameter(0)]
+            ))),
+            U64
+        ],
+        vec![MutableReference(Box::new(TypeParameter(0)))]
+    );
+    add!(
+        m,
+        addr,
+        "Vector",
+        "push_back",
+        NativeVector::native_push_back,
+        vec![Kind::All],
+        vec![
+            MutableReference(Box::new(tstruct(
+                addr,
+                "Vector",
+                "T",
+                vec![TypeParameter(0)]
+            ))),
+            TypeParameter(0),
+        ],
+        vec![]
+    );
+    add!(
+        m,
+        addr,
+        "Vector",
+        "pop_back",
+        NativeVector::native_pop,
+        vec![Kind::All],
+        vec![MutableReference(Box::new(tstruct(
+            addr,
+            "Vector",
+            "T",
+            vec![TypeParameter(0)]
+        )))],
+        vec![TypeParameter(0)]
+    );
+    add!(
+        m,
+        addr,
+        "Vector",
+        "destroy_empty",
+        NativeVector::native_destroy_empty,
+        vec![Kind::All],
+        vec![tstruct(addr, "Vector", "T", vec![TypeParameter(0)])],
+        vec![]
+    );
+    add!(
+        m,
+        addr,
+        "Vector",
+        "swap",
+        NativeVector::native_swap,
+        vec![Kind::All],
+        vec![
+            MutableReference(Box::new(tstruct(
+                addr,
+                "Vector",
+                "T",
+                vec![TypeParameter(0)]
+            ))),
+            U64,
+            U64,
+        ],
+        vec![]
+    );
 
-        //
-        // TODO: both API bolow are directly implemented in the interepreter as we lack a
-        // good mechanism to expose certain API to native functions.
-        // Specifically we need access to some frame information (e.g. type instantiations) and
-        // access to the data store.
-        // Maybe marking native functions in a certain way (e.g `system` or similar) may
-        // be a way for the VM to force a given argument to the native implementation.
-        // Alternative models are fine too...
-        //
+    //
+    // TODO: both API bolow are directly implemented in the interepreter as we lack a
+    // good mechanism to expose certain API to native functions.
+    // Specifically we need access to some frame information (e.g. type instantiations) and
+    // access to the data store.
+    // Maybe marking native functions in a certain way (e.g `system` or similar) may
+    // be a way for the VM to force a given argument to the native implementation.
+    // Alternative models are fine too...
+    //
 
-        // Event
-        add!(m, addr, "LibraAccount", "write_to_event_store",
-            |_, _| {
-                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
-                            "write_to_event_store does not have a native implementation"
-                                .to_string()))
-             },
-            vec![Kind::Unrestricted],
-            vec![ByteArray, U64, TypeParameter(0)],
-            vec![]
-        );
-        // LibraAccount
-        add!(m, addr, "LibraAccount", "save_account",
-            |_, _| {
-                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
-                    "save_account does not have a native implementation".to_string()))
-            },
-            vec![
-                Address,
-                // this is LibraAccount.T which happens to be the first struct handle in the
-                // binary.
-                // TODO: current plan is to rework the description of the native function
-                // by using the binary directly and have functions that fetch the arguments
-                // go through the signature for extra verification. That is the plan if perf
-                // and the model look good.
-                Struct(StructHandleIndex::new(0), vec![]),
-            ],
-            vec![]
-        );
-        m
-    };
-}
+    // Event
+    add!(
+        m,
+        addr,
+        "LibraAccount",
+        "write_to_event_store",
+        |_, _| {
+            Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                "write_to_event_store does not have a native implementation".to_string(),
+            ))
+        },
+        vec![Kind::Unrestricted],
+        vec![ByteArray, U64, TypeParameter(0)],
+        vec![]
+    );
+    // LibraAccount
+    add!(
+        m,
+        addr,
+        "LibraAccount",
+        "save_account",
+        |_, _| {
+            Err(VMStatus::new(StatusCode::UNREACHABLE)
+                .with_message("save_account does not have a native implementation".to_string()))
+        },
+        vec![
+            Address,
+            // this is LibraAccount.T which happens to be the first struct handle in the
+            // binary.
+            // TODO: current plan is to rework the description of the native function
+            // by using the binary directly and have functions that fetch the arguments
+            // go through the signature for extra verification. That is the plan if perf
+            // and the model look good.
+            Struct(StructHandleIndex::new(0), vec![]),
+        ],
+        vec![]
+    );
+    m
+});
 
 #[macro_export]
 macro_rules! pop_arg {
