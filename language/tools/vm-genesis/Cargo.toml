@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 anyhow = "1.0"
-lazy_static = "1.3.0"
+once_cell = "1.2.0"
 rand = "0.6.5"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }

@@ -8,7 +8,6 @@ mod genesis_gas_schedule;
 use crate::genesis_gas_schedule::initial_gas_schedule;
 use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
-use lazy_static::lazy_static;
 use libra_crypto::{
     ed25519::*,
     traits::ValidKey,
@@ -27,6 +26,7 @@ use libra_types::{
     identifier::Identifier,
     transaction::{ChangeSet, RawTransaction, SignatureCheckedTransaction},
 };
+use once_cell::sync::Lazy;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
 use std::str::FromStr;
@@ -44,40 +44,38 @@ use vm_runtime_types::value::Value;
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
 
-lazy_static! {
-    pub static ref GENESIS_KEYPAIR: (Ed25519PrivateKey, Ed25519PublicKey) = {
-        let mut rng = StdRng::from_seed(GENESIS_SEED);
-        compat::generate_keypair(&mut rng)
-    };
-    // TODO(philiphayes): remove this when we add discovery set to genesis config.
-    static ref PLACEHOLDER_PUBKEY: X25519StaticPublicKey = {
-        let salt = None;
-        let seed = [69u8; 32];
-        let app_info = None;
-        let (_, pubkey) = X25519StaticPrivateKey::derive_keypair_from_seed(salt, &seed, app_info);
-        pubkey
-    };
-}
+pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::new(|| {
+    let mut rng = StdRng::from_seed(GENESIS_SEED);
+    compat::generate_keypair(&mut rng)
+});
+// TODO(philiphayes): remove this when we add discovery set to genesis config.
+static PLACEHOLDER_PUBKEY: Lazy<X25519StaticPublicKey> = Lazy::new(|| {
+    let salt = None;
+    let seed = [69u8; 32];
+    let app_info = None;
+    let (_, pubkey) = X25519StaticPrivateKey::derive_keypair_from_seed(salt, &seed, app_info);
+    pubkey
+});
 
 // Identifiers for well-known functions.
-lazy_static! {
-    static ref ADD_VALIDATOR: Identifier = Identifier::new("add_validator").unwrap();
-    static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
-    static ref INITIALIZE_BLOCK: Identifier = Identifier::new("initialize_block_metadata").unwrap();
-    static ref INITIALIZE_TXN_FEES: Identifier =
-        Identifier::new("initialize_transaction_fees").unwrap();
-    static ref INITIALIZE_VALIDATOR_SET: Identifier =
-        Identifier::new("initialize_validator_set").unwrap();
-    static ref INITIALIZE_DISCOVERY_SET: Identifier =
-        Identifier::new("initialize_discovery_set").unwrap();
-    static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
-    static ref RECONFIGURE: Identifier = Identifier::new("reconfigure").unwrap();
-    static ref REGISTER_CANDIDATE_VALIDATOR: Identifier =
-        Identifier::new("register_candidate_validator").unwrap();
-    static ref ROTATE_AUTHENTICATION_KEY: Identifier =
-        { Identifier::new("rotate_authentication_key").unwrap() };
-    static ref EPILOGUE: Identifier = Identifier::new("epilogue").unwrap();
-}
+static ADD_VALIDATOR: Lazy<Identifier> = Lazy::new(|| Identifier::new("add_validator").unwrap());
+static INITIALIZE: Lazy<Identifier> = Lazy::new(|| Identifier::new("initialize").unwrap());
+static INITIALIZE_BLOCK: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("initialize_block_metadata").unwrap());
+static INITIALIZE_TXN_FEES: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("initialize_transaction_fees").unwrap());
+static INITIALIZE_VALIDATOR_SET: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("initialize_validator_set").unwrap());
+static INITIALIZE_DISCOVERY_SET: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("initialize_discovery_set").unwrap());
+static MINT_TO_ADDRESS: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("mint_to_address").unwrap());
+static RECONFIGURE: Lazy<Identifier> = Lazy::new(|| Identifier::new("reconfigure").unwrap());
+static REGISTER_CANDIDATE_VALIDATOR: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("register_candidate_validator").unwrap());
+static ROTATE_AUTHENTICATION_KEY: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("rotate_authentication_key").unwrap());
+static EPILOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unwrap());
 
 struct FakeStateView;
 
