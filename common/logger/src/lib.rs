@@ -30,7 +30,7 @@ mod simple_logger;
 
 use crate::kv_categorizer::ErrorCategorizer;
 use glog_format::GlogFormat;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use slog::{o, Discard, Drain, FilterLevel, Logger, Never};
 pub use slog::{slog_crit, slog_debug, slog_error, slog_info, slog_trace, slog_warn};
 use slog_async::Async;
@@ -97,35 +97,32 @@ fn create_test_root_logger() -> Logger {
     Logger::root(Mutex::new(envlogger).fuse(), o!())
 }
 
-// TODO: redo this
-lazy_static! {
-    static ref TESTING_ENVLOGGER_GUARD: GlobalLoggerGuard = {
-        let logger = {
-            if ::std::env::var("RUST_LOG").is_ok() {
-                create_default_root_logger(false /* async */, None /* chan_size */)
-            } else {
-                Logger::root(Discard, o!())
-            }
-        };
-        set_global_logger(logger)
+static TESTING_ENVLOGGER_GUARD: Lazy<GlobalLoggerGuard> = Lazy::new(|| {
+    let logger = {
+        if ::std::env::var("RUST_LOG").is_ok() {
+            create_default_root_logger(false /* async */, None /* chan_size */)
+        } else {
+            Logger::root(Discard, o!())
+        }
     };
+    set_global_logger(logger)
+});
 
-    static ref END_TO_END_TESTING_ENVLOGGER_GUARD: GlobalLoggerGuard = {
-        let logger = create_test_root_logger();
-        set_global_logger(logger)
-    };
-}
+static END_TO_END_TESTING_ENVLOGGER_GUARD: Lazy<GlobalLoggerGuard> = Lazy::new(|| {
+    let logger = create_test_root_logger();
+    set_global_logger(logger)
+});
 
 /// Create and setup default global logger following the env-logger conventions,
 ///  i.e. configured by environment variable RUST_LOG.
 /// This is useful to make logging optional in unit tests.
 pub fn try_init_for_testing() {
-    ::lazy_static::initialize(&TESTING_ENVLOGGER_GUARD);
+    Lazy::force(&TESTING_ENVLOGGER_GUARD);
 }
 
 /// Create and setup default global logger for use in end to end testing.
 pub fn init_for_e2e_testing() {
-    ::lazy_static::initialize(&END_TO_END_TESTING_ENVLOGGER_GUARD);
+    Lazy::force(&END_TO_END_TESTING_ENVLOGGER_GUARD);
 }
 
 fn get_logger<D>(is_async: bool, chan_size: Option<usize>, drain: D) -> Logger
