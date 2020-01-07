@@ -3,7 +3,7 @@
 
 use crate::{FuzzTarget, FuzzTargetImpl};
 use anyhow::{format_err, Result};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::{collections::BTreeMap, env};
 
 /// Convenience macro to return the module name.
@@ -65,23 +65,24 @@ mod signed_transaction;
 mod sparse_merkle_proof;
 mod vm_value;
 
-lazy_static! {
-    static ref ALL_TARGETS: BTreeMap<&'static str, Box<dyn FuzzTargetImpl>> = {
-        let targets: Vec<Box<dyn FuzzTargetImpl>> = vec![
-            // List fuzz targets here in this format.
-            Box::new(compiled_module::CompiledModuleTarget::default()),
-            Box::new(signed_transaction::SignedTransactionTarget::default()),
-            Box::new(inner_signed_transaction::SignedTransactionTarget::default()),
-            Box::new(sparse_merkle_proof::SparseMerkleProofTarget::default()),
-            Box::new(accumulator_merkle_proof::AccumulatorProofTarget::default()),
-            Box::new(vm_value::ValueTarget::default()),
-            Box::new(consensus_proposal::ConsensusProposal::default()),
-            Box::new(admission_control::AdmissionControlSubmitTransactionRequest::default()),
-            Box::new(inbound_rpc_protocol::RpcInboundRequest::default()),
-        ];
-        targets.into_iter().map(|target| (target.name(), target)).collect()
-    };
-}
+static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy::new(|| {
+    let targets: Vec<Box<dyn FuzzTargetImpl>> = vec![
+        // List fuzz targets here in this format.
+        Box::new(compiled_module::CompiledModuleTarget::default()),
+        Box::new(signed_transaction::SignedTransactionTarget::default()),
+        Box::new(inner_signed_transaction::SignedTransactionTarget::default()),
+        Box::new(sparse_merkle_proof::SparseMerkleProofTarget::default()),
+        Box::new(accumulator_merkle_proof::AccumulatorProofTarget::default()),
+        Box::new(vm_value::ValueTarget::default()),
+        Box::new(consensus_proposal::ConsensusProposal::default()),
+        Box::new(admission_control::AdmissionControlSubmitTransactionRequest::default()),
+        Box::new(inbound_rpc_protocol::RpcInboundRequest::default()),
+    ];
+    targets
+        .into_iter()
+        .map(|target| (target.name(), target))
+        .collect()
+});
 
 impl FuzzTarget {
     /// The environment variable used for passing fuzz targets to child processes.

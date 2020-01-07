@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Helpers for fuzz testing.
 
-use lazy_static::lazy_static;
 use libra_fuzzer::{commands, FuzzTarget};
+use once_cell::sync::Lazy;
 use std::{env, ffi::OsString, fs, path::PathBuf};
 use structopt::StructOpt;
 
@@ -19,12 +19,10 @@ struct Opt {
 
 /// The default number of items to generate in a corpus.
 const GENERATE_DEFAULT_ITEMS: usize = 128;
-lazy_static! {
-    /// A stringified form of `GENERATE_DEFAULT_ITEMS`.
-    ///
-    /// Required because structopt only accepts strings as default values.
-    static ref GENERATE_DEFAULT_ITEMS_STR: String = GENERATE_DEFAULT_ITEMS.to_string();
-}
+/// A stringified form of `GENERATE_DEFAULT_ITEMS`.
+///
+/// Required because structopt only accepts strings as default values.
+static GENERATE_DEFAULT_ITEMS_STR: Lazy<String> = Lazy::new(|| GENERATE_DEFAULT_ITEMS.to_string());
 
 #[derive(Debug, StructOpt)]
 enum Command {
@@ -35,7 +33,7 @@ enum Command {
         #[structopt(
             short = "n",
             long = "num-items",
-            default_value("&GENERATE_DEFAULT_ITEMS_STR")
+            default_value = &GENERATE_DEFAULT_ITEMS_STR
         )]
         num_items: usize,
         /// Custom directory for corpus output to be stored in (required if not running under
