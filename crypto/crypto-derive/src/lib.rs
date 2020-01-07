@@ -281,9 +281,9 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
             }
         }
 
-        ::lazy_static::lazy_static!{
-            static ref #static_hasher_name: #hasher_name = #hasher_name::new();
-        }
+        static #static_hasher_name: libra_crypto::_once_cell::sync::Lazy<#hasher_name> =
+            libra_crypto::_once_cell::sync::Lazy::new(|| #hasher_name::new());
+
 
         impl std::default::Default for #hasher_name
         {

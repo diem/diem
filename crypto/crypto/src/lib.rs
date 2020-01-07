@@ -23,3 +23,7 @@ pub mod test_utils;
 
 pub use self::traits::*;
 pub use hash::HashValue;
+
+// Reexport once_cell for use in CryptoHasher Derive implementation
+#[doc(hidden)]
+pub use once_cell as _once_cell;
