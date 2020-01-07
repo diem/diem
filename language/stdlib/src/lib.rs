@@ -10,13 +10,11 @@ use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use bytecode_verifier::{verify_module_dependencies, VerifiedModule};
 use ir_to_bytecode::compiler::compile_module;
 use ir_to_bytecode::parser::ast::Loc;
-use lazy_static::lazy_static;
 use libra_types::{account_address::AccountAddress, account_config};
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    static ref ANNOTATED_STDLIB: (Vec<VerifiedModule>, SourceMap<Loc>) =
-        { build_stdlib(account_config::core_code_address()) };
-}
+static ANNOTATED_STDLIB: Lazy<(Vec<VerifiedModule>, SourceMap<Loc>)> =
+    Lazy::new(|| build_stdlib(account_config::core_code_address()));
 
 /// Returns a reference to the standard library, compiled with the
 /// [default address](account_config::core_code_address).

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use ir_to_bytecode::parser::{ast::Program, parse_program};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
 /// Returns the source code for the add validator transaction script
 pub fn add_validator() -> &'static str {
@@ -54,48 +54,31 @@ pub fn block_prologue() -> &'static str {
     include_str!("../transaction_scripts/block_prologue.mvir")
 }
 
-lazy_static! {
-    pub static ref ADD_VALIDATOR_TXN_BODY: Program = { parse_program(add_validator()).unwrap() };
-}
+pub static ADD_VALIDATOR_TXN_BODY: Lazy<Program> =
+    Lazy::new(|| parse_program(add_validator()).unwrap());
 
-lazy_static! {
-    pub static ref PEER_TO_PEER_TRANSFER_TXN_BODY: Program =
-        { parse_program(peer_to_peer()).unwrap() };
-}
+pub static PEER_TO_PEER_TRANSFER_TXN_BODY: Lazy<Program> =
+    Lazy::new(|| parse_program(peer_to_peer()).unwrap());
 
-lazy_static! {
-    pub static ref PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY: Program =
-        { parse_program(peer_to_peer_with_metadata()).unwrap() };
-}
+pub static PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY: Lazy<Program> =
+    Lazy::new(|| parse_program(peer_to_peer_with_metadata()).unwrap());
 
-lazy_static! {
-    pub static ref CREATE_ACCOUNT_TXN_BODY: Program = parse_program(create_account()).unwrap();
-}
+pub static CREATE_ACCOUNT_TXN_BODY: Lazy<Program> =
+    Lazy::new(|| parse_program(create_account()).unwrap());
 
-lazy_static! {
-    pub static ref REGISTER_VALIDATOR_TXN_BODY: Program =
-        { parse_program(register_validator()).unwrap() };
-}
+pub static REGISTER_VALIDATOR_TXN_BODY: Lazy<Program> =
+    Lazy::new(|| parse_program(register_validator()).unwrap());
 
-lazy_static! {
-    pub static ref REMOVE_VALIDATOR_TXN_BODY: Program =
-        { parse_program(remove_validator()).unwrap() };
-}
+pub static REMOVE_VALIDATOR_TXN_BODY: Lazy<Program> =
+    Lazy::new(|| parse_program(remove_validator()).unwrap());
 
-lazy_static! {
-    pub static ref ROTATE_CONSENSUS_PUBKEY_TXN_BODY: Program =
-        { parse_program(rotate_consensus_pubkey()).unwrap() };
-}
+pub static ROTATE_CONSENSUS_PUBKEY_TXN_BODY: Lazy<Program> =
+    Lazy::new(|| parse_program(rotate_consensus_pubkey()).unwrap());
 
-lazy_static! {
-    pub static ref ROTATE_AUTHENTICATION_KEY_TXN_BODY: Program =
-        { parse_program(rotate_key()).unwrap() };
-}
+pub static ROTATE_AUTHENTICATION_KEY_TXN_BODY: Lazy<Program> =
+    Lazy::new(|| parse_program(rotate_key()).unwrap());
 
-lazy_static! {
-    pub static ref MINT_TXN_BODY: Program = parse_program(mint()).unwrap();
-}
+pub static MINT_TXN_BODY: Lazy<Program> = Lazy::new(|| parse_program(mint()).unwrap());
 
-lazy_static! {
-    pub static ref BLOCK_PROLOGUE_TXN_BODY: Program = parse_program(block_prologue()).unwrap();
-}
+pub static BLOCK_PROLOGUE_TXN_BODY: Lazy<Program> =
+    Lazy::new(|| parse_program(block_prologue()).unwrap());
