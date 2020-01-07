@@ -34,5 +34,7 @@ mod state_computer;
 mod state_replication;
 mod txn_manager;
 
-pub use miner::{client::MineClient, server::setup_minerproxy_service, types::MineState, config::MinerConfig};
+pub use miner::{
+    client::MineClient, config::MinerConfig, server::setup_minerproxy_service, types::MineState,
+};
 pub use pow::mine_state;

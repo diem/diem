@@ -59,8 +59,8 @@ pub struct EventProcessor {
 impl EventProcessor {
     pub fn new(
         network_sender: ConsensusNetworkSender,
-        txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>,
-        state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>,
+        txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
+        state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
         author: AccountAddress,
         block_store: Arc<ConsensusDB>,
         rollback_flag: bool,
@@ -176,7 +176,7 @@ impl EventProcessor {
 
                                 //verify ledger info
                                 if let Some(validators) =
-                                block.quorum_cert().certified_block().next_validator_set()
+                                    block.quorum_cert().certified_block().next_validator_set()
                                 {
                                     let miner = validators.payload()[0].clone();
                                     let validator_verifier = ValidatorVerifier::new_single(
@@ -210,10 +210,10 @@ impl EventProcessor {
                                             if verify {
                                                 if self_peer_id != peer_id {
                                                     if let Some((height, block_index)) =
-                                                    chain_manager
-                                                        .borrow()
-                                                        .chain_height_and_root()
-                                                        .await
+                                                        chain_manager
+                                                            .borrow()
+                                                            .chain_height_and_root()
+                                                            .await
                                                     {
                                                         debug!(
                                                             "Self is {:?}, height is {}, Peer Id is {:?}, Block Id is {:?}, verify {}, height {}",
@@ -250,7 +250,7 @@ impl EventProcessor {
                                                                 TryInto::<BlockProto>::try_into(
                                                                     block.clone(),
                                                                 )
-                                                                    .expect("parse block err.");
+                                                                .expect("parse block err.");
 
                                                             // send block
                                                             let msg = ConsensusMsg {
@@ -268,13 +268,13 @@ impl EventProcessor {
                                                                 msg,
                                                                 vec![peer_id],
                                                             )
-                                                                .await;
+                                                            .await;
                                                         }
                                                     }
                                                 }
 
                                                 if let Err(err) =
-                                                (&mut block_cache_sender).send(block).await
+                                                    (&mut block_cache_sender).send(block).await
                                                 {
                                                     error!("send new block err: {:?}", err);
                                                 }
@@ -373,14 +373,14 @@ impl EventProcessor {
                                         &mut self_sender.clone(),
                                         resp_block_msg,
                                     )
-                                        .await;
+                                    .await;
                                 }
                             }
                             ConsensusMsg_oneof::RespondBlock(resp_block) => {
                                 let block_resp = BlockRetrievalResponse::try_from(resp_block)
                                     .expect("parse err.");
                                 if let Err(err) =
-                                sync_block_sender.send((peer_id, block_resp)).await
+                                    sync_block_sender.send((peer_id, block_resp)).await
                                 {
                                     error!("send sync block err: {:?}", err);
                                 };
@@ -422,7 +422,7 @@ impl EventProcessor {
             msg,
             vec![],
         )
-            .await;
+        .await;
     }
 
     pub async fn broadcast_consensus_msg_but(
