@@ -405,7 +405,7 @@ fn basic_block_retrieval() {
     block_on(async move {
         let mut first_proposals = vec![];
         // First three proposals are delivered just to nodes[0..2].
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[3].signer.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[3].smr.author());
         for _ in 0..2 {
             playground
                 .wait_for_messages(2, NetworkPlayground::proposals_only)
@@ -419,9 +419,9 @@ fn basic_block_retrieval() {
         }
         // The next proposal is delivered to all: as a result nodes[2] should retrieve the missing
         // blocks from nodes[0] and vote for the 3th proposal.
-        playground.stop_drop_message_for(&nodes[0].signer.author(), &nodes[3].signer.author());
+        playground.stop_drop_message_for(&nodes[0].smr.author(), &nodes[3].smr.author());
         // Drop nodes[1]'s vote to ensure nodes[3] contribute to the quorum
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[1].signer.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[1].smr.author());
 
         playground
             .wait_for_messages(2, NetworkPlayground::proposals_only)
@@ -463,7 +463,7 @@ fn block_retrieval_with_timeout() {
     block_on(async move {
         let mut first_proposals = vec![];
         // First three proposals are delivered just to nodes[0..2].
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[3].signer.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[3].smr.author());
         for _ in 0..2 {
             playground
                 .wait_for_messages(2, NetworkPlayground::proposals_only)
@@ -476,8 +476,8 @@ fn block_retrieval_with_timeout() {
             first_proposals.push(proposal_id);
         }
         // stop proposals from nodes[0]
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[1].signer.author());
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[2].signer.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[1].smr.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[2].smr.author());
 
         // Wait until {1, 2, 3} timeout to {0 , 1, 2, 3} excluding self messages
         playground
@@ -508,7 +508,7 @@ fn basic_state_sync() {
         let mut proposals = vec![];
         // The first ten proposals are delivered just to nodes[0..2], which should commit
         // the first seven blocks.
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[3].signer.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[3].smr.author());
         for _ in 0..10 {
             playground
                 .wait_for_messages(2, NetworkPlayground::proposals_only)
@@ -537,7 +537,7 @@ fn basic_state_sync() {
 
         // Next proposal is delivered to all: as a result nodes[3] should be able to retrieve the
         // missing blocks from nodes[0] and commit the first eight proposals as well.
-        playground.stop_drop_message_for(&nodes[0].signer.author(), &nodes[3].signer.author());
+        playground.stop_drop_message_for(&nodes[0].smr.author(), &nodes[3].smr.author());
         playground
             .wait_for_messages(3, NetworkPlayground::proposals_only)
             .await;
@@ -583,9 +583,9 @@ fn state_sync_on_timeout() {
         // the first seven blocks.
         // nodes[2] should be fully disconnected from the others s.t. its timeouts would not trigger
         // SyncInfo delivery ahead of time.
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[3].signer.author());
-        playground.drop_message_for(&nodes[1].signer.author(), nodes[3].signer.author());
-        playground.drop_message_for(&nodes[2].signer.author(), nodes[3].signer.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[3].smr.author());
+        playground.drop_message_for(&nodes[1].smr.author(), nodes[3].smr.author());
+        playground.drop_message_for(&nodes[2].smr.author(), nodes[3].smr.author());
         for _ in 0..10 {
             playground
                 .wait_for_messages(2, NetworkPlayground::proposals_only)
@@ -597,7 +597,7 @@ fn state_sync_on_timeout() {
 
         // Stop dropping messages from node 1 to node 0: next time node 0 sends a timeout to node 1,
         // node 1 responds with a SyncInfo that carries a LedgerInfo for commit at round >= 7.
-        playground.stop_drop_message_for(&nodes[1].signer.author(), &nodes[3].signer.author());
+        playground.stop_drop_message_for(&nodes[1].smr.author(), &nodes[3].smr.author());
         // Wait for the sync info message from 1 to 3
         playground
             .wait_for_messages(1, NetworkPlayground::sync_info_only)
@@ -628,9 +628,9 @@ fn sync_info_sent_if_remote_stale() {
     // help node 2 to catch up.
     let mut nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer, false);
     block_on(async move {
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[2].signer.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[2].smr.author());
         // Don't want to receive timeout messages from 2 until 1 has some real stuff to contribute.
-        playground.drop_message_for(&nodes[2].signer.author(), nodes[1].signer.author());
+        playground.drop_message_for(&nodes[2].smr.author(), nodes[1].smr.author());
         for _ in 0..10 {
             playground
                 .wait_for_messages(2, NetworkPlayground::proposals_only)
@@ -641,7 +641,7 @@ fn sync_info_sent_if_remote_stale() {
         }
 
         // Wait for some timeout message from 2 to {0, 1}.
-        playground.stop_drop_message_for(&nodes[2].signer.author(), &nodes[1].signer.author());
+        playground.stop_drop_message_for(&nodes[2].smr.author(), &nodes[1].smr.author());
         playground
             .wait_for_messages(3, NetworkPlayground::timeout_votes_only)
             .await;
@@ -687,10 +687,10 @@ fn aggregate_timeout_votes() {
     let nodes = SMRNode::start_num_nodes(3, &mut playground, FixedProposer, false);
     block_on(async move {
         // Nodes 1 and 2 cannot send messages to anyone
-        playground.drop_message_for(&nodes[1].signer.author(), nodes[0].signer.author());
-        playground.drop_message_for(&nodes[2].signer.author(), nodes[0].signer.author());
-        playground.drop_message_for(&nodes[1].signer.author(), nodes[2].signer.author());
-        playground.drop_message_for(&nodes[2].signer.author(), nodes[1].signer.author());
+        playground.drop_message_for(&nodes[1].smr.author(), nodes[0].smr.author());
+        playground.drop_message_for(&nodes[2].smr.author(), nodes[0].smr.author());
+        playground.drop_message_for(&nodes[1].smr.author(), nodes[2].smr.author());
+        playground.drop_message_for(&nodes[2].smr.author(), nodes[1].smr.author());
 
         // Node 0 sends proposals to nodes 1 and 2
         let msg = playground
@@ -705,13 +705,13 @@ fn aggregate_timeout_votes() {
         playground
             .wait_for_messages(2, NetworkPlayground::votes_only)
             .await;
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[1].signer.author());
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[2].signer.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[1].smr.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[2].smr.author());
 
         // Now when the nodes 1 and 2 have the votes from 0, enable communication between them.
         // As a result they should get the votes from each other and thus be able to form a QC.
-        playground.stop_drop_message_for(&nodes[2].signer.author(), &nodes[1].signer.author());
-        playground.stop_drop_message_for(&nodes[1].signer.author(), &nodes[2].signer.author());
+        playground.stop_drop_message_for(&nodes[2].smr.author(), &nodes[1].smr.author());
+        playground.stop_drop_message_for(&nodes[1].smr.author(), &nodes[2].smr.author());
 
         // Wait for the timeout messages sent by 1 and 2 to each other
         playground
@@ -778,9 +778,9 @@ fn chain_with_nil_blocks() {
                 NetworkPlayground::proposals_only,
             )
             .await;
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[1].signer.author());
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[2].signer.author());
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[3].signer.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[1].smr.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[2].smr.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[3].smr.author());
 
         // After the first timeout nodes 1, 2, 3 should have last_proposal votes and
         // they can generate its QC independently.
@@ -823,9 +823,9 @@ fn secondary_proposers() {
         SMRNode::start_num_nodes(num_nodes, &mut playground, MultipleOrderedProposers, false);
     block_on(async move {
         // Node 0 is disconnected.
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[1].signer.author());
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[2].signer.author());
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[3].signer.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[1].smr.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[2].smr.author());
+        playground.drop_message_for(&nodes[0].smr.author(), nodes[3].smr.author());
         // Run a system until node 0 is a designated primary proposer. In this round the
         // secondary proposal should be voted for and attached to the timeout message.
         let timeout_votes = playground
