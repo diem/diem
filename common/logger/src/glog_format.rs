@@ -159,18 +159,16 @@ mod tests {
     };
 
     use crate::kv_categorizer::InlineCategorizer;
-    use lazy_static::lazy_static;
+    use once_cell::sync::Lazy;
     use regex::{Captures, Regex};
     use slog::{info, o, Drain, Logger};
     use slog_term::PlainSyncDecorator;
     use thread_id;
 
-    lazy_static! {
-        // Create a regex that matches log lines.
-        static ref LOG_REGEX: Regex = Regex::new(
-            r"^(.)(\d{4} \d\d:\d\d:\d\d\.\d{6}) +(\d+) ([^:]+):(\d+)\] (.*)$",
-        ).unwrap();
-    }
+    // Create a regex that matches log lines.
+    static LOG_REGEX: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(r"^(.)(\d{4} \d\d:\d\d:\d\d\.\d{6}) +(\d+) ([^:]+):(\d+)\] (.*)$").unwrap()
+    });
 
     /// Wrap a buffer so that it can be used by slog as a log output.
     #[derive(Clone)]
