@@ -7,9 +7,12 @@ pub fn make_block_storage_client(
     port: u16,
     max_receive_len: Option<i32>,
 ) -> BlockStorageClient {
-    let env = EnvBuilder::new().name_prefix("grpc-block_storage-").build();
+    let env = EnvBuilder::new()
+        .name_prefix("grpc-block_storage-")
+        .cq_count(10)
+        .build();
     let mut builder =
-        ChannelBuilder::new(Arc::new(env)).primary_user_agent("grpc/block-storage-read");
+        ChannelBuilder::new(Arc::new(env)).primary_user_agent("grpc/block-block-storage-client");
     if let Some(m) = max_receive_len {
         builder = builder.max_receive_message_len(m);
     }

@@ -15,6 +15,7 @@ use consensus_types::block_retrieval::BlockRetrievalResponse;
 use consensus_types::payload_ext::BlockPayloadExt;
 use executor::Executor;
 use futures::channel::mpsc;
+use grpc_helpers::ServerHandle;
 use grpcio::Server;
 use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::Ed25519PrivateKey;
@@ -41,7 +42,7 @@ pub struct PowConsensusProvider {
     runtime: Option<tokio::runtime::Runtime>,
     event_handle: Option<EventProcessor>,
     miner_proxy: Option<Server>,
-    _block_storage_server: Server,
+    _block_storage_server: ServerHandle,
     chain_state_network_sender: Option<ChainStateNetworkSender>,
     chain_state_network_events: Option<ChainStateNetworkEvents>,
     mint_key: Option<Ed25519PrivateKey>,
@@ -134,7 +135,7 @@ impl PowConsensusProvider {
             runtime: Some(runtime),
             event_handle: Some(event_handle),
             miner_proxy: Some(miner_proxy),
-            _block_storage_server: block_storage_server,
+            _block_storage_server: ServerHandle::setup(block_storage_server),
             chain_state_network_sender: Some(chain_state_network_sender),
             chain_state_network_events: Some(chain_state_network_events),
             mint_key: Some(self_pri_key),
