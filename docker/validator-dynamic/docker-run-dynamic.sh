@@ -26,7 +26,7 @@ if [ -n "${CFG_SEED_PEER_IP}" ]; then # Seed peer ip for discovery
 	    params+="--bootstrap /ip4/${CFG_SEED_PEER_IP}/tcp/6180 "
 fi
 
-/opt/libra/bin/validator-config-builder \
+/opt/libra/bin/config-builder validator \
     --data-dir /opt/libra/data/common \
     --output-dir /opt/libra/etc/ \
     ${params[@]}
