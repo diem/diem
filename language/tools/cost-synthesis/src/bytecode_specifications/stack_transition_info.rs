@@ -9,7 +9,7 @@
 //!         [(source_tys_list, output_tys_list), ..., (source_tys_list, output_tys_list)]
 //! We encode each instruction with the number of arguments (and the valid types
 //! that these arguments can take), and the number of (type) outputs from that instruction.
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::{boxed::Box, u8::MAX};
 use vm::file_format::{Bytecode, SignatureToken, StructHandleIndex, TypeSignature};
 
@@ -65,8 +65,8 @@ impl SignatureTy {
 //
 // For any instruction that can take a stack value of any base type
 // we represent it as a variable type over all base types for the bytecode.
-lazy_static! {
-    static ref BASE_SIG_TOKENS: Vec<SignatureToken> = vec![
+static BASE_SIG_TOKENS: Lazy<Vec<SignatureToken>> = Lazy::new(|| {
+    vec![
         SignatureToken::Bool,
         SignatureToken::U8,
         SignatureToken::U64,
@@ -76,14 +76,16 @@ lazy_static! {
         // Bogus struct handle index, but it's fine since we disregard this in the generation of
         // instruction arguments.
         SignatureToken::Struct(StructHandleIndex::new(0), vec![]),
-    ];
+    ]
+});
 
-    static ref INTEGER_SIG_TOKENS: Vec<SignatureToken> = vec![
+static INTEGER_SIG_TOKENS: Lazy<Vec<SignatureToken>> = Lazy::new(|| {
+    vec![
         SignatureToken::U8,
         SignatureToken::U64,
         SignatureToken::U128,
-    ];
-}
+    ]
+});
 
 fn variable_ty_of_sig_tok(tok: Vec<SignatureToken>, len: u8) -> SignatureTy {
     let typs = tok.into_iter().map(TypeSignature).collect();
