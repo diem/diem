@@ -97,7 +97,7 @@ impl Experiment for RecoveryTime {
             info!("{}", result);
             Ok(Some(result))
         }
-            .boxed()
+        .boxed()
     }
 
     fn deadline(&self) -> Duration {

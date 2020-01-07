@@ -675,10 +675,7 @@ impl<T: Payload> EventProcessor<T> {
                 executed_block.transaction_info_hashes(),
             ),
             block.clone(),
-            executed_block
-                .compute_result()
-                .executed_state
-                .validators
+            executed_block.compute_result().executed_state.validators,
         );
 
         let vote = self

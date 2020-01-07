@@ -237,7 +237,7 @@ impl Experiment for MultiRegionSimulation {
             print_results(results);
             Ok(None)
         }
-            .boxed()
+        .boxed()
     }
 
     fn deadline(&self) -> Duration {

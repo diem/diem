@@ -97,7 +97,7 @@ impl Experiment for PerformanceBenchmarkNodesDown {
                 self, avg_tps, avg_latency
             )))
         }
-            .boxed()
+        .boxed()
     }
 
     fn deadline(&self) -> Duration {

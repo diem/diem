@@ -125,7 +125,7 @@ impl<T: Payload> ProposerElection<T> for MultiProposer<T> {
                     std::cmp::Ordering::Greater => {
                         self.backup_proposal = Some((rank, proposal));
                         self.backup_proposal_round = round;
-                    },
+                    }
                     std::cmp::Ordering::Equal => {
                         // Already have some backup for the given round: choose the best (lowest) rank.
                         let current_rank = self
@@ -135,8 +135,8 @@ impl<T: Payload> ProposerElection<T> for MultiProposer<T> {
                         if rank < current_rank {
                             self.backup_proposal = Some((rank, proposal));
                         }
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
                 return None;
             }

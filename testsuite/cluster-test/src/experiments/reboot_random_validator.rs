@@ -74,7 +74,7 @@ impl Experiment for RebootRandomValidators {
             }
             Ok(None)
         }
-            .boxed()
+        .boxed()
     }
 
     fn deadline(&self) -> Duration {

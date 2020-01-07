@@ -72,13 +72,8 @@ fn run_vm(module: VerifiedModule) -> Result<(), String> {
         .collect();
 
     let executor = FakeExecutor::from_genesis_file();
-    execute_function_in_module(
-        executor.get_state_view(),
-        module,
-        entry_idx,
-        main_args,
-    )
-    .map_err(|err| format!("Runtime error: {:?}", err))?;
+    execute_function_in_module(executor.get_state_view(), module, entry_idx, main_args)
+        .map_err(|err| format!("Runtime error: {:?}", err))?;
     Ok(())
 }
 

@@ -50,7 +50,7 @@ impl Action for Reboot {
                 }
             }
         }
-            .boxed()
+        .boxed()
     }
 }
 

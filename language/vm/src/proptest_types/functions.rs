@@ -83,11 +83,7 @@ impl FunctionDefinitionGen {
         let arg_count = arg_count.into();
         (
             any::<PropIndex>(),
-            FunctionSignatureGen::strategy(
-                return_count,
-                arg_count.clone(),
-                kind_count.into(),
-            ),
+            FunctionSignatureGen::strategy(return_count, arg_count.clone(), kind_count.into()),
             any::<bool>(),
             vec(any::<PropIndex>(), acquires_count.into()),
             CodeUnitGen::strategy(arg_count, code_len),
