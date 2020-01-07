@@ -4,13 +4,13 @@
 use crate::spec_language_ast::Condition;
 use crate::syntax::ParseError;
 use codespan::{ByteIndex, Span};
-use lazy_static::lazy_static;
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
+use once_cell::sync::Lazy;
 use std::{
     collections::{HashSet, VecDeque},
     fmt,
@@ -599,9 +599,7 @@ impl Script {
     }
 }
 
-lazy_static! {
-    static ref SELF_MODULE_NAME: Identifier = Identifier::new("Self").unwrap();
-}
+static SELF_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("Self").unwrap());
 
 impl ModuleName {
     /// Create a new `ModuleName` from an identifier
