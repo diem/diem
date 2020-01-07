@@ -30,7 +30,6 @@ use crate::{
     access::ModuleAccess, check_bounds::BoundsChecker, internals::ModuleIndex, IndexKind,
     SignatureTokenKind,
 };
-use lazy_static::lazy_static;
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
@@ -39,6 +38,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use mirai_annotations::*;
+use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -180,9 +180,7 @@ pub type LocalsSignaturePool = Vec<LocalsSignature>;
 
 // TODO: "<SELF>" only passes the validator for identifiers because it is special cased. Whenever
 // "<SELF>" is removed, so should the special case in identifier.rs.
-lazy_static! {
-    static ref SELF_MODULE_NAME: Identifier = Identifier::new("<SELF>").unwrap();
-}
+static SELF_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("<SELF>").unwrap());
 
 pub fn self_module_name() -> &'static IdentStr {
     &*SELF_MODULE_NAME
