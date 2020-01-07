@@ -11,7 +11,6 @@ mod mock_vm;
 
 use anyhow::{bail, ensure, format_err, Result};
 use futures::executor::block_on;
-use lazy_static::lazy_static;
 use libra_config::config::NodeConfig;
 use libra_config::config::VMConfig;
 use libra_crypto::{
@@ -38,6 +37,7 @@ use libra_types::{
     },
     write_set::{WriteOp, WriteSet},
 };
+use once_cell::sync::Lazy;
 use scratchpad::{ProofRead, SparseMerkleTree};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -51,10 +51,8 @@ use storage_proto::TreeState;
 use tokio::runtime::Runtime;
 use vm_runtime::VMExecutor;
 
-lazy_static! {
-    static ref OP_COUNTERS: libra_metrics::OpMetrics =
-        libra_metrics::OpMetrics::new_and_registered("executor");
-}
+static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
+    Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));
 
 const GENESIS_EPOCH: u64 = 0;
 const GENESIS_ROUND: Round = 0;

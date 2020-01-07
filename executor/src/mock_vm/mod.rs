@@ -4,7 +4,6 @@
 #[cfg(test)]
 mod mock_vm_test;
 
-use lazy_static::lazy_static;
 use libra_config::config::VMConfig;
 use libra_crypto::ed25519::compat;
 use libra_state_view::StateView;
@@ -22,6 +21,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use vm_runtime::VMExecutor;
 
@@ -38,14 +38,13 @@ enum MockVMTransaction {
     },
 }
 
-lazy_static! {
-    pub static ref KEEP_STATUS: TransactionStatus =
-        TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED));
+pub static KEEP_STATUS: Lazy<TransactionStatus> =
+    Lazy::new(|| TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)));
 
-    // We use 10 as the assertion error code for insufficient balance within the Libra coin contract.
-    pub static ref DISCARD_STATUS: TransactionStatus =
-        TransactionStatus::Discard(VMStatus::new(StatusCode::ABORTED).with_sub_status(10));
-}
+// We use 10 as the assertion error code for insufficient balance within the Libra coin contract.
+pub static DISCARD_STATUS: Lazy<TransactionStatus> = Lazy::new(|| {
+    TransactionStatus::Discard(VMStatus::new(StatusCode::ABORTED).with_sub_status(10))
+});
 
 pub struct MockVM;
 
