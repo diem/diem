@@ -18,7 +18,7 @@ digest = "0.8.1"
 ed25519-dalek = { git = "https://github.com/calibra/ed25519-dalek.git", branch = "fiat", features = ["serde"], default-features = false }
 hex = "0.3"
 hmac = "0.7.1"
-lazy_static = "1.3.0"
+once_cell = "1.2.0"
 mirai-annotations = "1.5.0"
 pairing = "0.14.2"
 proptest = { version = "0.9.1", optional = true }

@@ -90,9 +90,9 @@
 
 use anyhow::{ensure, Result};
 use bytes::Bytes;
-use lazy_static::lazy_static;
 use libra_nibble::Nibble;
 use mirai_annotations::*;
+use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
@@ -517,9 +517,7 @@ macro_rules! define_hasher {
             }
         }
 
-        lazy_static! {
-            static ref $hasher_name: $hasher_type = { $hasher_type::new() };
-        }
+        static $hasher_name: Lazy<$hasher_type> = Lazy::new(|| { $hasher_type::new() });
     };
 }
 
@@ -567,29 +565,28 @@ fn create_literal_hash(word: &str) -> HashValue {
     HashValue::from_slice(&s).expect("Cannot fail")
 }
 
-lazy_static! {
-    /// Placeholder hash of `Accumulator`.
-    pub static ref ACCUMULATOR_PLACEHOLDER_HASH: HashValue =
-        create_literal_hash("ACCUMULATOR_PLACEHOLDER_HASH");
+/// Placeholder hash of `Accumulator`.
+pub static ACCUMULATOR_PLACEHOLDER_HASH: Lazy<HashValue> =
+    Lazy::new(|| create_literal_hash("ACCUMULATOR_PLACEHOLDER_HASH"));
 
-    /// Placeholder hash of `SparseMerkleTree`.
-    pub static ref SPARSE_MERKLE_PLACEHOLDER_HASH: HashValue =
-        create_literal_hash("SPARSE_MERKLE_PLACEHOLDER_HASH");
+/// Placeholder hash of `SparseMerkleTree`.
+pub static SPARSE_MERKLE_PLACEHOLDER_HASH: Lazy<HashValue> =
+    Lazy::new(|| create_literal_hash("SPARSE_MERKLE_PLACEHOLDER_HASH"));
 
-    /// Block id reserved as the id of parent block of the genesis block.
-    pub static ref PRE_GENESIS_BLOCK_ID: HashValue =
-        create_literal_hash("PRE_GENESIS_BLOCK_ID");
+/// Block id reserved as the id of parent block of the genesis block.
+pub static PRE_GENESIS_BLOCK_ID: Lazy<HashValue> =
+    Lazy::new(|| create_literal_hash("PRE_GENESIS_BLOCK_ID"));
 
-    /// Genesis block id is used as a parent of the very first block executed by the executor.
-    pub static ref GENESIS_BLOCK_ID: HashValue =
-        // This maintains the invariant that block.id() == block.hash(), for
-        // the genesis block and allows us to (de/)serialize it consistently
-        HashValue::new([
-            0x5e, 0x10, 0xba, 0xd4, 0x5b, 0x35, 0xed, 0x92, 0x9c, 0xd6, 0xd2,
-            0xc7, 0x09, 0x8b, 0x13, 0x5d, 0x02, 0xdd, 0x25, 0x9a, 0xe8, 0x8a,
-            0x8d, 0x09, 0xf4, 0xeb, 0x5f, 0xba, 0xe9, 0xa6, 0xf6, 0xe4
-        ]);
-}
+/// Genesis block id is used as a parent of the very first block executed by the executor.
+pub static GENESIS_BLOCK_ID: Lazy<HashValue> = Lazy::new(|| {
+    // This maintains the invariant that block.id() == block.hash(), for
+    // the genesis block and allows us to (de/)serialize it consistently
+    HashValue::new([
+        0x5e, 0x10, 0xba, 0xd4, 0x5b, 0x35, 0xed, 0x92, 0x9c, 0xd6, 0xd2, 0xc7, 0x09, 0x8b, 0x13,
+        0x5d, 0x02, 0xdd, 0x25, 0x9a, 0xe8, 0x8a, 0x8d, 0x09, 0xf4, 0xeb, 0x5f, 0xba, 0xe9, 0xa6,
+        0xf6, 0xe4,
+    ])
+});
 
 /// Provides a test_only_hash() method that can be used in tests on types that implement
 /// `serde::Serialize`.
