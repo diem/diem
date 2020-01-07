@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use serde_json::{self, value as json};
 use std::{collections::VecDeque, sync::Mutex, time::SystemTime};
 
@@ -27,13 +27,10 @@ macro_rules! event {
     };
 }
 
-lazy_static! {
-    // This queue maintains last MAX_EVENTS_IN_QUEUE events
-    // This is very efficiently implemented with circular buffer with fixed capacity
-    static ref JSON_LOG_ENTRY_QUEUE: Mutex<VecDeque<JsonLogEntry>> = Mutex::new(
-        VecDeque::with_capacity(MAX_EVENTS_IN_QUEUE)
-    );
-}
+// This queue maintains last MAX_EVENTS_IN_QUEUE events
+// This is very efficiently implemented with circular buffer with fixed capacity
+static JSON_LOG_ENTRY_QUEUE: Lazy<Mutex<VecDeque<JsonLogEntry>>> =
+    Lazy::new(|| Mutex::new(VecDeque::with_capacity(MAX_EVENTS_IN_QUEUE)));
 
 impl JsonLogEntry {
     pub fn new(name: &'static str, json: json::Value) -> Self {
