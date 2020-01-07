@@ -76,6 +76,11 @@ impl<T: Payload> ChainedBftSMR<T> {
     }
 
     #[cfg(test)]
+    pub fn author(&self) -> Author {
+        self.author
+    }
+
+    #[cfg(test)]
     pub fn block_store(&self) -> Option<Arc<BlockStore<T>>> {
         self.block_store.clone()
     }
