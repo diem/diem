@@ -132,12 +132,10 @@ impl NetworkConfig {
             self.peer_id = key_peer_id;
         }
 
-        if !network_role.is_validator() {
-            ensure!(
-                self.peer_id == key_peer_id,
-                "For non-validators, the peer_id should be derived from the identity key.",
-            );
-        }
+        ensure!(
+            network_role.is_validator() || !self.is_permissioned || self.peer_id == key_peer_id,
+            "For permissioned, full-node networks, the peer_id should be derived from the identity key.",
+        );
         Ok(())
     }
 
