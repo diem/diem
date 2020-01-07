@@ -5,9 +5,6 @@
 
 //! Types and data used by the VM runtime
 
-#[macro_use]
-extern crate lazy_static;
-
 #[cfg(any(test, feature = "fuzzing"))]
 mod proptest_types;
 
