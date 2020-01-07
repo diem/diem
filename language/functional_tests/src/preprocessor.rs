@@ -13,13 +13,12 @@ use crate::{
     errors::*,
     evaluator::Transaction,
 };
+use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 
 /// Substitutes the placeholders (account names in double curly brackets) with addresses.
 pub fn substitute_addresses(config: &GlobalConfig, text: &str) -> String {
-    lazy_static! {
-        static ref PAT: Regex = Regex::new(r"\{\{([A-Za-z][A-Za-z0-9]*)\}\}").unwrap();
-    }
+    static PAT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\{\{([A-Za-z][A-Za-z0-9]*)\}\}").unwrap());
     PAT.replace_all(text, |caps: &Captures| {
         let name = &caps[1];
 
