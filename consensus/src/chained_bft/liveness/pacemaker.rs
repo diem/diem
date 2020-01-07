@@ -156,7 +156,7 @@ impl Pacemaker {
         time_service: Arc<dyn TimeService>,
         timeout_sender: channel::Sender<Round>,
     ) -> Self {
-        // Our counters are initialized via lazy_static, so they're not going to appear in
+        // Our counters are initialized lazily, so they're not going to appear in
         // Prometheus if some conditions never happen. Invoking get() function enforces creation.
         counters::QC_ROUNDS_COUNT.get();
         counters::TIMEOUT_ROUNDS_COUNT.get();
