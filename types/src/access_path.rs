@@ -46,9 +46,9 @@ use crate::{
     validator_set::validator_set_path,
 };
 use anyhow::{Error, Result};
-use lazy_static::lazy_static;
 use libra_crypto::hash::{CryptoHash, HashValue};
 use mirai_annotations::*;
+use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use radix_trie::TrieKey;
@@ -196,11 +196,9 @@ impl TrieKey for Accesses {
     }
 }
 
-lazy_static! {
-    /// The access path where the Validator Set resource is stored.
-    pub static ref VALIDATOR_SET_ACCESS_PATH: AccessPath =
-        AccessPath::new(association_address(), validator_set_path());
-}
+/// The access path where the Validator Set resource is stored.
+pub static VALIDATOR_SET_ACCESS_PATH: Lazy<AccessPath> =
+    Lazy::new(|| AccessPath::new(association_address(), validator_set_path()));
 
 #[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]

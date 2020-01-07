@@ -11,15 +11,14 @@ use crate::{
     validator_set::validator_set_module_name,
 };
 use anyhow::Result;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{iter::IntoIterator, ops::Deref, vec};
 
-lazy_static! {
-    static ref DISCOVERY_SET_STRUCT_NAME: Identifier = Identifier::new("DiscoverySet").unwrap();
-}
+static DISCOVERY_SET_STRUCT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("DiscoverySet").unwrap());
 
 pub fn discovery_set_module_name() -> &'static IdentStr {
     validator_set_module_name()

@@ -10,8 +10,8 @@ use crate::{
     validator_public_keys::ValidatorPublicKeys,
 };
 use anyhow::{Error, Result};
-use lazy_static::lazy_static;
 use libra_crypto::VerifyingKey;
+use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -23,10 +23,10 @@ use std::{
     vec,
 };
 
-lazy_static! {
-    static ref LIBRA_SYSTEM_MODULE_NAME: Identifier = Identifier::new("LibraSystem").unwrap();
-    static ref VALIDATOR_SET_STRUCT_NAME: Identifier = Identifier::new("ValidatorSet").unwrap();
-}
+static LIBRA_SYSTEM_MODULE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("LibraSystem").unwrap());
+static VALIDATOR_SET_STRUCT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("ValidatorSet").unwrap());
 
 pub fn validator_set_module_name() -> &'static IdentStr {
     &*LIBRA_SYSTEM_MODULE_NAME
