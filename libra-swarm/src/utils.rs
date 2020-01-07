@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use lazy_static::lazy_static;
 use libra_logger::prelude::*;
+use once_cell::sync::Lazy;
 use std::{env, path::PathBuf, process::Command};
 
 const WORKSPACE_BUILD_ERROR_MSG: &str = r#"
@@ -11,31 +11,27 @@ const WORKSPACE_BUILD_ERROR_MSG: &str = r#"
     Try running 'cargo build --all --bins' yourself.
 "#;
 
-lazy_static! {
-    // Global flag indicating if all binaries in the workspace have been built.
-    static ref WORKSPACE_BUILT: bool = {
-        info!("Building project binaries");
-        let args = if cfg!(debug_assertions) {
-            vec!["build", "--all", "--bins"]
-        } else {
-            vec!["build", "--all", "--bins", "--release"]
-        };
-
-
-        let cargo_build = Command::new("cargo")
-            .current_dir(workspace_root())
-            .args(&args)
-            .output()
-            .expect(WORKSPACE_BUILD_ERROR_MSG);
-        if !cargo_build.status.success() {
-            panic!(WORKSPACE_BUILD_ERROR_MSG);
-        }
-
-        info!("Finished building project binaries");
-
-        true
+// Global flag indicating if all binaries in the workspace have been built.
+static WORKSPACE_BUILT: Lazy<bool> = Lazy::new(|| {
+    info!("Building project binaries");
+    let args = if cfg!(debug_assertions) {
+        vec!["build", "--all", "--bins"]
+    } else {
+        vec!["build", "--all", "--bins", "--release"]
     };
-}
+
+    let cargo_build = Command::new("cargo")
+        .current_dir(workspace_root())
+        .args(&args)
+        .output()
+        .expect(WORKSPACE_BUILD_ERROR_MSG);
+    if cargo_build.status.success() {
+        info!("Finished building project binaries");
+        true
+    } else {
+        false
+    }
+});
 
 // Path to top level workspace
 pub fn workspace_root() -> PathBuf {
