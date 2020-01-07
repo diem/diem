@@ -47,7 +47,7 @@ can either be added to existing configs or generate completely new configs.
 
 Each peer, I, can then generate their own configurations by:
 
-    validator-config-builder \
+    config-builder validator \
         -a $PUBLIC_MULTIADDR_FOR_NODE_I \
         -b $PUBLIC_MULTIADDR_FOR_NODE_0 \
         -d /opt/libra/data \
@@ -59,7 +59,7 @@ Each peer, I, can then generate their own configurations by:
 
 As an example, this is the 2nd node (offset 1) in a set of 4:
 
-    validator-config-builder \
+    config-builder validator \
         -a "/ip4/1.1.1.2/tcp/7000" \
         -b "/ip4/1.1.1.1/tcp/7000" \
         -d /opt/libra/data \
@@ -69,24 +69,23 @@ As an example, this is the 2nd node (offset 1) in a set of 4:
         -o /opt/libra/etc \
         -s 0123456789abcdef101112131415161718191a1b1c1d1e1f2021222324252627
 
-To create a mint service's consensus peer config and key that connects to
-this service:
+To create a mint service's key:
 
-    faucet-config-builder \
-        -n 4 \
+    config-builder faucet \
         -o /opt/libra/etc \
         -s 0123456789abcdef101112131415161718191a1b1c1d1e1f2021222324252627
 
-Adding a full node network is similar to instantiating a validator config. The
-difference is that if a config already exists at that path, the assumption is
-to append the full node network, if the network isn't already defined.
-Secondly, full nodes support public or permissioned networks. The former
-requires no further configuration, whereas the latter needs a full node
-specific seed, total number of full nodes, and index into the configuration
-set. The total number includes the upstream peer which is indexed into the
-first position (0).
+Adding a full node network is similar to instantiating a validator config.
+Though there are three possible routes: 1) creating a new node config, 2)
+extending an existing full node with another network, 3) extending a validator
+with a full node network. The input is similar for all three cases with only
+the command (create, extend) differing them. When extending the validator, the
+tool assumes that there are n + 1 full nodes and gives the n + 1 identity to
+the validator. This is also the same peer id set in state sychronization for
+pure full nodes. Note: the current tool does not support the creation of trees
+of full node networks.
 
-    full-node-config-builder \
+    config-builder full-node (create | extend) \
         -a $PUBLIC_MULTIADDR_FOR_NODE_I \
         -b $PUBLIC_MULTIADDR_FOR_NODE_0 \
         -d /opt/libra/data \
@@ -99,7 +98,7 @@ first position (0).
 As an example a of adding 4 membered permissioned network connecting to the
 node above:
 
-    full-node-config-builder \
+    config-builder full-node create \
         -a "/ip4/1.1.1.2/tcp/7100" \
         -b "/ip4/1.1.1.2/tcp/7100" \
         -d /opt/libra/fn/data \
@@ -113,13 +112,13 @@ node above:
 
 Similarly a public network could be added via:
 
-    full-node-config-builder \
+    config-builder full-node create \
         -a "/ip4/1.1.1.2/tcp/7100" \
         -b "/ip4/1.1.1.2/tcp/7100" \
         -d /opt/libra/fn/data \
         -l "/ip4/0.0.0.0/tcp/7100" \
         -n 4 \
-        -o /opt/libra/fn/etc \
+        -o /opt/libra/etc \
         -s 0123456789abcdef101112131415161718191a1b1c1d1e1f2021222324252627 \
         -p
 
