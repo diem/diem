@@ -11,7 +11,7 @@ use crate::{
     language_storage::StructTag,
 };
 use anyhow::{bail, Error, Result};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -20,19 +20,20 @@ use std::{
     convert::{TryFrom, TryInto},
 };
 
-lazy_static! {
-    // LibraCoin
-    static ref COIN_MODULE_NAME: Identifier = Identifier::new("LibraCoin").unwrap();
-    static ref COIN_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
+// LibraCoin
+static COIN_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("LibraCoin").unwrap());
+static COIN_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 
-    // Account
-    static ref ACCOUNT_MODULE_NAME: Identifier = Identifier::new("LibraAccount").unwrap();
-    static ref ACCOUNT_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
+// Account
+static ACCOUNT_MODULE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("LibraAccount").unwrap());
+static ACCOUNT_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 
-    // Payment Events
-    static ref SENT_EVENT_NAME: Identifier = Identifier::new("SentPaymentEvent").unwrap();
-    static ref RECEIVED_EVENT_NAME: Identifier = Identifier::new("ReceivedPaymentEvent").unwrap();
-}
+// Payment Events
+static SENT_EVENT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("SentPaymentEvent").unwrap());
+static RECEIVED_EVENT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("ReceivedPaymentEvent").unwrap());
 
 pub fn coin_module_name() -> &'static IdentStr {
     &*COIN_MODULE_NAME
@@ -218,23 +219,21 @@ pub fn account_resource_path() -> Vec<u8> {
     AccessPath::resource_access_vec(&account_struct_tag(), &Accesses::empty())
 }
 
-lazy_static! {
-    /// The path to the sent event counter for an Account resource.
-    /// It can be used to query the event DB for the given event.
-    pub static ref ACCOUNT_SENT_EVENT_PATH: Vec<u8> = {
-        let mut path = account_resource_path();
-        path.extend_from_slice(b"/sent_events_count/");
-        path
-    };
+/// The path to the sent event counter for an Account resource.
+/// It can be used to query the event DB for the given event.
+pub static ACCOUNT_SENT_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
+    let mut path = account_resource_path();
+    path.extend_from_slice(b"/sent_events_count/");
+    path
+});
 
-    /// Returns the path to the received event counter for an Account resource.
-    /// It can be used to query the event DB for the given event.
-    pub static ref ACCOUNT_RECEIVED_EVENT_PATH: Vec<u8> = {
-        let mut path = account_resource_path();
-        path.extend_from_slice(b"/received_events_count/");
-        path
-    };
-}
+/// Returns the path to the received event counter for an Account resource.
+/// It can be used to query the event DB for the given event.
+pub static ACCOUNT_RECEIVED_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
+    let mut path = account_resource_path();
+    path.extend_from_slice(b"/received_events_count/");
+    path
+});
 
 /// Struct that represents a SentPaymentEvent.
 #[derive(Debug, Serialize, Deserialize)]

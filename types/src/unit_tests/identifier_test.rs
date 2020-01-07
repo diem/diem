@@ -3,7 +3,7 @@
 
 use crate::identifier::{IdentStr, Identifier, ALLOWED_IDENTIFIERS};
 use crate::test_helpers::assert_canonical_encode_decode;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use proptest::prelude::*;
 use regex::Regex;
 use serde_json;
@@ -100,12 +100,10 @@ proptest! {
 }
 
 fn invalid_identifier_strategy() -> impl Strategy<Value = String> {
-    lazy_static! {
-        static ref ALLOWED_IDENTIFIERS_REGEX: Regex = {
-            // Need to add anchors to ensure the entire string is matched.
-            Regex::new(&format!("^(?:{})$", ALLOWED_IDENTIFIERS)).unwrap()
-        };
-    }
+    static ALLOWED_IDENTIFIERS_REGEX: Lazy<Regex> = Lazy::new(|| {
+        // Need to add anchors to ensure the entire string is matched.
+        Regex::new(&format!("^(?:{})$", ALLOWED_IDENTIFIERS)).unwrap()
+    });
 
     ".*".prop_filter("Valid identifiers should not be generated", |s| {
         // Most strings won't match the regex above, so local rejects are OK.
