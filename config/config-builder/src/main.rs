@@ -177,7 +177,7 @@ fn build_full_node(command: FullNodeCommand) {
             let mut new_config = config_builder.build().expect("ConfigBuilder failed");
             new_config.set_data_dir(args.data_dir);
             save_config(new_config, &args.output_dir);
-        },
+        }
         FullNodeCommand::Extend(args) => {
             if !node_config_exists(&args.output_dir) {
                 eprintln!("No node config in this directory");
@@ -185,7 +185,8 @@ fn build_full_node(command: FullNodeCommand) {
             }
 
             let config_file = args.output_dir.join(NODE_CONFIG);
-            let mut orig_config = NodeConfig::load(&config_file).expect("Unable to load node config");
+            let mut orig_config =
+                NodeConfig::load(&config_file).expect("Unable to load node config");
             if orig_config.base.role.is_validator() {
                 config_builder
                     .extend_validator(&mut orig_config)
@@ -196,7 +197,7 @@ fn build_full_node(command: FullNodeCommand) {
                     .expect("Unable to append full node network");
             }
             save_config(orig_config, &args.output_dir);
-        },
+        }
     };
 }
 

@@ -22,7 +22,7 @@ RUN cargo build --release -p libra-node -p client -p config-builder && cd target
 
 ### Production Image ###
 FROM libra_e2e:latest as validator_with_config
-COPY --from=config_builder /libra/target/release/validator-config-builder /opt/libra/bin
+COPY --from=config_builder /libra/target/release/config-builder /opt/libra/bin
 COPY docker/validator-dynamic/docker-run-dynamic.sh /
 CMD /docker-run-dynamic.sh
 
