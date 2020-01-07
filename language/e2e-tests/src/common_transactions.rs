@@ -4,26 +4,24 @@
 //! Support for encoding transactions for common situations.
 
 use crate::{account::Account, compile::compile_script, gas_costs};
-use lazy_static::lazy_static;
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     transaction::{SignedTransaction, TransactionArgument},
 };
+use once_cell::sync::Lazy;
 use stdlib::transaction_scripts;
 use transaction_builder::{ADD_VALIDATOR_TXN, REGISTER_VALIDATOR_TXN};
 
-lazy_static! {
-    /// A serialized transaction to create a new account.
-    pub static ref CREATE_ACCOUNT: Vec<u8> = { create_account() };
-    /// A serialized transaction to mint new funds.
-    pub static ref MINT: Vec<u8> = { mint() };
-    /// A serialized transaction to transfer coin from one account to another (possibly new)
-    /// one.
-    pub static ref PEER_TO_PEER: Vec<u8> = { peer_to_peer() };
-    /// A serialized transaction to change the keys for an account.
-    pub static ref ROTATE_KEY: Vec<u8> = { rotate_key() };
-}
+/// A serialized transaction to create a new account.
+pub static CREATE_ACCOUNT: Lazy<Vec<u8>> = Lazy::new(create_account);
+/// A serialized transaction to mint new funds.
+pub static MINT: Lazy<Vec<u8>> = Lazy::new(mint);
+/// A serialized transaction to transfer coin from one account to another (possibly new)
+/// one.
+pub static PEER_TO_PEER: Lazy<Vec<u8>> = Lazy::new(peer_to_peer);
+/// A serialized transaction to change the keys for an account.
+pub static ROTATE_KEY: Lazy<Vec<u8>> = Lazy::new(rotate_key);
 
 /// Returns a transaction to add a new validator
 pub fn add_validator_txn(
