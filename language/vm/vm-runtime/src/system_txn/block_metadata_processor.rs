@@ -6,7 +6,6 @@ use crate::{
     counters::*, data_cache::BlockDataCache, runtime::VMRuntime,
     system_module_names::LIBRA_SYSTEM_MODULE,
 };
-use lazy_static::lazy_static;
 use libra_types::transaction::TransactionStatus;
 use libra_types::{
     block_metadata::BlockMetadata,
@@ -14,6 +13,7 @@ use libra_types::{
     transaction::TransactionOutput,
     vm_error::{StatusCode, VMStatus},
 };
+use once_cell::sync::Lazy;
 use vm::{
     errors::VMResult,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
@@ -21,9 +21,7 @@ use vm::{
 };
 use vm_runtime_types::value::Value;
 
-lazy_static! {
-    static ref BLOCK_PROLOGUE: Identifier = Identifier::new("block_prologue").unwrap();
-}
+static BLOCK_PROLOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("block_prologue").unwrap());
 
 pub(crate) fn process_block_metadata(
     block_metadata: BlockMetadata,

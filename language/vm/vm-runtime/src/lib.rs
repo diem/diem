@@ -100,10 +100,7 @@
 //!             +-----------------------------+
 //! ```
 
-//#[macro_use]
 extern crate vm;
-#[macro_use]
-extern crate lazy_static;
 #[macro_use]
 extern crate rental;
 #[macro_use]
