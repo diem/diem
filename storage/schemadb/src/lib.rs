@@ -18,8 +18,8 @@ pub mod schema;
 
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
 use anyhow::{format_err, Result};
-use lazy_static::lazy_static;
 use libra_metrics::OpMetrics;
+use once_cell::sync::Lazy;
 use rocksdb::{
     rocksdb_options::ColumnFamilyDescriptor, CFHandle, DBOptions, Writable, WriteOptions,
 };
@@ -30,9 +30,7 @@ use std::{
     path::Path,
 };
 
-lazy_static! {
-    static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("schemadb");
-}
+static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("schemadb"));
 
 /// Type alias to `rocksdb::ColumnFamilyOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
 pub type ColumnFamilyOptions = rocksdb::ColumnFamilyOptions;
