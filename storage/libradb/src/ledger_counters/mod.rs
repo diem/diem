@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::OP_COUNTER;
-use lazy_static::lazy_static;
 use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;
+use once_cell::sync::Lazy;
 use prometheus::IntGaugeVec;
 #[cfg(test)]
 use proptest::{collection::hash_map, prelude::*};
@@ -16,16 +16,17 @@ use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter};
 
 // register Prometheus counters
-lazy_static! {
-    pub static ref LIBRA_STORAGE_LEDGER: IntGaugeVec = register_int_gauge_vec!(
+pub static LIBRA_STORAGE_LEDGER: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
         // metric name
         "libra_storage_ledger",
         // metric description
         "Libra storage ledger counters",
         // metric labels (dimensions)
         &["type"]
-    ).unwrap();
-}
+    )
+    .unwrap()
+});
 
 /// Types of ledger counters.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, EnumIter, AsRefStr)]

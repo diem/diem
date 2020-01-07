@@ -45,7 +45,6 @@ use crate::{
 use anyhow::{bail, ensure, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::{iterator::JellyfishMerkleIterator, restore::JellyfishMerkleRestore};
-use lazy_static::lazy_static;
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_logger::prelude::*;
 use libra_metrics::OpMetrics;
@@ -66,36 +65,42 @@ use libra_types::{
         Version,
     },
 };
+use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::StartupInfo;
 use storage_proto::TreeState;
 
-lazy_static! {
-    static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("storage");
-}
+static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("storage"));
 
-lazy_static! {
-    pub static ref LIBRA_STORAGE_CF_SIZE_BYTES: IntGaugeVec = register_int_gauge_vec!(
+pub static LIBRA_STORAGE_CF_SIZE_BYTES: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
         // metric name
         "libra_storage_cf_size_bytes",
         // metric description
         "Libra storage Column Family size in bytes",
         // metric labels (dimensions)
         &["cf_name"]
-    ).unwrap();
+    )
+    .unwrap()
+});
 
-    pub static ref LIBRA_STORAGE_COMMITTED_TXNS: IntCounter = register_int_counter!(
+pub static LIBRA_STORAGE_COMMITTED_TXNS: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
         "libra_storage_committed_txns",
         "Libra storage committed transactions"
-    ).unwrap();
+    )
+    .unwrap()
+});
 
-    pub static ref LIBRA_STORAGE_LATEST_TXN_VERSION: IntGauge = register_int_gauge!(
+pub static LIBRA_STORAGE_LATEST_TXN_VERSION: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
         "libra_storage_latest_transaction_version",
         "Libra storage latest transaction version"
-    ).unwrap();
-}
+    )
+    .unwrap()
+});
 
 const MAX_LIMIT: u64 = 1000;
 const MAX_REQUEST_ITEMS: u64 = 100;
