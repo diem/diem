@@ -2,23 +2,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::ServiceMetrics;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use prometheus::IntCounter;
 
-lazy_static! {
-    pub static ref SVC_COUNTERS: ServiceMetrics = ServiceMetrics::new_and_registered();
-}
+pub static SVC_COUNTERS: Lazy<ServiceMetrics> = Lazy::new(ServiceMetrics::new_and_registered);
 
-lazy_static! {
-    // Admission Control counters
-    pub static ref COUNTER_ADMISSION_CONTROL_CANNOT_SEND_REPLY: IntCounter = register_int_counter!(
+// Admission Control counters
+pub static COUNTER_ADMISSION_CONTROL_CANNOT_SEND_REPLY: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
         "COUNTER_ADMISSION_CONTROL_CANNOT_SEND_REPLY",
         "Number of errors related to send reply in Admission Control"
-    ).unwrap();
+    )
+    .unwrap()
+});
 
-    // Client counters
-    pub static ref COUNTER_CLIENT_ERRORS: IntCounter = register_int_counter!(
+// Client counters
+pub static COUNTER_CLIENT_ERRORS: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
         "COUNTER_CLIENT_ERRORS",
         "Number of errors encountered by Client"
-    ).unwrap();
-}
+    )
+    .unwrap()
+});

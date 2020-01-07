@@ -3,14 +3,12 @@
 
 use super::super::*;
 use assert_approx_eq::assert_approx_eq;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use prometheus::{core::Collector, proto::MetricFamily, Counter, IntCounter, Opts, Registry};
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 
-lazy_static! {
-    pub static ref INT_COUNTER: IntCounter =
-        register_int_counter!("INT_COUNTER", "An integer counter").unwrap();
-}
+pub static INT_COUNTER: Lazy<IntCounter> =
+    Lazy::new(|| register_int_counter!("INT_COUNTER", "An integer counter").unwrap());
 
 rusty_fork_test! {
 #[test]
