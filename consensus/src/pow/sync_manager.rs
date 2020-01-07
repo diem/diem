@@ -1,13 +1,12 @@
 use crate::pow::chain_manager::ChainManager;
 use crate::pow::event_processor::EventProcessor;
-use crate::pow::payload_ext::BlockPayloadExt;
 use anyhow::Result;
 use atomic_refcell::AtomicRefCell;
 use channel;
-use consensus_types::block::Block;
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
+use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
 use futures::compat::Future01CompatExt;
 use futures::SinkExt;
 use futures::{channel::mpsc, StreamExt};
@@ -33,8 +32,6 @@ pub struct SyncManager {
     self_sender: channel::Sender<Result<Event<ConsensusMsg>>>,
     network_sender: ConsensusNetworkSender,
     block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
-    sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>>,
-    sync_signal_receiver: Option<mpsc::Receiver<(PeerId, (u64, HashValue))>>,
     chain_manager: Arc<AtomicRefCell<ChainManager>>,
     sync_block_cache: Arc<Mutex<HashMap<PeerId, Vec<Block<BlockPayloadExt>>>>>,
     sync_block_height: Arc<AtomicU64>,
@@ -46,10 +43,6 @@ impl SyncManager {
         self_sender: channel::Sender<Result<Event<ConsensusMsg>>>,
         network_sender: ConsensusNetworkSender,
         block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
-        sync_block_receiver: Option<
-            mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>,
-        >,
-        sync_signal_receiver: Option<mpsc::Receiver<(PeerId, (u64, HashValue))>>,
         chain_manager: Arc<AtomicRefCell<ChainManager>>,
     ) -> Self {
         SyncManager {
@@ -57,23 +50,18 @@ impl SyncManager {
             self_sender,
             network_sender,
             block_cache_sender,
-            sync_block_receiver,
-            sync_signal_receiver,
             chain_manager,
             sync_block_cache: Arc::new(Mutex::new(HashMap::new())),
             sync_block_height: Arc::new(AtomicU64::new(0)),
         }
     }
 
-    pub fn sync_block_msg(&mut self, executor: Handle) {
-        let mut sync_block_receiver = self
-            .sync_block_receiver
-            .take()
-            .expect("sync_block_receiver is none.");
-        let mut sync_signal_receiver = self
-            .sync_signal_receiver
-            .take()
-            .expect("sync_signal_receiver is none.");
+    pub fn sync_block_msg(
+        &self,
+        executor: Handle,
+        mut sync_block_receiver: mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>,
+        mut sync_signal_receiver: mpsc::Receiver<(PeerId, (u64, HashValue))>,
+    ) {
         let sync_network_sender = self.network_sender.clone();
         let mut sync_block_cache_sender = self.block_cache_sender.clone();
         let self_peer_id = self.author.clone();

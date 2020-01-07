@@ -12,7 +12,7 @@ use std::fmt::{Debug, Error, Formatter};
 pub trait MineState: Send + Sync {
     fn get_current_mine_ctx(&self, algo: Algo) -> Option<MineCtx>;
     fn mine_accept(&self, mine_ctx: &MineCtx, solution: Solution, nonce: u32) -> bool;
-    fn mine_block(&mut self, header: Vec<u8>) -> (Receiver<Proof>, Sender<Proof>);
+    fn mine_block(&mut self, header: Vec<u8>) -> (Receiver<Option<Proof>>, Sender<Option<Proof>>);
 }
 
 const CYCLE_LENGTH_U8: usize = PROOF_SIZE << 3;

@@ -1,10 +1,9 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::pow::block_tree::{BlockTree, CommitData};
-use crate::pow::payload_ext::BlockPayloadExt;
 use crate::state_replication::{StateComputer, TxnManager};
-use consensus_types::block::Block;
+use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
 use futures::compat::Future01CompatExt;
-use futures::{channel::mpsc, StreamExt};
+use futures::{channel::mpsc, SinkExt, StreamExt};
 use futures_locks::{Mutex, RwLock};
 use itertools;
 use libra_crypto::HashValue;
@@ -16,23 +15,23 @@ use libra_types::transaction::TransactionStatus;
 use libra_types::transaction::TransactionToCommit;
 use libra_types::transaction::{SignedTransaction, Transaction};
 use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
 
 pub struct ChainManager {
-    //    block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
     block_store: Arc<ConsensusDB>,
     state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
     block_tree: Arc<RwLock<BlockTree>>,
     orphan_blocks: Arc<Mutex<HashMap<HashValue, Vec<HashValue>>>>, //key -> parent_block_id, value -> block_id
     author: AccountAddress,
     read_storage: Arc<dyn StorageRead>,
+    new_block_sender: mpsc::Sender<u64>,
 }
 
 impl ChainManager {
     pub fn new(
-        //        block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
         block_store: Arc<ConsensusDB>,
         txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
         state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
@@ -40,6 +39,8 @@ impl ChainManager {
         author: AccountAddress,
         read_storage: Arc<dyn StorageRead>,
         write_storage: Arc<dyn StorageWrite>,
+        dump_path: PathBuf,
+        new_block_sender: mpsc::Sender<u64>,
     ) -> Self {
         //orphan block
         let orphan_blocks = Arc::new(Mutex::new(HashMap::new()));
@@ -50,15 +51,17 @@ impl ChainManager {
             txn_manager,
             rollback_mode,
             Arc::clone(&block_store),
+            dump_path,
         )));
+
         ChainManager {
-            //            block_cache_receiver,
             block_store,
             state_computer,
             block_tree,
             orphan_blocks,
             author,
             read_storage,
+            new_block_sender,
         }
     }
 
@@ -73,15 +76,16 @@ impl ChainManager {
     ) {
         let block_db = self.block_store.clone();
         let orphan_blocks = self.orphan_blocks.clone();
-        //        let mut block_cache_receiver = self
-        //            .block_cache_receiver
-        //            .take()
-        //            .expect("block_cache_receiver is none.");
         let state_computer = self.state_computer.clone();
         let author = self.author.clone();
         let block_tree = self.block_tree.clone();
         let _read_storage = self.read_storage.clone();
+        let mut new_block_sender = self.new_block_sender.clone();
         let chain_fut = async move {
+            new_block_sender
+                .send(0)
+                .await
+                .expect("new_block_sender send msg err.");
             loop {
                 ::futures::select! {
                 block = block_cache_receiver.select_next_some() => {
@@ -95,7 +99,7 @@ impl ChainManager {
                     let parent_block_id = block.parent_id();
                     let block_index = BlockIndex::new(&block.id(), &parent_block_id);
                     let mut chain_lock = block_tree.write().compat().await.unwrap();
-                    if chain_lock.block_exist(&parent_block_id) {
+                    if chain_lock.block_exist(&parent_block_id) && !chain_lock.block_exist(&block.id()) {
                         // 2. find ancestors
                         let (ancestors, pre_block_index) = chain_lock.find_ancestor_until_main_chain(&parent_block_id).expect("find ancestors err.");
                         // 3. find blocks
@@ -161,8 +165,11 @@ impl ChainManager {
                                         first_version: (txn_len - (commit_len as u64) + 1) as u64,
                                         ledger_info_with_sigs: Some(block.quorum_cert().ledger_info().clone())};
 
-                                    chain_lock.add_block_info(block, &parent_block_id, processed_vm_output, commit_data).await.expect("add_block_info failed.");
-                                    chain_lock.print_block_chain_root(author);
+                                    let (new_root, latest_height) = chain_lock.add_block_info(block, &parent_block_id, processed_vm_output, commit_data).await.expect("add_block_info failed.");
+                                    if new_root {
+                                        new_block_sender.send(latest_height).await.expect("new_block_sender send msg err.");
+                                        chain_lock.print_block_chain_root(author);
+                                    }
                                 } else {
                                     warn!("Peer id {:?}, Drop block {:?}, block version is {}, vm output version is {}", author, block.id(),
                                     block.quorum_cert().ledger_info().ledger_info().commit_info().version(), txn_len);
@@ -185,11 +192,10 @@ impl ChainManager {
                 }
             }
         };
-
         executor.spawn(chain_fut);
     }
 
-    pub async fn chain_root(&self) -> HashValue {
+    pub async fn chain_root(&self) -> Option<HashValue> {
         self.block_tree
             .clone()
             .read()
@@ -209,7 +215,7 @@ impl ChainManager {
             .block_exist(block_hash)
     }
 
-    pub async fn chain_height_and_root(&self) -> (u64, BlockIndex) {
+    pub async fn chain_height_and_root(&self) -> Option<(u64, BlockIndex)> {
         self.block_tree
             .clone()
             .read()

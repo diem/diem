@@ -9,6 +9,7 @@ fn main() {
         "src/proto/network.proto",
         "src/proto/state_synchronizer.proto",
         "src/proto/health_checker.proto",
+        "src/proto/chain_state.proto",
     ];
 
     let includes = [

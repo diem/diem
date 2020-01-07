@@ -18,10 +18,12 @@ pub mod get_with_proof;
 pub mod identifier;
 pub mod language_storage;
 pub mod ledger_info;
+pub mod libra_resource;
 pub mod proof;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
 pub mod proto;
+pub mod system_config;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod test_helpers;
 pub mod transaction;

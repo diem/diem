@@ -1,6 +1,6 @@
 use std::{mem::size_of, os::raw::c_int};
 
-#[link(name = "scrypt-kdf")]
+#[link(name = "scrypt-kdf", kind = "static")]
 extern "C" {
     fn crypto_scrypt(
         passwd: *const u8,
@@ -31,8 +31,7 @@ impl ScryptParams {
         assert!(p > 0);
         assert!(n > 0);
         assert!(
-            size_of::<usize>() >= size_of::<u32>()
-                || (r <= std::usize::MAX as u32 && p < std::usize::MAX as u32)
+            size_of::<usize>() >= size_of::<u32>() || (r <= std::u32::MAX && p < std::u32::MAX)
         );
 
         ScryptParams { n, r, p }

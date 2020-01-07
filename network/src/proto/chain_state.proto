@@ -1,0 +1,21 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package chain_state;
+
+message ChainStateMsg {
+  oneof message {
+    ChainStateRequest cs_req = 1;
+    ChainStateResponse cs_resp = 2;
+  }
+}
+
+message ChainStateRequest {
+  bytes bytes = 1;
+}
+
+message ChainStateResponse {
+  bytes bytes = 1;
+}

@@ -639,8 +639,11 @@ module LibraSystem {
                  move(collected_fees),
                  copy(amount_to_distribute_per_validator)
              );
-
-             LibraAccount.deposit(move(addr), move(payment_coin));
+             if (LibraCoin.value(&payment_coin) == 0) {
+                 LibraCoin.destroy_zero(move(payment_coin));
+             } else {
+                 LibraAccount.deposit(move(addr), move(payment_coin));
+             }
          }
 
          // Now pay back any remainder to the transaction fees. Deposits with value zero

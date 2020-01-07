@@ -1,5 +1,5 @@
+use super::block::Block;
 use anyhow::{Error, Result};
-use consensus_types::block::Block;
 use libra_crypto::hash::{BlockPayloadExtHasher, CryptoHash, CryptoHasher};
 use libra_crypto::HashValue;
 use libra_types::transaction::SignedTransaction;

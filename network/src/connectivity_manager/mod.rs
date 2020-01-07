@@ -319,10 +319,10 @@ where
         &'a mut self,
         pending_dials: &'a mut FuturesUnordered<BoxFuture<'static, PeerId>>,
     ) {
-        // Cancel dials to peers that are no longer eligible.
-        self.cancel_stale_dials().await;
         // Disconnect from connected peers that are no longer eligible.
         if !self.is_public {
+            // Cancel dials to peers that are no longer eligible.
+            self.cancel_stale_dials().await;
             self.close_stale_connections().await;
         }
         // Dial peers which are eligible but are neither connected nor queued for dialing in the

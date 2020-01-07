@@ -27,6 +27,18 @@ lazy_static! {
     // Account
     static ref ACCOUNT_MODULE_NAME: Identifier = Identifier::new("LibraAccount").unwrap();
     static ref ACCOUNT_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
+
+    // LibraSystem
+    static ref LIBRA_SYSTEM_MODULE_NAME: Identifier = Identifier::new("LibraSystem").unwrap();
+    static ref BLOCK_METADATA_STRUCT_NAME: Identifier = Identifier::new("BlockMetadata").unwrap();
+
+}
+
+pub fn libra_system_module_name() -> &'static IdentStr {
+    &*LIBRA_SYSTEM_MODULE_NAME
+}
+pub fn block_metadata_module_name() -> &'static IdentStr {
+    &*BLOCK_METADATA_STRUCT_NAME
 }
 
 pub fn coin_module_name() -> &'static IdentStr {
@@ -89,6 +101,15 @@ pub fn account_struct_tag() -> StructTag {
         address: core_code_address(),
         module: account_module_name().to_owned(),
         name: account_struct_name().to_owned(),
+        type_params: vec![],
+    }
+}
+
+pub fn block_metadata_struct_tag() -> StructTag {
+    StructTag {
+        address: core_code_address(),
+        module: libra_system_module_name().to_owned(),
+        name: block_metadata_module_name().to_owned(),
         type_params: vec![],
     }
 }

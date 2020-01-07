@@ -1,8 +1,9 @@
 use anyhow::{Error, Result};
 use libra_crypto::HashValue;
+use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
 pub struct BlockIndex {
     id: HashValue,
     parent_block_id: HashValue,

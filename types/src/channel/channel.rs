@@ -5,11 +5,11 @@ use crate::{
     account_config::core_code_address,
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
+    libra_resource::LibraResource,
 };
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 
 lazy_static! {
     // Channel
@@ -24,6 +24,8 @@ lazy_static! {
 
     static ref CHANNEL_GLOBAL_EVENTS_STRUCT_NAME: Identifier = Identifier::new("ChannelGlobalEvents").unwrap();
     static ref CHANNEL_EVENT_STRUCT_NAME: Identifier = Identifier::new("ChannelEvent").unwrap();
+    static ref CHANNEL_LOCKED_BY_STRUCT_NAME: Identifier = Identifier::new("ChannelLockedBy").unwrap();
+    static ref CHANNEL_CHALLENGE_BY_STRUCT_NAME: Identifier = Identifier::new("ChannelChallengedBy").unwrap();
 
     pub static ref CHANNEL_EVENT_PATH: Vec<u8> = {
         let mut path = channel_resource_path();
@@ -53,6 +55,12 @@ pub fn channel_global_events_struct_name() -> &'static IdentStr {
 pub fn channel_event_struct_name() -> &'static IdentStr {
     &*CHANNEL_EVENT_STRUCT_NAME
 }
+pub fn channel_locked_by_struct_name() -> &'static IdentStr {
+    &*CHANNEL_LOCKED_BY_STRUCT_NAME
+}
+pub fn channel_challenge_by_struct_name() -> &'static IdentStr {
+    &*CHANNEL_CHALLENGE_BY_STRUCT_NAME
+}
 
 pub fn channel_struct_tag() -> StructTag {
     StructTag {
@@ -77,6 +85,22 @@ pub fn channel_global_events_struct_tag() -> StructTag {
         address: core_code_address(),
         module: channel_module_name().to_owned(),
         name: channel_global_events_struct_name().to_owned(),
+        type_params: vec![],
+    }
+}
+pub fn channel_locked_by_struct_tag() -> StructTag {
+    StructTag {
+        address: core_code_address(),
+        module: channel_module_name().to_owned(),
+        name: channel_locked_by_struct_name().to_owned(),
+        type_params: vec![],
+    }
+}
+pub fn channel_challenge_by_struct_tag() -> StructTag {
+    StructTag {
+        address: core_code_address(),
+        module: channel_module_name().to_owned(),
+        name: channel_challenge_by_struct_name().to_owned(),
         type_params: vec![],
     }
 }
@@ -128,6 +152,33 @@ pub fn user_channels_struct_tag() -> StructTag {
     }
 }
 
+impl LibraResource for ChannelResource {
+    fn struct_tag() -> StructTag {
+        channel_struct_tag()
+    }
+}
+
+impl LibraResource for ChannelMirrorResource {
+    fn struct_tag() -> StructTag {
+        channel_mirror_struct_tag()
+    }
+}
+impl LibraResource for ChannelParticipantAccountResource {
+    fn struct_tag() -> StructTag {
+        channel_participant_struct_tag()
+    }
+}
+impl LibraResource for UserChannelsResource {
+    fn struct_tag() -> StructTag {
+        user_channels_struct_tag()
+    }
+}
+impl LibraResource for ChannelEvent {
+    fn struct_tag() -> StructTag {
+        channel_event_struct_tag()
+    }
+}
+
 /// A Rust representation of an Channel resource.
 /// This is not how the Channel is represented in the VM but it's a convenient
 /// representation.
@@ -165,9 +216,16 @@ impl ChannelResource {
     pub fn locked(&self) -> bool {
         self.stage == 1
     }
+    pub fn opened(&self) -> bool {
+        self.stage == 0
+    }
 
     pub fn participants(&self) -> &[AccountAddress] {
         self.participants.as_slice()
+    }
+
+    pub fn event_handle(&self) -> &EventHandle {
+        &self.events
     }
 
     pub fn make_from(bytes: Vec<u8>) -> Result<Self> {
@@ -282,14 +340,6 @@ impl UserChannelsResource {
     }
 }
 
-impl TryFrom<&[u8]> for UserChannelsResource {
-    type Error = Error;
-
-    fn try_from(value: &[u8]) -> Result<Self> {
-        lcs::from_bytes(value).map_err(|e| Into::into(e))
-    }
-}
-
 impl Into<Vec<AccountAddress>> for UserChannelsResource {
     fn into(self) -> Vec<AccountAddress> {
         self.channels
@@ -319,5 +369,26 @@ impl ChannelEvent {
 
     pub fn balances(&self) -> &[u64] {
         self.balances.as_slice()
+    }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct ChannelLockedBy {
+    pub participant: AccountAddress,
+    pub time_lock: u64,
+}
+impl LibraResource for ChannelLockedBy {
+    fn struct_tag() -> StructTag {
+        channel_locked_by_struct_tag()
+    }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct ChannelChallengeBy {
+    pub participant: AccountAddress,
+}
+impl LibraResource for ChannelChallengeBy {
+    fn struct_tag() -> StructTag {
+        channel_challenge_by_struct_tag()
     }
 }

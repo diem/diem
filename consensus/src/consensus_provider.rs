@@ -3,7 +3,10 @@
 
 use anyhow::Result;
 use libra_config::config::NodeConfig;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use network::validator_network::{
+    ChainStateNetworkEvents, ChainStateNetworkSender, ConsensusNetworkEvents,
+    ConsensusNetworkSender,
+};
 
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
 use crate::pow::pow_consensus_provider::PowConsensusProvider;
@@ -88,6 +91,8 @@ pub fn make_pow_consensus_provider(
     executor: Arc<Executor<MoveVM>>,
     state_sync_client: Arc<StateSyncClient>,
     rollback_flag: bool,
+    chain_state_network_sender: ChainStateNetworkSender,
+    chain_state_network_events: ChainStateNetworkEvents,
 ) -> Box<dyn ConsensusProvider> {
     let read = create_storage_read_client(node_config);
     let write = create_storage_write_client(node_config);
@@ -101,5 +106,7 @@ pub fn make_pow_consensus_provider(
         rollback_flag,
         read,
         write,
+        chain_state_network_sender,
+        chain_state_network_events,
     ))
 }

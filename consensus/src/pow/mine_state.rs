@@ -1,10 +1,10 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
-use crate::pow::payload_ext::BlockPayloadExt;
 use crate::pow::target::{difficult_1_target, get_next_work_required, BlockInfo, TBlockIndex};
 use async_std::{
     sync::{channel, Receiver, Sender},
     task,
 };
+use consensus_types::payload_ext::BlockPayloadExt;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use miner::miner::verify;
@@ -23,7 +23,7 @@ where
 
 struct StateInner {
     mine_ctx: Option<MineCtx>,
-    tx: Option<Sender<Proof>>,
+    tx: Option<Sender<Option<Proof>>>,
 }
 
 impl<B> MineStateManager<B>
@@ -98,7 +98,7 @@ where
                 if let Some(tx) = x.tx.take() {
                     task::block_on(async move {
                         debug!("Received Mined block");
-                        tx.send(proof).await;
+                        tx.send(Some(proof)).await;
                     });
                     *x = StateInner {
                         mine_ctx: None,
@@ -111,7 +111,7 @@ where
         return false;
     }
 
-    fn mine_block(&mut self, header: Vec<u8>) -> (Receiver<Proof>, Sender<Proof>) {
+    fn mine_block(&mut self, header: Vec<u8>) -> (Receiver<Option<Proof>>, Sender<Option<Proof>>) {
         let mut x = self.inner.lock().unwrap();
         let (tx, rx) = channel(1);
         let mine_ctx = MineCtx {

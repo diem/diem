@@ -241,6 +241,23 @@ where
         }
     }
 
+    /// pow signatures validate
+    pub fn pow_validate_signatures(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
+        match self.block_data.block_type() {
+            BlockType::Genesis => bail!("We should not accept genesis from others"),
+            BlockType::NilBlock => bail!("nil block with pow err."),
+            BlockType::Proposal { author, .. } => {
+                let signature = self
+                    .signature
+                    .as_ref()
+                    .ok_or_else(|| format_err!("Missing signature in Proposal"))?;
+                signature.verify(validator, *author, self.id())?;
+                self.quorum_cert().ledger_info().verify(validator)?;
+                Ok(())
+            }
+        }
+    }
+
     /// Makes sure that the proposal makes sense, independently of the current state.
     /// If this is the genesis block, we skip these checks.
     pub fn verify_well_formed(&self) -> anyhow::Result<()> {

@@ -86,7 +86,7 @@ module LibraAccount {
     // Channel Resource on chain
     resource Channel {
         channel_sequence_number: u64,
-        // 0 open 1 locked 2 closed
+        // 0 open 1 locked 2 closed 3 resolved
         stage: u64,
         participants: Vector.T<address>,
         events: Self.EventHandle<Self.ChannelEvent>,
@@ -961,10 +961,14 @@ module LibraAccount {
         txn_channel_sequence_number = ChannelTransaction.get_txn_channel_sequence_number();
 
         channel = borrow_global_mut<Channel>(copy(channel_address));
-        *(&mut copy(channel).stage) = 0;
+        if(!ChannelTransaction.is_offchain() && !Self.has_authorized_by_participants()){
+            *(&mut copy(channel).stage) = 3;
+        } else {
+            *(&mut copy(channel).stage) = 0;
+            Self.do_emit_channel_event(copy(channel_address), copy(channel));
+        }
         locked_by = Self.move_from_channel<Self.ChannelLockedBy>();
         Self.destroy_locked_by(move(locked_by));
-        Self.do_emit_channel_event(copy(channel_address), copy(channel));
         return;
     }
 
@@ -1162,8 +1166,14 @@ module LibraAccount {
                 } else {
                     if(*&copy(channel).stage == 2){
                         // if channel is locked at prologue, it must become closed at epilogue.
-                    } else{
-                        abort(1016);
+                    } else {
+                        if(*&copy(channel).stage == 3){
+                            // resolve without participant's signature
+                            *(&mut copy(channel).stage) = 0;
+                            Self.do_emit_channel_event(copy(channel_address), copy(channel));
+                        } else {
+                            abort(1016);
+                        }
                     }
                 }
             }

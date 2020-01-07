@@ -10,6 +10,7 @@ pub mod block_retrieval;
 pub mod common;
 pub mod epoch_retrieval;
 pub mod executed_block;
+pub mod payload_ext;
 pub mod proposal_msg;
 pub mod quorum_cert;
 pub mod sync_info;

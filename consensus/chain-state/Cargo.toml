@@ -1,0 +1,18 @@
+[package]
+name = "chain-state"
+version = "0.1.0"
+authors = ["tiangong3624749 <tiangong3624749@163.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+network = { path = "../../network", version = "0.1.0" }
+tokio = { version = "0.2", features = ["full"] }
+futures = { version = "0.3.0", features = ["compat"] }
+anyhow = "1.0"
+serde = { version = "1.0.99", default-features = false }
+consensus-types = { path = "../consensus-types" }
+libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

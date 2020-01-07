@@ -44,3 +44,7 @@ generate-keypair = { path = "../../config/generate-keypair", version = "0.1.0" }
 
 futures = "0.3.0"
 tokio = { version = "0.2", features = ["full"] }
+
+[[bin]]
+name = "transaction_gen"
+path = "src/bin/transaction_gen.rs"

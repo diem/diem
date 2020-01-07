@@ -20,6 +20,7 @@ use network::{
         // when you add a new protocol const, you must add this in either
         // .direct_send_protocols or .rpc_protocols vector of network_builder in setup_network()
         ADMISSION_CONTROL_RPC_PROTOCOL,
+        CHAIN_STATE_DIRECT_SEND_PROTOCOL,
         CONSENSUS_DIRECT_SEND_PROTOCOL,
         CONSENSUS_RPC_PROTOCOL,
         MEMPOOL_DIRECT_SEND_PROTOCOL,
@@ -113,6 +114,7 @@ pub fn setup_network(
             ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
+            ProtocolId::from_static(CHAIN_STATE_DIRECT_SEND_PROTOCOL),
         ])
         .rpc_protocols(vec![
             ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
@@ -155,19 +157,6 @@ pub fn setup_network(
             .trusted_peers(trusted_peers)
             .signing_keys((signing_private, signing_public))
             .discovery_interval_ms(config.discovery_interval_ms);
-    } else if config.enable_encryption_and_authentication {
-        let identity_private = config
-            .network_keypairs
-            .identity_keys
-            .take_private()
-            .expect("Failed to take Network identity private key, key absent or already read");
-        let identity_public = config.network_keypairs.identity_keys.public().clone();
-        // Even if a network end-point is permissionless, it might want to prove its identity to
-        // another peer it connects to. For this, we use TCP + Noise but in a permission-less way.
-        network_builder.transport(TransportType::TcpNoise(Some((
-            identity_private,
-            identity_public,
-        ))));
     } else if config.is_public_network {
         let seed_peers = config
             .seed_peers
@@ -197,6 +186,19 @@ pub fn setup_network(
             .seed_peers(seed_peers)
             .signing_keys((signing_private, signing_public))
             .discovery_interval_ms(config.discovery_interval_ms);
+    } else if config.enable_encryption_and_authentication {
+        let identity_private = config
+            .network_keypairs
+            .identity_keys
+            .take_private()
+            .expect("Failed to take Network identity private key, key absent or already read");
+        let identity_public = config.network_keypairs.identity_keys.public().clone();
+        // Even if a network end-point is permissionless, it might want to prove its identity to
+        // another peer it connects to. For this, we use TCP + Noise but in a permission-less way.
+        network_builder.transport(TransportType::TcpNoise(Some((
+            identity_private,
+            identity_public,
+        ))));
     } else {
         network_builder.transport(TransportType::Tcp);
     }
@@ -300,6 +302,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     let mut mempool = None;
     let mut consensus = None;
+    let (mut cs_network_sender, mut cs_network_events) = (None, None);
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {
         // Note: We need to start network provider before consensus, because the consensus
         // initialization is blocked on state synchronizer to sync to the initial root ledger
@@ -317,6 +320,18 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
                 ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ]);
+
+        if node_config.consensus.consensus_type == POW {
+            //add chain state protocol
+            let (chain_state_network_sender, chain_state_network_events) = network_provider
+                .add_chain_state(vec![ProtocolId::from_static(
+                    CHAIN_STATE_DIRECT_SEND_PROTOCOL,
+                )]);
+
+            cs_network_sender = Some(chain_state_network_sender);
+            cs_network_events = Some(chain_state_network_events);
+        }
+
         runtime.handle().spawn(network_provider.start());
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);
@@ -340,6 +355,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 executor,
                 state_synchronizer.create_client(),
                 false,
+                cs_network_sender.expect("cs_network_sender is none."),
+                cs_network_events.expect("cs_network_events is none."),
             ),
             _ => make_consensus_provider(
                 node_config,

@@ -97,6 +97,7 @@ use mirai_annotations::*;
 use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
 use serde::{de, ser};
+use std::convert::TryFrom;
 use std::{self, convert::AsRef, fmt};
 use tiny_keccak::Keccak;
 
@@ -250,6 +251,21 @@ impl HashValue {
     /// Returns first SHORT_STRING_LENGTH bytes as String in hex
     pub fn short_str(&self) -> String {
         hex::encode(&self.hash[0..SHORT_STRING_LENGTH]).to_string()
+    }
+}
+
+impl From<HashValue> for String {
+    fn from(hash: HashValue) -> String {
+        hex::encode(&hash.hash[..]).to_string()
+    }
+}
+
+impl TryFrom<String> for HashValue {
+    type Error = anyhow::Error;
+
+    fn try_from(hex: String) -> Result<HashValue> {
+        let bytes = hex::decode(hex).expect("from hex fail.");
+        HashValue::from_slice(&bytes)
     }
 }
 
