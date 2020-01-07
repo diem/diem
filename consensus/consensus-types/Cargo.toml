@@ -9,7 +9,6 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 hex = { version = "0.3.2", default-features = false }
-lazy_static = { version = "1.3.0", default-features = false }
 mirai-annotations = { version = "1.5.0", default-features = false }
 proptest = { version = "0.9.4", optional = true }
 rand = { version = "0.6.5", default-features = false }
