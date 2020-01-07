@@ -17,8 +17,8 @@ build-cuda-plugins = []
 
 [dependencies]
 cuckoo_plugin = { path = "plugin", version = "0.1.0" }
-ocl_cuckaroo = {path = "./ocl_cuckaroo", version = "0.1.0"}
-ocl_cuckatoo = {path = "./ocl_cuckatoo", version = "0.1.0"}
+#ocl_cuckaroo = {path = "./ocl_cuckaroo", version = "0.1.0"}
+#ocl_cuckatoo = {path = "./ocl_cuckatoo", version = "0.1.0"}
 time = "^0.1"
 rust-crypto = "0.2.36"
 log = "^0.3"

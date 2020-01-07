@@ -52,18 +52,19 @@ pub fn mine(header: &[u8], nonce: u32, nthread: u32, device: u32) -> Solution {
 }
 
 pub fn verify(header: &[u8], nonce: u32, solution: Solution) -> bool {
-    let mut ctx = CuckatooContext::<u64>::new_impl(31, 42, 1).unwrap();
+    let mut ctx = CuckatooContext::<u64>::new_impl(31, 42, 2).unwrap();
     let _ = ctx.set_header_nonce(header.to_owned(), Some(nonce), false);
     let proof = CuckarooProof::new(solution.into());
     ctx.verify(&proof).is_ok()
 }
 
 #[cfg(test)]
+
 mod test {
     use super::*;
-    use crate::config::MinerConfig;
     use cuckoo::PROOF_SIZE;
     #[test]
+    #[ignore] //TODO: test only gpu feature enable
     fn test_mine() {
         let header = vec![0u8; 80];
         let nonce = 99;
