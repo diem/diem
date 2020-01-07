@@ -35,8 +35,8 @@ use core::convert::TryFrom;
 use ed25519_dalek;
 use libra_crypto_derive::{SilentDebug, SilentDisplay};
 use serde::{de, ser};
-use std::fmt;
 use std::cmp::Ordering;
+use std::fmt;
 
 /// The length of the Ed25519PrivateKey
 pub const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
@@ -385,7 +385,7 @@ fn check_s_lt_l(s: &[u8]) -> bool {
         match s[i].cmp(&L[i]) {
             Ordering::Less => return true,
             Ordering::Greater => return false,
-            _ => {},
+            _ => {}
         }
     }
     // As this stage S == L which implies a non canonical S.

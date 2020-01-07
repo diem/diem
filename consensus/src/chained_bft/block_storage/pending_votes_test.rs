@@ -30,12 +30,7 @@ fn test_qc_aggregation() {
 
     let li1 = random_ledger_info();
     let vote_data_1 = random_vote_data(1);
-    let vote_data_1_author_0 = Vote::new(
-        vote_data_1,
-        signers[0].author(),
-        li1,
-        &signers[0],
-    );
+    let vote_data_1_author_0 = Vote::new(vote_data_1, signers[0].author(), li1, &signers[0]);
 
     // first time a new vote is added the result is VoteAdded
     assert_eq!(
@@ -74,12 +69,7 @@ fn test_qc_aggregation() {
         VoteReceptionResult::VoteAdded(1)
     );
     // Two votes for the ledger info form a QC
-    let vote_data_2_author_2 = Vote::new(
-        vote_data_2,
-        signers[2].author(),
-        li2,
-        &signers[2],
-    );
+    let vote_data_2_author_2 = Vote::new(vote_data_2, signers[2].author(), li2, &signers[2]);
     match pending_votes.insert_vote(&vote_data_2_author_2, &validator) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
             assert!(validator
@@ -130,24 +120,14 @@ fn test_qc_aggregation_keep_last_only() {
     );
 
     // another author voting for round 1 cannot form a QC because the old vote is gone
-    let vote_round_1_author_1 = Vote::new(
-        vote_round_1,
-        signers[1].author(),
-        li1,
-        &signers[1],
-    );
+    let vote_round_1_author_1 = Vote::new(vote_round_1, signers[1].author(), li1, &signers[1]);
     assert_eq!(
         pending_votes.insert_vote(&vote_round_1_author_1, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
 
     // another author voting for the vote data in round 2 can finally form a QC
-    let vote_round_2_author_1 = Vote::new(
-        vote_round_2,
-        signers[1].author(),
-        li2,
-        &signers[1],
-    );
+    let vote_round_2_author_1 = Vote::new(vote_round_2, signers[1].author(), li2, &signers[1]);
     match pending_votes.insert_vote(&vote_round_2_author_1, &validator) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
             assert!(validator
@@ -170,12 +150,7 @@ fn test_tc_aggregation() {
 
     let li1 = random_ledger_info();
     let vote_round_1 = random_vote_data(1);
-    let mut vote_round_1_author_0 = Vote::new(
-        vote_round_1,
-        signers[0].author(),
-        li1,
-        &signers[0],
-    );
+    let mut vote_round_1_author_0 = Vote::new(vote_round_1, signers[0].author(), li1, &signers[0]);
 
     let timeout = vote_round_1_author_0.timeout();
     let signature = timeout.sign(&signers[0]);
@@ -191,12 +166,8 @@ fn test_tc_aggregation() {
     // round signature
     let li2 = random_ledger_info();
     let vote2_round_1 = random_vote_data(1);
-    let mut vote2_round_1_author_1 = Vote::new(
-        vote2_round_1,
-        signers[1].author(),
-        li2,
-        &signers[1],
-    );
+    let mut vote2_round_1_author_1 =
+        Vote::new(vote2_round_1, signers[1].author(), li2, &signers[1]);
     assert_eq!(
         pending_votes.insert_vote(&vote2_round_1_author_1, &validator),
         VoteReceptionResult::VoteAdded(1)
@@ -226,12 +197,7 @@ fn test_tc_aggregation_keep_last_only() {
 
     let li1 = random_ledger_info();
     let vote_round_1 = random_vote_data(1);
-    let mut vote_round_1_author_0 = Vote::new(
-        vote_round_1,
-        signers[0].author(),
-        li1,
-        &signers[0],
-    );
+    let mut vote_round_1_author_0 = Vote::new(vote_round_1, signers[0].author(), li1, &signers[0]);
     let timeout = vote_round_1_author_0.timeout();
     let signature = timeout.sign(&signers[0]);
     vote_round_1_author_0.add_timeout_signature(signature);
@@ -245,12 +211,7 @@ fn test_tc_aggregation_keep_last_only() {
     // A vote for round 2 overrides the previous vote
     let li2 = random_ledger_info();
     let vote_round_2 = random_vote_data(2);
-    let mut vote_round_2_author_0 = Vote::new(
-        vote_round_2,
-        signers[0].author(),
-        li2,
-        &signers[0],
-    );
+    let mut vote_round_2_author_0 = Vote::new(vote_round_2, signers[0].author(), li2, &signers[0]);
     let timeout = vote_round_2_author_0.timeout();
     let signature = timeout.sign(&signers[0]);
     vote_round_2_author_0.add_timeout_signature(signature);
@@ -262,12 +223,8 @@ fn test_tc_aggregation_keep_last_only() {
     // a new vote for round 1 cannot form a TC
     let li3 = random_ledger_info();
     let vote3_round_1 = random_vote_data(1);
-    let mut vote3_round_1_author_1 = Vote::new(
-        vote3_round_1,
-        signers[1].author(),
-        li3,
-        &signers[1],
-    );
+    let mut vote3_round_1_author_1 =
+        Vote::new(vote3_round_1, signers[1].author(), li3, &signers[1]);
     let timeout = vote3_round_1_author_1.timeout();
     let signature = timeout.sign(&signers[1]);
     vote3_round_1_author_1.add_timeout_signature(signature);
@@ -279,12 +236,8 @@ fn test_tc_aggregation_keep_last_only() {
     // a new vote for round 2 should form a TC
     let li4 = random_ledger_info();
     let vote4_round_2 = random_vote_data(2);
-    let mut vote4_round_2_author_1 = Vote::new(
-        vote4_round_2,
-        signers[1].author(),
-        li4,
-        &signers[1],
-    );
+    let mut vote4_round_2_author_1 =
+        Vote::new(vote4_round_2, signers[1].author(), li4, &signers[1]);
     let timeout = vote4_round_2_author_1.timeout();
     let signature = timeout.sign(&signers[1]);
     vote4_round_2_author_1.add_timeout_signature(signature);

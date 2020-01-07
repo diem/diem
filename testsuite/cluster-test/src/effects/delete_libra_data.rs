@@ -27,7 +27,7 @@ impl Action for DeleteLibraData {
                 .run_cmd(vec!["sudo rm -rf /data/libra/common"])
                 .await
         }
-            .boxed()
+        .boxed()
     }
 }
 

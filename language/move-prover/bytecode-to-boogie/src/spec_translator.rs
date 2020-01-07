@@ -568,23 +568,19 @@ impl<'a> SpecTranslator<'a> {
                     "cannt handle more than one return value as of now",
                     BoogieExpr("<ret>".to_string(), SignatureToken::U64),
                 )
-            },
-            std::cmp::Ordering::Less => {
-                self.error(
-                    "function does not return a value",
-                    BoogieExpr("<ret>".to_string(), SignatureToken::U64),
-                )
-            },
-            _ => {
-                BoogieExpr(
-                    "ret0".to_string(),
-                    sig.return_tokens()
-                        .nth(0)
-                        .expect("non-empty return")
-                        .signature_token()
-                        .clone(),
-                )
             }
+            std::cmp::Ordering::Less => self.error(
+                "function does not return a value",
+                BoogieExpr("<ret>".to_string(), SignatureToken::U64),
+            ),
+            _ => BoogieExpr(
+                "ret0".to_string(),
+                sig.return_tokens()
+                    .nth(0)
+                    .expect("non-empty return")
+                    .signature_token()
+                    .clone(),
+            ),
         }
     }
 

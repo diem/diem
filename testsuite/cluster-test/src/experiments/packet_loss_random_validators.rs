@@ -80,7 +80,7 @@ impl Experiment for PacketLossRandomValidators {
             }
             Ok(None)
         }
-            .boxed()
+        .boxed()
     }
 
     fn deadline(&self) -> Duration {

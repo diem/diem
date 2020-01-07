@@ -486,10 +486,7 @@ fn test_update() {
     );
     assert_eq!(smt2.get(key2), AccountState::Unknown);
     assert_eq!(smt2.get(key3), AccountState::Unknown);
-    assert_eq!(
-        smt2.get(key4),
-        AccountState::ExistsInScratchPad(value4)
-    );
+    assert_eq!(smt2.get(key4), AccountState::ExistsInScratchPad(value4));
 
     // Verify root hash.
     let value1_hash = value1.hash();
@@ -520,10 +517,7 @@ fn test_update() {
 
     // For smt2, only key1 should be available since smt2 was constructed by updating smt1 with
     // key1.
-    assert_eq!(
-        smt2.get(key1),
-        AccountState::ExistsInScratchPad(value1)
-    );
+    assert_eq!(smt2.get(key1), AccountState::ExistsInScratchPad(value1));
     assert_eq!(smt2.get(key2), AccountState::Unknown);
     assert_eq!(smt2.get(key3), AccountState::Unknown);
     assert_eq!(smt2.get(key4), AccountState::Unknown);
@@ -533,8 +527,5 @@ fn test_update() {
     assert_eq!(smt22.get(key1), AccountState::Unknown);
     assert_eq!(smt22.get(key2), AccountState::Unknown);
     assert_eq!(smt22.get(key3), AccountState::Unknown);
-    assert_eq!(
-        smt22.get(key4),
-        AccountState::ExistsInScratchPad(value4)
-    );
+    assert_eq!(smt22.get(key4), AccountState::ExistsInScratchPad(value4));
 }

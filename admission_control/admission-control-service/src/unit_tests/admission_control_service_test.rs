@@ -159,8 +159,7 @@ fn test_submit_txn_inner_vm() {
 
     let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
     let test_key = compat::generate_keypair(&mut rng);
-    req.transaction =
-        Some(get_test_signed_txn(sender, 0, keypair.0, test_key.1, None).into());
+    req.transaction = Some(get_test_signed_txn(sender, 0, keypair.0, test_key.1, None).into());
     let response = block_on(upstream_proxy::submit_transaction_to_mempool(
         upstream_proxy_data,
         req,
