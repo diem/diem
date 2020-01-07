@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
-use lazy_static::lazy_static;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
 use libra_types::block_metadata::BlockMetadata;
@@ -13,11 +12,12 @@ use libra_types::{
     byte_array::ByteArray,
     transaction::{Script, Transaction, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
+use once_cell::sync::Lazy;
 use std::{collections::HashSet, iter::FromIterator};
 use stdlib::{
     stdlib_modules,
     transaction_scripts::{
-        ADD_VALIDATOR_TXN_BODY, BLOCK_PROLOGUE_TXN_BODY, CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY,
+        ADD_VALIDATOR_TXN_BODY, CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY,
         PEER_TO_PEER_TRANSFER_TXN_BODY, PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY,
         REGISTER_VALIDATOR_TXN_BODY, REMOVE_VALIDATOR_TXN_BODY, ROTATE_AUTHENTICATION_KEY_TXN_BODY,
         ROTATE_CONSENSUS_PUBKEY_TXN_BODY,
@@ -26,22 +26,21 @@ use stdlib::{
 #[cfg(any(test, feature = "fuzzing"))]
 use vm::file_format::Bytecode;
 
-lazy_static! {
-    pub static ref ADD_VALIDATOR_TXN: Vec<u8> = { compile_script(&ADD_VALIDATOR_TXN_BODY) };
-    static ref PEER_TO_PEER_TXN: Vec<u8> = { compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY) };
-    static ref PEER_TO_PEER_WITH_METADATA_TXN: Vec<u8> =
-        { compile_script(&PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY) };
-    static ref CREATE_ACCOUNT_TXN: Vec<u8> = { compile_script(&CREATE_ACCOUNT_TXN_BODY) };
-    pub static ref REGISTER_VALIDATOR_TXN: Vec<u8> =
-        { compile_script(&REGISTER_VALIDATOR_TXN_BODY) };
-    pub static ref REMOVE_VALIDATOR_TXN: Vec<u8> = { compile_script(&REMOVE_VALIDATOR_TXN_BODY) };
-    static ref ROTATE_AUTHENTICATION_KEY_TXN: Vec<u8> =
-        { compile_script(&ROTATE_AUTHENTICATION_KEY_TXN_BODY) };
-    pub static ref ROTATE_CONSENSUS_PUBKEY_TXN: Vec<u8> =
-        { compile_script(&ROTATE_CONSENSUS_PUBKEY_TXN_BODY) };
-    static ref MINT_TXN: Vec<u8> = { compile_script(&MINT_TXN_BODY) };
-    static ref BLOCK_PROLOGUE_TXN: Vec<u8> = { compile_script(&BLOCK_PROLOGUE_TXN_BODY) };
-}
+pub static ADD_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| compile_script(&ADD_VALIDATOR_TXN_BODY));
+static PEER_TO_PEER_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY));
+static PEER_TO_PEER_WITH_METADATA_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compile_script(&PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY));
+static CREATE_ACCOUNT_TXN: Lazy<Vec<u8>> = Lazy::new(|| compile_script(&CREATE_ACCOUNT_TXN_BODY));
+pub static REGISTER_VALIDATOR_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compile_script(&REGISTER_VALIDATOR_TXN_BODY));
+pub static REMOVE_VALIDATOR_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compile_script(&REMOVE_VALIDATOR_TXN_BODY));
+static ROTATE_AUTHENTICATION_KEY_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compile_script(&ROTATE_AUTHENTICATION_KEY_TXN_BODY));
+pub static ROTATE_CONSENSUS_PUBKEY_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compile_script(&ROTATE_CONSENSUS_PUBKEY_TXN_BODY));
+static MINT_TXN: Lazy<Vec<u8>> = Lazy::new(|| compile_script(&MINT_TXN_BODY));
 
 fn compile_script(body: &ast::Program) -> Vec<u8> {
     let compiled_program =
