@@ -38,8 +38,7 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use safety_rules::SafetyRulesManagerConfig;
-use std::{convert::TryFrom, path::PathBuf, sync::Arc};
-use tempfile::NamedTempFile;
+use std::{convert::TryFrom, sync::Arc};
 use tokio::runtime;
 
 /// Auxiliary struct that is preparing SMR for the test
@@ -53,7 +52,6 @@ struct SMRNode {
     mempool: MockTransactionManager,
     mempool_notif_receiver: mpsc::Receiver<usize>,
     storage: Arc<MockStorage<TestPayload>>,
-    safety_rules_path: PathBuf,
 }
 
 impl SMRNode {
@@ -65,7 +63,6 @@ impl SMRNode {
         initial_data: RecoveryData<TestPayload>,
         proposer_type: ConsensusProposerType,
         executor_with_reconfig: Option<ValidatorSet>,
-        safety_rules_path: PathBuf,
     ) -> Self {
         let validators = initial_data.validators();
         let author = signer.author();
@@ -128,7 +125,6 @@ impl SMRNode {
             mempool,
             mempool_notif_receiver: commit_receiver,
             storage,
-            safety_rules_path,
         }
     }
 
@@ -146,7 +142,6 @@ impl SMRNode {
             recover_data,
             self.proposer_type,
             None,
-            self.safety_rules_path,
         )
     }
 
@@ -166,7 +161,6 @@ impl SMRNode {
         let mut nodes = vec![];
         for smr_id in 0..num_nodes {
             let (initial_data, storage) = MockStorage::start_for_testing(validator_set.clone());
-            let safety_rules_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
             nodes.push(Self::start(
                 playground,
                 signers.remove(0),
@@ -175,7 +169,6 @@ impl SMRNode {
                 initial_data,
                 proposer_type,
                 executor_validator_set.clone(),
-                safety_rules_path,
             ));
         }
         nodes
