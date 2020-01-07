@@ -10,7 +10,6 @@ publish = false
 edition = "2018"
 
 [dev-dependencies]
-lazy_static = "1.2.0"
 num = "0.2.0"
 num-traits = "0.2"
 rust_decimal = "1.0.2"
