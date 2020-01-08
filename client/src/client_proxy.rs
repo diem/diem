@@ -344,7 +344,10 @@ impl ClientProxy {
     /// Waits for the next transaction for a specific address and prints it
     pub fn wait_for_transaction(&mut self, account: AccountAddress, sequence_number: u64) {
         let mut max_iterations = 5000;
-        print!("waiting ");
+        print!(
+            "waiting for {} with sequence number {}",
+            account, sequence_number
+        );
         loop {
             stdout().flush().unwrap();
 

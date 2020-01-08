@@ -720,7 +720,7 @@ fn test_e2e_reconfiguration() {
         Decimal::from_str(&client_proxy_1.get_balance(&["b", "0"]).unwrap()).ok()
     );
     // wait for the mint txn in node 0
-    client_proxy_0.wait_for_transaction(association_address(), 1);
+    client_proxy_0.wait_for_transaction(association_address(), 2);
     assert_eq!(
         Decimal::from_f64(10.0),
         Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
@@ -751,8 +751,8 @@ fn test_e2e_reconfiguration() {
     client_proxy_1
         .add_validator(&["add_validator", &peer_id], true)
         .unwrap();
-    // Wait for it catches up, mint1 + remove + mint2 + add => seq == 4
-    client_proxy_0.wait_for_transaction(association_address(), 4);
+    // Wait for it catches up, mint1 + remove + mint2 + add => seq == 5
+    client_proxy_0.wait_for_transaction(association_address(), 5);
     assert_eq!(
         Decimal::from_f64(20.0),
         Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
