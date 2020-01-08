@@ -17,12 +17,11 @@ use anyhow::Result;
 use channel;
 use consensus_types::common::{Author, Payload, Round};
 use futures::{select, stream::StreamExt};
-use libra_config::config::ConsensusConfig;
+use libra_config::config::{ConsensusConfig, NodeConfig};
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::EpochInfo;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use safety_rules::SafetyRulesManager;
-use safety_rules::SafetyRulesManagerConfig;
 use std::{sync::Arc, sync::RwLock, time::Instant};
 use tokio::runtime::{Handle, Runtime};
 
@@ -31,7 +30,7 @@ use tokio::runtime::{Handle, Runtime};
 pub struct ChainedBftSMRInput<T> {
     network_sender: ConsensusNetworkSender,
     network_events: ConsensusNetworkEvents,
-    safety_rules_manager_config: SafetyRulesManagerConfig,
+    safety_rules_manager: SafetyRulesManager<T>,
     config: ConsensusConfig,
     initial_data: RecoveryData<T>,
 }
@@ -52,17 +51,16 @@ impl<T: Payload> ChainedBftSMR<T> {
         author: Author,
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
-        safety_rules_manager_config: SafetyRulesManagerConfig,
+        node_config: &mut NodeConfig,
         runtime: Runtime,
-        config: ConsensusConfig,
         storage: Arc<dyn PersistentStorage<T>>,
         initial_data: RecoveryData<T>,
     ) -> Self {
         let input = ChainedBftSMRInput {
             network_sender,
             network_events,
-            safety_rules_manager_config,
-            config,
+            safety_rules_manager: SafetyRulesManager::new(node_config),
+            config: node_config.consensus.clone(),
             initial_data,
         };
 
@@ -175,8 +173,6 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             verifier: input.initial_data.validators(),
         }));
 
-        let safety_rules_manager = SafetyRulesManager::new(input.safety_rules_manager_config);
-
         let mut epoch_mgr = EpochManager::new(
             self.author,
             Arc::clone(&epoch_info),
@@ -188,7 +184,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             txn_manager,
             state_computer,
             self.storage.clone(),
-            safety_rules_manager,
+            input.safety_rules_manager,
         );
 
         // Step 2

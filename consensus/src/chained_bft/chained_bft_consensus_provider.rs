@@ -19,7 +19,6 @@ use libra_logger::prelude::*;
 use libra_mempool::proto::mempool_client::MempoolClientWrapper;
 use libra_types::transaction::SignedTransaction;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-use safety_rules::SafetyRulesManagerConfig;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use tokio::runtime;
@@ -49,7 +48,6 @@ impl ChainedBftProvider {
 
         let author = node_config.validator_network.as_ref().unwrap().peer_id;
         debug!("[Consensus] My peer: {:?}", author);
-        let config = node_config.consensus.clone();
         let storage = Arc::new(StorageWriteProxy::new(node_config));
         let initial_data = runtime.block_on(storage.start());
 
@@ -62,9 +60,8 @@ impl ChainedBftProvider {
             author,
             network_sender,
             network_events,
-            SafetyRulesManagerConfig::new(node_config),
+            node_config,
             runtime,
-            config,
             storage,
             initial_data,
         );

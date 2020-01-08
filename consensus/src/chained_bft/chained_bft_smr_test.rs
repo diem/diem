@@ -36,7 +36,6 @@ use network::{
     proto::ConsensusMsg_oneof,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use safety_rules::SafetyRulesManagerConfig;
 use std::{convert::TryFrom, sync::Arc};
 use tokio::runtime;
 
@@ -77,15 +76,12 @@ impl SMRNode {
             .build()
             .expect("Failed to create Tokio runtime!");
 
-        let safety_rules_manager_config = SafetyRulesManagerConfig::new(&mut config.clone());
-
         let mut smr = ChainedBftSMR::new(
             author,
             network_sender,
             network_events,
-            safety_rules_manager_config,
+            &mut config.clone(),
             runtime,
-            config.consensus.clone(),
             storage.clone(),
             initial_data,
         );
