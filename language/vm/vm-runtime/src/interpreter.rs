@@ -548,27 +548,27 @@ impl<'txn> Interpreter<'txn> {
                     }
                     Bytecode::Or => {
                         gas!(const_instr: context, self, Opcodes::OR)?;
-                        self.binop_bool(|l, r| l || r)?
+                        self.binop_bool(|l, r| Ok(l || r))?
                     }
                     Bytecode::And => {
                         gas!(const_instr: context, self, Opcodes::AND)?;
-                        self.binop_bool(|l, r| l && r)?
+                        self.binop_bool(|l, r| Ok(l && r))?
                     }
                     Bytecode::Lt => {
                         gas!(const_instr: context, self, Opcodes::LT)?;
-                        self.binop_bool(|l: u64, r| l < r)?
+                        self.binop_bool(IntegerValue::lt)?
                     }
                     Bytecode::Gt => {
                         gas!(const_instr: context, self, Opcodes::GT)?;
-                        self.binop_bool(|l: u64, r| l > r)?
+                        self.binop_bool(IntegerValue::gt)?
                     }
                     Bytecode::Le => {
                         gas!(const_instr: context, self, Opcodes::LE)?;
-                        self.binop_bool(|l: u64, r| l <= r)?
+                        self.binop_bool(IntegerValue::le)?
                     }
                     Bytecode::Ge => {
                         gas!(const_instr: context, self, Opcodes::GE)?;
-                        self.binop_bool(|l: u64, r| l >= r)?
+                        self.binop_bool(IntegerValue::ge)?
                     }
                     Bytecode::Abort => {
                         gas!(const_instr: context, self, Opcodes::ABORT)?;
@@ -831,9 +831,9 @@ impl<'txn> Interpreter<'txn> {
     fn binop_bool<F, T>(&mut self, f: F) -> VMResult<()>
     where
         VMResult<T>: From<Value>,
-        F: FnOnce(T, T) -> bool,
+        F: FnOnce(T, T) -> VMResult<bool>,
     {
-        self.binop(|lhs, rhs| Ok(Value::bool(f(lhs, rhs))))
+        self.binop(|lhs, rhs| Ok(Value::bool(f(lhs, rhs)?)))
     }
 
     /// Entry point for all global store operations (effectively opcodes).

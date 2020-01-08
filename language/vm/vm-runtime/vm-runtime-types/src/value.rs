@@ -591,6 +591,74 @@ impl IntegerValue {
             U128(x) => IntegerValue::U128(x >> other.into_bits_shifted::<u128>()?),
         })
     }
+
+    pub fn lt(self, other: Self) -> VMResult<bool> {
+        use IntegerValue::*;
+
+        Ok(match (self, other) {
+            (U8(l), U8(r)) => l < r,
+            (U64(l), U64(r)) => l < r,
+            (U128(l), U128(r)) => l < r,
+            (l, r) => {
+                let msg = format!(
+                    "Cannot compare {:?} and {:?}: incompatible integer types",
+                    l, r
+                );
+                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+            }
+        })
+    }
+
+    pub fn le(self, other: Self) -> VMResult<bool> {
+        use IntegerValue::*;
+
+        Ok(match (self, other) {
+            (U8(l), U8(r)) => l <= r,
+            (U64(l), U64(r)) => l <= r,
+            (U128(l), U128(r)) => l <= r,
+            (l, r) => {
+                let msg = format!(
+                    "Cannot compare {:?} and {:?}: incompatible integer types",
+                    l, r
+                );
+                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+            }
+        })
+    }
+
+    pub fn gt(self, other: Self) -> VMResult<bool> {
+        use IntegerValue::*;
+
+        Ok(match (self, other) {
+            (U8(l), U8(r)) => l > r,
+            (U64(l), U64(r)) => l > r,
+            (U128(l), U128(r)) => l > r,
+            (l, r) => {
+                let msg = format!(
+                    "Cannot compare {:?} and {:?}: incompatible integer types",
+                    l, r
+                );
+                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+            }
+        })
+    }
+
+    pub fn ge(self, other: Self) -> VMResult<bool> {
+        use IntegerValue::*;
+
+        Ok(match (self, other) {
+            (U8(l), U8(r)) => l >= r,
+            (U64(l), U64(r)) => l >= r,
+            (U128(l), U128(r)) => l >= r,
+            (l, r) => {
+                let msg = format!(
+                    "Cannot compare {:?} and {:?}: incompatible integer types",
+                    l, r
+                );
+                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+            }
+        })
+    }
 }
 
 //
