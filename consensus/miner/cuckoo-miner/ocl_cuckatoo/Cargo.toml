@@ -1,0 +1,15 @@
+[package]
+name = "ocl_cuckatoo"
+version = "0.1.0"
+
+[dependencies]
+cuckoo_plugin = { path = "../plugin", version = "0.1.0" }
+ocl = "0.19"
+hashbrown = "0.1"
+libc = "0.2.24"
+blake2-rfc = "0.2"
+byteorder = "1"
+
+[lib]
+name = "ocl_cuckatoo"
+crate-type = ["cdylib", "rlib"]

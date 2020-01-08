@@ -1,0 +1,14 @@
+A Cuckoo inspired Password Based Key Derivation Function
+
+
+Fix memory parameter N=2^n. Fix path length d.  Given password p.
+Let siphash key = BLAKE2(p).
+Define bipartitie graph G=(U,V) on N+N nodes with N edges, where for 0<=i<N,
+edge i has U endpoint siphash(k,i0) % N and V endpoint siphash(k,i1) % N.
+Define w as size N bitvector of whether edge i
+is adjacent to a U node with leaf distance > d.
+
+Let PBKDF_{N,d}(p) = BLAKE2(w)
+
+Efficiently computable in 2N bits of memory and O(N) time.
+Hard to compute in less than N bits of memory.

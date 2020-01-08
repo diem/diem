@@ -1,0 +1,42 @@
+[package]
+name = "cuckoo_miner"
+version = "0.1.0"
+authors = ["yeastplume"]
+license = "MIT/Apache-2.0/BSD-3-Clause"
+description = "Rust bindings to John Tromp's Cuckoo Cycle Implementations"
+build = "src/build.rs"
+
+[features]
+default = []
+#feature to allow turing off plugin builds
+no-plugin-build = []
+#whether to test avx2 CPU plugins
+test-avx2 = []
+#feature which defines whether to build cuda libs
+build-cuda-plugins = []
+
+[dependencies]
+cuckoo_plugin = { path = "plugin", version = "0.1.0" }
+#ocl_cuckaroo = {path = "./ocl_cuckaroo", version = "0.1.0"}
+#ocl_cuckatoo = {path = "./ocl_cuckatoo", version = "0.1.0"}
+time = "^0.1"
+rust-crypto = "0.2.36"
+log = "^0.3"
+rand = "^0.3.16"
+byteorder = "^0.5"
+blake2-rfc = "~0.2.17"
+regex = "~0.2.2"
+glob = "0.2.11"
+serde = "~1.0.8"
+serde_derive = "~1.0.8"
+serde_json = "~1.0.2"
+libc = "0.2.24"
+libloading = "0.4.1"
+slog = { version = "2.5.2", features = ["max_level_trace", "release_max_level_trace"] }
+
+[dev-dependencies]
+const-cstr = "0.2"
+
+[build-dependencies]
+cmake = "0.1.24"
+fs_extra = "1.1.0"

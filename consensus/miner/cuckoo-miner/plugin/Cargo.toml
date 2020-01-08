@@ -1,0 +1,11 @@
+[package]
+name = "cuckoo_plugin"
+version = "0.1.0"
+
+[dependencies]
+byteorder = "^0.5"
+blake2-rfc = "~0.2.17"
+serde = "~1.0.8"
+serde_derive = "~1.0.8"
+serde_json = "~1.0.2"
+libc = "0.2.24"

@@ -1,0 +1,11 @@
+#!/usr/bin/perl
+my $i = 0;
+while(<>) {
+  next unless /^real\s+(.+)m(.+)s$/;
+  ++$i;
+  my $t = 60*$1+$2;
+  push @t, $t;
+  my $r = $t[0]/$t;
+  printf("(%d,%.3f) ",$i,$r);
+  print "\n" unless $i % 5;
+}

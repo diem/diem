@@ -57,10 +57,11 @@ impl<S: MineState + Clone + Send + Clone + 'static> MinerProxy for MinerProxySer
     ) {
         let mut accept = false;
         if let Some(ctx) = req.mine_ctx {
-            accept = self
-                .miner_proxy_inner
-                .state
-                .mine_accept(&ctx.into(), req.solution, req.nonce);
+            accept = self.miner_proxy_inner.state.mine_accept(
+                &ctx.into(),
+                req.solution.into(),
+                req.nonce,
+            );
         }
 
         let resp = MinedBlockResponse { accept };

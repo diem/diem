@@ -1,0 +1,24 @@
+void count_node_deg(u32 uorv) {
+  for (edge_t nonce = 0; nonce < NEDGES; nonce++) {
+    if (alive(nonce)) {
+      nonleaf.set(sipnode(sip_keys, nonce, uorv));
+    }
+  }
+}
+
+void kill_leaf_edges(u32 uorv) {
+  for (edge_t nonce = 0; nonce < NEDGES; nonce++) {
+    if (alive(nonce)) {
+      if (!nonleaf.test(sipnode(sip_keys, nonce, uorv) ^ 1))
+        alive.reset(nonce);
+    }
+  }
+}
+
+  for (u32 round=0; round < trims; round++) {
+    for (u32 uorv = 0; uorv < 2; uorv++) {
+      memset(nonleaf.bits, 0, nodeBytes));
+      count_node_deg(uorv);
+      kill_leaf_edges(uorv);
+    }
+  }

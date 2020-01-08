@@ -3,7 +3,7 @@ use crate::pow::block_tree::{BlockTree, CommitData};
 use crate::state_replication::{StateComputer, TxnManager};
 use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
 use futures::compat::Future01CompatExt;
-use futures::{channel::mpsc, StreamExt};
+use futures::{channel::mpsc, SinkExt, StreamExt};
 use futures_locks::{Mutex, RwLock};
 use itertools;
 use libra_crypto::HashValue;
@@ -15,6 +15,7 @@ use libra_types::transaction::TransactionStatus;
 use libra_types::transaction::TransactionToCommit;
 use libra_types::transaction::{SignedTransaction, Transaction};
 use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
@@ -26,6 +27,7 @@ pub struct ChainManager {
     orphan_blocks: Arc<Mutex<HashMap<HashValue, Vec<HashValue>>>>, //key -> parent_block_id, value -> block_id
     author: AccountAddress,
     read_storage: Arc<dyn StorageRead>,
+    new_block_sender: mpsc::Sender<u64>,
 }
 
 impl ChainManager {
@@ -37,6 +39,8 @@ impl ChainManager {
         author: AccountAddress,
         read_storage: Arc<dyn StorageRead>,
         write_storage: Arc<dyn StorageWrite>,
+        dump_path: PathBuf,
+        new_block_sender: mpsc::Sender<u64>,
     ) -> Self {
         //orphan block
         let orphan_blocks = Arc::new(Mutex::new(HashMap::new()));
@@ -47,6 +51,7 @@ impl ChainManager {
             txn_manager,
             rollback_mode,
             Arc::clone(&block_store),
+            dump_path,
         )));
 
         ChainManager {
@@ -56,6 +61,7 @@ impl ChainManager {
             orphan_blocks,
             author,
             read_storage,
+            new_block_sender,
         }
     }
 
@@ -74,7 +80,12 @@ impl ChainManager {
         let author = self.author.clone();
         let block_tree = self.block_tree.clone();
         let _read_storage = self.read_storage.clone();
+        let mut new_block_sender = self.new_block_sender.clone();
         let chain_fut = async move {
+            new_block_sender
+                .send(0)
+                .await
+                .expect("new_block_sender send msg err.");
             loop {
                 ::futures::select! {
                 block = block_cache_receiver.select_next_some() => {
@@ -154,8 +165,11 @@ impl ChainManager {
                                         first_version: (txn_len - (commit_len as u64) + 1) as u64,
                                         ledger_info_with_sigs: Some(block.quorum_cert().ledger_info().clone())};
 
-                                    chain_lock.add_block_info(block, &parent_block_id, processed_vm_output, commit_data).await.expect("add_block_info failed.");
-                                    chain_lock.print_block_chain_root(author);
+                                    let (new_root, latest_height) = chain_lock.add_block_info(block, &parent_block_id, processed_vm_output, commit_data).await.expect("add_block_info failed.");
+                                    if new_root {
+                                        new_block_sender.send(latest_height).await.expect("new_block_sender send msg err.");
+                                        chain_lock.print_block_chain_root(author);
+                                    }
                                 } else {
                                     warn!("Peer id {:?}, Drop block {:?}, block version is {}, vm output version is {}", author, block.id(),
                                     block.quorum_cert().ledger_info().ledger_info().commit_info().version(), txn_len);
@@ -178,11 +192,10 @@ impl ChainManager {
                 }
             }
         };
-
         executor.spawn(chain_fut);
     }
 
-    pub async fn chain_root(&self) -> HashValue {
+    pub async fn chain_root(&self) -> Option<HashValue> {
         self.block_tree
             .clone()
             .read()
@@ -202,7 +215,7 @@ impl ChainManager {
             .block_exist(block_hash)
     }
 
-    pub async fn chain_height_and_root(&self) -> (u64, BlockIndex) {
+    pub async fn chain_height_and_root(&self) -> Option<(u64, BlockIndex)> {
         self.block_tree
             .clone()
             .read()
