@@ -79,6 +79,7 @@ members = [
     "testsuite",
     "testsuite/cluster-test",
     "testsuite/libra-fuzzer",
+    "testsuite/libra-fuzzer/fuzz",
     "types",
     "vm-validator",
     "x",
