@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{path::PathBuf, net::SocketAddr};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -71,11 +71,34 @@ impl OnDiskStorageConfig {
     }
 }
 
+/// Defines how safety rules should be executed
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum SafetyRulesService {
+    /// This runs safety rules in the same thread as event processor
     Local,
+    /// This is the production, separate service approach
+    Process(RemoteService),
+    /// This runs safety rules in the same thread as event processor but data is passed through the
+    /// light weight RPC (serializer)
     Serializer,
+    /// This instructs Consensus that this is an test model, where Consensus should take the
+    /// existing config, create a new process, and pass it the config
+    SpawnedProcess(RemoteService),
+    /// This creates a separate thread to run safety rules, it is similar to a fork / exec style
     Thread,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct RemoteService {
+    pub server_address: SocketAddr,
+    pub consensus_type: ConsensusType,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+pub enum ConsensusType {
+    SignedTransactions,
+    Bytes,
+    Rounds,
 }
