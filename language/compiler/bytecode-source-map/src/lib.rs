@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-pub mod disassembler;
 pub mod mapping;
 pub mod marking;
 pub mod source_map;

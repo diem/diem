@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::mapping::SourceMapping;
-use crate::source_map::{FunctionSourceMap, SourceName};
 use anyhow::{bail, format_err, Result};
+use bytecode_source_map::{
+    mapping::SourceMapping,
+    source_map::{FunctionSourceMap, SourceName},
+};
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
 use libra_types::identifier::{IdentStr, Identifier};
 use vm::access::ModuleAccess;
