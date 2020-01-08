@@ -1134,6 +1134,7 @@ pub fn format_type_checking(
     name: String,
     sig: &SignatureToken,
 ) -> String {
+    let mut params = name;
     let check = match sig {
         SignatureToken::U64 => "is#Integer",
         SignatureToken::Bool => "is#Boolean",
@@ -1141,13 +1142,17 @@ pub fn format_type_checking(
         SignatureToken::ByteArray => "is#ByteArray",
         // Only need to check Struct for top-level; fields will be checked as we extract them.
         SignatureToken::Struct(_, _) => "is#Vector",
-        // Otherwise it is a reference or a type parameter. Will be checked when accessed.
+        SignatureToken::Reference(_) | SignatureToken::MutableReference(_) => {
+            params = format!("local_counter, {}", params);
+            "IsValidReferenceParameter"
+        }
+        // Otherwise it is a type parameter which is opaque
         _ => "",
     };
     if check.is_empty() {
         "".to_string()
     } else {
-        format!("assume {}({});\n", check, name)
+        format!("assume {}({});\n", check, params)
     }
 }
 
