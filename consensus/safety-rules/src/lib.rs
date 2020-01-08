@@ -19,7 +19,7 @@ pub use crate::{
     error::Error,
     persistent_storage::{InMemoryStorage, OnDiskStorage},
     safety_rules::SafetyRules,
-    safety_rules_manager::{SafetyRulesManager, SafetyRulesManagerConfig},
+    safety_rules_manager::SafetyRulesManager,
     t_safety_rules::TSafetyRules,
 };
 

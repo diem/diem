@@ -9,17 +9,21 @@ use crate::{
     InMemoryStorage, OnDiskStorage, SafetyRules, TSafetyRules,
 };
 use consensus_types::common::Payload;
-use libra_config::config::{NodeConfig, SafetyRulesBackend, SafetyRulesConfig, SafetyRulesService};
+use libra_config::config::{NodeConfig, SafetyRulesBackend, SafetyRulesService};
 use libra_types::crypto_proxies::ValidatorSigner;
 use std::sync::{Arc, RwLock};
 
-pub struct SafetyRulesManagerConfig {
-    service: SafetyRulesService,
-    storage: Option<Box<dyn PersistentStorage>>,
-    validator_signer: Option<ValidatorSigner>,
+enum SafetyRulesWrapper<T> {
+    Local(Arc<RwLock<SafetyRules<T>>>),
+    Serializer(Arc<RwLock<SerializerService<T>>>),
+    Thread(ThreadClient<T>),
 }
 
-impl SafetyRulesManagerConfig {
+pub struct SafetyRulesManager<T> {
+    internal_safety_rules: SafetyRulesWrapper<T>,
+}
+
+impl<T: Payload> SafetyRulesManager<T> {
     pub fn new(config: &mut NodeConfig) -> Self {
         let private_key = config
             .test
@@ -38,11 +42,9 @@ impl SafetyRulesManagerConfig {
             .peer_id;
 
         let validator_signer = ValidatorSigner::new(author, private_key);
-        Self::new_with_signer(validator_signer, &config.consensus.safety_rules)
-    }
 
-    pub fn new_with_signer(validator_signer: ValidatorSigner, config: &SafetyRulesConfig) -> Self {
-        let storage = match &config.backend {
+        let sr_config = &config.consensus.safety_rules;
+        let storage = match &sr_config.backend {
             SafetyRulesBackend::InMemoryStorage => InMemoryStorage::default_storage(),
             SafetyRulesBackend::OnDiskStorage(config) => {
                 if config.default {
@@ -55,33 +57,7 @@ impl SafetyRulesManagerConfig {
             }
         };
 
-        Self {
-            service: config.service.clone(),
-            storage: Some(storage),
-            validator_signer: Some(validator_signer),
-        }
-    }
-}
-
-enum SafetyRulesWrapper<T> {
-    Local(Arc<RwLock<SafetyRules<T>>>),
-    Serializer(Arc<RwLock<SerializerService<T>>>),
-    Thread(ThreadClient<T>),
-}
-
-pub struct SafetyRulesManager<T> {
-    internal_safety_rules: SafetyRulesWrapper<T>,
-}
-
-impl<T: Payload> SafetyRulesManager<T> {
-    pub fn new(mut config: SafetyRulesManagerConfig) -> Self {
-        let storage = config.storage.take().expect("validator_signer missing");
-        let validator_signer = config
-            .validator_signer
-            .take()
-            .expect("validator_signer missing");
-
-        match config.service {
+        match sr_config.service {
             SafetyRulesService::Local => Self::new_local(storage, validator_signer),
             SafetyRulesService::Serializer => Self::new_serializer(storage, validator_signer),
             SafetyRulesService::Thread => Self::new_thread(storage, validator_signer),
