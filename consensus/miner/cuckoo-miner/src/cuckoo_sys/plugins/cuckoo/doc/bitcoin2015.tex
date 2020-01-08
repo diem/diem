@@ -1,0 +1,610 @@
+\documentclass{beamer}
+\mode<presentation>
+
+\usetheme{Madrid}
+
+% \usepackage[margin=.9in]{geometry}
+\usepackage{pgfplots}
+\usepackage{listings}
+% \pgfplotsset{compat=default}
+\pgfplotsset{compat=1.10}
+\newcommand{\cuckoo}{{\rm cuckoo}}
+\newcommand{\hash}{{\rm siphash}}
+% \usepackage{hyperref}
+
+\title{Cuckoo Cycle}
+\subtitle{a memory bound graph-theoretic proof-of-work}
+\author{John Tromp}
+\date{\today}
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+% \section*{Outline}
+% \begin{frame}
+% \frametitle{Outline}
+  % \tableofcontents
+% \end{frame}
+
+\begin{frame}
+\frametitle{What is a proof-of-work system?}
+\begin{itemize}
+\item
+Allows a verifier to check, with negligible effort, that a prover has expended a large amount of computational effort.
+% \pause
+\item {Applications}
+\begin{itemize}
+\item Spam
+% \pause
+\item Denial-of-Service
+% \pause
+\item Crypto Currencies
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example PoW: Hashcash, by Adam Back (1997)}
+A \alert{proof} for a message $m$ is a {\em nonce} $n$ such that
+\begin{equation*}
+H(m|n)
+\end{equation*} starts with many zero bits,
+for some fixed hash function $H$.
+%  and notion of many.
+% \pause
+\begin{itemize}
+\item
+Hashcash adopted by most crypto-currencies
+with various choices of hash function
+\item
+double-SHA256 in Bitcoin
+\item scrypt in Tenebrix, copied by Litecoin
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Memory Bound PoW}
+\begin{itemize}
+\item main memory latency the bottleneck
+\end{itemize}
+% \pause
+\begin{description}
+\item[MB1] a target memory footprint that exceeds a single memory chip
+% \pause
+\item[MB2] a pattern of necessarily random memory accesses
+% \pause
+\item[MB3] minimal computation per random memory access
+% \pause
+\item[MB4] no feasible trade-off of memory for time
+% \pause
+\end{description}
+\begin{itemize}
+\item DRAM is like an ASIC for all memory bound applications
+\item why not SRAM?
+%\item huge economies of scale of commodity DRAM production
+%\pause
+\end{itemize}
+\end{frame}
+
+% \begin{frame}
+% \frametitle{What about SRAM?}
+% \begin{itemize}
+% \item order of magnitude faster
+% % \pause
+% \item two orders more expensive
+% % \pause
+% \item not cost effective
+% % \pause
+% \item maximize memory accesses per second per dollar
+% \end{itemize}
+% \end{frame}
+
+\begin{frame}
+\frametitle{Graph Theoretic PoW}
+\begin{itemize}
+\item Erd\H{o}s-R\'{e}nyi model, denoted $G(N,M)$
+% \pause
+\item picks among all graphs with $N$ nodes and $M$ edges
+% \pause
+\item instead pick edges with a {\em keyed} hash function $h$
+mapping nonces to edges
+% \pause
+\item graph has \alert{solution} if some $H$ occurs as subgraph
+% \pause
+\item \alert{proof} is set nonces that generate edges of $H$'s occurance
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Graph Theoretic PoW Properties}
+\begin{itemize}
+\item verifiable in time depending only on $H$,
+independent of $N$ and $M$.
+\item expected \#occurrences of $H$ is a function of both $N$ and $M$.
+\item monotonically increasing in $M$.
+\item in many cases, roughly a function of $\frac{M}{N}$
+\item less than one expected solution makes PoW challenging
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Cuckoo Cycle}
+\begin{itemize}
+\item $H$ is length $L$ cycle
+% \pause
+\item in bipartite graph
+% \pause
+\item $M=N/2$
+% \pause
+\item $h$ is siphash2-4, a lightweight 6 round hash function
+with 128-bit key and 64-bit output.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Cuckoo Cycle Solution Probability}
+\begin{tikzpicture}[scale=1.2]
+\begin{axis}[xlabel={$\frac{M}{N}$ in \%}, ylabel={probability}, legend pos=north west]
+\addplot[color=blue] coordinates {
+(40,0) (41,0.00001) (42,0.00003) (43,0.0001) (44,0.00031) (45,0.00067)
+(46,0.00141) (47,0.00385) (48,0.00967) (49,0.02222) (50,0.05076)
+(51,0.10117) (52,0.17953) (53,0.27993) (54,0.39581) (55,0.51873)
+(56,0.63614) (57,0.73955) (58,0.82352) (59,0.88719) (60,0.93182)
+(61,0.9616) (62,0.97949) (63,0.98956) (64,0.99503) (65,0.99799)
+(66,0.99907) (67,0.9996) (68,0.99989) (69,0.99997) (70,0.99998) (71,1) };
+\addlegendentry{has 42-cycle}
+\end{axis}
+\end{tikzpicture}
+\end{frame}
+
+\begin{frame}
+\frametitle{Cuckoo hashing (2004)}
+\begin{itemize}
+\item two same size tables, each with its own hash function
+% \pause
+\item two possible locations for each key
+% \pause
+\item upon insertion: if both occupied
+% \pause
+\item kick one out and insert in alternate location
+% \pause
+\item repeat until vacancy or some max iteration reached
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Cycle detection in Cuckoo Cycle}
+\begin{itemize}
+\item enumerate nonces one by one
+\item insert nonce in Cuckoo hashtable, but store alternate
+location, and forget nonce
+% \pause
+\item maintain {\em forest}, a disjoint union of trees.
+\item In each tree, all edges are directed toward its {\em root}
+% \pause
+\item if edge endpoints have different roots:
+% \pause
+\item reverse edges on shorter path
+% \pause
+\item join trees
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example, adding first 7 edges}
+% \item graph on $N=8+8$ nodes after adding 7 edges
+% In order to add the 8th edge $(10,11)$, we follow the paths $10 \rightarrow 5
+% \rightarrow 8$ and $11 \rightarrow 12$ to find different roots $8$ and $12$.
+% Since the latter path is shorter, we reverse it to $12 \rightarrow 11$ so we
+% can add the new edge as $(11 \rightarrow 10)$, resulting in the middle diagram.
+% In order to add to 9th edge
+% $(10,13)$ we now find the path from $10$ to be the shorter one, so we reverse
+% that and add the new edge as $(10 \rightarrow 13)$, resulting in the right diagram.
+\begin{tikzpicture}[scale=2,>=stealth]
+\node  (2) at (1, 2) [shape=circle,draw] {2};
+\node  (4) at (2, 2) [shape=circle,draw] {4};
+\node  (8) at (3, 2) [shape=circle,draw] {8};
+\node (10) at (4, 2) [shape=circle,draw] {10};
+\node (12) at (5, 2) [shape=circle,draw] {12};
+\node  (5) at (4,-1) [shape=circle,draw] {5};
+\node  (9) at (2,-1) [shape=circle,draw] {9};
+\node (11) at (5,-1) [shape=circle,draw] {11};
+\node (13) at (3,-1) [shape=circle,draw] {13};
+\node (15) at (1,-1) [shape=circle,draw] {15};
+\draw [<-]  (2) -- (15);
+% \pause
+\draw [<-]  (4) -- (9);
+% \pause
+\draw [<-]  (8) -- (5);
+% \pause
+\draw [->]  (4) -- (15);
+% \pause
+\draw [<-] (12) -- (11);
+% \pause
+\draw [->] (10) -- (5);
+% \pause
+\draw [<-]  (4) -- (13);
+\end{tikzpicture}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example, adding edge $(10,13)$}
+\begin{tikzpicture}[scale=2,>=stealth]
+\node  (2) at (1, 2) [shape=circle,draw] {2};
+\node  (4) at (2, 2) [shape=circle,draw] {4};
+\node  (8) at (3, 2) [shape=circle,draw] {8};
+\node (10) at (4, 2) [shape=circle,draw] {10};
+\node (12) at (5, 2) [shape=circle,draw] {12};
+\node  (5) at (4,-1) [shape=circle,draw] {5};
+\node  (9) at (2,-1) [shape=circle,draw] {9};
+\node (11) at (5,-1) [shape=circle,draw] {11};
+\node (13) at (3,-1) [shape=circle,draw] {13};
+\node (15) at (1,-1) [shape=circle,draw] {15};
+\draw [<-]  (2) -- (15);
+\draw [<-]  (4) -- (9);
+\draw [<-]  (8) -- (5);
+\draw [->]  (4) -- (15);
+\draw [->] (12) -- (11);
+\draw [->] (10) -- (5);
+\draw [<-]  (4) -- (13);
+\draw [<-] (10) -- (11);
+\end{tikzpicture}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example, adding edge $(8,9)$}
+\begin{tikzpicture}[scale=2,>=stealth]
+\node  (2) at (1, 2) [shape=circle,draw] {2};
+\node  (4) at (2, 2) [shape=circle,draw] {4};
+\node  (8) at (3, 2) [shape=circle,draw] {8};
+\node (10) at (4, 2) [shape=circle,draw] {10};
+\node (12) at (5, 2) [shape=circle,draw] {12};
+\node  (5) at (4,-1) [shape=circle,draw] {5};
+\node  (9) at (2,-1) [shape=circle,draw] {9};
+\node (11) at (5,-1) [shape=circle,draw] {11};
+\node (13) at (3,-1) [shape=circle,draw] {13};
+\node (15) at (1,-1) [shape=circle,draw] {15};
+\draw [<-]  (2) -- (15);
+\draw [<-]  (4) -- (9);
+\draw [->]  (8) -- (5);
+\draw [->]  (4) -- (15);
+\draw [->] (12) -- (11);
+\draw [<-] (10) -- (5);
+\draw [<-]  (4) -- (13);
+\draw [<-] (10) -- (11);
+\draw [->] (10) -- (13);
+\end{tikzpicture}
+\end{frame}
+
+% The left plot in Figure~\ref{runtimes} shows both the total runtime in seconds and the runtime of just
+% the hash computation, as a function of (log)size. The latter is purely
+% linear, while the former is superlinear due to increasing memory latency
+% as the nodes no longer fit in cache. The right plot show this more clearly
+% as the percentage of hashing to total runtime, ending up around 5\%.
+
+% \begin{frame}
+% \frametitle{Runtime}
+% \begin{tikzpicture}
+% \begin{axis}[xlabel={$\mbox{log}_2(N)$}, ymode=log, ylabel={seconds}, legend pos=north west]
+% \addplot[color=red] coordinates {
+% % (10,0.0000) (11,0.0000) (12,0.0000) (13,0.0001) (14,0.0001)
+% (15,0.0002) (16,0.0004) (17,0.0008) (18,0.0017) (19,0.0034)
+% (20,0.0068) (21,0.0139) (22,0.0271) (23,0.0542) (24,0.1084)
+% (25,0.2166) (26,0.4336) (27,0.8658) (28,1.7322) (29,3.4719)
+% (30,7.0389) };
+% \addlegendentry{hashing runtime}
+% \addplot[color=green] coordinates {
+% % (10,0.0000) (11,0.0000) (12,0.0001) (13,0.0001) (14,0.0003)
+% (15,0.0002) (16,0.0010) (17,0.0022) (18,0.0049) (19,0.0104)
+% (20,0.0250) (21,0.0986) (22,0.2465) (23,0.5332) (24,1.1922)
+% (25,2.5505) (26,5.3394) (27,11.0793) (28,23.1984) (29,54.6811)
+% (30,128.1682) };
+% \addlegendentry{total runtime}
+% \end{axis}
+% \end{tikzpicture}
+% \end{frame}
+
+\begin{frame}
+\frametitle{Compute Intensity}
+\begin{tikzpicture}[scale=1.2]
+\begin{axis}[xlabel={$\mbox{log}_2(N)$}, ylabel={\% runtime}, legend pos=north east]
+\addplot[color=blue] coordinates {
+% (10,38.8889) (11,33.3333) (12,45.1613) (13,39.8496) (14,44.6154)
+(15,96.5217) (16,45.9119) (17,38.2180) (18,35.0988) (19,32.6724)
+(20,27.2076) (21,14.0874) (22,11.0014) (23,10.1635) (24,9.0964)
+(25,8.4921) (26,8.1215) (27,7.8144) (28,7.4670) (29,6.3494)
+(30,5.4919) };
+\addlegendentry{hashing percentage}
+\end{axis}
+\end{tikzpicture}
+\end{frame}
+
+%The left plot in Figure~\ref{accesses} shows the probability of finding a 42-cycle as a function
+%of the percentage edges/nodes, while the right plot shows the average number of
+%memory reads and writes per edge as a function of the percentage
+%of processed nonces (progress through main loop).
+%Both were determined from 10000 runs at size $2^{20}$;
+%results at size $2^{25}$ look almost identical.
+%In total the basic algorithm averages 3.3 reads and 1.1 writes per edge.
+
+\begin{frame}
+\frametitle{Memory Reads and Writes}
+\begin{tikzpicture}[scale=1.2]
+\begin{axis}[xlabel={\% nonces processed}, ylabel={\# memory accesses per nonce}, ymin=0, legend pos=north west]
+\addplot[color=green] coordinates {
+(0,2.01) (1,2.02) (2,2.03) (3,2.04) (4,2.05) (5,2.06) (6,2.07) (7,2.08) (8,2.09) (9,2.10) (10,2.11) (11,2.12) (12,2.13) (13,2.15) (14,2.16) (15,2.17) (16,2.18) (17,2.20) (18,2.21) (19,2.22) (20,2.23) (21,2.25) (22,2.26) (23,2.28) (24,2.29) (25,2.30) (26,2.32) (27,2.33) (28,2.35) (29,2.36) (30,2.38) (31,2.40) (32,2.41) (33,2.43) (34,2.45) (35,2.46) (36,2.48) (37,2.50) (38,2.52) (39,2.54) (40,2.56) (41,2.58) (42,2.60) (43,2.62) (44,2.64) (45,2.66) (46,2.68) (47,2.71) (48,2.73) (49,2.76) (50,2.78) (51,2.81) (52,2.83) (53,2.86) (54,2.89) (55,2.92) (56,2.95) (57,2.98) (58,3.01) (59,3.05) (60,3.08) (61,3.12) (62,3.15) (63,3.19) (64,3.23) (65,3.27) (66,3.32) (67,3.36) (68,3.41) (69,3.45) (70,3.51) (71,3.56) (72,3.61) (73,3.67) (74,3.73) (75,3.80) (76,3.86) (77,3.93) (78,4.01) (79,4.09) (80,4.17) (81,4.26) (82,4.36) (83,4.46) (84,4.57) (85,4.69) (86,4.83) (87,4.97) (88,5.13) (89,5.30) (90,5.49) (91,5.71) (92,5.96) (93,6.25) (94,6.59) (95,6.99) (96,7.51) (97,8.18) (98,9.20) (99,10.93) };
+\addlegendentry{reads}
+\addplot[color=red] coordinates {
+(0,1.00) (1,1.00) (2,1.00) (3,1.00) (4,1.00) (5,1.00) (6,1.00) (7,1.00) (8,1.00) (9,1.00) (10,1.00) (11,1.00) (12,1.00) (13,1.00) (14,1.00) (15,1.00) (16,1.00) (17,1.00) (18,1.00) (19,1.00) (20,1.00) (21,1.00) (22,1.00) (23,1.01) (24,1.01) (25,1.01) (26,1.01) (27,1.01) (28,1.01) (29,1.01) (30,1.01) (31,1.01) (32,1.01) (33,1.02) (34,1.02) (35,1.02) (36,1.02) (37,1.02) (38,1.02) (39,1.02) (40,1.03) (41,1.03) (42,1.03) (43,1.03) (44,1.03) (45,1.04) (46,1.04) (47,1.04) (48,1.04) (49,1.05) (50,1.05) (51,1.05) (52,1.06) (53,1.06) (54,1.06) (55,1.07) (56,1.07) (57,1.07) (58,1.08) (59,1.08) (60,1.08) (61,1.09) (62,1.09) (63,1.10) (64,1.10) (65,1.11) (66,1.11) (67,1.12) (68,1.13) (69,1.13) (70,1.14) (71,1.14) (72,1.15) (73,1.16) (74,1.16) (75,1.17) (76,1.18) (77,1.19) (78,1.20) (79,1.21) (80,1.22) (81,1.23) (82,1.24) (83,1.25) (84,1.26) (85,1.27) (86,1.29) (87,1.30) (88,1.32) (89,1.33) (90,1.35) (91,1.37) (92,1.39) (93,1.41) (94,1.43) (95,1.46) (96,1.48) (97,1.51) (98,1.54) (99,1.58) };
+\addlegendentry{writes}
+\end{axis}
+\end{tikzpicture}
+\end{frame}
+
+% \caption{Threshold nature of solution, and increasing memory usage on threshold approach}
+
+\begin{frame}
+\begin{itemize}
+\frametitle{Difficulty control}
+\item 
+Ratio $\frac{M}{N} \geq 0.7$ practically guarantees solution
+% \pause
+\item
+crypto currencies need precise control
+% \pause
+
+% The implementation default $\frac{M}{N}=\frac{1}{2}$ gives a solution probability of roughly $2.2\%$,
+%while the average number of cycles found increases slowly with size; from 2 at $2^{20}$ to 3 at $2^{30}$.
+
+\item
+introduce difficulty target $0 < T < 2^{256}$ is introduced
+% \pause
+\item
+require sha256 digest of ascending proof cycle nonces be less than $T$
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Edge Trimming, suggested by David Andersen}
+\begin{itemize}
+\item
+identify nodes of degree 1.
+\item 
+Such {\em leaf edges} can never be part of a cycle.
+\item
+eliminate their incident edge.
+\item $\frac{M}{N} \leq \frac{1}{2}$ implies expected degree of a node is then at most 1
+\item
+significant fraction of edges expected to be leaf edges.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Edge Trimming Implementation}
+\begin{itemize}
+\item
+maintain bitvector of {\em alive} edges
+% \pause
+\item
+Initialize 2-bit degree counters (one per even node) to 0
+% \pause
+\item
+for all alive edges, increase counter for even endpoint,
+capping the value at 2.
+% \pause
+\item
+for all alive edges, if counter for even endpoint is less than 2,
+kill the edge
+% \pause
+% set the edge to be not-alive.
+\item repeat for all odd endpoints
+% \pause
+\item 
+Support {\em counter partitioning}, process $N / 2^{B}$ endpoints at a time
+\end{itemize}
+\end{frame}
+
+% The diagrams in Figure~\ref{trimming} show two rounds of edge trimming on the earlier example. In round one
+% even nodes 2 and 12 lose their single incident edge and in round two, odd nodes 11 and 15 lose
+% their remaining single incident edge. At this point only the 6-cycle is left, so further trimming
+% would be pointless.
+
+\begin{frame}
+\frametitle{Trimming Example}
+\begin{tikzpicture}[scale=2,>=stealth]
+\node  (2) at (1, 2) [shape=circle,draw] {2};
+\node  (4) at (2, 2) [shape=circle,draw] {4};
+\node  (8) at (3, 2) [shape=circle,draw] {8};
+\node (10) at (4, 2) [shape=circle,draw] {10};
+\node (12) at (5, 2) [shape=circle,draw] {12};
+\node  (5) at (4,-1) [shape=circle,draw] {5};
+\node  (9) at (2,-1) [shape=circle,draw] {9};
+\node (11) at (5,-1) [shape=circle,draw] {11};
+\node (13) at (3,-1) [shape=circle,draw] {13};
+\node (15) at (1,-1) [shape=circle,draw] {15};
+\only<1> \draw [-]  (2) -- (15);
+\only<1-3> \draw [-]  (4) -- (9);
+\draw [-]  (8) -- (5);
+\only<1-2> \draw [-]  (4) -- (15);
+\only<1> \draw [-] (12) -- (11);
+\draw [-] (10) -- (5);
+\draw [-]  (4) -- (13);
+\only<1-2> \draw [-] (10) -- (11);
+\draw [-] (10) -- (13);
+\draw [-]  (8) -- (9);
+\end{tikzpicture}
+\end{frame}
+
+% After all edge trimming rounds, the counter memory is freed, and allocated to a
+% custom cuckoo\_hashtable (based on \cite{preshing2013}) that presents the same interface as the
+% simple array in the basic algorithm, but gets by with much fewer locations, as long as its {\em load},
+% the ratio of remaining edges to number of locations, is bounded away from 1; e.g. under 90 percent.
+
+\begin{frame}
+\frametitle{Time-Memory Trade-Offs (TMTOs)}
+\begin{itemize}
+\item use $k$ times less memory
+% \pause
+\item but run $c \times k$ times slower
+% \pause
+\item memory-hardness $c$
+% \pause
+\item based on breadth-first-search (BFS)
+% \pause
+\item either $L/2$ or $L$ levels
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Solution Rate Reduction}
+\begin{tikzpicture}
+% \begin{axis}[ymin=0, xtick={2,8,16,24,32,40,48,56,64}, xlabel={cycle length $L$}, ylabel={slowdown factor}, legend pos=north west]
+\begin{axis}[ymin=0, xlabel={cycle length $L$}, ylabel={slowdown factor}, legend pos=north west]
+\addplot [color=red] coordinates {
+(2,2.8) (4,6.4) (6,9.7) (8,14.5) (10,13.0) (12,25.1) (14,29.0) (16,28.5)
+(20,30.4) (24,46.0) (28,36.0) (32,43.3) (40,51.0) (48,82.2) (56,81.0) (64,72.7)
+};
+\addlegendentry{BFS($L/2$)}
+\addplot [color=green] coordinates {
+(4,14.4) (6,11.6) (8,20.7) (10,21.4) (12,13.9) (14,18.1) (16,26.8) (20,21.9)
+(24,18.8) (28,23.3) (32,31.8) (40,42.6) (48,35.6) (56,22.2) (64,41.0)
+};
+\addlegendentry{BFS($L$)}
+%\addplot [color=blue, mark=o] coordinates {
+%(2, 1.4)
+%};
+%\addlegendentry{customized}
+\addlegendentry{}
+\end{axis}
+\end{tikzpicture}
+\end{frame}
+
+\begin{frame}
+\frametitle{Choice of cycle length}
+\begin{itemize}
+\item
+% \pause
+length 2 cycle: two nonces with identical edge endpoints
+% \pause
+\item {\em collision} in edge space.
+% \pause
+\item
+Essentially the {\em Momentum} PoW, (Daniel Larimer 2013)
+% \pause
+
+%Second, the choice of $M=2^{26}$ gives a ratio $\frac{M}{N}$ of 1 rather than $\frac{1}{2}$ and as such
+%prohibits the use of edge trimming.
+\item likely has greater variety of efficient algorithms
+% \pause
+\item improved BFS($L/2$) TMTO algorithm
+% \pause
+\item slowdown only $1.75$, not so infeasible
+% \pause
+\item suggest length in range 20-64
+\end{itemize}
+\end{frame}
+
+%The plot below shows the distribution of cycle lengths found for sizes $2^{10},2^{15},2^{20},2^{25}$,
+%as determined from 100000,100000,10000, and 10000 runs respectively. The tails of the distributions
+%beyond $L=100$ are not shown. For reference, the longest cycle found was of length 2120.
+
+% \begin{frame}
+% \frametitle{Cycle Length Distribution}
+% \begin{tikzpicture}[scale=1.2]
+% \begin{axis}[ymin=0, xlabel={cycle length $L$}, ylabel={probability}, legend pos=north east]
+% \addplot[color=orange] coordinates {
+% (4,0.24862) (6,0.15673) (8,0.10907) (10,0.07952) (12,0.05783) (14,0.04269) (16,0.0303)
+% (18,0.02237) (20,0.01653) (22,0.01168) (24,0.00815) (26,0.00511) (28,0.00374) (30,0.00251)
+% (32,0.00191) (34,0.00098) (36,0.00079) (38,0.00029) (40,0.0003) (42,0.00011) (44,0.00018)
+% (46,8e-05) (48,2e-05) (50,3e-05) };
+% \addlegendentry{10}
+% \addplot[color=green] coordinates {
+% (4,0.24822) (6,0.16551) (8,0.12317) (10,0.09749) (12,0.08105) (14,0.07036) (16,0.05871) (18,0.05308)
+% (20,0.04717) (22,0.04189) (24,0.03801) (26,0.03342) (28,0.03205) (30,0.02822) (32,0.02521)
+% (34,0.02282) (36,0.0212) (38,0.01852) (40,0.01814) (42,0.01668) (44,0.01511) (46,0.01356)
+% (48,0.01246) (50,0.01145) (52,0.0101) (54,0.0093) (56,0.00861) (58,0.00778) (60,0.00768)
+% (62,0.00672) (64,0.00589) (66,0.00565) (68,0.00517) (70,0.00455) (72,0.00435) (74,0.00375)
+% (76,0.00348) (78,0.00286) (80,0.00276) (82,0.0023) (84,0.00224) (86,0.00204) (88,0.00165)
+% (90,0.00164) (92,0.00134) (94,0.00126) (96,0.00114) (98,0.00103) (100,0.00101) };
+% \addlegendentry{15}
+% \addplot[color=red] coordinates {
+% (4,0.249) (6,0.1666) (8,0.1309) (10,0.0977) (12,0.0821) (14,0.0754) (16,0.0612) (18,0.0569)
+% (20,0.0504) (22,0.0412) (24,0.0438) (26,0.0385) (28,0.0364) (30,0.0349) (32,0.0328) (34,0.0286)
+% (36,0.0263) (38,0.0283) (40,0.0244) (42,0.0237) (44,0.0213) (46,0.0197) (48,0.0185) (50,0.0171)
+% (52,0.0169) (54,0.0204) (56,0.0161) (58,0.0155) (60,0.0153) (62,0.0158) (64,0.0135) (66,0.0135)
+% (68,0.0118) (70,0.0158) (72,0.0137) (74,0.012) (76,0.0108) (78,0.0119) (80,0.0116) (82,0.0106)
+% (84,0.0112) (86,0.0102) (88,0.0075) (90,0.0096) (92,0.0091) (94,0.0094) (96,0.0077) (98,0.0089)
+% (100,0.006) };
+% \addlegendentry{20}
+% \addplot[color=blue] coordinates {
+% (4,0.2439) (6,0.1661) (8,0.1216) (10,0.1031) (12,0.0816) (14,0.0755) (16,0.0635) (18,0.055) (20,0.0511) (22,0.0451) (24,0.0427) (26,0.0369) (28,0.0375) (30,0.0336) (32,0.0302) (34,0.0297) (36,0.0264) (38,0.0268) (40,0.0254) (42,0.0215) (44,0.021) (46,0.0205) (48,0.0206) (50,0.0182) (52,0.017) (54,0.0192) (56,0.0172) (58,0.0169) (60,0.0167) (62,0.0147) (64,0.0169) (66,0.0137) (68,0.0169) (70,0.0125) (72,0.0127) (74,0.0123) (76,0.0139) (78,0.0122) (80,0.0131) (82,0.0129) (84,0.012) (86,0.0119) (88,0.0102) (90,0.0088) (92,0.0102) (94,0.0115) (96,0.0108) (98,0.0089) (100,0.0104) };
+% \addlegendentry{25}
+% \end{axis}
+% \end{tikzpicture}
+% \end{frame}
+
+\begin{frame}
+\frametitle{Choice of graph size}
+\begin{itemize}
+\item Larger sizes makes it hard to fit in single memory chip
+% \pause
+\item also harder for botnets to mine without excessive swapping.
+% \pause
+%Sending a computer into swap-hell will likely alert its owner and trigger a cleanup,
+%so botnet operators can be expected to eschew memory bound PoWs in favor of low-memory ones.
+\item but allow fewer attempts per block interval, wasting effort spent on last attempt
+% \pause
+% progress freeness
+\item suggest graph sizes $2^{28}$ - $2^{32}$
+%  with the larger ones geared more toward longer block interval times and faster mining hardware.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Dynamic Sizing}
+\begin{itemize}
+\item memory chip capacities evolve
+% \pause
+\item
+re-evaluate the graph size now and then
+% \pause
+\item
+double size when difficulty drops too much
+% graph size is deemed to have become "too easy" for existing hardware, and gets doubled.
+\item smooth transition and avoid loss of hashing power
+  with range of sizes (Myriad style)
+%namely $k$ consecutive 2-powers for some small number $k\geq 2$.
+%As with Myriad-coin, separate difficulty controls are maintained for each size,
+% adjusted so that each size accounts for roughly $\frac{1}{k}$ of all blocks.
+
+% Doubling graph sizes is then equivalent to disabling the smallest 2-power,
+% and enabling a new largest one, whose initial difficulty target is twice that of the previous largest.
+% Even if none of the hardware that was working on the smallest 2-power is repurposed for a larger size,
+% since this hardware only accounted for a fraction $\frac{1}{k}$ of the rewards, the loss of
+% % proof-of-work power should be acceptable.
+
+% It remains to decide what exact form the ``difficulties too low'' condition should take.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Summary}
+\begin{itemize}
+\item
+novel graph-theoretic proof-of-work design
+\item scalable memory
+% \pause
+\item instant verifiability
+% \pause
+\item first where memory latency dominates the runtime.
+% \pause
+% Barring any unforeseen memory-time trade-offs, it makes for a 
+\item near-ideal memory bound PoW
+% \pause
+\item potential for decentralization of mining.
+\end{itemize}
+\end{frame}
+
+\end{document}  

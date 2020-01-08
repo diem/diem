@@ -4,7 +4,7 @@
 syntax = "proto3";
 
 package types;
-
+option go_package = "libra/types";
 import "transaction.proto";
 import "google/protobuf/empty.proto";
 
@@ -36,7 +36,7 @@ message BlockSummary {
     bytes accumulator_root_hash = 4;
     bytes state_root_hash = 5;
     bytes miner = 6;
-    uint64 nonce = 7;
+    uint32 nonce = 7;
     bytes target = 8;
     uint32 algo = 9;
 }

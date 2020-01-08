@@ -5,11 +5,10 @@ use async_std::{
     task,
 };
 use consensus_types::payload_ext::BlockPayloadExt;
-use cuckoo::Solution;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use miner::miner::verify;
-use miner::types::{from_slice, Algo, MineCtx, MineState, Proof, H256, U256};
+use miner::types::{from_slice, Algo, MineCtx, MineState, Proof, Solution, H256, U256};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -72,7 +71,7 @@ where
         })
     }
 
-    fn mine_accept(&self, mine_ctx_req: &MineCtx, solution: Vec<u8>, nonce: u64) -> bool {
+    fn mine_accept(&self, mine_ctx_req: &MineCtx, solution: Solution, nonce: u32) -> bool {
         let mut x = self.inner.lock().unwrap();
         if let Some(mine_ctx) = &x.mine_ctx {
             if mine_ctx.target.clone().is_none() {
@@ -80,19 +79,10 @@ where
             }
             let target: U256 = mine_ctx.target.clone().unwrap().into();
             if mine_ctx == mine_ctx_req {
-                let s = {
-                    let s: Solution = solution.clone().into();
-                    if s == Solution::empty() {
-                        None
-                    } else {
-                        Some(s)
-                    }
-                };
-
                 if verify(
-                    &mine_ctx.header.into(),
+                    &mine_ctx.header,
                     nonce,
-                    s,
+                    solution.clone(),
                     &mine_ctx.algo.clone().unwrap(),
                     &target,
                 ) != true
@@ -125,7 +115,7 @@ where
         let mut x = self.inner.lock().unwrap();
         let (tx, rx) = channel(1);
         let mine_ctx = MineCtx {
-            header: from_slice(&header),
+            header,
             target: None,
             algo: None,
         };

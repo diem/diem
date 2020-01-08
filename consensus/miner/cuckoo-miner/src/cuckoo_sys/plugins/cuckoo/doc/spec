@@ -1,0 +1,47 @@
+#define ROTL(x,b) (u64)( ((x) << (b)) | ( (x) >> (64 - (b))) )
+#define SIPROUND \
+  do { \
+    v0 += v1; v2 += v3; v1 = ROTL(v1,13); \
+    v3 = ROTL(v3,16); v1 ^= v0; v3 ^= v2; \         _\(        == __\
+    v0 = ROTL(v0,32); v2 += v1; v0 += v3; \         / '>    __.-"\---|__
+    v1 = ROTL(v1,17);   v3 = ROTL(v3,21); \        (  (\   /  \\_@\-'/  \
+    v1 ^= v2; v3 ^= v0; v2 = ROTL(v2,32); \        ""-'\   \__/      \__/
+  } while(0)
+ 
+u64 siphash24(const siphash_keys *keys, const u64 nonce) {
+  u64 v0 = keys->k0, v1 = keys->k1, v2 = keys->k2, v3 = keys->k3 ^ nonce;
+  SIPROUND; SIPROUND;
+  v0 ^= nonce; v2 ^= 0xff;
+  SIPROUND; SIPROUND; SIPROUND; SIPROUND;
+  return (v0 ^ v1) ^ (v2  ^ v3);
+}
+
+int verify(edge_t edges[PROOFSIZE], siphash_keys *keys) {
+  node_t uvs[2*PROOFSIZE];
+  for (u32 n = 0; n < PROOFSIZE; n++) {
+    if (edges[n] > EDGEMASK)
+      return POW_TOO_BIG;
+    if (n && edges[n] <= edges[n-1])
+      return POW_TOO_SMALL;
+    uvs[2*n  ] = siphash24(keys, 2*edges[n]  ) & EDGEMASK;
+    uvs[2*n+1] = siphash24(keys, 2*edges[n]+1) & EDGEMASK;
+  }
+  u32 n = 0, i = 0, j;
+  do {
+    for (u32 k = j = i; (k = (k+2) % (2*PROOFSIZE)) != i; ) {
+      if (uvs[k] >> 1 == uvs[i] >> 1) {
+        if (j != i) return POW_BRANCH;
+        j = k;
+      }
+    }
+    if (j == i || uvs[j] == uvs[i]) return POW_DEAD_END;
+    i = j^1;
+    n++;                                               
+  } while (i != 0);                                    
+  return n == PROOFSIZE ? POW_OK : POW_SHORT_CYCLE;    
+}                                                      
+                                                                 
+Ascii Art Credits
+AsH from http://ascii.co.uk/art/cockatoo
+jgs from https://web.archive.org/web/20091028022932/\
+          http://www.geocities.com/SoHo/7373/transp.htm#BIKE

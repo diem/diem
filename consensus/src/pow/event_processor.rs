@@ -12,7 +12,6 @@ use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
 use consensus_types::{block::Block, payload_ext::BlockPayloadExt};
-use cuckoo::Solution;
 use futures::channel::mpsc;
 use futures::{stream::select, SinkExt, StreamExt, TryStreamExt};
 use libra_crypto::hash::CryptoHash;
@@ -25,7 +24,7 @@ use libra_types::crypto_proxies::ValidatorVerifier;
 use libra_types::transaction::SignedTransaction;
 use libra_types::PeerId;
 use miner::miner::verify;
-use miner::types::{from_slice, Algo, H256, U256};
+use miner::types::{from_slice, Algo, Solution, H256, U256};
 use network::validator_network::{ChainStateNetworkEvents, ChainStateNetworkSender};
 use network::{
     proto::{
@@ -193,26 +192,15 @@ impl EventProcessor {
                                                 target_h.into()
                                             };
                                             let algo: &Algo = &payload.algo.into();
-                                            let solution = {
-                                                let s: Solution = payload.solve.clone().into();
-                                                if s == Solution::empty() {
-                                                    None
-                                                } else {
-                                                    Some(s)
-                                                }
-                                            };
-                                            let header_hash = {
-                                                let hash = block
-                                                    .quorum_cert()
-                                                    .ledger_info()
-                                                    .ledger_info()
-                                                    .hash()
-                                                    .to_vec();
-                                                let hash_h: H256 = from_slice(&hash).into();
-                                                hash_h
-                                            };
+                                            let solution: Solution = payload.solve.clone().into();
+                                            let header = block
+                                                .quorum_cert()
+                                                .ledger_info()
+                                                .ledger_info()
+                                                .hash()
+                                                .to_vec();
                                             let verify = verify(
-                                                &header_hash,
+                                                &header,
                                                 payload.nonce,
                                                 solution,
                                                 algo,
