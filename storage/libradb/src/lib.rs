@@ -568,6 +568,15 @@ impl LibraDB {
                         txn_list_with_proof,
                     })
                 }
+                RequestItem::GetAccountStateByVersion { address, version } => {
+                    Ok(ResponseItem::GetAccountState {
+                        account_state_with_proof: self.get_account_state_with_proof(
+                            address,
+                            version,
+                            ledger_version,
+                        )?,
+                    })
+                }
             })
             .collect::<Result<Vec<_>>>()?;
 
