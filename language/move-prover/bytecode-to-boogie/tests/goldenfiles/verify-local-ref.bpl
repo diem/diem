@@ -22,6 +22,7 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
+    assume IsValidReferenceParameter(local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 3;

@@ -18,3 +18,8 @@ fn verify_div() {
 fn verify_local_ref() {
     test(VERIFY, &["test_mvir/verify-local-ref.mvir"]);
 }
+
+#[test]
+fn verify_ref_param() {
+    test(VERIFY, &["test_mvir/verify-ref-param.mvir"]);
+}

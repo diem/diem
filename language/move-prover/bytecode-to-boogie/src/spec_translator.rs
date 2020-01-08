@@ -211,7 +211,7 @@ impl<'a> SpecTranslator<'a> {
     /// Translate a dereference.
     fn translate_dref(&mut self, loc: &StorageLocation) -> BoogieExpr {
         let BoogieExpr(s, t) = self.translate_location_as_reference(loc);
-        if let SignatureToken::Reference(sig) = t {
+        if let SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) = t {
             BoogieExpr(format!("Dereference(m, {})", s), *sig)
         } else {
             self.error(
@@ -412,7 +412,7 @@ impl<'a> SpecTranslator<'a> {
             StorageLocation::AccessPath { base, fields } => {
                 let BoogieExpr(mut res, mut t) = self.translate_location_as_value(base);
                 // If the type of the location is a reference, dref it now.
-                if let SignatureToken::Reference(vt) = t {
+                if let SignatureToken::Reference(vt) | SignatureToken::MutableReference(vt) = t {
                     res = format!("Dereference(m, {})", res);
                     t = *vt;
                 }
@@ -435,7 +435,7 @@ impl<'a> SpecTranslator<'a> {
         match loc {
             StorageLocation::Formal(name) => {
                 let BoogieExpr(s, t) = self.translate_param(name);
-                if let SignatureToken::Reference(_) = t {
+                if let SignatureToken::Reference(_) | SignatureToken::MutableReference(_) = t {
                     BoogieExpr(s, SignatureToken::Reference(Box::new(t)))
                 } else {
                     self.error(

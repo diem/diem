@@ -1,0 +1,12 @@
+module TestSpecs {
+
+    resource T {
+      value: u64,
+    }
+
+    public value(ref: &Self.T): u64
+    ensures return == ref/value
+    {
+        return *&move(ref).value;
+    }
+}

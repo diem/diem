@@ -114,7 +114,8 @@ function {:inline 1} IsEmpty(a: ValueArray): bool {
 //   prefer to handcode this so its easier to evolve the model independent of the
 //   translator.
 
-// STRATIFICATION_DEPTH: 4
+const StratificationDepth: int;
+axiom StratificationDepth == 4;
 
 function {:inline 1} IsEqual4(v1: Value, v2: Value): bool {
     v1 == v2
@@ -247,6 +248,15 @@ function {:constructor} Local(i: int): Location;
 type {:datatype} Reference;
 function {:constructor} Reference(l: Location, p: Path): Reference;
 const DefaultReference: Reference;
+
+function {:inline} IsValidReferenceParameter(local_counter: int, r: Reference): bool {
+  // If the reference parameter is for a local, its index must be less then the current
+  // local counter. This prevents any aliasing with locals which we create later.
+  (is#Local(l#Reference(r)) ==> i#Local(l#Reference(r)) < local_counter)
+  &&
+  // The path must be in range of current stratification depth.
+  (size#Path(p#Reference(r)) >= 0 && size#Path(p#Reference(r)) < StratificationDepth)
+}
 
 type {:datatype} Memory;
 function {:constructor} Memory(domain: [Location]bool, contents: [Location]Value): Memory;
