@@ -21,11 +21,12 @@ pub struct TestConfig {
     temp_dir: Option<TempPath>,
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
 impl Clone for TestConfig {
     fn clone(&self) -> Self {
         Self {
-            account_keypair: None,
-            consensus_keypair: None,
+            account_keypair: self.account_keypair.clone(),
+            consensus_keypair: self.consensus_keypair.clone(),
             temp_dir: None,
         }
     }

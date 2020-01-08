@@ -66,4 +66,4 @@ vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = ["proptest", "consensus-types/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing"]
+fuzzing = ["proptest", "consensus-types/fuzzing", "libra-config/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing"]
