@@ -1,0 +1,38 @@
+module TestSpecs {
+
+    public mut_b(b: &mut u64){
+        *move(b) = 10;
+        return;
+    }
+
+    public mut_ref()
+      succeeds_if true // force verification of no assertion failures
+    {
+        let b: u64;
+        let b_ref: &mut u64;
+
+        b = 20;
+        b_ref = &mut b;
+        // mutable reference passed into a function call
+        Self.mut_b(copy(b_ref));
+        b = *move(b_ref);
+        assert(move(b) == 10, 42);
+        return;
+    }
+
+    public mut_ref_failure()
+      succeeds_if true // force verification of no assertion failures
+    {
+        let b: u64;
+        let b_ref: &mut u64;
+
+        b = 20;
+        b_ref = &mut b;
+        Self.mut_b(copy(b_ref));
+        b = *move(b_ref);
+
+        // Assert value to be 9 instead of the expected 10
+        assert(move(b) == 9, 42); //! A postcondition might not hold
+        return;
+    }
+}
