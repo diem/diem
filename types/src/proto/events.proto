@@ -6,7 +6,7 @@
 // transactions, sent transactions, etc.
 
 syntax = "proto3";
-
+option go_package = "libra/types";
 package types;
 
 import "proof.proto";
