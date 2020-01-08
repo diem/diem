@@ -13,3 +13,8 @@ fn verify_create_resource() {
 fn verify_div() {
     test(VERIFY, &["test_mvir/verify-div.mvir"]);
 }
+
+#[test]
+fn verify_local_ref() {
+    test(VERIFY, &["test_mvir/verify-local-ref.mvir"]);
+}
