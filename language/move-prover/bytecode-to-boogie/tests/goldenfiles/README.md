@@ -13,13 +13,13 @@ golden files out-of-date independent of your changes.
 To run those tests, use:
 
 ```shell script
-VERIFY_BPL_GOLDEN=1 cargo test --test translator_tests
+VERIFY_BPL_GOLDEN=1 cargo test
 ```
 
 To update the golden files, use:
 
 ```shell script
-VERIFY_BPL_GOLDEN=1 REGENERATE_GOLDENFILES=1 cargo test --test translator_tests
+VERIFY_BPL_GOLDEN=1 REGENERATE_GOLDENFILES=1 cargo test
 ```
 
 By careful with cargo caching of test results. Cargo doesn't know about the semantics of environment

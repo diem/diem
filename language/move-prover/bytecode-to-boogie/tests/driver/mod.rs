@@ -67,6 +67,20 @@ pub fn test(flags: &[&str], sources: &[&str]) {
     }
 }
 
+/// Helper to create a path to an mvir source in the standard library.
+#[allow(dead_code)]
+pub fn std_mvir(b: &str) -> String {
+    format!("../../stdlib/modules/{}.mvir", b)
+}
+
+/// Flags to use for test() to do only parsing and type checking of boogie.
+#[allow(dead_code)]
+pub const NO_VERIFY: &[&str] = &["-B=-noVerify"];
+
+/// Flags to use for test() to do verification.
+#[allow(dead_code)]
+pub const VERIFY: &[&str] = &[];
+
 /// Extracts expected diags from sources and compares it with actual diags.
 fn verify_diag(sources: &[&str], mut actual_diag: Vec<String>) {
     // Collect expected diagnosis from source. A comment of the form

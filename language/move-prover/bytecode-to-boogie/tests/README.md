@@ -6,8 +6,8 @@ problem with the Move Prover, please consider to add a test which captures it, a
 Adding a test is simple:
 
 1. Create an MVIR source in the [`../test_mvir`](../test_mvir) directory representing the problem.
-   See [`../test_mvir/test-specs-verify.rs`](../test_mvir/test-specs-verify.mvir) for an example.
-2. Add a `#[test] fn` to the Rust source [`./translator_tests.rs`](./translator_tests.rs):
+   See [`../test_mvir/test-specs-verify.rs`](../test_mvir/verify-create-resource.mvir) for an example.
+2. Add a `#[test] fn` to the Rust source [`./prover_tests.rs`](./prover_tests.rs):
 
    ```rust
    #[test]
@@ -28,8 +28,8 @@ Adding a test is simple:
 
    If the produced error is actually unexpected, please add a `TODO` and explain what you expected, so the issue
    can be investigated.
-5. At the latest before you send a PR, also re-generated the golden files:
+5. At the latest before you send a PR, also re-generate the golden files:
    ```shell script
    touch tests/translator_tests.rs
-   VERIFY_BPL_GOLDEN=1 REGENERATE_GOLDENFILES=1 cargo test --test translator_tests
+   VERIFY_BPL_GOLDEN=1 REGENERATE_GOLDENFILES=1 cargo test
    ```

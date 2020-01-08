@@ -1,0 +1,22 @@
+module TestSpecs {
+
+    public div(x: u64, y: u64): u64
+      succeeds_if y > 0
+      // TODO: we currently cannot write x / y in specs, so the below ensures is commented out for now.
+      // ensures return == x / y
+    {
+      let r: u64;
+      r = copy(x) / copy(y);
+      return move(r);
+    }
+
+    public div_by_zero_detected(x: u64, y: u64): u64
+      // The below forces the method to succeed, producing an error. Without it,
+      // we would keep this aspect unspecified.
+      succeeds_if true //! postcondition might not hold
+    {
+      let r: u64;
+      r = copy(x) / copy(y); // not captured by succeeds_if
+      return move(r);
+    }
+}
