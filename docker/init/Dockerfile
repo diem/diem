@@ -18,8 +18,7 @@ FROM toolchain AS builder
 
 COPY . /libra
 
-RUN cargo build --release -p config-builder && cd target/release && rm -r build deps incremental
-RUN strip target/release/full-node-config-builder target/release/validator-config-builder
+RUN cargo build --release -p libra-node -p client -p config-builder && cd target/release && rm -r build deps incremental
 
 ### Production Image ###
 FROM debian:buster AS prod
