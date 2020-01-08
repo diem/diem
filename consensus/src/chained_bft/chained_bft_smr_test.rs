@@ -20,18 +20,17 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, executor::block_on, prelude::*};
-use libra_config::config::{
-    ConsensusConfig,
-    ConsensusProposerType::{self, FixedProposer, MultipleOrderedProposers, RotatingProposer},
-    SafetyRulesConfig,
+use libra_config::{
+    config::{
+        ConsensusProposerType::{self, FixedProposer, MultipleOrderedProposers, RotatingProposer},
+        NodeConfig, SafetyRulesConfig,
+    },
+    generator::{self, ValidatorSwarm},
 };
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
     crypto_proxies::ValidatorSet,
-    crypto_proxies::{
-        random_validator_verifier, LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorSigner,
-        ValidatorVerifier,
-    },
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier},
 };
 use network::{
     proto::ConsensusMsg_oneof,
@@ -43,9 +42,8 @@ use tokio::runtime;
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
-    signer: ValidatorSigner,
+    config: NodeConfig,
     validators: Arc<ValidatorVerifier>,
-    proposer_type: ConsensusProposerType,
     smr_id: usize,
     smr: ChainedBftSMR<TestPayload>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
@@ -57,15 +55,14 @@ struct SMRNode {
 impl SMRNode {
     fn start(
         playground: &mut NetworkPlayground,
-        signer: ValidatorSigner,
+        config: NodeConfig,
         smr_id: usize,
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
-        proposer_type: ConsensusProposerType,
         executor_with_reconfig: Option<ValidatorSet>,
     ) -> Self {
         let validators = initial_data.validators();
-        let author = signer.author();
+        let author = config.validator_network.as_ref().unwrap().peer_id;
 
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -76,30 +73,19 @@ impl SMRNode {
         let runtime = runtime::Builder::new()
             .threaded_scheduler()
             .enable_all()
-            .on_thread_start(with_smr_id(signer.author().short_str()))
+            .on_thread_start(with_smr_id(author.short_str()))
             .build()
             .expect("Failed to create Tokio runtime!");
 
-        let config = ConsensusConfig {
-            max_pruned_blocks_in_mem: 10000,
-            pacemaker_initial_timeout_ms: 3000,
-            proposer_type,
-            contiguous_rounds: 2,
-            max_block_size: 50,
-            safety_rules: SafetyRulesConfig::default(),
-        };
+        let safety_rules_manager_config = SafetyRulesManagerConfig::new(&mut config.clone());
 
-        let safety_rules_manager_config = SafetyRulesManagerConfig::new_with_signer(
-            signer.clone(),
-            &SafetyRulesConfig::default(),
-        );
         let mut smr = ChainedBftSMR::new(
-            signer.author(),
+            author,
             network_sender,
             network_events,
             safety_rules_manager_config,
             runtime,
-            config,
+            config.consensus.clone(),
             storage.clone(),
             initial_data,
         );
@@ -116,9 +102,8 @@ impl SMRNode {
         )
         .expect("Failed to start SMR!");
         Self {
-            signer,
+            config,
             validators,
-            proposer_type,
             smr_id,
             smr,
             commit_cb_receiver,
@@ -136,11 +121,10 @@ impl SMRNode {
             .unwrap_or_else(|e| panic!("fail to restart due to: {}", e));
         Self::start(
             playground,
-            self.signer,
+            self.config,
             self.smr_id + 10,
             self.storage,
             recover_data,
-            self.proposer_type,
             None,
         )
     }
@@ -151,27 +135,43 @@ impl SMRNode {
         proposer_type: ConsensusProposerType,
         executor_with_reconfig: bool,
     ) -> Vec<Self> {
-        let (mut signers, validators) = random_validator_verifier(num_nodes, None, true);
-        let validator_set: ValidatorSet = (&validators).into();
+        let ValidatorSwarm {
+            mut nodes,
+            validator_set,
+        } = generator::validator_swarm_for_testing(num_nodes);
+
         let executor_validator_set = if executor_with_reconfig {
             Some(validator_set.clone())
         } else {
             None
         };
-        let mut nodes = vec![];
-        for smr_id in 0..num_nodes {
+
+        // Some tests make assumptions about the ordering of configs in relation
+        // to the FixedProposer which should be the first proposer in lexical order.
+        nodes.sort_by(|a, b| {
+            let a_auth = a.validator_network.as_ref().unwrap().peer_id;
+            let b_auth = b.validator_network.as_ref().unwrap().peer_id;
+            a_auth.cmp(&b_auth)
+        });
+
+        let mut smr_nodes = vec![];
+        for (smr_id, config) in nodes.iter().enumerate() {
+            let mut node_config = config.clone();
+            node_config.consensus.proposer_type = proposer_type;
+            // Use in memory storage for testing
+            node_config.consensus.safety_rules = SafetyRulesConfig::default();
+
             let (initial_data, storage) = MockStorage::start_for_testing(validator_set.clone());
-            nodes.push(Self::start(
+            smr_nodes.push(Self::start(
                 playground,
-                signers.remove(0),
+                node_config,
                 smr_id,
                 storage,
                 initial_data,
-                proposer_type,
                 executor_validator_set.clone(),
             ));
         }
-        nodes
+        smr_nodes
     }
 }
 
@@ -567,7 +567,7 @@ fn basic_state_sync() {
             .next()
             .await
             .expect("Fail to be notified by a mempool committed txns");
-        assert_eq!(nodes[3].mempool.get_committed_txns().len(), 50);
+        assert_eq!(nodes[3].mempool.get_committed_txns().len(), 100);
     });
 }
 
