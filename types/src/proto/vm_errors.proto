@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 syntax = "proto3";
-option go_package = "starcoin/types";
+option go_package = "libra/types";
 package types;
 
 // The statuses and errors produced by the VM can be categorized into a

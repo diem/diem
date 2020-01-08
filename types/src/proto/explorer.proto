@@ -4,7 +4,7 @@
 syntax = "proto3";
 
 package types;
-option go_package = "starcoin/types";
+option go_package = "libra/types";
 import "transaction.proto";
 import "google/protobuf/empty.proto";
 
