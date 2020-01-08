@@ -61,6 +61,7 @@ impl<T: Payload> SafetyRulesManager<T> {
             SafetyRulesService::Local => Self::new_local(storage, validator_signer),
             SafetyRulesService::Serializer => Self::new_serializer(storage, validator_signer),
             SafetyRulesService::Thread => Self::new_thread(storage, validator_signer),
+            _ => panic!("Unimplemented SafetyRulesService: {:?}", sr_config.service),
         }
     }
 
