@@ -3,10 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use bytecode_source_map::disassembler::{Disassembler, DisassemblerOptions};
-use bytecode_source_map::mapping::SourceMapping;
-use bytecode_source_map::source_map::ModuleSourceMap;
-use bytecode_source_map::utils::module_source_map_from_file;
+use bytecode_source_map::{
+    mapping::SourceMapping, source_map::ModuleSourceMap, utils::module_source_map_from_file,
+};
+use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use ir_to_bytecode_syntax::ast::Loc;
 use libra_types::transaction::Module;
 use serde_json;

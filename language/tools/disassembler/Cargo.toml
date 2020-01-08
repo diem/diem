@@ -1,0 +1,25 @@
+[package]
+name = "disassembler"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
+bytecode-source-map = { path = "../../compiler/bytecode-source-map", version = "0.1.0" }
+ir-to-bytecode-syntax = { path = "../../compiler/ir-to-bytecode/syntax", version = "0.1.0" }
+libra-types = { path = "../../../types", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
+
+codespan = { version = "0.2.1" }
+codespan-reporting = "0.2.1"
+structopt = "0.3.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]
