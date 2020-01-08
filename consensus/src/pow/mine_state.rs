@@ -8,7 +8,7 @@ use consensus_types::payload_ext::BlockPayloadExt;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use miner::miner::verify;
-use miner::types::{from_slice, Algo, MineCtx, MineState, Proof, Solution, H256, U256};
+use miner::types::{Algo, MineCtx, MineState, Proof, Solution, U256};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -77,7 +77,7 @@ where
             if mine_ctx.target.clone().is_none() {
                 return false;
             }
-            let target: U256 = mine_ctx.target.clone().unwrap().into();
+            let target: U256 = mine_ctx.target.clone().unwrap();
             if mine_ctx == mine_ctx_req {
                 if verify(
                     &mine_ctx.header,
@@ -148,7 +148,7 @@ impl Iterator for BlockIndex {
         {
             let _ = match block.payload() {
                 Some(payload) => {
-                    let target: H256 = from_slice(&payload.target).into();
+                    let target: U256 = U256::from_little_endian(&payload.target);
                     let algo: Algo = payload.algo.clone().into();
                     ret = Some(BlockInfo {
                         timestamp: block.timestamp_usecs(),
@@ -202,7 +202,7 @@ pub struct DummyBlockInner {
 
 impl DummyBlockIndex {
     pub fn new() -> Self {
-        let difficult_1_target = H256::max_value();
+        let difficult_1_target = difficult_1_target();
         let genesis_block = BlockInfo {
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -217,7 +217,7 @@ impl DummyBlockIndex {
             inner: Arc::new(Mutex::new(DummyBlockInner { blocks, count: 1 })),
         }
     }
-    pub fn add_block(&mut self, target: H256, algo: Algo) {
+    pub fn add_block(&mut self, target: U256, algo: Algo) {
         self.inner.lock().unwrap().blocks.push(BlockInfo {
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)

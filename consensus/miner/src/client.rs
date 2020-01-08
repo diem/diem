@@ -88,7 +88,7 @@ impl MineClient {
         let mut ctx_stream =
             MineCtxStream::new(self.rpc_client.clone(), self.cfg.algorithm.clone());
         while let Some(ctx) = ctx_stream.next().await {
-            let target: U256 = ctx.target.clone().unwrap().into();
+            let target: U256 = ctx.target.clone().unwrap();
             let (nonce, solution) = miner::solve(&ctx.header, &target, &self.cfg);
             let req = MinedBlockRequest {
                 mine_ctx: Some(ctx.into()),

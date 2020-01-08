@@ -29,7 +29,7 @@ use libra_types::{
     validator_public_keys::ValidatorPublicKeys,
     validator_set::ValidatorSet,
 };
-use miner::types::{MineState, Proof};
+use miner::types::{u256_to_vec, MineState, Proof};
 use network::{
     proto::{
         Block as BlockProto, ConsensusMsg,
@@ -237,7 +237,7 @@ impl MintManager {
                                                         txns,
                                                         nonce: proof.nonce,
                                                         solve: proof.solution.into(),
-                                                        target: proof.target.to_vec(),
+                                                        target: u256_to_vec(proof.target),
                                                         algo: proof.algo.into(),
                                                     };
 
