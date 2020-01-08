@@ -24,7 +24,7 @@ use libra_types::crypto_proxies::ValidatorVerifier;
 use libra_types::transaction::SignedTransaction;
 use libra_types::PeerId;
 use miner::miner::verify;
-use miner::types::{from_slice, Algo, Solution, H256, U256};
+use miner::types::{Algo, Solution, U256};
 use network::validator_network::{ChainStateNetworkEvents, ChainStateNetworkSender};
 use network::{
     proto::{
@@ -186,11 +186,8 @@ impl EventProcessor {
                                     match block.pow_validate_signatures(&validator_verifier) {
                                         Ok(_) => {
                                             let payload = block.payload().expect("payload is none");
-                                            let target: U256 = {
-                                                let target_h: H256 =
-                                                    from_slice(&payload.target).into();
-                                                target_h.into()
-                                            };
+                                            let target: U256 =
+                                                U256::from_little_endian(&payload.target);
                                             let algo: &Algo = &payload.algo.into();
                                             let solution: Solution = payload.solve.clone().into();
                                             let header = block

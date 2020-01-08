@@ -6,6 +6,7 @@ mod chain_manager;
 pub(crate) mod chain_state_request_handle;
 mod event_processor;
 pub mod mine_state;
+#[allow(deprecated)]
 mod mint_manager;
 mod sync_manager;
 mod target;

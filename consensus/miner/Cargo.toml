@@ -21,8 +21,7 @@ cuckoo_miner = {path = "./cuckoo-miner"}
 cuckoo = {path = "../crypto/cuckoo"}
 scrypt = {path = "../crypto/scrypt"}
 rand = { version = "0.6.5", default-features = false }
-numext-fixed-hash = "0.1.4"
-numext-fixed-uint = "0.1.4"
+ethereum-types = "0.2.3"
 clap = "2.31.2"
 blake2-rfc = "0.2"
 

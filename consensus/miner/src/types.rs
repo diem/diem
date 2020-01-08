@@ -3,8 +3,7 @@ use async_std::sync::{Receiver, Sender};
 pub use blake2_rfc::blake2b::blake2b;
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use cuckoo::PROOF_SIZE;
-pub use numext_fixed_hash::H256;
-pub use numext_fixed_uint::U256;
+pub use ethereum_types::{H256, U256};
 use proto::miner::MineCtx as MineCtxRpc;
 use std::convert::{From, Into};
 use std::fmt::{Debug, Error, Formatter};
@@ -99,29 +98,21 @@ pub struct Proof {
     pub solution: Solution,
     pub nonce: u32,
     pub algo: Algo,
-    pub target: H256,
+    pub target: U256,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct MineCtx {
     pub header: Vec<u8>,
-    pub target: Option<H256>,
+    pub target: Option<U256>,
     pub algo: Option<Algo>,
-}
-
-pub fn from_slice(bytes: &[u8]) -> [u8; 32] {
-    let mut array = [0; 32];
-    assert_eq!(32, bytes.len());
-    let bytes = &bytes[..array.len()];
-    array.copy_from_slice(bytes);
-    array
 }
 
 impl From<MineCtxRpc> for MineCtx {
     fn from(ctx: MineCtxRpc) -> Self {
         MineCtx {
             header: ctx.header,
-            target: Some(from_slice(&ctx.target).into()),
+            target: Some(U256::from_little_endian(&ctx.target)),
             algo: Some(ctx.algo.into()),
         }
     }
@@ -131,7 +122,7 @@ impl Into<MineCtxRpc> for MineCtx {
     fn into(self) -> MineCtxRpc {
         MineCtxRpc {
             header: self.header.to_vec(),
-            target: self.target.unwrap().to_vec(),
+            target: u256_to_vec(self.target.unwrap()),
             algo: self.algo.unwrap().into(),
         }
     }
@@ -168,4 +159,23 @@ pub fn set_header_nonce(header: &[u8], nonce: u32) -> Vec<u8> {
     header.truncate(len - 4);
     let _ = header.write_u32::<LittleEndian>(nonce);
     header
+}
+
+pub fn u256_to_vec(u: U256) -> Vec<u8> {
+    let mut t = vec![0u8; 32];
+    u.to_little_endian(&mut t);
+    t
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_u256() {
+        let u: U256 = 1.into();
+        let b = u256_to_vec(u);
+        let i = U256::from_little_endian(&b);
+        assert!(u == i);
+    }
 }
