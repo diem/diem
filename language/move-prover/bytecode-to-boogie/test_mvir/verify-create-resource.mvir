@@ -25,22 +25,4 @@ module TestSpecs {
       // move_to_sender<R>(R{x:1}); // This is what we omit to make this fail.
       return;
     }
-
-    public div_by_zero(x: u64, y: u64): u64
-      succeeds_if y != 0
-      // TODO: if we use y > 0 instead of y != 0, verification fails.
-      //   Need to investigate why.
-    {
-      let r: u64;
-      r = copy(x) / copy(y);
-      return move(r);
-    }
-
-    public div_by_zero_error(x: u64, y: u64): u64
-      succeeds_if true //! postcondition might not hold
-    {
-      let r: u64;
-      r = copy(x) / copy(y);
-      return move(r);
-    }
 }

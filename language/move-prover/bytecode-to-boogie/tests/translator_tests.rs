@@ -4,13 +4,6 @@
 mod driver;
 use driver::*;
 
-fn std_mvir(b: &str) -> String {
-    format!("../../stdlib/modules/{}.mvir", b)
-}
-
-const NO_VERIFY: &[&str] = &["-B=-noVerify"];
-const VERIFY: &[&str] = &[];
-
 #[test]
 fn test3() {
     test(NO_VERIFY, &["test_mvir/test3.mvir"]);
@@ -80,9 +73,4 @@ fn test_generics() {
 #[test]
 fn test_specs_translate() {
     test(NO_VERIFY, &["test_mvir/test-specs-translate.mvir"]);
-}
-
-#[test]
-fn test_specs_verify() {
-    test(VERIFY, &["test_mvir/test-specs-verify.mvir"]);
 }

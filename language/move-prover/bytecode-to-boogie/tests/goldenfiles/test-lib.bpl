@@ -1498,8 +1498,6 @@ procedure LibraCoin_mint_verify (arg0: Value, arg1: Reference) returns (ret0: Va
 
 procedure {:inline 1} LibraCoin_initialize () returns ()
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean((Address(TxnSenderAddress(txn))) != (Address(173345816)))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean((Address(TxnSenderAddress(txn))) != (Address(173345816))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
