@@ -1,4 +1,5 @@
 use libra_crypto::HashValue;
+use libra_logger::prelude::*;
 use miner::types::{Algo, U256};
 
 pub const BLOCK_WINDOW: u32 = 12;
@@ -8,7 +9,7 @@ pub fn difficult_1_target() -> U256 {
     U256::max_value() / DIFF_1_HASH_TIMES.into()
 }
 
-pub const DIFF_1_HASH_TIMES: u32 = 1000;
+pub const DIFF_1_HASH_TIMES: u32 = 10000;
 
 pub fn current_hash_rate(target: &[u8]) -> u64 {
     // current_hash_rate = (difficult_1_target/target_current) * difficult_1_hash/block_per_esc
@@ -36,6 +37,10 @@ where
         blocks
     };
     if blocks.len() <= 1 {
+        debug!(
+            "Block length less than 1, set target to 1 difficult:{:?}",
+            difficult_1_target()
+        );
         return difficult_1_target();
     }
     let target = blocks[0].target;
@@ -48,22 +53,31 @@ where
             time_used += diff;
             latest_block_index += 1;
         }
+
         if time_used == 0 {
             1
         } else {
             time_used
         }
     };
-    //new_target = old_target * (old_time/plan_time);
-    if target / (BLOCK_TIME_SEC * blocks.len() as u32).into()
-        >= difficult_1_target() / time_used.into()
+    let time_plan = BLOCK_TIME_SEC * (blocks.len() - 1) as u32;
+    // new_target = old_target * time_used/time_plan
+    let new_target = if let Some(target) = (target / time_plan.into()).checked_mul(time_used.into())
     {
-        return difficult_1_target();
-    }
-    let new_target = (target / (BLOCK_TIME_SEC * blocks.len() as u32).into())
-        .checked_mul(time_used.into())
-        .unwrap();
+        target
+    } else {
+        debug!("target large than max value, set to 1_difficult");
+        difficult_1_target()
+    };
+
+    info!(
+        "time_used:{:?}s, time_plan:{:?}s, each block used::{:?}s",
+        time_used,
+        time_plan,
+        time_used / (blocks.len() - 1) as u64
+    );
     new_target
+    //difficult_1_target()
 }
 
 #[derive(Clone)]
