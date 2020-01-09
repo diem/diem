@@ -11,7 +11,4 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3.0"
-tokio-sync= "0.2.0-alpha.6"
-
-[dev-dependencies]
 tokio = { version = "0.2.8", features = ["full"] }
