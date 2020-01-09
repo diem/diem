@@ -4,7 +4,10 @@
 //! Integration tests for validator_network.
 use crate::{
     common::NetworkPublicKeys,
-    proto::{ConsensusMsg, ConsensusMsg_oneof, MempoolSyncMsg, RequestBlock, RespondBlock},
+    proto::{
+        BroadcastTransactionsRequest, ConsensusMsg, ConsensusMsg_oneof, MempoolSyncMsg,
+        MempoolSyncMsg_oneof, RequestBlock, RespondBlock,
+    },
     utils::MessageExt,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
@@ -12,6 +15,7 @@ use crate::{
     },
     ProtocolId,
 };
+use assert_matches::assert_matches;
 use futures::{future::join, StreamExt};
 use libra_config::config::RoleType;
 use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, traits::ValidKey, x25519};
@@ -156,14 +160,17 @@ fn test_mempool_sync() {
     runtime.handle().spawn(network_provider.start());
 
     // The dialer dials the listener and sends a mempool sync message
-    let mut mempool_msg = MempoolSyncMsg::default();
-    mempool_msg.peer_id = dialer_peer_id.into();
+    let mut req = BroadcastTransactionsRequest::default();
+    req.peer_id = dialer_peer_id.into();
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
     let txn: SignedTransaction = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None)
         .try_into()
         .unwrap();
-    mempool_msg.transactions.push(txn.clone());
+    req.transactions.push(txn.clone());
+    let mempool_msg = MempoolSyncMsg {
+        message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(req)),
+    };
 
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
@@ -194,6 +201,10 @@ fn test_mempool_sync() {
         // The listener then receives the mempool sync message
         match listener_mp_net_events.next().await.unwrap().unwrap() {
             Event::Message((peer_id, msg)) => {
+                let msg = assert_matches!(
+                    msg.message,
+                    Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(msg)) => msg
+                );
                 assert_eq!(peer_id, dialer_peer_id);
                 let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
                 assert_eq!(msg.peer_id, dialer_peer_id_bytes);
@@ -297,14 +308,17 @@ fn test_permissionless_mempool_sync() {
     runtime.handle().spawn(network_provider.start());
 
     // The dialer dials the listener and sends a mempool sync message
-    let mut mempool_msg = MempoolSyncMsg::default();
-    mempool_msg.peer_id = dialer_peer_id.into();
+    let mut req = BroadcastTransactionsRequest::default();
+    req.peer_id = dialer_peer_id.into();
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
     let txn: SignedTransaction = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None)
         .try_into()
         .unwrap();
-    mempool_msg.transactions.push(txn.clone());
+    req.transactions.push(txn.clone());
+    let mempool_msg = MempoolSyncMsg {
+        message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(req)),
+    };
 
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
@@ -335,6 +349,10 @@ fn test_permissionless_mempool_sync() {
         // The listener then receives the mempool sync message
         match listener_mp_net_events.next().await.unwrap().unwrap() {
             Event::Message((peer_id, msg)) => {
+                let msg = assert_matches!(
+                    msg.message,
+                    Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(msg)) => msg
+                );
                 assert_eq!(peer_id, dialer_peer_id);
                 let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
                 assert_eq!(msg.peer_id, dialer_peer_id_bytes);

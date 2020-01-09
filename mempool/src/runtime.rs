@@ -60,7 +60,6 @@ impl MempoolRuntime {
             storage_client,
             vm_validator,
             vec![],
-            None,
         );
 
         let addr = format!(

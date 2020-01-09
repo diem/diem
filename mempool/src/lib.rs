@@ -54,6 +54,9 @@
 //! every Consensus commit request. We use a separate system TTL to ensure that a transaction won't
 //! remain stuck in Mempool forever, even if Consensus doesn't make progress
 
+// Increase recursion limit to allow for use of select! macro.
+#![recursion_limit = "1024"]
+
 pub mod proto;
 pub use runtime::MempoolRuntime;
 

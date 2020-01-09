@@ -59,15 +59,20 @@ impl MempoolNetworkSender {
 mod tests {
     use super::*;
     use crate::{
-        interface::NetworkNotification, protocols::direct_send::Message, utils::MessageExt,
+        interface::NetworkNotification,
+        proto::{BroadcastTransactionsRequest, MempoolSyncMsg_oneof},
+        protocols::direct_send::Message,
+        utils::MessageExt,
         validator_network::Event,
     };
     use futures::{executor::block_on, sink::SinkExt, stream::StreamExt};
 
     fn new_test_sync_msg(peer_id: PeerId) -> MempoolSyncMsg {
-        let mut mempool_msg = MempoolSyncMsg::default();
-        mempool_msg.peer_id = peer_id.into();
-        mempool_msg
+        let mut req = BroadcastTransactionsRequest::default();
+        req.peer_id = peer_id.into();
+        MempoolSyncMsg {
+            message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(req)),
+        }
     }
 
     // Direct send messages should get deserialized through the

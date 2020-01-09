@@ -2227,6 +2227,7 @@ name = "libra-mempool"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "assert_matches 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bounded-executor 0.1.0",
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "channel 0.1.0",
@@ -2741,6 +2742,7 @@ version = "0.1.0"
 dependencies = [
  "admission-control-proto 0.1.0",
  "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "assert_matches 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bounded-executor 0.1.0",
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",

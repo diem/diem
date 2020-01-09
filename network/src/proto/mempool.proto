@@ -13,6 +13,23 @@ import "transaction.proto";
  * Mempool service is responsible for sending and receiving MempoolSyncMsg
  * across validators. */
 message MempoolSyncMsg {
+  oneof message {
+    BroadcastTransactionsRequest broadcast_transactions_request = 1;
+    BroadcastTransactionsResponse broadcast_transactions_response = 2;
+  }
+}
+
+message BroadcastTransactionsRequest {
   bytes peer_id = 1;
   repeated types.SignedTransaction transactions = 2;
+}
+
+enum BroadcastTransactionsStatusCode {
+  Success = 0;
+  MempoolIsFull = 1;
+  SharedMempoolError = 2;
+}
+
+message BroadcastTransactionsResponse {
+  BroadcastTransactionsStatusCode code = 1;
 }
