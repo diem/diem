@@ -8,6 +8,7 @@ mod error;
 mod local_client;
 mod network;
 mod persistent_storage;
+mod remote_service;
 mod safety_rules;
 mod safety_rules_manager;
 mod serializer;
