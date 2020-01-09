@@ -9,7 +9,7 @@
 
 use futures::future::{Future, FutureExt};
 use futures_semaphore::Semaphore;
-use tokio::runtime::Handle;
+use tokio::{runtime::Handle, task::JoinHandle};
 
 #[derive(Clone, Debug)]
 pub struct BoundedExecutor {
@@ -35,13 +35,18 @@ impl BoundedExecutor {
 
     /// Spawn a [`Future`] on the `BoundedExecutor`. This function is async and
     /// will block if the executor is at capacity.
-    pub async fn spawn<F>(&self, f: F)
+    pub async fn spawn<F>(&self, f: F) -> JoinHandle<F::Output>
     where
-        F: Future<Output = ()> + Send + 'static,
+        F: Future + Send + 'static,
+        F::Output: Send + 'static,
     {
         let spawn_permit = self.semaphore.acquire().await;
-        let f = f.map(move |_| drop(spawn_permit));
-        self.executor.spawn(f);
+        let f = f.map(move |ret| {
+            // Release the permit back to the semaphore when this task completes.
+            drop(spawn_permit);
+            ret
+        });
+        self.executor.spawn(f)
     }
 }
 
