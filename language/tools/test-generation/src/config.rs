@@ -44,6 +44,14 @@ pub const EXECUTE_UNVERIFIED_MODULE: bool = false;
 /// Default is `true`
 pub const GAS_METERING: bool = true;
 
+/// Call stack height limit. This is defined in the VM, and is replicated here. This should track
+/// that constant.
+pub const CALL_STACK_LIMIT: usize = 1024;
+
+/// The value stack size limit. This is defined in the VM and is replicated here. This should
+/// remain in sync with the constant for this defined in the VM.
+pub const VALUE_STACK_LIMIT: usize = 1024;
+
 /// Command line arguments for the tool
 #[derive(Debug, StructOpt)]
 #[structopt(

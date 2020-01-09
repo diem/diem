@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{borrow_graph::BorrowGraph, error::VMError};
-use std::{collections::HashMap, fmt};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 use vm::access::ModuleAccess;
 use vm::file_format::{
-    empty_module, CompiledModule, CompiledModuleMut, Kind, LocalsSignature, LocalsSignatureIndex,
-    SignatureToken, StructDefinitionIndex, TableIndex,
+    empty_module, CompiledModule, CompiledModuleMut, FunctionHandleIndex, Kind, LocalsSignature,
+    LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, TableIndex,
 };
 
 /// The BorrowState denotes whether a local is `Available` or
@@ -102,6 +105,83 @@ impl AbstractValue {
                 Self::is_generic_token(tok)
             }
             _ => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CallGraph {
+    calls: HashMap<FunctionHandleIndex, HashSet<FunctionHandleIndex>>,
+    max_function_handle_index: usize,
+}
+
+impl CallGraph {
+    pub fn new(max_function_handle_index: usize) -> Self {
+        Self {
+            calls: HashMap::new(),
+            max_function_handle_index,
+        }
+    }
+
+    pub fn add_call(&mut self, caller: FunctionHandleIndex, callee: FunctionHandleIndex) {
+        self.calls
+            .entry(caller)
+            .or_insert_with(HashSet::new)
+            .insert(callee);
+    }
+
+    pub fn can_call(&self, my_index: FunctionHandleIndex) -> Vec<FunctionHandleIndex> {
+        // We want the set of function handles that don't lead to a recursive call-graph
+        (0..self.max_function_handle_index)
+            .filter(|index| {
+                self.call_depth(my_index, FunctionHandleIndex(*index as TableIndex))
+                    .is_some()
+            })
+            .map(|i| FunctionHandleIndex(i as TableIndex))
+            .collect()
+    }
+
+    pub fn max_calling_depth(&self, index: FunctionHandleIndex) -> usize {
+        let mut instantiation_depth = 0;
+        for (caller, callees) in self.calls.iter() {
+            for callee in callees.iter() {
+                if *callee == index {
+                    let depth = self.max_calling_depth(*caller) + 1;
+                    instantiation_depth = std::cmp::max(depth, instantiation_depth);
+                }
+            }
+        }
+        instantiation_depth
+    }
+
+    /// None if recursive, Some(index) if non-recursive, and index is the length of the maximal call
+    /// graph path originating at caller, and calling through callee.
+    pub fn call_depth(
+        &self,
+        caller: FunctionHandleIndex,
+        callee: FunctionHandleIndex,
+    ) -> Option<usize> {
+        if caller == callee {
+            return None;
+        }
+        match self.calls.get(&callee) {
+            None => Some(1),
+            Some(callee_callees) => {
+                if callee_callees.contains(&caller) {
+                    return None;
+                }
+                let call_depths = callee_callees
+                    .iter()
+                    .filter_map(|callee_callee| self.call_depth(caller, *callee_callee))
+                    .collect::<Vec<_>>();
+                if call_depths.len() < callee_callees.len() {
+                    // We found a recursive call
+                    None
+                } else {
+                    let max = call_depths.iter().max().unwrap();
+                    Some(max + 1)
+                }
+            }
         }
     }
 }
@@ -217,6 +297,8 @@ pub struct AbstractState {
     /// This graph stores borrow information needed to ensure that bytecode instructions
     /// are memory safe
     borrow_graph: BorrowGraph,
+
+    pub call_graph: CallGraph,
 }
 
 impl AbstractState {
@@ -236,6 +318,7 @@ impl AbstractState {
             aborted: false,
             control_flow_allowed: false,
             borrow_graph: BorrowGraph::new(0),
+            call_graph: CallGraph::new(0),
         }
     }
 
@@ -246,6 +329,7 @@ impl AbstractState {
         locals: HashMap<usize, (AbstractValue, BorrowState)>,
         instantiation: Vec<Kind>,
         acquires_global_resources: Vec<StructDefinitionIndex>,
+        call_graph: CallGraph,
     ) -> AbstractState {
         let locals_len = locals.len();
         let module = InstantiableModule::new(
@@ -263,6 +347,7 @@ impl AbstractState {
             aborted: false,
             control_flow_allowed: false,
             borrow_graph: BorrowGraph::new(locals_len as u8),
+            call_graph,
         }
     }
 
@@ -463,11 +548,6 @@ impl AbstractState {
     /// The final state is one where the stack is empty
     pub fn is_final(&self) -> bool {
         self.stack.is_empty()
-    }
-
-    /// Returns the underlying module, with all type instantiations applied.
-    pub fn instantiate_module(self) -> CompiledModuleMut {
-        self.module.instantiate()
     }
 }
 
