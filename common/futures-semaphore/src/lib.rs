@@ -18,13 +18,10 @@
 //! could potentially deadlock the futures runtime if enough tasks are waiting on
 //! the semaphore.
 
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll};
-use tokio_sync::semaphore::{AcquireError, Permit as TokioPermit, Semaphore as TokioSemaphore};
+use tokio::sync::Semaphore as TokioSemaphore;
 
-/// The wrapped tokio_sync [`Semaphore`](TokioSemaphore) and total permit capacity.
+/// The wrapped tokio [`Semaphore`](TokioSemaphore) and total permit capacity.
 #[derive(Debug)]
 struct Inner {
     semaphore: TokioSemaphore,
@@ -42,7 +39,6 @@ pub struct Semaphore {
 #[derive(Debug)]
 pub struct Permit {
     inner: Arc<Inner>,
-    permit: TokioPermit,
 }
 
 impl Semaphore {
@@ -72,82 +68,47 @@ impl Semaphore {
         self.available_permits() == 0
     }
 
-    /// Acquire an available permit from the semaphore, blocking until none are
-    /// available.
+    /// Acquire an available permit from the semaphore.
+    ///
+    /// If there are no permits currently available, the future will wait until
+    /// a permit is released back to the semaphore.
     pub async fn acquire(&self) -> Permit {
-        let permit = Permit {
-            inner: Arc::clone(&self.inner),
-            permit: TokioPermit::new(),
-        };
+        // Acquire a permit and then immediately "forget" it (drop it without
+        // returning the permit to the pool of available permits). We will
+        // manually add a new permit when our `Permit` RAII guard is dropped.
+        //
+        // We do this instead of holding tokio's `SemaphorePermit` in the RAII
+        // guard due to lifetime issues--tokio's `SemaphorePermit` needs a
+        // direct reference to the `Semaphore`; however, we want to send our
+        // `Permit` to other tasks or threads, so we need an `Arc` to the
+        // semaphore so the permit doesn't outlive the semaphore.
+        let permit = self.inner.semaphore.acquire().await;
+        permit.forget();
 
-        PermitFuture::new(permit)
-            .await
-            // The TokioSemaphore is not dropped yet and our wrapper never calls
-            // .close(), so the TokioSemaphore can never be closed unless all
-            // references, including this &self, have been dropped.
-            .expect("TokioSemaphore is never closed")
+        Permit {
+            inner: Arc::clone(&self.inner),
+        }
     }
 
     /// Try to acquire an available permit from the semaphore. If no permits are
     /// available, return `None`.
     pub fn try_acquire(&self) -> Option<Permit> {
-        let mut permit = TokioPermit::new();
-        match permit.try_acquire(&self.inner.semaphore) {
-            Ok(()) => Some(Permit {
-                inner: Arc::clone(&self.inner),
-                permit,
-            }),
-            Err(err) => {
-                // The TokioSemaphore is not dropped yet and our wrapper never
-                // calls .close(), so the TokioSemaphore can never be closed
-                // unless all references, including this &self, have been
-                // dropped.
-                assert!(!err.is_closed());
-                assert!(err.is_no_permits());
-                None
+        match self.inner.semaphore.try_acquire() {
+            Ok(permit) => {
+                // See above comment in `Semaphore::acquire`.
+                permit.forget();
+                Some(Permit {
+                    inner: Arc::clone(&self.inner),
+                })
             }
+            Err(_) => None,
         }
-    }
-}
-
-impl Permit {
-    fn release(&mut self) {
-        self.permit.release(&self.inner.semaphore);
     }
 }
 
 impl Drop for Permit {
     fn drop(&mut self) {
-        self.release();
-    }
-}
-
-struct PermitFuture {
-    permit: Option<Permit>,
-}
-
-impl PermitFuture {
-    fn new(permit: Permit) -> Self {
-        Self {
-            permit: Some(permit),
-        }
-    }
-}
-
-impl Future for PermitFuture {
-    type Output = Result<Permit, AcquireError>;
-
-    fn poll(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Self::Output> {
-        let mut permit = self.permit.take().unwrap();
-
-        match permit.permit.poll_acquire(context, &permit.inner.semaphore) {
-            Poll::Ready(Ok(())) => Poll::Ready(Ok(permit)),
-            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
-            Poll::Pending => {
-                self.permit = Some(permit);
-                Poll::Pending
-            }
-        }
+        self.inner.semaphore.add_permits(1);
     }
 }
 
