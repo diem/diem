@@ -4,8 +4,9 @@
 use crate::{
     local_client::LocalClient,
     persistent_storage::PersistentStorage,
+    remote_service::RemoteService,
     serializer::{SerializerClient, SerializerService},
-    thread::ThreadClient,
+    thread::ThreadService,
     InMemoryStorage, OnDiskStorage, SafetyRules, TSafetyRules,
 };
 use consensus_types::common::Payload;
@@ -16,7 +17,7 @@ use std::sync::{Arc, RwLock};
 enum SafetyRulesWrapper<T> {
     Local(Arc<RwLock<SafetyRules<T>>>),
     Serializer(Arc<RwLock<SerializerService<T>>>),
-    Thread(ThreadClient<T>),
+    Thread(ThreadService<T>),
 }
 
 pub struct SafetyRulesManager<T> {
@@ -94,7 +95,7 @@ impl<T: Payload> SafetyRulesManager<T> {
         storage: Box<dyn PersistentStorage>,
         validator_signer: ValidatorSigner,
     ) -> Self {
-        let thread = ThreadClient::<T>::new(storage, validator_signer);
+        let thread = ThreadService::<T>::new(storage, validator_signer);
 
         Self {
             internal_safety_rules: SafetyRulesWrapper::Thread(thread),
