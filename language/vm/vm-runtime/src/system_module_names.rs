@@ -50,7 +50,8 @@ pub static GAS_SCHEDULE_MODULE: Lazy<ModuleId> = Lazy::new(|| {
 });
 
 // Names for special functions and structs
-pub static CREATE_ACCOUNT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("make").unwrap());
+pub static CREATE_ACCOUNT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("create_account").unwrap());
 pub static ACCOUNT_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 pub static EMIT_EVENT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("write_to_event_store").unwrap());

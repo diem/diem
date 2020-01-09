@@ -15,7 +15,6 @@ use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
 use libra_types::vm_error::sub_status;
 use libra_types::{
-    account_address::AccountAddress,
     account_config,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
@@ -139,16 +138,6 @@ impl<'alloc> VMRuntime<'alloc> {
         };
 
         context.publish_module(module_id, module)
-    }
-
-    pub fn create_account(
-        &self,
-        context: &mut dyn InterpreterContext,
-        txn_data: &TransactionMetadata,
-        gas_schedule: &CostTable,
-        addr: AccountAddress,
-    ) -> VMResult<()> {
-        Interpreter::create_account_entry(context, self, txn_data, gas_schedule, addr)
     }
 
     pub fn execute_script(

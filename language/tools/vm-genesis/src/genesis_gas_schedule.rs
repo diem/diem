@@ -13,7 +13,7 @@ use vm::{
     gas_schedule::{CostTable, GasCost, GAS_SCHEDULE_NAME, MAXIMUM_NUMBER_OF_GAS_UNITS},
 };
 use vm_runtime::{
-    chain_state::TransactionExecutionContext, data_cache::RemoteCache, runtime::VMRuntime,
+    chain_state::TransactionExecutionContext, data_cache::RemoteCache, move_vm::MoveVM,
     system_module_names::GAS_SCHEDULE_MODULE,
 };
 use vm_runtime_types::value::Value;
@@ -119,13 +119,13 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
     lcs::to_bytes(&cost_table).expect("Unable to serialize genesis gas schedule for instructions")
 });
 
-pub(crate) fn initial_gas_schedule(runtime: &VMRuntime, data_view: &dyn RemoteCache) -> Value {
-    let struct_def = runtime
+pub(crate) fn initial_gas_schedule(move_vm: &MoveVM, data_view: &dyn RemoteCache) -> Value {
+    let struct_def = move_vm
         .resolve_struct_def_by_name(
             &GAS_SCHEDULE_MODULE,
             &GAS_SCHEDULE_NAME,
             &mut TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, data_view),
         )
-        .unwrap();
+        .expect("GasSchedule Module must exist");
     Value::simple_deserialize(&INITIAL_GAS_SCHEDULE, struct_def).unwrap()
 }
