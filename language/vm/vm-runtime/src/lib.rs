@@ -114,7 +114,6 @@ pub mod foreign_contracts;
 #[macro_use]
 pub mod gas_meter;
 mod libra_vm;
-mod move_vm;
 mod system_txn;
 #[cfg(test)]
 mod unit_tests;
@@ -126,6 +125,7 @@ pub mod execution_context;
 pub mod identifier;
 pub mod interpreter;
 pub mod loaded_data;
+pub mod move_vm;
 pub mod runtime;
 pub mod system_module_names;
 

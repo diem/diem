@@ -12,8 +12,7 @@ use crate::{
     },
     runtime::VMRuntime,
     system_module_names::{
-        ACCOUNT_MODULE, ACCOUNT_STRUCT_NAME, CREATE_ACCOUNT_NAME, EMIT_EVENT_NAME,
-        SAVE_ACCOUNT_NAME,
+        ACCOUNT_MODULE, ACCOUNT_STRUCT_NAME, EMIT_EVENT_NAME, SAVE_ACCOUNT_NAME,
     },
 };
 use libra_logger::prelude::*;
@@ -176,30 +175,6 @@ impl<'txn> Interpreter<'txn> {
         ret
     }
 
-    /// Create an account on the blockchain by calling into `CREATE_ACCOUNT_NAME` function stored
-    /// in the `ACCOUNT_MODULE` on chain.
-    // REVIEW: this should not live here
-    pub(crate) fn create_account_entry(
-        context: &mut dyn InterpreterContext,
-        runtime: &'txn VMRuntime<'_>,
-        txn_data: &'txn TransactionMetadata,
-        gas_schedule: &'txn CostTable,
-        addr: AccountAddress,
-    ) -> VMResult<()> {
-        let account_module = runtime.get_loaded_module(&ACCOUNT_MODULE, context)?;
-        let mut interp = Self::new(txn_data, gas_schedule);
-        interp.execute_function_call(
-            runtime,
-            context,
-            &ACCOUNT_MODULE,
-            &CREATE_ACCOUNT_NAME,
-            vec![Value::address(addr)],
-        )?;
-
-        let account_resource = interp.operand_stack.pop_as::<Struct>()?;
-        interp.save_account(runtime, context, account_module, addr, account_resource)
-    }
-
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
     /// given module cache and gas schedule.
     fn new(txn_data: &'txn TransactionMetadata, gas_schedule: &'txn CostTable) -> Self {
@@ -209,33 +184,6 @@ impl<'txn> Interpreter<'txn> {
             gas_schedule,
             txn_data,
         }
-    }
-
-    /// Execute a function.
-    /// `module` is an identifier for the name the module is stored in. `function_name` is the name
-    /// of the function. If such function is found, the VM will execute this function with arguments
-    /// `args`. The return value will be placed on the top of the value stack and abort if an error
-    /// occurs.
-    // REVIEW: this should probably disappear or at the very least only one between
-    // `execute_function` and `entrypoint` should exist. It's a bit messy at
-    // the moment given tooling and testing. Once we remove Program transactions and we
-    // clean up the loader we will have a better time cleaning this up.
-    fn execute_function_call(
-        &mut self,
-        runtime: &'txn VMRuntime<'_>,
-        context: &mut dyn InterpreterContext,
-        module: &ModuleId,
-        function_name: &IdentStr,
-        args: Vec<Value>,
-    ) -> VMResult<()> {
-        let loaded_module = runtime.get_loaded_module(module, context)?;
-        let func_idx = loaded_module
-            .function_defs_table
-            .get(function_name)
-            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-        let func = FunctionRef::new(loaded_module, *func_idx);
-
-        self.execute(runtime, context, func, args)
     }
 
     /// Internal execution entry point.
