@@ -26,8 +26,7 @@ FROM debian:buster AS prod
 RUN apt-get update && apt-get install gettext-base && apt-get clean && rm -r /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/libra/bin
-COPY --from=builder /libra/target/release/full-node-config-builder /opt/libra/bin
-COPY --from=builder /libra/target/release/validator-config-builder /opt/libra/bin
+COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 
 ARG BUILD_DATE
 ARG GIT_REV
