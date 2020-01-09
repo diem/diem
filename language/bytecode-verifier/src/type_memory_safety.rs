@@ -460,7 +460,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             Err(err_at_offset(StatusCode::COPYLOC_RESOURCE_ERROR, offset))
                         }
                         Kind::Unrestricted => {
-                            if !state.is_local_borrowed(*idx) {
+                            if !state.is_local_mutably_borrowed(*idx) {
                                 self.stack.push(TypedAbstractValue {
                                     signature: signature_view.as_inner().clone(),
                                     value: AbstractValue::Value(Kind::Unrestricted),
