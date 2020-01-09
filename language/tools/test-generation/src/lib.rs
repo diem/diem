@@ -24,7 +24,7 @@ use bytecode_verifier::VerifiedModule;
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use libra_state_view::StateView;
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray, vm_error::StatusCode};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{fs, io::Write, panic};
 use utils::module_generation::{generate_module, ModuleGeneratorOptions};
@@ -50,7 +50,7 @@ fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
 }
 
 /// This function runs a verified module in the VM runtime
-fn run_vm(module: VerifiedModule) -> Result<(), String> {
+fn run_vm(module: VerifiedModule) -> VMResult<()> {
     // By convention the 0'th index function definition is the entrypoint to the module (i.e. that
     // will contain only simply-typed arguments).
     let entry_idx = FunctionDefinitionIndex::new(0);
@@ -73,8 +73,6 @@ fn run_vm(module: VerifiedModule) -> Result<(), String> {
 
     let executor = FakeExecutor::from_genesis_file();
     execute_function_in_module(executor.get_state_view(), module, entry_idx, main_args)
-        .map_err(|err| format!("Runtime error: {:?}", err))?;
-    Ok(())
 }
 
 /// Execute the first function in a module
@@ -161,9 +159,13 @@ pub fn run_generation(args: Args) {
     let mut executed_programs: u64 = 0;
     let mut generation_options = ModuleGeneratorOptions::default();
     generation_options.min_table_size = 10;
-    generation_options.max_ty_params = 5;
-    generation_options.max_functions = 10;
-    generation_options.max_structs = 10;
+    // The more structs, and the larger the number of type parameters the more complex the
+    // functions and bytecode sequences generated. Be careful about setting these parameters too
+    // large -- this can lead to expontial increases in the size and number of struct
+    // instantiations that can be generated.
+    generation_options.max_ty_params = 3;
+    generation_options.max_functions = 5;
+    generation_options.max_structs = 5;
     generation_options.args_for_ty_params = true;
     generation_options.references_allowed = false;
     // Test generation cannot currently cope with resources
@@ -171,9 +173,11 @@ pub fn run_generation(args: Args) {
     let seed = seed(args.seed);
     let mut rng = StdRng::from_seed(seed);
     for i in 0..iterations {
+        debug!("Generating module");
         let mut module = generate_module(&mut rng, generation_options.clone()).into_inner();
+        debug!("Generated...generating bytecode");
         module = BytecodeGenerator::new(&mut rng).generate_module(module);
-        debug!("Running on verifier...");
+        debug!("Done...Running on verifier...");
         let module = module.freeze().expect("generated module failed to freeze.");
         let verified_module = match run_verifier(module.clone()) {
             Ok(verified_module) => {
@@ -206,12 +210,13 @@ pub fn run_generation(args: Args) {
                                 verify!(executed_programs < u64::max_value());
                                 executed_programs += 1
                             }
-                            Err(e) => {
-                                // TODO: Uncomment this to allow saving of modules that fail
-                                // the VM runtime.
-                                // output_error_case(module.clone(), args.output_path.clone(), i);
-                                error!("{}", e)
-                            }
+                            Err(e) => match e.major_status {
+                                StatusCode::ARITHMETIC_ERROR | StatusCode::OUT_OF_GAS => (),
+                                _ => {
+                                    error!("{}", e);
+                                    output_error_case(module.clone(), args.output_path.clone(), i);
+                                }
+                            },
                         }
                     }
                     Err(_) => {

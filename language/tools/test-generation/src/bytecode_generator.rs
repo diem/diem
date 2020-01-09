@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    abstract_state::{AbstractState, BorrowState, InstantiableModule},
-    config::{MAX_CFG_BLOCKS, MUTATION_TOLERANCE, NEGATE_PRECONDITIONS, NEGATION_PROBABILITY},
+    abstract_state::{AbstractState, BorrowState, CallGraph, InstantiableModule},
+    config::{
+        CALL_STACK_LIMIT, MAX_CFG_BLOCKS, MUTATION_TOLERANCE, NEGATE_PRECONDITIONS,
+        NEGATION_PROBABILITY, VALUE_STACK_LIMIT,
+    },
     control_flow_graph::CFG,
     summaries,
 };
@@ -95,6 +98,28 @@ enum StackEffect {
 
     /// Represents no change in stack size
     Nop,
+}
+
+/// Context containing information about a function
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct FunctionGenerationContext {
+    pub function_handle_index: FunctionHandleIndex,
+    pub starting_call_height: usize,
+    pub locals_len: usize,
+}
+
+impl FunctionGenerationContext {
+    pub fn new(
+        function_handle_index: FunctionHandleIndex,
+        starting_call_height: usize,
+        locals_len: usize,
+    ) -> Self {
+        Self {
+            function_handle_index,
+            starting_call_height,
+            locals_len,
+        }
+    }
 }
 
 /// Generates a sequence of bytecode instructions.
@@ -246,13 +271,48 @@ impl<'a> BytecodeGenerator<'a> {
         }
     }
 
+    // Soft cutoff: We starting making it less likely for the stack size to be increased once it
+    // becomes greater than VALUE_STACK_LIMIT - 24. Once we reach the stack limit then we have a
+    // hard cutoff.
+    fn value_backpressure(state: &AbstractState, probability: f32) -> f32 {
+        let len = state.stack_len();
+
+        if len <= VALUE_STACK_LIMIT - 24 {
+            return probability;
+        }
+
+        if len > VALUE_STACK_LIMIT - 24 {
+            return probability * 0.5;
+        }
+
+        0.0
+    }
+
+    // Tight cutoff: calls can be generated as long as it's less than the max call stack height. If
+    // the call would cause the call stack to overflow then it can't be generated.
+    fn call_stack_backpressure(
+        state: &AbstractState,
+        fn_context: &FunctionGenerationContext,
+        call: FunctionHandleIndex,
+    ) -> Option<FunctionHandleIndex> {
+        if let Some(call_size) = state
+            .call_graph
+            .call_depth(fn_context.function_handle_index, call)
+        {
+            if call_size + fn_context.starting_call_height <= CALL_STACK_LIMIT {
+                return Some(call);
+            }
+        }
+        None
+    }
+
     /// Given an `AbstractState`, `state`, and a the number of locals the function has,
     /// this function returns a list of instructions whose preconditions are satisfied for
     /// the state.
     fn candidate_instructions(
         &mut self,
+        fn_context: &FunctionGenerationContext,
         state: AbstractState,
-        locals_len: usize,
         module: CompiledModuleMut,
     ) -> Vec<(StackEffect, Bytecode)> {
         let mut matches: Vec<(StackEffect, Bytecode)> = Vec::new();
@@ -262,8 +322,10 @@ impl<'a> BytecodeGenerator<'a> {
                 BytecodeType::NoArg(instruction) => Some(instruction.clone()),
                 BytecodeType::LocalIndex(instruction) => {
                     // Generate a random index into the locals
-                    if locals_len > 0 {
-                        Some(instruction(self.rng.gen_range(0, locals_len) as LocalIndex))
+                    if fn_context.locals_len > 0 {
+                        Some(instruction(
+                            self.rng.gen_range(0, fn_context.locals_len) as LocalIndex
+                        ))
                     } else {
                         None
                     }
@@ -311,13 +373,22 @@ impl<'a> BytecodeGenerator<'a> {
                 }
                 BytecodeType::FunctionAndLocalIndex(instruction) => {
                     // Select a random function handle and local signature
-                    Self::index_or_none(&module.function_handles, &mut self.rng).map(|x| {
-                        instruction(
-                            FunctionHandleIndex::new(x),
-                            // Set 0 as the signature index. This index will be filled in/changed later
-                            LocalsSignatureIndex::new(0),
-                        )
-                    })
+                    let callable_fns = &state.call_graph.can_call(fn_context.function_handle_index);
+                    Self::index_or_none(callable_fns, &mut self.rng)
+                        .and_then(|handle_idx| {
+                            Self::call_stack_backpressure(
+                                &state,
+                                fn_context,
+                                callable_fns[handle_idx as usize],
+                            )
+                        })
+                        .map(|handle| {
+                            instruction(
+                                handle,
+                                // Set 0 as the signature index. This index will be filled in/changed later
+                                LocalsSignatureIndex::new(0),
+                            )
+                        })
                 }
             };
             if let Some(instruction) = instruction {
@@ -358,6 +429,7 @@ impl<'a> BytecodeGenerator<'a> {
         } else {
             1.0
         };
+        let prob_add = Self::value_backpressure(&state, prob_add);
         debug!("Pr[add] = {:?}", prob_add);
         let next_instruction_index;
         if self.rng.gen_range(0.0, 1.0) <= prob_add {
@@ -440,6 +512,7 @@ impl<'a> BytecodeGenerator<'a> {
     /// to the bytecode sequence
     pub fn apply_instruction(
         &self,
+        fn_context: &FunctionGenerationContext,
         mut state: AbstractState,
         bytecode: &mut Vec<Bytecode>,
         instruction: Bytecode,
@@ -455,6 +528,11 @@ impl<'a> BytecodeGenerator<'a> {
         let instruction = step.1;
         debug!("Affected: {}", state);
         debug!("Actual instr: {:?}", instruction);
+        if let Bytecode::Call(index, _) = instruction {
+            state
+                .call_graph
+                .add_call(fn_context.function_handle_index, index);
+        }
         bytecode.push(instruction);
         debug!("**********************\n");
         state
@@ -464,6 +542,7 @@ impl<'a> BytecodeGenerator<'a> {
     /// bytecode instructions such that `abstract_state_out` is reached.
     pub fn generate_block(
         &mut self,
+        fn_context: &FunctionGenerationContext,
         abstract_state_in: AbstractState,
         abstract_state_out: AbstractState,
         module: &CompiledModuleMut,
@@ -474,24 +553,37 @@ impl<'a> BytecodeGenerator<'a> {
         let mut state = abstract_state_in.clone();
         // Generate block body
         loop {
-            let candidates = self.candidate_instructions(
-                state.clone(),
-                abstract_state_in.get_locals().len(),
-                module.clone(),
-            );
+            let candidates = self.candidate_instructions(fn_context, state.clone(), module.clone());
             if candidates.is_empty() {
                 warn!("No candidates found for state: [{:?}]", state);
                 break;
             }
             match self.select_candidate(0, &state, &candidates) {
                 Ok(next_instruction) => {
-                    state = self.apply_instruction(state, &mut bytecode, next_instruction, false);
+                    state = self.apply_instruction(
+                        fn_context,
+                        state,
+                        &mut bytecode,
+                        next_instruction,
+                        false,
+                    );
                     if state.is_final() {
                         break;
                     } else if state.has_aborted() {
-                        state =
-                            self.apply_instruction(state, &mut bytecode, Bytecode::LdU64(0), true);
-                        state = self.apply_instruction(state, &mut bytecode, Bytecode::Abort, true);
+                        state = self.apply_instruction(
+                            fn_context,
+                            state,
+                            &mut bytecode,
+                            Bytecode::LdU64(0),
+                            true,
+                        );
+                        state = self.apply_instruction(
+                            fn_context,
+                            state,
+                            &mut bytecode,
+                            Bytecode::Abort,
+                            true,
+                        );
                         return (bytecode, state);
                     }
                 }
@@ -517,9 +609,16 @@ impl<'a> BytecodeGenerator<'a> {
                     state = next_instructions
                         .into_iter()
                         .fold(state, |state, instruction| {
-                            self.apply_instruction(state, &mut bytecode, instruction, true)
+                            self.apply_instruction(
+                                fn_context,
+                                state,
+                                &mut bytecode,
+                                instruction,
+                                true,
+                            )
                         });
                     state = self.apply_instruction(
+                        fn_context,
                         state,
                         &mut bytecode,
                         Bytecode::StLoc(*i as u8),
@@ -529,12 +628,19 @@ impl<'a> BytecodeGenerator<'a> {
                     && *current_availability == BorrowState::Available
                 {
                     state = self.apply_instruction(
+                        fn_context,
                         state,
                         &mut bytecode,
                         Bytecode::MoveLoc(*i as u8),
                         true,
                     );
-                    state = self.apply_instruction(state, &mut bytecode, Bytecode::Pop, true);
+                    state = self.apply_instruction(
+                        fn_context,
+                        state,
+                        &mut bytecode,
+                        Bytecode::Pop,
+                        true,
+                    );
                 }
             } else {
                 unreachable!("Target locals out contains new local");
@@ -549,10 +655,12 @@ impl<'a> BytecodeGenerator<'a> {
     /// `target_max` instructions.
     pub fn generate(
         &mut self,
+        fn_context: &FunctionGenerationContext,
         locals: &[SignatureToken],
         signature: &FunctionSignature,
         acquires_global_resources: &[StructDefinitionIndex],
         module: &mut CompiledModuleMut,
+        call_graph: &mut CallGraph,
     ) -> Vec<Bytecode> {
         let number_of_blocks = self.rng.gen_range(1, MAX_CFG_BLOCKS + 1);
         // The number of basic blocks must be at least one based on the
@@ -570,28 +678,54 @@ impl<'a> BytecodeGenerator<'a> {
                 block.get_locals_in().clone(),
                 signature.type_formals.clone(),
                 acquires_global_resources.to_vec(),
+                call_graph.clone(),
             );
             let state2 = AbstractState::from_locals(
                 module.clone(),
                 block.get_locals_out().clone(),
                 signature.type_formals.clone(),
                 acquires_global_resources.to_vec(),
+                call_graph.clone(),
             );
-            let (mut bytecode, mut state_f) = self.generate_block(state1, state2.clone(), module);
+            let (mut bytecode, mut state_f) =
+                self.generate_block(fn_context, state1, state2.clone(), module);
             state_f.allow_control_flow();
             if !state_f.has_aborted() {
                 state_f = if cfg_copy.num_children(*block_id) == 2 {
                     // BrTrue, BrFalse: Add bool and branching instruction randomly
-                    state_f =
-                        self.apply_instruction(state_f, &mut bytecode, Bytecode::LdFalse, true);
+                    state_f = self.apply_instruction(
+                        fn_context,
+                        state_f,
+                        &mut bytecode,
+                        Bytecode::LdFalse,
+                        true,
+                    );
                     if self.rng.gen_bool(0.5) {
-                        self.apply_instruction(state_f, &mut bytecode, Bytecode::BrTrue(0), true)
+                        self.apply_instruction(
+                            fn_context,
+                            state_f,
+                            &mut bytecode,
+                            Bytecode::BrTrue(0),
+                            true,
+                        )
                     } else {
-                        self.apply_instruction(state_f, &mut bytecode, Bytecode::BrFalse(0), true)
+                        self.apply_instruction(
+                            fn_context,
+                            state_f,
+                            &mut bytecode,
+                            Bytecode::BrFalse(0),
+                            true,
+                        )
                     }
                 } else if cfg_copy.num_children(*block_id) == 1 {
                     // Branch: Add branch instruction
-                    self.apply_instruction(state_f, &mut bytecode, Bytecode::Branch(0), true)
+                    self.apply_instruction(
+                        fn_context,
+                        state_f,
+                        &mut bytecode,
+                        Bytecode::Branch(0),
+                        true,
+                    )
                 } else if cfg_copy.num_children(*block_id) == 0 {
                     // Return: Add return types to last block
                     for token_type in signature.return_types.iter() {
@@ -606,6 +740,7 @@ impl<'a> BytecodeGenerator<'a> {
                                 .into_iter()
                                 .fold(state_f, |state_f, instruction| {
                                     self.apply_instruction(
+                                        fn_context,
                                         state_f,
                                         &mut bytecode,
                                         instruction,
@@ -613,13 +748,14 @@ impl<'a> BytecodeGenerator<'a> {
                                     )
                                 });
                     }
-                    self.apply_instruction(state_f, &mut bytecode, Bytecode::Ret, true)
+                    self.apply_instruction(fn_context, state_f, &mut bytecode, Bytecode::Ret, true)
                 } else {
                     state_f
                 };
             }
             block.set_instructions(bytecode);
-            *module = state_f.instantiate_module();
+            *module = state_f.module.instantiate();
+            *call_graph = state_f.call_graph;
         }
         // The CFG will be non-empty if we set the number of basic blocks to generate
         // to be non-zero
@@ -629,17 +765,25 @@ impl<'a> BytecodeGenerator<'a> {
 
     pub fn generate_module(&mut self, mut module: CompiledModuleMut) -> CompiledModuleMut {
         let mut fdefs = module.function_defs.clone();
+        let mut call_graph = CallGraph::new(module.function_handles.len());
         for fdef in fdefs.iter_mut() {
             let f_handle = &module.function_handles[fdef.function.0 as usize].clone();
             let func_sig = module.function_signatures[f_handle.signature.0 as usize].clone();
             let locals_sigs = module.locals_signatures[fdef.code.locals.0 as usize]
                 .0
                 .clone();
+            let fn_context = FunctionGenerationContext::new(
+                fdef.function,
+                call_graph.max_calling_depth(fdef.function),
+                locals_sigs.len(),
+            );
             fdef.code.code = self.generate(
+                &fn_context,
                 &locals_sigs,
                 &func_sig,
                 &fdef.acquires_global_resources,
                 &mut module,
+                &mut call_graph,
             );
         }
         module.function_defs = fdefs;
