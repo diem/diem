@@ -22,7 +22,7 @@ prost = "0.5.0"
 prometheus = { version = "0.7.0", default-features = false }
 rand = "0.6.5"
 thiserror = "1.0"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "0.2.8", features = ["full"] }
 tokio-util = { version = "0.2", features = ["codec"] }
 tokio-retry = "0.2.0"
 

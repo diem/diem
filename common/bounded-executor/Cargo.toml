@@ -12,4 +12,4 @@ edition = "2018"
 [dependencies]
 futures-semaphore = { path = "../futures-semaphore", version = "0.1.0" }
 futures = "0.3.0"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "0.2.8", features = ["full"] }
