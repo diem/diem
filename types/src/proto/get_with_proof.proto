@@ -150,6 +150,7 @@ message RequestItem {
         GetEventsByEventAccessPathRequest get_events_by_event_access_path_request =
         3;
         GetTransactionsRequest get_transactions_request = 4;
+        GetAccountStateByVersionRequest get_account_state_by_version_request = 20;
     }
 }
 
@@ -197,6 +198,13 @@ message ResponseItem {
 message GetAccountStateRequest {
     // Account for which we are fetching the state.
     bytes address = 1;
+}
+
+// Gets latest state for an account.
+message GetAccountStateByVersionRequest {
+    // Account for which we are fetching the state.
+    bytes address = 1;
+    uint64 version = 2;
 }
 
 // State information returned by a get account state query.

@@ -12,7 +12,7 @@ use crate::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::AccumulatorConsistencyProof,
     proto::types::{
-        GetAccountStateRequest, GetAccountStateResponse,
+        GetAccountStateByVersionRequest, GetAccountStateRequest, GetAccountStateResponse,
         GetAccountTransactionBySequenceNumberRequest,
         GetAccountTransactionBySequenceNumberResponse, GetEventsByEventAccessPathRequest,
         GetEventsByEventAccessPathResponse, GetTransactionsRequest, GetTransactionsResponse,
@@ -453,6 +453,10 @@ pub enum RequestItem {
         limit: u64,
         fetch_events: bool,
     },
+    GetAccountStateByVersion {
+        address: AccountAddress,
+        version: u64,
+    },
 }
 
 impl TryFrom<crate::proto::types::RequestItem> for RequestItem {
@@ -508,6 +512,11 @@ impl TryFrom<crate::proto::types::RequestItem> for RequestItem {
                     fetch_events,
                 }
             }
+            GetAccountStateByVersionRequest(request) => {
+                let address = AccountAddress::try_from(request.address)?;
+                let version = request.version;
+                RequestItem::GetAccountStateByVersion { address, version }
+            }
         };
 
         Ok(request)
@@ -557,6 +566,12 @@ impl From<RequestItem> for crate::proto::types::RequestItem {
                 limit,
                 fetch_events,
             }),
+            RequestItem::GetAccountStateByVersion { address, version } => {
+                RequestedItems::GetAccountStateByVersionRequest(GetAccountStateByVersionRequest {
+                    address: address.into(),
+                    version,
+                })
+            }
         };
 
         Self {

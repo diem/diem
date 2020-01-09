@@ -266,6 +266,9 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
 
                 response_item.response_items = Some(ResponseItems::GetTransactionsResponse(resp));
             }
+            RequestedItems::GetAccountStateByVersionRequest(_request) => {
+                unimplemented!();
+            }
         }
     }
     Ok(response_item)
