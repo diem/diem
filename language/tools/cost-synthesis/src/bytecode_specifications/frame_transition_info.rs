@@ -23,13 +23,18 @@ pub(crate) fn frame_transitions<'txn>(
     instr: &Bytecode,
     module_info: (&'txn LoadedModule, Option<FunctionDefinitionIndex>),
 ) {
-    while interpreter.call_stack_height() > 1 {
+    // Every time we execute a bytecode instruction, we need to clear the old frames and push a
+    // new one. If we reuse a frame from one call into the interpreter to another, we will fail
+    // to execute the instruction -- the instruction sequence will have length 1 but the pc in
+    // the frame will be greater than that.
+    while interpreter.call_stack_height() > 0 {
         interpreter.pop_call();
     }
-
     let module = module_info.0;
+    let empty_frame = FunctionRef::new(module, FunctionDefinitionIndex::new(0));
+    interpreter.push_frame(empty_frame.clone(), vec![]);
+
     if should_push_frame(instr) {
-        let empty_frame = FunctionRef::new(module, FunctionDefinitionIndex::new(0));
         // We push a frame here since it won't pop anything off of the value stack.
         interpreter.push_frame(empty_frame, vec![]);
     }

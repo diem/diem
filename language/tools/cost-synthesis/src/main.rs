@@ -149,12 +149,7 @@ fn stack_instructions(options: &Opt) {
         BrTrue(0),
         Branch(0),
         Pop,
-        GetTxnGasUnitPrice,
-        GetTxnMaxGasUnits,
-        GetGasRemaining,
         GetTxnSenderAddress,
-        GetTxnSequenceNumber,
-        GetTxnPublicKey,
     ];
 
     let mut account = Account::new();

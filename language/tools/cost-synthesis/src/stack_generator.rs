@@ -193,8 +193,10 @@ where
     }
 
     // TODO: merge the following three.
-    fn next_u8(&mut self, stk: &[Value]) -> u8 {
-        if self.op == Bytecode::Sub && !stk.is_empty() {
+    fn next_u8(&mut self, stk: &[Value], is_padding: bool) -> u8 {
+        if (self.op == Bytecode::Shl || self.op == Bytecode::Shr) && !is_padding {
+            self.gen.gen_range(1, 8u8)
+        } else if self.op == Bytecode::Sub && !stk.is_empty() && !is_padding {
             let peek: VMResult<u8> = stk
                 .last()
                 .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
@@ -205,12 +207,14 @@ where
                 peek.expect("[Next Integer] Unable to cast peeked stack value to a u8."),
             )
         } else {
-            self.gen.gen_range(0, u8::max_value())
+            self.gen.gen_range(1, 16u8)
         }
     }
 
-    fn next_u64(&mut self, stk: &[Value]) -> u64 {
-        if self.op == Bytecode::Sub && !stk.is_empty() {
+    fn next_u64(&mut self, stk: &[Value], is_padding: bool) -> u64 {
+        if (self.op == Bytecode::Shl || self.op == Bytecode::Shr) && !is_padding {
+            self.gen.gen_range(1, 8u64)
+        } else if self.op == Bytecode::Sub && !stk.is_empty() && !is_padding {
             let peek: VMResult<u64> = stk
                 .last()
                 .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
@@ -221,12 +225,14 @@ where
                 peek.expect("[Next Integer] Unable to cast peeked stack value to a u64."),
             )
         } else {
-            u64::from(self.gen.gen_range(0, u32::max_value()))
+            u64::from(self.gen.gen_range(1, u32::max_value()))
         }
     }
 
-    fn next_u128(&mut self, stk: &[Value]) -> u128 {
-        if self.op == Bytecode::Sub && !stk.is_empty() {
+    fn next_u128(&mut self, stk: &[Value], is_padding: bool) -> u128 {
+        if (self.op == Bytecode::Shl || self.op == Bytecode::Shr) && !is_padding {
+            self.gen.gen_range(1, 8u128)
+        } else if self.op == Bytecode::Sub && !stk.is_empty() && !is_padding {
             let peek: VMResult<u128> = stk
                 .last()
                 .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
@@ -237,7 +243,7 @@ where
                 peek.expect("[Next Integer] Unable to cast peeked stack value to a u128."),
             )
         } else {
-            u128::from(self.gen.gen_range(0, u32::max_value()))
+            u128::from(self.gen.gen_range(1, u64::max_value()))
         }
     }
 
@@ -312,9 +318,9 @@ where
 
     fn next_stack_value(&mut self, stk: &[Value], is_padding: bool) -> Value {
         match self.gen.gen_range(0, 6) {
-            0 => Value::u8(self.next_u8(stk)),
-            1 => Value::u64(self.next_u64(stk)),
-            2 => Value::u128(self.next_u128(stk)),
+            0 => Value::u8(self.next_u8(stk, is_padding)),
+            1 => Value::u64(self.next_u64(stk, is_padding)),
+            2 => Value::u128(self.next_u128(stk, is_padding)),
             3 => Value::bool(self.next_bool()),
             4 => Value::byte_array(self.next_bytearray()),
             _ => Value::address(self.next_addr(is_padding)),
@@ -380,15 +386,15 @@ where
                 (Branch(index as CodeOffset), 1)
             }
             LdU8(_) => {
-                let i = self.next_u8(&[]);
+                let i = self.next_u8(&[], false);
                 (LdU8(i), 1)
             }
             LdU64(_) => {
-                let i = self.next_u64(&[]);
+                let i = self.next_u64(&[], false);
                 (LdU64(i), 1)
             }
             LdU128(_) => {
-                let i = self.next_u128(&[]);
+                let i = self.next_u128(&[], false);
                 (LdU128(i), 1)
             }
             LdByteArray(_) => {
@@ -493,9 +499,9 @@ where
     fn resolve_to_value(&mut self, sig_token: &SignatureToken, stk: &[Value]) -> Value {
         match sig_token {
             SignatureToken::Bool => Value::bool(self.next_bool()),
-            SignatureToken::U8 => Value::u8(self.next_u8(stk)),
-            SignatureToken::U64 => Value::u64(self.next_u64(stk)),
-            SignatureToken::U128 => Value::u128(self.next_u128(stk)),
+            SignatureToken::U8 => Value::u8(self.next_u8(stk, false)),
+            SignatureToken::U64 => Value::u64(self.next_u64(stk, false)),
+            SignatureToken::U128 => Value::u128(self.next_u128(stk, false)),
             SignatureToken::Address => Value::address(self.next_addr(false)),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.resolve_to_value(sig, stk);
