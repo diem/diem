@@ -211,12 +211,19 @@ impl AbstractState {
         !self.borrow_graph.all_borrows(nonce).is_empty()
     }
 
+    fn local_borrows(&self, idx: LocalIndex) -> BTreeSet<Nonce> {
+        self.borrow_graph
+            .consistent_borrows(self.frame_root(), LabelElem::Local(idx))
+    }
+
     /// checks if a local is borrowed
     pub fn is_local_borrowed(&self, idx: LocalIndex) -> bool {
-        !self
-            .borrow_graph
-            .consistent_borrows(self.frame_root(), LabelElem::Local(idx))
-            .is_empty()
+        !self.local_borrows(idx).is_empty()
+    }
+
+    /// checks if a local is mutably borrowed
+    pub fn is_local_mutably_borrowed(&self, idx: LocalIndex) -> bool {
+        !self.all_nonces_immutable(self.local_borrows(idx))
     }
 
     /// checks if a global is borrowed

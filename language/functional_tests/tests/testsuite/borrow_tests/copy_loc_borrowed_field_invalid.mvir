@@ -1,0 +1,15 @@
+module Tester {
+    struct T { f: u64 }
+
+    t() {
+        let x: Self.T;
+        let r1: &mut u64;
+
+        x = T { f: 0 };
+        r1 = &mut (&mut x).f;
+        _ = copy(x);
+        return;
+    }
+}
+
+// check: COPYLOC_EXISTS_BORROW_ERROR
