@@ -4,13 +4,14 @@
 use crate::{
     abstract_state::{AbstractState, BorrowState, CallGraph, InstantiableModule},
     config::{
-        CALL_STACK_LIMIT, MAX_CFG_BLOCKS, MUTATION_TOLERANCE, NEGATE_PRECONDITIONS,
-        NEGATION_PROBABILITY, VALUE_STACK_LIMIT,
+        CALL_STACK_LIMIT, INHABITATION_INSTRUCTION_LIMIT, MAX_CFG_BLOCKS, MUTATION_TOLERANCE,
+        NEGATE_PRECONDITIONS, NEGATION_PROBABILITY, VALUE_STACK_LIMIT,
     },
     control_flow_graph::CFG,
     summaries,
 };
 use rand::{rngs::StdRng, Rng};
+use slog_scope::{debug, error, warn};
 use vm::access::ModuleAccess;
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
@@ -106,6 +107,7 @@ pub struct FunctionGenerationContext {
     pub function_handle_index: FunctionHandleIndex,
     pub starting_call_height: usize,
     pub locals_len: usize,
+    pub bytecode_len: u64,
 }
 
 impl FunctionGenerationContext {
@@ -113,12 +115,22 @@ impl FunctionGenerationContext {
         function_handle_index: FunctionHandleIndex,
         starting_call_height: usize,
         locals_len: usize,
+        bytecode_len: u64,
     ) -> Self {
         Self {
             function_handle_index,
             starting_call_height,
             locals_len,
+            bytecode_len,
         }
+    }
+
+    pub fn incr_instruction_count(&mut self) -> Option<()> {
+        self.bytecode_len += 1;
+        if self.bytecode_len >= (u16::max_value() - 1) as u64 {
+            return None;
+        }
+        Some(())
     }
 }
 
@@ -512,12 +524,12 @@ impl<'a> BytecodeGenerator<'a> {
     /// to the bytecode sequence
     pub fn apply_instruction(
         &self,
-        fn_context: &FunctionGenerationContext,
+        fn_context: &mut FunctionGenerationContext,
         mut state: AbstractState,
         bytecode: &mut Vec<Bytecode>,
         instruction: Bytecode,
         exact: bool,
-    ) -> AbstractState {
+    ) -> Option<AbstractState> {
         // Bytecode will never be generated this large
         assume!(bytecode.len() < usize::max_value());
         debug!("**********************");
@@ -534,19 +546,20 @@ impl<'a> BytecodeGenerator<'a> {
                 .add_call(fn_context.function_handle_index, index);
         }
         bytecode.push(instruction);
+        fn_context.incr_instruction_count()?;
         debug!("**********************\n");
-        state
+        Some(state)
     }
 
     /// Given a valid starting state `abstract_state_in`, generate a valid sequence of
     /// bytecode instructions such that `abstract_state_out` is reached.
     pub fn generate_block(
         &mut self,
-        fn_context: &FunctionGenerationContext,
+        fn_context: &mut FunctionGenerationContext,
         abstract_state_in: AbstractState,
         abstract_state_out: AbstractState,
         module: &CompiledModuleMut,
-    ) -> (Vec<Bytecode>, AbstractState) {
+    ) -> Option<(Vec<Bytecode>, AbstractState)> {
         debug!("Abstract state in: {}", abstract_state_in.clone());
         debug!("Abstract state out: {}", abstract_state_out.clone());
         let mut bytecode: Vec<Bytecode> = Vec::new();
@@ -566,7 +579,7 @@ impl<'a> BytecodeGenerator<'a> {
                         &mut bytecode,
                         next_instruction,
                         false,
-                    );
+                    )?;
                     if state.is_final() {
                         break;
                     } else if state.has_aborted() {
@@ -576,21 +589,21 @@ impl<'a> BytecodeGenerator<'a> {
                             &mut bytecode,
                             Bytecode::LdU64(0),
                             true,
-                        );
+                        )?;
                         state = self.apply_instruction(
                             fn_context,
                             state,
                             &mut bytecode,
                             Bytecode::Abort,
                             true,
-                        );
-                        return (bytecode, state);
+                        )?;
+                        return Some((bytecode, state));
                     }
                 }
                 Err(err) => {
                     // Could not complete the bytecode sequence; reset to empty
                     error!("{}", err);
-                    return (Vec::new(), abstract_state_in);
+                    return Some((Vec::new(), abstract_state_in));
                 }
             }
         }
@@ -606,24 +619,30 @@ impl<'a> BytecodeGenerator<'a> {
                         "local availability instructions: {:#?} for token {:#?}",
                         next_instructions, &abstract_value.token
                     );
-                    state = next_instructions
-                        .into_iter()
-                        .fold(state, |state, instruction| {
-                            self.apply_instruction(
-                                fn_context,
-                                state,
-                                &mut bytecode,
-                                instruction,
-                                true,
-                            )
-                        });
+                    if next_instructions.len() >= INHABITATION_INSTRUCTION_LIMIT {
+                        return None;
+                    }
+                    state =
+                        next_instructions
+                            .into_iter()
+                            .fold(Some(state), |state, instruction| {
+                                state.and_then(|state| {
+                                    self.apply_instruction(
+                                        fn_context,
+                                        state,
+                                        &mut bytecode,
+                                        instruction,
+                                        true,
+                                    )
+                                })
+                            })?;
                     state = self.apply_instruction(
                         fn_context,
                         state,
                         &mut bytecode,
                         Bytecode::StLoc(*i as u8),
                         true,
-                    );
+                    )?;
                 } else if *target_availability == BorrowState::Unavailable
                     && *current_availability == BorrowState::Available
                 {
@@ -633,21 +652,21 @@ impl<'a> BytecodeGenerator<'a> {
                         &mut bytecode,
                         Bytecode::MoveLoc(*i as u8),
                         true,
-                    );
+                    )?;
                     state = self.apply_instruction(
                         fn_context,
                         state,
                         &mut bytecode,
                         Bytecode::Pop,
                         true,
-                    );
+                    )?;
                 }
             } else {
                 unreachable!("Target locals out contains new local");
             }
         }
         // Update the module to be the module that we've been building in our abstract state
-        (bytecode, state)
+        Some((bytecode, state))
     }
 
     /// Generate the body of a function definition given a set of starting `locals` and a target
@@ -655,13 +674,13 @@ impl<'a> BytecodeGenerator<'a> {
     /// `target_max` instructions.
     pub fn generate(
         &mut self,
-        fn_context: &FunctionGenerationContext,
+        fn_context: &mut FunctionGenerationContext,
         locals: &[SignatureToken],
         signature: &FunctionSignature,
         acquires_global_resources: &[StructDefinitionIndex],
         module: &mut CompiledModuleMut,
         call_graph: &mut CallGraph,
-    ) -> Vec<Bytecode> {
+    ) -> Option<Vec<Bytecode>> {
         let number_of_blocks = self.rng.gen_range(1, MAX_CFG_BLOCKS + 1);
         // The number of basic blocks must be at least one based on the
         // generation range.
@@ -688,7 +707,7 @@ impl<'a> BytecodeGenerator<'a> {
                 call_graph.clone(),
             );
             let (mut bytecode, mut state_f) =
-                self.generate_block(fn_context, state1, state2.clone(), module);
+                self.generate_block(fn_context, state1, state2.clone(), module)?;
             state_f.allow_control_flow();
             if !state_f.has_aborted() {
                 state_f = if cfg_copy.num_children(*block_id) == 2 {
@@ -699,7 +718,7 @@ impl<'a> BytecodeGenerator<'a> {
                         &mut bytecode,
                         Bytecode::LdFalse,
                         true,
-                    );
+                    )?;
                     if self.rng.gen_bool(0.5) {
                         self.apply_instruction(
                             fn_context,
@@ -707,7 +726,7 @@ impl<'a> BytecodeGenerator<'a> {
                             &mut bytecode,
                             Bytecode::BrTrue(0),
                             true,
-                        )
+                        )?
                     } else {
                         self.apply_instruction(
                             fn_context,
@@ -715,7 +734,7 @@ impl<'a> BytecodeGenerator<'a> {
                             &mut bytecode,
                             Bytecode::BrFalse(0),
                             true,
-                        )
+                        )?
                     }
                 } else if cfg_copy.num_children(*block_id) == 1 {
                     // Branch: Add branch instruction
@@ -725,7 +744,7 @@ impl<'a> BytecodeGenerator<'a> {
                         &mut bytecode,
                         Bytecode::Branch(0),
                         true,
-                    )
+                    )?
                 } else if cfg_copy.num_children(*block_id) == 0 {
                     // Return: Add return types to last block
                     for token_type in signature.return_types.iter() {
@@ -735,10 +754,10 @@ impl<'a> BytecodeGenerator<'a> {
                             "Return value instructions: {:#?} for token {:#?}",
                             next_instructions, &token_type
                         );
-                        state_f =
-                            next_instructions
-                                .into_iter()
-                                .fold(state_f, |state_f, instruction| {
+                        state_f = next_instructions.into_iter().fold(
+                            Some(state_f),
+                            |state_f, instruction| {
+                                state_f.and_then(|state_f| {
                                     self.apply_instruction(
                                         fn_context,
                                         state_f,
@@ -746,9 +765,11 @@ impl<'a> BytecodeGenerator<'a> {
                                         instruction,
                                         true,
                                     )
-                                });
+                                })
+                            },
+                        )?;
                     }
-                    self.apply_instruction(fn_context, state_f, &mut bytecode, Bytecode::Ret, true)
+                    self.apply_instruction(fn_context, state_f, &mut bytecode, Bytecode::Ret, true)?
                 } else {
                     state_f
                 };
@@ -760,10 +781,10 @@ impl<'a> BytecodeGenerator<'a> {
         // The CFG will be non-empty if we set the number of basic blocks to generate
         // to be non-zero
         verify!(number_of_blocks > 0 || cfg.get_basic_blocks().is_empty());
-        cfg.serialize()
+        Some(cfg.serialize())
     }
 
-    pub fn generate_module(&mut self, mut module: CompiledModuleMut) -> CompiledModuleMut {
+    pub fn generate_module(&mut self, mut module: CompiledModuleMut) -> Option<CompiledModuleMut> {
         let mut fdefs = module.function_defs.clone();
         let mut call_graph = CallGraph::new(module.function_handles.len());
         for fdef in fdefs.iter_mut() {
@@ -772,22 +793,23 @@ impl<'a> BytecodeGenerator<'a> {
             let locals_sigs = module.locals_signatures[fdef.code.locals.0 as usize]
                 .0
                 .clone();
-            let fn_context = FunctionGenerationContext::new(
+            let mut fn_context = FunctionGenerationContext::new(
                 fdef.function,
                 call_graph.max_calling_depth(fdef.function),
                 locals_sigs.len(),
+                0,
             );
             fdef.code.code = self.generate(
-                &fn_context,
+                &mut fn_context,
                 &locals_sigs,
                 &func_sig,
                 &fdef.acquires_global_resources,
                 &mut module,
                 &mut call_graph,
-            );
+            )?;
         }
         module.function_defs = fdefs;
-        module
+        Some(module)
     }
 
     /// Generate a sequence of instructions whose overall effect is to push a single value of type token

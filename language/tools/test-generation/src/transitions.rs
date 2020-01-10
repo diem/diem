@@ -504,7 +504,7 @@ pub fn stack_struct_popn(
     let struct_def = state_copy.module.module.struct_def_at(struct_index);
     let struct_def_view = StructDefinitionView::new(&state_copy.module.module, struct_def);
     for _ in struct_def_view.fields().unwrap() {
-        state = stack_pop(&state)?;
+        state.stack_pop()?;
     }
     Ok(state)
 }
@@ -774,7 +774,7 @@ pub fn stack_function_popn(
         .function_signature_at(function_handle.signature);
     let number_of_pops = function_signature.arg_types.iter().len();
     for _ in 0..number_of_pops {
-        state = stack_pop(&state)?;
+        state.stack_pop()?;
     }
     Ok(state)
 }
