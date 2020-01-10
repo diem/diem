@@ -6,6 +6,6 @@ error:
    │          ^ Unexpected token: '{'
    ·
  3 │     f(): { }
-   │          - Expected: '[Name]', '[Name<Types>]', '[Address]'
+   │          - Expected: '[Name]', '[Address]'
    │
 

@@ -13,7 +13,6 @@ pub enum Tok {
     AddressValue,
     U64Value,
     NameValue,
-    NameBeginArgsValue,
     Exclaim,
     ExclaimEqual,
     Percent,
@@ -74,7 +73,6 @@ impl fmt::Display for Tok {
             AddressValue => "[Address]",
             U64Value => "[U64]",
             NameValue => "[Name]",
-            NameBeginArgsValue => "[Name<Types>]",
             Exclaim => "!",
             ExclaimEqual => "!=",
             Percent => "%",
@@ -171,11 +169,19 @@ impl<'input> Lexer<'input> {
         self.prev_end
     }
 
+    // Look ahead to the next token after the current one and return it without advancing
+    // the state of the lexer.
     pub fn lookahead(&self) -> Result<Tok, Error> {
         let text = self.text[self.cur_end..].trim_start();
         let offset = self.text.len() - text.len();
         let (tok, _) = find_token(self.file, text, offset)?;
         Ok(tok)
+    }
+
+    // Return the starting offset for the next token after the current one.
+    pub fn lookahead_start_loc(&self) -> usize {
+        let text = self.text[self.cur_end..].trim_start();
+        self.text.len() - text.len()
     }
 
     pub fn advance(&mut self) -> Result<(), Error> {
@@ -213,10 +219,7 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
         }
         'A'..='Z' | 'a'..='z' | '_' => {
             let len = get_name_len(&text);
-            match &text[len..].chars().next() {
-                Some('<') => (Tok::NameBeginArgsValue, len + 1),
-                _ => (get_name_token(&text[..len]), len),
-            }
+            (get_name_token(&text[..len]), len)
         }
         '&' => {
             if text.starts_with("&mut ") {
