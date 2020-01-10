@@ -5,4 +5,3 @@
 
 pub mod client;
 pub mod swarm;
-pub mod utils;

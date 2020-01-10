@@ -45,7 +45,7 @@ pub fn workspace_root() -> PathBuf {
 
 // Path to the directory where build artifacts live.
 //TODO maybe add an Environment Variable which points to built binaries
-pub fn build_dir() -> PathBuf {
+fn build_dir() -> PathBuf {
     env::current_exe()
         .ok()
         .map(|mut path| {

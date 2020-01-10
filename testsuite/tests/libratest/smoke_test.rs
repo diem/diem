@@ -5,10 +5,8 @@ use cli::client_proxy::ClientProxy;
 use libra_config::config::{NodeConfig, RoleType};
 use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, HashValue, SigningKey};
 use libra_logger::prelude::*;
-use libra_swarm::{
-    swarm::{LibraNode, LibraSwarm},
-    utils,
-};
+use libra_swarm::swarm::LibraNode;
+use libra_swarm::swarm::LibraSwarm;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     account_address::AccountAddress,
@@ -24,6 +22,7 @@ use std::fs::{self, File};
 use std::io::Read;
 use std::str::FromStr;
 use std::{thread, time};
+use workspace_builder;
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,
@@ -215,8 +214,8 @@ fn test_execute_custom_module_and_script() {
     let recipient_address = client_proxy.create_next_account(false).unwrap().address;
     client_proxy.mint_coins(&["mintb", "1", "1"], true).unwrap();
 
-    let module_path =
-        utils::workspace_root().join("testsuite/tests/libratest/dev_modules/module.mvir");
+    let module_path = workspace_builder::workspace_root()
+        .join("testsuite/tests/libratest/dev_modules/module.mvir");
     let unwrapped_module_path = module_path.to_str().unwrap();
     let module_params = &["compile", "0", unwrapped_module_path, "module"];
     let module_compiled_path = client_proxy.compile_program(module_params).unwrap();
@@ -225,8 +224,8 @@ fn test_execute_custom_module_and_script() {
         .publish_module(&["publish", "0", &module_compiled_path[..]])
         .unwrap();
 
-    let script_path =
-        utils::workspace_root().join("testsuite/tests/libratest/dev_modules/script.mvir");
+    let script_path = workspace_builder::workspace_root()
+        .join("testsuite/tests/libratest/dev_modules/script.mvir");
     let unwrapped_script_path = script_path.to_str().unwrap();
     let script_params = &["execute", "0", unwrapped_script_path, "script"];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();

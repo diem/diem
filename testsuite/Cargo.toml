@@ -15,6 +15,7 @@ num-traits = "0.2"
 rust_decimal = "1.0.2"
 statistical = "1"
 rusty-fork = "0.2.1"
+workspace-builder = { path = "../common/workspace-builder", version = "0.1.0" }
 
 # In order to limit the potential waiting time for binaries to be built while
 # running tests all binaries which are being tested under this testsuite
