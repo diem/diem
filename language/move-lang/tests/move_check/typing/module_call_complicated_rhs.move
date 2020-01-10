@@ -21,7 +21,7 @@ module M {
 
     t2() {
         foo({});
-        foo({ let x = 0; });
+        foo({ let _x = 0; });
 
         let x = 0;
         bar({ x });
@@ -34,7 +34,7 @@ module M {
 
     t3() {
         foo({});
-        foo({ let x = 0; });
+        foo({ let _x = 0; });
 
         let x = 0;
         bar({ x });

@@ -2,6 +2,14 @@ error:
 
    ┌── tests/move_check/locals/assign_partial_resource.move:6:21 ───
    │
+ 6 │         if (cond) { r = R{}; };
+   │                     ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+   │
+
+error: 
+
+   ┌── tests/move_check/locals/assign_partial_resource.move:6:21 ───
+   │
  7 │         r = R{};
    │         ^ Invalid assignment to local 'r'
    ·
@@ -13,11 +21,27 @@ error:
 
     ┌── tests/move_check/locals/assign_partial_resource.move:13:29 ───
     │
+ 13 │         if (cond) {} else { r = R{}; };
+    │                             ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/assign_partial_resource.move:13:29 ───
+    │
  14 │         r = R{};
     │         ^ Invalid assignment to local 'r'
     ·
  13 │         if (cond) {} else { r = R{}; };
-    │                             - The local contains a resource value due to this assignment. The resource must be used before you assign to this local again
+    │                             - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/assign_partial_resource.move:20:24 ───
+    │
+ 20 │         while (cond) { r = R{} };
+    │                        ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
     │
 
 error: 
@@ -40,6 +64,14 @@ error:
     ·
  20 │         while (cond) { r = R{} };
     │                        - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/assign_partial_resource.move:27:16 ───
+    │
+ 27 │         loop { r = R{} }
+    │                ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
     │
 
 error: 

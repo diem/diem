@@ -55,7 +55,13 @@ impl<'a, 'b> Context<'a, 'b> {
 impl TransferFunctions for BorrowSafety {
     type State = BorrowState;
 
-    fn execute(&mut self, pre: &mut Self::State, cmd: &Command) -> Errors {
+    fn execute(
+        &mut self,
+        pre: &mut Self::State,
+        _lbl: Label,
+        _idx: usize,
+        cmd: &Command,
+    ) -> Errors {
         let mut context = Context::new(self, pre);
         command(&mut context, cmd);
         context
@@ -71,13 +77,14 @@ pub fn verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
     locals: &UniqueMap<Var, SingleType>,
-    cfg: &mut super::cfg::BlockCFG,
+    cfg: &super::cfg::BlockCFG,
 ) {
     let mut initial_state = BorrowState::initial(locals);
     initial_state.bind_arguments(&signature.parameters);
     let mut safety = BorrowSafety::new(locals);
     initial_state.canonicalize_locals(&safety.local_numbers);
-    errors.append(&mut safety.analyze_function(cfg, initial_state));
+    let result = safety.analyze_function(cfg, initial_state);
+    errors.append(&mut result.err().unwrap_or_else(Errors::new));
 }
 
 //**************************************************************************************************

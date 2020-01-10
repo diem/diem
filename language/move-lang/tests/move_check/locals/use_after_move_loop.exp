@@ -36,10 +36,10 @@ error:
 
     ┌── tests/move_check/locals/use_after_move_loop.move:14:24 ───
     │
- 14 │         loop { let y = x; _ = move x }
+ 14 │         loop { let y = x; _ = move x; y; }
     │                        ^ Invalid usage of local 'x'
     ·
- 14 │         loop { let y = x; _ = move x }
+ 14 │         loop { let y = x; _ = move x; y; }
     │                               ------ The local might not have a value due to this position. The local must be assigned a value before being used
     │
 
@@ -47,10 +47,10 @@ error:
 
     ┌── tests/move_check/locals/use_after_move_loop.move:14:31 ───
     │
- 14 │         loop { let y = x; _ = move x }
+ 14 │         loop { let y = x; _ = move x; y; }
     │                               ^^^^^^ Invalid usage of local 'x'
     ·
- 14 │         loop { let y = x; _ = move x }
+ 14 │         loop { let y = x; _ = move x; y; }
     │                               ------ The local might not have a value due to this position. The local must be assigned a value before being used
     │
 
@@ -58,10 +58,10 @@ error:
 
     ┌── tests/move_check/locals/use_after_move_loop.move:19:24 ───
     │
- 19 │         loop { let y = x; if (cond) continue; _ = move x }
+ 19 │         loop { let y = x; if (cond) continue; _ = move x; y; }
     │                        ^ Invalid usage of local 'x'
     ·
- 19 │         loop { let y = x; if (cond) continue; _ = move x }
+ 19 │         loop { let y = x; if (cond) continue; _ = move x; y; }
     │                                                   ------ The local might not have a value due to this position. The local must be assigned a value before being used
     │
 

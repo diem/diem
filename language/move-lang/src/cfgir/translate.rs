@@ -175,7 +175,13 @@ fn function_body(
                 context.error(e);
             }
 
-            cfgir::refine(signature, &locals, &mut cfg, infinite_loop_starts);
+            cfgir::refine(
+                &mut context.errors,
+                signature,
+                &locals,
+                &mut cfg,
+                &infinite_loop_starts,
+            );
             cfgir::verify(&mut context.errors, signature, &locals, &mut cfg);
 
             GB::Defined {

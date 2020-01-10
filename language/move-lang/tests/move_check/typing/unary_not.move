@@ -10,6 +10,6 @@ module M {
         !copy x;
         !move x;
         !r.f;
-        let R {f} = r;
+        let R {f: _} = r;
     }
 }

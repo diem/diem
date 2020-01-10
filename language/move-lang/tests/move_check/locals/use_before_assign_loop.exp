@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/locals/use_before_assign_loop.move:3:13 ───
    │
- 4 │         loop { let y = move x + 1; x = 0 }
+ 4 │         loop { let y = move x + 1; x = 0; y; }
    │                        ^^^^^^ Invalid usage of local 'x'
    ·
  3 │         let x: u64;
@@ -13,7 +13,7 @@ error:
 
    ┌── tests/move_check/locals/use_before_assign_loop.move:8:13 ───
    │
- 9 │         loop { let y = x + 1; if (cond) { continue }; x = 0 }
+ 9 │         loop { let y = x + 1; if (cond) { continue }; x = 0; y; }
    │                        ^ Invalid usage of local 'x'
    ·
  8 │         let x: u64;
@@ -35,7 +35,7 @@ error:
 
     ┌── tests/move_check/locals/use_before_assign_loop.move:18:13 ───
     │
- 19 │         loop { let y = &x; _ = move y; if (cond) { x = 0 }; break }
+ 19 │         loop { let y = &x; _ = move y; if (cond) { x = 0 }; break };
     │                        ^^ Invalid usage of local 'x'
     ·
  18 │         let x: u64;

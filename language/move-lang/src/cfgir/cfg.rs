@@ -13,7 +13,7 @@ pub trait CFG {
     fn successors(&self, label: Label) -> &BTreeSet<Label>;
 
     fn predecessors(&self, label: Label) -> &BTreeSet<Label>;
-    fn commands<'a>(&'a self, label: Label) -> Box<dyn Iterator<Item = &'a Command> + 'a>;
+    fn commands<'a>(&'a self, label: Label) -> Box<dyn Iterator<Item = (usize, &'a Command)> + 'a>;
     fn num_blocks(&self) -> usize;
     fn start_block(&self) -> Label;
 }
@@ -68,11 +68,16 @@ impl<'a> BlockCFG<'a> {
 
         // no dead code
         let mut errors = Errors::new();
+        let mut dead_blocks = vec![];
         for label in blocks.keys() {
             if !successor_map.contains_key(label) {
+                dead_blocks.push(*label);
                 let loc = blocks.get(label).unwrap().front().unwrap().loc;
                 errors.push(vec![(loc, DEAD_CODE_ERR.into())])
             }
+        }
+        for label in dead_blocks {
+            blocks.remove(&label);
         }
 
         let cfg = BlockCFG {
@@ -84,12 +89,30 @@ impl<'a> BlockCFG<'a> {
         (cfg, errors)
     }
 
+    pub fn blocks(&self) -> &Blocks {
+        &self.blocks
+    }
+
+    pub fn blocks_mut(&mut self) -> &mut Blocks {
+        &mut self.blocks
+    }
+
     pub fn block(&self, label: Label) -> &BasicBlock {
         self.blocks.get(&label).unwrap()
     }
 
     pub fn block_mut(&mut self, label: Label) -> &mut BasicBlock {
         self.blocks.get_mut(&label).unwrap()
+    }
+
+    pub fn display_blocks(&self) {
+        for (lbl, block) in self.blocks() {
+            println!("--BLOCK {}--", lbl);
+            for cmd in block {
+                println!("{:#?}", cmd.value);
+            }
+            println!();
+        }
     }
 }
 
@@ -102,8 +125,8 @@ impl<'a> CFG for BlockCFG<'a> {
         self.predecessor_map.get(&label).unwrap()
     }
 
-    fn commands<'s>(&'s self, label: Label) -> Box<dyn Iterator<Item = &'s Command> + 's> {
-        Box::new(self.block(label).iter())
+    fn commands<'s>(&'s self, label: Label) -> Box<dyn Iterator<Item = (usize, &'s Command)> + 's> {
+        Box::new(self.block(label).iter().enumerate())
     }
 
     fn num_blocks(&self) -> usize {
@@ -128,7 +151,7 @@ pub struct ReverseBlockCFG<'a> {
 }
 
 impl<'a> ReverseBlockCFG<'a> {
-    pub fn new(forward_cfg: &'a mut BlockCFG, infinite_loop_starts: BTreeSet<Label>) -> Self {
+    pub fn new(forward_cfg: &'a mut BlockCFG, infinite_loop_starts: &BTreeSet<Label>) -> Self {
         let blocks: &'a mut Blocks = &mut forward_cfg.blocks;
         let forward_successors = &mut forward_cfg.successor_map;
         let forward_predecessor = &mut forward_cfg.predecessor_map;
@@ -153,6 +176,7 @@ impl<'a> ReverseBlockCFG<'a> {
             end_blocks
         };
 
+        // setup fake terminal block that will act as the start node in reverse traversal
         let terminal = Label(blocks.keys().map(|lbl| lbl.0).max().unwrap_or(0) + 1);
         assert!(!blocks.contains_key(&terminal), "{:#?}", blocks);
         blocks.insert(terminal, BasicBlock::new());
@@ -163,6 +187,8 @@ impl<'a> ReverseBlockCFG<'a> {
                 .insert(terminal);
         }
         forward_predecessor.insert(terminal, end_blocks);
+        // ensure map is not partial
+        forward_successors.insert(terminal, BTreeSet::new());
 
         Self {
             start: terminal,
@@ -170,6 +196,10 @@ impl<'a> ReverseBlockCFG<'a> {
             successor_map: forward_predecessor,
             predecessor_map: forward_successors,
         }
+    }
+
+    pub fn blocks(&self) -> &Blocks {
+        &self.blocks
     }
 
     pub fn block(&self, label: Label) -> &BasicBlock {
@@ -181,6 +211,11 @@ impl<'a> Drop for ReverseBlockCFG<'a> {
     fn drop(&mut self) {
         let empty_block = self.blocks.remove(&self.start);
         assert!(empty_block.unwrap().is_empty());
+        let start_predecessors = self.predecessor_map.remove(&self.start);
+        assert!(
+            start_predecessors.is_some(),
+            "ICE missing start node from predecessors"
+        );
         let start_successors = self.successor_map.remove(&self.start).unwrap();
         for start_successor in start_successors {
             self.predecessor_map
@@ -200,8 +235,8 @@ impl<'a> CFG for ReverseBlockCFG<'a> {
         self.predecessor_map.get(&label).unwrap()
     }
 
-    fn commands<'s>(&'s self, label: Label) -> Box<dyn Iterator<Item = &'s Command> + 's> {
-        Box::new(self.block(label).iter().rev())
+    fn commands<'s>(&'s self, label: Label) -> Box<dyn Iterator<Item = (usize, &'s Command)> + 's> {
+        Box::new(self.block(label).iter().enumerate().rev())
     }
 
     fn num_blocks(&self) -> usize {

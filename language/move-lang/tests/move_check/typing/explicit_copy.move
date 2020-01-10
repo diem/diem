@@ -7,5 +7,7 @@ module M {
         let s = S{};
         (copy u: u64);
         (copy s: S);
+        s;
+        u;
     }
 }

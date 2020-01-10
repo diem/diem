@@ -4,31 +4,31 @@ module M {
     tmove() {
         let x = 0;
         move x;
-        let y = move x + 1;
+        let _ = move x + 1;
 
         let s = S{};
-        let s2 = s;
-        let s3 = s;
+        let _s2 = s;
+        let _s3 = s;
     }
 
     tcopy() {
         let x = 0;
         move x;
-        let y = x + 1;
+        let _ = x + 1;
 
         let s = S{};
-        let s2 = s;
-        let s3 = copy s;
+        let _s2 = s;
+        let _s3 = copy s;
     }
 
     tborrow() {
         let x = 0;
         move x;
-        let y = &x;
+        let _ = &x;
 
         let s = S{};
-        let s2 = s;
-        let s3 = &s;
+        let _s2 = s;
+        let _s3 = &s;
     }
 
 }

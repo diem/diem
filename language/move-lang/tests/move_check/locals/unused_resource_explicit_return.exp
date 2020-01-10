@@ -2,6 +2,14 @@ error:
 
    ┌── tests/move_check/locals/unused_resource_explicit_return.move:5:13 ───
    │
+ 5 │         let r = R{};
+   │             ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+   │
+
+error: 
+
+   ┌── tests/move_check/locals/unused_resource_explicit_return.move:5:13 ───
+   │
  6 │         return ()
    │         ^^^^^^^^^ Invalid return
    ·
@@ -46,11 +54,27 @@ error:
 
     ┌── tests/move_check/locals/unused_resource_explicit_return.move:28:13 ───
     │
+ 28 │         let r = R{};
+    │             ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:28:13 ───
+    │
  29 │         loop { return () }
     │                ^^^^^^^^^ Invalid return
     ·
  28 │         let r = R{};
     │             - The local 'r' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:33:13 ───
+    │
+ 33 │         let x = &R{};
+    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
     │
 
 error: 

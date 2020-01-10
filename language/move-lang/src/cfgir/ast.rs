@@ -10,7 +10,7 @@ use crate::{
     shared::unique_map::UniqueMap,
     shared::*,
 };
-use std::collections::{BTreeMap, BTreeSet, LinkedList};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 // HLIR + Unstructured Control Flow + CFG
 
@@ -117,7 +117,7 @@ pub type Type = Spanned<Type_>;
 
 pub type Blocks = BTreeMap<Label, BasicBlock>;
 
-pub type BasicBlock = LinkedList<Command>;
+pub type BasicBlock = VecDeque<Command>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub struct Label(pub usize);
@@ -219,6 +219,12 @@ pub enum ExpListItem {
 //**************************************************************************************************
 // impls
 //**************************************************************************************************
+
+impl std::fmt::Display for Label {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl Command_ {
     pub fn is_terminal(&self) -> bool {

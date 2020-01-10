@@ -286,7 +286,7 @@ module LibraAccount {
         );
 
         // Bump the sequence number
-        move sender_account.sequence_number = sender_account.sequence_number + 1;
+        sender_account.sequence_number = sender_account.sequence_number + 1;
         // Pay the transaction fee into the transaction fee pot
         LibraCoin::deposit(&mut borrow_global_mut<T>(0xFEE).balance, transaction_fee);
     }

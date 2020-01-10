@@ -5,6 +5,7 @@ mod absint;
 pub mod ast;
 mod borrows;
 pub mod cfg;
+mod liveness;
 mod locals;
 pub mod translate;
 
@@ -21,19 +22,20 @@ use std::collections::BTreeSet;
 ///   - Might prove be a bit tricky to get exactly right as it might happen only at the statement
 ///     level instead of the expression level
 pub fn refine(
-    _signature: &FunctionSignature,
-    _locals: &UniqueMap<Var, SingleType>,
+    errors: &mut Errors,
+    signature: &FunctionSignature,
+    locals: &UniqueMap<Var, SingleType>,
     cfg: &mut BlockCFG,
-    infinite_loop_starts: BTreeSet<Label>,
+    infinite_loop_starts: &BTreeSet<Label>,
 ) {
-    ReverseBlockCFG::new(cfg, infinite_loop_starts);
+    liveness::refine_and_verify(errors, signature, locals, cfg, infinite_loop_starts);
 }
 
 pub fn verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
     locals: &UniqueMap<Var, SingleType>,
-    cfg: &mut BlockCFG,
+    cfg: &BlockCFG,
 ) {
     locals::verify(errors, signature, locals, cfg);
     borrows::verify(errors, signature, locals, cfg)

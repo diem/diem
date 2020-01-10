@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/locals/use_before_assign_simple.move:5:13 ───
    │
- 6 │         let y = move x + 1;
+ 6 │         let _ = move x + 1;
    │                 ^^^^^^ Invalid usage of local 'x'
    ·
  5 │         let x: u64;
@@ -13,8 +13,8 @@ error:
 
    ┌── tests/move_check/locals/use_before_assign_simple.move:8:13 ───
    │
- 9 │         let s2 = s;
-   │                  ^ Invalid usage of local 's'
+ 9 │         let _s2 = s;
+   │                   ^ Invalid usage of local 's'
    ·
  8 │         let s: S;
    │             - The local does not have a value due to this position. The local must be assigned a value before being used
@@ -24,7 +24,7 @@ error:
 
     ┌── tests/move_check/locals/use_before_assign_simple.move:13:13 ───
     │
- 14 │         let y = x + 1;
+ 14 │         let _ = x + 1;
     │                 ^ Invalid usage of local 'x'
     ·
  13 │         let x: u64;
@@ -33,10 +33,18 @@ error:
 
 error: 
 
+    ┌── tests/move_check/locals/use_before_assign_simple.move:17:19 ───
+    │
+ 17 │         let _s3 = copy s;
+    │                   ^^^^^^ Invalid 'copy'. The local 's' is not live following this expression. Remove the 'copy' annotation or re-annotate as 'move'
+    │
+
+error: 
+
     ┌── tests/move_check/locals/use_before_assign_simple.move:16:13 ───
     │
- 17 │         let s3 = copy s;
-    │                  ^^^^^^ Invalid usage of local 's'
+ 17 │         let _s3 = copy s;
+    │                   ^^^^^^ Invalid usage of local 's'
     ·
  16 │         let s: S;
     │             - The local does not have a value due to this position. The local must be assigned a value before being used
@@ -46,7 +54,7 @@ error:
 
     ┌── tests/move_check/locals/use_before_assign_simple.move:21:13 ───
     │
- 22 │         let y = &x;
+ 22 │         let _ = &x;
     │                 ^^ Invalid usage of local 'x'
     ·
  21 │         let x: u64;
@@ -57,8 +65,8 @@ error:
 
     ┌── tests/move_check/locals/use_before_assign_simple.move:24:13 ───
     │
- 25 │         let s2 = &s;
-    │                  ^^ Invalid usage of local 's'
+ 25 │         let _s2 = &s;
+    │                   ^^ Invalid usage of local 's'
     ·
  24 │         let s: S;
     │             - The local does not have a value due to this position. The local must be assigned a value before being used
