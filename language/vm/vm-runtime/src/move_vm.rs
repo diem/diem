@@ -102,7 +102,7 @@ impl MoveVM {
             .rent(|runtime| runtime.resolve_struct_def_by_name(module_id, name, context))
     }
 
-    pub(crate) fn load_gas_schedule<S: ChainState>(
+    pub fn load_gas_schedule<S: ChainState>(
         &self,
         chain_state: &mut S,
         data_view: &dyn RemoteCache,
