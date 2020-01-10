@@ -43,18 +43,17 @@ fn bytecode_bin_ops() {
 
 #[test]
 fn bytecode_shl_shr() {
-    let tys = INTEGER_TYPES
+    for (op, ty) in [Bytecode::Shl, Bytecode::Shr]
         .iter()
         .cartesian_product(INTEGER_TYPES.iter())
-        .filter(|(ty1, ty2)| ty1 != ty2);
-    for (op, (ty1, ty2)) in [Bytecode::Shl, Bytecode::Shr].iter().cartesian_product(tys) {
+    {
         let mut state1 = AbstractState::new();
-        state1.stack_push(AbstractValue::new_primitive(ty1.clone()));
-        state1.stack_push(AbstractValue::new_primitive(ty2.clone()));
+        state1.stack_push(AbstractValue::new_primitive(ty.clone()));
+        state1.stack_push(AbstractValue::new_primitive(SignatureToken::U8));
         let (state2, _) = common::run_instruction(op.clone(), state1);
         assert_eq!(
             state2.stack_peek(0),
-            Some(AbstractValue::new_primitive(ty1.clone())),
+            Some(AbstractValue::new_primitive(ty.clone())),
             "stack type postcondition not met"
         );
     }

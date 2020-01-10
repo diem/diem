@@ -1209,7 +1209,28 @@ main() {
 
 //! new-transaction
 main() {
-    _ = true << 0;
+    _ = 0 << 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 << 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 << 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true << 0u8;
     return;
 }
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
@@ -1223,14 +1244,7 @@ main() {
 
 //! new-transaction
 main() {
-    _ = 0 << 0x0;
-    return;
-}
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-
-//! new-transaction
-main() {
-    _ = 0x0 << 0;
+    _ = 0x0 << 0u8;
     return;
 }
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
@@ -1273,7 +1287,28 @@ main() {
 
 //! new-transaction
 main() {
-    _ = true >> 0;
+    _ = 0 >> 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 >> 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 >> 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true >> 0u8;
     return;
 }
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
@@ -1287,14 +1322,7 @@ main() {
 
 //! new-transaction
 main() {
-    _ = 0 >> 0x0;
-    return;
-}
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-
-//! new-transaction
-main() {
-    _ = 0x0 >> 0;
+    _ = 0x0 >> 0u8;
     return;
 }
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR

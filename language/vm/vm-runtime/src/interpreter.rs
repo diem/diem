@@ -488,11 +488,17 @@ impl<'txn> Interpreter<'txn> {
                     }
                     Bytecode::Shl => {
                         gas!(const_instr: context, self, Opcodes::SHL)?;
-                        self.binop_int(IntegerValue::shl_checked)?
+                        let rhs = self.operand_stack.pop_as::<u8>()?;
+                        let lhs = self.operand_stack.pop_as::<IntegerValue>()?;
+                        self.operand_stack
+                            .push(lhs.shl_checked(rhs)?.into_value())?;
                     }
                     Bytecode::Shr => {
                         gas!(const_instr: context, self, Opcodes::SHR)?;
-                        self.binop_int(IntegerValue::shr_checked)?
+                        let rhs = self.operand_stack.pop_as::<u8>()?;
+                        let lhs = self.operand_stack.pop_as::<IntegerValue>()?;
+                        self.operand_stack
+                            .push(lhs.shr_checked(rhs)?.into_value())?;
                     }
                     Bytecode::Or => {
                         gas!(const_instr: context, self, Opcodes::OR)?;

@@ -224,14 +224,8 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
         // TODO: rewrite in a more efficient way.
         Bytecode::Shl | Bytecode::Shr => type_transition! {
             vec![ty_of_sig_tok(SignatureToken::U8), ty_of_sig_tok(SignatureToken::U8)] => u8s(1),
-            vec![ty_of_sig_tok(SignatureToken::U8), ty_of_sig_tok(SignatureToken::U64)] => u8s(1),
-            vec![ty_of_sig_tok(SignatureToken::U8), ty_of_sig_tok(SignatureToken::U128)] => u8s(1),
             vec![ty_of_sig_tok(SignatureToken::U64), ty_of_sig_tok(SignatureToken::U8)] => u64s(1),
-            vec![ty_of_sig_tok(SignatureToken::U64), ty_of_sig_tok(SignatureToken::U64)] => u64s(1),
-            vec![ty_of_sig_tok(SignatureToken::U64), ty_of_sig_tok(SignatureToken::U128)] => u64s(1),
-            vec![ty_of_sig_tok(SignatureToken::U128), ty_of_sig_tok(SignatureToken::U8)] => u128s(1),
-            vec![ty_of_sig_tok(SignatureToken::U128), ty_of_sig_tok(SignatureToken::U64)] => u128s(1),
-            vec![ty_of_sig_tok(SignatureToken::U128), ty_of_sig_tok(SignatureToken::U128)] => u128s(1)
+            vec![ty_of_sig_tok(SignatureToken::U128), ty_of_sig_tok(SignatureToken::U8)] => u128s(1)
         },
         Bytecode::Eq | Bytecode::Neq => type_transition! {
             fixed: non_variable_values(2) => bools(1)

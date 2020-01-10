@@ -232,7 +232,10 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
             effects: Effects::NoTyParams(vec![state_stack_bin_op!()]),
         },
         Bytecode::Shl | Bytecode::Shr => Summary {
-            preconditions: vec![state_stack_has_integer!(0), state_stack_has_integer!(1)],
+            preconditions: vec![
+                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U8))),
+                state_stack_has_integer!(1),
+            ],
             effects: Effects::NoTyParams(vec![state_stack_bin_op!()]),
         },
         Bytecode::Or | Bytecode::And => Summary {
