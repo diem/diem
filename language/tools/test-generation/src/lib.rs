@@ -15,23 +15,23 @@ pub mod transitions;
 #[macro_use]
 extern crate mirai_annotations;
 
-#[macro_use]
-extern crate log;
-extern crate env_logger;
 use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::VerifiedModule;
+use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray, vm_error::StatusCode};
-use rand::{rngs::StdRng, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use slog_scope::{debug, error, info};
+use std::thread;
 use std::{fs, io::Write, panic};
-use utils::module_generation::{generate_module, ModuleGeneratorOptions};
+use utils::module_generation::generate_module;
 use vm::{
     access::ModuleAccess,
     errors::VMResult,
-    file_format::{CompiledModule, FunctionDefinitionIndex, SignatureToken},
+    file_format::{CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, SignatureToken},
     gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS,
     transaction_metadata::TransactionMetadata,
 };
@@ -112,14 +112,14 @@ fn execute_function_in_module(
 
 /// Serialize a module to `path` if `output_path` is `Some(path)`. If `output_path` is `None`
 /// print the module out as debug output.
-fn output_error_case(module: CompiledModule, output_path: Option<String>, iteration: u64) {
+fn output_error_case(module: CompiledModule, output_path: Option<String>, case_id: u64, tid: u64) {
     match output_path {
         Some(path) => {
             let mut out = vec![];
             module
                 .serialize(&mut out)
                 .expect("Unable to serialize module");
-            let output_file = format!("{}/case{}.module", path, iteration);
+            let output_file = format!("{}/case{}_{}.module", path, tid, case_id);
             let mut f = fs::File::create(&output_file)
                 .unwrap_or_else(|err| panic!("Unable to open output file {}: {}", &path, err));
             f.write_all(&out)
@@ -150,45 +150,105 @@ fn seed(seed: Option<String>) -> [u8; 32] {
     array
 }
 
-/// Run generate_bytecode for 'iterations' iterations and test each generated module
-/// on the bytecode verifier.
-pub fn run_generation(args: Args) {
-    env_logger::init();
-    let iterations = args.num_iterations;
-    let mut verified_programs: u64 = 0;
-    let mut executed_programs: u64 = 0;
-    let mut generation_options = ModuleGeneratorOptions::default();
-    generation_options.min_table_size = 10;
-    // The more structs, and the larger the number of type parameters the more complex the
-    // functions and bytecode sequences generated. Be careful about setting these parameters too
-    // large -- this can lead to expontial increases in the size and number of struct
-    // instantiations that can be generated.
-    generation_options.max_ty_params = 3;
-    generation_options.max_functions = 5;
-    generation_options.max_structs = 5;
-    generation_options.args_for_ty_params = true;
-    generation_options.references_allowed = false;
-    // Test generation cannot currently cope with resources
-    generation_options.add_resources = false;
-    let seed = seed(args.seed);
+#[derive(Debug, Clone, PartialEq)]
+pub enum Status {
+    VerificationFailure,
+    ExecutionFailure,
+    Valid,
+}
+
+fn bytecode_module(rng: &mut StdRng, module: CompiledModuleMut) -> CompiledModuleMut {
+    let mut generated_module = BytecodeGenerator::new(rng).generate_module(module.clone());
+    // Module generation can retry under certain circumstances
+    while generated_module.is_none() {
+        generated_module = BytecodeGenerator::new(rng).generate_module(module.clone());
+    }
+    generated_module.unwrap()
+}
+
+pub fn module_frame_generation(
+    num_iters: Option<u64>,
+    seed: [u8; 32],
+    sender: Sender<CompiledModuleMut>,
+    stats: Receiver<Status>,
+) {
+    let mut verification_failures: u128 = 0;
+    let mut execution_failures: u128 = 0;
+    let mut generated: u128 = 1;
+
+    let generation_options = config::module_generation_settings();
     let mut rng = StdRng::from_seed(seed);
-    for i in 0..iterations {
+    let mut module = generate_module(&mut rng, generation_options.clone()).into_inner();
+    // Either get the number of iterations provided by the user, or iterate "infinitely"--up to
+    // u128::MAX number of times.
+    let iters = num_iters
+        .map(|x| x as u128)
+        .unwrap_or_else(|| std::u128::MAX);
+
+    while generated < iters && sender.send(module).is_ok() {
+        module = generate_module(&mut rng, generation_options.clone()).into_inner();
+        generated += 1;
+        while let Ok(stat) = stats.try_recv() {
+            match stat {
+                Status::VerificationFailure => verification_failures += 1,
+                Status::ExecutionFailure => execution_failures += 1,
+                _ => (),
+            };
+        }
+
+        if generated > 0 && generated % 100 == 0 {
+            info!(
+                "Generated: {} Verified: {} Executed: {}",
+                generated,
+                (generated - verification_failures),
+                (generated - execution_failures)
+            );
+        }
+    }
+
+    // Drop the sender channel to signal to the consumers that they should expect no more modules,
+    // and should finish up.
+    drop(sender);
+
+    // Gather final stats from the consumers.
+    while let Ok(stat) = stats.recv() {
+        match stat {
+            Status::VerificationFailure => verification_failures += 1,
+            Status::ExecutionFailure => execution_failures += 1,
+            _ => (),
+        };
+    }
+    info!(
+        "Final stats: Generated: {} Verified: {} Executed: {}",
+        generated,
+        (generated - verification_failures),
+        (generated - execution_failures)
+    );
+}
+
+pub fn bytecode_generation(
+    output_path: Option<String>,
+    tid: u64,
+    mut rng: StdRng,
+    receiver: Receiver<CompiledModuleMut>,
+    stats: Sender<Status>,
+) {
+    while let Ok(module) = receiver.recv() {
+        let mut status = Status::VerificationFailure;
         debug!("Generating module");
-        let mut module = generate_module(&mut rng, generation_options.clone()).into_inner();
-        debug!("Generated...generating bytecode");
-        module = BytecodeGenerator::new(&mut rng).generate_module(module);
-        debug!("Done...Running on verifier...");
+        let module = bytecode_module(&mut rng, module);
+
+        debug!("Done...Running module on verifier...");
         let module = module.freeze().expect("generated module failed to freeze.");
         let verified_module = match run_verifier(module.clone()) {
             Ok(verified_module) => {
-                // We cannot execute more than u64::max_value() iterations.
-                verify!(verified_programs < u64::max_value());
-                verified_programs += 1;
+                status = Status::ExecutionFailure;
                 Some(verified_module)
             }
             Err(e) => {
                 error!("{}", e);
-                output_error_case(module.clone(), args.output_path.clone(), i);
+                let uid = rng.gen::<u64>();
+                output_error_case(module.clone(), output_path.clone(), uid, tid);
                 if EXECUTE_UNVERIFIED_MODULE {
                     Some(VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
                         module.clone(),
@@ -198,43 +258,82 @@ pub fn run_generation(args: Args) {
                 }
             }
         };
+
         if let Some(verified_module) = verified_module {
             if RUN_ON_VM {
-                debug!("Running on VM...");
+                debug!("Done...Running module on VM...");
                 let execution_result = panic::catch_unwind(|| run_vm(verified_module));
                 match execution_result {
-                    Ok(execution_result) => {
-                        match execution_result {
-                            Ok(_) => {
-                                // We cannot execute more than u64::max_value() iterations.
-                                verify!(executed_programs < u64::max_value());
-                                executed_programs += 1
-                            }
-                            Err(e) => match e.major_status {
-                                StatusCode::ARITHMETIC_ERROR | StatusCode::OUT_OF_GAS => (),
-                                _ => {
-                                    error!("{}", e);
-                                    output_error_case(module.clone(), args.output_path.clone(), i);
-                                }
-                            },
+                    Ok(execution_result) => match execution_result {
+                        Ok(_) => {
+                            status = Status::Valid;
                         }
-                    }
+                        Err(e) => match e.major_status {
+                            StatusCode::ARITHMETIC_ERROR | StatusCode::OUT_OF_GAS => {
+                                status = Status::Valid;
+                            }
+                            _ => {
+                                error!("{}", e);
+                                let uid = rng.gen::<u64>();
+                                output_error_case(module.clone(), output_path.clone(), uid, tid);
+                            }
+                        },
+                    },
                     Err(_) => {
                         // Save modules that cause the VM runtime to panic
-                        output_error_case(module.clone(), args.output_path.clone(), i);
+                        let uid = rng.gen::<u64>();
+                        output_error_case(module.clone(), output_path.clone(), uid, tid);
                     }
                 }
+            } else {
+                status = Status::Valid;
             }
         };
-        if iterations > 10 && i % (iterations / 10) == 0 {
-            info!("Iteration: {} / {}", i, iterations);
-        }
+        stats.send(status).unwrap();
     }
 
-    info!(
-        "Total programs: {}, Percent valid: {:.2}, Percent executed {:.2}",
-        iterations,
-        (verified_programs as f64) / (iterations as f64) * 100.0,
-        (executed_programs as f64) / (iterations as f64) * 100.0,
+    drop(stats);
+}
+
+/// Run generate_bytecode for the range passed in and test each generated module
+/// on the bytecode verifier.
+pub fn run_generation(args: Args) {
+    let num_threads = if let Some(num_threads) = args.num_threads {
+        num_threads as usize
+    } else {
+        num_cpus::get()
+    };
+    assert!(
+        num_threads > 0,
+        "Number of worker threads must be greater than 0"
     );
+
+    let (sender, receiver) = bounded(num_threads);
+    let (stats_sender, stats_reciever) = unbounded();
+    let seed = seed(args.seed);
+
+    let mut threads = Vec::new();
+    for tid in 0..num_threads {
+        let receiver = receiver.clone();
+        let stats_sender = stats_sender.clone();
+        let rng = StdRng::from_seed(seed);
+        let output_path = args.output_path.clone();
+        threads.push(thread::spawn(move || {
+            bytecode_generation(output_path, tid as u64, rng, receiver, stats_sender)
+        }));
+    }
+
+    // Need to drop this channel otherwise we'll get infinite blocking since the other channels are
+    // cloned; this one will remain open unless we close it and other threads are going to block
+    // waiting for more stats.
+    drop(stats_sender);
+
+    let num_iters = args.num_iterations;
+    threads.push(thread::spawn(move || {
+        module_frame_generation(num_iters, seed, sender, stats_reciever)
+    }));
+
+    for thread in threads {
+        thread.join().unwrap();
+    }
 }
