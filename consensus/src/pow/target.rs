@@ -37,7 +37,7 @@ where
         blocks
     };
     if blocks.len() <= 1 {
-        debug!(
+        info!(
             "Block length less than 1, set target to 1 difficult:{:?}",
             difficult_1_target()
         );
@@ -66,7 +66,7 @@ where
     {
         target
     } else {
-        debug!("target large than max value, set to 1_difficult");
+        info!("target large than max value, set to 1_difficult");
         difficult_1_target()
     };
 

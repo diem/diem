@@ -58,7 +58,7 @@ where
         ));
         ctx.algo = Some(algo.clone());
         ctx.target = target.clone();
-        debug!(
+        info!(
             "Prepare to mine block algo:{:?}, header:{:?}, target:{:?}",
             algo.clone(),
             ctx.header.clone(),
@@ -97,7 +97,7 @@ where
                 };
                 if let Some(tx) = x.tx.take() {
                     task::block_on(async move {
-                        debug!("Received Mined block");
+                        info!("Received Mined block");
                         tx.send(Some(proof)).await;
                     });
                     *x = StateInner {
