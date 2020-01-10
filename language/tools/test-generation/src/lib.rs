@@ -35,9 +35,9 @@ use vm::{
     gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS,
     transaction_metadata::TransactionMetadata,
 };
-use vm_cache_map::Arena;
-use vm_runtime::chain_state::TransactionExecutionContext;
-use vm_runtime::{data_cache::BlockDataCache, runtime::VMRuntime};
+use vm_runtime::{
+    chain_state::TransactionExecutionContext, data_cache::BlockDataCache, move_vm::MoveVM,
+};
 use vm_runtime_types::value::Value;
 
 /// This function calls the Bytecode verifier to test it
@@ -89,22 +89,22 @@ fn execute_function_in_module(
         module.identifier_at(entry_name_idx)
     };
     {
-        let arena = Arena::new();
-        let mut runtime = VMRuntime::new(&arena);
+        let mut runtime = MoveVM::new();
         runtime.cache_module(module.clone());
 
         let data_cache = BlockDataCache::new(state_view);
-        let context = TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, &data_cache);
-        let gas_schedule = runtime.load_gas_schedule(&context, &data_cache)?;
+        let mut context =
+            TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, &data_cache);
+        let gas_schedule = runtime.load_gas_schedule(&mut context, &data_cache)?;
         let txn_data = TransactionMetadata::default();
         let mut interpreter_context =
             TransactionExecutionContext::new(txn_data.max_gas_amount(), &data_cache);
         runtime.execute_function(
-            &mut interpreter_context,
-            &txn_data,
-            &gas_schedule,
             &module_id,
             &entry_name,
+            &gas_schedule,
+            &mut interpreter_context,
+            &txn_data,
             args,
         )
     }
