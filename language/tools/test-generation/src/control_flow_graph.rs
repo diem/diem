@@ -3,6 +3,7 @@
 
 use crate::abstract_state::{AbstractValue, BorrowState};
 use rand::{rngs::StdRng, Rng};
+use slog_scope::debug;
 use std::collections::{HashMap, VecDeque};
 use vm::file_format::{Bytecode, FunctionSignature, Kind, SignatureToken};
 

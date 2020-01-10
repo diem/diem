@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use structopt::StructOpt;
+use utils::module_generation::ModuleGeneratorOptions;
 
 /// This defines how tolerant the generator will be about deviating from
 /// the starting stack height.
@@ -52,6 +53,32 @@ pub const CALL_STACK_LIMIT: usize = 1024;
 /// remain in sync with the constant for this defined in the VM.
 pub const VALUE_STACK_LIMIT: usize = 1024;
 
+/// Certain randomly generated types can lead to extremely long instruction sequences. This can
+/// lead to test generation taking quite a while in order to handle all of these. This parameter
+/// bounds the maximum allowable instruction length for a type. If the instruction sequence is
+/// larger then this, a new module and bytecode generation will be attempted.
+pub const INHABITATION_INSTRUCTION_LIMIT: usize = 1000;
+
+/// The module generation settings that are used for generation module scaffolding for bytecode
+/// generation.
+pub fn module_generation_settings() -> ModuleGeneratorOptions {
+    let mut generation_options = ModuleGeneratorOptions::default();
+    generation_options.min_table_size = 10;
+    // The more structs, and the larger the number of type parameters the more complex the
+    // functions and bytecode sequences generated. Be careful about setting these parameters too
+    // large -- this can lead to expontial increases in the size and number of struct
+    // instantiations that can be generated.
+    generation_options.max_ty_params = 4;
+    generation_options.max_functions = 6;
+    generation_options.max_fields = 10;
+    generation_options.max_structs = 6;
+    generation_options.args_for_ty_params = true;
+    generation_options.references_allowed = false;
+    // Test generation cannot currently cope with resources
+    generation_options.add_resources = false;
+    generation_options
+}
+
 /// Command line arguments for the tool
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -60,9 +87,10 @@ pub const VALUE_STACK_LIMIT: usize = 1024;
     about = "Tool for generating tests for the bytecode verifier and Move VM runtime."
 )]
 pub struct Args {
-    /// The number of programs that will be generated
+    /// The optional number of programs that will be generated. If not specified, program
+    /// generation will run infinitely.
     #[structopt(short = "i", long = "iterations")]
-    pub num_iterations: u64,
+    pub num_iterations: Option<u64>,
 
     /// Path where a serialized module should be saved.
     /// If `None`, then the module will just be printed out.
@@ -72,4 +100,8 @@ pub struct Args {
     /// The optional seed used for test generation.
     #[structopt(short = "s", long = "seed")]
     pub seed: Option<String>,
+
+    /// The optional number of threads to use for test generation.
+    #[structopt(short = "t", long = "threads")]
+    pub num_threads: Option<u64>,
 }
