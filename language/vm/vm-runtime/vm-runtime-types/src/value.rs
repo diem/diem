@@ -17,7 +17,7 @@ use serde::{de, Deserialize, Serialize};
 use std::{
     cell::{Ref, RefCell},
     fmt,
-    mem::{replace, size_of},
+    mem::replace,
     ops::Add,
     rc::Rc,
 };
@@ -538,57 +538,53 @@ impl IntegerValue {
         })
     }
 
-    pub const fn bits_of<T>() -> usize {
-        size_of::<T>() * 8
-    }
-
-    pub fn into_bits_shifted<T>(self) -> VMResult<usize> {
-        use IntegerValue::*;
-
-        let res = match self {
-            U8(x) => {
-                if x < (Self::bits_of::<T>() as u8) {
-                    Some(x as usize)
-                } else {
-                    None
-                }
-            }
-            U64(x) => {
-                if x < (Self::bits_of::<T>() as u64) {
-                    Some(x as usize)
-                } else {
-                    None
-                }
-            }
-            U128(x) => {
-                if x < (Self::bits_of::<T>() as u128) {
-                    Some(x as usize)
-                } else {
-                    None
-                }
-            }
-        };
-
-        res.ok_or_else(|| VMStatus::new(StatusCode::ARITHMETIC_ERROR))
-    }
-
-    pub fn shl_checked(self, other: Self) -> VMResult<Self> {
+    pub fn shl_checked(self, n_bits: u8) -> VMResult<Self> {
         use IntegerValue::*;
 
         Ok(match self {
-            U8(x) => IntegerValue::U8(x << other.into_bits_shifted::<u8>()?),
-            U64(x) => IntegerValue::U64(x << other.into_bits_shifted::<u64>()?),
-            U128(x) => IntegerValue::U128(x << other.into_bits_shifted::<u128>()?),
+            U8(x) => {
+                if n_bits >= 8 {
+                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                }
+                IntegerValue::U8(x << n_bits)
+            }
+            U64(x) => {
+                if n_bits >= 64 {
+                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                }
+                IntegerValue::U64(x << n_bits)
+            }
+            U128(x) => {
+                if n_bits >= 128 {
+                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                }
+                IntegerValue::U128(x << n_bits)
+            }
         })
     }
 
-    pub fn shr_checked(self, other: Self) -> VMResult<Self> {
+    pub fn shr_checked(self, n_bits: u8) -> VMResult<Self> {
         use IntegerValue::*;
 
         Ok(match self {
-            U8(x) => IntegerValue::U8(x >> other.into_bits_shifted::<u8>()?),
-            U64(x) => IntegerValue::U64(x >> other.into_bits_shifted::<u64>()?),
-            U128(x) => IntegerValue::U128(x >> other.into_bits_shifted::<u128>()?),
+            U8(x) => {
+                if n_bits >= 8 {
+                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                }
+                IntegerValue::U8(x >> n_bits)
+            }
+            U64(x) => {
+                if n_bits >= 64 {
+                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                }
+                IntegerValue::U64(x >> n_bits)
+            }
+            U128(x) => {
+                if n_bits >= 128 {
+                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                }
+                IntegerValue::U128(x >> n_bits)
+            }
         })
     }
 
@@ -658,6 +654,16 @@ impl IntegerValue {
                 return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         })
+    }
+
+    pub fn into_value(self) -> Value {
+        use IntegerValue::*;
+
+        match self {
+            U8(x) => Value::u8(x),
+            U64(x) => Value::u64(x),
+            U128(x) => Value::u128(x),
+        }
     }
 }
 

@@ -806,7 +806,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::Shl | Bytecode::Shr => {
                 let operand1 = self.stack.pop().unwrap();
                 let operand2 = self.stack.pop().unwrap();
-                if operand1.signature.is_integer() && operand2.signature.is_integer() {
+                if operand2.signature.is_integer() && operand1.signature == SignatureToken::U8 {
                     self.stack.push(TypedAbstractValue {
                         signature: operand2.signature,
                         value: AbstractValue::Value(Kind::Unrestricted),

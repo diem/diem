@@ -7,35 +7,7 @@ main() {
 
 //! new-transaction
 main() {
-    _ = 0u8 << 8u64;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
-    _ = 0u8 << 8u128;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
     _ = 0u64 << 64u8;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
-    _ = 0u64 << 64u64;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
-    _ = 0u64 << 64u128;
     return;
 }
 // check: ARITHMETIC_ERROR
@@ -49,35 +21,7 @@ main() {
 
 //! new-transaction
 main() {
-    _ = 0u128 << 128u64;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
-    _ = 0u128 << 128u128;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
     _ = 0u8 >> 8u8;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
-    _ = 0u8 >> 8u64;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
-    _ = 0u8 >> 8u128;
     return;
 }
 // check: ARITHMETIC_ERROR
@@ -91,35 +35,7 @@ main() {
 
 //! new-transaction
 main() {
-    _ = 0u64 >> 64u64;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
-    _ = 0u64 >> 64u128;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
     _ = 0u128 >> 128u8;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
-    _ = 0u128 >> 128u64;
-    return;
-}
-// check: ARITHMETIC_ERROR
-
-//! new-transaction
-main() {
-    _ = 0u128 >> 128u128;
     return;
 }
 // check: ARITHMETIC_ERROR
@@ -179,7 +95,7 @@ main() {
 main() {
     assert(1234u64 >> 63u8 == 0u64, 4000);
     assert(3u8 >> 5u8 == 0u8, 4001);
-    assert(43152365326753472145312542634526753u128 >> 127 == 0u128, 4002);
+    assert(43152365326753472145312542634526753u128 >> 127u8 == 0u128, 4002);
     return;
 }
 // check: EXECUTED
