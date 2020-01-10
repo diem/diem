@@ -12,12 +12,18 @@ edition = "2018"
 [dependencies]
 rand = "0.6.5"
 log = "0.4"
-env_logger = "0.6"
+num_cpus = "1.11.1"
 mirai-annotations = "1.4.0"
 structopt = "0.3.2"
 itertools = "0.8.2"
 hex = "0.3.1"
 getrandom = "0.1.13"
+crossbeam-channel = "0.4.0"
+
+slog = { version = "2.5.0", features = ["max_level_debug", "release_max_level_debug"] }
+slog-term = "2.4.1"
+slog-scope = "4.0"
+slog-envlogger = "2.1.0"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 libra-config = { path = "../../../config", version = "0.1.0" }
