@@ -638,6 +638,44 @@ proptest! {
     }
 
     #[test]
+    fn test_put_blob_with_proof2(
+        key1 in any::<HashValue>()
+            .prop_filter(
+                "Can't be 0xffffff...",
+                |key| *key != HashValue::new([0xff; HashValue::LENGTH]),
+            ),
+        accounts in vec(any::<AccountStateBlob>(), 2),
+    ) {
+        let db = MockTreeStore::default();
+        let tree = JellyfishMerkleTree::new(&db);
+        let mut version = 0;
+        let mut kvs = HashMap::new();
+
+        kvs.insert(key1.clone(), accounts[0].clone());
+        let (new_root_hash, batch) = tree
+            .put_blob_set(vec![(key1, accounts[0].clone())], version)
+            .unwrap();
+        db.write_tree_update_batch(batch).unwrap();
+
+        let root_hash = tree.get_root_hash(version).unwrap();
+        assert_eq!(root_hash, new_root_hash);
+        test_existent_keys_impl(&tree, version, &kvs);
+
+        let key2 = plus_one(key1);
+        version = version + 1;
+
+        kvs.insert(key2.clone(), accounts[1].clone());
+        let (new_root_hash, batch) = tree
+            .put_blob_set(vec![(key2, accounts[1].clone())], version)
+            .unwrap();
+        db.write_tree_update_batch(batch).unwrap();
+
+        let root_hash = tree.get_root_hash(version).unwrap();
+        assert_eq!(root_hash, new_root_hash);
+        test_existent_keys_impl(&tree, version, &kvs);
+    }
+
+    #[test]
     fn test_get_range_proof(
         (btree, n) in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..1000)
             .prop_flat_map(|btree| {
