@@ -20,6 +20,7 @@ members = [
     "common/prost-ext",
     "common/tools",
     "common/util",
+    "common/workspace-builder",
     "config",
     "config/config-builder",
     "config/generate-keypair",

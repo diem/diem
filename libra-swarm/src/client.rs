@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::utils;
 use client_lib::{client_proxy::ClientProxy, commands};
 use std::{
     collections::HashMap,
@@ -10,6 +9,7 @@ use std::{
     process::{Child, Command, Output, Stdio},
     sync::Arc,
 };
+use workspace_builder;
 
 pub struct InteractiveClient {
     client: Option<Child>,
@@ -50,8 +50,8 @@ impl InteractiveClient {
         // unless we convert it to an absolute path
         Self {
             client: Some(
-                Command::new(utils::get_bin("client"))
-                    .current_dir(utils::workspace_root())
+                Command::new(workspace_builder::get_bin("client"))
+                    .current_dir(workspace_builder::workspace_root())
                     .arg("-p")
                     .arg(port.to_string())
                     .arg("-m")
@@ -91,8 +91,8 @@ impl InteractiveClient {
             /// from the client CLI. Comment the stdout/stderr lines below
             /// and enjoy pretty Matrix-style output.
             client: Some(
-                Command::new(utils::get_bin("client"))
-                    .current_dir(utils::workspace_root())
+                Command::new(workspace_builder::get_bin("client"))
+                    .current_dir(workspace_builder::workspace_root())
                     .arg("-p")
                     .arg(port.to_string())
                     .arg("-m")

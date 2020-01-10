@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::utils;
 use anyhow::{Context, Result};
 use config_builder::{FullNodeConfig, SwarmConfig, ValidatorConfig};
 use debug_interface::NodeDebugClient;
@@ -19,6 +18,7 @@ use std::{
     str::FromStr,
 };
 use thiserror::Error;
+use workspace_builder;
 
 const LIBRA_NODE_BIN: &str = "libra-node";
 
@@ -65,9 +65,9 @@ impl LibraNode {
             RoleType::Validator => Some(config.validator_network.unwrap().peer_id),
             RoleType::FullNode => None,
         };
-        let mut node_command = Command::new(utils::get_bin(LIBRA_NODE_BIN));
+        let mut node_command = Command::new(workspace_builder::get_bin(LIBRA_NODE_BIN));
         node_command
-            .current_dir(utils::workspace_root())
+            .current_dir(workspace_builder::workspace_root())
             .arg("-f")
             .arg(config_path);
         if env::var("RUST_LOG").is_err() {
@@ -296,7 +296,8 @@ impl LibraSwarm {
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
         info!("logs at {:?}", swarm_config_dir);
         let mut template = if let Some(template_path) = template_path {
-            NodeConfig::load(utils::workspace_root().join(template_path)).unwrap_or_default()
+            NodeConfig::load(workspace_builder::workspace_root().join(template_path))
+                .unwrap_or_default()
         } else {
             let mut template = NodeConfig::default();
             template.vm_config.publishing_options = VMPublishingOption::Open;
