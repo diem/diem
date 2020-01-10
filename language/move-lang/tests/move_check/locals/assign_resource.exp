@@ -2,6 +2,14 @@ error:
 
    ┌── tests/move_check/locals/assign_resource.move:5:13 ───
    │
+ 5 │         let r = R{};
+   │             ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+   │
+
+error: 
+
+   ┌── tests/move_check/locals/assign_resource.move:5:13 ───
+   │
  6 │         r = R{};
    │         ^ Invalid assignment to local 'r'
    ·
@@ -40,6 +48,14 @@ error:
     ·
  23 │         let r = R{};
     │             - The local contains a resource value due to this assignment. The resource must be used before you assign to this local again
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/assign_resource.move:29:13 ───
+    │
+ 29 │         let r = R{};
+    │             ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
     │
 
 error: 

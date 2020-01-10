@@ -25,7 +25,7 @@ module M {
     }
 
     t5() {
-        let x = &R{};
+        let _ = &R{};
     }
 
     t6<T>(x: T) {

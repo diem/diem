@@ -28,7 +28,7 @@ module M {
 
     t0(): u64 {
         let v = Container::new();
-        let Box { f1, f2 }  = Container::get(&v);
+        let Box { f1, f2 }  = Container::get(&v); f2;
         Container::put(&mut v, Box { f1: 0, f2: 0});
         f1
     }

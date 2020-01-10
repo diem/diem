@@ -12,7 +12,7 @@ module M {
     }
 
     t1(): u64 {
-        loop { let x = 0; }
+        loop { let x = 0; x; }
     }
 
     t2() {

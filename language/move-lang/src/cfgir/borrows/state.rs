@@ -332,7 +332,7 @@ impl BorrowState {
 
     pub fn mutate(&mut self, loc: Loc, rvalue: Value) -> Errors {
         let id = match rvalue {
-            Value::NonRef => panic!("ICE type checking failed"),
+            Value::NonRef => panic!("ICE type checking failed {:#?}", loc),
             Value::Ref(id) => id,
         };
 
@@ -456,7 +456,7 @@ impl BorrowState {
 
     pub fn dereference(&mut self, loc: Loc, rvalue: Value) -> (Errors, Value) {
         let id = match rvalue {
-            Value::NonRef => panic!("ICE type checking failed"),
+            Value::NonRef => panic!("ICE type checking failed {:#?}", loc),
             Value::Ref(id) => id,
         };
 
@@ -684,5 +684,42 @@ impl AbstractDomain for BorrowState {
         } else {
             JoinResult::Unchanged
         }
+    }
+}
+
+//**************************************************************************************************
+// Display
+//**************************************************************************************************
+
+impl std::fmt::Display for Label {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Label::Local(s) => write!(f, "local%{}", s),
+            Label::Resource(s) => write!(f, "resource%{}", s),
+            Label::Field(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::NonRef => write!(f, "_"),
+            Value::Ref(id) => write!(f, "{:?}", id),
+        }
+    }
+}
+
+impl BorrowState {
+    #[allow(dead_code)]
+    pub fn display(&self) {
+        println!("NEXT ID: {}", self.next_id);
+        println!("LOCALS:");
+        for (var, value) in &self.locals {
+            println!("  {}: {}", var.value(), value)
+        }
+        println!("BORROWS: ");
+        self.borrows.display();
+        println!();
     }
 }

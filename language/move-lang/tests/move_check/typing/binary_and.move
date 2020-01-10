@@ -11,6 +11,6 @@ module M {
         copy x && move x;
         r.f && r.f;
         true && false && (true && false);
-        let R {f} = r;
+        let R {f: _} = r;
     }
 }

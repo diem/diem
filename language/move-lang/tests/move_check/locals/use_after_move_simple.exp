@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/locals/use_after_move_simple.move:6:9 ───
    │
- 7 │         let y = move x + 1;
+ 7 │         let _ = move x + 1;
    │                 ^^^^^^ Invalid usage of local 'x'
    ·
  6 │         move x;
@@ -11,20 +11,20 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/use_after_move_simple.move:10:18 ───
+    ┌── tests/move_check/locals/use_after_move_simple.move:10:19 ───
     │
- 11 │         let s3 = s;
-    │                  ^ Invalid usage of local 's'
+ 11 │         let _s3 = s;
+    │                   ^ Invalid usage of local 's'
     ·
- 10 │         let s2 = s;
-    │                  - The local does not have a value due to this position. The local must be assigned a value before being used
+ 10 │         let _s2 = s;
+    │                   - The local does not have a value due to this position. The local must be assigned a value before being used
     │
 
 error: 
 
     ┌── tests/move_check/locals/use_after_move_simple.move:16:9 ───
     │
- 17 │         let y = x + 1;
+ 17 │         let _ = x + 1;
     │                 ^ Invalid usage of local 'x'
     ·
  16 │         move x;
@@ -33,20 +33,28 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/use_after_move_simple.move:20:18 ───
+    ┌── tests/move_check/locals/use_after_move_simple.move:21:19 ───
     │
- 21 │         let s3 = copy s;
-    │                  ^^^^^^ Invalid usage of local 's'
+ 21 │         let _s3 = copy s;
+    │                   ^^^^^^ Invalid 'copy'. The local 's' is not live following this expression. Remove the 'copy' annotation or re-annotate as 'move'
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_simple.move:20:19 ───
+    │
+ 21 │         let _s3 = copy s;
+    │                   ^^^^^^ Invalid usage of local 's'
     ·
- 20 │         let s2 = s;
-    │                  - The local does not have a value due to this position. The local must be assigned a value before being used
+ 20 │         let _s2 = s;
+    │                   - The local does not have a value due to this position. The local must be assigned a value before being used
     │
 
 error: 
 
     ┌── tests/move_check/locals/use_after_move_simple.move:26:9 ───
     │
- 27 │         let y = &x;
+ 27 │         let _ = &x;
     │                 ^^ Invalid usage of local 'x'
     ·
  26 │         move x;
@@ -55,12 +63,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/use_after_move_simple.move:30:18 ───
+    ┌── tests/move_check/locals/use_after_move_simple.move:30:19 ───
     │
- 31 │         let s3 = &s;
-    │                  ^^ Invalid usage of local 's'
+ 31 │         let _s3 = &s;
+    │                   ^^ Invalid usage of local 's'
     ·
- 30 │         let s2 = s;
-    │                  - The local does not have a value due to this position. The local must be assigned a value before being used
+ 30 │         let _s2 = s;
+    │                   - The local does not have a value due to this position. The local must be assigned a value before being used
     │
 

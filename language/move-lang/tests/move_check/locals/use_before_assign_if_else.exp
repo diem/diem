@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/locals/use_before_assign_if_else.move:3:13 ───
    │
- 5 │         let y = move x + 1;
+ 5 │         let _ = move x + 1;
    │                 ^^^^^^ Invalid usage of local 'x'
    ·
  3 │         let x: u64;
@@ -13,7 +13,7 @@ error:
 
     ┌── tests/move_check/locals/use_before_assign_if_else.move:9:13 ───
     │
- 11 │         let y = move x + 1;
+ 11 │         let _ = move x + 1;
     │                 ^^^^^^ Invalid usage of local 'x'
     ·
  9 │         let x: u64;
@@ -24,7 +24,7 @@ error:
 
     ┌── tests/move_check/locals/use_before_assign_if_else.move:15:13 ───
     │
- 17 │         let y = move x + 1;
+ 17 │         let _ = move x + 1;
     │                 ^^^^^^ Invalid usage of local 'x'
     ·
  15 │         let x: u64;

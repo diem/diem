@@ -2,32 +2,32 @@ error:
 
    ┌── tests/move_check/locals/use_before_assign_if.move:3:13 ───
    │
- 5 │         let y = move x + 1;
+ 5 │         let _ = move x + 1;
    │                 ^^^^^^ Invalid usage of local 'x'
    ·
  3 │         let x: u64;
-   │             - The local does not have a value due to this position. The local must be assigned a value before being used
+   │             - The local might not have a value due to this position. The local must be assigned a value before being used
    │
 
 error: 
 
     ┌── tests/move_check/locals/use_before_assign_if.move:9:13 ───
     │
- 11 │         let y = x + 1;
+ 11 │         let _ = x + 1;
     │                 ^ Invalid usage of local 'x'
     ·
  9 │         let x: u64;
-    │             - The local does not have a value due to this position. The local must be assigned a value before being used
+    │             - The local might not have a value due to this position. The local must be assigned a value before being used
     │
 
 error: 
 
     ┌── tests/move_check/locals/use_before_assign_if.move:15:13 ───
     │
- 17 │         let y = &x;
+ 17 │         let _ = &x;
     │                 ^^ Invalid usage of local 'x'
     ·
  15 │         let x: u64;
-    │             - The local does not have a value due to this position. The local must be assigned a value before being used
+    │             - The local might not have a value due to this position. The local must be assigned a value before being used
     │
 

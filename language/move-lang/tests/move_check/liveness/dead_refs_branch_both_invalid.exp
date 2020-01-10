@@ -1,0 +1,44 @@
+error: 
+
+    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:4:21 ───
+    │
+ 10 │         _ = x;
+    │             ^ Invalid copy of local 'x'
+    ·
+ 4 │         let x_ref = &mut x;
+    │                     ------ It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:4:21 ───
+    │
+ 11 │         _ = move x;
+    │             ^^^^^^ Invalid move of local 'x'
+    ·
+ 4 │         let x_ref = &mut x;
+    │                     ------ It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:17:21 ───
+    │
+ 23 │         _ = x;
+    │             ^ Invalid copy of local 'x'
+    ·
+ 17 │         let x_ref = &mut x;
+    │                     ------ It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:17:21 ───
+    │
+ 24 │         _ = move x;
+    │             ^^^^^^ Invalid move of local 'x'
+    ·
+ 17 │         let x_ref = &mut x;
+    │                     ------ It is still being mutably borrowed by this reference
+    │
+

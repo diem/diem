@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/locals/use_after_move_if.move:4:25 ───
    │
- 5 │         let y = move x + 1;
+ 5 │         let _ = move x + 1;
    │                 ^^^^^^ Invalid usage of local 'x'
    ·
  4 │         if (cond) { _ = move x };
@@ -13,7 +13,7 @@ error:
 
     ┌── tests/move_check/locals/use_after_move_if.move:10:25 ───
     │
- 11 │         let y = x + 1;
+ 11 │         let _ = x + 1;
     │                 ^ Invalid usage of local 'x'
     ·
  10 │         if (cond) { _ = move x };
@@ -24,7 +24,7 @@ error:
 
     ┌── tests/move_check/locals/use_after_move_if.move:16:25 ───
     │
- 17 │         let y = &x;
+ 17 │         let _ = &x;
     │                 ^^ Invalid usage of local 'x'
     ·
  16 │         if (cond) { _ = move x };

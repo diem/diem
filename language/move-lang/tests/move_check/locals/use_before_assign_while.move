@@ -1,12 +1,12 @@
 module M {
     tmove(cond: bool) {
         let x: u64;
-        while (cond) { let y = move x + 1; x = 0 }
+        while (cond) { let y = move x + 1; x = 0; y; }
     }
 
     tcopy(cond: bool) {
         let x: u64;
-        while (cond) { let y = move x + 1; if (cond) { continue }; x = 0 }
+        while (cond) { let y = move x + 1; if (cond) { continue }; x = 0; y; }
     }
 
     tborrow1(cond: bool) {

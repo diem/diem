@@ -68,7 +68,13 @@ impl<'a, 'b> Context<'a, 'b> {
 impl<'a> TransferFunctions for LocalsSafety<'a> {
     type State = LocalStates;
 
-    fn execute(&mut self, pre: &mut Self::State, cmd: &Command) -> Errors {
+    fn execute(
+        &mut self,
+        pre: &mut Self::State,
+        _lbl: Label,
+        _idx: usize,
+        cmd: &Command,
+    ) -> Errors {
         let mut context = Context::new(self, pre);
         command(&mut context, cmd);
         context.get_errors()
@@ -81,11 +87,12 @@ pub fn verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
     locals: &UniqueMap<Var, SingleType>,
-    cfg: &mut super::cfg::BlockCFG,
+    cfg: &super::cfg::BlockCFG,
 ) {
     let initial_state = LocalStates::initial(&signature.parameters, locals);
     let mut locals_safety = LocalsSafety::new(locals);
-    errors.append(&mut locals_safety.analyze_function(cfg, initial_state));
+    let result = locals_safety.analyze_function(cfg, initial_state);
+    errors.append(&mut result.err().unwrap_or_else(Errors::new));
 }
 
 //**************************************************************************************************

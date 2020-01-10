@@ -4,7 +4,7 @@ module M {
     t0() {
         let x = 0;
 
-        { let x = false; };
+        { let x = false; x; };
         (x: u64);
 
         { let x = false; (x: bool); };

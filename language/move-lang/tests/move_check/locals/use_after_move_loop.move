@@ -11,12 +11,12 @@ module M {
 
     tcopy1(cond: bool) {
         let x = 0;
-        loop { let y = x; _ = move x }
+        loop { let y = x; _ = move x; y; }
     }
 
     tcopy2(cond: bool) {
         let x = 0;
-        loop { let y = x; if (cond) continue; _ = move x }
+        loop { let y = x; if (cond) continue; _ = move x; y; }
     }
 
     tborrow1(cond: bool) {

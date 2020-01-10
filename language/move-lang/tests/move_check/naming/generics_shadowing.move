@@ -5,7 +5,7 @@ module M {
 
     foo<S: copyable>(s: S): S {
         let s: S = (s: S);
-        let s: S = copy s;
+        let s: S = s;
         s
     }
 
