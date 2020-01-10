@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 
 use backtrace::Backtrace;
-use libra_logger::prelude::*;
 use serde::Serialize;
 use std::{
     panic::{self, PanicInfo},
@@ -35,7 +34,7 @@ fn handle_panic(panic_info: &PanicInfo<'_>) {
     let backtrace = format!("{:#?}", Backtrace::new());
 
     let info = CrashInfo { details, backtrace };
-    crit!("{}", toml::to_string_pretty(&info).unwrap());
+    println!("{}", toml::to_string_pretty(&info).unwrap());
 
     // Provide some time to save the log to disk
     thread::sleep(time::Duration::from_millis(100));
