@@ -6,6 +6,6 @@ error:
    │                 ^ Unexpected token: '='
    ·
  3 │         let x : = 0;
-   │                 - Expected: '[Name]', '[Name<Types>]', '[Address]'
+   │                 - Expected: '[Name]', '[Address]'
    │
 

@@ -6,6 +6,6 @@ error:
    │ ^ Unexpected token: ''
    ·
  3 │ 
-   │ - Expected: 'move', 'copy', 'break', 'continue', '[Name]', '[Name<Types>]', '[Address]', 'true', 'false', '[U64]', '(', '{', '::'
+   │ - Expected: 'move', 'copy', 'break', 'continue', '[Name]', '[Address]', 'true', 'false', '[U64]', '(', '{', '::'
    │
 

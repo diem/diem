@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/expansion/type_arguments_on_field_access.move:6:11 ───
+   ┌── tests/move_check/expansion/type_arguments_on_field_access.move:6:17 ───
    │
  6 │         x.f<u64>;
-   │           ^^ Unexpected token: 'f<'
+   │                 ^ Unexpected token: ';'
    ·
  6 │         x.f<u64>;
-   │           -- Expected: a name value
+   │                 - Expected: 'move', 'copy', 'break', 'continue', '[Name]', '[Address]', 'true', 'false', '[U64]', '(', '{', '::'
    │
 
