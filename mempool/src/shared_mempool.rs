@@ -40,6 +40,18 @@ enum ChannelStatus {
     OPEN,
 }
 
+#[derive(Clone, Copy)]
+enum ScheduledEvent {
+    Broadcast,
+    CheckBroadcast,
+}
+
+#[derive(Clone, Copy)]
+struct ScheduledEventInfo {
+    peer_id: PeerId,
+    event_type: ScheduledEvent,
+}
+
 /// state of last broadcast with peer
 /// `timeline_id` is position in log of ready transactions
 /// `is_alive` - is connection healthy
@@ -57,6 +69,7 @@ struct PeerBroadcastState {
     num_batches_sent: usize,
     txn_timeline_id: u64,
     is_alive: bool,
+    broadcast_times: Vec<Duration>, // timestamp of broadcasts, in order
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -163,7 +176,7 @@ async fn process_incoming_transactions<V>(
         message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsResponse(resp)),
     };
     let mut network_sender = smp.network_sender;
-    println!("[shared mempool] direct send response");
+    debug!("[shared mempool] direct send response to {:?}", peer_id);
     network_sender
         .send_to(peer_id, msg)
         .await
@@ -207,9 +220,11 @@ async fn broadcast_transactions<V>(
 }
 
 /// returns earliest duration in the ordered keyset of `b_tree`
-fn pop_btree(b_tree: &BTreeMap<Duration, PeerId>) -> Option<(Duration, PeerId)> {
+fn pop_btree(
+    b_tree: &BTreeMap<Duration, ScheduledEventInfo>,
+) -> Option<(Duration, ScheduledEventInfo)> {
     match b_tree.iter().next() {
-        Some((timestamp, peer_id)) => Some((*timestamp, *peer_id)),
+        Some((timestamp, scheduled_event)) => Some((*timestamp, *scheduled_event)),
         None => None,
     }
 }
@@ -220,9 +235,10 @@ async fn broadcast_task<V>(
 ) where
     V: TransactionValidation,
 {
+    debug!("[shared mempool] broadcast_task started");
     // a BTreeMap whose (key, val) = (earliest scheduled attempted broadcast timestamp for peer, peer_id)
     // there should only be one entry per peer_id value
-    let mut scheduled_broadcasts: BTreeMap<Duration, PeerId> = BTreeMap::new();
+    let mut scheduled_events: BTreeMap<Duration, ScheduledEventInfo> = BTreeMap::new();
 
     // a HashMap where (key, val) = (
     //     peer_id,
@@ -234,7 +250,7 @@ async fn broadcast_task<V>(
     let mut peer_batch_broadcast_state: HashMap<PeerId, PeerBroadcastState> = HashMap::new();
 
     let batch_size = smp.config.shared_mempool_batch_size;
-    let max_batch_count: usize = 5; // TODO change this
+    let max_batch_count: usize = 15; // TODO change this
 
     loop {
         // loop for processing scheduled broadcasts
@@ -242,84 +258,210 @@ async fn broadcast_task<V>(
 
         // process scheduled broadcasts
         loop {
-            println!("[shared mempool] processing scheduled broadcasts");
-            match pop_btree(&scheduled_broadcasts) {
+            // debug!("[shared mempool] processing scheduled broadcasts");
+            match pop_btree(&scheduled_events) {
                 None => {
-                    println!("[shared mempool] b tree empty, no scheduled broadcasts");
+                    debug!("[shared mempool] b tree empty, no scheduled broadcasts");
                     break;
                 }
-                Some((timestamp, peer_id)) => {
+                Some((timestamp, scheduled_event)) => {
                     // prune BTreeMap of processed scheduled broadcasts
-                    println!("[shared mempool] processing scheduled broadcasts for timestamp");
+                    debug!("[shared mempool] processing scheduled broadcasts for timestamp");
                     let now = SystemTime::now()
                         .duration_since(SystemTime::UNIX_EPOCH)
                         .unwrap();
                     if timestamp > now {
-                        println!("[shared mempool] too early, break");
+                        debug!("[shared mempool] too early, break");
                         next_scheduled_broadcast_timestamp = Some(timestamp);
                         break;
                     }
 
-                    scheduled_broadcasts.remove(&timestamp);
+                    scheduled_events.remove(&timestamp);
+
+                    let peer_id = scheduled_event.peer_id;
                     // attempt this scheduled broadcast if it is ready
                     let batch_broadcast_state =
                         peer_batch_broadcast_state.get_mut(&peer_id).unwrap();
-                    if batch_broadcast_state.is_alive {
-                        let timeline_id = batch_broadcast_state.txn_timeline_id;
-                        println!(
-                            "[shared mempool] reading txn for peer {:?} and timeline id {:?}",
-                            peer_id, timeline_id
-                        );
-                        let (transactions, new_timeline_id) = smp
-                            .mempool
-                            .lock()
-                            .expect("[shared mempool] failed to acquire mempool lock")
-                            .read_timeline(timeline_id, batch_size);
+                    debug!("[shared mempool] state: {:?}", batch_broadcast_state);
+                    match scheduled_event.event_type {
+                        ScheduledEvent::Broadcast => {
+                            // attempt this scheduled broadcast if it is ready
+                            if batch_broadcast_state.is_alive {
+                                let timeline_id = batch_broadcast_state.txn_timeline_id;
+                                debug!(
+                                    "[shared mempool] reading txn for peer {:?} and timeline id {:?}",
+                                    peer_id, timeline_id
+                                );
+                                let (transactions, new_timeline_id) = smp
+                                    .mempool
+                                    .lock()
+                                    .expect("[shared mempool] failed to acquire mempool lock")
+                                    .read_timeline(timeline_id, batch_size);
 
-                        println!(
-                            "[shared mempool] got transaction for peer {:?} for timeline_id {:?}",
-                            peer_id, timeline_id
-                        );
+                                debug!(
+                                    "[shared mempool] got transaction for peer {:?} for timeline_id {:?}",
+                                    peer_id, timeline_id
+                                );
 
-                        let rescheduled_timestamp = timestamp
-                            .checked_add(Duration::new(0, 50 * 1_000_000))
-                            .unwrap();
-                        if transactions.is_empty() {
-                            // reschedule this broadcast to 50 ms later, when there might be actual txns to broadcast
-                            scheduled_broadcasts.insert(rescheduled_timestamp, peer_id);
-                        } else {
-                            // broadcast
-                            let smp_clone = smp.clone();
-                            println!("[shared mempool] broadcasting txns");
-                            broadcast_transactions(peer_id, transactions, smp_clone).await;
+                                let rescheduled_timestamp = timestamp
+                                    .checked_add(Duration::new(0, 50 * 1_000_000))
+                                    .unwrap();
+                                let scheduled_broadcast = ScheduledEventInfo {
+                                    peer_id,
+                                    event_type: ScheduledEvent::Broadcast,
+                                };
+                                if transactions.is_empty() {
+                                    // reschedule this broadcast to 50 ms later, when there might be actual txns to broadcast=
+                                    debug!("[shared mempool] no txns to broadcast, rescheduling");
+                                    scheduled_events
+                                        .insert(rescheduled_timestamp, scheduled_broadcast);
+                                } else {
+                                    // broadcast
+                                    let smp_clone = smp.clone();
+                                    debug!("[shared mempool] broadcasting txns to {:?}", peer_id);
+                                    broadcast_transactions(peer_id, transactions, smp_clone).await;
 
-                            // update states
-                            batch_broadcast_state.num_batches_sent += 1;
-                            batch_broadcast_state.txn_timeline_id = new_timeline_id;
+                                    // update states
+                                    batch_broadcast_state.num_batches_sent += 1;
+                                    batch_broadcast_state.txn_timeline_id = new_timeline_id;
+                                    batch_broadcast_state.broadcast_times.push(timestamp);
 
-                            // reschedule the x + 1'th batch if x < max_batch_count
-                            if batch_broadcast_state.num_batches_sent < max_batch_count {
-                                scheduled_broadcasts.insert(rescheduled_timestamp, peer_id);
+                                    // schedule the expiration to hear back for this broadcast
+                                    let scheduled_staleness_check = ScheduledEventInfo {
+                                        peer_id,
+                                        event_type: ScheduledEvent::CheckBroadcast,
+                                    };
+                                    let staleness_check_timestamp =
+                                        timestamp.checked_add(Duration::new(60, 0)).unwrap();
+                                    scheduled_events.insert(
+                                        staleness_check_timestamp,
+                                        scheduled_staleness_check,
+                                    );
+
+                                    // reschedule the x + 1'th batch if x < max_batch_count
+                                    if batch_broadcast_state.num_batches_sent < max_batch_count {
+                                        scheduled_events
+                                            .insert(rescheduled_timestamp, scheduled_broadcast);
+                                    }
+                                }
+                            } else {
+                                debug!(
+                                    "[shared mempool] skipping scheduled broadcasts of lost peer {:?}",
+                                    peer_id,
+                                );
                             }
                         }
-                    } else {
-                        println!("[shared mempool] skipping scheduled broadcasts of lost peers");
+                        ScheduledEvent::CheckBroadcast => {
+                            // timestamp = the time a batch expires
+                            // this check itself might have been expired
+                            debug!(
+                                "[shared mempool] checking broadcast expiration for {:?}: ",
+                                peer_id
+                            );
+
+                            let first_broadcast_expiration_timestamp = batch_broadcast_state
+                                .broadcast_times[0]
+                                .checked_add(Duration::from_secs(60))
+                                .unwrap();
+                            if timestamp == first_broadcast_expiration_timestamp {
+                                debug!("[shared mempool] broadcast expired for {:?}", peer_id);
+                                batch_broadcast_state.num_batches_sent -= 1;
+                                batch_broadcast_state.broadcast_times.remove(0);
+
+                                // need to update txn_timeline_id
+
+                                let resend_time = batch_broadcast_state
+                                    .broadcast_times
+                                    .last()
+                                    .unwrap()
+                                    .checked_add(Duration::from_millis(50))
+                                    .unwrap();
+
+                                // reschedule broadcast if stale
+                                scheduled_events.insert(
+                                    resend_time,
+                                    ScheduledEventInfo {
+                                        peer_id,
+                                        event_type: ScheduledEvent::Broadcast,
+                                    },
+                                );
+                            }
+                        }
                     }
+                    //                    // attempt this scheduled broadcast if it is ready
+                    //                    let batch_broadcast_state =
+                    //                        peer_batch_broadcast_state.get_mut(&peer_id).unwrap();
+                    //                    if batch_broadcast_state.is_alive {
+                    //                        let timeline_id = batch_broadcast_state.txn_timeline_id;
+                    //                        println!(
+                    //                            "[shared mempool] reading txn for peer {:?} and timeline id {:?}",
+                    //                            peer_id, timeline_id
+                    //                        );
+                    //                        let (transactions, new_timeline_id) = smp
+                    //                            .mempool
+                    //                            .lock()
+                    //                            .expect("[shared mempool] failed to acquire mempool lock")
+                    //                            .read_timeline(timeline_id, batch_size);
+                    //
+                    //                        println!(
+                    //                            "[shared mempool] got transaction for peer {:?} for timeline_id {:?}",
+                    //                            peer_id, timeline_id
+                    //                        );
+                    //
+                    //                        let rescheduled_timestamp = timestamp
+                    //                            .checked_add(Duration::new(0, 50 * 1_000_000))
+                    //                            .unwrap();
+                    //                        let scheduled_broadcast = ScheduledEventInfo {
+                    //                            peer_id,
+                    //                            event_type: ScheduledEvent::BROADCAST,
+                    //                        };
+                    //                        if transactions.is_empty() {
+                    //                            // reschedule this broadcast to 50 ms later, when there might be actual txns to broadcast=
+                    //                            scheduled_events.insert(rescheduled_timestamp, scheduled_broadcast);
+                    //                        } else {
+                    //                            // broadcast
+                    //                            let smp_clone = smp.clone();
+                    //                            println!("[shared mempool] broadcasting txns");
+                    //                            broadcast_transactions(peer_id, transactions, smp_clone).await;
+                    //
+                    //                            // update states
+                    //                            batch_broadcast_state.num_batches_sent += 1;
+                    //                            batch_broadcast_state.txn_timeline_id = new_timeline_id;
+                    //                            batch_broadcast_state.broadcast_times.push(timestamp);
+                    //
+                    //                            // schedule the expiration to hear back for this broadcast
+                    //                            let scheduled_staleness_check = ScheduledEventInfo {
+                    //                                peer_id,
+                    //                                event_type: ScheduledEvent::CHECK_BROADCAST,
+                    //                            };
+                    //                            let staleness_check_timestamp = timestamp
+                    //                                .checked_add(Duration::new(60, 0))
+                    //                                .unwrap();
+                    //                            scheduled_events.insert(staleness_check_timestamp, scheduled_staleness_check);
+                    //
+                    //                            // reschedule the x + 1'th batch if x < max_batch_count
+                    //                            if batch_broadcast_state.num_batches_sent < max_batch_count {
+                    //                                scheduled_events.insert(rescheduled_timestamp, scheduled_broadcast);
+                    //                            }
+                    //                        }
+                    //                    } else {
+                    //                        println!("[shared mempool] skipping scheduled broadcasts of lost peers");
+                    //                    }
                 }
             }
         }
 
         // listen to broadcast_triggers
         let listen_broadcast_triggers: ChannelStatus = async {
-            println!("[shared mempool] in listen_broadcast_triggers");
+            debug!("[shared mempool] in listen_broadcast_triggers");
 
             loop {
-                println!("[shared mempool] in loop");
+                // debug!("[shared mempool] in loop");
                 ::futures::select! {
                     update = broadcast_trigger.next() => {
                         match update {
                             Some(update) => {
-                                println!("[shared mempool] received broadcast trigger");
+                                // debug!("[shared mempool] received broadcast trigger");
                                 let peer_id = update.peer_id;
                                 let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
@@ -327,10 +469,9 @@ async fn broadcast_task<V>(
                                     match peer_batch_broadcast_state.get_mut(&peer_id) {
                                         Some(entry) => {
                                             entry.is_alive = false;
-                                            println!("[shared mempool] marked peer as lost {:?}", entry);
+                                            debug!("[shared mempool] marked peer as lost {:?}", entry);
                                         }
                                         None => {
-                                            println!("[shared mempool] received LostPeer notif for nonexistent peer");
                                             debug!("[shared mempool] received LostPeer notification for non-existent peer");
                                         }
                                     }
@@ -340,13 +481,18 @@ async fn broadcast_task<V>(
 
                                     // update state that ack for this broadcast was received
                                     // schedule next broadcast
-                                    scheduled_broadcasts.insert(now, peer_id);
-                                    println!("[shared mempool] scheduled broadcast for {:?} for {:?}", now, peer_id);
+
+                                    scheduled_events.insert(now, ScheduledEventInfo {
+                                        peer_id,
+                                        event_type: ScheduledEvent::Broadcast,
+                                    });
+                                    debug!("[shared mempool] scheduled broadcast for {:?} for {:?}", now, peer_id);
 
                                     match peer_batch_broadcast_state.get_mut(&peer_id) {
                                         Some(entry) => {
                                             if entry.is_alive {
                                                 entry.num_batches_sent -= 1;
+                                                entry.broadcast_times.remove(0);
                                             }
                                             entry.is_alive = true;
                                         }
@@ -356,6 +502,7 @@ async fn broadcast_task<V>(
                                                 num_batches_sent: 0,
                                                 is_alive: true,
                                                 txn_timeline_id: 0,
+                                                broadcast_times: vec![],
                                             });
                                         }
                                     }
@@ -365,27 +512,27 @@ async fn broadcast_task<V>(
                         }
                     }
                     default => {
-                        println!("[shared mempool] in default");
+                        // debug!("[shared mempool] in default");
                         let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
                         if let Some(deadline) = next_scheduled_broadcast_timestamp {
                             if now >= deadline {
-                                println!("[shared mempool] time's up in listen_broadcast_triggers");
+                                debug!("[shared mempool] time's up in listen_broadcast_triggers");
                                 break;
                             }
                         } else {
                             // since we received a peer, we can start looping through btree
-                            println!("[shared mempool] we got a peer, so break");
+                            debug!("[shared mempool] we got a peer, so break");
                             break;
                         }
                     }
                     complete => {
-                        println!("[shared mempool] completed yeh");
+                        debug!("[shared mempool] completed yeh");
                         return ChannelStatus::CLOSED;
                     }
                 }
             }
 
-            println!("[shared mempool] finished listen_broadcast_triggers");
+            debug!("[shared mempool] finished listen_broadcast_triggers");
             ChannelStatus::OPEN
         }.await;
 
@@ -406,7 +553,7 @@ async fn inbound_network_task<V>(
 ) where
     V: TransactionValidation,
 {
-    println!("[shared mempool] in inbound_network_task");
+    debug!("[shared mempool] in inbound_network_task");
     let subscribers = smp.subscribers.clone();
 
     // Use a BoundedExecutor to restrict only `workers_available` concurrent
@@ -419,7 +566,7 @@ async fn inbound_network_task<V>(
         match event {
             Ok(network_event) => match network_event {
                 Event::NewPeer(peer_id) => {
-                    println!("[shared mempool] received NEW PEER {:?}", peer_id);
+                    debug!("[shared mempool] received NEW PEER {:?}", peer_id);
                     OP_COUNTERS.inc("smp.event.new_peer");
                     // also consider the case where the this is not a completely new peer (new --> lost --> new)
                     let update = BroadcastUpdate {
@@ -427,7 +574,7 @@ async fn inbound_network_task<V>(
                         is_alive: true,
                     };
                     broadcast_trigger.clone().unbounded_send(update).unwrap();
-                    println!("[shared mempool] sent update to broadcast_trigger");
+                    debug!("[shared mempool] sent update to broadcast_trigger");
                     notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                 }
                 Event::LostPeer(peer_id) => {
@@ -438,7 +585,7 @@ async fn inbound_network_task<V>(
                         is_alive: false,
                     };
                     broadcast_trigger.clone().unbounded_send(update).unwrap();
-                    println!("[shared mempool] sent update to broadcast_trigger");
+                    debug!("[shared mempool] sent update to broadcast_trigger");
                     notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                 }
                 Event::Message((peer_id, msg)) => {
@@ -461,6 +608,7 @@ async fn inbound_network_task<V>(
                                 })
                                 .collect();
 
+                            debug!("[shared mempool] spawning process_incoming_transactions");
                             bounded_executor
                                 .spawn(process_incoming_transactions(
                                     smp.clone(),
@@ -468,10 +616,11 @@ async fn inbound_network_task<V>(
                                     transactions,
                                 ))
                                 .await;
+                            debug!("[shared mempool] spawned process_incoming_transactions");
                         }
                         Some(MempoolSyncMsg_oneof::BroadcastTransactionsResponse(_response)) => {
                             // send to channel to
-                            println!("[shared mempool] received BroadcastTransactionsResponse from peer {:?}", peer_id);
+                            debug!("[shared mempool] received BroadcastTransactionsResponse from peer {:?}", peer_id);
                             let update = BroadcastUpdate {
                                 peer_id,
                                 is_alive: true,
