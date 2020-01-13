@@ -28,4 +28,4 @@ mod transport;
 mod utils;
 
 /// Type for unique identifier associated with each network protocol
-pub type ProtocolId = bytes05::Bytes;
+pub type ProtocolId = bytes::Bytes;

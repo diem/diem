@@ -51,10 +51,10 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 
     let length_prefixed_data_strat = data_strat.prop_map(|data| {
         let max_len = data.len() + MAX_UVI_PREFIX_BYTES;
-        let mut buf = bytes05::BytesMut::with_capacity(max_len);
+        let mut buf = bytes::BytesMut::with_capacity(max_len);
         let mut codec = LengthDelimitedCodec::new();
         codec
-            .encode(bytes05::Bytes::from(data), &mut buf)
+            .encode(bytes::Bytes::from(data), &mut buf)
             .expect("Failed to create uvi-prefixed data for corpus");
         buf.freeze().to_vec()
     });

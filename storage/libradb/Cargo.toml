@@ -19,7 +19,7 @@ num-derive = "0.2"
 num-traits = "0.2"
 proptest = { version = "0.9.2", optional = true }
 proptest-derive = { version = "0.1.2", optional = true }
-prost = "0.5.0"
+prost = "0.6"
 prometheus = { version = "0.7.0", default-features = false }
 rand = "0.6.5"
 strum = "0.15.0"

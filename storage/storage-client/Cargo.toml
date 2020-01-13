@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0"
 async-trait = "0.1"
 futures = "0.3"
-tonic = { git = "https://github.com/hyperium/tonic.git" }
+tonic = "0.1"
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 scratchpad = { path = "../scratchpad", version = "0.1.0" }
 libra-state-view = { path = "../state-view", version = "0.1.0" }

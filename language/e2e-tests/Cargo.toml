@@ -28,7 +28,7 @@ vm-runtime-types = { path = "../vm/vm-runtime/vm-runtime-types", version = "0.1.
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
-prost = "0.5.0"
+prost = "0.6"
 libra-config =  { path = "../../config", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }

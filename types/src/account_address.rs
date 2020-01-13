@@ -3,7 +3,7 @@
 
 use anyhow::{ensure, Error, Result};
 use bech32::{Bech32, FromBase32, ToBase32};
-use bytes05::Bytes;
+use bytes::Bytes;
 use hex;
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},

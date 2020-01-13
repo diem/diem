@@ -11,17 +11,17 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-bytes = "0.4.12"
-tonic = { git = "https://github.com/hyperium/tonic.git" }
+bytes = "0.5"
+tonic = "0.1"
 proptest = { version = "0.9.2", optional = true }
 proptest-derive = { version = "0.1.0", optional = true }
-prost = "0.5.0"
+prost = "0.6"
 
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 
 [build-dependencies]
-tonic-build = { git = "https://github.com/hyperium/tonic.git" }
+tonic-build = "0.1"
 
 [dev-dependencies]
 libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }

@@ -503,7 +503,7 @@ fn verify_note(
         &peer_info_bytes,
     )?;
 
-    let peer_info = PeerInfo::decode(peer_info_bytes)?;
+    let peer_info = PeerInfo::decode(peer_info_bytes.as_ref())?;
     let mut verified_addrs = vec![];
     for addr in &peer_info.addrs {
         verified_addrs.push(Multiaddr::try_from(addr.clone())?)
@@ -520,7 +520,7 @@ fn verify_note(
             &signed_full_node_payload.payload,
         )?;
 
-        let _ = FullNodePayload::decode(&signed_full_node_payload.payload)?;
+        let _ = FullNodePayload::decode(signed_full_node_payload.payload.as_ref())?;
 
         // TODO(philiphayes): validate internal fields
     }

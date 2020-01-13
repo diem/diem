@@ -62,7 +62,7 @@ use crate::{
     ProtocolId,
 };
 use bounded_executor::BoundedExecutor;
-use bytes05::Bytes;
+use bytes::Bytes;
 use channel;
 use error::RpcError;
 use futures::{

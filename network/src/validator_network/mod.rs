@@ -12,7 +12,7 @@ use crate::{
     utils::MessageExt,
     ProtocolId,
 };
-use bytes05::Bytes;
+use bytes::Bytes;
 use futures::{
     channel::oneshot,
     ready,

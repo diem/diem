@@ -9,7 +9,7 @@ use crate::{
     protocols::direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
     ProtocolId,
 };
-use bytes05::Bytes;
+use bytes::Bytes;
 use channel;
 use futures::{sink::SinkExt, stream::StreamExt};
 use libra_types::PeerId;

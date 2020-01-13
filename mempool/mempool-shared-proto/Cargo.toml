@@ -10,8 +10,8 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-prost = "0.5.0"
-bytes = "0.4.12"
+prost = "0.6"
+bytes = "0.5"
 
 [build-dependencies]
-prost-build = "0.5.0"
+prost-build = "0.6"
