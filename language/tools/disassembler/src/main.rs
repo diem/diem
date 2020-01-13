@@ -44,6 +44,10 @@ struct Args {
     /// Print locals within each function.
     #[structopt(long = "locals")]
     pub print_locals: bool,
+
+    /// Whether or not the file being read is a binary file or not.
+    #[structopt(long = "bin")]
+    pub binary: bool,
 }
 
 fn main() {
@@ -65,10 +69,16 @@ fn main() {
         std::process::exit(1);
     }
 
-    let bytecode_source =
-        fs::read_to_string(args.bytecode_file_path.clone()).expect("Unable to read bytecode file");
-    let module_bytes: Module = serde_json::from_str(bytecode_source.as_str())
-        .expect("Unable to deserialize bytecode file");
+    let module_bytes = if !args.binary {
+        let bytecode_source = fs::read_to_string(args.bytecode_file_path.clone())
+            .expect("Unable to read bytecode file");
+        serde_json::from_str::<Module>(bytecode_source.as_str())
+            .expect("Unable to deserialize bytecode file")
+            .code()
+            .to_vec()
+    } else {
+        fs::read(args.bytecode_file_path.clone()).expect("Unable to deserialize binary file")
+    };
 
     let ir_source_path = Path::new(&args.bytecode_file_path).with_extension(mvir_extension);
     let ir_source = fs::read_to_string(&ir_source_path).ok();
@@ -83,15 +93,15 @@ fn main() {
     disassembler_options.print_locals = args.print_locals;
 
     let mut source_mapping = if args.is_script {
-        let compiled_script = CompiledScript::deserialize(module_bytes.code())
-            .expect("Script blob can't be deserialized");
+        let compiled_script =
+            CompiledScript::deserialize(&module_bytes).expect("Script blob can't be deserialized");
         source_map
             .or_else(|_| ModuleSourceMap::dummy_from_script(&compiled_script))
             .and_then(|source_map| Ok(SourceMapping::new_from_script(source_map, compiled_script)))
             .expect("Unable to build source mapping for compiled script")
     } else {
-        let compiled_module = CompiledModule::deserialize(module_bytes.code())
-            .expect("Module blob can't be deserialized");
+        let compiled_module =
+            CompiledModule::deserialize(&module_bytes).expect("Module blob can't be deserialized");
         source_map
             .or_else(|_| ModuleSourceMap::dummy_from_module(&compiled_module))
             .and_then(|source_map| Ok(SourceMapping::new(source_map, compiled_module)))
