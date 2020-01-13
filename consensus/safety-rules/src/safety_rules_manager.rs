@@ -6,6 +6,7 @@ use crate::{
     persistent_storage::PersistentStorage,
     remote_service::RemoteService,
     serializer::{SerializerClient, SerializerService},
+    spawned_process::SpawnedProcess,
     thread::ThreadService,
     InMemoryStorage, OnDiskStorage, SafetyRules, TSafetyRules,
 };
@@ -54,6 +55,7 @@ pub fn extract_service_inputs(
 enum SafetyRulesWrapper<T> {
     Local(Arc<RwLock<SafetyRules<T>>>),
     Serializer(Arc<RwLock<SerializerService<T>>>),
+    SpawnedProcess(SpawnedProcess<T>),
     Thread(ThreadService<T>),
 }
 
@@ -63,6 +65,10 @@ pub struct SafetyRulesManager<T> {
 
 impl<T: Payload> SafetyRulesManager<T> {
     pub fn new(config: &mut NodeConfig) -> Self {
+        if let SafetyRulesService::SpawnedProcess(_) = config.consensus.safety_rules.service {
+            return Self::new_spawned_process(config);
+        }
+
         let (validator_signer, storage) = extract_service_inputs(config);
         let sr_config = &config.consensus.safety_rules;
         match sr_config.service {
@@ -98,6 +104,13 @@ impl<T: Payload> SafetyRulesManager<T> {
         }
     }
 
+    pub fn new_spawned_process(config: &NodeConfig) -> Self {
+        let process = SpawnedProcess::<T>::new(config);
+        Self {
+            internal_safety_rules: SafetyRulesWrapper::SpawnedProcess(process),
+        }
+    }
+
     pub fn new_thread(
         storage: Box<dyn PersistentStorage>,
         validator_signer: ValidatorSigner,
@@ -117,8 +130,8 @@ impl<T: Payload> SafetyRulesManager<T> {
             SafetyRulesWrapper::Serializer(serializer_service) => {
                 Box::new(SerializerClient::new(serializer_service.clone()))
             }
+            SafetyRulesWrapper::SpawnedProcess(process) => Box::new(process.client()),
             SafetyRulesWrapper::Thread(thread) => Box::new(thread.client()),
-            _ => panic!("Unable to retrieve client for this service"),
         }
     }
 }
