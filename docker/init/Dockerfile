@@ -23,7 +23,8 @@ RUN cargo build --release -p libra-node -p client -p config-builder && cd target
 ### Production Image ###
 FROM debian:buster AS prod
 
-RUN apt-get update && apt-get install gettext-base && apt-get clean && rm -r /var/lib/apt/lists/*
+RUN apt-get update && apt-get -y install curl gettext-base && apt-get clean && rm -r /var/lib/apt/lists/*
+RUN cd /usr/local/bin && curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl && chmod +x kubectl
 
 RUN mkdir -p /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
