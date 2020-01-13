@@ -1,0 +1,33 @@
+module M {
+    resource Foo {
+        x: u128,
+    }
+
+    public foo() {
+        move_to_sender<Foo>(Foo {x: 100u128});
+        return;
+    }
+
+    public bar(): u128 acquires Foo {
+        let x: u128;
+        Foo { x } = move_from<Foo>(get_txn_sender());
+        return move(x);
+    }
+}
+
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    M.foo();
+    return;
+}
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    assert(M.bar() == 100u128, 42);
+    return;
+}

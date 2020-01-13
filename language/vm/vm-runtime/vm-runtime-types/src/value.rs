@@ -1509,7 +1509,9 @@ impl Serialize for ValueImpl {
     {
         use serde::ser::SerializeTuple;
         match self {
+            ValueImpl::U8(val) => serializer.serialize_u8(*val),
             ValueImpl::U64(val) => serializer.serialize_u64(*val),
+            ValueImpl::U128(val) => serializer.serialize_u128(*val),
             ValueImpl::Address(addr) => {
                 // TODO: this is serializing as a vector but we want just raw bytes
                 // however the AccountAddress story is a bit difficult to work with right now
@@ -1525,7 +1527,10 @@ impl Serialize for ValueImpl {
             }
             ValueImpl::ByteArray(bytearray) => bytearray.serialize(serializer),
             ValueImpl::NativeStruct(v) => v.serialize(serializer),
-            _ => unreachable!("invalid type to serialize"),
+            ValueImpl::Invalid
+            | ValueImpl::Reference(_)
+            | ValueImpl::GlobalRef(_)
+            | ValueImpl::PromotedReference(_) => unreachable!("invalid type to serialize"),
         }
     }
 }
