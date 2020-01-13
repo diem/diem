@@ -23,10 +23,10 @@ while [[ "$1" =~ ^- ]]; do case $1 in
     shift;
     if [[ "$1" =~ ^pull ]]; then
       SOURCE_VERSION="refs/${1}/head"
-      TAGS="dev_${1/\//_}"
+      TAGS="dev_${USER}_${1/\//_}"
     else
       SOURCE_VERSION="${1}"
-      TAGS="dev_${1}"
+      TAGS="dev_${USER}_${1}"
     fi
     ;;
   --addl_tags )
@@ -56,11 +56,11 @@ BUILD_ID=$(aws codebuild start-build --project-name libra-validator \
  --source-version ${SOURCE_VERSION} | jq -r .build.id)
 
 if [ -z "${BUILD_ID}" ]; then
-  echo "Failed to submit build"
+  echo "Failed to submit build. Make sure you have proper AWS credentials in your environment."
   exit 1
 fi
 
-echo "Started build with ID ${BUILD_ID}"
+echo "Started build with ID ${BUILD_ID}. Link to the build https://us-west-2.console.aws.amazon.com/codesuite/codebuild/projects/libra-validator/build/${BUILD_ID}/"
 
 while true; do
     BUILD_JSON=$(aws codebuild batch-get-builds --ids ${BUILD_ID})
