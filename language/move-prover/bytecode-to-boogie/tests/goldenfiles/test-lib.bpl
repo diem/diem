@@ -1391,10 +1391,11 @@ requires ExistsTxnSenderAccount(m, txn);
     var t17: Value; // IntegerType()
     var t18: Value; // IntegerType()
     var t19: Value; // IntegerType()
-    var t20: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
-    var t21: Reference; // ReferenceType(IntegerType())
-    var t22: Value; // IntegerType()
-    var t23: Value; // LibraCoin_T_type_value()
+    var t20: Value; // IntegerType()
+    var t21: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
+    var t22: Reference; // ReferenceType(IntegerType())
+    var t23: Value; // IntegerType()
+    var t24: Value; // LibraCoin_T_type_value()
 
     var tmp: Value;
     var old_size: int;
@@ -1408,7 +1409,7 @@ requires ExistsTxnSenderAccount(m, txn);
     assume IsValidReferenceParameter(local_counter, arg1);
 
     old_size := local_counter;
-    local_counter := local_counter + 24;
+    local_counter := local_counter + 25;
     m := UpdateLocal(m, old_size + 0, arg0);
     t1 := arg1;
 
@@ -1471,25 +1472,27 @@ Label_11:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 18, tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 17), GetLocal(m, old_size + 18));
+    m := UpdateLocal(m, old_size + 19, GetLocal(m, old_size + 18));
+
+    call tmp := Add(GetLocal(m, old_size + 17), GetLocal(m, old_size + 19));
     if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 19, tmp);
+    m := UpdateLocal(m, old_size + 20, tmp);
 
-    call t20 := CopyOrMoveRef(t2);
+    call t21 := CopyOrMoveRef(t2);
 
-    call t21 := BorrowField(t20, LibraCoin_MarketCap_total_value);
+    call t22 := BorrowField(t21, LibraCoin_MarketCap_total_value);
 
-    call WriteRef(t21, GetLocal(m, old_size + 19));
+    call WriteRef(t22, GetLocal(m, old_size + 20));
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 22, tmp);
-
-    assume is#Integer(GetLocal(m, old_size + 22));
-
-    call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 22));
     m := UpdateLocal(m, old_size + 23, tmp);
 
-    ret0 := GetLocal(m, old_size + 23);
+    assume is#Integer(GetLocal(m, old_size + 23));
+
+    call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 23));
+    m := UpdateLocal(m, old_size + 24, tmp);
+
+    ret0 := GetLocal(m, old_size + 24);
     return;
 
 Label_Abort:

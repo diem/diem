@@ -286,7 +286,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
-                self.local_types.push(SignatureToken::U8);
+                self.local_types.push(SignatureToken::U64);
                 self.code
                     .push(StacklessBytecode::CastU64(temp_index, operand_index));
                 self.temp_count += 1;
@@ -296,7 +296,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
-                self.local_types.push(SignatureToken::U8);
+                self.local_types.push(SignatureToken::U128);
                 self.code
                     .push(StacklessBytecode::CastU128(temp_index, operand_index));
                 self.temp_count += 1;
