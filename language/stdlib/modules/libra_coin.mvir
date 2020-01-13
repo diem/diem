@@ -12,7 +12,7 @@ module LibraCoin {
 
     resource MarketCap {
         // The sum of the values of all LibraCoin.T resources in the system
-        total_value: u64,
+        total_value: u128,
     }
 
     // Return a reference to the MintCapability published under the sender's account. Fails if the
@@ -28,7 +28,7 @@ module LibraCoin {
     // `borrow_sender_mint_capability`
     public mint(value: u64, capability: &Self.MintCapability): Self.T acquires MarketCap {
         let market_cap_ref: &mut Self.MarketCap;
-        let market_cap_total_value: u64;
+        let market_cap_total_value: u128;
 
         _ = move(capability);
 
@@ -40,7 +40,7 @@ module LibraCoin {
         // update market cap resource to reflect minting
         market_cap_ref = borrow_global_mut<MarketCap>(0xA550C18);
         market_cap_total_value = *&copy(market_cap_ref).total_value;
-        *(&mut move(market_cap_ref).total_value) = move(market_cap_total_value) + copy(value);
+        *(&mut move(market_cap_ref).total_value) = move(market_cap_total_value) + to_u128(copy(value));
 
         return T{value: move(value)};
     }
@@ -52,13 +52,13 @@ module LibraCoin {
         assert(get_txn_sender() == 0xA550C18, 1);
 
         move_to_sender<MintCapability>(MintCapability{ _dummy: true });
-        move_to_sender<MarketCap>(MarketCap { total_value: 0 });
+        move_to_sender<MarketCap>(MarketCap { total_value: 0u128 });
 
         return;
     }
 
     // Return the total value of all Libra in the system
-    public market_cap(): u64 acquires MarketCap {
+    public market_cap(): u128 acquires MarketCap {
         return *&(borrow_global<MarketCap>(0xA550C18)).total_value;
     }
 

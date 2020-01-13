@@ -617,15 +617,33 @@ impl<'a> ModuleTranslator<'a> {
                 "call tmp := LdFalse();".to_string(),
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
-            LdU8(_, _) => unimplemented!(),
-            LdU64(idx, num) => vec![
-                format!("call tmp := LdConst({});", num),
-                format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
+            LdU8(idx, num) =>
+                vec![
+                    format!("call tmp := LdConst({});", num),
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
+                ],
+            LdU64(idx, num) =>
+                vec![
+                    format!("call tmp := LdConst({});", num),
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
+                ],
+            LdU128(idx, num) =>
+                vec![
+                    format!("call tmp := LdConst({});", num),
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
+                ],
+            CastU8(dest, src) => vec![
+                // TODO: u8 bounds check
+                format!("m := UpdateLocal(m, old_size + {}, GetLocal(m, old_size + {}));", dest, src),
             ],
-            LdU128(_, _) => unimplemented!(),
-            CastU8(_, _) => unimplemented!(),
-            CastU64(_, _) => unimplemented!(),
-            CastU128(_, _) => unimplemented!(),
+            CastU64(dest, src) =>
+                vec![
+                // TODO: u64 bounds check
+                format!("m := UpdateLocal(m, old_size + {}, GetLocal(m, old_size + {}));", dest, src),
+            ],
+            CastU128(dest, src) => vec![
+                format!("m := UpdateLocal(m, old_size + {}, GetLocal(m, old_size + {}));", dest, src),
+            ],
             LdAddr(idx, addr_idx) => {
                 let addr = self.module.address_pool()[(*addr_idx).into_index()];
                 let addr_int = BigInt::from_str_radix(&addr.to_string(), 16).unwrap();
@@ -1136,7 +1154,7 @@ pub fn format_type_checking(
 ) -> String {
     let mut params = name;
     let check = match sig {
-        SignatureToken::U64 => "is#Integer",
+        SignatureToken::U8 | SignatureToken::U64 | SignatureToken::U128 => "is#Integer",
         SignatureToken::Bool => "is#Boolean",
         SignatureToken::Address => "is#Address",
         SignatureToken::ByteArray => "is#ByteArray",
@@ -1147,7 +1165,7 @@ pub fn format_type_checking(
             "IsValidReferenceParameter"
         }
         // Otherwise it is a type parameter which is opaque
-        _ => "",
+        SignatureToken::TypeParameter(_) => "",
     };
     if check.is_empty() {
         "".to_string()
@@ -1211,9 +1229,9 @@ pub fn format_type(module: &VerifiedModule, sig: &SignatureToken) -> String {
 pub fn format_type_value(module: &VerifiedModule, sig: &SignatureToken) -> String {
     match sig {
         SignatureToken::Bool => "BooleanType()".to_string(),
-        SignatureToken::U8 => unimplemented!(),
-        SignatureToken::U64 => "IntegerType()".to_string(),
-        SignatureToken::U128 => unimplemented!(),
+        SignatureToken::U8 | SignatureToken::U64 | SignatureToken::U128 => {
+            "IntegerType()".to_string()
+        }
         SignatureToken::ByteArray => "ByteArrayType()".to_string(),
         SignatureToken::Address => "AddressType()".to_string(),
         SignatureToken::Reference(t) | SignatureToken::MutableReference(t) => {
