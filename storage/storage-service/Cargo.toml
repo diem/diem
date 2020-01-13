@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0"
 async-trait = "0.1"
 tokio = { version = "0.2.8", features = ["full"] }
-tonic = { git = "https://github.com/hyperium/tonic.git" }
+tonic = "0.1"
 futures = "0.3"
 structopt = "0.3.2"
 

@@ -49,7 +49,7 @@ use crate::{
     peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
     ProtocolId,
 };
-use bytes05::Bytes;
+use bytes::Bytes;
 use channel;
 use futures::{
     io::{AsyncRead, AsyncWrite},

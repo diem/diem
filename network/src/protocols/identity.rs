@@ -114,7 +114,7 @@ where
         .to_bytes()
         .expect("writing protobuf failed; should never happen");
     framed_substream
-        .send(bytes05::Bytes::copy_from_slice(bytes.as_ref()))
+        .send(bytes::Bytes::copy_from_slice(bytes.as_ref()))
         .await?;
     framed_substream.close().await?;
 

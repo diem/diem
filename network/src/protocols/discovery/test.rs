@@ -48,7 +48,7 @@ fn gen_full_node_payload() -> FullNodePayload {
 
 fn get_addrs_from_note(note: &Note) -> Vec<Multiaddr> {
     let signed_peer_info = note.signed_peer_info.as_ref().unwrap();
-    let peer_info = PeerInfo::decode(&signed_peer_info.peer_info).unwrap();
+    let peer_info = PeerInfo::decode(signed_peer_info.peer_info.as_ref()).unwrap();
     let mut addrs = vec![];
     for addr in peer_info.addrs {
         addrs.push(Multiaddr::try_from(addr.clone()).unwrap());

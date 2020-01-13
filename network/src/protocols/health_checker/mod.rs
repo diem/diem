@@ -23,7 +23,7 @@ use crate::{
     utils::MessageExt,
     validator_network::{Event, HealthCheckerNetworkEvents, HealthCheckerNetworkSender},
 };
-use bytes05::Bytes;
+use bytes::Bytes;
 use futures::{
     channel::oneshot,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},

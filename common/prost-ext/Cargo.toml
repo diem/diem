@@ -13,4 +13,4 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.5"
-prost = "0.5.0"
+prost = "0.6"

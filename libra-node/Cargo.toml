@@ -16,7 +16,7 @@ parity-multiaddr = "0.6.0"
 rayon = "1.2.0"
 structopt = "0.3.2"
 tokio = { version = "0.2.8", features = ["full"] }
-tonic = { git = "https://github.com/hyperium/tonic.git" }
+tonic = "0.1"
 
 admission-control-proto = { path = "../admission_control/admission-control-proto", version = "0.1.0" }
 admission-control-service = { path = "../admission_control/admission-control-service", version = "0.1.0" }

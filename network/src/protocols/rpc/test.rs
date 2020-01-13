@@ -310,7 +310,7 @@ fn dialer_close_before_listener_send() {
             Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         // Send the rpc request data.
         substream
-            .buffered_send(bytes05::Bytes::from_static(req_data))
+            .buffered_send(bytes::Bytes::from_static(req_data))
             .await
             .unwrap();
         // Dialer then suddenly drops the connection
@@ -358,12 +358,12 @@ fn dialer_sends_two_requests_err() {
             Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         // Send the rpc request data.
         substream
-            .buffered_send(bytes05::Bytes::from_static(req_data))
+            .buffered_send(bytes::Bytes::from_static(req_data))
             .await
             .unwrap();
         // ERROR: Send _another_ rpc request data in the same substream.
         substream
-            .buffered_send(bytes05::Bytes::from_static(req_data))
+            .buffered_send(bytes::Bytes::from_static(req_data))
             .await
             .unwrap();
         // Dialer half-closes
@@ -564,7 +564,7 @@ fn outbound_cancellation_recv() {
         cancel_done_rx.await.unwrap();
 
         // should get an error when trying to send
-        match substream.send(bytes05::Bytes::from_static(res_data)).await {
+        match substream.send(bytes::Bytes::from_static(res_data)).await {
             Err(err) => assert_eq!(io::ErrorKind::BrokenPipe, err.kind()),
             res => panic!("listener: Unexpected result: {:?}", res),
         }

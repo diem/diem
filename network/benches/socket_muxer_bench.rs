@@ -37,7 +37,7 @@
 //!
 //! Note: gnuplot must be installed to generate benchmark plots.
 
-use bytes05::{Bytes, BytesMut};
+use bytes::{Bytes, BytesMut};
 use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,

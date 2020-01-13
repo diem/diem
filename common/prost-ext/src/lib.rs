@@ -43,9 +43,9 @@ pub mod test_helpers {
         P: prost::Message + Default,
     {
         let proto: P = object.clone().into();
-        let proto_bytes = proto.to_vec().unwrap();
+        let proto_bytes = proto.to_bytes().unwrap();
         let from_proto = T::try_from(proto).unwrap();
-        let from_proto_bytes = T::try_from(P::decode(&proto_bytes).unwrap()).unwrap();
+        let from_proto_bytes = T::try_from(P::decode(proto_bytes).unwrap()).unwrap();
         assert_eq!(*object, from_proto);
         assert_eq!(*object, from_proto_bytes);
     }
