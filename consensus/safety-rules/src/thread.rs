@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(dead_code)]
-
 //! This provides a execution separation between SafetyRules and Consensus without requiring the
 //! use of processes. Rust does not support fork and so the mechanics to actually construct a
 //! SafetyRules that would run together and be started by Consensus requires a separate binary and
@@ -25,7 +23,7 @@ use std::{
 /// ThreadClient is the actual owner of the thread but in the context of Consenus and SafetyRules
 /// is on the client side of the operations as it makes queries / requests to SafetyRules.
 pub struct ThreadService<T> {
-    child: JoinHandle<()>,
+    _child: JoinHandle<()>,
     server_addr: SocketAddr,
     marker: PhantomData<T>,
 }
@@ -41,7 +39,7 @@ impl<T: Payload> ThreadService<T> {
         });
 
         Self {
-            child,
+            _child: child,
             server_addr,
             marker: PhantomData,
         }
