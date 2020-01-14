@@ -87,7 +87,7 @@ impl Transport for TcpTransport {
     }
 
     fn dial(&self, addr: Multiaddr) -> Result<Self::Outbound, Self::Error> {
-        let socket_addr = multiaddr_to_socketaddr(&addr)?;
+        let socket_addr = multiaddr_to_string(&addr)?;
         let config = self.clone();
         let f: Pin<Box<dyn Future<Output = io::Result<TcpStream>> + Send + 'static>> =
             Box::pin(TcpStream::connect(socket_addr));
@@ -220,6 +220,40 @@ fn multiaddr_to_socketaddr(addr: &Multiaddr) -> ::std::io::Result<SocketAddr> {
     match (proto1, proto2) {
         (Protocol::Ip4(ip), Protocol::Tcp(port)) => Ok(SocketAddr::new(ip.into(), port)),
         (Protocol::Ip6(ip), Protocol::Tcp(port)) => Ok(SocketAddr::new(ip.into(), port)),
+        _ => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("Invalid Multiaddr '{:?}'", addr),
+        )),
+    }
+}
+
+fn multiaddr_to_string(addr: &Multiaddr) -> ::std::io::Result<String> {
+    let mut iter = addr.iter();
+    let proto1 = iter.next().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("Invalid Multiaddr '{:?}'", addr),
+        )
+    })?;
+    let proto2 = iter.next().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("Invalid Multiaddr '{:?}'", addr),
+        )
+    })?;
+
+    if iter.next().is_some() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("Invalid Multiaddr '{:?}'", addr),
+        ));
+    }
+
+    match (proto1, proto2) {
+        (Protocol::Ip4(ip), Protocol::Tcp(port)) => Ok(format!("{}:{}", ip, port)),
+        (Protocol::Ip6(ip), Protocol::Tcp(port)) => Ok(format!("{}:{}", ip, port)),
+        (Protocol::Dns4(host), Protocol::Tcp(port))
+        | (Protocol::Dns6(host), Protocol::Tcp(port)) => Ok(format!("{}:{}", host, port)),
         _ => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!("Invalid Multiaddr '{:?}'", addr),
