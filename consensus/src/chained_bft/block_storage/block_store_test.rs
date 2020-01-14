@@ -3,7 +3,9 @@
 
 use crate::chained_bft::test_utils::build_simple_tree;
 use crate::chained_bft::{
-    block_storage::{block_store::sync_manager::NeedFetchResult, BlockReader, VoteReceptionResult},
+    block_storage::{
+        block_store::sync_manager::NeedFetchResult, BlockReader, PendingVotes, VoteReceptionResult,
+    },
     test_utils::{build_empty_tree, TreeInserter},
 };
 use consensus_types::{
@@ -255,6 +257,7 @@ fn test_insert_vote() {
     let block_store = inserter.block_store();
     let genesis = block_store.root();
     let block = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
+    let mut pending_votes = PendingVotes::new();
 
     assert!(block_store.get_quorum_cert_for_block(block.id()).is_none());
     for (i, voter) in signers.iter().enumerate().take(10).skip(1) {
@@ -273,13 +276,13 @@ fn test_insert_vote() {
             placeholder_ledger_info(),
             voter,
         );
-        let vote_res = block_store.insert_vote_and_qc(&vote, &validator_verifier);
+        let vote_res = pending_votes.insert_vote(&vote, &validator_verifier);
 
         // first vote of an author is accepted
         assert_eq!(vote_res, VoteReceptionResult::VoteAdded(i as u64));
         // filter out duplicates
         assert_eq!(
-            block_store.insert_vote_and_qc(&vote, &validator_verifier),
+            pending_votes.insert_vote(&vote, &validator_verifier),
             VoteReceptionResult::DuplicateVote,
         );
         // qc is still not there
@@ -302,9 +305,12 @@ fn test_insert_vote() {
         placeholder_ledger_info(),
         final_voter,
     );
-    match block_store.insert_vote_and_qc(&vote, &validator_verifier) {
+    match pending_votes.insert_vote(&vote, &validator_verifier) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
             assert_eq!(qc.certified_block().id(), block.id());
+            block_store
+                .insert_single_quorum_cert(qc.as_ref().clone())
+                .unwrap();
         }
         _ => {
             panic!("QC not formed!");

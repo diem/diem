@@ -13,6 +13,7 @@ mod block_tree;
 mod pending_votes;
 
 pub use block_store::{sync_manager::BlockRetriever, BlockStore};
+pub use pending_votes::PendingVotes;
 
 /// Result of the vote processing. The failure case (Verification error) is returned
 /// as the Error part of the result.
@@ -25,8 +26,6 @@ pub enum VoteReceptionResult {
     DuplicateVote,
     /// The very same author has already voted for another proposal in this round (equivocation).
     EquivocateVote,
-    /// This block has been already certified.
-    OldQuorumCertificate(Arc<QuorumCert>),
     /// This block has just been certified after adding the vote.
     NewQuorumCertificate(Arc<QuorumCert>),
     /// The vote completes a new TimeoutCertificate

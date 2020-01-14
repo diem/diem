@@ -3,7 +3,7 @@
 
 use crate::{
     chained_bft::{
-        block_storage::{block_tree::BlockTree, BlockReader, VoteReceptionResult},
+        block_storage::{block_tree::BlockTree, BlockReader},
         persistent_storage::{PersistentStorage, RecoveryData},
     },
     counters,
@@ -12,16 +12,16 @@ use crate::{
 use anyhow::{bail, ensure, format_err, Context};
 use consensus_types::{
     block::Block, common::Payload, executed_block::ExecutedBlock, quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate, vote::Vote,
+    timeout_certificate::TimeoutCertificate,
 };
 use debug_interface::event;
 use executor::{ExecutedTrees, ProcessedVMOutput};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_types::crypto_proxies::ValidatorSet;
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},
@@ -322,26 +322,6 @@ impl<T: Payload> BlockStore<T> {
         Ok(())
     }
 
-    /// Adds a vote for the block.
-    /// The returned value either contains the vote result (with new / old QC etc.) or a
-    /// verification error.
-    /// A block store does not verify that the block, which is voted for, is present locally.
-    /// It returns QC, if it is formed, but does not insert it into block store, because it might
-    /// not have required dependencies yet
-    /// Different execution ids are treated as different blocks (e.g., if some proposal is
-    /// executed in a non-deterministic fashion due to a bug, then the votes for execution result
-    /// A and the votes for execution result B are aggregated separately).
-    pub fn insert_vote(
-        &self,
-        vote: &Vote,
-        validator_verifier: &ValidatorVerifier,
-    ) -> VoteReceptionResult {
-        self.inner
-            .write()
-            .unwrap()
-            .insert_vote(vote, validator_verifier)
-    }
-
     /// Prune the tree up to next_root_id (keep next_root_id's block).  Any branches not part of
     /// the next_root_id's tree should be removed as well.
     ///
@@ -434,20 +414,6 @@ impl<T: Payload> BlockStore<T> {
     /// The number of pruned blocks that are still available in memory
     pub(super) fn pruned_blocks_in_mem(&self) -> usize {
         self.inner.read().unwrap().pruned_blocks_in_mem()
-    }
-
-    /// Helper to insert vote and qc
-    /// Can't be used in production, because production insertion potentially requires state sync
-    pub fn insert_vote_and_qc(
-        &self,
-        vote: &Vote,
-        validator_verifier: &ValidatorVerifier,
-    ) -> VoteReceptionResult {
-        let r = self.insert_vote(vote, validator_verifier);
-        if let VoteReceptionResult::NewQuorumCertificate(ref qc) = r {
-            self.insert_single_quorum_cert(qc.as_ref().clone()).unwrap();
-        }
-        r
     }
 
     /// Helper function to insert the block with the qc together
