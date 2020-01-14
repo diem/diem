@@ -24,6 +24,7 @@ slog = { version = "2.5.0", features = ["max_level_debug", "release_max_level_de
 slog-term = "2.4.1"
 slog-scope = "4.0"
 slog-envlogger = "2.1.0"
+slog-json = "2.3.0"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 libra-config = { path = "../../../config", version = "0.1.0" }

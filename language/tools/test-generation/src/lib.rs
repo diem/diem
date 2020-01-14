@@ -112,18 +112,38 @@ fn execute_function_in_module(
 
 /// Serialize a module to `path` if `output_path` is `Some(path)`. If `output_path` is `None`
 /// print the module out as debug output.
-fn output_error_case(module: CompiledModule, output_path: Option<String>, case_id: u64, tid: u64) {
+fn output_error_case(
+    module: CompiledModule,
+    error: String,
+    output_path: Option<String>,
+    case_id: u64,
+    tid: u64,
+) {
     match output_path {
         Some(path) => {
             let mut out = vec![];
             module
                 .serialize(&mut out)
                 .expect("Unable to serialize module");
-            let output_file = format!("{}/case{}_{}.module", path, tid, case_id);
-            let mut f = fs::File::create(&output_file)
-                .unwrap_or_else(|err| panic!("Unable to open output file {}: {}", &path, err));
-            f.write_all(&out)
-                .unwrap_or_else(|err| panic!("Unable to write to output file {}: {}", &path, err));
+            let error_id = format!("{}/case{}_{}", path, tid, case_id);
+            fs::create_dir_all(&error_id).unwrap();
+            let module_output_file = format!("{}/module.mv", error_id);
+            let module_error_output_file = format!("{}/error.err", error_id);
+            fs::File::create(&module_output_file)
+                .unwrap_or_else(|err| {
+                    panic!(
+                        "Unable to open output file {}: {}",
+                        &module_output_file, err
+                    )
+                })
+                .write_all(&out)
+                .unwrap_or_else(|err| {
+                    panic!(
+                        "Unable to write to output file {}: {}",
+                        &module_output_file, err
+                    )
+                });
+            fs::write(module_error_output_file, error).unwrap();
         }
         None => {
             debug!("{:#?}", module);
@@ -245,7 +265,7 @@ pub fn bytecode_generation(
             Err(e) => {
                 error!("{}", e);
                 let uid = rng.gen::<u64>();
-                output_error_case(module.clone(), output_path.clone(), uid, tid);
+                output_error_case(module.clone(), e, output_path.clone(), uid, tid);
                 if EXECUTE_UNVERIFIED_MODULE {
                     Some(VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
                         module.clone(),
@@ -272,14 +292,26 @@ pub fn bytecode_generation(
                             _ => {
                                 error!("{}", e);
                                 let uid = rng.gen::<u64>();
-                                output_error_case(module.clone(), output_path.clone(), uid, tid);
+                                output_error_case(
+                                    module.clone(),
+                                    e.to_string(),
+                                    output_path.clone(),
+                                    uid,
+                                    tid,
+                                );
                             }
                         },
                     },
                     Err(_) => {
                         // Save modules that cause the VM runtime to panic
                         let uid = rng.gen::<u64>();
-                        output_error_case(module.clone(), output_path.clone(), uid, tid);
+                        output_error_case(
+                            module.clone(),
+                            "VM panic".to_string(),
+                            output_path.clone(),
+                            uid,
+                            tid,
+                        );
                     }
                 }
             } else {
