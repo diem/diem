@@ -6,14 +6,14 @@ use crate::json_metrics::get_json_metrics;
 use crate::public_metrics::PUBLIC_METRICS;
 use futures::future;
 use hyper::{
-    rt::{self, Future},
-    service::service_fn,
+    service::{make_service_fn, service_fn},
     Body, Method, Request, Response, Server, StatusCode,
 };
-use libra_logger::prelude::*;
 use prometheus::{proto::MetricFamily, Encoder, TextEncoder};
 use std::collections::HashMap;
 use std::net::{SocketAddr, ToSocketAddrs};
+use std::thread;
+use tokio::runtime;
 
 fn encode_metrics(encoder: impl Encoder, whitelist: &'static [&'static str]) -> Vec<u8> {
     let mut metric_families = prometheus::gather();
@@ -56,7 +56,7 @@ fn whitelist_json_metrics(
     whitelist_metrics
 }
 
-fn serve_metrics(req: Request<Body>) -> impl Future<Item = Response<Body>, Error = hyper::Error> {
+async fn serve_metrics(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     let mut resp = Response::new(Body::empty());
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/metrics") => {
@@ -82,12 +82,10 @@ fn serve_metrics(req: Request<Body>) -> impl Future<Item = Response<Body>, Error
         }
     };
 
-    future::ok(resp)
+    Ok(resp)
 }
 
-fn serve_public_metrics(
-    req: Request<Body>,
-) -> impl Future<Item = Response<Body>, Error = hyper::Error> {
+async fn serve_public_metrics(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     let mut resp = Response::new(Body::empty());
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/metrics") => {
@@ -107,7 +105,7 @@ fn serve_public_metrics(
         }
     };
 
-    future::ok(resp)
+    Ok(resp)
 }
 
 pub fn start_server(host: String, port: u16, public_metric: bool) {
@@ -119,34 +117,37 @@ pub fn start_server(host: String, port: u16, public_metric: bool) {
         .unwrap();
 
     if public_metric {
-        rt::run(rt::lazy(move || {
-            match Server::try_bind(&addr) {
-                Ok(srv) => {
-                    let srv = srv
-                        .serve(|| service_fn(serve_public_metrics))
-                        .map_err(|e| eprintln!("server error: {}", e));
-                    info!("Metric server listening on http://{}", addr);
-                    rt::spawn(srv);
-                }
-                Err(e) => error!("Metric server bind error: {}", e),
-            };
+        thread::spawn(move || {
+            let make_service = make_service_fn(|_| {
+                future::ok::<_, hyper::Error>(service_fn(serve_public_metrics))
+            });
 
-            Ok(())
-        }));
+            let mut rt = runtime::Builder::new()
+                .basic_scheduler()
+                .enable_io()
+                .build()
+                .unwrap();
+            rt.block_on(async {
+                let server = Server::bind(&addr).serve(make_service);
+                server.await
+            })
+            .unwrap();
+        });
     } else {
-        rt::run(rt::lazy(move || {
-            match Server::try_bind(&addr) {
-                Ok(srv) => {
-                    let srv = srv
-                        .serve(|| service_fn(serve_metrics))
-                        .map_err(|e| eprintln!("server error: {}", e));
-                    info!("Metric server listening on http://{}", addr);
-                    rt::spawn(srv);
-                }
-                Err(e) => error!("Metric server bind error: {}", e),
-            };
+        thread::spawn(move || {
+            let make_service =
+                make_service_fn(|_| future::ok::<_, hyper::Error>(service_fn(serve_metrics)));
 
-            Ok(())
-        }));
+            let mut rt = runtime::Builder::new()
+                .basic_scheduler()
+                .enable_io()
+                .build()
+                .unwrap();
+            rt.block_on(async {
+                let server = Server::bind(&addr).serve(make_service);
+                server.await
+            })
+            .unwrap();
+        });
     }
 }
