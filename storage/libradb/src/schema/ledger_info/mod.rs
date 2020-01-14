@@ -15,15 +15,12 @@
 use crate::schema::ensure_slice_len_eq;
 use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt};
-use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
-use prost::Message;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
     DEFAULT_CF_NAME,
 };
-use std::convert::TryInto;
 use std::mem::size_of;
 
 define_schema!(
@@ -46,12 +43,11 @@ impl KeyCodec<LedgerInfoSchema> for u64 {
 
 impl ValueCodec<LedgerInfoSchema> for LedgerInfoWithSignatures {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        let event: libra_types::proto::types::LedgerInfoWithSignatures = self.clone().into();
-        Ok(event.to_vec()?)
+        lcs::to_bytes(self).map_err(Into::into)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        libra_types::proto::types::LedgerInfoWithSignatures::decode(data)?.try_into()
+        lcs::from_bytes(data).map_err(Into::into)
     }
 }
 

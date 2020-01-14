@@ -9,8 +9,9 @@ use schemadb::schema::assert_encode_decode;
 proptest! {
     #[test]
     fn test_encode_decode(
+        epoch in any::<u64>(),
         ledger_info_with_sigs in any_with::<LedgerInfoWithSignatures>((1..10).into())
     ) {
-        assert_encode_decode::<LedgerInfoSchema>(&0, &ledger_info_with_sigs);
+        assert_encode_decode::<LedgerInfoSchema>(&epoch, &ledger_info_with_sigs);
     }
 }
