@@ -1,26 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::block_storage::pending_votes::PendingVotes;
-use crate::{
-    chained_bft::block_storage::VoteReceptionResult, counters,
-    util::time_service::duration_since_epoch,
-};
+use crate::counters;
 use anyhow::bail;
 use consensus_types::{
-    executed_block::ExecutedBlock, quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate, vote::Vote,
+    executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
 };
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::ValidatorVerifier;
 use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;
 use std::{
     collections::{vec_deque::VecDeque, HashMap, HashSet},
     fmt::Debug,
     sync::Arc,
-    time::Duration,
 };
 
 /// This structure is a wrapper of [`ExecutedBlock`](crate::consensus_types::block::ExecutedBlock)
@@ -83,8 +76,6 @@ pub struct BlockTree<T> {
     highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
     /// The quorum certificate that has highest commit info.
     highest_commit_cert: Arc<QuorumCert>,
-    /// Manages pending votes to be aggregated.
-    pending_votes: PendingVotes,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
     id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert>>,
     /// To keep the IDs of the elements that have been pruned from the tree but not cleaned up yet.
@@ -131,7 +122,6 @@ where
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
             highest_timeout_cert,
             highest_commit_cert: Arc::new(root_ledger_info),
-            pending_votes: PendingVotes::new(),
             id_to_quorum_cert,
             pruned_block_ids,
             max_pruned_blocks_in_mem,
@@ -263,28 +253,6 @@ where
         }
 
         Ok(())
-    }
-
-    pub(super) fn insert_vote(
-        &mut self,
-        vote: &Vote,
-        validator_verifier: &ValidatorVerifier,
-    ) -> VoteReceptionResult {
-        let block_id = vote.vote_data().proposed().id();
-        if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
-            return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
-        }
-        let res = self.pending_votes.insert_vote(vote, validator_verifier);
-        if let VoteReceptionResult::NewQuorumCertificate(_) = res {
-            // Note that the block might not be present locally, in which case we cannot calculate
-            // time between block creation and qc
-            if let Some(time_to_qc) = self.get_block(&block_id).and_then(|block| {
-                duration_since_epoch().checked_sub(Duration::from_micros(block.timestamp_usecs()))
-            }) {
-                counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
-            }
-        }
-        res
     }
 
     /// Find the blocks to prune up to next_root_id (keep next_root_id's block). Any branches not

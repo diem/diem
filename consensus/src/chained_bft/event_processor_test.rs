@@ -178,6 +178,7 @@ impl NodeSetup {
         let pacemaker = Self::create_pacemaker(time_service.clone());
 
         let proposer_election = Self::create_proposer_election(proposer_author);
+
         let mut event_processor = EventProcessor::new(
             Arc::clone(&block_store),
             last_vote_sent,
@@ -225,6 +226,7 @@ fn basic_new_rank_event_test() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
+    let node1 = nodes.pop().unwrap();
     let node = &mut nodes[0];
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
@@ -281,12 +283,23 @@ fn basic_new_rank_event_test() {
             placeholder_ledger_info(),
             &node.signer,
         );
-        let validator_verifier = Arc::new(ValidatorVerifier::new_single(
-            node.signer.author(),
-            node.signer.public_key(),
-        ));
-        node.block_store
-            .insert_vote_and_qc(&vote, &validator_verifier);
+        let vote1 = Vote::new(
+            VoteData::new(
+                a1.block().gen_block_info(
+                    executed_state.state_id,
+                    executed_state.version,
+                    executed_state.validators.clone(),
+                ),
+                a1.quorum_cert().certified_block().clone(),
+            ),
+            node1.signer.author(),
+            placeholder_ledger_info(),
+            &node1.signer,
+        );
+        // Adding votes to form a QC
+        node.event_processor.add_vote(&vote).await.unwrap();
+        node.event_processor.add_vote(&vote1).await.unwrap();
+
         node.event_processor
             .process_new_round_event(NewRoundEvent {
                 round: 2,

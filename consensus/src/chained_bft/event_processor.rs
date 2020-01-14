@@ -3,7 +3,9 @@
 
 use crate::{
     chained_bft::{
-        block_storage::{BlockReader, BlockRetriever, BlockStore, VoteReceptionResult},
+        block_storage::{
+            BlockReader, BlockRetriever, BlockStore, PendingVotes, VoteReceptionResult,
+        },
         liveness::{
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
@@ -68,6 +70,7 @@ pub mod event_processor_fuzzing;
 /// executors.
 pub struct EventProcessor<T> {
     block_store: Arc<BlockStore<T>>,
+    pending_votes: PendingVotes,
     pacemaker: Pacemaker,
     proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
     proposal_generator: ProposalGenerator<T>,
@@ -101,9 +104,11 @@ impl<T: Payload> EventProcessor<T> {
             let round = v.vote_data().proposed().round();
             (v, round)
         });
+        let pending_votes = PendingVotes::new();
 
         Self {
             block_store,
+            pending_votes,
             pacemaker,
             proposer_election,
             proposal_generator,
@@ -740,9 +745,28 @@ impl<T: Payload> EventProcessor<T> {
     /// 1) fetch missing dependencies if required, and then
     /// 2) call process_certificates(), which will start a new round in return.
     async fn add_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
+        let block_id = vote.vote_data().proposed().id();
+        // Check if the block already had a QC
+        if self
+            .block_store
+            .get_quorum_cert_for_block(block_id)
+            .is_some()
+        {
+            return Ok(());
+        }
         // Add the vote and check whether it completes a new QC or a TC
-        match self.block_store.insert_vote(vote, &self.validators) {
+        let res = self.pending_votes.insert_vote(vote, &self.validators);
+        match res {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
+                // Note that the block might not be present locally, in which case we cannot calculate
+                // time between block creation and qc
+                if let Some(time_to_qc) = self.block_store.get_block(block_id).and_then(|block| {
+                    duration_since_epoch()
+                        .checked_sub(Duration::from_micros(block.timestamp_usecs()))
+                }) {
+                    counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
+                }
+
                 self.new_qc_aggregated(qc, vote.author()).await
             }
             VoteReceptionResult::NewTimeoutCertificate(tc) => self.new_tc_aggregated(tc).await,
