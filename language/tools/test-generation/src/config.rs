@@ -104,4 +104,8 @@ pub struct Args {
     /// The optional number of threads to use for test generation.
     #[structopt(short = "t", long = "threads")]
     pub num_threads: Option<u64>,
+
+    /// The optional file path for logging. If no path is provided, logs are output to stdout.
+    #[structopt(short = "l", long = "log-file")]
+    pub log_file_path: Option<String>,
 }
