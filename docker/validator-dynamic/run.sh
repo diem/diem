@@ -33,4 +33,6 @@ docker run \
     --ip $bootstrap \
     --network testnet \
     --publish 8000:8000 \
+    --publish 9101:9101 \
+    --publish 9102:9102 \
     "$image"
