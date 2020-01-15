@@ -105,10 +105,10 @@ fn discover_workspace(ec2: &Ec2Client) -> String {
 }
 
 fn current_instance_id() -> String {
-    let client = reqwest::Client::new();
+    let client = reqwest::blocking::Client::new();
     let url = Url::parse("http://169.254.169.254/1.0/meta-data/instance-id");
     let url = url.expect("Failed to parse metadata url");
     let response = client.get(url).send();
-    let mut response = response.expect("Metadata request failed");
+    let response = response.expect("Metadata request failed");
     response.text().expect("Failed to parse metadata response")
 }

@@ -1011,7 +1011,7 @@ impl ClientProxy {
         num_coins: u64,
         is_blocking: bool,
     ) -> Result<()> {
-        let client = reqwest::ClientBuilder::new().use_sys_proxy().build()?;
+        let client = reqwest::blocking::ClientBuilder::new().build()?;
 
         let url = reqwest::Url::parse_with_params(
             format!("http://{}", self.faucet_server).as_str(),
@@ -1021,7 +1021,7 @@ impl ClientProxy {
             ],
         )?;
 
-        let mut response = client.post(url).send()?;
+        let response = client.post(url).send()?;
         let status_code = response.status();
         let body = response.text()?;
         if !status_code.is_success() {
