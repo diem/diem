@@ -23,3 +23,23 @@ fn verify_local_ref() {
 fn verify_ref_param() {
     test(VERIFY, &["test_mvir/verify-ref-param.mvir"]);
 }
+
+#[test]
+fn verify_libra_coin() {
+    test(VERIFY, &[verified_std_mvir("libra_coin").as_str()])
+}
+
+#[test]
+fn verify_libra_account() {
+    test(
+        VERIFY,
+        &[
+            verified_std_mvir("libra_coin").as_str(),
+            verified_std_mvir("hash").as_str(),
+            verified_std_mvir("u64_util").as_str(),
+            verified_std_mvir("address_util").as_str(),
+            verified_std_mvir("bytearray_util").as_str(),
+            verified_std_mvir("libra_account").as_str(),
+        ],
+    )
+}

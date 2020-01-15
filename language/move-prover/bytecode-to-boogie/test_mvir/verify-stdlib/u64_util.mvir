@@ -1,0 +1,4 @@
+module U64Util {
+    // TODO: specify
+    native public u64_to_bytes(i: u64): bytearray;
+}
