@@ -4,7 +4,7 @@
 //! A module to generate, store and load known users accounts.
 //! The concept of known users can be helpful for testing to provide reproducible results.
 
-use crate::*;
+use crate::{mnemonic::Mnemonic, wallet_library::WalletLibrary};
 use anyhow::{ensure, Result};
 use std::{
     fs::File,

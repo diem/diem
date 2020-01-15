@@ -8,52 +8,6 @@
 
 macro_rules! impl_array_newtype {
     ($thing:ident, $ty:ty, $len:expr) => {
-        impl $thing {
-            #[inline]
-            /// Converts the object to a raw pointer
-            pub fn as_ptr(&self) -> *const $ty {
-                let &$thing(ref dat) = self;
-                dat.as_ptr()
-            }
-
-            #[inline]
-            /// Converts the object to a mutable raw pointer
-            pub fn as_mut_ptr(&mut self) -> *mut $ty {
-                let &mut $thing(ref mut dat) = self;
-                dat.as_mut_ptr()
-            }
-
-            #[inline]
-            /// Returns the length of the object as an array
-            pub fn len(&self) -> usize {
-                $len
-            }
-
-            #[inline]
-            /// Returns whether the object, as an array, is empty. Always false.
-            pub fn is_empty(&self) -> bool {
-                false
-            }
-
-            #[inline]
-            /// Returns the underlying bytes.
-            pub fn as_bytes(&self) -> &[$ty; $len] {
-                &self.0
-            }
-
-            #[inline]
-            /// Returns the underlying bytes.
-            pub fn to_bytes(&self) -> [$ty; $len] {
-                self.0.clone()
-            }
-
-            #[inline]
-            /// Returns the underlying bytes.
-            pub fn into_bytes(self) -> [$ty; $len] {
-                self.0
-            }
-        }
-
         impl<'a> From<&'a [$ty]> for $thing {
             fn from(data: &'a [$ty]) -> $thing {
                 assert_eq!(data.len(), $len);
