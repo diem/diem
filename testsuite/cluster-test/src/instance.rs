@@ -72,7 +72,7 @@ impl Instance {
 
     pub fn counter(&self, counter: &str) -> Result<f64> {
         let response: Value =
-            reqwest::get(format!("http://{}:9101/counters", self.ip).as_str())?.json()?;
+            reqwest::blocking::get(format!("http://{}:9101/counters", self.ip).as_str())?.json()?;
         if let Value::Number(ref response) = response[counter] {
             if let Some(response) = response.as_f64() {
                 Ok(response)
@@ -93,7 +93,7 @@ impl Instance {
     }
 
     pub fn is_up(&self) -> bool {
-        reqwest::get(format!("http://{}:9101/counters", self.ip).as_str())
+        reqwest::blocking::get(format!("http://{}:9101/counters", self.ip).as_str())
             .map(|x| x.status().is_success())
             .unwrap_or(false)
     }

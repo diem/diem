@@ -8,12 +8,12 @@ use reqwest::{self, Url};
 use serde_json::{self, json};
 
 pub struct SlackClient {
-    client: reqwest::Client,
+    client: reqwest::blocking::Client,
 }
 
 impl SlackClient {
     pub fn new() -> Self {
-        let client = reqwest::Client::new();
+        let client = reqwest::blocking::Client::new();
         Self { client }
     }
 

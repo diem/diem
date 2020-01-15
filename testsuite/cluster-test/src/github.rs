@@ -26,12 +26,12 @@ pub struct Author {
 }
 
 pub struct GitHub {
-    client: reqwest::Client,
+    client: reqwest::blocking::Client,
 }
 
 impl GitHub {
     pub fn new() -> GitHub {
-        let client = reqwest::Client::new();
+        let client = reqwest::blocking::Client::new();
         GitHub { client }
     }
 
@@ -42,7 +42,7 @@ impl GitHub {
         let url = format!("https://api.github.com/repos/{}/commits?sha={}", repo, sha);
         let url: Url = url.parse().expect("Failed to parse github url");
         let request = self.client.get(url);
-        let mut response = request
+        let response = request
             .send()
             .map_err(|e| format_err!("Failed to query github: {:?}", e))?;
         let response: Vec<CommitInfo> = response

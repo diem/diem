@@ -11,7 +11,7 @@ use std::{collections::HashMap, time::Duration};
 #[derive(Clone)]
 pub struct Prometheus {
     url: Url,
-    client: reqwest::Client,
+    client: reqwest::blocking::Client,
 }
 
 pub struct MatrixResponse {
@@ -27,7 +27,7 @@ impl Prometheus {
         let url = format!("http://{}:9091", ip)
             .parse()
             .expect("Failed to parse prometheus url");
-        let client = reqwest::Client::new();
+        let client = reqwest::blocking::Client::new();
         Self { url, client }
     }
 
@@ -49,7 +49,7 @@ impl Prometheus {
             ))
             .expect("Failed to make query_range url");
 
-        let mut response = self
+        let response = self
             .client
             .get(url.clone())
             .send()
