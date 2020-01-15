@@ -420,7 +420,6 @@ impl LibraVM {
                         process_block_metadata(block_metadata, runtime, &mut data_cache)
                     })?)
                 }
-                // TODO: Implement the logic for processing writeset transactions.
                 TransactionBlock::WriteSet(change_set) => result.push(
                     self.check_change_set(&change_set, state_view)
                         .map(|_| self.process_change_set(&mut data_cache, change_set))
