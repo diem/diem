@@ -498,6 +498,9 @@ procedure LibraCoin_value_verify (arg0: Reference) returns (ret0: Value)
 
 procedure {:inline 1} LibraCoin_split (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean(b#Boolean(Boolean((SelectField(ret1, LibraCoin_T_value)) == (arg1))) && b#Boolean(Boolean((SelectField(ret0, LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(arg0, LibraCoin_T_value))) - i#Integer(arg1)))))));
+ensures old(!(b#Boolean(Boolean(i#Integer(SelectField(arg0, LibraCoin_T_value)) < i#Integer(arg1))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(SelectField(arg0, LibraCoin_T_value)) < i#Integer(arg1)))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // LibraCoin_T_type_value()
