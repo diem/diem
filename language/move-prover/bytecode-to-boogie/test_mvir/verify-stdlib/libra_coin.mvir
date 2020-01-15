@@ -1,0 +1,172 @@
+module LibraCoin {
+    // A resource representing the Libra coin
+    resource T {
+        // The value of the coin. May be zero
+        value: u64,
+    }
+
+    // A singleton resource that grants access to `LibraCoin.mint`. Only the Association has one.
+    resource MintCapability {
+        _dummy: bool // dummy field because Move doesn't allow zero-sized structs
+    }
+
+    resource MarketCap {
+        // The sum of the values of all LibraCoin.T resources in the system
+        total_value: u64,
+    }
+
+    // Return a reference to the MintCapability published under the sender's account. Fails if the
+    // sender does not have a MintCapability.
+    // Since only the Association account has a mint capability, this will only succeed if it is
+    // invoked by a transaction sent by that account.
+    public mint_with_default_capability(amount: u64): Self.T acquires MintCapability, MarketCap
+    aborts_if !global_exists<Self.MintCapability>(txn_sender)
+    aborts_if !global_exists<Self.MarketCap>(0xA550C18)
+    // Over mint-able amount
+    aborts_if amount > 1000000000000000
+    // MarketCap overflow
+    aborts_if amount + global<Self.MarketCap>(0xA550C18).total_value > 9223372036854775807
+    ensures global<Self.MarketCap>(0xA550C18).total_value == old(global<Self.MarketCap>(0xA550C18).total_value) + amount
+    ensures RET.value == amount
+    {
+        return Self.mint(move(amount), borrow_global<MintCapability>(get_txn_sender()));
+    }
+
+    // Mint a new LibraCoin.T worth `value`. The caller must have a reference to a MintCapability.
+    // Only the Association account can acquire such a reference, and it can do so only via
+    // `borrow_sender_mint_capability`
+    public mint(value: u64, capability: &Self.MintCapability): Self.T acquires MarketCap
+    aborts_if !global_exists<Self.MarketCap>(0xA550C18)
+    // Over mint-able amount
+    aborts_if value > 1000000000000000
+    // MarketCap overflow
+    aborts_if value + global<Self.MarketCap>(0xA550C18).total_value > 9223372036854775807
+    ensures global<Self.MarketCap>(0xA550C18).total_value == old(global<Self.MarketCap>(0xA550C18).total_value) + value
+    ensures RET.value == value
+    {
+        let market_cap_ref: &mut Self.MarketCap;
+        let market_cap_total_value: u64;
+
+        _ = move(capability);
+
+        // TODO: temporary measure for testnet only: limit minting to 1B Libra at a time.
+        // this is to prevent the market cap's total value from hitting u64_max due to excessive
+        // minting. This will not be a problem in the production Libra system because coins will
+        // be backed with real-world assets, and thus minting will be correspondingly rarer.
+        assert(copy(value) <= 1000000000 * 1000000, 11); // * 1000000 because the unit is microlibra
+        // update market cap resource to reflect minting
+        market_cap_ref = borrow_global_mut<MarketCap>(0xA550C18);
+        market_cap_total_value = *&copy(market_cap_ref).total_value;
+        *(&mut move(market_cap_ref).total_value) = move(market_cap_total_value) + copy(value);
+
+        return T{value: move(value)};
+    }
+
+    // This can only be invoked by the Association address, and only a single time.
+    // Currently, it is invoked in the genesis transaction
+    public initialize()
+    aborts_if txn_sender != 0xA550C18
+    aborts_if global_exists<Self.MintCapability>(txn_sender)
+    aborts_if global_exists<Self.MarketCap>(txn_sender)
+    ensures global_exists<Self.MintCapability>(txn_sender)
+    ensures global_exists<Self.MarketCap>(txn_sender)
+    ensures global<Self.MarketCap>(txn_sender).total_value == 0
+    // I'm not going to specify _dummy == true because I don't think we care.
+    {
+        // Only callable by the Association address
+        assert(get_txn_sender() == 0xA550C18, 1);
+
+        move_to_sender<MintCapability>(MintCapability{ _dummy: true });
+        move_to_sender<MarketCap>(MarketCap { total_value: 0 });
+
+        return;
+    }
+
+    // Return the total value of all Libra in the system
+    public market_cap(): u64 acquires MarketCap
+    aborts_if !global_exists<Self.MarketCap>(0xA550C18)
+    ensures RET == global<Self.MarketCap>(0xA550C18).total_value
+    {
+        return *&(borrow_global<MarketCap>(0xA550C18)).total_value;
+    }
+
+    // Create a new LibraCoin.T with a value of 0
+    public zero(): Self.T
+    ensures RET.value == 0
+    {
+        return T{value: 0};
+    }
+
+    // Public accessor for the value of a coin
+    public value(coin_ref: &Self.T): u64
+    ensures RET == coin_ref.value
+    {
+        return *&move(coin_ref).value;
+    }
+
+    // Splits the given coin into two and returns them both
+    // It leverages `Self.withdraw` for any verifications of the values
+    public split(coin: Self.T, amount: u64): Self.T * Self.T {
+        let other: Self.T;
+        other = Self.withdraw(&mut coin, move(amount));
+        return move(coin), move(other);
+    }
+
+    // "Divides" the given coin into two, where original coin is modified in place
+    // The original coin will have value = original value - `amount`
+    // The new coin will have a value = `amount`
+    // Fails if the coins value is less than `amount`
+    public withdraw(coin_ref: &mut Self.T, amount: u64): Self.T
+    aborts_if coin_ref.value < amount
+    ensures coin_ref.value == old(coin_ref.value) - amount
+    ensures RET.value == amount
+    {
+        let value: u64;
+
+        // Check that `amount` is less than the coin's value
+        value = *(&mut copy(coin_ref).value);
+        assert(copy(value) >= copy(amount), 10);
+
+        // Split the coin
+        *(&mut move(coin_ref).value) = move(value) - copy(amount);
+        return T{value: move(amount)};
+    }
+
+    // Merges two coins and returns a new coin whose value is equal to the sum of the two inputs
+    public join(coin1: Self.T, coin2: Self.T): Self.T
+    aborts_if coin1.value + coin2.value > 9223372036854775807
+    ensures RET.value == old(coin1.value) + old(coin2.value)
+    {
+        Self.deposit(&mut coin1, move(coin2));
+        return move(coin1);
+    }
+
+    // "Merges" the two coins
+    // The coin passed in by reference will have a value equal to the sum of the two coins
+    // The `check` coin is consumed in the process
+    public deposit(coin_ref: &mut Self.T, check: Self.T)
+    aborts_if coin_ref.value + check.value > 9223372036854775807
+    ensures coin_ref.value == old(coin_ref.value) + old(check.value)
+    {
+        let value: u64;
+        let check_value: u64;
+
+        value = *(&mut copy(coin_ref).value);
+        T { value: check_value } = move(check);
+        *(&mut move(coin_ref).value)= move(value) + move(check_value);
+        return;
+    }
+
+    // Destroy a coin
+    // Fails if the value is non-zero
+    // The amount of LibraCoin.T in the system is a tightly controlled property,
+    // so you cannot "burn" any non-zero amount of LibraCoin.T
+    public destroy_zero(coin: Self.T)
+    aborts_if coin.value != 0
+    {
+        let value: u64;
+        T { value } = move(coin);
+        assert(move(value) == 0, 11);
+        return;
+    }
+}

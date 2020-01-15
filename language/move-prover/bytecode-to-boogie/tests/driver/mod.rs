@@ -73,6 +73,14 @@ pub fn std_mvir(b: &str) -> String {
     format!("../../stdlib/modules/{}.mvir", b)
 }
 
+/// Helper to create a path to a verified mvir source of the standard library.
+/// We currently maintaining copies of those in `./test_mvir/verify-stdlib`, eventually
+/// we should move this to the (source language based) standard library.
+#[allow(dead_code)]
+pub fn verified_std_mvir(b: &str) -> String {
+    format!("test_mvir/verify-stdlib/{}.mvir", b)
+}
+
 /// Flags to use for test() to do only parsing and type checking of boogie.
 #[allow(dead_code)]
 pub const NO_VERIFY: &[&str] = &["-B=-noVerify"];
