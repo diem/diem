@@ -7,21 +7,31 @@ use crate::{
 };
 use channel;
 use futures::{
-    channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
+    channel::mpsc::{self, unbounded, UnboundedReceiver, UnboundedSender},
     executor::block_on,
     SinkExt, StreamExt,
 };
-use libra_config::config::NodeConfig;
+use libra_config::config::{
+    NetworkConfig, NetworkKeyPairs, NetworkPeerInfo, NetworkPeersConfig, NodeConfig,
+    SeedPeersConfig,
+};
+use libra_crypto::{
+    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519::X25519StaticPrivateKey, Uniform,
+    ValidKey,
+};
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
     proto::MempoolSyncMsg,
     validator_network::{MempoolNetworkEvents, MempoolNetworkSender},
 };
+use parity_multiaddr::Multiaddr;
 use prost::Message;
+use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
+    path::PathBuf,
     sync::{Arc, Mutex},
 };
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
@@ -38,12 +48,77 @@ struct SharedMempoolNetwork {
     timers: HashMap<PeerId, UnboundedSender<SyncEvent>>,
 }
 
+/// Creates a validator network of with `nodes_in_network_count` validator nodes
+fn default_validator_network_with_peers(
+    nodes_in_network_count: u32,
+) -> HashMap<PeerId, NetworkConfig> {
+    let mut peers_network_config: HashMap<PeerId, NetworkConfig> = HashMap::new();
+    let mut peers_keypairs: HashMap<PeerId, NetworkKeyPairs> = HashMap::new();
+    let mut all_peers: Vec<PeerId> = Vec::new();
+
+    // create peers
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    for _ in 0..nodes_in_network_count {
+        let signing_key = Ed25519PrivateKey::generate_for_testing(&mut rng);
+        let identity_key = X25519StaticPrivateKey::generate_for_testing(&mut rng);
+        let keypair = NetworkKeyPairs::load(signing_key, identity_key);
+        let peer_id = PeerId::try_from(keypair.identity_keys.public().to_bytes()).unwrap();
+        peers_keypairs.insert(peer_id.clone(), keypair);
+        all_peers.push(peer_id.clone());
+    }
+
+    for (peer_id, keypair) in peers_keypairs.into_iter() {
+        let other_peers: Vec<&PeerId> = all_peers.iter().filter(|peer| peer != &&peer_id).collect();
+        let network_peers = default_multiple_peers(&keypair, other_peers.clone());
+
+        let config = NetworkConfig {
+            peer_id,
+            listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
+            advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
+            discovery_interval_ms: 1000,
+            connectivity_check_interval_ms: 5000,
+            enable_encryption_and_authentication: true,
+            is_permissioned: true,
+            network_keypairs_file: PathBuf::new(),
+            network_keypairs: keypair,
+            network_peers_file: PathBuf::new(),
+            network_peers,
+            seed_peers_file: PathBuf::new(),
+            seed_peers: SeedPeersConfig::default(),
+        };
+        peers_network_config.insert(peer_id.clone(), config);
+    }
+    peers_network_config
+}
+
+fn default_multiple_peers(keypair: &NetworkKeyPairs, peer_ids: Vec<&PeerId>) -> NetworkPeersConfig {
+    let mut peers = NetworkPeersConfig::default();
+    for peer_id in peer_ids.iter() {
+        peers.peers.insert(
+            **peer_id,
+            NetworkPeerInfo {
+                identity_public_key: keypair.identity_keys.public().clone(),
+                signing_public_key: keypair.signing_keys.public().clone(),
+            },
+        );
+    }
+    peers
+}
+
 impl SharedMempoolNetwork {
-    fn bootstrap_with_config(peers: Vec<PeerId>, mut config: NodeConfig) -> Self {
+    fn bootstrap_validator_network_smp(validator_nodes_count: u32) -> (Self, Vec<PeerId>) {
+        let mut config = NodeConfig::random();
         let mut smp = Self::default();
         config.mempool.shared_mempool_batch_size = 1;
 
-        for peer in peers {
+        // add all peers in this vector as validator peers
+        let validator_network_peers = default_validator_network_with_peers(validator_nodes_count);
+
+        let mut peers = vec![];
+        for peer in validator_network_peers.keys() {
+            peers.push(peer.clone());
+        }
+        for (peer, validator_network_config) in validator_network_peers.into_iter() {
             let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
             let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
             let (network_notifs_tx, network_notifs_rx) = channel::new_test(8);
@@ -51,12 +126,15 @@ impl SharedMempoolNetwork {
             let network_events = MempoolNetworkEvents::new(network_notifs_rx);
             let (sender, subscriber) = unbounded();
             let (timer_sender, timer_receiver) = unbounded();
+            let (_ac_sender, smp_receiver) = mpsc::channel(1_024);
 
+            config.validator_network = Some(validator_network_config);
             let runtime = start_shared_mempool(
                 &config,
                 Arc::clone(&mempool),
                 network_sender,
-                network_events,
+                vec![network_events],
+                smp_receiver,
                 Arc::new(MockStorageReadClient),
                 Arc::new(MockVMValidator),
                 vec![sender],
@@ -70,11 +148,7 @@ impl SharedMempoolNetwork {
             smp.timers.insert(peer, timer_sender);
             smp.runtimes.insert(peer, runtime);
         }
-        smp
-    }
-
-    fn bootstrap(peers: Vec<PeerId>) -> Self {
-        Self::bootstrap_with_config(peers, NodeConfig::random())
+        (smp, peers)
     }
 
     fn add_txns(&mut self, peer_id: &PeerId, txns: Vec<TestTransaction>) {
@@ -150,9 +224,8 @@ impl SharedMempoolNetwork {
 
 #[test]
 fn test_basic_flow() {
-    let (peer_a, peer_b) = (PeerId::random(), PeerId::random());
-
-    let mut smp = SharedMempoolNetwork::bootstrap(vec![peer_a, peer_b]);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(
         &peer_a,
         vec![
@@ -163,7 +236,7 @@ fn test_basic_flow() {
     );
 
     // A discovers new peer B
-    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_b));
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(*peer_b));
 
     for seq in 0..3 {
         // A attempts to send message
@@ -174,9 +247,9 @@ fn test_basic_flow() {
 
 #[test]
 fn test_metric_cache_ignore_shared_txns() {
-    let (peer_a, peer_b) = (PeerId::random(), PeerId::random());
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
 
-    let mut smp = SharedMempoolNetwork::bootstrap(vec![peer_a, peer_b]);
     let txns = vec![
         TestTransaction::new(1, 0, 1),
         TestTransaction::new(1, 1, 1),
@@ -192,7 +265,7 @@ fn test_metric_cache_ignore_shared_txns() {
     assert_eq!(smp.exist_in_metrics_cache(&peer_a, &txns[2]), true);
 
     // Let peer_a discover new peer_b.
-    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_b));
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(*peer_b));
     for txn in txns.iter().take(3) {
         // Let peer_a share txns with peer_b
         let (_transaction, rx_peer) = smp.deliver_message(&peer_a);
@@ -203,13 +276,17 @@ fn test_metric_cache_ignore_shared_txns() {
 
 #[test]
 fn test_interruption_in_sync() {
-    let (peer_a, peer_b, peer_c) = (PeerId::random(), PeerId::random(), PeerId::random());
-    let mut smp = SharedMempoolNetwork::bootstrap(vec![peer_a, peer_b, peer_c]);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(3);
+    let (peer_a, peer_b, peer_c) = (
+        peers.get(0).unwrap(),
+        peers.get(1).unwrap(),
+        peers.get(2).unwrap(),
+    );
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 0, 1)]);
 
     // A discovers 2 peers
-    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_b));
-    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_c));
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(*peer_b));
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(*peer_c));
 
     // make sure it delivered first transaction to both nodes
     let mut peers = vec![
@@ -217,43 +294,43 @@ fn test_interruption_in_sync() {
         smp.deliver_message(&peer_a).1,
     ];
     peers.sort();
-    let mut expected_peers = vec![peer_b, peer_c];
+    let mut expected_peers = vec![*peer_b, *peer_c];
     expected_peers.sort();
     assert_eq!(peers, expected_peers);
 
     // A loses connection to B
-    smp.send_event(&peer_a, NetworkNotification::LostPeer(peer_b));
+    smp.send_event(&peer_a, NetworkNotification::LostPeer(*peer_b));
 
     // only C receives following transactions
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 1, 1)]);
     let (txn, peer_id) = smp.deliver_message(&peer_a);
-    assert_eq!(peer_id, peer_c);
+    assert_eq!(peer_id, *peer_c);
     assert_eq!(txn.sequence_number(), 1);
 
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 2, 1)]);
     let (txn, peer_id) = smp.deliver_message(&peer_a);
-    assert_eq!(peer_id, peer_c);
+    assert_eq!(peer_id, *peer_c);
     assert_eq!(txn.sequence_number(), 2);
 
     // A reconnects to B
-    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_b));
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(*peer_b));
 
     // B should receive transaction 2
     let (txn, peer_id) = smp.deliver_message(&peer_a);
-    assert_eq!(peer_id, peer_b);
+    assert_eq!(peer_id, *peer_b);
     assert_eq!(txn.sequence_number(), 1);
 }
 
 #[test]
 fn test_ready_transactions() {
-    let (peer_a, peer_b) = (PeerId::random(), PeerId::random());
-    let mut smp = SharedMempoolNetwork::bootstrap(vec![peer_a, peer_b]);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(
         &peer_a,
         vec![TestTransaction::new(1, 0, 1), TestTransaction::new(1, 2, 1)],
     );
     // first message delivery
-    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_b));
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(*peer_b));
     smp.deliver_message(&peer_a);
 
     // add txn1 to Mempool
@@ -267,13 +344,13 @@ fn test_ready_transactions() {
 
 #[test]
 fn test_broadcast_self_transactions() {
-    let (peer_a, peer_b) = (PeerId::random(), PeerId::random());
-    let mut smp = SharedMempoolNetwork::bootstrap(vec![peer_a, peer_b]);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 1)]);
 
     // A and B discover each other
-    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_b));
-    smp.send_event(&peer_b, NetworkNotification::NewPeer(peer_a));
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(*peer_b));
+    smp.send_event(&peer_b, NetworkNotification::NewPeer(*peer_a));
 
     // A sends txn to B
     smp.deliver_message(&peer_a);
@@ -288,8 +365,8 @@ fn test_broadcast_self_transactions() {
 
 #[test]
 fn test_broadcast_dependencies() {
-    let (peer_a, peer_b) = (PeerId::random(), PeerId::random());
-    let mut smp = SharedMempoolNetwork::bootstrap(vec![peer_a, peer_b]);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     // Peer A has transactions with sequence numbers 0 and 2
     smp.add_txns(
         &peer_a,
@@ -299,8 +376,8 @@ fn test_broadcast_dependencies() {
     smp.add_txns(&peer_b, vec![TestTransaction::new(0, 1, 1)]);
 
     // A and B discover each other
-    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_b));
-    smp.send_event(&peer_b, NetworkNotification::NewPeer(peer_a));
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(*peer_b));
+    smp.send_event(&peer_b, NetworkNotification::NewPeer(*peer_a));
 
     // B receives 0
     smp.deliver_message(&peer_a);
@@ -314,15 +391,15 @@ fn test_broadcast_dependencies() {
 
 #[test]
 fn test_broadcast_updated_transaction() {
-    let (peer_a, peer_b) = (PeerId::random(), PeerId::random());
-    let mut smp = SharedMempoolNetwork::bootstrap(vec![peer_a, peer_b]);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
 
     // Peer A has a transaction with sequence number 0 and gas price 1
     smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 1)]);
 
     // A and B discover each other
-    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_b));
-    smp.send_event(&peer_b, NetworkNotification::NewPeer(peer_a));
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(*peer_b));
+    smp.send_event(&peer_b, NetworkNotification::NewPeer(*peer_a));
 
     // B receives 0
     let txn = smp.deliver_message(&peer_a).0;

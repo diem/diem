@@ -12,7 +12,7 @@ use anyhow::{format_err, Result};
 use bounded_executor::BoundedExecutor;
 use bytes::Bytes;
 use futures::{
-    channel::{mpsc, oneshot},
+    channel::oneshot,
     stream::{select_all, StreamExt},
 };
 use libra_config::config::{AdmissionControlConfig, RoleType};
@@ -92,10 +92,6 @@ pub async fn process_network_messages<M, V>(
     network_events: Vec<AdmissionControlNetworkEvents>,
     mut peer_info: HashMap<PeerId, bool>,
     executor: Handle,
-    mut client_events: mpsc::Receiver<(
-        SubmitTransactionRequest,
-        oneshot::Sender<Result<SubmitTransactionResponse>>,
-    )>,
 ) where
     M: MempoolClientTrait + Clone + 'static,
     V: TransactionValidation + Clone + 'static,
@@ -106,12 +102,6 @@ pub async fn process_network_messages<M, V>(
 
     loop {
         ::futures::select! {
-            (mut msg, callback) = client_events.select_next_some() => {
-                let peer_id = pick_peer(&peer_info);
-                bounded_executor
-                    .spawn(submit_transaction(msg, upstream_proxy_data.clone(), peer_id, callback))
-                    .await;
-            },
             network_event = events.select_next_some() => {
                 match network_event {
                     Ok(event) => {
@@ -173,75 +163,6 @@ fn pick_peer(peer_info: &HashMap<PeerId, bool>) -> Option<PeerId> {
 
 fn count_active_peers(peer_info: &HashMap<PeerId, bool>) -> usize {
     peer_info.iter().filter(|(_, &is_alive)| is_alive).count()
-}
-
-async fn submit_transaction<M, V>(
-    request: SubmitTransactionRequest,
-    mut upstream_proxy_data: UpstreamProxyData<M, V>,
-    peer_id: Option<PeerId>,
-    callback: oneshot::Sender<Result<SubmitTransactionResponse>>,
-) where
-    M: MempoolClientTrait,
-    V: TransactionValidation,
-{
-    let start_time = Instant::now();
-    let mut response = None;
-    let mut txn_result = "success";
-    match upstream_proxy_data.role {
-        RoleType::Validator => {
-            response = Some(submit_transaction_to_mempool(upstream_proxy_data, request).await);
-        }
-        RoleType::FullNode => {
-            if let Some(peer_id) = peer_id {
-                let result = upstream_proxy_data
-                    .network_sender
-                    .send_transaction_upstream(
-                        peer_id.clone(),
-                        request,
-                        upstream_proxy_data.ac_config.upstream_proxy_timeout,
-                    )
-                    .await;
-                match result {
-                    Ok(res) => {
-                        response = Some(Ok(res));
-                    }
-                    Err(e) => {
-                        txn_result = "failure";
-                        response = Some(Err(format_err!(
-                            "[admission-control] Sending transaction upstream returned an error: {:?}",
-                            e
-                        )));
-                    }
-                }
-            }
-        }
-    };
-    let res = response.unwrap_or_else(|| {
-        // timeout
-        txn_result = "failure";
-        counters::TIMEOUT
-            .with_label_values(&["client", "timeout"])
-            .inc();
-        Err(format_err!(
-            "[admission-control] Processing write request failed"
-        ))
-    });
-    if let Err(e) = callback.send(res) {
-        txn_result = "failure";
-        counters::TIMEOUT
-            .with_label_values(&["client", "callback_timeout"])
-            .inc();
-        error!(
-            "[admission control] failed to send back transaction result with error: {:?}",
-            e
-        );
-    };
-    counters::TRANSACTION_LATENCY
-        .with_label_values(&[txn_result])
-        .observe(start_time.elapsed().as_secs() as f64);
-    counters::TRANSACTION_PROXY
-        .with_label_values(&["client", txn_result])
-        .inc();
 }
 
 async fn submit_transaction_upstream<M, V>(
