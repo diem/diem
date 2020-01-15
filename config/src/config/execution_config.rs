@@ -87,8 +87,7 @@ mod test {
     #[test]
     fn test_some_and_load_genesis() {
         let fake_genesis = Transaction::WriteSet(
-            ChangeSet::new(WriteSetMut::new(vec![]).freeze().unwrap()),
-            vec![],
+            ChangeSet::new(WriteSetMut::new(vec![]).freeze().unwrap(), vec![]),
         );
         let (mut config, path) = generate_config();
         config.genesis = Some(fake_genesis.clone());
