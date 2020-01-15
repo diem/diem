@@ -220,17 +220,12 @@ module LibraAccount {
     }
 
     // Withdraw `amount` LibraCoin.T from account under cap.account_address
-    // TODO: this currently fails verification (two expected errors marked with below). It appears that we need
-    //   more type assumptions for spec expression.
-    //!  A postcondition might not hold on this return path.
-    //!  A postcondition might not hold on this return path.
     public withdraw_with_capability(
         cap: &Self.WithdrawalCapability, amount: u64
     ): LibraCoin.T acquires T
     aborts_if !global_exists<Self.T>(cap.account_address)
     aborts_if global<Self.T>(cap.account_address).balance.value < amount
     ensures RET.value == amount
-    // this one doesn't pass Boogie
     ensures global<Self.T>(cap.account_address).balance.value == old(global<Self.T>(cap.account_address).balance.value) - amount
     {
         let account: &mut Self.T;

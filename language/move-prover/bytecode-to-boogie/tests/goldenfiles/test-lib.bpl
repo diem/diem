@@ -734,7 +734,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -781,7 +782,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -828,7 +830,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -875,7 +878,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -922,7 +926,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -969,7 +974,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -1406,7 +1412,8 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // assume arguments are of correct types
     assume is#Integer(arg0);
-    assume IsValidReferenceParameter(local_counter, arg1);
+    assume is#Vector(Dereference(m, arg1));
+    assume IsValidReferenceParameter(m, local_counter, arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 25;
@@ -1696,7 +1703,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -1823,7 +1831,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
     assume is#Integer(arg1);
 
     old_size := local_counter;
@@ -1982,7 +1991,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
     assume is#Vector(arg1);
 
     old_size := local_counter;
@@ -2504,7 +2514,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
     assume is#Integer(arg1);
 
     old_size := local_counter;
@@ -2651,7 +2662,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
     assume is#Integer(arg1);
 
     old_size := local_counter;
@@ -2897,7 +2909,8 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // assume arguments are of correct types
     assume is#Address(arg0);
-    assume IsValidReferenceParameter(local_counter, arg1);
+    assume is#Vector(Dereference(m, arg1));
+    assume IsValidReferenceParameter(m, local_counter, arg1);
     assume is#Integer(arg2);
     assume is#ByteArray(arg3);
 
@@ -3121,7 +3134,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
     assume is#ByteArray(arg1);
 
     old_size := local_counter;
@@ -3247,7 +3261,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
     assume is#ByteArray(arg1);
 
     old_size := local_counter;
@@ -3673,7 +3688,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 6;
@@ -3777,7 +3793,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -3977,7 +3994,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 3;
@@ -4018,7 +4036,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 3;
@@ -4562,7 +4581,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
     assume is#Address(arg1);
 
     old_size := local_counter;
@@ -4675,7 +4695,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
     assume is#Address(arg1);
 
     old_size := local_counter;
@@ -4811,7 +4832,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 18;

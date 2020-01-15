@@ -166,7 +166,8 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_
 
     // assume arguments are of correct types
     assume is#Integer(arg0);
-    assume IsValidReferenceParameter(local_counter, arg1);
+    assume is#Vector(Dereference(m, arg1));
+    assume IsValidReferenceParameter(m, local_counter, arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 24;
@@ -464,7 +465,8 @@ ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, arg0), LibraCoin
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -595,7 +597,8 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(m, arg0), LibraC
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
     assume is#Integer(arg1);
 
     old_size := local_counter;
@@ -760,7 +763,8 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
     assume is#Vector(arg1);
 
     old_size := local_counter;
