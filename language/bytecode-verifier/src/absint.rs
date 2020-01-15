@@ -29,41 +29,32 @@ pub enum BlockPrecondition<State> {
 }
 
 #[derive(Clone)]
-pub enum BlockPostcondition {
+pub enum BlockPostcondition<AnalysisError> {
     /// Analyzing block was successful
     Success,
     /// Analyzing block ended in an error
-    Error,
+    Error(AnalysisError),
 }
 
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct BlockInvariant<State> {
+pub struct BlockInvariant<State, AnalysisError> {
     /// Precondition of the block
-    pre: BlockPrecondition<State>,
+    pub pre: BlockPrecondition<State>,
     /// Postcondition of the block---just success/error for now
-    post: BlockPostcondition,
-}
-
-impl<State> BlockInvariant<State> {
-    pub fn pre(&self) -> &BlockPrecondition<State> {
-        &self.pre
-    }
-
-    pub fn post(&self) -> &BlockPostcondition {
-        &self.post
-    }
+    pub post: BlockPostcondition<AnalysisError>,
 }
 
 /// A map from block id's to the pre/post of each block after a fixed point is reached.
 #[allow(dead_code)]
-pub type InvariantMap<State> = HashMap<BlockId, BlockInvariant<State>>;
+pub type InvariantMap<State, AnalysisError> =
+    HashMap<BlockId, BlockInvariant<State, AnalysisError>>;
 
 /// Take a pre-state + instruction and mutate it to produce a post-state
 /// Auxiliary data can be stored in self.
 pub trait TransferFunctions {
     type State: AbstractDomain;
-    type AnalysisError;
+    type AnalysisError: Clone;
 
     /// Execute local@instr found at index local@index in the current basic block from pre-state
     /// local@pre.
@@ -91,8 +82,8 @@ pub trait AbstractInterpreter: TransferFunctions {
         initial_state: Self::State,
         function_view: &FunctionDefinitionView<CompiledModule>,
         cfg: &dyn ControlFlowGraph,
-    ) -> InvariantMap<Self::State> {
-        let mut inv_map: InvariantMap<Self::State> = InvariantMap::new();
+    ) -> InvariantMap<Self::State, Self::AnalysisError> {
+        let mut inv_map: InvariantMap<Self::State, Self::AnalysisError> = InvariantMap::new();
         let entry_block_id = cfg.entry_block_id();
         let mut work_list = vec![entry_block_id];
         inv_map.insert(
@@ -104,20 +95,12 @@ pub trait AbstractInterpreter: TransferFunctions {
         );
 
         while let Some(block_id) = work_list.pop() {
-            let mut block_invariant = match inv_map.get_mut(&block_id) {
-                Some(BlockInvariant {
-                    post: BlockPostcondition::Error,
-                    ..
-                }) =>
-                // Analyzing this block previously resulted in an error. Avoid double-reporting.
-                {
-                    continue
-                }
-                Some(invariant) => invariant.clone(),
+            let block_invariant = match inv_map.get_mut(&block_id) {
+                Some(invariant) => invariant,
                 None => unreachable!("Missing invariant for block {}", block_id),
             };
 
-            let mut state = match block_invariant.pre {
+            let mut state = match &block_invariant.pre {
                 BlockPrecondition::State(s) => s.clone(),
                 BlockPrecondition::JoinFailure =>
                 // Can't analyze the block from a failing precondition
@@ -125,16 +108,15 @@ pub trait AbstractInterpreter: TransferFunctions {
                     continue
                 }
             };
-            let block_ends_in_error = self
-                .execute_block(block_id, &mut state, &function_view, cfg)
-                .is_err();
-            if block_ends_in_error {
-                block_invariant.post = BlockPostcondition::Error;
-                continue;
-            } else {
-                block_invariant.post = BlockPostcondition::Success;
+            match self.execute_block(block_id, &mut state, &function_view, cfg) {
+                Err(errors) => {
+                    block_invariant.post = BlockPostcondition::Error(errors);
+                    continue;
+                }
+                Ok(()) => {
+                    block_invariant.post = BlockPostcondition::Success;
+                }
             };
-
             // propagate postcondition of this block to successor blocks
             for next_block_id in cfg.successors(&block_id) {
                 match inv_map.get_mut(next_block_id) {
