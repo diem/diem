@@ -342,6 +342,7 @@ module LibraAccount {
     }
 
     // Creates a new account at `fresh_address` with an initial balance of zero
+    // Creating account on 0x0 will cause runtime failure as it is a reserved address for MoveVM.
     public create_account(fresh_address: address) {
         let generator: Self.EventHandleGenerator;
 

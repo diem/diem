@@ -215,19 +215,6 @@ fn create_and_initialize_main_accounts(
             )
         });
 
-    // create the core code account
-    let core_code_address = account_config::core_code_address();
-    move_vm
-        .execute_function(
-            &ACCOUNT_MODULE,
-            &CREATE_ACCOUNT_NAME,
-            gas_schedule,
-            interpreter_context,
-            &txn_data,
-            vec![Value::address(core_code_address)],
-        )
-        .unwrap_or_else(|_| panic!("Failure creating core code account {:?}", core_code_address));
-
     move_vm
         .execute_function(
             &COIN_MODULE,

@@ -14,6 +14,7 @@ use compiler::Compiler;
 use libra_config::config::{NodeConfig, VMPublishingOption};
 use libra_crypto::ed25519::*;
 use libra_types::{
+    account_config::core_code_address,
     test_helpers::transaction_test_helpers,
     transaction::{
         Script, TransactionArgument, TransactionPayload, TransactionStatus,
@@ -44,6 +45,30 @@ fn verify_signature() {
             executor.verify_transaction(signed_txn.clone()),
             executor.execute_transaction(signed_txn).status(),
             VMStatus::new(StatusCode::INVALID_SIGNATURE)
+        );
+    });
+}
+
+#[test]
+fn verify_reserved_sender() {
+    test_all_genesis(|mut executor| {
+        let sender = AccountData::new(900_000, 10);
+        executor.add_account_data(&sender);
+        // Generate a new key pair to try and sign things with.
+        let (private_key, public_key) = compat::generate_keypair(None);
+        let program = encode_transfer_script(sender.address(), 100);
+        let signed_txn = transaction_test_helpers::get_test_signed_txn(
+            core_code_address(),
+            0,
+            private_key,
+            public_key,
+            Some(program),
+        );
+
+        assert_prologue_parity!(
+            executor.verify_transaction(signed_txn.clone()),
+            executor.execute_transaction(signed_txn).status(),
+            VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
         );
     });
 }
