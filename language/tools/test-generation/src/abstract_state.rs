@@ -94,18 +94,7 @@ impl AbstractValue {
     /// Predicate on whether the type of the abstract value is generic -- it is if it contains a
     /// type parameter.
     pub fn is_generic(&self) -> bool {
-        Self::is_generic_token(&self.token)
-    }
-
-    fn is_generic_token(token: &SignatureToken) -> bool {
-        match token {
-            SignatureToken::TypeParameter(_) => true,
-            SignatureToken::Struct(_, tys) => tys.iter().any(Self::is_generic_token),
-            SignatureToken::Reference(tok) | SignatureToken::MutableReference(tok) => {
-                Self::is_generic_token(tok)
-            }
-            _ => false,
-        }
+        self.token.is_generic()
     }
 }
 

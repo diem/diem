@@ -22,7 +22,10 @@ use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use libra_state_view::StateView;
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray, vm_error::StatusCode};
+use libra_types::{
+    account_address::AccountAddress, byte_array::ByteArray, transaction::Module,
+    vm_error::StatusCode,
+};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use slog_scope::{debug, error, info};
 use std::thread;
@@ -186,7 +189,8 @@ fn bytecode_module(rng: &mut StdRng, module: CompiledModuleMut) -> CompiledModul
     generated_module.unwrap()
 }
 
-pub fn module_frame_generation(
+fn module_frame_generation(
+    specific_frame: Option<CompiledModuleMut>,
     num_iters: Option<u64>,
     seed: [u8; 32],
     sender: Sender<CompiledModuleMut>,
@@ -198,13 +202,17 @@ pub fn module_frame_generation(
 
     let generation_options = config::module_generation_settings();
     let mut rng = StdRng::from_seed(seed);
-    let mut module = generate_module(&mut rng, generation_options.clone()).into_inner();
+    let mut module = specific_frame
+        .clone()
+        .unwrap_or_else(|| generate_module(&mut rng, generation_options.clone()).into_inner());
     let iters = num_iters
         .map(|x| x as u128)
         .unwrap_or_else(|| std::u128::MAX);
 
     while generated < iters && sender.send(module).is_ok() {
-        module = generate_module(&mut rng, generation_options.clone()).into_inner();
+        module = specific_frame
+            .clone()
+            .unwrap_or_else(|| generate_module(&mut rng, generation_options.clone()).into_inner());
         generated += 1;
         while let Ok(stat) = stats.try_recv() {
             match stat {
@@ -214,7 +222,7 @@ pub fn module_frame_generation(
             };
         }
 
-        if generated > 0 && generated % 100 == 0 {
+        if generated > 0 && generated % 1000 == 0 {
             info!(
                 "Generated: {} Verified: {} Executed: {}",
                 generated,
@@ -243,7 +251,7 @@ pub fn module_frame_generation(
     );
 }
 
-pub fn bytecode_generation(
+fn bytecode_generation(
     output_path: Option<String>,
     tid: u64,
     mut rng: StdRng,
@@ -324,6 +332,20 @@ pub fn bytecode_generation(
     drop(stats);
 }
 
+fn deserialize_explicit_module(path: Option<String>) -> Option<CompiledModuleMut> {
+    path.map(|path| {
+        let options = config::module_generation_settings();
+        let bytecode_source = fs::read_to_string(path).expect("Unable to read bytecode file");
+        let module_bytes: Module = serde_json::from_str(bytecode_source.as_str())
+            .expect("Unable to deserialize bytecode file");
+        let mut module = CompiledModule::deserialize(module_bytes.code())
+            .unwrap()
+            .into_inner();
+        utils::module_generation::padding::Pad::pad(10, &mut module, options);
+        module
+    })
+}
+
 /// Run generate_bytecode for the range passed in and test each generated module
 /// on the bytecode verifier.
 pub fn run_generation(args: Args) {
@@ -356,8 +378,9 @@ pub fn run_generation(args: Args) {
     drop(stats_sender);
 
     let num_iters = args.num_iterations;
+    let specified_module = deserialize_explicit_module(args.with_module);
     threads.push(thread::spawn(move || {
-        module_frame_generation(num_iters, seed, sender, stats_reciever)
+        module_frame_generation(specified_module, num_iters, seed, sender, stats_reciever)
     }));
 
     for thread in threads {

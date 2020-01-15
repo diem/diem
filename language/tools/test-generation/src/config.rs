@@ -108,4 +108,8 @@ pub struct Args {
     /// The optional file path for logging. If no path is provided, logs are output to stdout.
     #[structopt(short = "l", long = "log-file")]
     pub log_file_path: Option<String>,
+
+    /// An optional module skeleton which will be used for bytecode generation.
+    #[structopt(short = "m", long = "module")]
+    pub with_module: Option<String>,
 }

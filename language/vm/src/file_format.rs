@@ -635,6 +635,17 @@ impl SignatureToken {
         }
     }
 
+    /// Returns `true` if the `SignatureToken` contains a type parameter.
+    pub fn is_generic(&self) -> bool {
+        use SignatureToken::*;
+        match self {
+            TypeParameter(_) => true,
+            Struct(_, toks) => toks.iter().any(Self::is_generic),
+            Reference(tok) | MutableReference(tok) => tok.is_generic(),
+            Bool | U8 | U64 | U128 | ByteArray | Address => false,
+        }
+    }
+
     // Returns `true` if the `SignatureToken` is an integer type.
     pub fn is_integer(&self) -> bool {
         use SignatureToken::*;

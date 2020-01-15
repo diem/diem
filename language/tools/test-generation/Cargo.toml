@@ -17,6 +17,7 @@ mirai-annotations = "1.4.0"
 structopt = "0.3.2"
 itertools = "0.8.2"
 hex = "0.3.1"
+serde_json = "1"
 getrandom = "0.1.13"
 crossbeam-channel = "0.4.0"
 

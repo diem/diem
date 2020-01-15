@@ -6,6 +6,7 @@ use crate::{
     config::ALLOW_MEMORY_UNSAFE,
     error::VMError,
 };
+use std::collections::HashMap;
 use vm::{
     access::*,
     file_format::{
@@ -14,8 +15,6 @@ use vm::{
     },
     views::{FunctionHandleView, SignatureTokenView, StructDefinitionView, ViewInternals},
 };
-
-use std::collections::HashMap;
 
 //---------------------------------------------------------------------------
 // Type Instantiations from Unification with the Abstract Stack
@@ -38,12 +37,7 @@ impl Subst {
     /// is a type parameter, and the `stack_sig` is a concrete type. But, if the instruction signature is a
     /// concrete type, but the stack signature is a type parameter, they cannot unify and no
     /// substitution is created.
-    pub fn check_and_add(
-        &mut self,
-        state: &AbstractState,
-        stack_sig: SignatureToken,
-        instr_sig: SignatureToken,
-    ) -> bool {
+    pub fn check_and_add(&mut self, stack_sig: SignatureToken, instr_sig: SignatureToken) -> bool {
         match (stack_sig, instr_sig) {
             (tok, SignatureToken::TypeParameter(idx)) => {
                 if let Some(other_type) = self.subst.get(&(idx as usize)).cloned() {
@@ -67,7 +61,7 @@ impl Subst {
                 }
                 assert!(params1.len() == params2.len());
                 for (s1, s2) in params1.into_iter().zip(params2.into_iter()) {
-                    if !self.check_and_add(state, s1, s2) {
+                    if !self.check_and_add(s1, s2) {
                         return false;
                     }
                 }
@@ -374,10 +368,11 @@ pub fn stack_satisfies_struct_signature(
         } else {
             token_view.as_inner().clone()
         };
-        let has = if let SignatureToken::TypeParameter(idx) = &ty {
-            if stack_kind_is_subkind(state, i, type_formals[*idx as usize]) {
+        let has = if ty.is_generic() {
+            let ty_kind = kind_for_token(state, &ty, type_formals);
+            if stack_kind_is_subkind(state, i, ty_kind) {
                 let stack_tok = state.stack_peek(i).unwrap();
-                substitution.check_and_add(state, stack_tok.token, ty)
+                substitution.check_and_add(stack_tok.token, ty)
             } else {
                 false
             }
@@ -545,12 +540,11 @@ pub fn stack_unpack_struct(
     struct_index: StructDefinitionIndex,
     instantiation: LocalsSignatureIndex,
 ) -> Result<AbstractState, VMError> {
-    let state_copy = state.clone();
-    let mut state = state.clone();
+    let mut mut_state = state.clone();
     let ty_instantiation = state.module.instantiantiation_at(instantiation).clone();
-    let kinds = kinds_for_instantiation(&state_copy, &ty_instantiation);
-    let struct_def = state_copy.module.module.struct_def_at(struct_index);
-    let struct_def_view = StructDefinitionView::new(&state_copy.module.module, struct_def);
+    let kinds = kinds_for_instantiation(state, &ty_instantiation);
+    let struct_def = &state.module.module.struct_def_at(struct_index);
+    let struct_def_view = StructDefinitionView::new(&state.module.module, struct_def);
     let token_views = struct_def_view
         .fields()
         .into_iter()
@@ -559,11 +553,11 @@ pub fn stack_unpack_struct(
     for token_view in token_views {
         let abstract_value = AbstractValue {
             token: token_view.as_inner().substitute(&ty_instantiation),
-            kind: kind_for_token(&state, &token_view.as_inner(), &kinds),
+            kind: kind_for_token(&mut_state, &token_view.as_inner(), &kinds),
         };
-        state = stack_push(&state, abstract_value)?;
+        mut_state = stack_push(&mut_state, abstract_value)?;
     }
-    Ok(state)
+    Ok(mut_state)
 }
 
 pub fn struct_ref_instantiation(state: &mut AbstractState) -> Result<Vec<SignatureToken>, VMError> {
@@ -671,9 +665,8 @@ pub fn stack_satisfies_function_signature(
     state: &AbstractState,
     function_index: FunctionHandleIndex,
 ) -> (bool, Subst) {
-    let state_copy = state.clone();
-    let function_handle = state_copy.module.module.function_handle_at(function_index);
-    let function_signature = state_copy
+    let function_handle = state.module.module.function_handle_at(function_index);
+    let function_signature = state
         .module
         .module
         .function_signature_at(function_handle.signature);
@@ -681,10 +674,11 @@ pub fn stack_satisfies_function_signature(
     let mut satisfied = true;
     let mut substitution = Subst::new();
     for (i, arg_type) in function_signature.arg_types.iter().rev().enumerate() {
-        let has = if let SignatureToken::TypeParameter(idx) = arg_type {
-            if stack_kind_is_subkind(state, i, type_formals[*idx as usize]) {
+        let has = if arg_type.is_generic() {
+            let ty_kind = kind_for_token(state, &arg_type, type_formals);
+            if stack_kind_is_subkind(state, i, ty_kind) {
                 let stack_tok = state.stack_peek(i).unwrap();
-                substitution.check_and_add(state, stack_tok.token, arg_type.clone())
+                substitution.check_and_add(stack_tok.token, arg_type.clone())
             } else {
                 false
             }

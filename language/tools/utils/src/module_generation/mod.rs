@@ -3,7 +3,7 @@
 
 mod generator;
 mod options;
-mod padding;
+pub mod padding;
 mod utils;
 
 pub use generator::{
