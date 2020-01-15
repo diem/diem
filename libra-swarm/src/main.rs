@@ -37,6 +37,8 @@ fn main() {
     let num_nodes = args.num_nodes;
     let num_full_nodes = args.num_full_nodes;
 
+    libra_logger::init_for_e2e_testing();
+
     let mut validator_swarm = LibraSwarm::configure_swarm(
         num_nodes,
         RoleType::Validator,
