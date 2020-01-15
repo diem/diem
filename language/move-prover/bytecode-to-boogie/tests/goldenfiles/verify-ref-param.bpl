@@ -44,7 +44,8 @@ ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, arg0), TestSpecs
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidReferenceParameter(local_counter, arg0);
+    assume is#Vector(Dereference(m, arg0));
+    assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;

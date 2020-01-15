@@ -249,13 +249,28 @@ type {:datatype} Reference;
 function {:constructor} Reference(l: Location, p: Path): Reference;
 const DefaultReference: Reference;
 
-function {:inline} IsValidReferenceParameter(local_counter: int, r: Reference): bool {
+function {:inline} IsValidReferenceParameter(m: Memory, local_counter: int, r: Reference): bool {
   // If the reference parameter is for a local, its index must be less then the current
   // local counter. This prevents any aliasing with locals which we create later.
   (is#Local(l#Reference(r)) ==> i#Local(l#Reference(r)) < local_counter)
   &&
   // The path must be in range of current stratification depth.
   (size#Path(p#Reference(r)) >= 0 && size#Path(p#Reference(r)) < StratificationDepth)
+  &&
+  // Each internal node in the memory tree must be a vector and each index in the path must be in range.
+  (size#Path(p#Reference(r)) == 0 ||
+   (is#Vector(contents#Memory(m)[l#Reference(r)]) && p#Path(p#Reference(r))[0] >= 0 &&
+     p#Path(p#Reference(r))[0] < vlen(contents#Memory(m)[l#Reference(r)])))
+  &&
+  (size#Path(p#Reference(r)) <= 1 ||
+    (is#Vector(ReadValue(Path(p#Path(p#Reference(r)), 1), contents#Memory(m)[l#Reference(r)]))
+     && p#Path(p#Reference(r))[1] >= 0 &&
+     p#Path(p#Reference(r))[1] < vlen(ReadValue(Path(p#Path(p#Reference(r)), 1), contents#Memory(m)[l#Reference(r)]))))
+  &&
+  (size#Path(p#Reference(r)) <= 2 ||
+    (is#Vector(ReadValue(Path(p#Path(p#Reference(r)), 2), contents#Memory(m)[l#Reference(r)]))
+     && p#Path(p#Reference(r))[1] >= 0 &&
+     p#Path(p#Reference(r))[1] < vlen(ReadValue(Path(p#Path(p#Reference(r)), 2), contents#Memory(m)[l#Reference(r)]))))
 }
 
 type {:datatype} Memory;
