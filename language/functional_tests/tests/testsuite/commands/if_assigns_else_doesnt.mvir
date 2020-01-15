@@ -11,6 +11,3 @@ main() {
 }
 
 // check: COPYLOC_UNAVAILABLE_ERROR
-
-// TODO: verifier is producing two identical errors, fix it?
-// check: COPYLOC_UNAVAILABLE_ERROR
