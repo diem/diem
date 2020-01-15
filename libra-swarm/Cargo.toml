@@ -24,3 +24,4 @@ generate-keypair = { path = "../config/generate-keypair", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["cloneable-private-keys"] }
 libra-tools = { path = "../common/tools", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }

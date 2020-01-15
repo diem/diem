@@ -12,15 +12,12 @@
 //! https://github.com/rust-bitcoin/rust-wallet/blob/master/wallet/src/walletlibrary.rs
 
 use crate::{
-    error::*,
+    error::{Result, WalletError},
     io_utils,
     key_factory::{ChildNumber, KeyFactory, Seed},
     mnemonic::Mnemonic,
 };
-pub use libra_crypto::{
-    ed25519::{Ed25519PublicKey, Ed25519Signature},
-    hash::CryptoHash,
-};
+use libra_crypto::hash::CryptoHash;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{helpers::TransactionSigner, RawTransaction, SignedTransaction},

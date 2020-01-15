@@ -3,12 +3,12 @@
 
 use crate::utils;
 use anyhow::{Context, Result};
-use client_lib::AccountAddress;
 use config_builder::{FullNodeConfig, SwarmConfig, ValidatorConfig};
 use debug_interface::NodeDebugClient;
 use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
 use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
+use libra_types::account_address::AccountAddress;
 use std::{
     collections::HashMap,
     env,

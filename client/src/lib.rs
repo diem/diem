@@ -9,24 +9,24 @@
 //! Client (binary) is the CLI tool to interact with Libra validator.
 //! It supposes all public APIs.
 
-pub use libra_crypto::{ed25519::*, test_utils::KeyPair, traits::ValidKeyStringExt};
-pub use libra_types::{
-    account_address::AccountAddress,
-    account_config::association_address,
-    transaction::{RawTransaction, TransactionArgument, TransactionPayload},
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+    traits::ValidKeyStringExt,
 };
-pub use libra_wallet::wallet_library::CryptoHash;
+use libra_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
-pub(crate) mod account_commands;
+
+mod account_commands;
 /// Main instance of client holding corresponding information, e.g. account address.
 pub mod client_proxy;
 /// Command struct to interact with client.
 pub mod commands;
-pub(crate) mod dev_commands;
+mod dev_commands;
 /// gRPC client wrapper to connect to validator.
-pub(crate) mod grpc_client;
-pub(crate) mod query_commands;
-pub(crate) mod transfer_commands;
+mod grpc_client;
+mod query_commands;
+mod transfer_commands;
 
 /// Struct used to store data for each created account.  We track the sequence number
 /// so we can create new transactions easily

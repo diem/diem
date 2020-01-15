@@ -17,7 +17,12 @@
 
 use byteorder::{ByteOrder, LittleEndian};
 use hmac::Hmac;
-use libra_crypto::{ed25519::*, hash::HashValue, hkdf::Hkdf, traits::SigningKey};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    hash::HashValue,
+    hkdf::Hkdf,
+    traits::SigningKey,
+};
 use libra_types::account_address::AccountAddress;
 use mirai_annotations::*;
 use pbkdf2::pbkdf2;
@@ -159,13 +164,6 @@ impl KeyFactory {
 
 /// Seed is the output of a one-way function, which accepts a Mnemonic as input
 pub struct Seed([u8; 32]);
-
-impl Seed {
-    /// Get the underlying Seed internal data
-    pub fn data(&self) -> Vec<u8> {
-        self.0.to_vec()
-    }
-}
 
 impl Seed {
     /// This constructor implements the one-way function that allows to generate a Seed from a

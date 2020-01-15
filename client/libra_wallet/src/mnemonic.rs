@@ -5,8 +5,10 @@
 //! rust-wallet crate. The original file may be found here:
 //!
 //! https://github.com/rust-bitcoin/rust-wallet/blob/master/wallet/src/mnemonic.rs
-use crate::error::*;
 
+use crate::error::{Result, WalletError};
+#[cfg(test)]
+use libra_tools::tempdir::TempPath;
 use mirai_annotations::*;
 #[cfg(test)]
 use rand::rngs::EntropyRng;
@@ -18,9 +20,6 @@ use std::{
     io::Write,
     path::Path,
 };
-
-#[cfg(test)]
-use libra_tools::tempdir::TempPath;
 
 /// Mnemonic seed for deterministic key derivation based on [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki).
 /// The mnemonic must encode entropy in a multiple of 32 bits. With more entropy, security is

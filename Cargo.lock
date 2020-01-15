@@ -2257,6 +2257,7 @@ dependencies = [
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
  "libra-tools 0.1.0",
+ "libra-types 0.1.0",
  "once_cell 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",

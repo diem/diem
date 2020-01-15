@@ -1,10 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
+use crate::{commands::is_address, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use anyhow::{bail, ensure, format_err, Error, Result};
-use libra_crypto::{ed25519::*, test_utils::KeyPair};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    test_utils::KeyPair,
+};
 use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
@@ -24,7 +27,7 @@ use libra_types::{
         TransactionArgument, TransactionPayload, Version,
     },
 };
-use libra_wallet::{io_utils, wallet_library::WalletLibrary};
+use libra_wallet::{io_utils, WalletLibrary};
 use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,

@@ -1,19 +1,23 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-#![allow(unused_mut)]
-use cli::{
-    association_address, client_proxy::ClientProxy, AccountAddress, CryptoHash,
-    TransactionArgument, TransactionPayload,
-};
+
+use cli::client_proxy::ClientProxy;
 use libra_config::config::{NodeConfig, RoleType};
-use libra_crypto::{ed25519::*, test_utils::KeyPair, HashValue, SigningKey};
+use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, HashValue, SigningKey};
 use libra_logger::prelude::*;
-use libra_swarm::swarm::LibraNode;
-use libra_swarm::{swarm::LibraSwarm, utils};
+use libra_swarm::{
+    swarm::{LibraNode, LibraSwarm},
+    utils,
+};
 use libra_tools::tempdir::TempPath;
-use libra_types::block_info::BlockInfo;
-use libra_types::ledger_info::LedgerInfo;
-use libra_types::waypoint::Waypoint;
+use libra_types::{
+    account_address::AccountAddress,
+    account_config::association_address,
+    block_info::BlockInfo,
+    ledger_info::LedgerInfo,
+    transaction::{TransactionArgument, TransactionPayload},
+    waypoint::Waypoint,
+};
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::fs::{self, File};
@@ -83,7 +87,7 @@ impl TestEnvironment {
     }
 
     fn launch_swarm(&mut self, role: RoleType) {
-        let mut swarm = match role {
+        let swarm = match role {
             RoleType::Validator => &mut self.validator_swarm,
             RoleType::FullNode => self.full_node_swarm.as_mut().unwrap(),
         };
@@ -250,7 +254,7 @@ fn test_execute_custom_module_and_script() {
 
 #[test]
 fn smoke_test_single_node() {
-    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    let (_swarm, client_proxy) = setup_swarm_and_client_proxy(1, 0);
     test_smoke_script(client_proxy);
 }
 
@@ -269,7 +273,7 @@ fn smoke_test_single_node_block_metadata() {
 
 #[test]
 fn smoke_test_multi_node() {
-    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
+    let (_swarm, client_proxy) = setup_swarm_and_client_proxy(4, 0);
     test_smoke_script(client_proxy);
 }
 
@@ -302,7 +306,7 @@ fn test_concurrent_transfers_single_node() {
 #[test]
 fn test_basic_fault_tolerance() {
     // A configuration with 4 validators should tolerate single node failure.
-    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(4, 1);
+    let (mut env, client_proxy) = setup_swarm_and_client_proxy(4, 1);
     // kill the first validator
     env.validator_swarm.kill_node(0);
     // run the script for the smoke test by submitting requests to the second validator
@@ -707,7 +711,7 @@ fn test_full_node_basic_flow() {
 
 #[test]
 fn test_e2e_reconfiguration() {
-    let (mut env, mut client_proxy_1) = setup_swarm_and_client_proxy(3, 1);
+    let (env, mut client_proxy_1) = setup_swarm_and_client_proxy(3, 1);
     // the client connected to the removed validator
     let mut client_proxy_0 = env.get_validator_ac_client(0, None);
     client_proxy_1.create_next_account(false).unwrap();
@@ -761,7 +765,7 @@ fn test_e2e_reconfiguration() {
 
 #[test]
 fn test_client_waypoints() {
-    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(3, 1);
+    let (env, mut client_proxy) = setup_swarm_and_client_proxy(3, 1);
     // Make sure some txns are committed
     client_proxy.create_next_account(false).unwrap();
     client_proxy
