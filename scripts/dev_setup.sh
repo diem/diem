@@ -51,7 +51,7 @@ Welcome to Libra!
 This script will download and install the necessary dependencies needed to
 build Libra Core. This includes:
 	* Rust (and the necessary components, e.g. rust-fmt, clippy)
-	* CMake, protobuf
+	* CMake
 
 If you'd prefer to install these dependencies yourself, please exit this script
 now with Ctrl-C.
@@ -99,33 +99,6 @@ else
 		sudo pacman -Syu cmake --noconfirm
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install cmake
-	fi
-fi
-
-echo "Installing Protobuf......"
-if which protoc &>/dev/null; then
-  echo "Protobuf is already installed"
-else
-	if [[ "$OSTYPE" == "linux-gnu" ]]; then
-		if ! which unzip &>/dev/null; then
-			echo "Installing unzip......"
-			if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
-				sudo yum install unzip -y
-			elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-				sudo apt-get install unzip -y
-			elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
-				sudo pacman -Syu unzip --noconfirm
-			fi
-		fi
-		PROTOC_VERSION=3.8.0
-		PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
-		curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP
-		sudo unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
-		sudo unzip -o $PROTOC_ZIP -d /usr/local include/*
-		rm -f $PROTOC_ZIP
-		echo "protoc is installed to /usr/local/bin/"
-	else
-		brew install protobuf
 	fi
 fi
 
