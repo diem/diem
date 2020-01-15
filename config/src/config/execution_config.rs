@@ -69,7 +69,10 @@ impl ExecutionConfig {
 mod test {
     use super::*;
     use libra_tools::tempdir::TempPath;
-    use libra_types::{transaction::Transaction, write_set::WriteSetMut};
+    use libra_types::{
+        transaction::{ChangeSet, Transaction},
+        write_set::WriteSetMut,
+    };
 
     #[test]
     fn test_no_genesis() {
@@ -83,7 +86,10 @@ mod test {
 
     #[test]
     fn test_some_and_load_genesis() {
-        let fake_genesis = Transaction::WriteSet(WriteSetMut::new(vec![]).freeze().unwrap());
+        let fake_genesis = Transaction::WriteSet(
+            ChangeSet::new(WriteSetMut::new(vec![]).freeze().unwrap()),
+            vec![],
+        );
         let (mut config, path) = generate_config();
         config.genesis = Some(fake_genesis.clone());
         let root_dir = RootPath::new_path(path.path());

@@ -245,9 +245,7 @@ impl LibraVM {
                 self.run_prologue(gas_schedule, &mut ctx, &txn_data)?;
                 Ok(VerifiedTranscationPayload::Module(module.code().to_vec()))
             }
-            TransactionPayload::WriteSet(change_set) => {
-                Ok(VerifiedTranscationPayload::ChangeSet(change_set.clone()))
-            }
+            TransactionPayload::WriteSet(_) => Err(VMStatus::new(StatusCode::UNREACHABLE)),
         }
     }
 
@@ -276,9 +274,6 @@ impl LibraVM {
                     txn_data,
                     convert_txn_args(args),
                 )
-            }
-            VerifiedTranscationPayload::ChangeSet(change_set) => {
-                return self.process_change_set(remote_cache, change_set);
             }
         }
         .map_err(|err| {
@@ -426,7 +421,11 @@ impl LibraVM {
                     })?)
                 }
                 // TODO: Implement the logic for processing writeset transactions.
-                TransactionBlock::WriteSet(_) => unimplemented!(""),
+                TransactionBlock::WriteSet(change_set) => result.push(
+                    self.check_change_set(&change_set, state_view)
+                        .map(|_| self.process_change_set(&mut data_cache, change_set))
+                        .unwrap_or_else(discard_error_output),
+                ),
             }
         }
         report_block_count(count);
@@ -541,7 +540,7 @@ impl VMExecutor for LibraVM {
 /// Transaction flows are different across different types of transactions.
 pub enum TransactionBlock {
     UserTransaction(Vec<SignedTransaction>),
-    WriteSet(WriteSet),
+    WriteSet(ChangeSet),
     BlockPrologue(BlockMetadata),
 }
 
@@ -557,15 +556,23 @@ pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock>
                 }
                 blocks.push(TransactionBlock::BlockPrologue(data));
             }
-            Transaction::WriteSet(ws) => {
+            Transaction::WriteSet(cs) => {
                 if !buf.is_empty() {
                     blocks.push(TransactionBlock::UserTransaction(buf));
                     buf = vec![];
                 }
-                blocks.push(TransactionBlock::WriteSet(ws));
+                blocks.push(TransactionBlock::WriteSet(cs));
             }
             Transaction::UserTransaction(txn) => {
-                buf.push(txn);
+                if let TransactionPayload::WriteSet(cs) = txn.payload() {
+                    if !buf.is_empty() {
+                        blocks.push(TransactionBlock::UserTransaction(buf));
+                        buf = vec![];
+                    }
+                    blocks.push(TransactionBlock::WriteSet(cs.clone()));
+                } else {
+                    buf.push(txn);
+                }
             }
         }
     }
@@ -576,7 +583,6 @@ pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock>
 }
 
 enum VerifiedTranscationPayload {
-    ChangeSet(ChangeSet),
     Script(Vec<u8>, Vec<TransactionArgument>),
     Module(Vec<u8>),
 }

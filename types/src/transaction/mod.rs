@@ -1068,7 +1068,7 @@ pub enum Transaction {
 
     /// Transaction that applies a WriteSet to the current storage. This should be used for ONLY for
     /// genesis right now.
-    WriteSet(WriteSet),
+    WriteSet(ChangeSet),
 
     /// Transaction to update the block metadata resource at the beginning of a block.
     BlockMetadata(BlockMetadata),
