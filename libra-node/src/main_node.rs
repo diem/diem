@@ -8,7 +8,7 @@ use debug_interface::{
     proto::node_debug_interface_server::NodeDebugInterfaceServer,
 };
 use executor::Executor;
-use futures::executor::block_on;
+use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
@@ -35,6 +35,8 @@ use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
 use vm_runtime::LibraVM;
+
+const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 
 pub struct LibraHandle {
     _ac: AdmissionControlRuntime,
@@ -199,6 +201,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut ac_network_sender = None;
     let mut ac_network_events = vec![];
     let mut validator_network_provider = None;
+    let mut mempool_network_sender = None;
+    let mut mempool_network_events = vec![];
 
     if let Some(network) = node_config.validator_network.as_mut() {
         let (runtime, mut network_provider) = setup_network(network, RoleType::Validator);
@@ -212,8 +216,13 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             )]);
         ac_network_events.push(ac_events);
 
+        let (mempool_sender, mempool_events) = network_provider
+            .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
+        mempool_network_events.push(mempool_events);
+
         validator_network_provider = Some((network.peer_id, runtime, network_provider));
         ac_network_sender = Some(ac_sender);
+        mempool_network_sender = Some(mempool_sender);
     }
 
     for i in 0..node_config.full_node_networks.len() {
@@ -229,9 +238,14 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             )]);
         ac_network_events.push(ac_events);
 
+        let (mempool_sender, mempool_events) = network_provider
+            .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
+        mempool_network_events.push(mempool_events);
+
         let network = &node_config.full_node_networks[i];
         if node_config.is_upstream_network(network) {
             ac_network_sender = Some(ac_sender);
+            mempool_network_sender = Some(mempool_sender);
         }
         // Start the network provider.
         runtime.handle().spawn(network_provider.start());
@@ -255,13 +269,22 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         Arc::clone(&executor),
         &node_config,
     );
+    let (ac_endpoint_sender, smp_receiver) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
     let admission_control = AdmissionControlRuntime::bootstrap(
         &node_config,
         ac_network_sender.unwrap(),
         ac_network_events,
+        ac_endpoint_sender,
     );
 
-    let mut mempool = None;
+    instant = Instant::now();
+    let mempool = Some(MempoolRuntime::bootstrap(
+        &node_config,
+        mempool_network_sender.unwrap(),
+        mempool_network_events,
+        smp_receiver,
+    ));
+    debug!("Mempool started in {} ms", instant.elapsed().as_millis());
     let mut consensus = None;
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {
         // Note: We need to start network provider before consensus, because the consensus
@@ -273,8 +296,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         // network provider -> consensus -> state synchronizer -> network provider. This deadlock
         // was observed in GitHub Issue #749. A long term fix might be make
         // consensus initialization async instead of blocking on state synchronizer.
-        let (mempool_network_sender, mempool_network_events) = network_provider
-            .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
         let (consensus_network_sender, consensus_network_events) =
             network_provider.add_consensus(vec![
                 ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
@@ -292,15 +313,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         block_on(state_synchronizer.wait_until_initialized())
             .expect("State synchronizer initialization failure");
         debug!("State synchronizer initialization complete.");
-
-        // Initialize and start mempool.
-        instant = Instant::now();
-        mempool = Some(MempoolRuntime::bootstrap(
-            &node_config,
-            mempool_network_sender,
-            mempool_network_events,
-        ));
-        debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
         // Initialize and start consensus.
         instant = Instant::now();

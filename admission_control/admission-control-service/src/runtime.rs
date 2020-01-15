@@ -6,8 +6,12 @@ use crate::{
     counters,
     upstream_proxy::{process_network_messages, UpstreamProxyData},
 };
-use admission_control_proto::proto::admission_control::admission_control_server::AdmissionControlServer;
-use futures::channel::mpsc;
+use admission_control_proto::proto::admission_control::{
+    admission_control_server::AdmissionControlServer, SubmitTransactionRequest,
+    SubmitTransactionResponse,
+};
+use anyhow::Result;
+use futures::channel::{mpsc, oneshot};
 use libra_config::config::{NodeConfig, RoleType};
 use libra_mempool::proto::mempool_client::MempoolClientWrapper;
 use network::validator_network::{AdmissionControlNetworkEvents, AdmissionControlNetworkSender};
@@ -30,6 +34,10 @@ impl AdmissionControlRuntime {
         config: &NodeConfig,
         network_sender: AdmissionControlNetworkSender,
         network_events: Vec<AdmissionControlNetworkEvents>,
+        ac_sender: mpsc::Sender<(
+            SubmitTransactionRequest,
+            oneshot::Sender<Result<SubmitTransactionResponse>>,
+        )>,
     ) -> Self {
         let ac_service_rt = Builder::new()
             .thread_name("ac-service-")
@@ -37,7 +45,6 @@ impl AdmissionControlRuntime {
             .enable_all()
             .build()
             .expect("[admission control] failed to create runtime");
-        let (ac_sender, ac_receiver) = mpsc::channel(1_024);
 
         let port = config.admission_control.admission_control_service_port;
 
@@ -109,7 +116,6 @@ impl AdmissionControlRuntime {
             network_events,
             peer_info,
             executor.clone(),
-            ac_receiver,
         ));
 
         Self {

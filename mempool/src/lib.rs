@@ -3,6 +3,8 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+// Increase recursion limit to allow for use of select! macro.
+#![recursion_limit = "1024"]
 
 //! Mempool is used to hold transactions that have been submitted but not yet agreed upon and
 //! executed.

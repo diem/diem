@@ -5,6 +5,11 @@ use crate::{
     core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool,
     shared_mempool::start_shared_mempool,
 };
+use admission_control_proto::proto::admission_control::{
+    SubmitTransactionRequest, SubmitTransactionResponse,
+};
+use anyhow::Result;
+use futures::channel::{mpsc::Receiver, oneshot};
 use libra_config::config::NodeConfig;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
 use std::{
@@ -28,7 +33,11 @@ impl MempoolRuntime {
     pub fn bootstrap(
         config: &NodeConfig,
         network_sender: MempoolNetworkSender,
-        network_events: MempoolNetworkEvents,
+        network_events: Vec<MempoolNetworkEvents>,
+        ac_endpoint_listener: Receiver<(
+            SubmitTransactionRequest,
+            oneshot::Sender<Result<SubmitTransactionResponse>>,
+        )>,
     ) -> Self {
         let mempool_service_rt = Builder::new()
             .thread_name("mempool-service-")
@@ -55,6 +64,7 @@ impl MempoolRuntime {
             mempool,
             network_sender,
             network_events,
+            ac_endpoint_listener,
             storage_client,
             vm_validator,
             vec![],
