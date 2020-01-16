@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{format_err, Result};
+use reqwest::header::USER_AGENT;
 use reqwest::Url;
 use serde::Deserialize;
 
@@ -43,6 +44,7 @@ impl GitHub {
         let url: Url = url.parse().expect("Failed to parse github url");
         let request = self.client.get(url);
         let response = request
+            .header(USER_AGENT, "libra-cluster-test")
             .send()
             .map_err(|e| format_err!("Failed to query github: {:?}", e))?;
         let response: Vec<CommitInfo> = response
