@@ -38,7 +38,7 @@ impl StateSynchronizer {
         Self::bootstrap_with_executor_proxy(
             network,
             config.base.role,
-            config.base.waypoint.clone(),
+            config.base.waypoint,
             &config.state_sync,
             executor_proxy,
         )

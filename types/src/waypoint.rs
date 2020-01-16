@@ -16,7 +16,7 @@ const WAYPOINT_DELIMITER: char = ':';
 /// off-chain mechanism to verify the sync process right after the restart.
 /// At high level, a trusted waypoint verifies the LedgerInfo for a certain epoch change.
 /// For more information, please refer to the Waypoints documentation.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Waypoint {
     /// The version of the reconfiguration transaction that is being approved by this waypoint.
     version: Version,

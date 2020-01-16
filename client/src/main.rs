@@ -58,37 +58,38 @@ struct Args {
     pub verbose: bool,
 }
 
-fn main() -> std::io::Result<()> {
+fn main() {
     let _logger = set_default_global_logger(false /* async */, None);
     crash_handler::setup_panic_handler();
     let args = Args::from_args();
 
     let (commands, alias_to_cmd) = get_commands(args.faucet_account_file.is_some());
 
-    let faucet_account_file = args.faucet_account_file.unwrap_or_else(|| "".to_string());
+    let faucet_account_file = args
+        .faucet_account_file
+        .clone()
+        .unwrap_or_else(|| "".to_string());
     let mnemonic_file = args.mnemonic_file.clone();
     let mut client_proxy = ClientProxy::new(
         &args.host,
         args.port.get(),
         &faucet_account_file,
         args.sync,
-        args.faucet_server,
+        args.faucet_server.clone(),
         mnemonic_file,
         args.waypoint,
     )
-    .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, &format!("{}", e)[..]))?;
+    .expect("Failed to construct client.");
 
     // Test connection to validator
-    let latest_li = match client_proxy.test_validator_connection() {
-        Ok(li) => li,
-        Err(e) => {
-            println!(
-                "Not able to connect to validator at {}:{}, error {:?}",
-                args.host, args.port, e
-            );
-            return Ok(());
-        }
-    };
+    let latest_li = client_proxy
+        .test_validator_connection()
+        .unwrap_or_else(|e| {
+            panic!(
+                "Not able to connect to validator at {}:{}. Error: {}",
+                args.host, args.port, e,
+            )
+        });
     let ledger_info_str = format!(
         "latest version = {}, timestamp = {}",
         latest_li.ledger_info().version(),
@@ -160,8 +161,6 @@ fn main() -> std::io::Result<()> {
             }
         }
     }
-
-    Ok(())
 }
 
 /// Print the help message for the client and underlying command.

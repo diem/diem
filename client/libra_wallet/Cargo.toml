@@ -20,6 +20,7 @@ pbkdf2 = "0.3.0"
 serde = "1.0.96"
 sha3 = "0.8.2"
 sha2 = "0.8.0"
+thiserror = "1"
 ed25519-dalek = "1.0.0-pre.1"
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
