@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::libra_vm::{chunk_block_transactions, TransactionBlock};
-use libra_types::transaction::Transaction;
+use libra_types::transaction::{Transaction, TransactionPayload};
 use proptest::collection::vec;
 use proptest::prelude::*;
 
@@ -29,6 +29,19 @@ fn reconstruct_transaction_vec(blocks: Vec<TransactionBlock>) -> Vec<Transaction
 proptest! {
     #[test]
     fn chunking_round_trip(txns in vec(any::<Transaction>(), 1..20)) {
-        prop_assert_eq!(reconstruct_transaction_vec(chunk_block_transactions(txns.clone())), txns)
+        let result = reconstruct_transaction_vec(chunk_block_transactions(txns.clone()));
+        prop_assert_eq!(result.len(), txns.len());
+        let check = txns.iter().zip(result.iter()).all(|(l, r)| {
+            if let Transaction::UserTransaction(txn) = l {
+                if let TransactionPayload::WriteSet(ws_l) = txn.payload() {
+                    return match r {
+                        Transaction::WriteSet(ws_r) => ws_l == ws_r,
+                        _ => false,
+                    }
+                }
+            }
+            l == r
+        });
+        prop_assert!(check);
     }
 }
