@@ -201,7 +201,7 @@ impl SparseMerkleTree {
                 HashValue::LENGTH_IN_BITS - remaining_bits.len(),
             )),
             Node::Subtree(_) => {
-                // When the search reaches an Subtree node, we need proof to to give us more
+                // When the search reaches an Subtree node, we need proof to give us more
                 // information about this part of the tree.
                 let proof = proof_reader
                     .get_proof(key)
