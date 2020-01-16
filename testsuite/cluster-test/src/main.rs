@@ -58,6 +58,8 @@ struct Args {
         help = "If set, tries to connect to a libra-swarm instead of aws"
     )]
     swarm: bool,
+    #[structopt(long, help = "Time to run swarm test for in seconds")]
+    swarm_duration: Option<u64>,
 
     #[structopt(long, group = "action")]
     wipe_all_db: bool,
@@ -130,7 +132,8 @@ pub fn main() {
         };
         if args.swarm {
             let util = BasicSwarmUtil::setup(&args);
-            rt.block_on(util.emit_tx(args.accounts_per_client, thread_params));
+            let duration = args.swarm_duration.map(Duration::from_secs);
+            rt.block_on(util.emit_tx(args.accounts_per_client, thread_params, duration));
             return;
         } else {
             let util = ClusterUtil::setup(&args);
@@ -295,9 +298,14 @@ impl BasicSwarmUtil {
         }
     }
 
-    pub async fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
+    pub async fn emit_tx(
+        self,
+        accounts_per_client: usize,
+        thread_params: EmitThreadParams,
+        duration: Option<Duration>,
+    ) {
         let mut emitter = TxEmitter::new(&self.cluster);
-        emitter
+        let job = emitter
             .start_job(EmitJobRequest {
                 instances: self.cluster.validator_instances().to_vec(),
                 accounts_per_client,
@@ -305,7 +313,12 @@ impl BasicSwarmUtil {
             })
             .await
             .expect("Failed to start emit job");
-        thread::park();
+        if let Some(duration) = duration {
+            thread::sleep(duration);
+            emitter.stop_job(job);
+        } else {
+            thread::park();
+        }
     }
 }
 
