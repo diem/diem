@@ -24,9 +24,8 @@ use libra_types::{
     waypoint::Waypoint,
 };
 use std::convert::TryFrom;
-use std::sync::{Arc, Mutex};
 
-const MAX_GRPC_RETRY_COUNT: u64 = 1;
+const MAX_GRPC_RETRY_COUNT: u64 = 2;
 
 struct TrustedState {
     version: Version,
@@ -38,7 +37,7 @@ struct TrustedState {
 /// new LedgerInfo
 pub struct GRPCClient {
     client: AdmissionControlClientBlocking,
-    state: Arc<Mutex<TrustedState>>,
+    trusted_state: TrustedState,
 }
 
 impl GRPCClient {
@@ -51,14 +50,14 @@ impl GRPCClient {
             (0, VerifierType::TrustedVerifier(EpochInfo::empty())),
             |w| (w.version(), VerifierType::Waypoint(w)),
         );
-        let initial_state = TrustedState {
+        let initial_trusted_state = TrustedState {
             version: initial_version,
             verifier: initial_verifier,
             latest_epoch_change_li: None,
         };
         Ok(GRPCClient {
             client,
-            state: Arc::new(Mutex::new(initial_state)),
+            trusted_state: initial_trusted_state,
         })
     }
 
@@ -74,12 +73,13 @@ impl GRPCClient {
             .submit_transaction(req.clone())
             .map_err(Into::into);
 
-        let mut try_cnt = 0_u64;
-        while Self::need_to_retry(&mut try_cnt, &resp) {
+        let mut try_cnt = 0;
+        while Self::need_to_retry(try_cnt, &resp) {
             resp = self
                 .client
                 .submit_transaction(req.clone())
                 .map_err(Into::into);
+            try_cnt += 1;
         }
 
         let completed_resp = SubmitTransactionResponse::try_from(resp?)?;
@@ -123,47 +123,48 @@ impl GRPCClient {
         &mut self,
         requested_items: Vec<RequestItem>,
     ) -> Result<UpdateToLatestLedgerResponse> {
-        let current_state = Arc::clone(&self.state);
-        let req = UpdateToLatestLedgerRequest::new(
-            current_state.lock().unwrap().version,
-            requested_items,
-        );
+        let current_trusted_state = &self.trusted_state;
+        let req = UpdateToLatestLedgerRequest::new(current_trusted_state.version, requested_items);
+
         debug!("get_with_proof with request: {:?}", req);
         let proto_req = req.clone().into();
         let resp = self.client.update_to_latest_ledger(proto_req)?;
         let resp = UpdateToLatestLedgerResponse::try_from(resp)?;
-        let mut state = current_state.lock().unwrap();
-        if let Some(new_epoch_info) = resp.verify(&state.verifier, &req)? {
+
+        if let Some(new_epoch_info) = resp.verify(&current_trusted_state.verifier, &req)? {
             info!("Trusted epoch change to :{}", new_epoch_info);
-            state.verifier = VerifierType::TrustedVerifier(new_epoch_info);
-            state.latest_epoch_change_li = resp
+            self.trusted_state.verifier = VerifierType::TrustedVerifier(new_epoch_info);
+            self.trusted_state.latest_epoch_change_li = resp
                 .validator_change_proof
                 .ledger_info_with_sigs
                 .last()
                 .cloned();
         }
-        state.version = resp.ledger_info_with_sigs.ledger_info().version();
+        self.trusted_state.version = resp.ledger_info_with_sigs.ledger_info().version();
+
         Ok(resp)
     }
 
-    fn need_to_retry<T>(try_cnt: &mut u64, ret: &Result<T>) -> bool {
-        if *try_cnt <= MAX_GRPC_RETRY_COUNT {
-            *try_cnt += 1;
-            if let Err(error) = ret {
-                if let Some(grpc_error) = error.downcast_ref::<tonic::Status>() {
-                    // Only retry when the connection is down to make sure we won't
-                    // send one txn twice.
-                    return grpc_error.code() == tonic::Code::Unavailable
-                        || grpc_error.code() == tonic::Code::Unknown;
-                }
+    fn need_to_retry<T>(try_cnt: u64, ret: &Result<T>) -> bool {
+        if try_cnt >= MAX_GRPC_RETRY_COUNT {
+            return false;
+        }
+
+        if let Err(error) = ret {
+            if let Some(grpc_error) = error.downcast_ref::<tonic::Status>() {
+                // Only retry when the connection is down to make sure we won't
+                // send one txn twice.
+                return grpc_error.code() == tonic::Code::Unavailable
+                    || grpc_error.code() == tonic::Code::Unknown;
             }
         }
+
         false
     }
 
     /// LedgerInfo corresponding to the latest epoch change.
     pub(crate) fn latest_epoch_change_li(&self) -> Option<LedgerInfoWithSignatures> {
-        self.state.lock().unwrap().latest_epoch_change_li.clone()
+        self.trusted_state.latest_epoch_change_li.clone()
     }
 
     /// Sync version of get_with_proof
@@ -171,15 +172,15 @@ impl GRPCClient {
         &mut self,
         requested_items: Vec<RequestItem>,
     ) -> Result<UpdateToLatestLedgerResponse> {
-        let mut resp: Result<UpdateToLatestLedgerResponse> =
-            self.get_with_proof(requested_items.clone());
-        let mut try_cnt = 0_u64;
+        let mut resp = self.get_with_proof(requested_items.clone());
 
-        while Self::need_to_retry(&mut try_cnt, &resp) {
+        let mut try_cnt = 0;
+        while Self::need_to_retry(try_cnt, &resp) {
             resp = self.get_with_proof(requested_items.clone());
+            try_cnt += 1;
         }
 
-        Ok(resp?)
+        resp
     }
 
     /// Get the latest account sequence number for the account specified.
