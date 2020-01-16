@@ -146,6 +146,18 @@ impl<'alloc> VMModuleCache<'alloc> {
         Ok(def)
     }
 
+    pub fn instantiate_struct_def(
+        &self,
+        module: &LoadedModule,
+        idx: StructDefinitionIndex,
+        type_instantiation: Vec<Type>,
+        data_view: &dyn InterpreterContext,
+    ) -> VMResult<StructDef> {
+        let struct_def = self.resolve_struct_def(module, idx, data_view)?;
+        let type_context = TypeContext::new(type_instantiation);
+        type_context.subst_struct_def(&struct_def)
+    }
+
     /// Resolve a ModuleId into a LoadedModule if the module has been cached already.
     ///
     /// Returns:
@@ -220,7 +232,7 @@ impl<'alloc> VMModuleCache<'alloc> {
     }
 
     /// Resolve a SignatureToken into a Type recursively in either the cache or the `fetcher`.
-    fn resolve_signature_token(
+    pub fn resolve_signature_token(
         &self,
         module: &LoadedModule,
         tok: &SignatureToken,

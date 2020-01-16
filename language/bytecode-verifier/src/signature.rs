@@ -199,25 +199,11 @@ impl<'a> SignatureChecker<'a> {
                                         self.module.struct_handle_at(struct_def.struct_handle);
                                     let type_actuals =
                                         &self.module.locals_signature_at(*type_actuals_idx).0;
-                                    let mut errs = check_generic_instance(
+                                    check_generic_instance(
                                         context,
                                         &struct_handle.type_formals,
                                         type_actuals,
-                                    );
-
-                                    // TODO: Right now, it is forbidden to publish generic resources.
-                                    // We may lift the restriction after we properly implement access
-                                    // path derivation for generic types.
-                                    if !type_actuals.is_empty() {
-                                        errs.push(
-                                            VMStatus::new(StatusCode::TYPE_ERROR).with_message(
-                                                "generic resources not allowed in storage"
-                                                    .to_string(),
-                                            ),
-                                        )
-                                    }
-
-                                    errs
+                                    )
                                 }
                                 _ => vec![],
                             };

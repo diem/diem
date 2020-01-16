@@ -6,6 +6,7 @@ use crate::{
     native_structs::NativeStructType,
 };
 use libra_types::vm_error::{StatusCode, VMStatus};
+
 pub struct TypeContext(Vec<Type>);
 
 impl TypeContext {
@@ -17,7 +18,7 @@ impl TypeContext {
         Self((0..num_type_args).map(Type::TypeVariable).collect())
     }
 
-    pub fn subst_type(&self, ty: &Type) -> Result<Type, VMStatus> {
+    fn subst_type(&self, ty: &Type) -> Result<Type, VMStatus> {
         Ok(match ty {
             Type::TypeVariable(idx) => self.get_type(*idx)?,
             Type::Reference(ty) => Type::Reference(Box::new(self.subst_type(ty)?)),

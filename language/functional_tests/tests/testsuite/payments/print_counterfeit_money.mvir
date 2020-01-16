@@ -48,6 +48,4 @@ main() {
     return;
 }
 
-// check: TYPE_ERROR
-// check: TYPE_ERROR
-// check: LINKER_ERROR
+// check: MISSING_DATA

@@ -1,11 +1,9 @@
 module M {
-    resource Foo<T> { x: T }
+    struct Foo<T> { x: T }
 
     exists_foo_u64(): bool {
-        let b: bool;
-        b = exists<Foo<u64>>();
-        return move(b);
+        return exists<Foo<u64>>(0x0);
     }
 }
 
-// check: TYPE_ERROR
+// check: EXISTS_RESOURCE_TYPE_MISMATCH_ERROR

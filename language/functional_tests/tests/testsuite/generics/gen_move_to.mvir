@@ -1,0 +1,295 @@
+module M {
+    // Structures
+    //
+
+    // a generic resource
+    resource Some<T> { v: T }
+
+    // a resource
+    resource Value { val: u64 }
+
+    // a generic type either unrestricted or resource
+    struct Container<T> { elem: T }
+
+    // Functions
+    //
+
+    // return a `Container<T>`
+    public new_container<T>(t: T): Self.Container<T> {
+        return Container<T>{ elem: move(t) };
+    }
+
+    // change the elem of a `Container<T>` if T is unrestricted
+    public change_container<T: unrestricted>(c: &mut Self.Container<T>, t: T) {
+        *&mut move(c).elem = move(t);
+        return;
+    }
+
+    // destroy a `Container` and returns the `T` wrapped by it
+    public destroy_container<T>(c: Self.Container<T>): T {
+        let t: T;
+        Container<T> { elem: t } = move(c);
+        return move(t);
+    }
+
+    // return a `Value` instance (a resource)
+    public new_value(val: u64): Self.Value {
+        return Value{ val: move(val) };
+    }
+
+    // change the `val` in a `Value` instance
+    public change_value(value: &mut Self.Value, val: u64) {
+        *&mut move(value).val = move(val);
+        return;
+    }
+
+    // destroy `Value` and return the wrapped u64
+    public destroy_value(value: Self.Value): u64 {
+        let v: u64;
+        Value { val: v } = move(value);
+        return move(v);
+    }
+
+    // publish a well known `Some<Value>` resource
+    public publish_some_value() {
+        let value: Self.Value;
+        let some_of_value: Self.Some<Self.Value>;
+        value = Value { val: 100 };
+        some_of_value = Some<Self.Value>{ v : move(value) };
+        move_to_sender<Some<Self.Value>>(move(some_of_value));
+        return;
+    }
+
+    // unpublish whatever was published in `publish_some_value()`
+    public unpublish_some_value() acquires Some {
+        let some_of_value: Self.Some<Self.Value>;
+        let value: Self.Value;
+        let v: u64;
+
+        some_of_value = move_from<Some<Self.Value>>(get_txn_sender());
+        Some<Self.Value> { v: value } = move(some_of_value);
+        Value { val: v } = move(value);
+        assert(move(v) == 100, 100);
+
+        return;
+    }
+
+    // publish a `Some` under sender account
+    public publish_some<T>(v: T) {
+        let some_of_t: Self.Some<T>;
+        some_of_t = Some<T>{ v: move(v) };
+        move_to_sender<Some<T>>(move(some_of_t));
+        return;
+    }
+
+    // unpublish a `Some<T>` under sender account
+    public unpublish_some<T>(): T acquires Some {
+        let some_of_t: Self.Some<T>;
+        let t: T;
+
+        some_of_t = move_from<Some<T>>(get_txn_sender());
+        Some<T> { v: t } = move(some_of_t);
+
+        return move(t);
+    }
+
+    // whether an instance of Some<T> exists under sender account
+    public some_exists<T>(): bool {
+        return exists<Some<T>>(get_txn_sender());
+    }
+
+    // check a `Some` under sender account
+    public check_some<T>(val: T): T * bool acquires Some {
+        let some: &Self.Some<T>;
+        let inner_ref: &T;
+        let val_ref: &T;
+        let equal: bool;
+        some = borrow_global<Some<T>>(get_txn_sender());
+        inner_ref = &move(some).v;
+        val_ref = &val;
+        equal = (move(inner_ref) == move(val_ref));
+        return move(val), move(equal);
+    }
+
+    // publish a `Some` under sender account
+    public change_some<T: unrestricted>(val: T) acquires Some {
+        let some: &mut Self.Some<T>;
+        some = borrow_global_mut<Some<T>>(get_txn_sender());
+        *(&mut move(some).v) = move(val);
+        return;
+    }
+
+}
+
+//
+// From here on there are a set of transactions over a set of published
+// resources Some<T>.
+// It is best followed going line by line. They are effectively a single transaction
+// that publishes, uses and destroys resources but it's spread across multiple
+// transaction to test the MoveValue <-> byte[] conversions of the serializer
+// (effectively the publishing to store)
+//
+
+//
+// create, publish and exists
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    assert(M.some_exists<M.Value>() == false, 1010);
+    assert(M.some_exists<address>() == false, 1011);
+
+    M.publish_some_value();
+
+    assert(M.some_exists<M.Value>() == true, 1012);
+    return;
+}
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    assert(M.some_exists<M.Value>() == true, 1020);
+    assert(M.some_exists<u64>() == false, 1021);
+
+    M.publish_some<u64>(100);
+    M.publish_some<bool>(true);
+
+    assert(M.some_exists<u64>() == true, 1022);
+    assert(M.some_exists<bool>() == true, 1023);
+    assert(M.some_exists<address>() == false, 1024);
+    return;
+}
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    assert(M.some_exists<M.Value>() == true, 1030);
+    assert(M.some_exists<bool>() == true, 1031);
+    assert(M.some_exists<address>() == false, 1032);
+    assert(M.some_exists<M.Container<u64>>() == false, 1033);
+
+    M.publish_some<address>(0x0);
+    M.publish_some<M.Container<u64>>(
+        M.new_container<u64>(7)
+    );
+
+    assert(M.some_exists<address>() == true, 1034);
+    assert(M.some_exists<M.Container<u64>>() == true, 1035);
+    assert(M.some_exists<M.Container<u8>>() == false, 1036);
+    assert(M.some_exists<M.Value>() == true, 1037);
+
+    M.publish_some<M.Container<M.Value>>(
+        M.new_container<M.Value>(
+            M.new_value(5)
+        )
+    );
+    return;
+}
+
+//
+// borrows and mutations
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    let eq: bool;
+    let val: M.Value;
+    _, eq = M.check_some<bool>(true);
+    assert(move(eq), 2010);
+    _, eq = M.check_some<u64>(100);
+    assert(move(eq), 2011);
+    _, eq = M.check_some<address>(0x0);
+    assert(move(eq), 2012);
+    _, eq = M.check_some<M.Container<u64>>(M.new_container<u64>(7));
+    assert(move(eq), 2013);
+    _, eq = M.check_some<M.Container<u64>>(M.new_container<u64>(10));
+    assert(!move(eq), 2014);
+    val = M.new_value(5);
+    val, eq = M.check_some<M.Value>(move(val));
+    assert(!move(eq), 2015);
+    _ = M.destroy_value(move(val));
+    return;
+}
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    let eq: bool;
+    M.change_some<bool>(false);
+    M.change_some<u64>(1);
+    M.change_some<address>(0x01);
+    M.change_some<M.Container<u64>>(M.new_container<u64>(20));
+    _, eq = M.check_some<M.Container<u64>>(M.new_container<u64>(20));
+    assert(move(eq), 2020);
+    _, eq = M.check_some<address>(0x1);
+    assert(move(eq), 2021);
+    return;
+}
+
+//
+// unpublish, destroy and exists
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    M.unpublish_some_value();
+
+    assert(M.some_exists<M.Value>() == false, 3010);
+    assert(M.some_exists<address>() == true, 3011);
+    assert(M.some_exists<M.Container<u64>>() == true, 3012);
+    assert(M.some_exists<M.Container<u8>>() == false, 3013);
+    return;
+}
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    assert(M.some_exists<M.Container<M.Value>>() == true, 3020);
+    assert(M.some_exists<M.Value>() == false, 3021);
+    assert(M.some_exists<address>() == true, 3022);
+
+    assert(M.unpublish_some<u64>() == 1, 3023);
+    assert(!M.unpublish_some<bool>(), 3024);
+    assert(
+        M.destroy_container<u64>(
+            M.unpublish_some<M.Container<u64>>()
+        ) == 20,
+        3025
+    );
+    assert(M.unpublish_some<address>() == 0x01, 3026);
+
+    assert(M.some_exists<u64>() == false, 3027);
+    assert(M.some_exists<address>() == false, 3028);
+    assert(M.some_exists<M.Container<u64>>() == false, 3029);
+    return;
+}
+
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    assert(
+        M.destroy_value(
+            M.destroy_container<M.Value>(
+                M.unpublish_some<M.Container<M.Value>>()
+            )
+        ) == 5,
+        3030
+    );
+
+    assert(M.some_exists<u64>() == false, 3031);
+    assert(M.some_exists<address>() == false, 3032);
+    assert(M.some_exists<bool>() == false, 3033);
+    assert(M.some_exists<M.Container<u64>>() == false, 3034);
+    assert(M.some_exists<M.Container<M.Value>>() == false, 3035);
+    assert(M.some_exists<M.Value>() == false, 3036);
+    return;
+}
