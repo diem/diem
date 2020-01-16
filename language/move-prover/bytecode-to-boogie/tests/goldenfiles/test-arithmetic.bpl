@@ -29,8 +29,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 10;
@@ -76,6 +76,7 @@ Label_Abort:
 
 procedure TestArithmetic_add_two_number_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0, ret1 := TestArithmetic_add_two_number(arg0, arg1);
 }
 
@@ -102,9 +103,9 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
-    assume is#Integer(arg2);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
+    assume IsValidInteger(arg2);
 
     old_size := local_counter;
     local_counter := local_counter + 10;
@@ -147,6 +148,7 @@ Label_Abort:
 
 procedure TestArithmetic_multiple_ops_verify (arg0: Value, arg1: Value, arg2: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestArithmetic_multiple_ops(arg0, arg1, arg2);
 }
 
@@ -186,8 +188,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 23;
@@ -273,6 +275,7 @@ Label_Abort:
 
 procedure TestArithmetic_bool_ops_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestArithmetic_bool_ops(arg0, arg1);
 }
 
@@ -310,8 +313,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 21;
@@ -400,6 +403,7 @@ Label_Abort:
 
 procedure TestArithmetic_arithmetic_ops_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0, ret1 := TestArithmetic_arithmetic_ops(arg0, arg1);
 }
 
@@ -455,6 +459,7 @@ Label_Abort:
 
 procedure TestArithmetic_overflow_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestArithmetic_overflow();
 }
 
@@ -510,6 +515,7 @@ Label_Abort:
 
 procedure TestArithmetic_underflow_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestArithmetic_underflow();
 }
 
@@ -565,5 +571,6 @@ Label_Abort:
 
 procedure TestArithmetic_div_by_zero_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestArithmetic_div_by_zero();
 }

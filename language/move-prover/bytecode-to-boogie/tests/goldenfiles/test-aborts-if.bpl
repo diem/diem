@@ -28,8 +28,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_fl
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -67,6 +67,7 @@ Label_Abort:
 
 procedure TestAbortIf_abort1_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestAbortIf_abort1(arg0, arg1);
 }
 
@@ -87,8 +88,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_fl
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 2;
@@ -105,6 +106,7 @@ Label_Abort:
 
 procedure TestAbortIf_abort2_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestAbortIf_abort2(arg0, arg1);
 }
 
@@ -128,8 +130,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_fl
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 5;
@@ -161,6 +163,7 @@ Label_Abort:
 
 procedure TestAbortIf_abort3_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestAbortIf_abort3(arg0, arg1);
 }
 
@@ -186,8 +189,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_fla
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -225,6 +228,7 @@ Label_Abort:
 
 procedure TestAbortIf_abort4_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestAbortIf_abort4(arg0, arg1);
 }
 
@@ -250,8 +254,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(arg1)))) ==> abort_fl
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -289,6 +293,7 @@ Label_Abort:
 
 procedure TestAbortIf_abort5_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestAbortIf_abort5(arg0, arg1);
 }
 
@@ -314,8 +319,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_fla
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -353,6 +358,7 @@ Label_Abort:
 
 procedure TestAbortIf_abort6_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestAbortIf_abort6(arg0, arg1);
 }
 
@@ -378,8 +384,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_fla
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -417,6 +423,7 @@ Label_Abort:
 
 procedure TestAbortIf_abort7_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestAbortIf_abort7(arg0, arg1);
 }
 
@@ -447,8 +454,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) < i#Integer(arg1)))) ==> abort_fla
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 11;
@@ -503,6 +510,7 @@ Label_Abort:
 
 procedure TestAbortIf_abort8_verify (arg0: Value, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestAbortIf_abort8(arg0, arg1);
 }
 
@@ -529,8 +537,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) > i#Integer(arg1))) || b#Boolean(B
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -568,5 +576,6 @@ Label_Abort:
 
 procedure TestAbortIf_abort9_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestAbortIf_abort9(arg0, arg1);
 }

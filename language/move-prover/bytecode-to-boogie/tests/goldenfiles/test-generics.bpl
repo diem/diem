@@ -71,8 +71,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 12;
@@ -131,6 +131,7 @@ Label_Abort:
 
 procedure TestGenerics_move2_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestGenerics_move2(arg0, arg1);
 }
 
@@ -196,6 +197,7 @@ Label_Abort:
 
 procedure TestGenerics_create_verify (tv0: TypeValue, arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestGenerics_create(tv0: TypeValue, arg0);
 }
 
@@ -282,6 +284,7 @@ Label_Abort:
 
 procedure TestGenerics_overcomplicated_equals_verify (tv0: TypeValue, arg0: Value, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestGenerics_overcomplicated_equals(tv0: TypeValue, arg0, arg1);
 }
 
@@ -337,5 +340,6 @@ Label_Abort:
 
 procedure TestGenerics_test_verify () returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestGenerics_test();
 }

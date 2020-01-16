@@ -14,7 +14,7 @@ function TestStruct_B_type_value(): TypeValue {
 procedure {:inline 1} Pack_TestStruct_B(v0: Value, v1: Value) returns (v: Value)
 {
     assume is#Address(v0);
-    assume is#Integer(v1);
+    assume IsValidInteger(v1);
     v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
 
 }
@@ -37,7 +37,7 @@ function TestStruct_A_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_TestStruct_A(v0: Value, v1: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     assume is#Vector(v1);
     v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
 
@@ -61,7 +61,7 @@ function TestStruct_C_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_TestStruct_C(v0: Value, v1: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     assume is#Vector(v1);
     v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
 
@@ -83,7 +83,7 @@ function TestStruct_T_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_TestStruct_T(v0: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     v := Vector(ExtendValueArray(EmptyValueArray, v0));
 
 }
@@ -143,6 +143,7 @@ Label_Abort:
 
 procedure TestStruct_identity_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0, ret1 := TestStruct_identity(arg0, arg1);
 }
 
@@ -266,6 +267,7 @@ Label_Abort:
 
 procedure TestStruct_module_builtins_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestStruct_module_builtins(arg0);
 }
 
@@ -327,7 +329,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     assume is#Address(GetLocal(m, old_size + 7));
 
-    assume is#Integer(GetLocal(m, old_size + 8));
+    assume IsValidInteger(GetLocal(m, old_size + 8));
 
     call tmp := Pack_TestStruct_B(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 9, tmp);
@@ -346,7 +348,7 @@ Label_7:
 
     assume is#Address(GetLocal(m, old_size + 10));
 
-    assume is#Integer(GetLocal(m, old_size + 11));
+    assume IsValidInteger(GetLocal(m, old_size + 11));
 
     call tmp := Pack_TestStruct_B(GetLocal(m, old_size + 10), GetLocal(m, old_size + 11));
     m := UpdateLocal(m, old_size + 12, tmp);
@@ -368,7 +370,7 @@ Label_11:
     call t16 := CopyOrMoveRef(t4);
 
     call tmp := ReadRef(t16);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 17, tmp);
 
@@ -410,6 +412,7 @@ Label_Abort:
 
 procedure TestStruct_nested_struct_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestStruct_nested_struct(arg0);
 }
 
@@ -457,7 +460,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     assume is#Address(GetLocal(m, old_size + 4));
 
-    assume is#Integer(GetLocal(m, old_size + 5));
+    assume IsValidInteger(GetLocal(m, old_size + 5));
 
     call tmp := Pack_TestStruct_B(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 6, tmp);
@@ -471,7 +474,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call t8, t9 := Unpack_TestStruct_B(GetLocal(m, old_size + 7));
     assume is#Address(t8);
 
-    assume is#Integer(t9);
+    assume IsValidInteger(t9);
 
     m := UpdateLocal(m, old_size + 8, t8);
     m := UpdateLocal(m, old_size + 9, t9);
@@ -517,5 +520,6 @@ Label_Abort:
 
 procedure TestStruct_try_unpack_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestStruct_try_unpack(arg0);
 }

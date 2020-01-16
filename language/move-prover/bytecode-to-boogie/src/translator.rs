@@ -204,10 +204,20 @@ impl<'a> BoogieTranslator<'a> {
                 }
 
                 let type_value = format!("StructType({}, {})", struct_name, field_types);
-                emit_str(&format!(
-                    "function {}_type_value({}): TypeValue {{\n    {}\n}}\n",
-                    struct_name, type_args, type_value
-                ));
+                if struct_name == "LibraAccount_T" {
+                    // Special treatment of well-known resource LibraAccount_T. The type_value
+                    // function is forward-declared in the prelude, here we only add an axiom for
+                    // it.
+                    emit_str(&format!(
+                        "axiom {}_type_value() == {};\n",
+                        struct_name, type_value
+                    ));
+                } else {
+                    emit_str(&format!(
+                        "function {}_type_value({}): TypeValue {{\n    {}\n}}\n",
+                        struct_name, type_args, type_value
+                    ));
+                }
 
                 // Emit other struct specific boilerplate.
                 if !struct_def_view.is_native() {
@@ -303,6 +313,8 @@ impl<'a> ModuleTranslator<'a> {
             if function_def.is_native() {
                 res.push_str(&self.generate_function_sig(idx, true, &None));
                 res.push_str(";");
+                res.push_str(&self.generate_function_spec(idx, &None));
+                res.push_str("\n");
                 continue;
             }
             res.push_str(&self.translate_function(idx));
@@ -904,10 +916,17 @@ impl<'a> ModuleTranslator<'a> {
             }
             rets.push_str(&format!("ret{}", i));
         }
+        let assumptions = "    assume ExistsTxnSenderAccount(m, txn);\n";
         if function_signature.return_types.is_empty() {
-            format!("\n{{\n    call {}({});\n}}\n\n", fun_name, args)
+            format!(
+                "\n{{\n{}    call {}({});\n}}\n\n",
+                assumptions, fun_name, args
+            )
         } else {
-            format!("\n{{\n    call {} := {}({});\n}}\n\n", rets, fun_name, args)
+            format!(
+                "\n{{\n{}    call {} := {}({});\n}}\n\n",
+                assumptions, rets, fun_name, args
+            )
         }
     }
 
@@ -1155,7 +1174,7 @@ pub fn format_type_checking(
     let mut params = name;
     let mut ret = String::new();
     let check = match sig {
-        SignatureToken::U8 | SignatureToken::U64 | SignatureToken::U128 => "is#Integer",
+        SignatureToken::U8 | SignatureToken::U64 | SignatureToken::U128 => "IsValidInteger",
         SignatureToken::Bool => "is#Boolean",
         SignatureToken::Address => "is#Address",
         SignatureToken::ByteArray => "is#ByteArray",

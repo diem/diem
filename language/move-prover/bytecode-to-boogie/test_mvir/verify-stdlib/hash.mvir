@@ -1,5 +1,10 @@
 module Hash {
     // TODO: specify
-    native public sha2_256(data: bytearray): bytearray;
-    native public sha3_256(data: bytearray): bytearray;
+    native public sha2_256(data: bytearray): bytearray
+        // TODO: what are the really conditions here? For now make this total.
+        succeeds_if true;
+
+    native public sha3_256(data: bytearray): bytearray
+        // TODO: what are the really conditions here? For now make this total.
+        succeeds_if true;
 }

@@ -23,7 +23,7 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
+    assume IsValidInteger(arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -51,6 +51,7 @@ Label_Abort:
 
 procedure TestFuncCall_f_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestFuncCall_f(arg0);
 }
 
@@ -71,7 +72,7 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
+    assume IsValidInteger(arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 4;
@@ -99,6 +100,7 @@ Label_Abort:
 
 procedure TestFuncCall_g_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestFuncCall_g(arg0);
 }
 
@@ -163,7 +165,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call t6 := TestFuncCall_f(GetLocal(m, old_size + 5));
     if (abort_flag) { goto Label_Abort; }
-    assume is#Integer(t6);
+    assume IsValidInteger(t6);
 
     m := UpdateLocal(m, old_size + 6, t6);
 
@@ -178,7 +180,7 @@ Label_8:
 
     call t8 := TestFuncCall_g(GetLocal(m, old_size + 7));
     if (abort_flag) { goto Label_Abort; }
-    assume is#Integer(t8);
+    assume IsValidInteger(t8);
 
     m := UpdateLocal(m, old_size + 8, t8);
 
@@ -248,5 +250,6 @@ Label_Abort:
 
 procedure TestFuncCall_h_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestFuncCall_h(arg0);
 }

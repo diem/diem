@@ -22,7 +22,7 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(Dereference(m, arg0));
+    assume IsValidInteger(Dereference(m, arg0));
     assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
@@ -46,6 +46,7 @@ Label_Abort:
 
 procedure TestSpecs_mut_b_verify (arg0: Reference) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestSpecs_mut_b(arg0);
 }
 
@@ -98,7 +99,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     call t5 := CopyOrMoveRef(t1);
 
     call tmp := ReadRef(t5);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
 
@@ -135,6 +136,7 @@ Label_Abort:
 
 procedure TestSpecs_mut_ref_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestSpecs_mut_ref();
 }
 
@@ -187,7 +189,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     call t5 := CopyOrMoveRef(t1);
 
     call tmp := ReadRef(t5);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
 
@@ -224,5 +226,6 @@ Label_Abort:
 
 procedure TestSpecs_mut_ref_failure_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestSpecs_mut_ref_failure();
 }

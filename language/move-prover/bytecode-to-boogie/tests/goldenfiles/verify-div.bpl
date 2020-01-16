@@ -27,8 +27,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg1) > i#Integer(Integer(0))))) ==> !ab
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -63,6 +63,7 @@ Label_Abort:
 
 procedure TestSpecs_div_verify (arg0: Value, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestSpecs_div(arg0, arg1);
 }
 
@@ -87,8 +88,8 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -123,5 +124,6 @@ Label_Abort:
 
 procedure TestSpecs_div_by_zero_detected_verify (arg0: Value, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestSpecs_div_by_zero_detected(arg0, arg1);
 }

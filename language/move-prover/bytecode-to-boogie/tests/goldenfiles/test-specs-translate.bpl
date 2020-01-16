@@ -33,7 +33,7 @@ function TestSpecs_R_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_TestSpecs_R(v0: Value, v1: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     assume is#Vector(v1);
     v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
 
@@ -74,8 +74,8 @@ ensures old(b#Boolean(Boolean(i#Integer(arg0) <= i#Integer(Integer(0))))) ==> ab
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -110,6 +110,7 @@ Label_Abort:
 
 procedure TestSpecs_div_verify (arg0: Value, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestSpecs_div(arg0, arg1);
 }
 
@@ -143,6 +144,7 @@ Label_Abort:
 
 procedure TestSpecs_create_resource_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestSpecs_create_resource();
 }
 
@@ -174,6 +176,7 @@ Label_Abort:
 
 procedure TestSpecs_select_from_global_resource_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestSpecs_select_from_global_resource();
 }
 
@@ -214,6 +217,7 @@ Label_Abort:
 
 procedure TestSpecs_select_from_resource_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestSpecs_select_from_resource(arg0);
 }
 
@@ -254,6 +258,7 @@ Label_Abort:
 
 procedure TestSpecs_select_from_resource_nested_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestSpecs_select_from_resource_nested(arg0);
 }
 
@@ -294,6 +299,7 @@ Label_Abort:
 
 procedure TestSpecs_select_from_global_resource_dynamic_address_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestSpecs_select_from_global_resource_dynamic_address(arg0);
 }
 
@@ -330,6 +336,7 @@ Label_Abort:
 
 procedure TestSpecs_select_from_reference_verify (arg0: Reference) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestSpecs_select_from_reference(arg0);
 }
 
@@ -381,5 +388,6 @@ Label_Abort:
 
 procedure TestSpecs_ret_values_verify () returns (ret0: Value, ret1: Value, ret2: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0, ret1, ret2 := TestSpecs_ret_values();
 }

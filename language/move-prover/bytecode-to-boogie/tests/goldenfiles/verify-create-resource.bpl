@@ -11,7 +11,7 @@ function TestSpecs_R_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_TestSpecs_R(v0: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     v := Vector(ExtendValueArray(EmptyValueArray, v0));
 
 }
@@ -70,7 +70,7 @@ Label_5:
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 3, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 3));
+    assume IsValidInteger(GetLocal(m, old_size + 3));
 
     call tmp := Pack_TestSpecs_R(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 4, tmp);
@@ -87,6 +87,7 @@ Label_Abort:
 
 procedure TestSpecs_create_resource_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestSpecs_create_resource();
 }
 
@@ -138,5 +139,6 @@ Label_Abort:
 
 procedure TestSpecs_create_resource_error_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestSpecs_create_resource_error();
 }

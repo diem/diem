@@ -11,7 +11,7 @@ function LibraCoin_T_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_LibraCoin_T(v0: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     v := Vector(ExtendValueArray(EmptyValueArray, v0));
 
 }
@@ -51,7 +51,7 @@ function LibraCoin_MarketCap_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_LibraCoin_MarketCap(v0: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     v := Vector(ExtendValueArray(EmptyValueArray, v0));
 
 }
@@ -88,7 +88,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MintCapabi
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
+    assume IsValidInteger(arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 5;
@@ -121,6 +121,7 @@ Label_Abort:
 
 procedure LibraCoin_mint_with_default_capability_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_mint_with_default_capability(arg0);
 }
 
@@ -165,7 +166,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
+    assume IsValidInteger(arg0);
     assume is#Vector(Dereference(m, arg1));
     assume IsValidReferenceParameter(m, local_counter, arg1);
 
@@ -220,7 +221,7 @@ Label_11:
     call t15 := BorrowField(t14, LibraCoin_MarketCap_total_value);
 
     call tmp := ReadRef(t15);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 16, tmp);
 
@@ -246,7 +247,7 @@ Label_11:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 22, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 22));
+    assume IsValidInteger(GetLocal(m, old_size + 22));
 
     call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 22));
     m := UpdateLocal(m, old_size + 23, tmp);
@@ -262,6 +263,7 @@ Label_Abort:
 
 procedure LibraCoin_mint_verify (arg0: Value, arg1: Reference) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_mint(arg0, arg1);
 }
 
@@ -332,7 +334,7 @@ Label_7:
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 7, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 7));
+    assume IsValidInteger(GetLocal(m, old_size + 7));
 
     call tmp := Pack_LibraCoin_MarketCap(GetLocal(m, old_size + 7));
     m := UpdateLocal(m, old_size + 8, tmp);
@@ -349,6 +351,7 @@ Label_Abort:
 
 procedure LibraCoin_initialize_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraCoin_initialize();
 }
 
@@ -386,7 +389,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_
     call t2 := BorrowField(t1, LibraCoin_MarketCap_total_value);
 
     call tmp := ReadRef(t2);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
 
@@ -401,6 +404,7 @@ Label_Abort:
 
 procedure LibraCoin_market_cap_verify () returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_market_cap();
 }
 
@@ -428,7 +432,7 @@ ensures b#Boolean(Boolean((SelectField(ret0, LibraCoin_T_value)) == (Integer(0))
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 0, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 0));
+    assume IsValidInteger(GetLocal(m, old_size + 0));
 
     call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
@@ -444,6 +448,7 @@ Label_Abort:
 
 procedure LibraCoin_zero_verify () returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_zero();
 }
 
@@ -478,7 +483,7 @@ ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, arg0), LibraCoin
     call t2 := BorrowField(t1, LibraCoin_T_value);
 
     call tmp := ReadRef(t2);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
 
@@ -493,6 +498,7 @@ Label_Abort:
 
 procedure LibraCoin_value_verify (arg0: Reference) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_value(arg0);
 }
 
@@ -521,7 +527,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(arg0, LibraCoin_T_value)) < 
 
     // assume arguments are of correct types
     assume is#Vector(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 8;
@@ -562,6 +568,7 @@ Label_Abort:
 
 procedure LibraCoin_split_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0, ret1 := LibraCoin_split(arg0, arg1);
 }
 
@@ -602,7 +609,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(m, arg0), LibraC
     // assume arguments are of correct types
     assume is#Vector(Dereference(m, arg0));
     assume IsValidReferenceParameter(m, local_counter, arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 18;
@@ -615,7 +622,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(m, arg0), LibraC
     call t4 := BorrowField(t3, LibraCoin_T_value);
 
     call tmp := ReadRef(t4);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 5, tmp);
 
@@ -662,7 +669,7 @@ Label_11:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 16, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 16));
+    assume IsValidInteger(GetLocal(m, old_size + 16));
 
     call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 16));
     m := UpdateLocal(m, old_size + 17, tmp);
@@ -678,6 +685,7 @@ Label_Abort:
 
 procedure LibraCoin_withdraw_verify (arg0: Reference, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_withdraw(arg0, arg1);
 }
 
@@ -733,6 +741,7 @@ Label_Abort:
 
 procedure LibraCoin_join_verify (arg0: Value, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_join(arg0, arg1);
 }
 
@@ -781,7 +790,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     call t5 := BorrowField(t4, LibraCoin_T_value);
 
     call tmp := ReadRef(t5);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
 
@@ -792,7 +801,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     m := UpdateLocal(m, old_size + 7, tmp);
 
     call t8 := Unpack_LibraCoin_T(GetLocal(m, old_size + 7));
-    assume is#Integer(t8);
+    assume IsValidInteger(t8);
 
     m := UpdateLocal(m, old_size + 8, t8);
 
@@ -824,6 +833,7 @@ Label_Abort:
 
 procedure LibraCoin_deposit_verify (arg0: Reference, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraCoin_deposit(arg0, arg1);
 }
 
@@ -862,7 +872,7 @@ ensures old(b#Boolean(Boolean((SelectField(arg0, LibraCoin_T_value)) != (Integer
     m := UpdateLocal(m, old_size + 2, tmp);
 
     call t3 := Unpack_LibraCoin_T(GetLocal(m, old_size + 2));
-    assume is#Integer(t3);
+    assume IsValidInteger(t3);
 
     m := UpdateLocal(m, old_size + 3, t3);
 
@@ -899,5 +909,6 @@ Label_Abort:
 
 procedure LibraCoin_destroy_zero_verify (arg0: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraCoin_destroy_zero(arg0);
 }
