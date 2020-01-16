@@ -8,18 +8,18 @@ use admission_control_proto::{
 };
 use anyhow::{bail, Result};
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::{EpochInfo, LedgerInfoWithSignatures};
-use libra_types::validator_change::VerifierType;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::AccountResource,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
+    crypto_proxies::{EpochInfo, LedgerInfoWithSignatures},
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     transaction::{Transaction, Version},
+    validator_change::VerifierType,
     vm_error::StatusCode,
     waypoint::Waypoint,
 };

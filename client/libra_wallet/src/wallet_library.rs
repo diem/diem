@@ -12,11 +12,12 @@
 //! https://github.com/rust-bitcoin/rust-wallet/blob/master/wallet/src/walletlibrary.rs
 
 use crate::{
-    error::{Result, WalletError},
+    error::WalletError,
     io_utils,
     key_factory::{ChildNumber, KeyFactory, Seed},
     mnemonic::Mnemonic,
 };
+use anyhow::Result;
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
     account_address::AccountAddress,
@@ -86,7 +87,8 @@ impl WalletLibrary {
         if current > depth {
             return Err(WalletError::LibraWalletGeneric(
                 "Addresses already generated up to the supplied depth".to_string(),
-            ));
+            )
+            .into());
         }
         while self.key_leaf != ChildNumber(depth) {
             let _ = self.new_address();
@@ -115,7 +117,8 @@ impl WalletLibrary {
         } else {
             Err(WalletError::LibraWalletGeneric(
                 "This address is already in your wallet".to_string(),
-            ))
+            )
+            .into())
         }
     }
 
@@ -138,7 +141,8 @@ impl WalletLibrary {
                         "Child num {} not exist while depth is {}",
                         i,
                         self.addr_map.len()
-                    )))
+                    ))
+                    .into())
                 }
             }
         }
@@ -160,7 +164,8 @@ impl WalletLibrary {
         } else {
             Err(WalletError::LibraWalletGeneric(
                 "Well, that address is nowhere to be found... This is awkward".to_string(),
-            ))
+            )
+            .into())
         }
     }
 }

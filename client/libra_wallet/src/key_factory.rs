@@ -15,6 +15,8 @@
 //! Note further that the Key Derivation Function (KDF) chosen in the derivation of Child
 //! Private Keys adheres to [HKDF RFC 5869](https://tools.ietf.org/html/rfc5869).
 
+use crate::mnemonic::Mnemonic;
+use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
 use hmac::Hmac;
 use libra_crypto::{
@@ -29,8 +31,6 @@ use pbkdf2::pbkdf2;
 use serde::{Deserialize, Serialize};
 use sha3::Sha3_256;
 use std::{convert::TryFrom, ops::AddAssign};
-
-use crate::{error::Result, mnemonic::Mnemonic};
 
 /// Master is a set of raw bytes that are used for child key derivation
 pub struct Master([u8; 32]);
