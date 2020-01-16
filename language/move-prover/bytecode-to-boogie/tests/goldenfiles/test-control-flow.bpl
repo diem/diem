@@ -66,5 +66,6 @@ Label_Abort:
 
 procedure TestControlFlow_branch_once_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestControlFlow_branch_once(arg0);
 }

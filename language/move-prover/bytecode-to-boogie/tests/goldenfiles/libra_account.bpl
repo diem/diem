@@ -11,7 +11,7 @@ function LibraCoin_T_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_LibraCoin_T(v0: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     v := Vector(ExtendValueArray(EmptyValueArray, v0));
 
 }
@@ -51,7 +51,7 @@ function LibraCoin_MarketCap_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_LibraCoin_MarketCap(v0: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     v := Vector(ExtendValueArray(EmptyValueArray, v0));
 
 }
@@ -99,9 +99,7 @@ const LibraAccount_T_sequence_number: FieldName;
 axiom LibraAccount_T_sequence_number == 6;
 const LibraAccount_T_event_generator: FieldName;
 axiom LibraAccount_T_event_generator == 7;
-function LibraAccount_T_type_value(): TypeValue {
-    StructType(LibraAccount_T, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, ByteArrayType()), LibraCoin_T_type_value()), BooleanType()), BooleanType()), LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value())), LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value())), IntegerType()), LibraAccount_EventHandleGenerator_type_value()))
-}
+axiom LibraAccount_T_type_value() == StructType(LibraAccount_T, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, ByteArrayType()), LibraCoin_T_type_value()), BooleanType()), BooleanType()), LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value())), LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value())), IntegerType()), LibraAccount_EventHandleGenerator_type_value()));
 
 procedure {:inline 1} Pack_LibraAccount_T(v0: Value, v1: Value, v2: Value, v3: Value, v4: Value, v5: Value, v6: Value, v7: Value) returns (v: Value)
 {
@@ -111,7 +109,7 @@ procedure {:inline 1} Pack_LibraAccount_T(v0: Value, v1: Value, v2: Value, v3: V
     assume is#Boolean(v3);
     assume is#Vector(v4);
     assume is#Vector(v5);
-    assume is#Integer(v6);
+    assume IsValidInteger(v6);
     assume is#Vector(v7);
     v := Vector(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1), v2), v3), v4), v5), v6), v7));
 
@@ -183,7 +181,7 @@ function LibraAccount_SentPaymentEvent_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_LibraAccount_SentPaymentEvent(v0: Value, v1: Value, v2: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     assume is#Address(v1);
     assume is#ByteArray(v2);
     v := Vector(ExtendValueArray(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1), v2));
@@ -211,7 +209,7 @@ function LibraAccount_ReceivedPaymentEvent_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_LibraAccount_ReceivedPaymentEvent(v0: Value, v1: Value, v2: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     assume is#Address(v1);
     assume is#ByteArray(v2);
     v := Vector(ExtendValueArray(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1), v2));
@@ -235,7 +233,7 @@ function LibraAccount_EventHandleGenerator_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_LibraAccount_EventHandleGenerator(v0: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     v := Vector(ExtendValueArray(EmptyValueArray, v0));
 
 }
@@ -257,7 +255,7 @@ function LibraAccount_EventHandle_type_value(tv0: TypeValue): TypeValue {
 
 procedure {:inline 1} Pack_LibraAccount_EventHandle(tv0: TypeValue, v0: Value, v1: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     assume is#ByteArray(v1);
     v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
 
@@ -296,7 +294,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MintCapabi
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
+    assume IsValidInteger(arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 5;
@@ -329,6 +327,7 @@ Label_Abort:
 
 procedure LibraCoin_mint_with_default_capability_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_mint_with_default_capability(arg0);
 }
 
@@ -373,7 +372,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
+    assume IsValidInteger(arg0);
     assume is#Vector(Dereference(m, arg1));
     assume IsValidReferenceParameter(m, local_counter, arg1);
 
@@ -428,7 +427,7 @@ Label_11:
     call t15 := BorrowField(t14, LibraCoin_MarketCap_total_value);
 
     call tmp := ReadRef(t15);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 16, tmp);
 
@@ -454,7 +453,7 @@ Label_11:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 22, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 22));
+    assume IsValidInteger(GetLocal(m, old_size + 22));
 
     call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 22));
     m := UpdateLocal(m, old_size + 23, tmp);
@@ -470,6 +469,7 @@ Label_Abort:
 
 procedure LibraCoin_mint_verify (arg0: Value, arg1: Reference) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_mint(arg0, arg1);
 }
 
@@ -540,7 +540,7 @@ Label_7:
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 7, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 7));
+    assume IsValidInteger(GetLocal(m, old_size + 7));
 
     call tmp := Pack_LibraCoin_MarketCap(GetLocal(m, old_size + 7));
     m := UpdateLocal(m, old_size + 8, tmp);
@@ -557,6 +557,7 @@ Label_Abort:
 
 procedure LibraCoin_initialize_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraCoin_initialize();
 }
 
@@ -594,7 +595,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_
     call t2 := BorrowField(t1, LibraCoin_MarketCap_total_value);
 
     call tmp := ReadRef(t2);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
 
@@ -609,6 +610,7 @@ Label_Abort:
 
 procedure LibraCoin_market_cap_verify () returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_market_cap();
 }
 
@@ -636,7 +638,7 @@ ensures b#Boolean(Boolean((SelectField(ret0, LibraCoin_T_value)) == (Integer(0))
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 0, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 0));
+    assume IsValidInteger(GetLocal(m, old_size + 0));
 
     call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 1, tmp);
@@ -652,6 +654,7 @@ Label_Abort:
 
 procedure LibraCoin_zero_verify () returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_zero();
 }
 
@@ -686,7 +689,7 @@ ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, arg0), LibraCoin
     call t2 := BorrowField(t1, LibraCoin_T_value);
 
     call tmp := ReadRef(t2);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
 
@@ -701,6 +704,7 @@ Label_Abort:
 
 procedure LibraCoin_value_verify (arg0: Reference) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_value(arg0);
 }
 
@@ -729,7 +733,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(arg0, LibraCoin_T_value)) < 
 
     // assume arguments are of correct types
     assume is#Vector(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 8;
@@ -770,6 +774,7 @@ Label_Abort:
 
 procedure LibraCoin_split_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0, ret1 := LibraCoin_split(arg0, arg1);
 }
 
@@ -810,7 +815,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(m, arg0), LibraC
     // assume arguments are of correct types
     assume is#Vector(Dereference(m, arg0));
     assume IsValidReferenceParameter(m, local_counter, arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 18;
@@ -823,7 +828,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(m, arg0), LibraC
     call t4 := BorrowField(t3, LibraCoin_T_value);
 
     call tmp := ReadRef(t4);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 5, tmp);
 
@@ -870,7 +875,7 @@ Label_11:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 16, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 16));
+    assume IsValidInteger(GetLocal(m, old_size + 16));
 
     call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 16));
     m := UpdateLocal(m, old_size + 17, tmp);
@@ -886,6 +891,7 @@ Label_Abort:
 
 procedure LibraCoin_withdraw_verify (arg0: Reference, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_withdraw(arg0, arg1);
 }
 
@@ -941,6 +947,7 @@ Label_Abort:
 
 procedure LibraCoin_join_verify (arg0: Value, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraCoin_join(arg0, arg1);
 }
 
@@ -989,7 +996,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     call t5 := BorrowField(t4, LibraCoin_T_value);
 
     call tmp := ReadRef(t5);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
 
@@ -1000,7 +1007,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     m := UpdateLocal(m, old_size + 7, tmp);
 
     call t8 := Unpack_LibraCoin_T(GetLocal(m, old_size + 7));
-    assume is#Integer(t8);
+    assume IsValidInteger(t8);
 
     m := UpdateLocal(m, old_size + 8, t8);
 
@@ -1032,6 +1039,7 @@ Label_Abort:
 
 procedure LibraCoin_deposit_verify (arg0: Reference, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraCoin_deposit(arg0, arg1);
 }
 
@@ -1070,7 +1078,7 @@ ensures old(b#Boolean(Boolean((SelectField(arg0, LibraCoin_T_value)) != (Integer
     m := UpdateLocal(m, old_size + 2, tmp);
 
     call t3 := Unpack_LibraCoin_T(GetLocal(m, old_size + 2));
-    assume is#Integer(t3);
+    assume IsValidInteger(t3);
 
     m := UpdateLocal(m, old_size + 3, t3);
 
@@ -1107,6 +1115,7 @@ Label_Abort:
 
 procedure LibraCoin_destroy_zero_verify (arg0: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraCoin_destroy_zero(arg0);
 }
 
@@ -1114,19 +1123,39 @@ procedure LibraCoin_destroy_zero_verify (arg0: Value) returns ()
 
 // ** functions of module Hash
 
-procedure {:inline 1} Hash_sha2_256 (arg0: Value) returns (ret0: Value);procedure {:inline 1} Hash_sha3_256 (arg0: Value) returns (ret0: Value);
+procedure {:inline 1} Hash_sha2_256 (arg0: Value) returns (ret0: Value);
+requires ExistsTxnSenderAccount(m, txn);
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+
+procedure {:inline 1} Hash_sha3_256 (arg0: Value) returns (ret0: Value);
+requires ExistsTxnSenderAccount(m, txn);
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+
+
 
 // ** functions of module U64Util
 
 procedure {:inline 1} U64Util_u64_to_bytes (arg0: Value) returns (ret0: Value);
+requires ExistsTxnSenderAccount(m, txn);
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+
+
 
 // ** functions of module AddressUtil
 
 procedure {:inline 1} AddressUtil_address_to_bytes (arg0: Value) returns (ret0: Value);
+requires ExistsTxnSenderAccount(m, txn);
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+
+
 
 // ** functions of module BytearrayUtil
 
 procedure {:inline 1} BytearrayUtil_bytearray_concat (arg0: Value, arg1: Value) returns (ret0: Value);
+requires ExistsTxnSenderAccount(m, txn);
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+
+
 
 // ** functions of module LibraAccount
 
@@ -1191,7 +1220,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 8, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 8));
+    assume IsValidInteger(GetLocal(m, old_size + 8));
 
     call tmp := Pack_LibraAccount_EventHandleGenerator(GetLocal(m, old_size + 8));
     m := UpdateLocal(m, old_size + 9, tmp);
@@ -1272,7 +1301,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     assume is#Vector(GetLocal(m, old_size + 22));
 
-    assume is#Integer(GetLocal(m, old_size + 23));
+    assume IsValidInteger(GetLocal(m, old_size + 23));
 
     assume is#Vector(GetLocal(m, old_size + 24));
 
@@ -1290,11 +1319,15 @@ Label_Abort:
 
 procedure LibraAccount_make_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_make(arg0);
 }
 
 procedure {:inline 1} LibraAccount_deposit (arg0: Value, arg1: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value))) + i#Integer(SelectField(arg1, LibraCoin_T_value))))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))))) || b#Boolean(Boolean((SelectField(arg1, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(arg1, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))))) || b#Boolean(Boolean((SelectField(arg1, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(arg1, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -1340,11 +1373,15 @@ Label_Abort:
 
 procedure LibraAccount_deposit_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_deposit(arg0, arg1);
 }
 
 procedure {:inline 1} LibraAccount_deposit_with_metadata (arg0: Value, arg1: Value, arg2: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value))) + i#Integer(SelectField(arg1, LibraCoin_T_value))))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))))) || b#Boolean(Boolean((SelectField(arg1, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(arg1, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))))) || b#Boolean(Boolean((SelectField(arg1, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(arg1, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -1398,11 +1435,15 @@ Label_Abort:
 
 procedure LibraAccount_deposit_with_metadata_verify (arg0: Value, arg1: Value, arg2: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_deposit_with_metadata(arg0, arg1, arg2);
 }
 
 procedure {:inline 1} LibraAccount_deposit_with_sender_and_metadata (arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value))) + i#Integer(SelectField(arg2, LibraCoin_T_value))))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg1)))))) || b#Boolean(Boolean((SelectField(arg2, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(arg2, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg1)))))) || b#Boolean(Boolean((SelectField(arg2, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(arg2, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -1464,7 +1505,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call t8 := LibraCoin_value(t7);
     if (abort_flag) { goto Label_Abort; }
-    assume is#Integer(t8);
+    assume IsValidInteger(t8);
 
     m := UpdateLocal(m, old_size + 8, t8);
 
@@ -1513,7 +1554,7 @@ Label_10:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 20, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 18));
+    assume IsValidInteger(GetLocal(m, old_size + 18));
 
     assume is#Address(GetLocal(m, old_size + 19));
 
@@ -1556,7 +1597,7 @@ Label_10:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 31, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 29));
+    assume IsValidInteger(GetLocal(m, old_size + 29));
 
     assume is#Address(GetLocal(m, old_size + 30));
 
@@ -1577,6 +1618,7 @@ Label_Abort:
 
 procedure LibraAccount_deposit_with_sender_and_metadata_verify (arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_deposit_with_sender_and_metadata(arg0, arg1, arg2, arg3);
 }
 
@@ -1603,7 +1645,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // assume arguments are of correct types
     assume is#Address(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 9;
@@ -1654,6 +1696,7 @@ Label_Abort:
 
 procedure LibraAccount_mint_to_address_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_mint_to_address(arg0, arg1);
 }
 
@@ -1684,7 +1727,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, a
     // assume arguments are of correct types
     assume is#Vector(Dereference(m, arg0));
     assume IsValidReferenceParameter(m, local_counter, arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 8;
@@ -1722,6 +1765,7 @@ Label_Abort:
 
 procedure LibraAccount_withdraw_from_account_verify (arg0: Reference, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_withdraw_from_account(arg0, arg1);
 }
 
@@ -1729,8 +1773,8 @@ procedure {:inline 1} LibraAccount_withdraw_from_sender (arg0: Value) returns (r
 requires ExistsTxnSenderAccount(m, txn);
 ensures !abort_flag ==> b#Boolean(Boolean((SelectField(ret0, LibraCoin_T_value)) == (arg0)));
 ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value))) - i#Integer(arg0)))));
-ensures old(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(arg0))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))))) ==> !abort_flag;
-ensures old(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(arg0))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))))))) ==> abort_flag;
+ensures old(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(arg0))))) ==> !abort_flag;
+ensures old(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(arg0)))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // IntegerType()
@@ -1753,7 +1797,7 @@ ensures old(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccou
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
+    assume IsValidInteger(arg0);
 
     old_size := local_counter;
     local_counter := local_counter + 11;
@@ -1808,6 +1852,7 @@ Label_Abort:
 
 procedure LibraAccount_withdraw_from_sender_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_withdraw_from_sender(arg0);
 }
 
@@ -1840,7 +1885,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_
     // assume arguments are of correct types
     assume is#Vector(Dereference(m, arg0));
     assume IsValidReferenceParameter(m, local_counter, arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 10;
@@ -1884,6 +1929,7 @@ Label_Abort:
 
 procedure LibraAccount_withdraw_with_capability_verify (arg0: Reference, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_withdraw_with_capability(arg0, arg1);
 }
 
@@ -1982,6 +2028,7 @@ Label_Abort:
 
 procedure LibraAccount_extract_sender_withdrawal_capability_verify () returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_extract_sender_withdrawal_capability();
 }
 
@@ -2052,6 +2099,7 @@ Label_Abort:
 
 procedure LibraAccount_restore_withdrawal_capability_verify (arg0: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_restore_withdrawal_capability(arg0);
 }
 
@@ -2087,7 +2135,7 @@ requires ExistsTxnSenderAccount(m, txn);
     assume is#Address(arg0);
     assume is#Vector(Dereference(m, arg1));
     assume IsValidReferenceParameter(m, local_counter, arg1);
-    assume is#Integer(arg2);
+    assume IsValidInteger(arg2);
     assume is#ByteArray(arg3);
 
     old_size := local_counter;
@@ -2154,24 +2202,35 @@ Label_Abort:
 
 procedure LibraAccount_pay_from_capability_verify (arg0: Value, arg1: Reference, arg2: Value, arg3: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_pay_from_capability(arg0, arg1, arg2, arg3);
 }
 
 procedure {:inline 1} LibraAccount_pay_from_sender_with_metadata (arg0: Value, arg1: Value, arg2: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)));
+ensures !abort_flag ==> b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) >= i#Integer(arg1)));
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value))) - i#Integer(arg1)))));
+ensures old(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (arg0))) || b#Boolean(Boolean((arg1) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(arg1))) > i#Integer(Integer(9223372036854775807)))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(arg1))))) ==> !abort_flag;
+ensures old(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (arg0))) || b#Boolean(Boolean((arg1) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(arg1))) > i#Integer(Integer(9223372036854775807)))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(arg1)))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
     var t1: Value; // IntegerType()
     var t2: Value; // ByteArrayType()
     var t3: Value; // AddressType()
-    var t4: Value; // BooleanType()
+    var t4: Value; // AddressType()
     var t5: Value; // BooleanType()
-    var t6: Value; // AddressType()
-    var t7: Value; // AddressType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // LibraCoin_T_type_value()
-    var t10: Value; // ByteArrayType()
+    var t6: Value; // BooleanType()
+    var t7: Value; // IntegerType()
+    var t8: Value; // AddressType()
+    var t9: Value; // BooleanType()
+    var t10: Value; // BooleanType()
+    var t11: Value; // AddressType()
+    var t12: Value; // AddressType()
+    var t13: Value; // IntegerType()
+    var t14: Value; // LibraCoin_T_type_value()
+    var t15: Value; // ByteArrayType()
 
     var tmp: Value;
     var old_size: int;
@@ -2182,11 +2241,11 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // assume arguments are of correct types
     assume is#Address(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg1);
     assume is#ByteArray(arg2);
 
     old_size := local_counter;
-    local_counter := local_counter + 11;
+    local_counter := local_counter + 16;
     m := UpdateLocal(m, old_size + 0, arg0);
     m := UpdateLocal(m, old_size + 1, arg1);
     m := UpdateLocal(m, old_size + 2, arg2);
@@ -2195,38 +2254,59 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := Exists(GetLocal(m, old_size + 3), LibraAccount_T_type_value());
+    call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 4));
+    tmp := Boolean(!IsEqual(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4)));
     m := UpdateLocal(m, old_size + 5, tmp);
 
-    tmp := GetLocal(m, old_size + 5);
-    if (!b#Boolean(tmp)) { goto Label_6; }
-
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    call tmp := Not(GetLocal(m, old_size + 5));
     m := UpdateLocal(m, old_size + 6, tmp);
 
-    call LibraAccount_create_account(GetLocal(m, old_size + 6));
-    if (abort_flag) { goto Label_Abort; }
+    tmp := GetLocal(m, old_size + 6);
+    if (!b#Boolean(tmp)) { goto Label_7; }
 
-Label_6:
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    call tmp := LdConst(12);
     m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    goto Label_Abort;
+
+Label_7:
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 8, tmp);
 
-    call t9 := LibraAccount_withdraw_from_sender(GetLocal(m, old_size + 8));
-    if (abort_flag) { goto Label_Abort; }
-    assume is#Vector(t9);
+    call tmp := Exists(GetLocal(m, old_size + 8), LibraAccount_T_type_value());
+    m := UpdateLocal(m, old_size + 9, tmp);
 
-    m := UpdateLocal(m, old_size + 9, t9);
-
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    call tmp := Not(GetLocal(m, old_size + 9));
     m := UpdateLocal(m, old_size + 10, tmp);
 
-    call LibraAccount_deposit_with_metadata(GetLocal(m, old_size + 7), GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
+    tmp := GetLocal(m, old_size + 10);
+    if (!b#Boolean(tmp)) { goto Label_13; }
+
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 11, tmp);
+
+    call LibraAccount_create_account(GetLocal(m, old_size + 11));
+    if (abort_flag) { goto Label_Abort; }
+
+Label_13:
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 12, tmp);
+
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 13, tmp);
+
+    call t14 := LibraAccount_withdraw_from_sender(GetLocal(m, old_size + 13));
+    if (abort_flag) { goto Label_Abort; }
+    assume is#Vector(t14);
+
+    m := UpdateLocal(m, old_size + 14, t14);
+
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
+    m := UpdateLocal(m, old_size + 15, tmp);
+
+    call LibraAccount_deposit_with_metadata(GetLocal(m, old_size + 12), GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
     if (abort_flag) { goto Label_Abort; }
 
     return;
@@ -2238,18 +2318,29 @@ Label_Abort:
 
 procedure LibraAccount_pay_from_sender_with_metadata_verify (arg0: Value, arg1: Value, arg2: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_pay_from_sender_with_metadata(arg0, arg1, arg2);
 }
 
 procedure {:inline 1} LibraAccount_pay_from_sender (arg0: Value, arg1: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)));
+ensures !abort_flag ==> b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) >= i#Integer(arg1)));
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value))) - i#Integer(arg1)))));
+ensures old(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (arg0))) || b#Boolean(Boolean((arg1) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(arg1))) > i#Integer(Integer(9223372036854775807)))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(arg1))))) ==> !abort_flag;
+ensures old(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (arg0))) || b#Boolean(Boolean((arg1) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(arg1))) > i#Integer(Integer(9223372036854775807)))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(arg1)))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
     var t1: Value; // IntegerType()
     var t2: Value; // AddressType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // ByteArrayType()
+    var t3: Value; // AddressType()
+    var t4: Value; // BooleanType()
+    var t5: Value; // BooleanType()
+    var t6: Value; // IntegerType()
+    var t7: Value; // AddressType()
+    var t8: Value; // IntegerType()
+    var t9: Value; // ByteArrayType()
 
     var tmp: Value;
     var old_size: int;
@@ -2260,10 +2351,10 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // assume arguments are of correct types
     assume is#Address(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
-    local_counter := local_counter + 5;
+    local_counter := local_counter + 10;
     m := UpdateLocal(m, old_size + 0, arg0);
     m := UpdateLocal(m, old_size + 1, arg1);
 
@@ -2271,12 +2362,33 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 2, tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    call tmp := GetTxnSenderAddress();
     m := UpdateLocal(m, old_size + 3, tmp);
+
+    tmp := Boolean(!IsEqual(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3)));
+    m := UpdateLocal(m, old_size + 4, tmp);
+
+    call tmp := Not(GetLocal(m, old_size + 4));
+    m := UpdateLocal(m, old_size + 5, tmp);
+
+    tmp := GetLocal(m, old_size + 5);
+    if (!b#Boolean(tmp)) { goto Label_7; }
+
+    call tmp := LdConst(12);
+    m := UpdateLocal(m, old_size + 6, tmp);
+
+    goto Label_Abort;
+
+Label_7:
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 7, tmp);
+
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
+    m := UpdateLocal(m, old_size + 8, tmp);
 
     // unimplemented instruction
 
-    call LibraAccount_pay_from_sender_with_metadata(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
+    call LibraAccount_pay_from_sender_with_metadata(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8), GetLocal(m, old_size + 9));
     if (abort_flag) { goto Label_Abort; }
 
     return;
@@ -2288,6 +2400,7 @@ Label_Abort:
 
 procedure LibraAccount_pay_from_sender_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_pay_from_sender(arg0, arg1);
 }
 
@@ -2337,6 +2450,7 @@ Label_Abort:
 
 procedure LibraAccount_rotate_authentication_key_for_account_verify (arg0: Reference, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_rotate_authentication_key_for_account(arg0, arg1);
 }
 
@@ -2413,6 +2527,7 @@ Label_Abort:
 
 procedure LibraAccount_rotate_authentication_key_verify (arg0: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_rotate_authentication_key(arg0);
 }
 
@@ -2473,6 +2588,7 @@ Label_Abort:
 
 procedure LibraAccount_rotate_authentication_key_with_capability_verify (arg0: Reference, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_rotate_authentication_key_with_capability(arg0, arg1);
 }
 
@@ -2565,6 +2681,7 @@ Label_Abort:
 
 procedure LibraAccount_extract_sender_key_rotation_capability_verify () returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_extract_sender_key_rotation_capability();
 }
 
@@ -2635,11 +2752,17 @@ Label_Abort:
 
 procedure LibraAccount_restore_key_rotation_capability_verify (arg0: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_restore_key_rotation_capability(arg0);
 }
 
 procedure {:inline 1} LibraAccount_create_account (arg0: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)));
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(0))));
+ensures !abort_flag ==> b#Boolean(Boolean(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_delegated_withdrawal_capability)))));
+ensures old(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))))) ==> !abort_flag;
+ensures old(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2680,7 +2803,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 2, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 2));
+    assume IsValidInteger(GetLocal(m, old_size + 2));
 
     call tmp := Pack_LibraAccount_EventHandleGenerator(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 3, tmp);
@@ -2752,7 +2875,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     assume is#Vector(GetLocal(m, old_size + 15));
 
-    assume is#Integer(GetLocal(m, old_size + 16));
+    assume IsValidInteger(GetLocal(m, old_size + 16));
 
     assume is#Vector(GetLocal(m, old_size + 17));
 
@@ -2771,11 +2894,18 @@ Label_Abort:
 
 procedure LibraAccount_create_account_verify (arg0: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_create_account(arg0);
 }
 
 procedure {:inline 1} LibraAccount_create_new_account (arg0: Value, arg1: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)));
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value)) == (arg1)));
+ensures !abort_flag ==> b#Boolean(Boolean(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_delegated_withdrawal_capability)))));
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value))) - i#Integer(arg1)))));
+ensures old(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(arg1))) || b#Boolean(Boolean(i#Integer(arg1) > i#Integer(Integer(9223372036854775807)))))) ==> !abort_flag;
+ensures old(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(arg1))) || b#Boolean(Boolean(i#Integer(arg1) > i#Integer(Integer(9223372036854775807))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2796,7 +2926,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     // assume arguments are of correct types
     assume is#Address(arg0);
-    assume is#Integer(arg1);
+    assume IsValidInteger(arg1);
 
     old_size := local_counter;
     local_counter := local_counter + 8;
@@ -2841,10 +2971,18 @@ Label_Abort:
 
 procedure LibraAccount_create_new_account_verify (arg0: Value, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_create_new_account(arg0, arg1);
 }
 
-procedure {:inline 1} LibraAccount_save_account (arg0: Value, arg1: Value) returns ();procedure {:inline 1} LibraAccount_balance_for_account (arg0: Reference) returns (ret0: Value)
+procedure {:inline 1} LibraAccount_save_account (arg0: Value, arg1: Value) returns ();
+requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)));
+ensures !abort_flag ==> b#Boolean(Boolean((Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0)))) == (arg1)));
+ensures old(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))))) ==> !abort_flag;
+ensures old(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))) ==> abort_flag;
+
+procedure {:inline 1} LibraAccount_balance_for_account (arg0: Reference) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
@@ -2877,7 +3015,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call t4 := LibraCoin_value(t3);
     if (abort_flag) { goto Label_Abort; }
-    assume is#Integer(t4);
+    assume IsValidInteger(t4);
 
     m := UpdateLocal(m, old_size + 4, t4);
 
@@ -2898,6 +3036,7 @@ Label_Abort:
 
 procedure LibraAccount_balance_for_account_verify (arg0: Reference) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_balance_for_account(arg0);
 }
 
@@ -2933,7 +3072,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call t3 := LibraAccount_balance_for_account(t2);
     if (abort_flag) { goto Label_Abort; }
-    assume is#Integer(t3);
+    assume IsValidInteger(t3);
 
     m := UpdateLocal(m, old_size + 3, t3);
 
@@ -2948,6 +3087,7 @@ Label_Abort:
 
 procedure LibraAccount_balance_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_balance(arg0);
 }
 
@@ -2981,7 +3121,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call t2 := BorrowField(t1, LibraAccount_T_sequence_number);
 
     call tmp := ReadRef(t2);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
 
@@ -2996,6 +3136,7 @@ Label_Abort:
 
 procedure LibraAccount_sequence_number_for_account_verify (arg0: Reference) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_sequence_number_for_account(arg0);
 }
 
@@ -3031,7 +3172,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call t3 := LibraAccount_sequence_number_for_account(t2);
     if (abort_flag) { goto Label_Abort; }
-    assume is#Integer(t3);
+    assume IsValidInteger(t3);
 
     m := UpdateLocal(m, old_size + 3, t3);
 
@@ -3046,6 +3187,7 @@ Label_Abort:
 
 procedure LibraAccount_sequence_number_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_sequence_number(arg0);
 }
 
@@ -3098,6 +3240,7 @@ Label_Abort:
 
 procedure LibraAccount_delegated_key_rotation_capability_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_delegated_key_rotation_capability(arg0);
 }
 
@@ -3150,6 +3293,7 @@ Label_Abort:
 
 procedure LibraAccount_delegated_withdrawal_capability_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_delegated_withdrawal_capability(arg0);
 }
 
@@ -3192,6 +3336,7 @@ Label_Abort:
 
 procedure LibraAccount_withdrawal_capability_address_verify (arg0: Reference) returns (ret0: Reference)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_withdrawal_capability_address(arg0);
 }
 
@@ -3234,6 +3379,7 @@ Label_Abort:
 
 procedure LibraAccount_key_rotation_capability_address_verify (arg0: Reference) returns (ret0: Reference)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_key_rotation_capability_address(arg0);
 }
 
@@ -3277,6 +3423,7 @@ Label_Abort:
 
 procedure LibraAccount_exists_verify (arg0: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_exists(arg0);
 }
 
@@ -3343,10 +3490,10 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
+    assume IsValidInteger(arg0);
     assume is#ByteArray(arg1);
-    assume is#Integer(arg2);
-    assume is#Integer(arg3);
+    assume IsValidInteger(arg2);
+    assume IsValidInteger(arg3);
 
     old_size := local_counter;
     local_counter := local_counter + 50;
@@ -3444,7 +3591,7 @@ Label_21:
 
     call t31 := LibraAccount_balance_for_account(t30);
     if (abort_flag) { goto Label_Abort; }
-    assume is#Integer(t31);
+    assume IsValidInteger(t31);
 
     m := UpdateLocal(m, old_size + 31, t31);
 
@@ -3477,7 +3624,7 @@ Label_38:
     call t38 := BorrowField(t37, LibraAccount_T_sequence_number);
 
     call tmp := ReadRef(t38);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 39, tmp);
 
@@ -3535,6 +3682,7 @@ Label_Abort:
 
 procedure LibraAccount_prologue_verify (arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_prologue(arg0, arg1, arg2, arg3);
 }
 
@@ -3588,10 +3736,10 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(arg0);
-    assume is#Integer(arg1);
-    assume is#Integer(arg2);
-    assume is#Integer(arg3);
+    assume IsValidInteger(arg0);
+    assume IsValidInteger(arg1);
+    assume IsValidInteger(arg2);
+    assume IsValidInteger(arg3);
 
     old_size := local_counter;
     local_counter := local_counter + 37;
@@ -3639,7 +3787,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     call t19 := LibraAccount_balance_for_account(t18);
     if (abort_flag) { goto Label_Abort; }
-    assume is#Integer(t19);
+    assume IsValidInteger(t19);
 
     m := UpdateLocal(m, old_size + 19, t19);
 
@@ -3718,11 +3866,13 @@ Label_Abort:
 
 procedure LibraAccount_epilogue_verify (arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_epilogue(arg0, arg1, arg2, arg3);
 }
 
 procedure {:inline 1} LibraAccount_fresh_guid (arg0: Reference, arg1: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_EventHandleGenerator_type_value())
@@ -3740,13 +3890,11 @@ requires ExistsTxnSenderAccount(m, txn);
     var t12: Value; // ByteArrayType()
     var t13: Reference; // ReferenceType(IntegerType())
     var t14: Value; // IntegerType()
-    var t15: Value; // IntegerType()
-    var t16: Value; // IntegerType()
-    var t17: Reference; // ReferenceType(IntegerType())
+    var t15: Reference; // ReferenceType(IntegerType())
+    var t16: Value; // ByteArrayType()
+    var t17: Value; // ByteArrayType()
     var t18: Value; // ByteArrayType()
     var t19: Value; // ByteArrayType()
-    var t20: Value; // ByteArrayType()
-    var t21: Value; // ByteArrayType()
 
     var tmp: Value;
     var old_size: int;
@@ -3761,7 +3909,7 @@ requires ExistsTxnSenderAccount(m, txn);
     assume is#Address(arg1);
 
     old_size := local_counter;
-    local_counter := local_counter + 22;
+    local_counter := local_counter + 20;
     t0 := arg0;
     m := UpdateLocal(m, old_size + 1, arg1);
 
@@ -3787,7 +3935,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call t10 := CopyOrMoveRef(t2);
 
     call tmp := ReadRef(t10);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 11, tmp);
 
@@ -3803,40 +3951,33 @@ requires ExistsTxnSenderAccount(m, txn);
     call t13 := CopyOrMoveRef(t2);
 
     call tmp := ReadRef(t13);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 14, tmp);
 
-    call tmp := LdConst(1);
-    m := UpdateLocal(m, old_size + 15, tmp);
+    call t15 := CopyOrMoveRef(t2);
 
-    call tmp := Add(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 16, tmp);
-
-    call t17 := CopyOrMoveRef(t2);
-
-    call WriteRef(t17, GetLocal(m, old_size + 16));
+    call WriteRef(t15, GetLocal(m, old_size + 14));
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
-    m := UpdateLocal(m, old_size + 18, tmp);
+    m := UpdateLocal(m, old_size + 16, tmp);
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 19, tmp);
+    m := UpdateLocal(m, old_size + 17, tmp);
 
-    call t20 := BytearrayUtil_bytearray_concat(GetLocal(m, old_size + 18), GetLocal(m, old_size + 19));
+    call t18 := BytearrayUtil_bytearray_concat(GetLocal(m, old_size + 16), GetLocal(m, old_size + 17));
     if (abort_flag) { goto Label_Abort; }
-    assume is#ByteArray(t20);
+    assume is#ByteArray(t18);
 
-    m := UpdateLocal(m, old_size + 20, t20);
+    m := UpdateLocal(m, old_size + 18, t18);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 20));
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 18));
     m := UpdateLocal(m, old_size + 4, tmp);
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
-    m := UpdateLocal(m, old_size + 21, tmp);
+    m := UpdateLocal(m, old_size + 19, tmp);
 
-    ret0 := GetLocal(m, old_size + 21);
+    ret0 := GetLocal(m, old_size + 19);
     return;
 
 Label_Abort:
@@ -3847,11 +3988,13 @@ Label_Abort:
 
 procedure LibraAccount_fresh_guid_verify (arg0: Reference, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_fresh_guid(arg0, arg1);
 }
 
 procedure {:inline 1} LibraAccount_new_event_handle_impl (tv0: TypeValue, arg0: Reference, arg1: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_EventHandleGenerator_type_value())
@@ -3894,7 +4037,7 @@ requires ExistsTxnSenderAccount(m, txn);
 
     m := UpdateLocal(m, old_size + 5, t5);
 
-    assume is#Integer(GetLocal(m, old_size + 2));
+    assume IsValidInteger(GetLocal(m, old_size + 2));
 
     assume is#ByteArray(GetLocal(m, old_size + 5));
 
@@ -3912,11 +4055,13 @@ Label_Abort:
 
 procedure LibraAccount_new_event_handle_impl_verify (tv0: TypeValue, arg0: Reference, arg1: Value) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_new_event_handle_impl(tv0: TypeValue, arg0, arg1);
 }
 
 procedure {:inline 1} LibraAccount_new_event_handle (tv0: TypeValue) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -3973,11 +4118,13 @@ Label_Abort:
 
 procedure LibraAccount_new_event_handle_verify (tv0: TypeValue) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := LibraAccount_new_event_handle(tv0: TypeValue);
 }
 
 procedure {:inline 1} LibraAccount_emit_event (tv0: TypeValue, arg0: Reference, arg1: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_EventHandle_type_value(tv0))
@@ -3995,9 +4142,7 @@ requires ExistsTxnSenderAccount(m, txn);
     var t12: Value; // tv0
     var t13: Reference; // ReferenceType(IntegerType())
     var t14: Value; // IntegerType()
-    var t15: Value; // IntegerType()
-    var t16: Value; // IntegerType()
-    var t17: Reference; // ReferenceType(IntegerType())
+    var t15: Reference; // ReferenceType(IntegerType())
 
     var tmp: Value;
     var old_size: int;
@@ -4011,7 +4156,7 @@ requires ExistsTxnSenderAccount(m, txn);
     assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
-    local_counter := local_counter + 18;
+    local_counter := local_counter + 16;
     t0 := arg0;
     m := UpdateLocal(m, old_size + 1, arg1);
 
@@ -4040,7 +4185,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call t10 := CopyOrMoveRef(t2);
 
     call tmp := ReadRef(t10);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 11, tmp);
 
@@ -4053,20 +4198,13 @@ requires ExistsTxnSenderAccount(m, txn);
     call t13 := CopyOrMoveRef(t2);
 
     call tmp := ReadRef(t13);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 14, tmp);
 
-    call tmp := LdConst(1);
-    m := UpdateLocal(m, old_size + 15, tmp);
+    call t15 := CopyOrMoveRef(t2);
 
-    call tmp := Add(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 16, tmp);
-
-    call t17 := CopyOrMoveRef(t2);
-
-    call WriteRef(t17, GetLocal(m, old_size + 16));
+    call WriteRef(t15, GetLocal(m, old_size + 14));
 
     return;
 
@@ -4077,10 +4215,15 @@ Label_Abort:
 
 procedure LibraAccount_emit_event_verify (tv0: TypeValue, arg0: Reference, arg1: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_emit_event(tv0: TypeValue, arg0, arg1);
 }
 
-procedure {:inline 1} LibraAccount_write_to_event_store (tv0: TypeValue, arg0: Value, arg1: Value, arg2: Value) returns ();procedure {:inline 1} LibraAccount_destroy_handle (tv0: TypeValue, arg0: Value) returns ()
+procedure {:inline 1} LibraAccount_write_to_event_store (tv0: TypeValue, arg0: Value, arg1: Value, arg2: Value) returns ();
+requires ExistsTxnSenderAccount(m, txn);
+ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+
+procedure {:inline 1} LibraAccount_destroy_handle (tv0: TypeValue, arg0: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
 {
     // declare local variables
@@ -4110,7 +4253,7 @@ requires ExistsTxnSenderAccount(m, txn);
     m := UpdateLocal(m, old_size + 3, tmp);
 
     call t4, t5 := Unpack_LibraAccount_EventHandle(GetLocal(m, old_size + 3));
-    assume is#Integer(t4);
+    assume IsValidInteger(t4);
 
     assume is#ByteArray(t5);
 
@@ -4132,5 +4275,6 @@ Label_Abort:
 
 procedure LibraAccount_destroy_handle_verify (tv0: TypeValue, arg0: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call LibraAccount_destroy_handle(tv0: TypeValue, arg0);
 }

@@ -1,4 +1,6 @@
 module AddressUtil {
     // TODO: specify
-    native public address_to_bytes(addr: address): bytearray;
+    native public address_to_bytes(addr: address): bytearray
+        // TODO: what are the really conditions here? For now make this total.
+        succeeds_if true;
 }

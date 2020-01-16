@@ -11,7 +11,7 @@ function TestSpecs_T_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_TestSpecs_T(v0: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     v := Vector(ExtendValueArray(EmptyValueArray, v0));
 
 }
@@ -57,7 +57,7 @@ ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, arg0), TestSpecs
     call t2 := BorrowField(t1, TestSpecs_T_value);
 
     call tmp := ReadRef(t2);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
 
@@ -72,5 +72,6 @@ Label_Abort:
 
 procedure TestSpecs_value_verify (arg0: Reference) returns (ret0: Value)
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call ret0 := TestSpecs_value(arg0);
 }

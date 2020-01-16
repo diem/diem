@@ -13,8 +13,8 @@ function Test3_T_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_Test3_T(v0: Value, v1: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
-    assume is#Integer(v1);
+    assume IsValidInteger(v0);
+    assume IsValidInteger(v1);
     v := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, v0), v1));
 
 }
@@ -113,9 +113,9 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := LdConst(0);
     m := UpdateLocal(m, old_size + 10, tmp);
 
-    assume is#Integer(GetLocal(m, old_size + 9));
+    assume IsValidInteger(GetLocal(m, old_size + 9));
 
-    assume is#Integer(GetLocal(m, old_size + 10));
+    assume IsValidInteger(GetLocal(m, old_size + 10));
 
     call tmp := Pack_Test3_T(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
     m := UpdateLocal(m, old_size + 11, tmp);
@@ -203,7 +203,7 @@ Label_28:
     call t32 := CopyOrMoveRef(t5);
 
     call tmp := ReadRef(t32);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 33, tmp);
 
@@ -213,7 +213,7 @@ Label_28:
     call t34 := CopyOrMoveRef(t6);
 
     call tmp := ReadRef(t34);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 35, tmp);
 
@@ -322,5 +322,6 @@ Label_Abort:
 
 procedure Test3_test3_verify (arg0: Value) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call Test3_test3(arg0);
 }

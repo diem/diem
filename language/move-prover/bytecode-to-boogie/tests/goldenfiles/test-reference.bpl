@@ -11,7 +11,7 @@ function TestReference_T_type_value(): TypeValue {
 
 procedure {:inline 1} Pack_TestReference_T(v0: Value) returns (v: Value)
 {
-    assume is#Integer(v0);
+    assume IsValidInteger(v0);
     v := Vector(ExtendValueArray(EmptyValueArray, v0));
 
 }
@@ -42,7 +42,7 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume is#Integer(Dereference(m, arg0));
+    assume IsValidInteger(Dereference(m, arg0));
     assume IsValidReferenceParameter(m, local_counter, arg0);
 
     old_size := local_counter;
@@ -66,6 +66,7 @@ Label_Abort:
 
 procedure TestReference_mut_b_verify (arg0: Reference) returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestReference_mut_b(arg0);
 }
 
@@ -117,7 +118,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call t5 := CopyOrMoveRef(t1);
 
     call tmp := ReadRef(t5);
-    assume is#Integer(tmp);
+    assume IsValidInteger(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
 
@@ -154,5 +155,6 @@ Label_Abort:
 
 procedure TestReference_mut_ref_verify () returns ()
 {
+    assume ExistsTxnSenderAccount(m, txn);
     call TestReference_mut_ref();
 }

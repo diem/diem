@@ -64,6 +64,10 @@ function {:constructor} Vector(v: ValueArray): Value; // used to both represent 
 const DefaultValue: Value;
 function {:builtin "MapConst"} MapConstValue(v: Value): [int]Value;
 
+function {:inline} IsValidInteger(v: Value): bool {
+  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= 9223372036854775807
+}
+
 
 // Value Array
 // -----------
@@ -343,11 +347,12 @@ function {:inline 1} Dereference(m: Memory, ref: Reference): Value {
 
 // Checker whether sender account exists.
 function {:inline 1} ExistsTxnSenderAccount(m: Memory, txn: Transaction): bool {
-   // TODO: need to verify whether this is the intended semantics. We assume right now
-   //   we can identify sender account existence if there is any resource under the sender address.
-   // (exists resource: TypeValue :: domain#Memory(m)[Global(resource, sender#Transaction(txn))])
-   true
+   domain#Memory(m)[Global(LibraAccount_T_type_value(), sender#Transaction(txn))]
 }
+
+// Forward declaration of type value of LibraAccount. This is declared so we can define
+// ExistsTxnSenderAccount.
+function LibraAccount_T_type_value(): TypeValue;
 
 // Returns sender address.
 function {:inline 1} TxnSenderAddress(txn: Transaction): Address {
@@ -587,6 +592,7 @@ var txn: Transaction;
 function {:constructor} Transaction(
   gas_unit_price: int, max_gas_units: int, public_key: ByteArray,
   sender: Address, sequence_number: int, gas_remaining: int) : Transaction;
+
 
 const some_key: ByteArray;
 
