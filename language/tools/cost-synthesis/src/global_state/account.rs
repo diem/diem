@@ -74,6 +74,7 @@ impl Account {
                         let struct_tag = resource_storage_key(
                             mod_ref,
                             StructDefinitionIndex::new(struct_idx as TableIndex),
+                            vec![],
                         );
                         // Create the access path for the resource and associate the binary blob
                         // with that access path.

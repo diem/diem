@@ -19,7 +19,7 @@ proptest! {
         prop_assert_eq!(module_id, deserialized_module_id);
 
         for i in 0..module.struct_defs().len() {
-            let struct_key = resource_storage_key(&module, StructDefinitionIndex::new(i as TableIndex));
+            let struct_key = resource_storage_key(&module, StructDefinitionIndex::new(i as TableIndex), vec![]);
             let deserialized_struct_key = {
                 let serialized_key = lcs::to_bytes(&struct_key).unwrap();
                 lcs::from_bytes(&serialized_key).expect("Deserialize should work")

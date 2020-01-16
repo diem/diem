@@ -23,13 +23,17 @@ use libra_types::{
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
-    file_format::{FunctionHandleIndex, FunctionSignature, StructDefinitionIndex},
+    file_format::{FunctionHandleIndex, FunctionSignature, SignatureToken, StructDefinitionIndex},
     gas_schedule::{CostTable, GAS_SCHEDULE_NAME},
     transaction_metadata::TransactionMetadata,
     CompiledModule, IndexKind,
 };
 use vm_cache_map::Arena;
-use vm_runtime_types::{loaded_data::struct_def::StructDef, value::Value};
+use vm_runtime_types::{
+    loaded_data::{struct_def::StructDef, types::Type},
+    type_context::TypeContext,
+    value::Value,
+};
 
 /// An instantiation of the MoveVM.
 /// `code_cache` is the top level module cache that holds loaded published modules.
@@ -69,7 +73,7 @@ impl<'alloc> VMRuntime<'alloc> {
             })?;
 
         let gas_struct_def_idx = gas_module.get_struct_def_index(&GAS_SCHEDULE_NAME)?;
-        let struct_tag = resource_storage_key(gas_module, *gas_struct_def_idx);
+        let struct_tag = resource_storage_key(gas_module, *gas_struct_def_idx, vec![]);
         let access_path = create_access_path(&address, struct_tag);
 
         let data_blob = data_view
@@ -201,9 +205,15 @@ impl<'alloc> VMRuntime<'alloc> {
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
+        type_actuals: Vec<Type>,
         data_view: &dyn InterpreterContext,
     ) -> VMResult<StructDef> {
-        self.code_cache.resolve_struct_def(module, idx, data_view)
+        if type_actuals.is_empty() {
+            self.code_cache.resolve_struct_def(module, idx, data_view)
+        } else {
+            self.code_cache
+                .instantiate_struct_def(module, idx, type_actuals, data_view)
+        }
     }
 
     pub fn resolve_function_ref(
@@ -214,6 +224,17 @@ impl<'alloc> VMRuntime<'alloc> {
     ) -> VMResult<FunctionRef<'alloc>> {
         self.code_cache
             .resolve_function_ref(caller_module, idx, data_view)
+    }
+
+    pub fn resolve_signature_token(
+        &self,
+        module: &LoadedModule,
+        tok: &SignatureToken,
+        type_context: &TypeContext,
+        data_view: &dyn InterpreterContext,
+    ) -> VMResult<Type> {
+        self.code_cache
+            .resolve_signature_token(module, tok, type_context, data_view)
     }
 
     pub fn get_loaded_module(
