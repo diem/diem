@@ -523,7 +523,14 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                     // assume that the "<" is a boolean operator.
                     let next_start = tokens.lookahead_start_loc();
                     if next_start == start_loc + tokens.content().len() {
-                        parse_pack_or_call(tokens)?
+                        match parse_pack_or_call(tokens) {
+                            Ok(x) => x,
+                            Err(mut e) => {
+                                let loc = make_loc(tokens.file_name(), next_start, next_start);
+                                e.push((loc, "Perhaps you need a blank space before this '<' operator?".to_string()));
+                                return Err(e)
+                            },
+                        }
                     } else {
                         Exp_::Name(parse_name(tokens)?)
                     }
