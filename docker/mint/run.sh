@@ -16,6 +16,9 @@ CONFIGDIR="$(dirname "$0")/../../terraform/validator-sets/dev"
 
 docker network create --subnet 172.18.0.0/24 testnet || true
 
-docker run -e AC_HOST="$AC_HOST" -e AC_PORT="$AC_PORT" -e LOG_LEVEL="$LOG_LEVEL" \
+docker run \
+    -e AC_HOST="$AC_HOST" \
+    -e AC_PORT="$AC_PORT" \
+    -e LOG_LEVEL="$LOG_LEVEL" \
 	-e MINT_KEY="$(base64 $CONFIGDIR/mint.key)" \
 	--network testnet --publish 8080:8000 "$IMAGE"
