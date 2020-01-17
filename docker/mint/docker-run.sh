@@ -4,9 +4,8 @@
 
 set -ex
 export RUST_BACKTRACE=full
-/opt/libra/bin/faucet-config-builder \
+/opt/libra/bin/config-builder faucet \
     -o /opt/libra/etc \
-    -n $CFG_NUM_VALIDATORS \
     -s $CFG_SEED
 
 cd /opt/libra/bin && \
