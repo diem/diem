@@ -1,23 +1,9 @@
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:14:9 ───
-    │
- 14 │         move_to_sender(R { v })
-    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
-    ·
- 14 │         move_to_sender(R { v })
-    │                        ------- The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
     ┌── tests/move_check/typing/invalid_type_acquire.move:18:9 ───
     │
  18 │         T,
-    │         ^ Invalid 'acquires' annotation
-    ·
- 18 │         T,
-    │         - Expected a nominal resource. Found the type: T
+    │         ^ Invalid acquires item. Expected a resource name, but got a type parameter
     │
 
 error: 
@@ -25,10 +11,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:19:9 ───
     │
  19 │         u64,
-    │         ^^^ Invalid 'acquires' annotation
-    ·
- 19 │         u64,
-    │         --- Expected a nominal resource. Found the type: u64
+    │         ^^^ Invalid acquires item. Expected a resource name, but got a builtin type
     │
 
 error: 
@@ -36,10 +19,10 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:20:9 ───
     │
  20 │         X::R,
-    │         ^^^^ Invalid 'acquires' annotation
+    │         ^^^^ Invalid acquires item
     ·
  20 │         X::R,
-    │         ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
+    │            - The struct 'R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -47,10 +30,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
     │
  21 │         S,
-    │         ^ Invalid 'acquires' annotation
-    ·
- 21 │         S,
-    │         - Expected a nominal resource. Found the type: 0x1::M::S
+    │         ^ Invalid acquires item. Expected a nominal resource.
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -58,72 +38,50 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:22:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:30:9 ───
     │
- 22 │         R<u64>,
-    │         ^^^^^^ Invalid 'acquires' annotation
-    ·
- 22 │         R<u64>,
-    │         ------ The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:23:9 ───
-    │
- 23 │         R<T>
-    │         ^^^^ Invalid 'acquires' annotation
-    ·
- 23 │         R<T>
-    │         ---- The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:32:9 ───
-    │
- 32 │         destroy(move_from(a));
+ 30 │         destroy(move_from(a));
     │         ^^^^^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/invalid_type_acquire.move:30:17 ───
+    │
+ 30 │         destroy(move_from(a));
+    │                 ^^^^^^^^^ Could not infer this type. Try adding an annotation
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/invalid_type_acquire.move:31:17 ───
+    │
+ 31 │         destroy(move_from<T>(a));
+    │                 ^^^^^^^^^^^^^^^ Invalid call to move_from.
+    ·
+ 31 │         destroy(move_from<T>(a));
+    │                           - Expected a nominal resource. Found the type: T
     │
 
 error: 
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:32:17 ───
     │
- 32 │         destroy(move_from(a));
-    │                 ^^^^^^^^^ Could not infer this type. Try adding an annotation
+ 32 │         destroy(move_from<u64>(a));
+    │                 ^^^^^^^^^^^^^^^^^ Invalid call to move_from.
+    ·
+ 32 │         destroy(move_from<u64>(a));
+    │                           --- Expected a nominal resource. Found the type: u64
     │
 
 error: 
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:33:17 ───
     │
- 33 │         destroy(move_from<T>(a));
-    │                 ^^^^^^^^^^^^^^^ Invalid call to move_from.
-    ·
- 33 │         destroy(move_from<T>(a));
-    │                           - Expected a nominal resource. Found the type: T
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:34:17 ───
-    │
- 34 │         destroy(move_from<u64>(a));
-    │                 ^^^^^^^^^^^^^^^^^ Invalid call to move_from.
-    ·
- 34 │         destroy(move_from<u64>(a));
-    │                           --- Expected a nominal resource. Found the type: u64
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:35:17 ───
-    │
- 35 │         destroy(move_from<X::R>(a));
+ 33 │         destroy(move_from<X::R>(a));
     │                 ^^^^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
- 35 │         destroy(move_from<X::R>(a));
+ 33 │         destroy(move_from<X::R>(a));
     │                           ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
@@ -131,10 +89,10 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
     │
- 36 │         destroy(move_from<S>(a));
+ 34 │         destroy(move_from<S>(a));
     │                 ^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
- 36 │         destroy(move_from<S>(a));
+ 34 │         destroy(move_from<S>(a));
     │                           - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
@@ -143,64 +101,42 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:37:17 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:36:9 ───
     │
- 37 │         destroy(move_from<R<u64>>(a));
-    │                 ^^^^^^^^^^^^^^^^^^^^ Invalid call to move_from.
-    ·
- 37 │         destroy(move_from<R<u64>>(a));
-    │                           ------ The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:38:17 ───
-    │
- 38 │         destroy(move_from<R<T>>(a));
-    │                 ^^^^^^^^^^^^^^^^^^ Invalid call to move_from.
-    ·
- 38 │         destroy(move_from<R<T>>(a));
-    │                           ---- The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:40:9 ───
-    │
- 40 │         borrow_global(a);
+ 36 │         borrow_global(a);
     │         ^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:41:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:37:9 ───
     │
- 41 │         borrow_global<T>(a);
+ 37 │         borrow_global<T>(a);
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
- 41 │         borrow_global<T>(a);
+ 37 │         borrow_global<T>(a);
     │                       - Expected a nominal resource. Found the type: T
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:42:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:38:9 ───
     │
- 42 │         borrow_global<u64>(a);
+ 38 │         borrow_global<u64>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
- 42 │         borrow_global<u64>(a);
+ 38 │         borrow_global<u64>(a);
     │                       --- Expected a nominal resource. Found the type: u64
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:43:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:39:9 ───
     │
- 43 │         borrow_global<X::R>(a);
+ 39 │         borrow_global<X::R>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
- 43 │         borrow_global<X::R>(a);
+ 39 │         borrow_global<X::R>(a);
     │                       ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
@@ -208,10 +144,10 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
     │
- 44 │         borrow_global<S>(a);
+ 40 │         borrow_global<S>(a);
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
- 44 │         borrow_global<S>(a);
+ 40 │         borrow_global<S>(a);
     │                       - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
@@ -220,64 +156,42 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:45:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:42:9 ───
     │
- 45 │         borrow_global<R<u64>>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
-    ·
- 45 │         borrow_global<R<u64>>(a);
-    │                       ------ The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:46:9 ───
-    │
- 46 │         borrow_global<R<T>>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
-    ·
- 46 │         borrow_global<R<T>>(a);
-    │                       ---- The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:48:9 ───
-    │
- 48 │         borrow_global_mut(a);
+ 42 │         borrow_global_mut(a);
     │         ^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:49:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:43:9 ───
     │
- 49 │         borrow_global_mut<T>(a);
+ 43 │         borrow_global_mut<T>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
- 49 │         borrow_global_mut<T>(a);
+ 43 │         borrow_global_mut<T>(a);
     │                           - Expected a nominal resource. Found the type: T
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:50:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:44:9 ───
     │
- 50 │         borrow_global_mut<u64>(a);
+ 44 │         borrow_global_mut<u64>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
- 50 │         borrow_global_mut<u64>(a);
+ 44 │         borrow_global_mut<u64>(a);
     │                           --- Expected a nominal resource. Found the type: u64
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:51:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:45:9 ───
     │
- 51 │         borrow_global_mut<X::R>(a);
+ 45 │         borrow_global_mut<X::R>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
- 51 │         borrow_global_mut<X::R>(a);
+ 45 │         borrow_global_mut<X::R>(a);
     │                           ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
@@ -285,10 +199,10 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
     │
- 52 │         borrow_global_mut<S>(a);
+ 46 │         borrow_global_mut<S>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
- 52 │         borrow_global_mut<S>(a);
+ 46 │         borrow_global_mut<S>(a);
     │                           - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
@@ -297,64 +211,42 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:53:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:48:9 ───
     │
- 53 │         borrow_global_mut<R<u64>>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
-    ·
- 53 │         borrow_global_mut<R<u64>>(a);
-    │                           ------ The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:54:9 ───
-    │
- 54 │         borrow_global_mut<R<T>>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
-    ·
- 54 │         borrow_global_mut<R<T>>(a);
-    │                           ---- The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:56:9 ───
-    │
- 56 │         exists(a);
+ 48 │         exists(a);
     │         ^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:57:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:49:9 ───
     │
- 57 │         exists<T>(a);
+ 49 │         exists<T>(a);
     │         ^^^^^^^^^^^^ Invalid call to exists.
     ·
- 57 │         exists<T>(a);
+ 49 │         exists<T>(a);
     │                - Expected a nominal resource. Found the type: T
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:58:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:50:9 ───
     │
- 58 │         exists<u64>(a);
+ 50 │         exists<u64>(a);
     │         ^^^^^^^^^^^^^^ Invalid call to exists.
     ·
- 58 │         exists<u64>(a);
+ 50 │         exists<u64>(a);
     │                --- Expected a nominal resource. Found the type: u64
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:59:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:51:9 ───
     │
- 59 │         exists<X::R>(a);
+ 51 │         exists<X::R>(a);
     │         ^^^^^^^^^^^^^^^ Invalid call to exists.
     ·
- 59 │         exists<X::R>(a);
+ 51 │         exists<X::R>(a);
     │                ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
@@ -362,10 +254,10 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
     │
- 60 │         exists<S>(a);
+ 52 │         exists<S>(a);
     │         ^^^^^^^^^^^^ Invalid call to exists.
     ·
- 60 │         exists<S>(a);
+ 52 │         exists<S>(a);
     │                - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
@@ -374,72 +266,50 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:61:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:54:9 ───
     │
- 61 │         exists<R<u64>>(a);
-    │         ^^^^^^^^^^^^^^^^^ Invalid call to exists.
-    ·
- 61 │         exists<R<u64>>(a);
-    │                ------ The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:62:9 ───
-    │
- 62 │         exists<R<T>>(a);
-    │         ^^^^^^^^^^^^^^^ Invalid call to exists.
-    ·
- 62 │         exists<R<T>>(a);
-    │                ---- The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:64:9 ───
-    │
- 64 │         move_to_sender(any());
+ 54 │         move_to_sender(any());
     │         ^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:64:24 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:54:24 ───
     │
- 64 │         move_to_sender(any());
+ 54 │         move_to_sender(any());
     │                        ^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:65:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:55:9 ───
     │
- 65 │         move_to_sender<T>(any());
+ 55 │         move_to_sender<T>(any());
     │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
     ·
- 65 │         move_to_sender<T>(any());
+ 55 │         move_to_sender<T>(any());
     │                        - Expected a nominal resource. Found the type: T
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:66:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:56:9 ───
     │
- 66 │         move_to_sender<u64>(any());
+ 56 │         move_to_sender<u64>(any());
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
     ·
- 66 │         move_to_sender<u64>(any());
+ 56 │         move_to_sender<u64>(any());
     │                        --- Expected a nominal resource. Found the type: u64
     │
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:67:9 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:57:9 ───
     │
- 67 │         move_to_sender<X::R>(any());
+ 57 │         move_to_sender<X::R>(any());
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
     ·
- 67 │         move_to_sender<X::R>(any());
+ 57 │         move_to_sender<X::R>(any());
     │                        ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
@@ -447,35 +317,13 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
     │
- 68 │         move_to_sender<S>(any());
+ 58 │         move_to_sender<S>(any());
     │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
     ·
- 68 │         move_to_sender<S>(any());
+ 58 │         move_to_sender<S>(any());
     │                        - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:69:9 ───
-    │
- 69 │         move_to_sender<R<u64>>(any());
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
-    ·
- 69 │         move_to_sender<R<u64>>(any());
-    │                        ------ The resource cannot take any type arguments, but found 1 type arguments
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:70:9 ───
-    │
- 70 │         move_to_sender<R<T>>(any());
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
-    ·
- 70 │         move_to_sender<R<T>>(any());
-    │                        ---- The resource cannot take any type arguments, but found 1 type arguments
     │
 

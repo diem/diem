@@ -1071,7 +1071,7 @@ fn parse_function_decl<'input>(
     let mut acquires = vec![];
     if match_token(tokens, Tok::Acquires)? {
         loop {
-            acquires.push(parse_base_type(tokens)?);
+            acquires.push(parse_module_access(tokens)?);
             if tokens.peek() == Tok::Semicolon || tokens.peek() == Tok::LBrace {
                 break;
             }

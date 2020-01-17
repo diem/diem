@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/typing/extraneous_acquire.move:5:19 ───
    │
  5 │     t0() acquires R1 {
-   │                   ^^ Invalid 'acquires' list. The type '0x8675309::M::R1' was never acquired by 'move_from', 'borrow_global', 'borrow_global_mut', or a transitive call
+   │                   ^^ Invalid 'acquires' list. The resource '0x8675309::M::R1' was never acquired by 'move_from', 'borrow_global', 'borrow_global_mut', or a transitive call
    │
 
 error: 
@@ -11,6 +11,6 @@ error:
    ┌── tests/move_check/typing/extraneous_acquire.move:9:33 ───
    │
  9 │     t1(a: address) acquires R1, R2 {
-   │                                 ^^ Invalid 'acquires' list. The type '0x8675309::M::R2' was never acquired by 'move_from', 'borrow_global', 'borrow_global_mut', or a transitive call
+   │                                 ^^ Invalid 'acquires' list. The resource '0x8675309::M::R2' was never acquired by 'move_from', 'borrow_global', 'borrow_global_mut', or a transitive call
    │
 

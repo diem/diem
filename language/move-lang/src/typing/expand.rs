@@ -10,7 +10,6 @@ use crate::{
     shared::*,
     typing::ast as T,
 };
-use std::collections::BTreeSet;
 
 //**************************************************************************************************
 // Functions
@@ -28,17 +27,6 @@ pub fn function_signature(context: &mut Context, sig: &mut FunctionSignature) {
         single_type(context, st);
     }
     type_(context, &mut sig.return_type)
-}
-
-pub fn function_acquires(context: &mut Context, bs: &mut BTreeSet<BaseType>) {
-    let old = std::mem::replace(bs, BTreeSet::new());
-    for mut bt in old {
-        base_type(context, &mut bt);
-        assert!(
-            bs.insert(bt),
-            "ICE the acquires set was already a set. Expand should not change that"
-        );
-    }
 }
 
 //**************************************************************************************************

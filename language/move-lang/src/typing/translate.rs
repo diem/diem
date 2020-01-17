@@ -88,8 +88,6 @@ fn function(context: &mut Context, _name: FunctionName, f: N::Function) -> T::Fu
     function_signature(context, &signature);
     expand::function_signature(context, &mut signature);
 
-    let mut acquires = function_acquires(context, acquires);
-    expand::function_acquires(context, &mut acquires);
     let body = function_body(context, &acquires, n_body);
 
     T::Function {
@@ -121,22 +119,9 @@ fn function_signature(context: &mut Context, sig: &N::FunctionSignature) {
     core::solve_constraints(context);
 }
 
-fn function_acquires(context: &mut Context, acquires: BTreeSet<BaseType>) -> BTreeSet<BaseType> {
-    for ty in &acquires {
-        core::instantiate_base(context, ty.clone());
-    }
-    core::solve_constraints(context);
-
-    let msg = || "Invalid 'acquires' annotation".into();
-    let check_annot = |bt: &BaseType| -> bool {
-        globals::check_global_access(context, &bt.loc, msg, bt) // true if no error
-    };
-    acquires.into_iter().filter(check_annot).collect()
-}
-
 fn function_body(
     context: &mut Context,
-    acquires: &BTreeSet<BaseType>,
+    acquires: &BTreeSet<StructName>,
     sp!(loc, nb_): N::FunctionBody,
 ) -> T::FunctionBody {
     assert!(context.constraints.is_empty());

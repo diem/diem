@@ -55,7 +55,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 pub struct Function {
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
-    pub acquires: BTreeSet<BaseType>,
+    pub acquires: BTreeSet<StructName>,
     pub body: FunctionBody,
 }
 
@@ -114,7 +114,7 @@ pub struct ModuleCall {
     pub type_arguments: Vec<BaseType>,
     pub arguments: Box<Exp>,
     pub parameter_types: Vec<SingleType>,
-    pub acquires: BTreeSet<BaseType>,
+    pub acquires: BTreeSet<StructName>,
 }
 
 #[derive(Debug, PartialEq)]

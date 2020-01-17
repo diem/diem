@@ -75,7 +75,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 pub struct Function {
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
-    pub acquires: Vec<SingleType>,
+    pub acquires: Vec<ModuleAccess>,
     pub body: FunctionBody,
 }
 

@@ -195,11 +195,7 @@ fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Fu
     assert!(context.has_empty_locals());
     let visibility = f.visibility;
     let signature = function_signature(context, f.signature);
-    let acquires = f
-        .acquires
-        .into_iter()
-        .map(|b| base_type(context, b))
-        .collect();
+    let acquires = f.acquires;
     let body = function_body(context, &signature.return_type, f.body);
     H::Function {
         visibility,
@@ -948,13 +944,12 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             let expected_type = H::Type_::from_vec(eloc, single_types(context, parameter_types));
             let htys = base_types(context, type_arguments);
             let harg = exp!(context, result, Some(&expected_type), *arguments);
-            let hacquires = base_types(context, acquires);
             let call = H::ModuleCall {
                 module,
                 name,
                 type_arguments: htys,
                 arguments: harg,
-                acquires: hacquires,
+                acquires,
             };
             HE::ModuleCall(Box::new(call))
         }
