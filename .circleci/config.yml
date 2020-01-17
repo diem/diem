@@ -59,11 +59,29 @@ commands:
             sudo apt-get update
             sudo apt-get install lcov
             cargo install --force grcov
+  install_docker_linter:
+    steps:
+      - run:
+          name: install dockerfile linter (hadolint)
+          command: |
+             export HADOLINT=${HOME}/hadolint
+             export HADOLINT_VER=v1.17.4
+             curl -sL -o ${HADOLINT} "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VER}/hadolint-$(uname -s)-$(uname -m)" && chmod 700 ${HADOLINT}
   install_rust_nightly_toolchain:
     steps:
       - run:
           name: Install nightly toolchain for features not in beta/stable
           command: rustup install nightly
+  find_dockerfile_changes:
+    steps:
+      - run:
+          name: Get the list of updated docker files
+          command: |
+            echo 'export CHANGED_DOCKER_FILES=$(
+              for commit in $(git rev-list origin/master..HEAD) ; do
+                git diff-tree --no-commit-id --name-only -r "$commit" -- "*.Dockerfile";
+              done
+            )' >> $BASH_ENV
   build_setup:
     steps:
       - checkout
@@ -189,19 +207,18 @@ jobs:
       - run:
           name: Check if the docker build job should run
           command: .circleci/should_build_docker.sh
+      - install_docker_linter
+      - find_dockerfile_changes
       - run:
-          name: Get the list of updated docker files
+          name: Lint DockerFile changes
           command: |
-            echo 'export DOCKER_FILES=$(
-              for commit in $(git rev-list origin/master..HEAD) ; do
-                git diff-tree --no-commit-id --name-only -r "$commit" -- "*.Dockerfile";
-              done
-            )' >> $BASH_ENV
+            export HADOLINT=${HOME}/hadolint
+            ${HADOLINT} -c .lintrules/hadolint.yaml $CHANGED_DOCKER_FILES || true
       - run:
           name: Build each of the updated docker files
           command: |
             # Use the dockerfile own build.sh script if it has one.
-            for docker_file in $DOCKER_FILES; do
+            for docker_file in $CHANGED_DOCKER_FILES; do
               echo "Checking $docker_file"
               build_script=$(dirname $docker_file)/build.sh
               if [ -f "$build_script" ]; then
