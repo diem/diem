@@ -1,4 +1,14 @@
 
+// ** helpers from test_mvir/test-specs-translate.prover.bpl// Boogie helper functions for test-specs-translate.mvir
+
+function {:inline} number_in_range(x: Value): Value {
+  Boolean(i#Integer(x) >= 0 && i#Integer(x) < 128)
+}
+
+function {:inline} max_u64(): Value {
+  Integer(MAX_U64)
+}
+
 
 // ** structs of module TestSpecs
 
@@ -390,4 +400,45 @@ procedure TestSpecs_ret_values_verify () returns (ret0: Value, ret1: Value, ret2
 {
     assume ExistsTxnSenderAccount(m, txn);
     call ret0, ret1, ret2 := TestSpecs_ret_values();
+}
+
+procedure {:inline 1} TestSpecs_helper_function (arg0: Value) returns (ret0: Value)
+requires ExistsTxnSenderAccount(m, txn);
+ensures b#Boolean(Boolean(b#Boolean(number_in_range(arg0)) && b#Boolean(Boolean(i#Integer(arg0) < i#Integer(max_u64())))));
+{
+    // declare local variables
+    var t0: Value; // IntegerType()
+    var t1: Value; // IntegerType()
+
+    var tmp: Value;
+    var old_size: int;
+
+    var saved_m: Memory;
+    assume !abort_flag;
+    saved_m := m;
+
+    // assume arguments are of correct types
+    assume IsValidInteger(arg0);
+
+    old_size := local_counter;
+    local_counter := local_counter + 2;
+    m := UpdateLocal(m, old_size + 0, arg0);
+
+    // bytecode translation starts here
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
+    m := UpdateLocal(m, old_size + 1, tmp);
+
+    ret0 := GetLocal(m, old_size + 1);
+    return;
+
+Label_Abort:
+    abort_flag := true;
+    m := saved_m;
+    ret0 := DefaultValue;
+}
+
+procedure TestSpecs_helper_function_verify (arg0: Value) returns (ret0: Value)
+{
+    assume ExistsTxnSenderAccount(m, txn);
+    call ret0 := TestSpecs_helper_function(arg0);
 }

@@ -68,4 +68,10 @@ module TestSpecs {
     {
         return (7, false, 10);
     }
+
+    public helper_function(x: u64): u64
+      ensures number_in_range(x) && x < max_u64()
+    {
+        return move(x);
+    }
 }

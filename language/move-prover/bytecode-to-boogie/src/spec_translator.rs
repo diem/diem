@@ -40,6 +40,12 @@ impl BoogieExpr {
 /// which no one will/can ever realistically use.
 const ERROR_TYPE: SignatureToken = SignatureToken::TypeParameter(std::u16::MAX);
 
+/// A dummy type to represent an unknown type. We use a type parameter for this, with an index
+/// which no one will/can ever realistically use. We currently need this to support a hack
+/// for specification helper functions (SpecExp::Call) whose type we do not know, and which
+/// are defined in Boogie.
+const UNKNOWN_TYPE: SignatureToken = SignatureToken::TypeParameter(std::u16::MAX - 1);
+
 impl<'a> SpecTranslator<'a> {
     pub fn new(
         all_modules: &'a [VerifiedModule],
@@ -209,6 +215,16 @@ impl<'a> SpecTranslator<'a> {
                 let BoogieExpr(s, t) = self.translate_expr(expr);
                 BoogieExpr(format!("old({})", s), t)
             }
+            SpecExp::Call(name, exprs) => BoogieExpr(
+                format!(
+                    "{}({})",
+                    name,
+                    exprs.iter().map(|e| self.translate_expr(e).0).join(", ")
+                ),
+                // We currently do not have a way to know the return type (and expected argument
+                // types) of a helper function.
+                UNKNOWN_TYPE,
+            ),
         }
     }
 
@@ -476,7 +492,7 @@ impl<'a> SpecTranslator<'a> {
 
     /// Checks for an expected type.
     fn require_type(&mut self, t: SignatureToken, expected: &SignatureToken) -> SignatureToken {
-        if t != ERROR_TYPE && t != *expected {
+        if t != ERROR_TYPE && t != UNKNOWN_TYPE && t != *expected {
             self.error(
                 &format!(
                     "incompatible types: expected `{}`, found `{}`",
@@ -637,6 +653,11 @@ impl<'a> SpecTranslator<'a> {
                     ("<field>".to_string(), ERROR_TYPE),
                 )
             }
+        } else if *sig == UNKNOWN_TYPE {
+            self.error(
+                "unknown result type of helper function; cannot select field",
+                ("field".to_string(), ERROR_TYPE),
+            )
         } else {
             self.error(
                 &format!(
@@ -648,7 +669,7 @@ impl<'a> SpecTranslator<'a> {
         }
     }
 
-    /// Gets the current function's signature.
+    /// Gets the current functions signature.
     fn get_function_signature(&self) -> FunctionSignatureView<VerifiedModule> {
         let function_def = self.module.function_def_at(self.function_info.index);
         let function_view = FunctionHandleView::new(

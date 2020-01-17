@@ -55,6 +55,8 @@ pub enum SpecExp {
     // TODO: binary operators not supported by Move like implies and iff
     /// Value of expression evaluated in the state before function enter.
     Old(Box<SpecExp>),
+    /// Call to a helper function.
+    Call(String, Vec<SpecExp>),
 }
 
 /// A specification directive to be verified

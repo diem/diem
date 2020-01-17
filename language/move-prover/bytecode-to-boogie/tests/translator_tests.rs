@@ -42,7 +42,9 @@ fn test_aborts_if() {
 #[test]
 fn test_lib() {
     test(
-        NO_VERIFY,
+        // We have not yet created .prover.bpl stubs for native functions in library, so instruct
+        // translator to generate them.
+        &["--native-stubs", "-B=-noVerify"],
         &[
             &std_mvir("vector"),
             &std_mvir("u64_util"),

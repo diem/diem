@@ -15,6 +15,7 @@ use libra_types::account_address::AccountAddress;
 use log::{debug, error, info};
 use regex::Regex;
 use std::fs;
+use std::path::Path;
 use std::process::Command;
 use vm::file_format::FunctionDefinitionIndex;
 
@@ -51,6 +52,7 @@ impl<'app> Driver<'app> {
     pub fn run(&mut self) {
         self.load_modules(&self.options.mvir_sources);
         self.add_prelude();
+        self.add_helpers();
         self.translate_modules();
         // write resulting code
         info!("writing boogie to {}", self.options.output_path);
@@ -71,6 +73,7 @@ impl<'app> Driver<'app> {
         // Extract the prelude from the generated output, as we want to return it in a separate
         // string.
         let prelude = std::mem::replace(&mut self.output, String::new());
+        self.add_helpers();
         self.translate_modules();
         (prelude, std::mem::replace(&mut self.output, String::new()))
     }
@@ -162,11 +165,47 @@ impl<'app> Driver<'app> {
         }
     }
 
+    /// Add boogie helper functions on per-source base. For every source `path.mvir`, if a file
+    /// `path.prover.bpl` exists, add it to the boogie output.
+    pub fn add_helpers(&mut self) {
+        for src in &self.options.mvir_sources {
+            let path = Path::new(src);
+            let parent = path
+                .parent()
+                .unwrap_or_else(|| Path::new(""))
+                .to_str()
+                .unwrap()
+                .to_string();
+            let helper = &format!(
+                "{}/{}.prover.bpl",
+                if parent == "" {
+                    ".".to_string()
+                } else {
+                    parent
+                },
+                path.file_stem()
+                    .expect("file has no ending")
+                    .to_string_lossy()
+            );
+            if let Ok(content) = fs::read_to_string(helper) {
+                info!("reading helper functions from {}", helper);
+                self.output
+                    .push_str(&format!("\n// ** helpers from {}", helper));
+                self.output.push_str(&content);
+            }
+        }
+    }
+
     /// Translates all modules.
     pub fn translate_modules(&mut self) {
         self.output.push_str(
-            &BoogieTranslator::new(&self.verified_modules, &self.module_infos, &self.source_map)
-                .translate(),
+            &BoogieTranslator::new(
+                self.options,
+                &self.verified_modules,
+                &self.module_infos,
+                &self.source_map,
+            )
+            .translate(),
         );
     }
 
