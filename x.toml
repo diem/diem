@@ -13,10 +13,6 @@ allowed = [
     "clippy::needless_lifetimes",
     # This ends up being platform dependent, e.g. the Instant type
     "clippy::trivially-copy-pass-by-ref",
-    # Temporarily allow the `clippy::inheret-to-string` lint to avoid having to
-    # fix all violations in our codebase during the compiler bump to 1.39.0
-    # beta where it was changed to be on-by-default.
-    "clippy::inherent-to-string",
     # Whitelist for now since it seems like the futures::select! macro has an issue with this
     "clippy::unnecessary-mut-passed",
 ]
