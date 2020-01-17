@@ -200,9 +200,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut state_sync_network_handles = vec![];
     let mut ac_network_sender = None;
     let mut ac_network_events = vec![];
+    let mut mempool_network_handles = vec![];
     let mut validator_network_provider = None;
-    let mut mempool_network_sender = None;
-    let mut mempool_network_events = vec![];
 
     if let Some(network) = node_config.validator_network.as_mut() {
         let (runtime, mut network_provider) = setup_network(network, RoleType::Validator);
@@ -210,19 +209,18 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ]));
 
+        let (mempool_sender, mempool_events) = network_provider
+            .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
+        mempool_network_handles.push((network.peer_id, mempool_sender, mempool_events));
+
         let (ac_sender, ac_events) =
             network_provider.add_admission_control(vec![ProtocolId::from_static(
                 ADMISSION_CONTROL_RPC_PROTOCOL,
             )]);
         ac_network_events.push(ac_events);
 
-        let (mempool_sender, mempool_events) = network_provider
-            .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
-        mempool_network_events.push(mempool_events);
-
         validator_network_provider = Some((network.peer_id, runtime, network_provider));
         ac_network_sender = Some(ac_sender);
-        mempool_network_sender = Some(mempool_sender);
     }
 
     for i in 0..node_config.full_node_networks.len() {
@@ -232,20 +230,23 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ]));
 
+        let (mempool_sender, mempool_events) = network_provider
+            .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
+        mempool_network_handles.push((
+            node_config.full_node_networks[i].peer_id,
+            mempool_sender,
+            mempool_events,
+        ));
+
         let (ac_sender, ac_events) =
             network_provider.add_admission_control(vec![ProtocolId::from_static(
                 ADMISSION_CONTROL_RPC_PROTOCOL,
             )]);
         ac_network_events.push(ac_events);
 
-        let (mempool_sender, mempool_events) = network_provider
-            .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
-        mempool_network_events.push(mempool_events);
-
         let network = &node_config.full_node_networks[i];
         if node_config.is_upstream_network(network) {
             ac_network_sender = Some(ac_sender);
-            mempool_network_sender = Some(mempool_sender);
         }
         // Start the network provider.
         runtime.handle().spawn(network_provider.start());
@@ -269,20 +270,19 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         Arc::clone(&executor),
         &node_config,
     );
-    let (ac_endpoint_sender, smp_receiver) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
+    let (ac_sender, client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
     let admission_control = AdmissionControlRuntime::bootstrap(
         &node_config,
         ac_network_sender.unwrap(),
         ac_network_events,
-        ac_endpoint_sender,
+        ac_sender,
     );
 
     instant = Instant::now();
     let mempool = Some(MempoolRuntime::bootstrap(
-        &node_config,
-        mempool_network_sender.unwrap(),
-        mempool_network_events,
-        smp_receiver,
+        node_config,
+        mempool_network_handles,
+        client_events,
     ));
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
     let mut consensus = None;
