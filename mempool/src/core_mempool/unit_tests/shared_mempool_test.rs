@@ -11,27 +11,17 @@ use futures::{
     executor::block_on,
     SinkExt, StreamExt,
 };
-use libra_config::config::{
-    NetworkConfig, NetworkKeyPairs, NetworkPeerInfo, NetworkPeersConfig, NodeConfig,
-    SeedPeersConfig,
-};
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519::X25519StaticPrivateKey, Uniform,
-    ValidKey,
-};
+use libra_config::config::{NetworkConfig, NodeConfig};
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
     proto::MempoolSyncMsg,
     validator_network::{MempoolNetworkEvents, MempoolNetworkSender},
 };
-use parity_multiaddr::Multiaddr;
 use prost::Message;
-use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
-    path::PathBuf,
     sync::{Arc, Mutex},
 };
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
@@ -48,77 +38,19 @@ struct SharedMempoolNetwork {
     timers: HashMap<PeerId, UnboundedSender<SyncEvent>>,
 }
 
-/// Creates a validator network of with `nodes_in_network_count` validator nodes
-fn default_validator_network_with_peers(
-    nodes_in_network_count: u32,
-) -> HashMap<PeerId, NetworkConfig> {
-    let mut peers_network_config: HashMap<PeerId, NetworkConfig> = HashMap::new();
-    let mut peers_keypairs: HashMap<PeerId, NetworkKeyPairs> = HashMap::new();
-    let mut all_peers: Vec<PeerId> = Vec::new();
-
-    // create peers
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    for _ in 0..nodes_in_network_count {
-        let signing_key = Ed25519PrivateKey::generate_for_testing(&mut rng);
-        let identity_key = X25519StaticPrivateKey::generate_for_testing(&mut rng);
-        let keypair = NetworkKeyPairs::load(signing_key, identity_key);
-        let peer_id = PeerId::try_from(keypair.identity_keys.public().to_bytes()).unwrap();
-        peers_keypairs.insert(peer_id.clone(), keypair);
-        all_peers.push(peer_id.clone());
-    }
-
-    for (peer_id, keypair) in peers_keypairs.into_iter() {
-        let other_peers: Vec<&PeerId> = all_peers.iter().filter(|peer| peer != &&peer_id).collect();
-        let network_peers = default_multiple_peers(&keypair, other_peers.clone());
-
-        let config = NetworkConfig {
-            peer_id,
-            listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
-            advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
-            discovery_interval_ms: 1000,
-            connectivity_check_interval_ms: 5000,
-            enable_encryption_and_authentication: true,
-            is_permissioned: true,
-            network_keypairs_file: PathBuf::new(),
-            network_keypairs: keypair,
-            network_peers_file: PathBuf::new(),
-            network_peers,
-            seed_peers_file: PathBuf::new(),
-            seed_peers: SeedPeersConfig::default(),
-        };
-        peers_network_config.insert(peer_id.clone(), config);
-    }
-    peers_network_config
-}
-
-fn default_multiple_peers(keypair: &NetworkKeyPairs, peer_ids: Vec<&PeerId>) -> NetworkPeersConfig {
-    let mut peers = NetworkPeersConfig::default();
-    for peer_id in peer_ids.iter() {
-        peers.peers.insert(
-            **peer_id,
-            NetworkPeerInfo {
-                identity_public_key: keypair.identity_keys.public().clone(),
-                signing_public_key: keypair.signing_keys.public().clone(),
-            },
-        );
-    }
-    peers
-}
-
 impl SharedMempoolNetwork {
     fn bootstrap_validator_network_smp(validator_nodes_count: u32) -> (Self, Vec<PeerId>) {
-        let mut config = NodeConfig::random();
         let mut smp = Self::default();
-        config.mempool.shared_mempool_batch_size = 1;
-
-        // add all peers in this vector as validator peers
-        let validator_network_peers = default_validator_network_with_peers(validator_nodes_count);
-
         let mut peers = vec![];
-        for peer in validator_network_peers.keys() {
-            peers.push(peer.clone());
-        }
-        for (peer, validator_network_config) in validator_network_peers.into_iter() {
+
+        for _ in 0..validator_nodes_count {
+            let peer_id = PeerId::random();
+            let mut validator_network_config = NetworkConfig::default();
+            validator_network_config.peer_id = peer_id;
+            let mut config = NodeConfig::random();
+            config.validator_network = Some(validator_network_config);
+            config.mempool.shared_mempool_batch_size = 1;
+
             let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
             let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
             let (network_notifs_tx, network_notifs_rx) = channel::new_test(8);
@@ -126,27 +58,27 @@ impl SharedMempoolNetwork {
             let network_events = MempoolNetworkEvents::new(network_notifs_rx);
             let (sender, subscriber) = unbounded();
             let (timer_sender, timer_receiver) = unbounded();
-            let (_ac_sender, smp_receiver) = mpsc::channel(1_024);
+            let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
+            let network_handles = vec![(peer_id, network_sender, network_events)];
 
-            config.validator_network = Some(validator_network_config);
             let runtime = start_shared_mempool(
                 &config,
                 Arc::clone(&mempool),
-                network_sender,
-                vec![network_events],
-                smp_receiver,
+                network_handles,
+                ac_endpoint_receiver,
                 Arc::new(MockStorageReadClient),
                 Arc::new(MockVMValidator),
                 vec![sender],
                 Some(timer_receiver.map(|_| SyncEvent).boxed()),
             );
 
-            smp.mempools.insert(peer, mempool);
-            smp.network_reqs_rxs.insert(peer, network_reqs_rx);
-            smp.network_notifs_txs.insert(peer, network_notifs_tx);
-            smp.subscribers.insert(peer, subscriber);
-            smp.timers.insert(peer, timer_sender);
-            smp.runtimes.insert(peer, runtime);
+            peers.push(peer_id);
+            smp.mempools.insert(peer_id, mempool);
+            smp.network_reqs_rxs.insert(peer_id, network_reqs_rx);
+            smp.network_notifs_txs.insert(peer_id, network_notifs_tx);
+            smp.subscribers.insert(peer_id, subscriber);
+            smp.timers.insert(peer_id, timer_sender);
+            smp.runtimes.insert(peer_id, runtime);
         }
         (smp, peers)
     }

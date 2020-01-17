@@ -11,6 +11,7 @@ use admission_control_proto::proto::admission_control::{
 use anyhow::Result;
 use futures::channel::{mpsc::Receiver, oneshot};
 use libra_config::config::NodeConfig;
+use libra_types::PeerId;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
 use std::{
     net::ToSocketAddrs,
@@ -32,9 +33,10 @@ impl MempoolRuntime {
     /// setup Mempool runtime
     pub fn bootstrap(
         config: &NodeConfig,
-        network_sender: MempoolNetworkSender,
-        network_events: Vec<MempoolNetworkEvents>,
-        ac_endpoint_listener: Receiver<(
+        // The first element in the tuple is the ID of the network that this network is a handle to
+        // See `NodeConfig::is_upstream_peer` for the definition of network ID
+        mempool_network_handles: Vec<(PeerId, MempoolNetworkSender, MempoolNetworkEvents)>,
+        client_events: Receiver<(
             SubmitTransactionRequest,
             oneshot::Sender<Result<SubmitTransactionResponse>>,
         )>,
@@ -62,9 +64,8 @@ impl MempoolRuntime {
         let shared_mempool = start_shared_mempool(
             config,
             mempool,
-            network_sender,
-            network_events,
-            ac_endpoint_listener,
+            mempool_network_handles,
+            client_events,
             storage_client,
             vm_validator,
             vec![],
