@@ -5,7 +5,6 @@ testsuite = { path = "testsuite", system = true }
 
 [clippy]
 allowed = [
-    "clippy::get_unwrap",
     "clippy::new_without_default",
     # Deriving Arbitrary often causes this warning to show up.
     "clippy::unit_arg",
