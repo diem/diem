@@ -205,6 +205,10 @@ impl<'a> SpecTranslator<'a> {
                 let right = self.translate_expr(right);
                 self.translate_binop(op, left, right)
             }
+            SpecExp::Old(expr) => {
+                let BoogieExpr(s, t) = self.translate_expr(expr);
+                BoogieExpr(format!("old({})", s), t)
+            }
         }
     }
 
@@ -396,10 +400,7 @@ impl<'a> SpecTranslator<'a> {
     fn translate_location_as_value(&mut self, loc: &StorageLocation) -> BoogieExpr {
         match loc {
             StorageLocation::Formal(name) => self.translate_param(name),
-            StorageLocation::Old(loc) => {
-                let BoogieExpr(s, t) = self.translate_location_as_value(loc);
-                BoogieExpr(format!("old({})", s), t)
-            }
+
             StorageLocation::Ret(index) => self.translate_return(*index as usize),
             StorageLocation::TxnSenderAddress => BoogieExpr(
                 "Address(TxnSenderAddress(txn))".to_string(),

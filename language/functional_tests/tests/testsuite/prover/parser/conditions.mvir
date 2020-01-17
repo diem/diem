@@ -249,4 +249,11 @@ module TestBinaryOps {
       return *&copy(p).x + *&move(p).y;
   }
 
+  public ret_implies(x: u64): u64
+  ensures x >= 4 ==> RET == x % 4
+  ensures x < 4  ==> RET == x
+  {
+      return move(x) % 4;
+  }
+
 }

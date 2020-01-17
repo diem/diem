@@ -323,13 +323,10 @@ module LibraAccount {
         aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > 9223372036854775807
         aborts_if global<Self.T>(txn_sender).balance.value < amount
         ensures global_exists<Self.T>(payee)
-        // TODO: we currently cannot write old(global_exists...) because of a parser/ast restriction. So we cannot
-        //   express below post condition as we want, but only a weaker one.
-        // ensures old(global_exists<Self.T>(payee)) ==>
-        //               global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + amount
-        // ensures !old(global_exists<Self.T>(payee)) ==>
-        //               global<Self.T>(payee).balance.value == amount
-        ensures global<Self.T>(payee).balance.value >= amount // weaker than above
+        ensures old(global_exists<Self.T>(payee)) ==>
+                    global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + amount
+        // TODO: we currently cannot verify the case where account did not exist.
+        //   ensures !old(global_exists<Self.T>(payee)) ==> global<Self.T>(payee).balance.value == amount
         ensures global<Self.T>(txn_sender).balance.value == old(global<Self.T>(txn_sender).balance.value) - amount
     {
         // TODO: note we added this assertion. Is it a bug?
@@ -357,13 +354,10 @@ module LibraAccount {
         aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > 9223372036854775807
         aborts_if global<Self.T>(txn_sender).balance.value < amount
         ensures global_exists<Self.T>(payee)
-        // TODO: we currently cannot write old(global_exists...) because of a parser/ast restriction. So we cannot
-        //   express below post condition as we want, but only a weaker one.
-        // ensures old(global_exists<Self.T>(payee)) ==>
-        //               global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + amount
-        // ensures !old(global_exists<Self.T>(payee)) ==>
-        //               global<Self.T>(payee).balance.value == amount
-        ensures global<Self.T>(payee).balance.value >= amount // weaker than above
+        ensures old(global_exists<Self.T>(payee)) ==>
+            global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + amount
+        // TODO: we currently cannot verify the case where account did not exist.
+        //   ensures !old(global_exists<Self.T>(payee)) ==> global<Self.T>(payee).balance.value == amount
         ensures global<Self.T>(txn_sender).balance.value == old(global<Self.T>(txn_sender).balance.value) - amount
     {
         // TODO: note we added this assertion. Is it a bug?

@@ -274,6 +274,7 @@ fn parse_copyable_val_<'input>(
 fn get_precedence(token: &Tok) -> u32 {
     match token {
         // Reserved minimum precedence value is 1 (specified in parse_exp_)
+        Tok::EqualEqualGreater => 1,
         Tok::PipePipe => 2,
         Tok::AmpAmp => 3,
         Tok::EqualEqual => 4,
@@ -1396,13 +1397,6 @@ fn parse_storage_location<'input>(
                 address,
             }
         }
-        Tok::Old => {
-            tokens.advance()?;
-            consume_token(tokens, Tok::LParen)?;
-            let stloc = parse_storage_location(tokens)?;
-            consume_token(tokens, Tok::RParen)?;
-            StorageLocation::Old(Box::new(stloc))
-        }
         _ => StorageLocation::Formal(parse_name(tokens)?),
     };
 
@@ -1463,6 +1457,13 @@ fn parse_unary_spec_exp<'input>(
             let exp = parse_spec_exp(tokens)?;
             SpecExp::Not(Box::new(exp))
         }
+        Tok::Old => {
+            tokens.advance()?;
+            consume_token(tokens, Tok::LParen)?;
+            let exp = parse_spec_exp(tokens)?;
+            consume_token(tokens, Tok::RParen)?;
+            SpecExp::Old(Box::new(exp))
+        }
         _ => SpecExp::StorageLocation(parse_storage_location(tokens)?),
     })
 }
@@ -1491,26 +1492,35 @@ fn parse_rhs_of_spec_exp<'input>(
             rhs = parse_rhs_of_spec_exp(tokens, rhs, this_prec + 1)?;
             next_tok_prec = get_precedence(&tokens.peek());
         }
-        let op = match op_token {
-            Tok::EqualEqual => BinOp::Eq,
-            Tok::ExclaimEqual => BinOp::Neq,
-            Tok::Less => BinOp::Lt,
-            Tok::Greater => BinOp::Gt,
-            Tok::LessEqual => BinOp::Le,
-            Tok::GreaterEqual => BinOp::Ge,
-            Tok::PipePipe => BinOp::Or,
-            Tok::AmpAmp => BinOp::And,
-            Tok::Caret => BinOp::Xor,
-            Tok::Pipe => BinOp::BitOr,
-            Tok::Amp => BinOp::BitAnd,
-            Tok::Plus => BinOp::Add,
-            Tok::Minus => BinOp::Sub,
-            Tok::Star => BinOp::Mul,
-            Tok::Slash => BinOp::Div,
-            Tok::Percent => BinOp::Mod,
-            _ => panic!("Unexpected token that is not a binary operator"),
-        };
-        result = SpecExp::Binop(Box::new(result), op, Box::new(rhs))
+        if op_token == Tok::EqualEqualGreater {
+            // Syntactic sugar: p ==> c ~~~> !p || c
+            result = SpecExp::Binop(
+                Box::new(SpecExp::Not(Box::new(result))),
+                BinOp::Or,
+                Box::new(rhs),
+            );
+        } else {
+            let op = match op_token {
+                Tok::EqualEqual => BinOp::Eq,
+                Tok::ExclaimEqual => BinOp::Neq,
+                Tok::Less => BinOp::Lt,
+                Tok::Greater => BinOp::Gt,
+                Tok::LessEqual => BinOp::Le,
+                Tok::GreaterEqual => BinOp::Ge,
+                Tok::PipePipe => BinOp::Or,
+                Tok::AmpAmp => BinOp::And,
+                Tok::Caret => BinOp::Xor,
+                Tok::Pipe => BinOp::BitOr,
+                Tok::Amp => BinOp::BitAnd,
+                Tok::Plus => BinOp::Add,
+                Tok::Minus => BinOp::Sub,
+                Tok::Star => BinOp::Mul,
+                Tok::Slash => BinOp::Div,
+                Tok::Percent => BinOp::Mod,
+                _ => panic!("Unexpected token that is not a binary operator"),
+            };
+            result = SpecExp::Binop(Box::new(result), op, Box::new(rhs))
+        }
     }
     Ok(result)
 }
