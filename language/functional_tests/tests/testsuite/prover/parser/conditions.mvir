@@ -256,4 +256,9 @@ module TestBinaryOps {
       return move(x) % 4;
   }
 
+  public ret_spec_function(x: u64): u64
+  ensures some_function(x, x) > RET
+  {
+      return move(x);
+  }
 }

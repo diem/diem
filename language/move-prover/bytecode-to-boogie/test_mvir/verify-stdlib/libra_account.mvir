@@ -113,7 +113,7 @@ module LibraAccount {
         aborts_if !global_exists<Self.T>(txn_sender)
         aborts_if !global_exists<Self.T>(payee)
         aborts_if to_deposit.value == 0
-        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > 9223372036854775807
+        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > max_balance()
         ensures global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + to_deposit.value
     {
         Self.deposit_with_metadata(move(payee), move(to_deposit), h"");
@@ -130,7 +130,7 @@ module LibraAccount {
         aborts_if !global_exists<Self.T>(txn_sender)
         aborts_if !global_exists<Self.T>(payee)
         aborts_if to_deposit.value == 0
-        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > 9223372036854775807
+        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > max_balance()
         ensures global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + to_deposit.value
     {
         Self.deposit_with_sender_and_metadata(
@@ -154,7 +154,7 @@ module LibraAccount {
         aborts_if !global_exists<Self.T>(payee)
         aborts_if !global_exists<Self.T>(sender)
         aborts_if to_deposit.value == 0
-        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > 9223372036854775807
+        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > max_balance()
         ensures global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + to_deposit.value
     {
         let deposit_value: u64;
@@ -320,7 +320,7 @@ module LibraAccount {
         aborts_if global<Self.T>(txn_sender).delegated_withdrawal_capability
         aborts_if txn_sender == payee
         aborts_if amount == 0
-        aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > 9223372036854775807
+        aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > max_balance()
         aborts_if global<Self.T>(txn_sender).balance.value < amount
         ensures global_exists<Self.T>(payee)
         ensures old(global_exists<Self.T>(payee)) ==>
@@ -351,7 +351,7 @@ module LibraAccount {
         aborts_if global<Self.T>(txn_sender).delegated_withdrawal_capability
         aborts_if txn_sender == payee
         aborts_if amount == 0
-        aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > 9223372036854775807
+        aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > max_balance()
         aborts_if global<Self.T>(txn_sender).balance.value < amount
         ensures global_exists<Self.T>(payee)
         ensures old(global_exists<Self.T>(payee)) ==>
@@ -468,7 +468,7 @@ module LibraAccount {
         aborts_if global_exists<Self.T>(fresh_address)
         aborts_if global<Self.T>(txn_sender).delegated_withdrawal_capability
         aborts_if global<Self.T>(txn_sender).balance.value < initial_balance
-        aborts_if initial_balance > 9223372036854775807
+        aborts_if initial_balance > max_balance()
         ensures global_exists<Self.T>(fresh_address)
         ensures global<Self.T>(fresh_address).balance.value == initial_balance
         ensures !global<Self.T>(fresh_address).delegated_withdrawal_capability
@@ -629,7 +629,7 @@ module LibraAccount {
     // hash it with the sender's address, the result is guaranteed to be globally unique.
     fresh_guid(counter: &mut Self.EventHandleGenerator, sender: address): bytearray
         succeeds_if true
-        // aborts_if counter.counter + 1 > 9223372036854775807
+        // aborts_if counter.counter + 1 > max_balance()
     {
         let count: &mut u64;
         let count_bytes: bytearray;
@@ -656,7 +656,7 @@ module LibraAccount {
     // Use EventHandleGenerator to generate a unique event handle that one can emit an event to.
     new_event_handle_impl<T: unrestricted>(counter: &mut Self.EventHandleGenerator, sender: address): Self.EventHandle<T>
         succeeds_if true
-        // aborts_if counter.counter + 1 > 9223372036854775807
+        // aborts_if counter.counter + 1 > max_balance()
     {
         return EventHandle<T> {counter: 0, guid: Self.fresh_guid(move(counter), move(sender))};
     }

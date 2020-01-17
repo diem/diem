@@ -13,6 +13,7 @@
 //!    for example, how to construct a TypeValue from a SignatureToken, how to access memory,
 //!    and so on.
 
+use crate::cli::Options;
 use crate::spec_translator::SpecTranslator;
 use bytecode_source_map::source_map::ModuleSourceMap;
 use bytecode_verifier::VerifiedModule;
@@ -65,6 +66,7 @@ pub struct FunctionInfo {
 }
 
 pub struct BoogieTranslator<'a> {
+    pub options: &'a Options,
     pub modules: &'a [VerifiedModule],
     pub module_infos: &'a [ModuleInfo],
     pub source_maps: &'a [ModuleSourceMap<Loc>],
@@ -87,6 +89,7 @@ pub struct ModuleTranslator<'a> {
 
 impl<'a> BoogieTranslator<'a> {
     pub fn new(
+        options: &'a Options,
         modules: &'a [VerifiedModule],
         module_infos: &'a [ModuleInfo],
         source_maps: &'a [ModuleSourceMap<Loc>],
@@ -109,6 +112,7 @@ impl<'a> BoogieTranslator<'a> {
             }
         }
         Self {
+            options,
             modules,
             module_infos,
             source_maps,
@@ -311,10 +315,12 @@ impl<'a> ModuleTranslator<'a> {
         // translation of stackless bytecode
         for (idx, function_def) in self.module.function_defs().iter().enumerate() {
             if function_def.is_native() {
-                res.push_str(&self.generate_function_sig(idx, true, &None));
-                res.push_str(";");
-                res.push_str(&self.generate_function_spec(idx, &None));
-                res.push_str("\n");
+                if self.parent.options.native_stubs {
+                    res.push_str(&self.generate_function_sig(idx, true, &None));
+                    res.push_str(";");
+                    res.push_str(&self.generate_function_spec(idx, &None));
+                    res.push_str("\n");
+                }
                 continue;
             }
             res.push_str(&self.translate_function(idx));

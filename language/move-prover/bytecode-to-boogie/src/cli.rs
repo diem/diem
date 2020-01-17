@@ -49,6 +49,8 @@ pub struct Options {
     pub boogie_flags: Vec<String>,
     /// Whether to only generate boogie
     pub generate_only: bool,
+    /// Whether to generate stubs for native functions.
+    pub native_stubs: bool,
 }
 
 impl Default for Options {
@@ -64,6 +66,7 @@ impl Default for Options {
             cvc4_exe: "".to_string(),
             boogie_flags: vec![],
             generate_only: false,
+            native_stubs: false,
         }
     }
 }
@@ -107,6 +110,11 @@ impl Options {
                     .short("g")
                     .long("generate-only")
                     .help("only generate boogie file but do not call boogie"),
+            )
+            .arg(
+                Arg::with_name("native-stubs")
+                    .long("native-stubs")
+                    .help("whether to generate stubs for native functions"),
             )
             .arg(
                 Arg::with_name("boogie-exe")
@@ -181,6 +189,7 @@ impl Options {
             _ => unreachable!("should not happen"),
         };
         self.generate_only = matches.is_present("generate-only");
+        self.native_stubs = matches.is_present("native-stubs");
         self.use_cvc4 = matches.is_present("use-cvc4");
         self.boogie_exe = get_with_default("boogie-exe");
         self.z3_exe = get_with_default("z3-exe");

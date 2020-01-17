@@ -1464,6 +1464,26 @@ fn parse_unary_spec_exp<'input>(
             consume_token(tokens, Tok::RParen)?;
             SpecExp::Old(Box::new(exp))
         }
+        Tok::NameValue => {
+            let next = tokens.lookahead();
+            if next.is_err() || next.unwrap() != Tok::LParen {
+                SpecExp::StorageLocation(parse_storage_location(tokens)?)
+            } else {
+                let name = parse_name(tokens)?;
+                let mut args = vec![];
+                consume_token(tokens, Tok::LParen)?;
+                while tokens.peek() != Tok::RParen {
+                    let exp = parse_spec_exp(tokens)?;
+                    args.push(exp);
+                    if tokens.peek() != Tok::Comma {
+                        break;
+                    }
+                    consume_token(tokens, Tok::Comma)?;
+                }
+                consume_token(tokens, Tok::RParen)?;
+                SpecExp::Call(name, args)
+            }
+        }
         _ => SpecExp::StorageLocation(parse_storage_location(tokens)?),
     })
 }
