@@ -22,9 +22,6 @@ pub enum StorageLocation {
         base: Box<StorageLocation>,
         fields: Vec<Field>,
     },
-    /// Value of a storage location *after* the current procedure executes. Not applicable to
-    /// TxnSenderAddress. Address, or Return
-    Old(Box<StorageLocation>),
     /// Sender address for the current transaction
     TxnSenderAddress,
     /// Account address constant
@@ -56,6 +53,8 @@ pub enum SpecExp {
     /// Binary operators also suported by Move
     Binop(Box<SpecExp>, BinOp, Box<SpecExp>),
     // TODO: binary operators not supported by Move like implies and iff
+    /// Value of expression evaluated in the state before function enter.
+    Old(Box<SpecExp>),
 }
 
 /// A specification directive to be verified

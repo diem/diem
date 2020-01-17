@@ -35,6 +35,7 @@ pub enum Tok {
     LessLess,
     Equal,
     EqualEqual,
+    EqualEqualGreater,
     Greater,
     GreaterEqual,
     GreaterGreater,
@@ -274,7 +275,9 @@ fn find_token(
             }
         }
         '=' => {
-            if text.starts_with("==") {
+            if text.starts_with("==>") {
+                (Tok::EqualEqualGreater, 3)
+            } else if text.starts_with("==") {
                 (Tok::EqualEqual, 2)
             } else {
                 (Tok::Equal, 1)
