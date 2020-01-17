@@ -5,7 +5,7 @@ use super::error;
 use backtrace::Backtrace;
 use rand::{rngs::SmallRng, FromEntropy, Rng};
 use serde::Serialize;
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 
 #[derive(Serialize)]
 pub enum SecurityEvent {
@@ -160,13 +160,15 @@ impl SecurityLog {
         self
     }
 
-    pub(crate) fn to_string(&self) -> String {
-        serde_json::to_string(&self).unwrap_or_else(|e| e.to_string())
-    }
-
     /// Prints the `SecurityEvent` struct.
     pub fn log(self) {
         error!("[security] {}", self.to_string());
+    }
+}
+
+impl fmt::Display for SecurityLog {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", serde_json::to_string(&self).unwrap_or_else(|e| e.to_string()))
     }
 }
 
