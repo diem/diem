@@ -138,7 +138,7 @@ impl Context {
         loc: Loc,
         m: &ModuleIdent,
         n: &Name,
-    ) -> Option<(StructName, Option<Kind>)> {
+    ) -> Option<(Loc, StructName, Option<Kind>)> {
         let types = match self.scoped_types.get(m) {
             None => {
                 self.error(vec![(loc, format!("Unbound module '{}'", m,))]);
@@ -157,7 +157,7 @@ impl Context {
                 )]);
                 None
             }
-            Some((_, _, rloc)) => Some((StructName(n.clone()), rloc)),
+            Some((decl_loc, _, rloc)) => Some((decl_loc, StructName(n.clone()), rloc)),
         }
     }
 
@@ -402,21 +402,82 @@ fn function_body(context: &mut Context, sp!(loc, b_): E::FunctionBody) -> N::Fun
 
 fn function_acquires(
     context: &mut Context,
-    eacquires: Vec<E::SingleType>,
-) -> BTreeSet<N::BaseType> {
+    eacquires: Vec<E::ModuleAccess>,
+) -> BTreeSet<StructName> {
     let mut acquires = BTreeMap::new();
     for eacquire in eacquires {
-        let bt = base_type(context, eacquire);
-        let new_loc = bt.loc;
-        if let Some(old_loc) = acquires.insert(bt, new_loc) {
+        let sn = match acquires_type(context, eacquire) {
+            None => continue,
+            Some(sn) => sn,
+        };
+        let new_loc = sn.loc();
+        if let Some(old_loc) = acquires.insert(sn, new_loc) {
             context.error(vec![
                 (new_loc, "Duplicate acquires item"),
                 (old_loc, "Previously listed here"),
             ])
         }
     }
+    acquires.into_iter().map(|(n, _)| n).collect()
+}
 
-    acquires.into_iter().map(|(b, _)| b).collect()
+fn acquires_type(context: &mut Context, sp!(loc, en_): E::ModuleAccess) -> Option<StructName> {
+    use ResolvedType as RT;
+    use E::ModuleAccess_ as EN;
+    match en_ {
+        EN::Name(n) => match context.resolve_unscoped_type(&n)? {
+            RT::Struct(decl_loc, m, resource_opt) => {
+                acquires_type_struct(context, loc, decl_loc, m, StructName(n), resource_opt)
+            }
+            RT::BuiltinType => {
+                context.error(vec![(
+                    loc,
+                    "Invalid acquires item. Expected a resource name, but got a builtin type",
+                )]);
+                None
+            }
+            RT::TParam(_, _) => {
+                context.error(vec![(
+                    loc,
+                    "Invalid acquires item. Expected a resource name, but got a type parameter",
+                )]);
+                None
+            }
+        },
+        EN::ModuleAccess(m, n) => {
+            let (decl_loc, _, resource_opt) = context.resolve_module_type(loc, &m, &n)?;
+            acquires_type_struct(context, loc, decl_loc, m, StructName(n), resource_opt)
+        }
+    }
+}
+
+fn acquires_type_struct(
+    context: &mut Context,
+    loc: Loc,
+    decl_loc: Loc,
+    declared_module: ModuleIdent,
+    n: StructName,
+    resource_opt: Option<Kind>,
+) -> Option<StructName> {
+    let declared_in_current = match &context.current_module {
+        Some(current_module) => current_module == &declared_module,
+        None => false,
+    };
+    if !declared_in_current {
+        let tmsg =  format!("The struct '{}' was not declared in the current module. Global storage access is internal to the module'", n);
+        context.error(vec![(loc, "Invalid acquires item".into()), (n.loc(), tmsg)]);
+        return None;
+    }
+
+    if resource_opt.is_none() {
+        context.error(vec![
+            (loc, "Invalid acquires item. Expected a nominal resource."),
+            (decl_loc, "Declared as a normal struct here"),
+        ]);
+        return None;
+    }
+
+    Some(n)
 }
 
 //**************************************************************************************************
@@ -554,7 +615,7 @@ fn base_type(context: &mut Context, ty: E::SingleType) -> N::BaseType {
                     assert!(context.has_errors());
                     NB::Anything
                 }
-                Some((_, resource_opt)) => {
+                Some((_, _, resource_opt)) => {
                     let tn = sp(loc, NN::ModuleType(m, StructName(n)));
                     NB::Apply(resource_opt, tn, base_types(context, tys))
                 }

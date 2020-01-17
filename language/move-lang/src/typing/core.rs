@@ -38,7 +38,7 @@ pub struct FunctionInfo {
     pub defined_loc: Loc,
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
-    pub acquires: BTreeSet<BaseType>,
+    pub acquires: BTreeSet<StructName>,
 }
 
 pub struct ModuleInfo {
@@ -184,7 +184,7 @@ impl Context {
             .expect("ICE should have failed in naming")
     }
 
-    pub fn function_acquires(&mut self, m: &ModuleIdent, n: &FunctionName) -> BTreeSet<BaseType> {
+    pub fn function_acquires(&mut self, m: &ModuleIdent, n: &FunctionName) -> BTreeSet<StructName> {
         self.function_info(m, n).acquires.clone()
     }
 }
@@ -377,7 +377,7 @@ pub fn make_function_type(
     Loc,
     Vec<BaseType>,
     Vec<(Var, SingleType)>,
-    BTreeSet<BaseType>,
+    BTreeSet<StructName>,
     Type,
 ) {
     let in_current_module = match &context.current_module {

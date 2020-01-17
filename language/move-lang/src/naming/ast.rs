@@ -79,7 +79,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 pub struct Function {
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
-    pub acquires: BTreeSet<BaseType>,
+    pub acquires: BTreeSet<StructName>,
     pub body: FunctionBody,
 }
 

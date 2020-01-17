@@ -416,7 +416,7 @@ fn function(
     let acquires_global_resources = fdef
         .acquires
         .into_iter()
-        .map(|b| struct_definition_index_base(context, &b))
+        .map(|s| context.struct_definition_index(&s))
         .collect();
 
     let code = match fdef.body.value {

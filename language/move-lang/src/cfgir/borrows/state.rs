@@ -530,18 +530,11 @@ impl BorrowState {
         &mut self,
         loc: Loc,
         args: Values,
-        acquires: &BTreeSet<BaseType>,
+        resources: &BTreeSet<StructName>,
         return_ty: &Type,
     ) -> (Errors, Values) {
         let mut errors = vec![];
-        let resources = acquires
-            .iter()
-            .map(|t| match &t.value {
-                BaseType_::Apply(_, sp!(_, TypeName_::ModuleType(_, s)), _) => s,
-                _ => panic!("ICE type checking failed"),
-            })
-            .collect::<BTreeSet<_>>();
-        for resource in &resources {
+        for resource in resources {
             let borrowed_by = self.resource_borrowed_by(resource);
             let borrows = &self.borrows;
             // TODO point to location of acquire

@@ -19,8 +19,6 @@ module M {
         u64,
         X::R,
         S,
-        R<u64>,
-        R<T>
     {
     }
 
@@ -34,39 +32,29 @@ module M {
         destroy(move_from<u64>(a));
         destroy(move_from<X::R>(a));
         destroy(move_from<S>(a));
-        destroy(move_from<R<u64>>(a));
-        destroy(move_from<R<T>>(a));
 
         borrow_global(a);
         borrow_global<T>(a);
         borrow_global<u64>(a);
         borrow_global<X::R>(a);
         borrow_global<S>(a);
-        borrow_global<R<u64>>(a);
-        borrow_global<R<T>>(a);
 
         borrow_global_mut(a);
         borrow_global_mut<T>(a);
         borrow_global_mut<u64>(a);
         borrow_global_mut<X::R>(a);
         borrow_global_mut<S>(a);
-        borrow_global_mut<R<u64>>(a);
-        borrow_global_mut<R<T>>(a);
 
         exists(a);
         exists<T>(a);
         exists<u64>(a);
         exists<X::R>(a);
         exists<S>(a);
-        exists<R<u64>>(a);
-        exists<R<T>>(a);
 
         move_to_sender(any());
         move_to_sender<T>(any());
         move_to_sender<u64>(any());
         move_to_sender<X::R>(any());
         move_to_sender<S>(any());
-        move_to_sender<R<u64>>(any());
-        move_to_sender<R<T>>(any());
     }
 }

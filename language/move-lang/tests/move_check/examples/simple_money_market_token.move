@@ -70,7 +70,8 @@ module OneToOneMarket {
 
     accept<AssetType: copyable>(init: Token::Coin<AssetType>) {
         let sender = Transaction::sender();
-        if (!exists<Pool<AssetType>>(sender)) move_to_sender(Pool<AssetType> { coin: init })
+        Transaction::assert(!exists<Pool<AssetType>>(sender), 42);
+        move_to_sender(Pool<AssetType> { coin: init })
     }
 
     public register_price<In: copyable, Out: copyable>(
@@ -85,7 +86,7 @@ module OneToOneMarket {
     }
 
     public deposit<In: copyable, Out: copyable>(coin: Token::Coin<In>)
-        acquires Pool<In>, DepositRecord<In, Out>
+        acquires Pool, DepositRecord
     {
         let amount = Token::value(&coin);
 
@@ -98,7 +99,7 @@ module OneToOneMarket {
     public borrow<In: copyable, Out: copyable>(
         amount: u64,
     ): Token::Coin<Out>
-        acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+        acquires Price, Pool, DepositRecord, BorrowRecord
     {
         Transaction::assert(amount <= max_borrow_amount<In, Out>(), 1025);
 
@@ -109,10 +110,8 @@ module OneToOneMarket {
     }
 
     max_borrow_amount<In: copyable, Out: copyable>(): u64
-        acquires Price<In, Out>, Pool<Out>, DepositRecord<In, Out>, BorrowRecord<In, Out>
+        acquires Price, Pool, DepositRecord, BorrowRecord
     {
-        let sender = Transaction::sender();
-
         let input_deposited = deposited_amount<In, Out>();
         let output_deposited = borrowed_amount<In, Out>();
 
@@ -130,7 +129,7 @@ module OneToOneMarket {
     }
 
     update_deposit_record<In: copyable, Out: copyable>(amount: u64)
-        acquires DepositRecord<In, Out>
+        acquires DepositRecord
     {
         let sender = Transaction::sender();
         if (!exists<DepositRecord<In, Out>>(sender)) {
@@ -141,7 +140,7 @@ module OneToOneMarket {
     }
 
     update_borrow_record<In: copyable, Out: copyable>(amount: u64)
-        acquires BorrowRecord<In, Out>
+        acquires BorrowRecord
     {
         let sender = Transaction::sender();
         if (!exists<BorrowRecord<In, Out>>(sender)) {
@@ -152,7 +151,7 @@ module OneToOneMarket {
     }
 
     deposited_amount<In: copyable, Out: copyable>(): u64
-        acquires DepositRecord<In, Out>
+        acquires DepositRecord
     {
         let sender = Transaction::sender();
         if (!exists<DepositRecord<In, Out>>(sender)) return 0;
@@ -160,7 +159,7 @@ module OneToOneMarket {
     }
 
     borrowed_amount<In: copyable, Out: copyable>(): u64
-        acquires BorrowRecord<In, Out>
+        acquires BorrowRecord
     {
         let sender = Transaction::sender();
         if (!exists<BorrowRecord<In, Out>>(sender)) return 0;
