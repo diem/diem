@@ -138,6 +138,23 @@ where
         let key = <SK as SeekKeyCodec<S>>::encode_seek_key(seek_key)?;
         Ok(self.db_iter.seek_for_prev(rocksdb::SeekKey::Key(&key)))
     }
+
+    fn next_impl(&mut self) -> Result<Option<(S::Key, S::Value)>> {
+        // If the iterator is not valid, we first check if there is an error, then we return None
+        // if there is no error. See
+        // https://github.com/facebook/rocksdb/wiki/Iterator#error-handling
+        self.db_iter.status().map_err(convert_rocksdb_err)?;
+        if !self.db_iter.valid() {
+            return Ok(None);
+        }
+
+        let raw_key = self.db_iter.key();
+        let raw_value = self.db_iter.value();
+        let key = <S::Key as KeyCodec<S>>::decode_key(&raw_key)?;
+        let value = <S::Value as ValueCodec<S>>::decode_value(&raw_value)?;
+        self.db_iter.next();
+        Ok(Some((key, value)))
+    }
 }
 
 impl<'a, S> Iterator for SchemaIterator<'a, S>
@@ -147,13 +164,7 @@ where
     type Item = Result<(S::Key, S::Value)>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.db_iter.kv().map(|(raw_key, raw_value)| {
-            self.db_iter.next();
-            Ok((
-                <S::Key as KeyCodec<S>>::decode_key(&raw_key)?,
-                <S::Value as ValueCodec<S>>::decode_value(&raw_value)?,
-            ))
-        })
+        self.next_impl().transpose()
     }
 }
 
