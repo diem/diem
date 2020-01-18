@@ -255,7 +255,13 @@ module LibraAccount {
     }
 
     // Return a unique capability granting permission to withdraw from the sender's account balance.
-    public extract_sender_withdrawal_capability(): Self.WithdrawalCapability acquires T {
+    public extract_sender_withdrawal_capability(): Self.WithdrawalCapability
+        acquires T
+        aborts_if !global_exists<Self.T>(txn_sender)
+        aborts_if global<Self.T>(txn_sender).delegated_withdrawal_capability
+        ensures global<Self.T>(txn_sender).delegated_withdrawal_capability
+        ensures RET.account_address == txn_sender
+    {
         let sender: address;
         let sender_account: &mut Self.T;
         let delegated_ref: &mut bool;
@@ -273,7 +279,11 @@ module LibraAccount {
     }
 
     // Return the withdrawal capability to the account it originally came from
-    public restore_withdrawal_capability(cap: Self.WithdrawalCapability) acquires T {
+    public restore_withdrawal_capability(cap: Self.WithdrawalCapability)
+        acquires T
+        aborts_if !global_exists<Self.T>(cap.account_address)
+        ensures !global<Self.T>(cap.account_address).delegated_withdrawal_capability
+    {
         let account_address: address;
         let account: &mut Self.T;
 
@@ -367,14 +377,21 @@ module LibraAccount {
         return;
     }
 
-    rotate_authentication_key_for_account(account: &mut Self.T, new_authentication_key: bytearray) {
+    rotate_authentication_key_for_account(account: &mut Self.T, new_authentication_key: bytearray)
+        ensures account.authentication_key == new_authentication_key
+    {
         *(&mut move(account).authentication_key) = move(new_authentication_key);
         return;
     }
 
     // Rotate the transaction sender's authentication key
     // The new key will be used for signing future transactions
-    public rotate_authentication_key(new_authentication_key: bytearray) acquires T {
+    public rotate_authentication_key(new_authentication_key: bytearray)
+        acquires T
+        aborts_if !global_exists<Self.T>(txn_sender)
+        aborts_if global<Self.T>(txn_sender).delegated_key_rotation_capability
+        ensures global<Self.T>(txn_sender).authentication_key == new_authentication_key
+    {
         let sender_account: &mut Self.T;
 
         sender_account = borrow_global_mut<T>(get_txn_sender());
@@ -395,7 +412,12 @@ module LibraAccount {
     public rotate_authentication_key_with_capability(
         cap: &Self.KeyRotationCapability,
         new_authentication_key: bytearray,
-    ) acquires T  {
+    )
+        acquires T
+        aborts_if !global_exists<Self.T>(cap.account_address)
+        // TODO: below does not work currently
+        // ensures global<Self.T>(cap.account_address).authentication_key == new_authentication_key
+    {
         Self.rotate_authentication_key_for_account(
             borrow_global_mut<T>(*&move(cap).account_address),
             move(new_authentication_key)
@@ -404,7 +426,12 @@ module LibraAccount {
     }
 
     // Return a unique capability granting permission to rotate the sender's authentication key
-    public extract_sender_key_rotation_capability(): Self.KeyRotationCapability acquires T {
+    public extract_sender_key_rotation_capability(): Self.KeyRotationCapability
+        acquires T
+        aborts_if !global_exists<Self.T>(txn_sender)
+        aborts_if global<Self.T>(txn_sender).delegated_key_rotation_capability
+        ensures RET.account_address == txn_sender
+    {
         let sender: address;
         let delegated_ref: &mut bool;
 
@@ -420,7 +447,11 @@ module LibraAccount {
     }
 
     // Return the key rotation capability to the account it originally came from
-    public restore_key_rotation_capability(cap: Self.KeyRotationCapability) acquires T {
+    public restore_key_rotation_capability(cap: Self.KeyRotationCapability)
+        acquires T
+        aborts_if !global_exists<Self.T>(cap.account_address)
+        ensures !global<Self.T>(cap.account_address).delegated_key_rotation_capability
+    {
         let account_address: address;
         let account: &mut Self.T;
 
@@ -488,50 +519,78 @@ module LibraAccount {
         ensures global<Self.T>(addr) == account;
 
     // Helper to return u64 value of the `balance` field for given `account`
-    balance_for_account(account: &Self.T): u64 {
+    balance_for_account(account: &Self.T): u64
+        ensures RET == account.balance.value
+    {
         let balance_value: u64;
         balance_value = LibraCoin.value(&move(account).balance);
         return move(balance_value);
     }
 
     // Return the current balance of the LibraCoin.T in LibraAccount.T at `addr`
-    public balance(addr: address): u64 acquires T {
+    public balance(addr: address): u64
+        acquires T
+        aborts_if !global_exists<Self.T>(addr)
+        ensures RET == global<Self.T>(addr).balance.value
+    {
         return Self.balance_for_account(borrow_global<T>(move(addr)));
     }
 
     // Helper to return the sequence number field for given `account`
-    sequence_number_for_account(account: &Self.T): u64 {
+    sequence_number_for_account(account: &Self.T): u64
+        ensures RET == account.sequence_number
+    {
         return *(&move(account).sequence_number);
     }
 
     // Return the current sequence number at `addr`
-    public sequence_number(addr: address): u64 acquires T {
+    public sequence_number(addr: address): u64
+        acquires T
+        aborts_if !global_exists<Self.T>(addr)
+        ensures RET == global<Self.T>(addr).sequence_number
+    {
         return Self.sequence_number_for_account(borrow_global<T>(move(addr)));
     }
 
    // Return true if the account at `addr` has delegated its key rotation capability
-    public delegated_key_rotation_capability(addr: address): bool acquires T {
+    public delegated_key_rotation_capability(addr: address): bool
+        acquires T
+        aborts_if !global_exists<Self.T>(addr)
+        ensures RET == global<Self.T>(addr).delegated_key_rotation_capability
+    {
         return *&(borrow_global<T>(move(addr))).delegated_key_rotation_capability;
     }
 
     // Return true if the account at `addr` has delegated its withdrawal capability
-    public delegated_withdrawal_capability(addr: address): bool acquires T {
+    public delegated_withdrawal_capability(addr: address): bool
+        acquires T
+        aborts_if !global_exists<Self.T>(addr)
+        ensures RET == global<Self.T>(addr).delegated_withdrawal_capability
+    {
         return *&(borrow_global<T>(move(addr))).delegated_withdrawal_capability;
     }
 
 
     // Return a reference to the address associated with the given withdrawal capability
-    public withdrawal_capability_address(cap: &Self.WithdrawalCapability): &address {
+    public withdrawal_capability_address(cap: &Self.WithdrawalCapability): &address
+        // TODO: this doesn't work probably because we are returning an address
+        // ensures RET == &cap.account_address
+    {
         return &move(cap).account_address;
     }
 
     // Return a reference to the address associated with the given key rotation capability
-    public key_rotation_capability_address(cap: &Self.KeyRotationCapability): &address {
+    public key_rotation_capability_address(cap: &Self.KeyRotationCapability): &address
+        // TODO: this doesn't work probably because we are returning an address
+        // ensures RET == &cap.account_address
+    {
         return &move(cap).account_address;
     }
 
     // Checks if an account exists at `check_addr`
-    public exists(check_addr: address): bool {
+    public exists(check_addr: address): bool
+        ensures RET == global_exists<Self.T>(check_addr)
+    {
         return exists<T>(move(check_addr));
     }
 

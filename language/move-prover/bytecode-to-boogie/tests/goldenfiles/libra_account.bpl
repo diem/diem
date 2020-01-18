@@ -1966,6 +1966,10 @@ procedure LibraAccount_withdraw_with_capability_verify (arg0: Reference, arg1: V
 
 procedure {:inline 1} LibraAccount_extract_sender_withdrawal_capability () returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability));
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(ret0, LibraAccount_WithdrawalCapability_account_address)) == (Address(TxnSenderAddress(txn)))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2065,6 +2069,9 @@ procedure LibraAccount_extract_sender_withdrawal_capability_verify () returns (r
 
 procedure {:inline 1} LibraAccount_restore_withdrawal_capability (arg0: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(SelectField(arg0, LibraAccount_WithdrawalCapability_account_address)))), LibraAccount_T_delegated_withdrawal_capability)))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(SelectField(arg0, LibraAccount_WithdrawalCapability_account_address))))))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(SelectField(arg0, LibraAccount_WithdrawalCapability_account_address)))))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // LibraAccount_WithdrawalCapability_type_value()
@@ -2437,6 +2444,7 @@ procedure LibraAccount_pay_from_sender_verify (arg0: Value, arg1: Value) returns
 
 procedure {:inline 1} LibraAccount_rotate_authentication_key_for_account (arg0: Reference, arg1: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures b#Boolean(Boolean((SelectField(Dereference(m, arg0), LibraAccount_T_authentication_key)) == (arg1)));
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -2487,6 +2495,9 @@ procedure LibraAccount_rotate_authentication_key_for_account_verify (arg0: Refer
 
 procedure {:inline 1} LibraAccount_rotate_authentication_key (arg0: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_authentication_key)) == (arg0)));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_key_rotation_capability)))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_key_rotation_capability))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // ByteArrayType()
@@ -2564,6 +2575,8 @@ procedure LibraAccount_rotate_authentication_key_verify (arg0: Value) returns ()
 
 procedure {:inline 1} LibraAccount_rotate_authentication_key_with_capability (arg0: Reference, arg1: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(SelectField(Dereference(m, arg0), LibraAccount_KeyRotationCapability_account_address))))))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(SelectField(Dereference(m, arg0), LibraAccount_KeyRotationCapability_account_address)))))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_KeyRotationCapability_type_value())
@@ -2625,6 +2638,9 @@ procedure LibraAccount_rotate_authentication_key_with_capability_verify (arg0: R
 
 procedure {:inline 1} LibraAccount_extract_sender_key_rotation_capability () returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(ret0, LibraAccount_KeyRotationCapability_account_address)) == (Address(TxnSenderAddress(txn)))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_key_rotation_capability)))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_key_rotation_capability))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -2718,6 +2734,9 @@ procedure LibraAccount_extract_sender_key_rotation_capability_verify () returns 
 
 procedure {:inline 1} LibraAccount_restore_key_rotation_capability (arg0: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(SelectField(arg0, LibraAccount_KeyRotationCapability_account_address)))), LibraAccount_T_delegated_key_rotation_capability)))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(SelectField(arg0, LibraAccount_KeyRotationCapability_account_address))))))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(SelectField(arg0, LibraAccount_KeyRotationCapability_account_address)))))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // LibraAccount_KeyRotationCapability_type_value()
@@ -3008,6 +3027,7 @@ procedure LibraAccount_create_new_account_verify (arg0: Value, arg1: Value) retu
 
 procedure {:inline 1} LibraAccount_balance_for_account (arg0: Reference) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures b#Boolean(Boolean((ret0) == (SelectField(SelectField(Dereference(m, arg0), LibraAccount_T_balance), LibraCoin_T_value))));
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -3066,6 +3086,9 @@ procedure LibraAccount_balance_for_account_verify (arg0: Reference) returns (ret
 
 procedure {:inline 1} LibraAccount_balance (arg0: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean((ret0) == (SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_balance), LibraCoin_T_value))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3117,6 +3140,7 @@ procedure LibraAccount_balance_verify (arg0: Value) returns (ret0: Value)
 
 procedure {:inline 1} LibraAccount_sequence_number_for_account (arg0: Reference) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, arg0), LibraAccount_T_sequence_number))));
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -3166,6 +3190,9 @@ procedure LibraAccount_sequence_number_for_account_verify (arg0: Reference) retu
 
 procedure {:inline 1} LibraAccount_sequence_number (arg0: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_sequence_number))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3217,6 +3244,9 @@ procedure LibraAccount_sequence_number_verify (arg0: Value) returns (ret0: Value
 
 procedure {:inline 1} LibraAccount_delegated_key_rotation_capability (arg0: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_delegated_key_rotation_capability))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3270,6 +3300,9 @@ procedure LibraAccount_delegated_key_rotation_capability_verify (arg0: Value) re
 
 procedure {:inline 1} LibraAccount_delegated_withdrawal_capability (arg0: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(arg0))), LibraAccount_T_delegated_withdrawal_capability))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0))))))) ==> abort_flag;
 {
     // declare local variables
     var t0: Value; // AddressType()
@@ -3409,6 +3442,7 @@ procedure LibraAccount_key_rotation_capability_address_verify (arg0: Reference) 
 
 procedure {:inline 1} LibraAccount_exists (arg0: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures b#Boolean(Boolean((ret0) == (ExistsResource(m, LibraAccount_T_type_value(), a#Address(arg0)))));
 {
     // declare local variables
     var t0: Value; // AddressType()
