@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use functional_tests::{
+use crate::{
     checker::*,
+    compiler::Compiler,
     config::global::Config as GlobalConfig,
     evaluator::eval,
     preprocessor::{build_transactions, split_input},
@@ -53,7 +54,10 @@ fn pretty_mode() -> bool {
 }
 
 // Runs all tests under the test/testsuite directory.
-fn functional_tests(path: &Path) -> datatest_stable::Result<()> {
+pub fn functional_tests<TComp: Compiler>(
+    compiler: TComp,
+    path: &Path,
+) -> datatest_stable::Result<()> {
     let input = read_to_string(path)?;
 
     let lines: Vec<String> = input.lines().map(|line| line.to_string()).collect();
@@ -62,7 +66,7 @@ fn functional_tests(path: &Path) -> datatest_stable::Result<()> {
     let config = GlobalConfig::build(&config)?;
     let transactions = build_transactions(&config, &transactions)?;
 
-    let log = eval(&config, &transactions)?;
+    let log = eval(&config, compiler, &transactions)?;
 
     let res = match_output(&log, &directives);
 
@@ -210,5 +214,3 @@ fn functional_tests(path: &Path) -> datatest_stable::Result<()> {
 
     panic!("test failed")
 }
-
-datatest_stable::harness!(functional_tests, "tests/testsuite", r".*\.mvir");
