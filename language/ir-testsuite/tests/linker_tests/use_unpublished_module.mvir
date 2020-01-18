@@ -14,6 +14,6 @@ main() {
     M.foo();
     return;
 }
-// The script is compiled against M, but since M is not published on-chain,
-// it will be rejected by the runtime.
-// check: LINKER_ERROR
+// The script requires M, but since M is not published on-chain, there is no dependency to link
+// against
+// check: MISSING_DEPENDENCY
