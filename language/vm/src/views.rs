@@ -25,9 +25,10 @@ use crate::{
 };
 use std::collections::BTreeSet;
 
-use libra_types::language_storage::ModuleId;
-
-use libra_types::identifier::IdentStr;
+use libra_types::{
+    identifier::IdentStr,
+    language_storage::{ModuleId, StructTag},
+};
 use std::collections::BTreeMap;
 
 /// Represents a lazily evaluated abstraction over a module.
@@ -177,6 +178,17 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
     pub fn id(&self) -> ModuleId {
         self.module.self_id()
     }
+
+    /// Return the `StructHandleIndex` that corresponds to the normalized type `t` in this module's
+    /// table of `StructHandle`'s. Returns `None` if there is no corresponding handle
+    pub fn resolve_struct(&self, t: &StructTag) -> Option<StructHandleIndex> {
+        for (idx, handle) in self.module.struct_handles().iter().enumerate() {
+            if &StructHandleView::new(self.module, handle).normalize_struct() == t {
+                return Some(StructHandleIndex::new(idx as u16));
+            }
+        }
+        None
+    }
 }
 
 pub struct ModuleHandleView<'a, T> {
@@ -210,6 +222,10 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
         }
     }
 
+    pub fn handle(&self) -> &StructHandle {
+        &self.struct_handle
+    }
+
     pub fn is_nominal_resource(&self) -> bool {
         self.struct_handle.is_nominal_resource
     }
@@ -228,6 +244,28 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
 
     pub fn module_id(&self) -> ModuleId {
         self.module.module_id_for_handle(self.module_handle())
+    }
+
+    /// Return the StructHandleIndex of this handle in the module's struct handle table
+    pub fn handle_idx(&self) -> StructHandleIndex {
+        for (idx, handle) in self.module.struct_handles().iter().enumerate() {
+            if handle == self.handle() {
+                return StructHandleIndex::new(idx as u16);
+            }
+        }
+        unreachable!("Cannot resolve StructHandle {:?} in module {:?}. This should never happen in a well-formed `StructHandleView`. Perhaps this handle came from a different module?", self.handle(), self.module().name())
+    }
+
+    /// Return a normalized representation of this struct type that can be compared across modules
+    pub fn normalize_struct(&self) -> StructTag {
+        let module_id = self.module_id();
+        StructTag {
+            module: module_id.name().into(),
+            address: *module_id.address(),
+            name: self.name().into(),
+            // TODO: take type params as input
+            type_params: vec![],
+        }
     }
 }
 
@@ -317,6 +355,11 @@ impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
     pub fn name(&self) -> &'a IdentStr {
         self.struct_handle_view.name()
     }
+
+    /// Return a normalized representation of this struct type that can be compared across modules
+    pub fn normalize_struct(&self) -> StructTag {
+        self.struct_handle_view.normalize_struct()
+    }
 }
 
 pub struct FieldDefinitionView<'a, T> {
@@ -338,8 +381,12 @@ impl<'a, T: ModuleAccess> FieldDefinitionView<'a, T> {
         TypeSignatureView::new(self.module, type_signature)
     }
 
-    pub fn signature_token(&self) -> &SignatureToken {
+    pub fn signature_token(&self) -> &'a SignatureToken {
         &self.module.type_signature_at(self.field_def.signature).0
+    }
+
+    pub fn signature_token_view(&self) -> SignatureTokenView<'a, T> {
+        SignatureTokenView::new(self.module, self.signature_token())
     }
 
     // Field definitions are always private.
@@ -348,6 +395,12 @@ impl<'a, T: ModuleAccess> FieldDefinitionView<'a, T> {
     pub fn member_of(&self) -> StructHandleView<'a, T> {
         let struct_handle = self.module.struct_handle_at(self.field_def.struct_);
         StructHandleView::new(self.module, struct_handle)
+    }
+
+    /// Return a normalized representation of the type of this field's declaring struct that can be
+    /// compared across modules
+    pub fn normalize_declaring_struct(&self) -> StructTag {
+        self.member_of().normalize_struct()
     }
 }
 
@@ -590,6 +643,39 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
     #[inline]
     pub fn struct_index(&self) -> Option<StructHandleIndex> {
         self.token.struct_index()
+    }
+
+    /// If `self` is a struct or reference to a struct, return a normalized representation of this
+    /// struct type that can be compared across modules
+    pub fn normalize_struct(&self) -> Option<StructTag> {
+        self.struct_handle().map(|handle| handle.normalize_struct())
+    }
+
+    /// Return the equivalent `SignatureToken` for `self` inside `module`
+    pub fn resolve_in_module(&self, other_module: &T) -> Option<SignatureToken> {
+        if let Some(struct_handle) = self.struct_handle() {
+            // Token contains a struct handle from `self.module`. Need to resolve inside
+            // `other_module`. We do this by normalizing the struct in `self.token`, then
+            // searching for the normalized representation inside `other_module`
+            // TODO: do we need to resolve `self.token`'s type actuals?
+            let type_actuals = Vec::new();
+            ModuleView::new(other_module)
+                .resolve_struct(&struct_handle.normalize_struct())
+                .map(|handle_idx| SignatureToken::Struct(handle_idx, type_actuals))
+        } else {
+            Some(self.token.clone())
+        }
+    }
+}
+
+impl<'a, T: ModuleAccess> ::std::fmt::Debug for SignatureTokenView<'a, T> {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        match self.normalize_struct() {
+            Some(s) if self.is_reference() => write!(f, "&{:?}", s),
+            Some(s) if self.is_mutable_reference() => write!(f, "&mut {:?}", s),
+            Some(s) => s.fmt(f),
+            None => self.token.fmt(f),
+        }
     }
 }
 

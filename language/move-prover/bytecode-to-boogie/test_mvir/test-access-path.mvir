@@ -1,0 +1,28 @@
+module AccessPathTest {
+    import 0x0.LibraCoin;
+    import 0x0.LibraAccount;
+
+    // This is needed because:
+    // (1) The spec refers directly to LibraAccount.T, but the code never does.
+    // (2) The spec implictly refers to LibraCoin.T because the type of
+    //     `global<LibraAccount.T>(a).balance` is LibraCoin.T. The code never refers to this type
+    // Inserting these "ghost types" puts StructHandle's into the bytecode format that the prover
+    // can use to refer to the types. Failing to include the ghost types will crash the prover (but
+    // will emit a helpful error message encouraging the developer to add the relevant ghost type)
+    resource ProverGhostTypes {
+        // commenting out this field will cause a failure in SpecTranslator.translate_resource_type
+        a: LibraAccount.T,
+        // commenting out this field will cause a failure in SpecTranslator.translate_field
+        b: LibraCoin.T
+    }
+
+    public fail_if_empty_balance(a: address)
+        aborts_if !global_exists<LibraAccount.T>(a)
+        aborts_if global<LibraAccount.T>(a).balance.value == 0
+    {
+        if (LibraAccount.balance(move(a)) == 0) {
+            abort(77);
+        }
+        return;
+    }
+}
