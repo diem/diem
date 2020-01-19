@@ -40,6 +40,22 @@ fn test_aborts_if() {
 }
 
 #[test]
+fn test_access_path() {
+    test(
+        VERIFY,
+        &[
+            &std_mvir("u64_util"),
+            &std_mvir("address_util"),
+            &std_mvir("bytearray_util"),
+            &std_mvir("hash"),
+            &std_mvir("libra_coin"),
+            &std_mvir("libra_account"),
+            "test_mvir/test-access-path.mvir",
+        ],
+    );
+}
+
+#[test]
 fn test_lib() {
     test(
         NO_VERIFY,

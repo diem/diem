@@ -16,7 +16,7 @@ use vm::access::ModuleAccess;
 use vm::file_format::{ModuleHandleIndex, SignatureToken, StructHandle, StructHandleIndex};
 use vm::views::{
     FieldDefinitionView, FunctionDefinitionView, FunctionHandleView, FunctionSignatureView,
-    ModuleHandleView, StructDefinitionView, StructHandleView,
+    ModuleHandleView, SignatureTokenView, StructDefinitionView, StructHandleView,
 };
 
 pub struct SpecTranslator<'a> {
@@ -524,7 +524,13 @@ impl<'a> SpecTranslator<'a> {
             }
         }
         self.error(
-            &format!("cannot resolve struct `{}`", id),
+            // Specifications can use types with no corresponding StructHandleIndex in the
+            // VerifiedModule (e.g, `aborts_if global<LibraAccount.T>(a).balance.value == 0` in a
+            // module that does not use the `LibraCoin.T` type). Trying to verify a specification
+            // that does this will result in the error below. Thus, the detailed error message
+            // below tries to help the developer fix this problem.
+            // Note: this could also happen due to a bug in the verifier
+            &format!("Cannot resolve type `{}`. Make sure this type is explicitly used as a parameter, return, or field type in the module. (e.g., `resource ProverGhostTypes {{ f: {} }}`.", id, id),
             (format!("<struct {}>", id), SignatureToken::U64),
         )
     }
@@ -602,29 +608,38 @@ impl<'a> SpecTranslator<'a> {
         } else {
             false
         };
-        if let SignatureToken::Struct(handle_idx, type_args) = sig {
-            let struct_handle = self.module.struct_handle_at(*handle_idx);
-            // We cannot lookup type information for fields of imported modules via the handle view.
-            // Instead we need to retrieve the struct definition, which might be in another module.
-            // TODO: validate that I've not missed some feature in file_format.rs. It might be
-            //   considered an issue in the byte code representation that we can't do this; it
-            //   might be better that bytecode fully specifies all metadata about dependencies.
-            if let Some(struct_def) = self.get_struct_definition(struct_handle) {
+
+        if let Some(struct_handle_view) = SignatureTokenView::new(self.module, sig).struct_handle()
+        {
+            // NOTE: this returns a StructDefinitionViewFrom a different module!
+            if let Some(struct_def) = self.get_struct_definition(struct_handle_view.handle()) {
                 let struct_name = struct_def.name().to_string(); // because of borrowing
                 if let Some(field_def) = self.get_field_definition(&struct_def, field) {
-                    let field_type = field_def.signature_token().substitute(type_args);
-                    (
-                        format!(
-                            "{}_{}",
-                            self.get_struct_name_for_boogie(struct_handle),
-                            field_def.name()
-                        ),
-                        if is_ref {
-                            SignatureToken::Reference(Box::new(field_type))
-                        } else {
-                            field_type
-                        },
-                    )
+                    // This is a SignatureToken in the dependent module, but we need one for the
+                    // current module
+                    let field_type_in_dependent_module = field_def.signature_token_view();
+                    if let Some(field_type_in_current_module) =
+                        field_type_in_dependent_module.resolve_in_module(self.module)
+                    {
+                        (
+                            format!(
+                                "{}_{}",
+                                self.get_struct_name_for_boogie(struct_handle_view.handle()),
+                                field_def.name()
+                            ),
+                            if is_ref {
+                                SignatureToken::Reference(Box::new(field_type_in_current_module))
+                            } else {
+                                field_type_in_current_module
+                            },
+                        )
+                    } else {
+                        let msg = format!("Cannot resolve type `{:?}` of field `{:?}` used in specification. Make sure this type is explicitly used as a parameter, return, or field type in the module. (e.g., `resource ProverGhostTypes {{ f: {:?} }}`.", field_type_in_dependent_module, field, field_type_in_dependent_module);
+                        // There is no SignatureToken for this field's type in the current
+                        // module. The developer will need to manually insert a usage of this
+                        // type.
+                        self.error(&msg, ("<field>".to_string(), ERROR_TYPE))
+                    }
                 } else {
                     self.error(
                         &format!("field `{}` undefined in struct `{}`", field, struct_name),
