@@ -6,13 +6,11 @@ use crate::{
         block_storage::BlockReader,
         chained_bft_smr::ChainedBftSMR,
         network_tests::NetworkPlayground,
-        persistent_storage::RecoveryData,
         test_utils::{
-            consensus_runtime, with_smr_id, MockStateComputer, MockStorage, MockTransactionManager,
-            TestPayload,
+            consensus_runtime, MockStateComputer, MockStorage, MockTransactionManager, TestPayload,
         },
     },
-    state_replication::StateMachineReplication,
+    consensus_provider::ConsensusProvider,
 };
 use channel;
 use consensus_types::{
@@ -28,21 +26,18 @@ use libra_config::{
     generator::{self, ValidatorSwarm},
 };
 use libra_crypto::hash::CryptoHash;
-use libra_types::{
-    crypto_proxies::ValidatorSet,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier},
+use libra_types::crypto_proxies::{
+    LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorSet, ValidatorVerifier,
 };
 use network::{
     proto::ConsensusMsg_oneof,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use std::{convert::TryFrom, sync::Arc};
-use tokio::runtime;
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
     config: NodeConfig,
-    validators: Arc<ValidatorVerifier>,
     smr_id: usize,
     smr: ChainedBftSMR<TestPayload>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
@@ -57,10 +52,8 @@ impl SMRNode {
         config: NodeConfig,
         smr_id: usize,
         storage: Arc<MockStorage<TestPayload>>,
-        initial_data: RecoveryData<TestPayload>,
         executor_with_reconfig: Option<ValidatorSet>,
     ) -> Self {
-        let validators = initial_data.validators();
         let author = config.validator_network.as_ref().unwrap().peer_id;
 
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
@@ -69,37 +62,25 @@ impl SMRNode {
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 
         playground.add_node(author, consensus_tx, network_reqs_rx);
-        let runtime = runtime::Builder::new()
-            .threaded_scheduler()
-            .enable_all()
-            .on_thread_start(with_smr_id(author.short_str()))
-            .build()
-            .expect("Failed to create Tokio runtime!");
+        let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+        let (mempool, commit_receiver) = MockTransactionManager::new();
 
         let mut smr = ChainedBftSMR::new(
-            author,
             network_sender,
             network_events,
             &mut config.clone(),
-            runtime,
-            storage.clone(),
-            initial_data,
-        );
-        let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
-        let (mp, commit_receiver) = MockTransactionManager::new();
-        let mempool = mp;
-        smr.start(
-            Box::new(mempool.clone()),
             Arc::new(MockStateComputer::new(
                 commit_cb_sender,
                 Arc::clone(&storage),
                 executor_with_reconfig,
             )),
-        )
-        .expect("Failed to start SMR!");
+            storage.clone(),
+            Box::new(mempool.clone()),
+        );
+
+        smr.start().expect("Failed to start SMR!");
         Self {
             config,
-            validators,
             smr_id,
             smr,
             commit_cb_receiver,
@@ -111,16 +92,11 @@ impl SMRNode {
 
     fn restart(mut self, playground: &mut NetworkPlayground) -> Self {
         self.smr.stop();
-        let recover_data = self
-            .storage
-            .try_start()
-            .unwrap_or_else(|e| panic!("fail to restart due to: {}", e));
         Self::start(
             playground,
             self.config,
             self.smr_id + 10,
             self.storage,
-            recover_data,
             None,
         )
     }
@@ -157,13 +133,12 @@ impl SMRNode {
             // Use in memory storage for testing
             node_config.consensus.safety_rules = SafetyRulesConfig::default();
 
-            let (initial_data, storage) = MockStorage::start_for_testing(validator_set.clone());
+            let (_, storage) = MockStorage::start_for_testing(validator_set.clone());
             smr_nodes.push(Self::start(
                 playground,
                 node_config,
                 smr_id,
                 storage,
-                initial_data,
                 executor_validator_set.clone(),
             ));
         }
@@ -172,12 +147,12 @@ impl SMRNode {
 }
 
 fn verify_finality_proof(node: &SMRNode, ledger_info_with_sig: &LedgerInfoWithSignatures) {
+    let validators = ValidatorVerifier::from(&node.storage.shared_storage.validator_set);
     let ledger_info_hash = ledger_info_with_sig.ledger_info().hash();
     for (author, signature) in ledger_info_with_sig.signatures() {
         assert_eq!(
             Ok(()),
-            node.validators
-                .verify_signature(*author, ledger_info_hash, &signature)
+            validators.verify_signature(*author, ledger_info_hash, &signature)
         );
     }
 }

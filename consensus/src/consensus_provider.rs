@@ -1,12 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::{
+    chained_bft::{chained_bft_smr::ChainedBftSMR, persistent_storage::StorageWriteProxy},
+    state_computer::ExecutionProxy,
+    txn_manager::MempoolProxy,
+};
 use anyhow::Result;
-use libra_config::config::NodeConfig;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-
-use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
 use executor::Executor;
+use libra_config::config::NodeConfig;
+use libra_mempool::proto::mempool_client::MempoolClientWrapper;
+use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
@@ -33,12 +37,19 @@ pub fn make_consensus_provider(
     executor: Arc<Executor<LibraVM>>,
     state_sync_client: Arc<StateSyncClient>,
 ) -> Box<dyn ConsensusProvider> {
-    Box::new(ChainedBftProvider::new(
-        node_config,
+    let storage = Arc::new(StorageWriteProxy::new(node_config));
+    let mempool_client =
+        MempoolClientWrapper::new("localhost", node_config.mempool.mempool_service_port);
+    let txn_manager = Box::new(MempoolProxy::new(mempool_client));
+    let state_computer = Arc::new(ExecutionProxy::new(executor, state_sync_client));
+
+    Box::new(ChainedBftSMR::new(
         network_sender,
         network_receiver,
-        executor,
-        state_sync_client,
+        node_config,
+        state_computer,
+        storage,
+        txn_manager,
     ))
 }
 

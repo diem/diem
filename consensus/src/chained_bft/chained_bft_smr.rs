@@ -7,10 +7,11 @@ use crate::{
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         network::{NetworkReceivers, NetworkTask},
-        persistent_storage::{PersistentStorage, RecoveryData},
+        persistent_storage::PersistentStorage,
     },
+    consensus_provider::ConsensusProvider,
     counters,
-    state_replication::{StateComputer, StateMachineReplication, TxnManager},
+    state_replication::{StateComputer, TxnManager},
     util::time_service::ClockTimeService,
 };
 use anyhow::Result;
@@ -23,7 +24,7 @@ use libra_types::crypto_proxies::EpochInfo;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use safety_rules::SafetyRulesManager;
 use std::{sync::Arc, sync::RwLock, time::Instant};
-use tokio::runtime::{Handle, Runtime};
+use tokio::runtime::{self, Handle, Runtime};
 
 /// All these structures need to be moved into EpochManager. Rather than make each one an option
 /// and perform ugly unwraps, they are bundled here.
@@ -31,8 +32,9 @@ pub struct ChainedBftSMRInput<T> {
     network_sender: ConsensusNetworkSender,
     network_events: ConsensusNetworkEvents,
     safety_rules_manager: SafetyRulesManager<T>,
+    state_computer: Arc<dyn StateComputer<Payload = T>>,
+    txn_manager: Box<dyn TxnManager<Payload = T>>,
     config: ConsensusConfig,
-    initial_data: RecoveryData<T>,
 }
 
 /// ChainedBFTSMR is the one to generate the components (BlockStore, Proposer, etc.) and start the
@@ -48,25 +50,25 @@ pub struct ChainedBftSMR<T> {
 
 impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
-        author: Author,
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
         node_config: &mut NodeConfig,
-        runtime: Runtime,
+        state_computer: Arc<dyn StateComputer<Payload = T>>,
         storage: Arc<dyn PersistentStorage<T>>,
-        initial_data: RecoveryData<T>,
+        txn_manager: Box<dyn TxnManager<Payload = T>>,
     ) -> Self {
         let input = ChainedBftSMRInput {
             network_sender,
             network_events,
             safety_rules_manager: SafetyRulesManager::new(node_config),
+            state_computer,
+            txn_manager,
             config: node_config.consensus.clone(),
-            initial_data,
         };
 
         Self {
-            author,
-            runtime: Some(runtime),
+            author: node_config.validator_network.as_ref().unwrap().peer_id,
+            runtime: None,
             block_store: None,
             storage,
             input: Some(input),
@@ -145,32 +147,32 @@ impl<T: Payload> ChainedBftSMR<T> {
     }
 }
 
-impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
-    type Payload = T;
-
+impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
     /// We're following the steps to start
     /// 1. Construct the EpochManager from the latest libradb state
     /// 2. Construct per-epoch component with the fixed Validators provided by EpochManager including
     /// ProposerElection, Pacemaker, SafetyRules, Network(Populate with known validators), EventProcessor
-    fn start(
-        &mut self,
-        txn_manager: Box<dyn TxnManager<Payload = Self::Payload>>,
-        state_computer: Arc<dyn StateComputer<Payload = Self::Payload>>,
-    ) -> Result<()> {
+    fn start(&mut self) -> Result<()> {
+        let mut runtime = runtime::Builder::new()
+            .thread_name("consensus-")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .expect("Failed to create Tokio runtime!");
+
+        let initial_data = runtime.block_on(self.storage.start());
         let input = self.input.take().expect("already started, input is None");
-        let executor = self
-            .runtime
-            .as_mut()
-            .expect("Consensus start: No valid runtime found!")
-            .handle();
+
+        let executor = runtime.handle().clone();
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
+        self.runtime = Some(runtime);
 
         let (timeout_sender, timeout_receiver) =
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         let epoch_info = Arc::new(RwLock::new(EpochInfo {
-            epoch: input.initial_data.epoch(),
-            verifier: input.initial_data.validators(),
+            epoch: initial_data.epoch(),
+            verifier: initial_data.validators(),
         }));
 
         let mut epoch_mgr = EpochManager::new(
@@ -181,14 +183,14 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             self_sender,
             input.network_sender,
             timeout_sender,
-            txn_manager,
-            state_computer,
+            input.txn_manager,
+            input.state_computer,
             self.storage.clone(),
             input.safety_rules_manager,
         );
 
         // Step 2
-        let event_processor = epoch_mgr.start_epoch(input.initial_data);
+        let event_processor = epoch_mgr.start_epoch(initial_data);
 
         // TODO: this is test only, we should remove this
         self.block_store = Some(event_processor.block_store());
@@ -197,13 +199,14 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             NetworkTask::new(epoch_info, input.network_events, self_receiver);
 
         Self::start_event_processing(
-            executor.clone(),
+            executor,
             epoch_mgr,
             event_processor,
             timeout_receiver,
             network_task,
             network_receiver,
         );
+
         debug!("Chained BFT SMR started.");
         Ok(())
     }

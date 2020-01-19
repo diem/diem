@@ -6,7 +6,6 @@ use consensus_types::block::Block;
 use consensus_types::executed_block::ExecutedBlock;
 use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof};
-use std::sync::Arc;
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 #[async_trait::async_trait]
@@ -82,18 +81,4 @@ pub trait StateComputer: Send + Sync {
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<ValidatorChangeProof>;
-}
-
-pub trait StateMachineReplication {
-    type Payload;
-    /// The function is synchronous: it returns when the state is initialized / recovered from
-    /// persisted storage and all the threads have been started.
-    fn start(
-        &mut self,
-        txn_manager: Box<dyn TxnManager<Payload = Self::Payload>>,
-        state_computer: Arc<dyn StateComputer<Payload = Self::Payload>>,
-    ) -> Result<()>;
-
-    /// Stop is synchronous: returns when all the threads are shutdown and the state is persisted.
-    fn stop(&mut self);
 }
