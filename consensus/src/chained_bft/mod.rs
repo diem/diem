@@ -4,8 +4,7 @@
 mod consensusdb;
 
 mod block_storage;
-pub mod chained_bft_consensus_provider;
-mod chained_bft_smr;
+pub mod chained_bft_smr;
 mod network;
 
 pub mod epoch_manager;
