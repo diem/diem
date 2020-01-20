@@ -27,7 +27,7 @@ use std::collections::BTreeSet;
 
 use libra_types::{
     identifier::IdentStr,
-    language_storage::{ModuleId, StructTag},
+    language_storage::{ModuleId, StructTag, TypeTag},
 };
 use std::collections::BTreeMap;
 
@@ -183,7 +183,9 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
     /// table of `StructHandle`'s. Returns `None` if there is no corresponding handle
     pub fn resolve_struct(&self, t: &StructTag) -> Option<StructHandleIndex> {
         for (idx, handle) in self.module.struct_handles().iter().enumerate() {
-            if &StructHandleView::new(self.module, handle).normalize_struct() == t {
+            if &StructHandleView::new(self.module, handle).normalize_struct(t.type_params.clone())
+                == t
+            {
                 return Some(StructHandleIndex::new(idx as u16));
             }
         }
@@ -222,6 +224,13 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
         }
     }
 
+    pub fn from_handle_idx(module: &'a T, idx: StructHandleIndex) -> Self {
+        Self {
+            module,
+            struct_handle: module.struct_handle_at(idx),
+        }
+    }
+
     pub fn handle(&self) -> &StructHandle {
         &self.struct_handle
     }
@@ -257,14 +266,13 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
     }
 
     /// Return a normalized representation of this struct type that can be compared across modules
-    pub fn normalize_struct(&self) -> StructTag {
+    pub fn normalize_struct(&self, type_params: Vec<TypeTag>) -> StructTag {
         let module_id = self.module_id();
         StructTag {
             module: module_id.name().into(),
             address: *module_id.address(),
             name: self.name().into(),
-            // TODO: take type params as input
-            type_params: vec![],
+            type_params,
         }
     }
 }
@@ -310,8 +318,8 @@ pub struct StructDefinitionView<'a, T> {
 
 impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
     pub fn new(module: &'a T, struct_def: &'a StructDefinition) -> Self {
-        let struct_handle = module.struct_handle_at(struct_def.struct_handle);
-        let struct_handle_view = StructHandleView::new(module, struct_handle);
+        let struct_handle_view =
+            StructHandleView::from_handle_idx(module, struct_def.struct_handle);
         Self {
             module,
             struct_def,
@@ -357,8 +365,8 @@ impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
     }
 
     /// Return a normalized representation of this struct type that can be compared across modules
-    pub fn normalize_struct(&self) -> StructTag {
-        self.struct_handle_view.normalize_struct()
+    pub fn normalize_struct(&self, type_params: Vec<TypeTag>) -> StructTag {
+        self.struct_handle_view.normalize_struct(type_params)
     }
 }
 
@@ -393,14 +401,13 @@ impl<'a, T: ModuleAccess> FieldDefinitionView<'a, T> {
 
     /// The struct this field is defined in.
     pub fn member_of(&self) -> StructHandleView<'a, T> {
-        let struct_handle = self.module.struct_handle_at(self.field_def.struct_);
-        StructHandleView::new(self.module, struct_handle)
+        StructHandleView::from_handle_idx(self.module, self.field_def.struct_)
     }
 
     /// Return a normalized representation of the type of this field's declaring struct that can be
     /// compared across modules
-    pub fn normalize_declaring_struct(&self) -> StructTag {
-        self.member_of().normalize_struct()
+    pub fn normalize_declaring_struct(&self, type_params: Vec<TypeTag>) -> StructTag {
+        self.member_of().normalize_struct(type_params)
     }
 }
 
@@ -577,7 +584,7 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
     #[inline]
     pub fn struct_handle(&self) -> Option<StructHandleView<'a, T>> {
         self.struct_index()
-            .map(|sh_idx| StructHandleView::new(self.module, self.module.struct_handle_at(sh_idx)))
+            .map(|sh_idx| StructHandleView::from_handle_idx(self.module, sh_idx))
     }
 
     #[inline]
@@ -608,8 +615,7 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
     pub fn contains_nominal_resource(&self, type_formals: &[Kind]) -> bool {
         match self.token {
             SignatureToken::Struct(sh_idx, type_arguments) => {
-                StructHandleView::new(self.module, self.module.struct_handle_at(*sh_idx))
-                    .is_nominal_resource()
+                StructHandleView::from_handle_idx(self.module, *sh_idx).is_nominal_resource()
                     || type_arguments.iter().any(|token| {
                         Self::new(self.module, token).contains_nominal_resource(type_formals)
                     })
@@ -641,32 +647,84 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
         self.token.struct_index()
     }
 
-    /// If `self` is a struct or reference to a struct, return a normalized representation of this
     /// struct type that can be compared across modules
-    pub fn normalize_struct(&self) -> Option<StructTag> {
-        self.struct_handle().map(|handle| handle.normalize_struct())
+    pub fn normalize_struct(&self, type_params: Vec<TypeTag>) -> Option<StructTag> {
+        self.struct_handle()
+            .map(|handle| handle.normalize_struct(type_params.clone()))
     }
 
     /// Return the equivalent `SignatureToken` for `self` inside `module`
     pub fn resolve_in_module(&self, other_module: &T) -> Option<SignatureToken> {
-        if let Some(struct_handle) = self.struct_handle() {
-            // Token contains a struct handle from `self.module`. Need to resolve inside
-            // `other_module`. We do this by normalizing the struct in `self.token`, then
-            // searching for the normalized representation inside `other_module`
-            // TODO: do we need to resolve `self.token`'s type actuals?
-            let type_actuals = Vec::new();
-            ModuleView::new(other_module)
-                .resolve_struct(&struct_handle.normalize_struct())
-                .map(|handle_idx| SignatureToken::Struct(handle_idx, type_actuals))
-        } else {
-            Some(self.token.clone())
+        match self.signature_token() {
+            SignatureToken::Struct(sh_idx, type_params) => {
+                // Token contains a struct handle from `self.module`. Need to resolve inside
+                // `other_module`. We do this by normalizing the struct in `self.token`, then
+                // searching for the normalized representation inside `other_module`
+                let type_actuals = type_params
+                    .iter()
+                    .map(|sig_token| {
+                        Self::new(other_module, sig_token).resolve_in_module(other_module)
+                    })
+                    .collect::<Option<Vec<_>>>()?;
+                ModuleView::new(other_module)
+                    .resolve_struct(
+                        &StructHandleView::from_handle_idx(self.module, *sh_idx)
+                            .normalize_struct(Vec::new()),
+                    )
+                    .map(|handle_idx| SignatureToken::Struct(handle_idx, type_actuals))
+            }
+            SignatureToken::Reference(t) => SignatureTokenView::new(self.module, t)
+                .resolve_in_module(other_module)
+                .map(|resolved| SignatureToken::Reference(Box::new(resolved))),
+            SignatureToken::MutableReference(t) => SignatureTokenView::new(self.module, t)
+                .resolve_in_module(other_module)
+                .map(|resolved| SignatureToken::MutableReference(Box::new(resolved))),
+            token => Some(token.clone()),
         }
+    }
+
+    /// Return a type tag corresponding to the type of `self` instantiated with the type actuals
+    /// in `type_actuals_tags`.
+    /// Returns None if `self` is not a struct type or if the size of `type_actual_tags` does not
+    /// match the number of type actuals that the struct expects.
+    pub fn derive_type_tag(&self, type_actual_tags: &[TypeTag]) -> Option<TypeTag> {
+        use SignatureToken::*;
+        Some(match self.token {
+            Bool => TypeTag::Bool,
+            Address => TypeTag::Address,
+            U8 => TypeTag::U8,
+            U64 => TypeTag::U64,
+            U128 => TypeTag::U128,
+            ByteArray => TypeTag::ByteArray,
+            TypeParameter(idx) => return type_actual_tags.get(*idx as usize).cloned(),
+            Reference(_) | MutableReference(_) =>
+            // don't derive a tag for references, only structs
+            {
+                return None
+            }
+            Struct(idx, type_actual_tokens) => {
+                if type_actual_tokens.len() != type_actual_tags.len() {
+                    // wrong number of type actuals
+                    return None;
+                }
+                let struct_type_actuals_tags = type_actual_tokens
+                    .iter()
+                    .map(|ty| {
+                        SignatureTokenView::new(self.module, ty).derive_type_tag(type_actual_tags)
+                    })
+                    .collect::<Option<Vec<_>>>()?;
+                TypeTag::Struct(
+                    StructHandleView::from_handle_idx(self.module, *idx)
+                        .normalize_struct(struct_type_actuals_tags),
+                )
+            }
+        })
     }
 }
 
 impl<'a, T: ModuleAccess> ::std::fmt::Debug for SignatureTokenView<'a, T> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        match self.normalize_struct() {
+        match self.normalize_struct(Vec::new()) {
             Some(s) if self.is_reference() => write!(f, "&{:?}", s),
             Some(s) if self.is_mutable_reference() => write!(f, "&mut {:?}", s),
             Some(s) => s.fmt(f),

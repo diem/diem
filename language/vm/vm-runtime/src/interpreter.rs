@@ -24,7 +24,7 @@ use libra_types::{
     contract_event::ContractEvent,
     event::EventKey,
     identifier::IdentStr,
-    language_storage::{ModuleId, StructTag, TypeTag},
+    language_storage::{ModuleId, TypeTag},
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
@@ -35,14 +35,14 @@ use vm::{
     access::ModuleAccess,
     errors::*,
     file_format::{
-        Bytecode, FunctionHandleIndex, LocalIndex, LocalsSignatureIndex, SignatureToken,
-        StructDefinitionIndex,
+        Bytecode, FunctionHandleIndex, LocalIndex, LocalsSignatureIndex, StructDefinitionIndex,
     },
     gas_schedule::{
         calculate_intrinsic_gas, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier,
         NativeCostIndex, Opcodes,
     },
     transaction_metadata::TransactionMetadata,
+    views::SignatureTokenView,
 };
 use vm_runtime_types::{
     loaded_data::{struct_def::StructDef, types::Type},
@@ -50,52 +50,6 @@ use vm_runtime_types::{
     type_context::TypeContext,
     value::{IntegerValue, Locals, ReferenceValue, Struct, Value},
 };
-
-fn derive_type_tag(
-    module: &impl ModuleAccess,
-    type_actual_tags: &[TypeTag],
-    ty: &SignatureToken,
-) -> VMResult<TypeTag> {
-    use SignatureToken::*;
-
-    match ty {
-        Bool => Ok(TypeTag::Bool),
-        Address => Ok(TypeTag::Address),
-        U8 => Ok(TypeTag::U8),
-        U64 => Ok(TypeTag::U64),
-        U128 => Ok(TypeTag::U128),
-        ByteArray => Ok(TypeTag::ByteArray),
-        TypeParameter(idx) => type_actual_tags
-            .get(*idx as usize)
-            .ok_or_else(|| {
-                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
-                    "Cannot derive type tag: type parameter index out of bounds.".to_string(),
-                )
-            })
-            .map(|inner| inner.clone()),
-        Reference(_) | MutableReference(_) => {
-            Err(VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
-                .with_message("Cannot derive type tag for references.".to_string()))
-        }
-        Struct(idx, struct_type_actuals) => {
-            let struct_type_actuals_tags = struct_type_actuals
-                .iter()
-                .map(|ty| derive_type_tag(module, type_actual_tags, ty))
-                .collect::<VMResult<Vec<_>>>()?;
-            let struct_handle = module.struct_handle_at(*idx);
-            let struct_name = module.identifier_at(struct_handle.name);
-            let module_handle = module.module_handle_at(struct_handle.module);
-            let module_address = module.address_at(module_handle.address);
-            let module_name = module.identifier_at(module_handle.name);
-            Ok(TypeTag::Struct(StructTag {
-                address: *module_address,
-                module: module_name.into(),
-                name: struct_name.into(),
-                type_params: struct_type_actuals_tags,
-            }))
-        }
-    }
-}
 
 /// `Interpreter` instances can execute Move functions.
 ///
@@ -254,11 +208,15 @@ impl<'txn> Interpreter<'txn> {
                     let type_actual_tags = type_actuals_sig
                         .iter()
                         .map(|ty| {
-                            derive_type_tag(
-                                current_frame.module(),
-                                current_frame.type_actual_tags(),
-                                ty,
-                            )
+                            SignatureTokenView::new(current_frame.module(), ty)
+                                .derive_type_tag(current_frame.type_actual_tags())
+                                .ok_or_else(|| {
+                                    VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                                        .with_message(format!(
+                                            "Cannot derive type tag for {:?}",
+                                            ty
+                                        ))
+                                })
                         })
                         .collect::<VMResult<Vec<_>>>()?;
                     let type_context = TypeContext::new(current_frame.type_actuals().to_vec());
@@ -845,7 +803,14 @@ impl<'txn> Interpreter<'txn> {
         let type_actuals_sig = &frame.module().locals_signature_at(type_actuals_idx).0;
         let type_actual_tags = type_actuals_sig
             .iter()
-            .map(|ty| derive_type_tag(frame.module(), frame.type_actual_tags(), ty))
+            .map(|ty| {
+                SignatureTokenView::new(frame.module(), ty)
+                    .derive_type_tag(frame.type_actual_tags())
+                    .ok_or_else(|| {
+                        VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                            .with_message(format!("Cannot derive type tag for {:?}", ty))
+                    })
+            })
             .collect::<VMResult<Vec<_>>>()?;
         let type_context = TypeContext::new(frame.type_actuals().to_vec());
         let type_actuals = type_actuals_sig
