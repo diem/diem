@@ -59,7 +59,7 @@ pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
 static_assertions::assert_not_impl_any!(Ed25519PrivateKey: Clone);
 
 /// An Ed25519 public key
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
 
 /// An Ed25519 signature
@@ -256,7 +256,13 @@ impl VerifyingKey for Ed25519PublicKey {
 
 impl std::fmt::Display for Ed25519PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", hex::encode(&self.0.to_bytes()[..]))
+        write!(f, "{}", hex::encode(&self.0.as_bytes()))
+    }
+}
+
+impl std::fmt::Debug for Ed25519PublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Ed25519PublicKey({})", self)
     }
 }
 

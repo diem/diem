@@ -85,12 +85,12 @@ pub struct X25519EphemeralPrivateKey(x25519_dalek::EphemeralSecret);
 pub struct X25519StaticPrivateKey(x25519_dalek::StaticSecret);
 
 /// An x25519 public key
-#[derive(Clone, Debug, Deref)]
+#[derive(Clone, Deref)]
 pub struct X25519PublicKey(x25519_dalek::PublicKey);
 
 /// An x25519 public key to match the X25519Static key type, which
 /// dereferences to an X25519PublicKey
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct X25519StaticPublicKey(X25519PublicKey);
 
 /// An x25519 shared key
@@ -288,6 +288,30 @@ impl TryFrom<&[u8]> for X25519StaticPublicKey {
 impl ValidKey for X25519StaticPublicKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.deref().0.as_bytes().to_vec()
+    }
+}
+
+impl std::fmt::Display for X25519PublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex::encode(&self.0.as_bytes()))
+    }
+}
+
+impl std::fmt::Debug for X25519PublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "X25519PublicKey({})", self)
+    }
+}
+
+impl std::fmt::Display for X25519StaticPublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.0)
+    }
+}
+
+impl std::fmt::Debug for X25519StaticPublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "X25519StaticPublicKey({})", self)
     }
 }
 
