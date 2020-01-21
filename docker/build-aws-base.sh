@@ -69,7 +69,7 @@ while true; do
     CURRENT_PHASE=$(echo $BUILD_JSON | jq -r '.builds[0].currentPhase')
     if [ $BUILD_STATUS = "IN_PROGRESS" ]; then
         echo "Build in progress. Current phase: ${CURRENT_PHASE}..."
-        sleep 10
+        sleep 30
     elif [ $BUILD_STATUS = "SUCCEEDED" ]; then
         echo "Build and push completed successfully"
         exit
