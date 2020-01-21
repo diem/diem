@@ -41,7 +41,7 @@ pub struct MockStorageReadClient;
 
 #[async_trait::async_trait]
 impl StorageRead for MockStorageReadClient {
-    async fn update_to_latest_ledger_async(
+    async fn update_to_latest_ledger(
         &self,
         client_known_version: Version,
         request_items: Vec<RequestItem>,
@@ -69,7 +69,7 @@ impl StorageRead for MockStorageReadClient {
         Ok(ret)
     }
 
-    async fn get_transactions_async(
+    async fn get_transactions(
         &self,
         _start_version: Version,
         _batch_size: u64,
@@ -79,18 +79,18 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
-    async fn get_latest_state_root_async(&self) -> Result<(Version, HashValue)> {
+    async fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
         unimplemented!()
     }
 
-    async fn get_latest_account_state_async(
+    async fn get_latest_account_state(
         &self,
         _address: AccountAddress,
     ) -> Result<Option<AccountStateBlob>> {
         Ok(Some(get_mock_account_state_blob()))
     }
 
-    async fn get_account_state_with_proof_by_version_async(
+    async fn get_account_state_with_proof_by_version(
         &self,
         _address: AccountAddress,
         _version: Version,
@@ -98,11 +98,11 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!();
     }
 
-    async fn get_startup_info_async(&self) -> Result<Option<StartupInfo>> {
+    async fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
         unimplemented!()
     }
 
-    async fn get_epoch_change_ledger_infos_async(
+    async fn get_epoch_change_ledger_infos(
         &self,
         _start_epoch: u64,
         _end_epoch: u64,

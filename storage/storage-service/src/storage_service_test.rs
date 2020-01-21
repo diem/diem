@@ -46,7 +46,7 @@ proptest! {
 
         for (txns_to_commit, ledger_info_with_sigs) in &blocks {
             rt.block_on(write_client
-                .save_transactions_async(txns_to_commit.clone(),
+                .save_transactions(txns_to_commit.clone(),
                                    version, /* first_version */
                                    Some(ledger_info_with_sigs.clone()),
                 )).unwrap();
@@ -77,7 +77,7 @@ proptest! {
                 _validator_change_proof,
                 _ledger_consistency_proof,
             ) = rt.block_on(read_client
-                .update_to_latest_ledger_async(0, account_state_request_items)).unwrap();
+                .update_to_latest_ledger(0, account_state_request_items)).unwrap();
             for ((address, blob), response_item) in zip_eq(account_states, response_items) {
                     match response_item {
                         ResponseItem::GetAccountState {
