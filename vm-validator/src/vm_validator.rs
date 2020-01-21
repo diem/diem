@@ -51,10 +51,7 @@ impl TransactionValidation for VMValidator {
     type ValidationInstance = LibraVM;
 
     async fn validate_transaction(&self, txn: SignedTransaction) -> Result<Option<VMStatus>> {
-        let (version, state_root) = self
-            .storage_read_client
-            .get_latest_state_root_async()
-            .await?;
+        let (version, state_root) = self.storage_read_client.get_latest_state_root().await?;
         let client = self.storage_read_client.clone();
         let rt_handle = self.rt_handle.clone();
         let vm = self.vm.clone();
@@ -89,7 +86,7 @@ pub async fn get_account_state(
     address: AccountAddress,
 ) -> Result<(u64, u64)> {
     let account_state = storage_read_client
-        .get_latest_account_state_async(address)
+        .get_latest_account_state(address)
         .await?;
     Ok(if let Some(blob) = account_state {
         let account_resource = AccountResource::try_from(&blob)?;

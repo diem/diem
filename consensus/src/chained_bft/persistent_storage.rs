@@ -311,7 +311,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         // find the block corresponding to storage latest ledger info
         let startup_info = self
             .read_client
-            .get_startup_info_async()
+            .get_startup_info()
             .await
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");

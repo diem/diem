@@ -137,9 +137,7 @@ impl<'a> StateView for VerifiedStateView<'a> {
                                 let reader = self.reader.clone();
                                 block_on(self.rt_handle.spawn(async move {
                                     reader
-                                        .get_account_state_with_proof_by_version_async(
-                                            address, version,
-                                        )
+                                        .get_account_state_with_proof_by_version(address, version)
                                         .await
                                 }))
                                 .unwrap()?

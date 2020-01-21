@@ -323,7 +323,7 @@ where
 
         let startup_info = block_on(executor.rt.spawn(async move {
             storage_read_client
-                .get_startup_info_async()
+                .get_startup_info()
                 .await
                 .expect("Shouldn't fail")
         }))
@@ -536,7 +536,7 @@ where
             let write_client = self.storage_write_client.clone();
             block_on(self.rt.spawn(async move {
                 write_client
-                    .save_transactions_async(
+                    .save_transactions(
                         txns_to_commit,
                         first_version_to_commit,
                         Some(ledger_info_with_sigs),
@@ -643,7 +643,7 @@ where
         let ledger_info = ledger_info_to_commit.clone();
         block_on(self.rt.spawn(async move {
             write_client
-                .save_transactions_async(txns_to_commit, first_version, ledger_info)
+                .save_transactions(txns_to_commit, first_version, ledger_info)
                 .await
         }))
         .unwrap()?;

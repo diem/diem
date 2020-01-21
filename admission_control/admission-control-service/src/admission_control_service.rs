@@ -58,7 +58,7 @@ impl AdmissionControlService {
             ledger_consistency_proof,
         ) = self
             .storage_read_client
-            .update_to_latest_ledger_async(rust_req.client_known_version, rust_req.requested_items)
+            .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)
             .await?;
         let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse::new(
             response_items,

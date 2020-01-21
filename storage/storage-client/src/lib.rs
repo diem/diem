@@ -71,7 +71,7 @@ impl StorageReadServiceClient {
 
 #[async_trait::async_trait]
 impl StorageRead for StorageReadServiceClient {
-    async fn update_to_latest_ledger_async(
+    async fn update_to_latest_ledger(
         &self,
         client_known_version: Version,
         requested_items: Vec<RequestItem>,
@@ -102,7 +102,7 @@ impl StorageRead for StorageReadServiceClient {
         ))
     }
 
-    async fn get_transactions_async(
+    async fn get_transactions(
         &self,
         start_version: Version,
         batch_size: u64,
@@ -122,7 +122,7 @@ impl StorageRead for StorageReadServiceClient {
         Ok(rust_resp.txn_list_with_proof)
     }
 
-    async fn get_latest_state_root_async(&self) -> Result<(Version, HashValue)> {
+    async fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
         let req = GetLatestStateRootRequest::default();
         let resp = self
             .client()
@@ -134,7 +134,7 @@ impl StorageRead for StorageReadServiceClient {
         Ok(rust_resp.into())
     }
 
-    async fn get_latest_account_state_async(
+    async fn get_latest_account_state(
         &self,
         address: AccountAddress,
     ) -> Result<Option<AccountStateBlob>> {
@@ -150,7 +150,7 @@ impl StorageRead for StorageReadServiceClient {
         Ok(rust_resp.account_state_blob)
     }
 
-    async fn get_account_state_with_proof_by_version_async(
+    async fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
         version: Version,
@@ -167,7 +167,7 @@ impl StorageRead for StorageReadServiceClient {
         Ok(resp.into())
     }
 
-    async fn get_startup_info_async(&self) -> Result<Option<StartupInfo>> {
+    async fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
         let proto_req = GetStartupInfoRequest::default();
         let resp = self
             .client()
@@ -179,7 +179,7 @@ impl StorageRead for StorageReadServiceClient {
         Ok(resp.info)
     }
 
-    async fn get_epoch_change_ledger_infos_async(
+    async fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
         end_epoch: u64,
@@ -266,7 +266,7 @@ impl StorageWriteServiceClient {
 
 #[async_trait::async_trait]
 impl StorageWrite for StorageWriteServiceClient {
-    async fn save_transactions_async(
+    async fn save_transactions(
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
@@ -291,7 +291,7 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::update_to_latest_ledger`]:../libradb/struct.LibraDB.html#method.
     /// update_to_latest_ledger
-    async fn update_to_latest_ledger_async(
+    async fn update_to_latest_ledger(
         &self,
         client_known_version: Version,
         request_items: Vec<RequestItem>,
@@ -305,7 +305,7 @@ pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::get_transactions`].
     ///
     /// [`LibraDB::get_transactions`]: ../libradb/struct.LibraDB.html#method.get_transactions
-    async fn get_transactions_async(
+    async fn get_transactions(
         &self,
         start_version: Version,
         batch_size: u64,
@@ -317,13 +317,13 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_latest_state_root`]:
     /// ../libradb/struct.LibraDB.html#method.get_latest_state_root
-    async fn get_latest_state_root_async(&self) -> Result<(Version, HashValue)>;
+    async fn get_latest_state_root(&self) -> Result<(Version, HashValue)>;
 
     /// See [`LibraDB::get_latest_account_state`].
     ///
     /// [`LibraDB::get_latest_account_state`]:
     /// ../libradb/struct.LibraDB.html#method.get_latest_account_state
-    async fn get_latest_account_state_async(
+    async fn get_latest_account_state(
         &self,
         address: AccountAddress,
     ) -> Result<Option<AccountStateBlob>>;
@@ -332,7 +332,7 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_account_state_with_proof_by_version`]:
     /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
-    async fn get_account_state_with_proof_by_version_async(
+    async fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
         version: Version,
@@ -342,13 +342,13 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_startup_info`]:
     /// ../libradb/struct.LibraDB.html#method.get_startup_info
-    async fn get_startup_info_async(&self) -> Result<Option<StartupInfo>>;
+    async fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 
     /// See [`LibraDB::get_epoch_change_ledger_infos`].
     ///
     /// [`LibraDB::get_epoch_change_ledger_infos`]:
     /// ../libradb/struct.LibraDB.html#method.get_epoch_change_ledger_infos
-    async fn get_epoch_change_ledger_infos_async(
+    async fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
         end_epoch: u64,
@@ -384,7 +384,7 @@ pub trait StorageWrite: Send + Sync {
     /// See [`LibraDB::save_transactions`].
     ///
     /// [`LibraDB::save_transactions`]: ../libradb/struct.LibraDB.html#method.save_transactions
-    async fn save_transactions_async(
+    async fn save_transactions(
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,

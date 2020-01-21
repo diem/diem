@@ -28,7 +28,7 @@ async fn main() {
     let client = StorageReadServiceClient::new("localhost", opt.node_port);
 
     let (version, state_root_hash) = client
-        .get_latest_state_root_async()
+        .get_latest_state_root()
         .await
         .expect("Failed to get latest version and state root hash.");
     println!("Latest version: {}", version);

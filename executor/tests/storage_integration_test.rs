@@ -76,7 +76,7 @@ fn create_storage_service_and_executor(
     ));
 
     let startup_info = rt
-        .block_on(storage_read_client.get_startup_info_async())
+        .block_on(storage_read_client.get_startup_info())
         .expect("unable to read ledger info from storage")
         .expect("startup info is None");
     let committed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
@@ -404,10 +404,12 @@ fn test_execution_with_storage() {
         validator_change_proof,
         _ledger_consistency_proof,
     ) = rt
-        .block_on(storage_read_client.update_to_latest_ledger_async(
-            /* client_known_version = */ 0,
-            request_items.clone(),
-        ))
+        .block_on(
+            storage_read_client.update_to_latest_ledger(
+                /* client_known_version = */ 0,
+                request_items.clone(),
+            ),
+        )
         .unwrap();
     verify_update_to_latest_ledger_response(
         &VerifierType::TrustedVerifier(EpochInfo {
@@ -617,10 +619,12 @@ fn test_execution_with_storage() {
         validator_change_proof,
         _ledger_consistency_proof,
     ) = rt
-        .block_on(storage_read_client.update_to_latest_ledger_async(
-            /* client_known_version = */ 0,
-            request_items.clone(),
-        ))
+        .block_on(
+            storage_read_client.update_to_latest_ledger(
+                /* client_known_version = */ 0,
+                request_items.clone(),
+            ),
+        )
         .unwrap();
     verify_update_to_latest_ledger_response(
         &&VerifierType::TrustedVerifier(EpochInfo {
