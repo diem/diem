@@ -33,6 +33,7 @@ pub const ESEQUENCE_NUMBER_TOO_OLD: u64 = 3; // transaction sequence number is t
 pub const ESEQUENCE_NUMBER_TOO_NEW: u64 = 4; // transaction sequence number is too new
 pub const EACCOUNT_DOES_NOT_EXIST: u64 = 5; // transaction sender's account does not exist
 pub const ECANT_PAY_GAS_DEPOSIT: u64 = 6; // insufficient balance to pay for gas deposit
+pub const ETRANSACTION_EXPIRED: u64 = 7; // transaction expiration time exceeds block time.
 
 /// Generic error codes. These codes don't have any special meaning for the VM, but they are useful
 /// conventions for debugging
@@ -82,6 +83,7 @@ pub fn convert_prologue_runtime_error(err: &VMStatus, txn_sender: &AccountAddres
             Some(ECANT_PAY_GAS_DEPOSIT) => {
                 VMStatus::new(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)
             }
+            Some(ETRANSACTION_EXPIRED) => VMStatus::new(StatusCode::TRANSACTION_EXPIRED),
             // This should never happen...
             _ => err.clone(),
         }

@@ -13,6 +13,13 @@ pub static ACCOUNT_MODULE: Lazy<ModuleId> = Lazy::new(|| {
         Identifier::new("LibraAccount").unwrap(),
     )
 });
+/// The ModuleId for the LibraTransactionTimeout module
+pub static LIBRA_TRANSACTION_TIMEOUT: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::core_code_address(),
+        Identifier::new("LibraTransactionTimeout").unwrap(),
+    )
+});
 /// The ModuleId for the LibraCoin module
 pub static COIN_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(

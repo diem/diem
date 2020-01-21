@@ -20,6 +20,9 @@ use vm_genesis::GENESIS_KEYPAIR;
 use vm_runtime::identifier::create_access_path;
 use vm_runtime_types::value::{Struct, Value};
 
+// TTL is 86400s. Initial time was set to 0.
+pub const DEFAULT_EXPIRATION_TIME: u64 = 40_000;
+
 /// Details about a Libra account.
 ///
 /// Tests will typically create a set of `Account` instances to run transactions on. This type
@@ -141,7 +144,7 @@ impl Account {
                 TransactionPayload::Program,
                 max_gas_amount,
                 gas_unit_price,
-                Duration::from_secs(u64::max_value()),
+                Duration::from_secs(DEFAULT_EXPIRATION_TIME),
             ),
             TransactionPayload::WriteSet(writeset) => {
                 RawTransaction::new_change_set(*self.address(), sequence_number, writeset)
@@ -152,7 +155,7 @@ impl Account {
                 module,
                 max_gas_amount,
                 gas_unit_price,
-                Duration::from_secs(u64::max_value()),
+                Duration::from_secs(DEFAULT_EXPIRATION_TIME),
             ),
             TransactionPayload::Script(script) => RawTransaction::new_script(
                 *self.address(),
@@ -160,7 +163,7 @@ impl Account {
                 script,
                 max_gas_amount,
                 gas_unit_price,
-                Duration::from_secs(u64::max_value()),
+                Duration::from_secs(DEFAULT_EXPIRATION_TIME),
             ),
         };
 
@@ -227,7 +230,8 @@ impl Account {
             program,
             max_gas_amount,
             gas_unit_price,
-            Duration::from_secs(u64::max_value()),
+            // TTL is 86400s. Initial time was set to 0.
+            Duration::from_secs(DEFAULT_EXPIRATION_TIME),
         )
         .sign(&self.privkey, self.pubkey.clone())
         .unwrap()
