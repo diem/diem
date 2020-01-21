@@ -25,12 +25,16 @@ fn compile_account_module() {
 
     let hash_code = include_str!("../../../stdlib/modules/hash.mvir");
     let coin_code = include_str!("../../../stdlib/modules/libra_coin.mvir");
+    let time_code = include_str!("../../../stdlib/modules/libra_time.mvir");
+    let ttl_code = include_str!("../../../stdlib/modules/libra_transaction_timeout.mvir");
     let account_code = include_str!("../../../stdlib/modules/libra_account.mvir");
 
     let address_util_module = compile_module_string(address_util_code).unwrap();
     let u64_util_module = compile_module_string(u64_util_code).unwrap();
     let bytearray_util_module = compile_module_string(bytearray_util_code).unwrap();
     let hash_module = compile_module_string(hash_code).unwrap();
+    let time_module = compile_module_string(time_code).unwrap();
+    let ttl_module = compile_module_string_with_deps(ttl_code, vec![time_module]).unwrap();
 
     let coin_module = compile_module_string(coin_code).unwrap();
 
@@ -42,6 +46,7 @@ fn compile_account_module() {
             u64_util_module,
             bytearray_util_module,
             coin_module,
+            ttl_module,
         ],
     )
     .unwrap();

@@ -349,6 +349,7 @@ impl LibraVM {
         let txn_public_key = txn_data.public_key().to_bytes().to_vec();
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
+        let txn_expiration_time = txn_data.expiration_time();
         record_stats! {time_hist | TXN_PROLOGUE_TIME_TAKEN | {
                 self.move_vm
                     .execute_function(
@@ -362,6 +363,7 @@ impl LibraVM {
                             Value::byte_array(ByteArray::new(txn_public_key)),
                             Value::u64(txn_gas_price),
                             Value::u64(txn_max_gas_units),
+                            Value::u64(txn_expiration_time),
                         ],
                     )
                     .map_err(|err| convert_prologue_runtime_error(&err, &txn_data.sender))

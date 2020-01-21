@@ -229,6 +229,17 @@ fn create_and_initialize_main_accounts(
 
     move_vm
         .execute_function(
+            &LIBRA_TRANSACTION_TIMEOUT,
+            &INITIALIZE,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+        )
+        .expect("Failure initializing LibraTransactionTimeout");
+
+    move_vm
+        .execute_function(
             &LIBRA_SYSTEM_MODULE,
             &INITIALIZE_BLOCK,
             &gas_schedule,
