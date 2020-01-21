@@ -4,7 +4,7 @@
 use crate::remote_service::RemoteService;
 use consensus_types::common::Payload;
 use libra_config::config::{NodeConfig, PersistableConfig, SafetyRulesService};
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use std::{
     marker::PhantomData,
     net::SocketAddr,

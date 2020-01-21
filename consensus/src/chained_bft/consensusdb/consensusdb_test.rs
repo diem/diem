@@ -3,7 +3,7 @@
 
 use super::*;
 use consensus_types::block::block_test_utils::certificate_for_genesis;
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 
 #[test]
 fn test_put_get() {

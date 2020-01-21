@@ -1,17 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use rand::RngCore;
 use std::{
     fs, io,
     path::{Path, PathBuf},
 };
 
-/// A simple wrapper for creating a temporary directory that is
-/// automatically deleted when it's dropped.
-///
-/// We use this in lieu of tempfile because tempfile brings in too many
-/// dependencies.
+/// A simple wrapper for creating a temporary directory that is automatically deleted when it's
+/// dropped. Used in lieu of tempfile due to the large number of dependencies.
 #[derive(Debug, PartialEq)]
 pub struct TempPath {
     path_buf: PathBuf,
@@ -29,12 +28,18 @@ impl Drop for TempPath {
 }
 
 impl TempPath {
-    /// Create new uninitialized temporary path, i.e. a file or directory
-    /// isn't created automatically
+    /// Create new uninitialized temporary path, i.e. a file or directory isn't created
+    /// automatically
     pub fn new() -> Self {
-        let tmpdir = create_path();
+        // Create a random path in the system temp directory
+        let mut temppath = std::env::temp_dir();
+        let mut rng = rand::thread_rng();
+        let mut bytes = [0_u8; 16];
+        rng.fill_bytes(&mut bytes);
+        temppath.push(hex::encode(&bytes));
+
         TempPath {
-            path_buf: tmpdir,
+            path_buf: temppath,
             persist: false,
         }
     }
@@ -44,6 +49,7 @@ impl TempPath {
         &self.path_buf
     }
 
+    /// Keep the temp path
     pub fn persist(&mut self) {
         self.persist = true;
     }
@@ -51,7 +57,6 @@ impl TempPath {
     pub fn create_as_file(&self) -> io::Result<()> {
         let mut builder = fs::OpenOptions::new();
         builder.write(true).create_new(true);
-
         builder.open(self.path())?;
         Ok(())
     }
@@ -61,21 +66,6 @@ impl TempPath {
         builder.create(self.path())?;
         Ok(())
     }
-}
-
-fn create_path() -> PathBuf {
-    create_path_in_dir(std::env::temp_dir())
-}
-
-fn create_path_in_dir(path: PathBuf) -> PathBuf {
-    let mut path = path;
-    let mut rng = rand::thread_rng();
-    let mut bytes = [0_u8; 16];
-    rng.fill_bytes(&mut bytes);
-    let path_string = hex::encode(&bytes);
-
-    path.push(path_string);
-    path
 }
 
 impl std::convert::AsRef<Path> for TempPath {

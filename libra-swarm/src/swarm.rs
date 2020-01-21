@@ -6,7 +6,7 @@ use config_builder::{FullNodeConfig, SwarmConfig, ValidatorConfig};
 use debug_interface::NodeDebugClient;
 use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
 use libra_logger::prelude::*;
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use libra_types::account_address::AccountAddress;
 use std::{
     collections::HashMap,

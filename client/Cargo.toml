@@ -33,7 +33,7 @@ libra-wallet = { path = "./libra_wallet", version = "0.1.0" }
 libra-logger =  { path = "../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
-libra-tools = { path = "../common/tools/", version = "0.1.0" }
+libra-temppath = { path = "../common/temppath/", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
 
 [dev-dependencies]

@@ -18,12 +18,12 @@ use tokio::runtime::Runtime;
 
 fn start_test_storage_with_read_write_client() -> (
     Runtime,
-    libra_tools::tempdir::TempPath,
+    libra_temppath::TempPath,
     StorageReadServiceClient,
     StorageWriteServiceClient,
 ) {
     let mut config = NodeConfig::random();
-    let tmp_dir = libra_tools::tempdir::TempPath::new();
+    let tmp_dir = libra_temppath::TempPath::new();
     config.storage.dir = tmp_dir.path().to_path_buf();
 
     let storage_server_handle = start_storage_service(&config);

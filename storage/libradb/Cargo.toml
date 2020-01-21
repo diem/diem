@@ -34,7 +34,7 @@ libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
 schemadb = { path = "../schemadb", version = "0.1.0" }
 storage-proto = { path = "../storage-proto", version = "0.1.0" }
-libra-tools = { path = "../../common/tools", version = "0.1.0" }
+libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
 

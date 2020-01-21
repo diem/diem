@@ -68,7 +68,7 @@ impl ExecutionConfig {
 #[cfg(test)]
 mod test {
     use super::*;
-    use libra_tools::tempdir::TempPath;
+    use libra_temppath::TempPath;
     use libra_types::{
         transaction::{ChangeSet, Transaction},
         write_set::WriteSetMut,

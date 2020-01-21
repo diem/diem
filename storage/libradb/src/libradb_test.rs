@@ -4,7 +4,7 @@
 use super::*;
 use crate::test_helper::arb_blocks_to_commit;
 use libra_crypto::hash::CryptoHash;
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use libra_types::{contract_event::ContractEvent, ledger_info::LedgerInfo};
 use proptest::prelude::*;
 use std::collections::HashMap;

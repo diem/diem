@@ -49,7 +49,7 @@ safety-rules = { path = "safety-rules", version = "0.1.0" }
 state-synchronizer = { path = "../state-synchronizer", version = "0.1.0" }
 schemadb = { path = "../storage/schemadb", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
-libra-tools = { path = "../common/tools", version = "0.1.0" }
+libra-temppath = { path = "../common/temppath", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
 

@@ -5,7 +5,7 @@ use super::*;
 use crate::{pruner, LibraDB};
 use jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_crypto::hash::CryptoHash;
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,

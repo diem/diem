@@ -16,4 +16,4 @@ structopt = "0.3.2"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto/", version = "0.1.0"}
-libra-tools = { path = "../../common/tools", version = "0.1.0" }
+libra-temppath = { path = "../../common/temppath", version = "0.1.0" }

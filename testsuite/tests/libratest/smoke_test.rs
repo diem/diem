@@ -7,7 +7,7 @@ use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, HashValue,
 use libra_logger::prelude::*;
 use libra_swarm::swarm::LibraNode;
 use libra_swarm::swarm::LibraSwarm;
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress,
     account_config::association_address,
@@ -38,7 +38,7 @@ impl TestEnvironment {
             LibraSwarm::configure_swarm(num_validators, RoleType::Validator, None, None, None)
                 .unwrap();
 
-        let mnemonic_file = libra_tools::tempdir::TempPath::new();
+        let mnemonic_file = libra_temppath::TempPath::new();
         mnemonic_file
             .create_as_file()
             .expect("could not create temporary mnemonic_file_path");

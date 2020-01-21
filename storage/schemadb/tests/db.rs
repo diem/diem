@@ -71,7 +71,7 @@ impl ValueCodec<TestSchema2> for TestField {
     }
 }
 
-fn open_db(dir: &libra_tools::tempdir::TempPath) -> DB {
+fn open_db(dir: &libra_temppath::TempPath) -> DB {
     let cf_opts_map: ColumnFamilyOptionsMap = [
         (DEFAULT_CF_NAME, ColumnFamilyOptions::default()),
         (
@@ -90,13 +90,13 @@ fn open_db(dir: &libra_tools::tempdir::TempPath) -> DB {
 }
 
 struct TestDB {
-    _tmpdir: libra_tools::tempdir::TempPath,
+    _tmpdir: libra_temppath::TempPath,
     db: DB,
 }
 
 impl TestDB {
     fn new() -> Self {
-        let tmpdir = libra_tools::tempdir::TempPath::new();
+        let tmpdir = libra_temppath::TempPath::new();
         let db = open_db(&tmpdir);
 
         TestDB {
@@ -283,7 +283,7 @@ fn test_two_schema_batches() {
 
 #[test]
 fn test_reopen() {
-    let tmpdir = libra_tools::tempdir::TempPath::new();
+    let tmpdir = libra_temppath::TempPath::new();
     {
         let db = open_db(&tmpdir);
         db.put::<TestSchema1>(&TestField(0), &TestField(0)).unwrap();

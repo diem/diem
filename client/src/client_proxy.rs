@@ -9,7 +9,7 @@ use libra_crypto::{
     test_utils::KeyPair,
 };
 use libra_logger::prelude::*;
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use libra_types::waypoint::Waypoint;
 use libra_types::{
@@ -1154,7 +1154,7 @@ impl fmt::Display for AccountEntry {
 #[cfg(test)]
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
-    use libra_tools::tempdir::TempPath;
+    use libra_temppath::TempPath;
     use libra_wallet::io_utils;
     use proptest::prelude::*;
 

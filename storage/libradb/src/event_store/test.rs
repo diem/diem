@@ -6,7 +6,7 @@ use crate::LibraDB;
 use itertools::Itertools;
 use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use libra_proptest_helpers::Index;
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress,
     contract_event::ContractEvent,

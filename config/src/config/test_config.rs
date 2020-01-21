@@ -3,7 +3,7 @@
 
 use crate::keys::KeyPair;
 use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
