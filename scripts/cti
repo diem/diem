@@ -1,0 +1,50 @@
+#!/bin/bash
+# Copyright (c) The Libra Core Contributors
+# SPDX-License-Identifier: Apache-2.0
+set -e
+
+aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
+ssh ssh.cluster-test-ci.aws.hlw3truzy4ls.com echo "ssh ok" >/dev/null || (echo "Failed to ssh to cluster test instance. Try renew corp canal cert with cc-certs"; exit 1)
+
+PR=""
+
+while (( "$#" )); do
+  case "$1" in
+    -p|--pr)
+      PR=$2
+      shift 2
+      ;;
+    -c|--container|-i|--image|--deploy)
+      echo "$1 command is not allowed in cti"
+      exit 1
+      ;;
+    *) # end argument parsing
+      break
+      ;;
+  esac
+done
+
+if [ -z "$PR" ]
+then
+      echo "No PR specified"
+      echo "Usage:"
+      echo "cti --pr <PR> [cluster test arguments]"
+      echo "Example:"
+      echo "cti --pr <PR> --run bench # Run benchmark"
+      exit 1
+fi
+
+./docker/validator-dynamic/build-aws.sh --version pull/$PR
+
+TAG=dev_${USER}_pull_${PR}
+
+echo "Build succeed, will use tag $TAG"
+echo "**********"
+echo "Dashboard: https://fburl.com/os3pb0ot"
+echo "Logs:"
+echo " * ssh ssh.cluster-test-ci.aws.hlw3truzy4ls.com"
+echo " * ssh-peer"
+echo " * tail -f /data/libra/libra.log"
+echo "**********"
+
+ssh -t ssh.cluster-test-ci.aws.hlw3truzy4ls.com ssh -i /libra_rsa ec2-user@ct.priv.cluster-test-ci.aws.hlw3truzy4ls.com ct -c cluster-test-ci --deploy $TAG $*
