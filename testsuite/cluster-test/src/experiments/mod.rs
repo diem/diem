@@ -96,12 +96,9 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
         "packet_loss_random_validators",
         f::<PacketLossRandomValidatorsParams>(),
     );
+    known_experiments.insert("bench", f::<PerformanceBenchmarkNodesDownParams>());
     known_experiments.insert(
-        "performance_benchmark_nodes_down",
-        f::<PerformanceBenchmarkNodesDownParams>(),
-    );
-    known_experiments.insert(
-        "performance_benchmark_three_region_simulation",
+        "bench_three_region",
         f::<PerformanceBenchmarkThreeRegionSimulationParams>(),
     );
     known_experiments.insert(
