@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::{change_set::ChangeSet, LibraDB};
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use libra_types::{
     proptest_types::{AccountInfoUniverse, LedgerInfoWithSignaturesGen},
     transaction::Version,

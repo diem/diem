@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use rand::{rngs::OsRng, Rng, SeedableRng};
 use std::{
     fs::{self, File},

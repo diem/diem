@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::LibraDB;
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use proptest::{collection::vec, prelude::*};
 
 fn verify(

@@ -267,7 +267,7 @@ pub struct NetworkPeerInfo {
 mod test {
     use super::*;
     use crate::config::RoleType;
-    use libra_tools::tempdir::TempPath;
+    use libra_temppath::TempPath;
     use rand::{rngs::StdRng, SeedableRng};
 
     #[test]

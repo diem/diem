@@ -9,7 +9,7 @@
 use crate::error::WalletError;
 use anyhow::Result;
 #[cfg(test)]
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use mirai_annotations::*;
 #[cfg(test)]
 use rand::rngs::EntropyRng;

@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::{ledger_counters::LedgerCounter, LibraDB};
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 
 fn bump_ledger_counters(
     store: &SystemStore,

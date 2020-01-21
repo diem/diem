@@ -5,7 +5,7 @@ use bytecode_to_boogie::cli::Options;
 use bytecode_to_boogie::driver::Driver;
 use goldenfile;
 use itertools::Itertools;
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use prettydiff::{basic::DiffOp, diff_lines};
 use regex::Regex;
 use std::fs::read_to_string;

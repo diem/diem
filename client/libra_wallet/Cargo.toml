@@ -23,11 +23,12 @@ sha2 = "0.8.0"
 thiserror = "1"
 ed25519-dalek = "1.0.0-pre.1"
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-temppath = { path = "../../common/temppath/", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 mirai-annotations = "1.5.0"
 
 [dev-dependencies]
-libra-tools = { path = "../../common/tools", version = "0.1.0" }
+libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 
 [features]
 default = []

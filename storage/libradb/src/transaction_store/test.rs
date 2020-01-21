@@ -4,7 +4,7 @@
 use super::*;
 use crate::LibraDB;
 use libra_proptest_helpers::Index;
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use libra_types::proptest_types::{AccountInfoUniverse, SignatureCheckedTransactionGen};
 use proptest::{collection::vec, prelude::*};
 

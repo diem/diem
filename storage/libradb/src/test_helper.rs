@@ -5,9 +5,9 @@
 
 use super::*;
 use libra_crypto::hash::CryptoHash;
-use libra_tools::tempdir::TempPath;
-use libra_types::block_info::BlockInfo;
+use libra_temppath::TempPath;
 use libra_types::{
+    block_info::BlockInfo,
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
     proptest_types::{AccountInfoUniverse, LedgerInfoWithSignaturesGen, TransactionToCommitGen},

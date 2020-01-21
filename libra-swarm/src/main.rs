@@ -5,7 +5,7 @@
 
 use libra_config::config::{NodeConfig, RoleType};
 use libra_swarm::{client, swarm::LibraSwarm};
-use libra_tools::tempdir::TempPath;
+use libra_temppath::TempPath;
 use std::path::Path;
 use structopt::StructOpt;
 
