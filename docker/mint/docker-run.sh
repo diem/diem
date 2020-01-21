@@ -12,7 +12,7 @@ fi
 
 /opt/libra/bin/config-builder faucet \
     -o /opt/libra/etc \
-    "$seed"
+    $seed
 
 cd /opt/libra/bin && \
 exec gunicorn --bind 0.0.0.0:8000 --access-logfile - --error-logfile - --log-level $LOG_LEVEL server
