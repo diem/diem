@@ -1,0 +1,21 @@
+# This buildspec is for AWS Codebuild
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      docker: 18
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region us-west-2)
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker/cluster-test/build.sh
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      # Tag and push the docker images
+      - SOURCE=cluster-test:latest TARGET_REPO=$LIBRA_CLUSTER_TEST_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short HEAD)" docker/tag-and-push.sh
