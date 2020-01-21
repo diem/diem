@@ -415,11 +415,13 @@ impl LibraVM {
                         self.execute_user_transactions(txns, &mut data_cache, state_view)?;
                     result.append(&mut outs);
                 }
-                TransactionBlock::BlockPrologue(block_metadata) => {
-                    result.push(self.move_vm.execute_runtime(|runtime| {
-                        process_block_metadata(block_metadata, runtime, &mut data_cache)
-                    })?)
-                }
+                TransactionBlock::BlockPrologue(block_metadata) => result.push(
+                    self.move_vm
+                        .execute_runtime(|runtime| {
+                            process_block_metadata(block_metadata, runtime, &mut data_cache)
+                        })
+                        .unwrap_or_else(discard_error_output),
+                ),
                 TransactionBlock::WriteSet(change_set) => result.push(
                     self.check_change_set(&change_set, state_view)
                         .map(|_| self.process_change_set(&mut data_cache, change_set))

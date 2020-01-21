@@ -199,6 +199,13 @@ impl FakeExecutor {
             .expect("A block with one transaction should have one output")
     }
 
+    pub fn execute_transaction_block(
+        &self,
+        block: Vec<Transaction>,
+    ) -> Result<Vec<TransactionOutput>, VMStatus> {
+        LibraVM::execute_block(block, &self.config, &self.data_store)
+    }
+
     /// Get the blob for the associated AccessPath
     pub fn read_from_access_path(&self, path: &AccessPath) -> Option<Vec<u8>> {
         StateView::get(&self.data_store, path).unwrap()
