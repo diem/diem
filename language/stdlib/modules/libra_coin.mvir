@@ -27,10 +27,7 @@ module LibraCoin {
     // Only the Association account can acquire such a reference, and it can do so only via
     // `borrow_sender_mint_capability`
     public mint(value: u64, capability: &Self.MintCapability): Self.T acquires MarketCap {
-        let market_cap_ref: &mut Self.MarketCap;
-        let market_cap_total_value: u128;
-
-        _ = move(capability);
+        let total_value_ref: &mut u128;
 
         // TODO: temporary measure for testnet only: limit minting to 1B Libra at a time.
         // this is to prevent the market cap's total value from hitting u64_max due to excessive
@@ -38,9 +35,8 @@ module LibraCoin {
         // be backed with real-world assets, and thus minting will be correspondingly rarer.
         assert(copy(value) <= 1000000000 * 1000000, 11); // * 1000000 because the unit is microlibra
         // update market cap resource to reflect minting
-        market_cap_ref = borrow_global_mut<MarketCap>(0xA550C18);
-        market_cap_total_value = *&copy(market_cap_ref).total_value;
-        *(&mut move(market_cap_ref).total_value) = move(market_cap_total_value) + to_u128(copy(value));
+        total_value_ref = &mut borrow_global_mut<MarketCap>(0xA550C18).total_value;
+        *move(total_value_ref) = *copy(total_value_ref) + to_u128(copy(value));
 
         return T{value: move(value)};
     }
