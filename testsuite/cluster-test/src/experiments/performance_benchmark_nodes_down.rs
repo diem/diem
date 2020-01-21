@@ -24,7 +24,7 @@ use structopt::StructOpt;
 pub struct PerformanceBenchmarkNodesDownParams {
     #[structopt(
         long,
-        default_value = "10",
+        default_value = "0",
         help = "Number of nodes which should be down"
     )]
     pub num_nodes_down: usize,
