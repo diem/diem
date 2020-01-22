@@ -20,10 +20,10 @@ if docker ps -f name=libra_cluster_test_builder_container -f ancestor=libra_clus
 else
   echo "Builder image has changed, re-creating builder container"
   docker rm -f libra_cluster_test_builder_container || echo "Build container did not exist"
-  docker run --name libra_cluster_test_builder_container -d -i -t -v $DIR/../..:/libra libra_cluster_test_builder bash
+  docker run --name libra_cluster_test_builder_container -d -v $DIR/../..:/libra libra_cluster_test_builder sleep infinity
 fi
 
-docker exec -i -t libra_cluster_test_builder_container bash -c 'docker/cluster-test/compile.sh && /bin/cp /target/release/cluster-test target/cluster_test_docker_builder/'
+docker exec libra_cluster_test_builder_container bash -c 'docker/cluster-test/compile.sh && /bin/cp /target/release/cluster-test target/cluster_test_docker_builder/'
 
 if [ "$1" = "--build-binary" ]; then
   echo "Not building docker container, run without --build-binary to build docker image"
