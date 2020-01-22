@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/struct_type_copyable.move:3:17 ───
    │
  3 │     struct S<T: copy> { }
-   │                 ^^^^ Unexpected token: 'copy'
+   │                 ^^^^ Unexpected 'copy'
    ·
  3 │     struct S<T: copy> { }
-   │                 ---- Expected: 'copyable', 'resource'
+   │                 ---- Type parameter constraint can be either 'copyable' or 'resource'
    │
 
