@@ -42,7 +42,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{bail, ensure, Result};
+use anyhow::{ensure, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::{iterator::JellyfishMerkleIterator, restore::JellyfishMerkleRestore};
 use libra_crypto::hash::{CryptoHash, HashValue};
@@ -237,13 +237,15 @@ impl LibraDB {
         error_if_too_many_requested(limit, MAX_LIMIT)?;
 
         let get_latest = !ascending && start_seq_num == u64::max_value();
-        let account_state =
+        let account_state_with_proof =
             self.get_account_state_with_proof(query_path.address, ledger_version, ledger_version)?;
-        let account_resource = if let Some(account_blob) = &account_state.blob {
+
+        let account_resource = if let Some(account_blob) = &account_state_with_proof.blob {
             AccountResource::make_from(&(&account_blob.try_into()?))?
         } else {
-            bail!("Nothing stored under address: {}", query_path.address);
+            return Ok((Vec::new(), account_state_with_proof))
         };
+
         let event_key = account_resource
             .get_event_handle_by_query_path(&query_path.path)?
             .key();
@@ -307,7 +309,7 @@ impl LibraDB {
 
         // We always need to return the account blob to prove that this is indeed the event that was
         // being queried.
-        Ok((events_with_proof, account_state))
+        Ok((events_with_proof, account_state_with_proof))
     }
 
     /// Returns a transaction that is the `seq_num`-th one associated with the given account. If

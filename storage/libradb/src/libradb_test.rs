@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::test_helper::arb_blocks_to_commit;
+use crate::test_helper::{arb_blocks_to_commit, arb_mock_genesis};
 use libra_crypto::hash::CryptoHash;
 use libra_temppath::TempPath;
 use libra_types::{contract_event::ContractEvent, ledger_info::LedgerInfo};
@@ -426,4 +426,38 @@ fn test_too_many_requested() {
             0
         )
         .is_err());
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(1))]
+
+    #[test]
+    fn test_get_events_from_non_existent_account(
+        (genesis_txn_to_commit, ledger_info_with_sigs) in arb_mock_genesis(),
+        non_existent_address in any::<AccountAddress>(),
+    ) {
+        let tmp_dir = TempPath::new();
+        let db = LibraDB::new(&tmp_dir);
+
+        db.save_transactions(&[genesis_txn_to_commit], 0, Some(&ledger_info_with_sigs)).unwrap();
+        prop_assume!(
+            db.get_account_state_with_proof(non_existent_address, 0, 0).unwrap().blob.is_none()
+        );
+
+        let (events, account_state_with_proof) = db
+            .get_events_by_query_path(
+                &AccessPath::new_for_sent_event(non_existent_address),
+                0,
+                true,
+                100,
+                0,
+            )
+            .unwrap();
+
+        account_state_with_proof
+            .verify(ledger_info_with_sigs.ledger_info(), 0, non_existent_address)
+            .unwrap();
+        assert!(account_state_with_proof.blob.is_none());
+        assert!(events.is_empty());
+    }
 }

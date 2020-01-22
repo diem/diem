@@ -220,6 +220,8 @@ fn test_execution_with_storage() {
     let account2 = AccountAddress::from_public_key(&pubkey2);
     let (_privkey3, pubkey3) = compat::generate_keypair(&mut rng);
     let account3 = AccountAddress::from_public_key(&pubkey3);
+    let (_privkey4, pubkey4) = compat::generate_keypair(&mut rng);
+    let account4 = AccountAddress::from_public_key(&pubkey4);  // non-existent account
     let genesis_account = association_address();
 
     // Create account1 with 2M coins.
@@ -396,6 +398,20 @@ fn test_execution_with_storage() {
             ascending: false,
             limit: 10,
         },
+        RequestItem::GetAccountState {
+            address: account4,
+        },
+        RequestItem::GetAccountTransactionBySequenceNumber {
+            account: account4,
+            sequence_number: 0,
+            fetch_events: true,
+        },
+        RequestItem::GetEventsByEventAccessPath {
+            access_path: AccessPath::new_for_sent_event(account4),
+            start_event_seq_num: 0,
+            ascending: true,
+            limit: 100,
+        }
     ];
 
     let (
@@ -550,6 +566,28 @@ fn test_execution_with_storage() {
         .into_get_events_by_access_path_response()
         .unwrap();
     assert_eq!(account3_received_events.len(), 3);
+
+    let account4_state = response_items
+        .pop()
+        .unwrap()
+        .into_get_account_state_response()
+        .unwrap();
+    assert!(account4_state.blob.is_none());
+
+    let (account4_transaction, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_account_txn_by_seq_num_response()
+        .unwrap();
+    assert!(account4_transaction.is_none());
+
+    let (account4_sent_events, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_events_by_access_path_response()
+        .unwrap();
+    assert!(account4_sent_events.is_empty());
+
 
     // Execution the 2nd block.
     let output2 = executor

@@ -86,14 +86,18 @@ prop_compose! {
     ///
     /// It is used in tests for both transaction block committing during normal running and
     /// transaction syncing during start up.
-    pub fn arb_blocks_to_commit()(
-        mut universe in any_with::<AccountInfoUniverse>(5).no_shrink(),
+    pub fn arb_blocks_to_commit_impl(
+        num_accounts: usize,
+        max_txn_per_block: usize,
+        max_blocks: usize,
+    )(
+        mut universe in any_with::<AccountInfoUniverse>(num_accounts).no_shrink(),
         batches in vec(
             (
-                vec(any::<TransactionToCommitGen>(), 1..=2),
+                vec(any::<TransactionToCommitGen>(), 1..=max_txn_per_block),
                 any::<LedgerInfoWithSignaturesGen>(),
             ),
-            1..10,
+            1..=max_blocks,
         ),
     ) ->
         Vec<(
@@ -117,4 +121,22 @@ prop_compose! {
 
         to_blocks_to_commit(partial_blocks).unwrap()
     }
+}
+
+pub fn arb_blocks_to_commit() -> impl Strategy<
+    Value = Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>
+> {
+    arb_blocks_to_commit_impl(5, 2, 10)
+}
+
+pub fn arb_mock_genesis() -> impl Strategy<
+    Value = (TransactionToCommit, LedgerInfoWithSignatures)
+> {
+    arb_blocks_to_commit_impl(1, 1, 1).prop_map(
+        |blocks| {
+            let (block, ledger_info_with_sigs) = &blocks[0];
+
+            (block[0].clone(), ledger_info_with_sigs.clone())
+        }
+    )
 }
