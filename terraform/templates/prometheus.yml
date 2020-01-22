@@ -51,7 +51,7 @@ scrape_configs:
       %{ for target in split(",", validators) }
       - targets: ['${element(split(":", target), 0)}:9100']
         labels:
-          validator_peer_id: '${substr(element(split(":", target), 1), 0, 8)}'
+          peer_id: 'val-${substr(element(split(":", target), 1), 0, 8)}'
           role: 'validator'
           workspace: '${workspace}'
       %{ endfor }
@@ -68,7 +68,7 @@ scrape_configs:
       %{ for target in split(",", validators) }
       - targets: ['${element(split(":", target), 0)}:9101']
         labels:
-          validator_peer_id: '${substr(element(split(":", target), 1), 0, 8)}'
+          peer_id: 'val-${substr(element(split(":", target), 1), 0, 8)}'
           role: 'validator'
           workspace: '${workspace}'
       %{ endfor }
@@ -85,7 +85,7 @@ scrape_configs:
       %{ for target in split(",", fullnodes) }
       - targets: ['${element(split(":", target), 0)}:9100']
         labels:
-          fullnode_peer_id: '${substr(element(split(":", target), 1), 0, 8)}'
+          peer_id: 'fn-${substr(element(split(":", target), 1), 0, 8)}'
           role: 'fullnode'
           workspace: '${workspace}'
       %{ endfor }
@@ -102,7 +102,7 @@ scrape_configs:
       %{ for target in split(",", fullnodes) }
       - targets: ['${element(split(":", target), 0)}:9101']
         labels:
-          fullnode_peer_id: '${substr(element(split(":", target), 1), 0, 8)}'
+          peer_id: 'fn-${substr(element(split(":", target), 1), 0, 8)}'
           role: 'fullnode'
           workspace: '${workspace}'
       %{ endfor }
