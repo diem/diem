@@ -982,10 +982,23 @@ fn parse_type_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Name, Kin
 
     let kind = if match_token(tokens, Tok::Colon)? {
         let start_loc = tokens.start_loc();
-        let k = token_match!(tokens.peek(), tokens.file_name(), start_loc, tokens.content(), {
+        let k = match tokens.peek() {
             Tok::Copyable => Kind_::Affine,
-            Tok::Resource => Kind_::Resource
-        });
+            Tok::Resource => Kind_::Resource,
+            _ => {
+                let loc = make_loc(
+                    tokens.file_name(),
+                    start_loc,
+                    start_loc + tokens.content().len(),
+                );
+                let msg =
+                    "Type parameter constraint can be either 'copyable' or 'resource'".to_string();
+                return Err(vec![
+                    (loc, format!("Unexpected '{}'", tokens.content())),
+                    (loc, msg),
+                ]);
+            }
+        };
         tokens.advance()?;
         let end_loc = tokens.previous_end_loc();
         spanned(tokens.file_name(), start_loc, end_loc, k)
