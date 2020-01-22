@@ -1020,13 +1020,13 @@ fn parse_type_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Name, Kin
 //          "native" "public"?
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
-//          ("acquires" <BaseType> ("," <BaseType>)*)?
+//          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
 //          ";"
 //      MoveFunctionDecl =
 //          "public"?
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
-//          ("acquires" <BaseType> ("," <BaseType>)*)?
+//          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
 //          "{" <Sequence>
 //      FunctionDefName =
 //          <Name>
@@ -1090,7 +1090,7 @@ fn parse_function_decl<'input>(
         sp(name.loc(), Type_::Unit)
     };
 
-    // ("acquires" (<BaseType> ",")* <BaseType> ","?
+    // ("acquires" (<ModuleAccess> ",")* <ModuleAccess> ","?
     let mut acquires = vec![];
     if match_token(tokens, Tok::Acquires)? {
         loop {
