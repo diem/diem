@@ -46,6 +46,7 @@ pub struct LibraHandle {
     consensus: Option<Box<dyn ConsensusProvider>>,
     _storage: Runtime,
     _debug: Runtime,
+    _more_rt: Runtime,
 }
 
 impl Drop for LibraHandle {
@@ -56,14 +57,16 @@ impl Drop for LibraHandle {
     }
 }
 
-fn setup_executor(config: &NodeConfig) -> Arc<Executor<LibraVM>> {
+fn setup_executor(config: &NodeConfig, rt: &mut Runtime) -> Arc<Executor<LibraVM>> {
     let storage_read_client = Arc::new(StorageReadServiceClient::new(
         &config.storage.address,
         config.storage.port,
+        rt,
     ));
     let storage_write_client = Arc::new(StorageWriteServiceClient::new(
         &config.storage.address,
         config.storage.port,
+        rt,
     ));
 
     Arc::new(Executor::new(
@@ -193,8 +196,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         instant.elapsed().as_millis()
     );
 
+    let mut more_rt = Runtime::new().unwrap();
+
     instant = Instant::now();
-    let executor = setup_executor(&node_config);
+    let executor = setup_executor(&node_config, &mut more_rt);
     debug!("Executor setup in {} ms", instant.elapsed().as_millis());
     let mut network_runtimes = vec![];
     let mut state_sync_network_handles = vec![];
@@ -322,6 +327,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             consensus_network_events,
             executor,
             state_synchronizer.create_client(),
+            &mut more_rt,
         );
         consensus_provider
             .start()
@@ -338,5 +344,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         consensus,
         _storage: storage,
         _debug: debug_if,
+        _more_rt: more_rt,
     }
 }

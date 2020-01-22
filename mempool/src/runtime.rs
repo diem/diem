@@ -41,7 +41,7 @@ impl MempoolRuntime {
             oneshot::Sender<Result<SubmitTransactionResponse>>,
         )>,
     ) -> Self {
-        let mempool_service_rt = Builder::new()
+        let mut mempool_service_rt = Builder::new()
             .thread_name("mempool-service-")
             .threaded_scheduler()
             .enable_all()
@@ -55,6 +55,7 @@ impl MempoolRuntime {
         let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
             "localhost",
             config.storage.port,
+            &mut mempool_service_rt,
         ));
         let vm_validator = Arc::new(VMValidator::new(
             &config,

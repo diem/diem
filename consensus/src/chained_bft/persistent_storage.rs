@@ -251,8 +251,8 @@ pub struct StorageWriteProxy {
 }
 
 impl StorageWriteProxy {
-    pub fn new(config: &NodeConfig) -> Self {
-        let read_client = create_storage_read_client(config);
+    pub fn new(config: &NodeConfig, rt: &mut tokio::runtime::Runtime) -> Self {
+        let read_client = create_storage_read_client(config, rt);
         let db = Arc::new(ConsensusDB::new(config.storage.dir()));
         StorageWriteProxy { db, read_client }
     }

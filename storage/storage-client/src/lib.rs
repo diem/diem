@@ -26,7 +26,6 @@ use libra_types::{
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
 use std::convert::TryFrom;
-use std::sync::Mutex;
 use storage_proto::{
     proto::storage::{
         storage_client::StorageClient, GetLatestStateRootRequest, GetStartupInfoRequest,
@@ -41,31 +40,20 @@ use storage_proto::{
 
 /// This provides storage read interfaces backed by real storage service.
 pub struct StorageReadServiceClient {
-    addr: String,
-    client: Mutex<Option<StorageClient<tonic::transport::Channel>>>,
+    inner: StorageClient<tonic::transport::Channel>,
 }
 
 impl StorageReadServiceClient {
     /// Constructs a `StorageReadServiceClient` with given host and port.
-    pub fn new(host: &str, port: u16) -> Self {
+    pub fn new(host: &str, port: u16, rt: &mut tokio::runtime::Runtime) -> Self {
         let addr = format!("http://{}:{}", host, port);
+        let inner = rt.block_on(StorageClient::connect(addr)).unwrap();
 
-        Self {
-            client: Mutex::new(None),
-            addr,
-        }
+        Self { inner }
     }
 
-    async fn client(&self) -> Result<StorageClient<tonic::transport::Channel>, tonic::Status> {
-        if self.client.lock().unwrap().is_none() {
-            let client = StorageClient::connect(self.addr.clone())
-                .await
-                .map_err(|e| tonic::Status::new(tonic::Code::Unavailable, e.to_string()))?;
-            *self.client.lock().unwrap() = Some(client);
-        }
-
-        // client is guaranteed to be populated by the time we reach here
-        Ok(self.client.lock().unwrap().clone().unwrap())
+    fn client(&self) -> StorageClient<tonic::transport::Channel> {
+        self.inner.clone()
     }
 }
 
@@ -89,7 +77,6 @@ impl StorageRead for StorageReadServiceClient {
             .into();
         let resp = self
             .client()
-            .await?
             .update_to_latest_ledger(req)
             .await?
             .into_inner();
@@ -112,24 +99,14 @@ impl StorageRead for StorageReadServiceClient {
         let req: storage_proto::proto::storage::GetTransactionsRequest =
             GetTransactionsRequest::new(start_version, batch_size, ledger_version, fetch_events)
                 .into();
-        let resp = self
-            .client()
-            .await?
-            .get_transactions(req)
-            .await?
-            .into_inner();
+        let resp = self.client().get_transactions(req).await?.into_inner();
         let rust_resp = GetTransactionsResponse::try_from(resp)?;
         Ok(rust_resp.txn_list_with_proof)
     }
 
     async fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
         let req = GetLatestStateRootRequest::default();
-        let resp = self
-            .client()
-            .await?
-            .get_latest_state_root(req)
-            .await?
-            .into_inner();
+        let resp = self.client().get_latest_state_root(req).await?.into_inner();
         let rust_resp = GetLatestStateRootResponse::try_from(resp)?;
         Ok(rust_resp.into())
     }
@@ -142,7 +119,6 @@ impl StorageRead for StorageReadServiceClient {
             GetLatestAccountStateRequest::new(address).into();
         let resp = self
             .client()
-            .await?
             .get_latest_account_state(req)
             .await?
             .into_inner();
@@ -159,7 +135,6 @@ impl StorageRead for StorageReadServiceClient {
             GetAccountStateWithProofByVersionRequest::new(address, version).into();
         let resp = self
             .client()
-            .await?
             .get_account_state_with_proof_by_version(req)
             .await?
             .into_inner();
@@ -171,7 +146,6 @@ impl StorageRead for StorageReadServiceClient {
         let proto_req = GetStartupInfoRequest::default();
         let resp = self
             .client()
-            .await?
             .get_startup_info(proto_req)
             .await?
             .into_inner();
@@ -188,7 +162,6 @@ impl StorageRead for StorageReadServiceClient {
             GetEpochChangeLedgerInfosRequest::new(start_epoch, end_epoch).into();
         let resp = self
             .client()
-            .await?
             .get_epoch_change_ledger_infos(proto_req)
             .await?
             .into_inner();
@@ -204,7 +177,6 @@ impl StorageRead for StorageReadServiceClient {
             BackupAccountStateRequest::new(version).into();
         let stream = self
             .client()
-            .await?
             .backup_account_state(proto_req)
             .await?
             .into_inner()
@@ -225,7 +197,6 @@ impl StorageRead for StorageReadServiceClient {
             GetAccountStateRangeProofRequest::new(rightmost_key, version).into();
         let resp = self
             .client()
-            .await?
             .get_account_state_range_proof(req)
             .await?
             .into_inner();
@@ -236,31 +207,20 @@ impl StorageRead for StorageReadServiceClient {
 
 /// This provides storage write interfaces backed by real storage service.
 pub struct StorageWriteServiceClient {
-    addr: String,
-    client: Mutex<Option<StorageClient<tonic::transport::Channel>>>,
+    inner: StorageClient<tonic::transport::Channel>,
 }
 
 impl StorageWriteServiceClient {
     /// Constructs a `StorageWriteServiceClient` with given host and port.
-    pub fn new(host: &str, port: u16) -> Self {
+    pub fn new(host: &str, port: u16, rt: &mut tokio::runtime::Runtime) -> Self {
         let addr = format!("http://{}:{}", host, port);
+        let inner = rt.block_on(StorageClient::connect(addr)).unwrap();
 
-        Self {
-            client: Mutex::new(None),
-            addr,
-        }
+        Self { inner }
     }
 
-    async fn client(&self) -> Result<StorageClient<tonic::transport::Channel>, tonic::Status> {
-        if self.client.lock().unwrap().is_none() {
-            let client = StorageClient::connect(self.addr.clone())
-                .await
-                .map_err(|e| tonic::Status::new(tonic::Code::Unavailable, e.to_string()))?;
-            *self.client.lock().unwrap() = Some(client);
-        }
-
-        // client is guaranteed to be populated by the time we reach here
-        Ok(self.client.lock().unwrap().clone().unwrap())
+    fn client(&self) -> StorageClient<tonic::transport::Channel> {
+        self.inner.clone()
     }
 }
 
@@ -275,7 +235,7 @@ impl StorageWrite for StorageWriteServiceClient {
         let req: storage_proto::proto::storage::SaveTransactionsRequest =
             SaveTransactionsRequest::new(txns_to_commit, first_version, ledger_info_with_sigs)
                 .into();
-        self.client().await?.save_transactions(req).await?;
+        self.client().save_transactions(req).await?;
         Ok(())
     }
 }

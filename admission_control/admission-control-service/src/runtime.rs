@@ -39,7 +39,7 @@ impl AdmissionControlRuntime {
             oneshot::Sender<Result<SubmitTransactionResponse>>,
         )>,
     ) -> Self {
-        let ac_service_rt = Builder::new()
+        let mut ac_service_rt = Builder::new()
             .thread_name("ac-service-")
             .threaded_scheduler()
             .enable_all()
@@ -62,6 +62,7 @@ impl AdmissionControlRuntime {
         let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
             "localhost",
             config.storage.port,
+            &mut ac_service_rt,
         ));
 
         let admission_control_service =

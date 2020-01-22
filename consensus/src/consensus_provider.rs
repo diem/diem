@@ -36,8 +36,9 @@ pub fn make_consensus_provider(
     network_receiver: ConsensusNetworkEvents,
     executor: Arc<Executor<LibraVM>>,
     state_sync_client: Arc<StateSyncClient>,
+    rt: &mut tokio::runtime::Runtime,
 ) -> Box<dyn ConsensusProvider> {
-    let storage = Arc::new(StorageWriteProxy::new(node_config));
+    let storage = Arc::new(StorageWriteProxy::new(node_config, rt));
     let mempool_client =
         MempoolClientWrapper::new("localhost", node_config.mempool.mempool_service_port);
     let txn_manager = Box::new(MempoolProxy::new(mempool_client));
@@ -54,9 +55,13 @@ pub fn make_consensus_provider(
 }
 
 /// Create a storage read client based on the config
-pub fn create_storage_read_client(config: &NodeConfig) -> Arc<dyn StorageRead> {
+pub fn create_storage_read_client(
+    config: &NodeConfig,
+    rt: &mut tokio::runtime::Runtime,
+) -> Arc<dyn StorageRead> {
     Arc::new(StorageReadServiceClient::new(
         &config.storage.address,
         config.storage.port,
+        rt,
     ))
 }
