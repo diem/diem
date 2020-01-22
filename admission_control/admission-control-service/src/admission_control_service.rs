@@ -6,18 +6,20 @@
 //! next step.
 
 use admission_control_proto::proto::admission_control::{
-    admission_control_server::AdmissionControl, SubmitTransactionRequest, SubmitTransactionResponse,
+    admission_control_server::{AdmissionControl, AdmissionControlServer},
+    SubmitTransactionRequest, SubmitTransactionResponse,
 };
 use anyhow::Result;
 use futures::{
     channel::{mpsc, oneshot},
     SinkExt,
 };
+use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
-use std::convert::TryFrom;
-use std::sync::Arc;
-use storage_client::StorageRead;
+use std::{convert::TryFrom, net::ToSocketAddrs, sync::Arc};
+use storage_client::{StorageRead, StorageReadServiceClient};
+use tokio::runtime::{Builder, Runtime};
 
 /// Struct implementing trait (service handle) AdmissionControlService.
 #[derive(Clone)]
@@ -43,6 +45,43 @@ impl AdmissionControlService {
             ac_sender,
             storage_read_client,
         }
+    }
+
+    /// Creates and spins up AdmissionControlService on runtime
+    /// Returns the runtime on which Admission Control Service is newly spawned
+    pub fn bootstrap(
+        config: &NodeConfig,
+        ac_sender: mpsc::Sender<(
+            SubmitTransactionRequest,
+            oneshot::Sender<Result<SubmitTransactionResponse>>,
+        )>,
+    ) -> Runtime {
+        let runtime = Builder::new()
+            .thread_name("ac-service-")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .expect("[admission control] failed to create runtime");
+
+        // Create storage read client
+        let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
+            "localhost",
+            config.storage.port,
+        ));
+        let admission_control_service = AdmissionControlService::new(ac_sender, storage_client);
+
+        let port = config.admission_control.admission_control_service_port;
+        let addr = format!("{}:{}", config.admission_control.address, port)
+            .to_socket_addrs()
+            .unwrap()
+            .next()
+            .unwrap();
+        runtime.spawn(
+            tonic::transport::Server::builder()
+                .add_service(AdmissionControlServer::new(admission_control_service))
+                .serve(addr),
+        );
+        runtime
     }
 
     /// Pass the UpdateToLatestLedgerRequest to Storage for read query.

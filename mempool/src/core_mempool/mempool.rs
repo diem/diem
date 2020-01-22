@@ -38,7 +38,7 @@ pub struct Mempool {
 }
 
 impl Mempool {
-    pub(crate) fn new(config: &NodeConfig) -> Self {
+    pub fn new(config: &NodeConfig) -> Self {
         Mempool {
             transactions: TransactionStore::new(&config.mempool),
             sequence_number_cache: LruCache::new(config.mempool.capacity),
@@ -94,8 +94,9 @@ impl Mempool {
         }
     }
 
-    fn get_required_balance(&mut self, txn: &SignedTransaction, gas_amount: u64) -> u64 {
-        txn.gas_unit_price() * gas_amount + self.transactions.get_required_balance(&txn.sender())
+    fn get_required_balance(&mut self, txn: &SignedTransaction, gas_amount: u64) -> u128 {
+        txn.gas_unit_price() as u128 * gas_amount as u128
+            + self.transactions.get_required_balance(&txn.sender()) as u128
     }
 
     /// Used to add a transaction to the Mempool
@@ -116,7 +117,7 @@ impl Mempool {
         );
 
         let required_balance = self.get_required_balance(&txn, gas_amount);
-        if balance < required_balance {
+        if (balance as u128) < required_balance {
             return MempoolAddTransactionStatus::new(
                 MempoolAddTransactionStatusCode::InsufficientBalance,
                 format!(

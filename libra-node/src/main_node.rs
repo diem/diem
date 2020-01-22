@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_service::runtime::AdmissionControlRuntime;
+use admission_control_service::admission_control_service::AdmissionControlService;
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use debug_interface::{
     node_debug_service::NodeDebugService,
@@ -19,7 +19,6 @@ use network::{
         LibraNetworkProvider,
         // when you add a new protocol const, you must add this in either
         // .direct_send_protocols or .rpc_protocols vector of network_builder in setup_network()
-        ADMISSION_CONTROL_RPC_PROTOCOL,
         CONSENSUS_DIRECT_SEND_PROTOCOL,
         CONSENSUS_RPC_PROTOCOL,
         MEMPOOL_DIRECT_SEND_PROTOCOL,
@@ -39,7 +38,7 @@ use vm_runtime::LibraVM;
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 
 pub struct LibraHandle {
-    _ac: AdmissionControlRuntime,
+    _ac: Runtime,
     _mempool: Option<MempoolRuntime>,
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
@@ -116,10 +115,7 @@ pub fn setup_network(
             ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ])
-        .rpc_protocols(vec![
-            ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
-            ProtocolId::from_static(ADMISSION_CONTROL_RPC_PROTOCOL),
-        ]);
+        .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
     if config.is_permissioned {
         // If the node wants to run in permissioned mode, it should also have authentication and
         // encryption.
@@ -198,8 +194,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     debug!("Executor setup in {} ms", instant.elapsed().as_millis());
     let mut network_runtimes = vec![];
     let mut state_sync_network_handles = vec![];
-    let mut ac_network_sender = None;
-    let mut ac_network_events = vec![];
     let mut mempool_network_handles = vec![];
     let mut validator_network_provider = None;
 
@@ -213,14 +207,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
         mempool_network_handles.push((network.peer_id, mempool_sender, mempool_events));
 
-        let (ac_sender, ac_events) =
-            network_provider.add_admission_control(vec![ProtocolId::from_static(
-                ADMISSION_CONTROL_RPC_PROTOCOL,
-            )]);
-        ac_network_events.push(ac_events);
-
         validator_network_provider = Some((network.peer_id, runtime, network_provider));
-        ac_network_sender = Some(ac_sender);
     }
 
     for i in 0..node_config.full_node_networks.len() {
@@ -238,16 +225,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             mempool_events,
         ));
 
-        let (ac_sender, ac_events) =
-            network_provider.add_admission_control(vec![ProtocolId::from_static(
-                ADMISSION_CONTROL_RPC_PROTOCOL,
-            )]);
-        ac_network_events.push(ac_events);
-
         let network = &node_config.full_node_networks[i];
-        if node_config.is_upstream_network(network) {
-            ac_network_sender = Some(ac_sender);
-        }
         // Start the network provider.
         runtime.handle().spawn(network_provider.start());
         network_runtimes.push(runtime);
@@ -271,12 +249,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         &node_config,
     );
     let (ac_sender, client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
-    let admission_control = AdmissionControlRuntime::bootstrap(
-        &node_config,
-        ac_network_sender.unwrap(),
-        ac_network_events,
-        ac_sender,
-    );
+    let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
 
     instant = Instant::now();
     let mempool = Some(MempoolRuntime::bootstrap(
@@ -332,7 +305,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     LibraHandle {
         _network_runtimes: network_runtimes,
-        _ac: admission_control,
+        _ac: admission_control_runtime,
         _mempool: mempool,
         _state_synchronizer: state_synchronizer,
         consensus,

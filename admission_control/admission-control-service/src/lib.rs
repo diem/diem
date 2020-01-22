@@ -12,9 +12,6 @@
 //! 1. SubmitTransaction, to submit transaction to associated validator.
 //! 2. UpdateToLatestLedger, to query storage, e.g. account state, transaction log, and proofs.
 
-#[macro_use]
-extern crate prometheus;
-
 #[cfg(test)]
 #[path = "unit_tests/admission_control_service_test.rs"]
 mod admission_control_service_test;
@@ -24,14 +21,6 @@ mod admission_control_service_test;
 pub mod admission_control_fuzzing;
 /// AC gRPC service.
 pub mod admission_control_service;
-mod counters;
 #[cfg(feature = "fuzzing")]
 /// Useful Mocks
 pub mod mocks;
-/// AC runtime to launch gRPC and network service
-pub mod runtime;
-/// Handler for sending transaction write requests upstream if needed
-mod upstream_proxy;
-
-use libra_types::account_address::AccountAddress;
-type PeerId = AccountAddress;

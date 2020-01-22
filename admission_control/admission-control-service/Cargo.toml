@@ -46,4 +46,4 @@ assert_matches = "1.3.0"
 
 [features]
 default = []
-fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing", "storage-service/fuzzing"]
+fuzzing = ["proptest", "libra-mempool/fuzzing", "libra-proptest-helpers", "libra-types/fuzzing", "storage-service/fuzzing"]
