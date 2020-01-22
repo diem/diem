@@ -34,13 +34,21 @@ impl StateSynchronizer {
         executor: Arc<Executor<LibraVM>>,
         config: &NodeConfig,
     ) -> Self {
-        let executor_proxy = ExecutorProxy::new(executor, config);
+        let mut runtime = Builder::new()
+            .thread_name("state-sync-")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .expect("[state synchronizer] failed to create runtime");
+
+        let executor_proxy = ExecutorProxy::new(executor, config, &mut runtime);
         Self::bootstrap_with_executor_proxy(
             network,
             config.base.role,
             config.base.waypoint,
             &config.state_sync,
             executor_proxy,
+            runtime,
         )
     }
 
@@ -50,14 +58,8 @@ impl StateSynchronizer {
         waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
         executor_proxy: E,
+        mut runtime: tokio::runtime::Runtime,
     ) -> Self {
-        let mut runtime = Builder::new()
-            .thread_name("state-sync-")
-            .threaded_scheduler()
-            .enable_all()
-            .build()
-            .expect("[state synchronizer] failed to create runtime");
-
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
 
         let initial_state = runtime

@@ -14,9 +14,9 @@ use storage_client::{StorageRead, VerifiedStateView};
 use tokio::runtime::Handle;
 use vm_runtime::{LibraVM, VMVerifier};
 
-#[cfg(test)]
-#[path = "unit_tests/vm_validator_test.rs"]
-mod vm_validator_test;
+// #[cfg(test)]
+// #[path = "unit_tests/vm_validator_test.rs"]
+// mod vm_validator_test;
 
 #[async_trait::async_trait]
 pub trait TransactionValidation: Send + Sync + Clone {

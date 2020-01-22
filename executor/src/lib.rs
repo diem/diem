@@ -4,8 +4,8 @@
 #![forbid(unsafe_code)]
 #![allow(dead_code)]
 
-#[cfg(test)]
-mod executor_test;
+// #[cfg(test)]
+// mod executor_test;
 #[cfg(test)]
 mod mock_vm;
 

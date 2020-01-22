@@ -26,10 +26,18 @@ fn start_test_storage_with_read_write_client() -> (
     let tmp_dir = libra_temppath::TempPath::new();
     config.storage.dir = tmp_dir.path().to_path_buf();
 
-    let storage_server_handle = start_storage_service(&config);
+    let mut storage_server_handle = start_storage_service(&config);
 
-    let read_client = StorageReadServiceClient::new(&config.storage.address, config.storage.port);
-    let write_client = StorageWriteServiceClient::new(&config.storage.address, config.storage.port);
+    let read_client = StorageReadServiceClient::new(
+        &config.storage.address,
+        config.storage.port,
+        &mut storage_server_handle,
+    );
+    let write_client = StorageWriteServiceClient::new(
+        &config.storage.address,
+        config.storage.port,
+        &mut storage_server_handle,
+    );
     (storage_server_handle, tmp_dir, read_client, write_client)
 }
 
