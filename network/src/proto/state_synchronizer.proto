@@ -5,13 +5,9 @@ syntax = "proto3";
 
 package state_synchronizer;
 
-message GetChunkRequest {
-  bytes bytes = 1;
-}
+message GetChunkRequest { bytes bytes = 1; }
 
-message GetChunkResponse {
-  bytes bytes = 1;
-}
+message GetChunkResponse { bytes bytes = 1; }
 
 message StateSynchronizerMsg {
   oneof message {

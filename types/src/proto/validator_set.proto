@@ -8,6 +8,4 @@ package types;
 import "validator_public_keys.proto";
 
 // Protobuf definition for the Rust struct ValidatorSet.
-message ValidatorSet {
-  repeated ValidatorPublicKeys validator_public_keys = 1;
-}
+message ValidatorSet { repeated ValidatorPublicKeys validator_public_keys = 1; }

@@ -25,11 +25,11 @@ import "language_storage.proto";
 //    by zero, running out of gas, etc. These do not signify an issue with
 //    the VM.
 message VMStatus {
-    // e.g. assertion violation, out of gas
-    uint64 major_status = 1;
-    // Any substatus code. e.g. assertion error number
-    bool has_sub_status = 2;
-    uint64 sub_status = 3;
-    bool has_message = 4;
-    string message = 5;
+  // e.g. assertion violation, out of gas
+  uint64 major_status = 1;
+  // Any substatus code. e.g. assertion error number
+  bool has_sub_status = 2;
+  uint64 sub_status = 3;
+  bool has_message = 4;
+  string message = 5;
 }

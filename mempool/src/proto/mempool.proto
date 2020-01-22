@@ -28,8 +28,7 @@ service Mempool {
       returns (CommitTransactionsResponse) {}
 
   // Check the health of mempool
-  rpc HealthCheck(HealthCheckRequest)
-      returns (HealthCheckResponse) {}
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {}
 }
 
 // -----------------------------------------------------------------------------
@@ -80,8 +79,8 @@ message TransactionExclusion {
 // -----------------------------------------------------------------------------
 message CommitTransactionsRequest {
   repeated CommittedTransaction transactions = 1;
-  // agreed monotonic timestamp microseconds since the epoch for a committed block
-  // used by Mempool to GC expired transactions
+  // agreed monotonic timestamp microseconds since the epoch for a committed
+  // block used by Mempool to GC expired transactions
   uint64 block_timestamp_usecs = 2;
 }
 
@@ -96,8 +95,7 @@ message CommittedTransaction {
 // -----------------------------------------------------------------------------
 // ---------------- HealthCheck
 // -----------------------------------------------------------------------------
-message HealthCheckRequest {
-}
+message HealthCheckRequest {}
 
 message HealthCheckResponse {
   // Indicate whether Mempool is in healthy condition.

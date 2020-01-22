@@ -7,6 +7,6 @@ package types;
 
 /// The unique identifier for a module on the chain.
 message ModuleId {
-    bytes address = 1;
-    string name = 2;
+  bytes address = 1;
+  string name = 2;
 }
