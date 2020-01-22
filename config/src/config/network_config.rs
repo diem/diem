@@ -405,13 +405,7 @@ mod test {
 
     fn default_network_peers(keypair: &NetworkKeyPairs, peer_id: PeerId) -> NetworkPeersConfig {
         let mut peers = NetworkPeersConfig::default();
-        peers.peers.insert(
-            peer_id,
-            NetworkPeerInfo {
-                identity_public_key: keypair.identity_keys.public().clone(),
-                signing_public_key: keypair.signing_keys.public().clone(),
-            },
-        );
+        peers.peers.insert(peer_id, keypair.as_peer_info());
         peers
     }
 }
