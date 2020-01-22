@@ -291,7 +291,7 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
                 ByteIndex(start_offset as u32),
             );
             let loc = Loc::new(file, span);
-            return Err(vec![(loc, "Invalid token".into())]);
+            return Err(vec![(loc, format!("Invalid character: '{}'", c))]);
         }
     };
 
