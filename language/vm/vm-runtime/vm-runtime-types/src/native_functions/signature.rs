@@ -3,7 +3,7 @@
 
 use crate::{
     native_functions::dispatch::{native_gas, NativeResult},
-    value::Value,
+    values::Value,
 };
 use bit_vec::BitVec;
 use libra_crypto::{
@@ -13,6 +13,7 @@ use libra_crypto::{
 };
 use libra_types::{
     byte_array::ByteArray,
+    language_storage::TypeTag,
     vm_error::{StatusCode, VMStatus},
 };
 use std::{collections::VecDeque, convert::TryFrom};
@@ -45,6 +46,7 @@ const OVERSIZED_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 8;
 const INVALID_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 9;
 
 pub fn native_ed25519_signature_verification(
+    _ty_args: Vec<TypeTag>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {
@@ -89,6 +91,7 @@ pub fn native_ed25519_signature_verification(
 
 /// Batch verify a collection of signatures using a bitmap for matching signatures to keys.
 pub fn native_ed25519_threshold_signature_verification(
+    _ty_args: Vec<TypeTag>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {

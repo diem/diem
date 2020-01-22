@@ -7,14 +7,14 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
-    vm_error::{sub_status, StatusCode, VMStatus},
+    vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use std::{collections::btree_map::BTreeMap, mem::replace};
 use vm::errors::*;
 use vm_runtime_types::{
-    loaded_data::struct_def::StructDef,
-    value::{GlobalRef, Value},
+    loaded_data::{struct_def::StructDef, types::Type},
+    values::{GlobalValue, Value},
 };
 
 /// The wrapper around the StateVersionView for the block.
@@ -89,7 +89,7 @@ pub struct TransactionDataCache<'txn> {
     // TODO: an AccessPath corresponds to a top level resource but that may not be the
     // case moving forward, so we need to review this.
     // Also need to relate this to a ResourceKey.
-    data_map: BTreeMap<AccessPath, GlobalRef>,
+    data_map: BTreeMap<AccessPath, Option<(StructDef, GlobalValue)>>,
     module_map: BTreeMap<ModuleId, Vec<u8>>,
     data_cache: &'txn dyn RemoteCache,
 }
@@ -131,8 +131,12 @@ impl<'txn> TransactionDataCache<'txn> {
         Ok(())
     }
 
-    pub fn publish_resource(&mut self, ap: &AccessPath, root: GlobalRef) -> VMResult<()> {
-        self.data_map.insert(ap.clone(), root);
+    pub fn publish_resource(
+        &mut self,
+        ap: &AccessPath,
+        g: (StructDef, GlobalValue),
+    ) -> VMResult<()> {
+        self.data_map.insert(ap.clone(), Some(g));
         Ok(())
     }
 
@@ -146,13 +150,13 @@ impl<'txn> TransactionDataCache<'txn> {
         &mut self,
         ap: &AccessPath,
         def: StructDef,
-    ) -> VMResult<&mut GlobalRef> {
+    ) -> VMResult<&mut Option<(StructDef, GlobalValue)>> {
         if !self.data_map.contains_key(ap) {
             match self.data_cache.get(ap)? {
                 Some(bytes) => {
-                    let res = Value::simple_deserialize(&bytes, def)?;
-                    let new_root = GlobalRef::make_root(ap.clone(), res);
-                    self.data_map.insert(ap.clone(), new_root);
+                    let res = Value::simple_deserialize(&bytes, Type::Struct(def.clone()))?;
+                    let gr = GlobalValue::new(res)?;
+                    self.data_map.insert(ap.clone(), Some((def, gr)));
                 }
                 None => {
                     return Err(vm_error(Location::new(), StatusCode::MISSING_DATA));
@@ -175,34 +179,27 @@ impl<'txn> TransactionDataCache<'txn> {
         let mut sorted_ws: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
 
         let data_map = replace(&mut self.data_map, BTreeMap::new());
-        for (key, global_ref) in data_map {
-            if !global_ref.is_clean() {
-                // if there are pending references get_data() returns None
-                // this is the check at the end of a transaction to verify all references
-                // are properly released
-                let deleted = global_ref.is_deleted();
-                if let Some(data) = global_ref.get_data() {
-                    if deleted {
-                        // The write set will not grow to this size due to the gas limit.
-                        // Expressing the bound in terms of the gas limit is impractical
-                        // for MIRAI to check to we set a safe upper bound.
-                        sorted_ws.insert(key, WriteOp::Deletion);
-                    } else if let Some(blob) = data.simple_serialize() {
-                        // The write set will not grow to this size due to the gas limit.
-                        // Expressing the bound in terms of the gas limit is impractical
-                        // for MIRAI to check to we set a safe upper bound.
+        for (key, global_val) in data_map {
+            match global_val {
+                Some((layout, global_val)) => {
+                    if !global_val.is_clean()? {
+                        // into_owned_struct will check if all references are properly released
+                        // at the end of a transaction
+                        let data = global_val.into_owned_struct()?;
+                        let blob = match data.simple_serialize(&layout) {
+                            Some(blob) => blob,
+                            None => {
+                                return Err(vm_error(
+                                    Location::new(),
+                                    StatusCode::VALUE_SERIALIZATION_ERROR,
+                                ))
+                            }
+                        };
                         sorted_ws.insert(key, WriteOp::Value(blob));
-                    } else {
-                        return Err(vm_error(
-                            Location::new(),
-                            StatusCode::VALUE_SERIALIZATION_ERROR,
-                        ));
                     }
-                } else {
-                    return Err(
-                        vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
-                            .with_sub_status(sub_status::DRE_MISSING_RELEASEREF),
-                    );
+                }
+                None => {
+                    sorted_ws.insert(key, WriteOp::Deletion);
                 }
             }
         }

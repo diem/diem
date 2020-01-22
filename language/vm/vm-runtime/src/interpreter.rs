@@ -48,7 +48,7 @@ use vm_runtime_types::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_functions::dispatch::resolve_native_function,
     type_context::TypeContext,
-    value::{IntegerValue, Locals, ReferenceValue, Struct, Value},
+    values::{IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
 };
 
 fn derive_type_tag(
@@ -407,7 +407,7 @@ impl<'txn> Interpreter<'txn> {
                         };
                         gas!(const_instr: context, self, opcode)?;
                         let field_offset = frame.module().get_field_offset(*fd_idx)?;
-                        let reference = self.operand_stack.pop_as::<ReferenceValue>()?;
+                        let reference = self.operand_stack.pop_as::<StructRef>()?;
                         let field_ref = reference.borrow_field(field_offset as usize)?;
                         self.operand_stack.push(field_ref)?;
                     }
@@ -417,10 +417,11 @@ impl<'txn> Interpreter<'txn> {
                         let args = self.operand_stack.popn(field_count)?;
                         let size = args.iter().fold(
                             AbstractMemorySize::new(GasCarrier::from(field_count)),
-                            |acc, arg| acc.add(arg.size()),
+                            |acc, v| acc.add(v.size()),
                         );
                         gas!(instr: context, self, Opcodes::PACK, size)?;
-                        self.operand_stack.push(Value::struct_(Struct::new(args)))?;
+                        self.operand_stack
+                            .push(Value::struct_(Struct::pack(args)))?;
                     }
                     Bytecode::Unpack(sd_idx, _) => {
                         let struct_def = frame.module().struct_def_at(*sd_idx);
@@ -435,23 +436,22 @@ impl<'txn> Interpreter<'txn> {
                         // TODO: Whether or not we want this gas metering in the loop is
                         // questionable.  However, if we don't have it in the loop we could wind up
                         // doing a fair bit of work before charging for it.
-                        for idx in 0..field_count {
-                            let value = struct_.get_field_value(idx as usize)?;
+                        for value in struct_.unpack()? {
                             gas!(instr: context, self, Opcodes::UNPACK, value.size())?;
                             self.operand_stack.push(value)?;
                         }
                     }
                     Bytecode::ReadRef => {
-                        let reference = self.operand_stack.pop_as::<ReferenceValue>()?;
+                        let reference = self.operand_stack.pop_as::<Reference>()?;
                         let value = reference.read_ref()?;
                         gas!(instr: context, self, Opcodes::READ_REF, value.size())?;
                         self.operand_stack.push(value)?;
                     }
                     Bytecode::WriteRef => {
-                        let reference = self.operand_stack.pop_as::<ReferenceValue>()?;
+                        let reference = self.operand_stack.pop_as::<Reference>()?;
                         let value = self.operand_stack.pop()?;
                         gas!(instr: context, self, Opcodes::WRITE_REF, value.size())?;
-                        reference.write_ref(value);
+                        reference.write_ref(value)?;
                     }
                     Bytecode::CastU8 => {
                         gas!(const_instr: context, self, Opcodes::CAST_U8)?;
@@ -564,8 +564,7 @@ impl<'txn> Interpreter<'txn> {
                             Opcodes::NEQ,
                             lhs.size().add(rhs.size())
                         )?;
-                        self.operand_stack
-                            .push(Value::bool(lhs.not_equals(&rhs)?))?;
+                        self.operand_stack.push(Value::bool(!lhs.equals(&rhs)?))?;
                     }
                     Bytecode::GetTxnSenderAddress => {
                         gas!(const_instr: context, self, Opcodes::GET_TXN_SENDER)?;
@@ -680,7 +679,7 @@ impl<'txn> Interpreter<'txn> {
     ) -> VMResult<Option<Frame<'txn, FunctionRef<'txn>>>> {
         let func = runtime.resolve_function_ref(module, idx, context)?;
         if func.is_native() {
-            self.call_native(runtime, context, func, type_actual_tags)?;
+            self.call_native(runtime, context, func, type_actual_tags, type_actuals)?;
             Ok(None)
         } else {
             let mut locals = Locals::new(func.local_count());
@@ -704,6 +703,7 @@ impl<'txn> Interpreter<'txn> {
         context: &mut dyn InterpreterContext,
         function: FunctionRef<'txn>,
         type_actual_tags: Vec<TypeTag>,
+        type_actuals: Vec<Type>,
     ) -> VMResult<()> {
         let module = function.module();
         let module_id = module.self_id();
@@ -711,7 +711,7 @@ impl<'txn> Interpreter<'txn> {
         let native_function = resolve_native_function(&module_id, function_name)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         if module_id == *ACCOUNT_MODULE && function_name == EMIT_EVENT_NAME.as_ident_str() {
-            self.call_emit_event(context, type_actual_tags)
+            self.call_emit_event(context, type_actual_tags, type_actuals)
         } else if module_id == *ACCOUNT_MODULE && function_name == SAVE_ACCOUNT_NAME.as_ident_str()
         {
             self.call_save_account(runtime, context)
@@ -729,7 +729,8 @@ impl<'txn> Interpreter<'txn> {
             for _ in 0..expected_args {
                 arguments.push_front(self.operand_stack.pop()?);
             }
-            let result = (native_function.dispatch)(arguments, self.gas_schedule)?;
+            let result =
+                (native_function.dispatch)(type_actual_tags, arguments, self.gas_schedule)?;
             gas!(consume: context, result.cost)?;
             result.result.and_then(|values| {
                 for value in values {
@@ -745,6 +746,7 @@ impl<'txn> Interpreter<'txn> {
         &mut self,
         context: &mut dyn InterpreterContext,
         mut type_actual_tags: Vec<TypeTag>,
+        mut type_actuals: Vec<Type>,
     ) -> VMResult<()> {
         if type_actual_tags.len() != 1 {
             return Err(
@@ -754,12 +756,23 @@ impl<'txn> Interpreter<'txn> {
                 )),
             );
         }
+
+        if type_actuals.len() != 1 {
+            return Err(
+                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
+                    "write_to_event_storage expects 1 argument got {}.",
+                    type_actuals.len()
+                )),
+            );
+        }
+
         let type_tag = type_actual_tags.pop().unwrap();
+        let layout = type_actuals.pop().unwrap();
 
         let msg = self
             .operand_stack
             .pop()?
-            .simple_serialize()
+            .simple_serialize(&layout)
             .ok_or_else(|| VMStatus::new(StatusCode::DATA_FORMAT_ERROR))?;
         let count = self.operand_stack.pop_as::<u64>()?;
         let key = self.operand_stack.pop_as::<ByteArray>()?;
@@ -787,7 +800,7 @@ impl<'txn> Interpreter<'txn> {
     /// Perform a binary operation to two values at the top of the stack.
     fn binop<F, T>(&mut self, f: F) -> VMResult<()>
     where
-        VMResult<T>: From<Value>,
+        Value: VMValueCast<T>,
         F: FnOnce(T, T) -> VMResult<Value>,
     {
         let rhs = self.operand_stack.pop_as::<T>()?;
@@ -813,7 +826,7 @@ impl<'txn> Interpreter<'txn> {
     /// Perform a binary operation for boolean values.
     fn binop_bool<F, T>(&mut self, f: F) -> VMResult<()>
     where
-        VMResult<T>: From<Value>,
+        Value: VMValueCast<T>,
         F: FnOnce(T, T) -> VMResult<bool>,
     {
         self.binop(|lhs, rhs| Ok(Value::bool(f(lhs, rhs)?)))
@@ -865,9 +878,9 @@ impl<'txn> Interpreter<'txn> {
         ap: AccessPath,
         struct_def: StructDef,
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        let global_ref = context.borrow_global(&ap, struct_def)?;
-        let size = global_ref.size();
-        self.operand_stack.push(Value::global_ref(global_ref))?;
+        let g = context.borrow_global(&ap, struct_def)?;
+        let size = g.size();
+        self.operand_stack.push(g.borrow_global()?)?;
         Ok(size)
     }
 
@@ -1012,11 +1025,10 @@ impl<'txn> Interpreter<'txn> {
             }
             internal_state.push_str(format!("{}* {:?}\n", i, code[pc]).as_str());
         }
-        internal_state
-            .push_str(format!("Locals:\n{}", current_frame.locals.pretty_string()).as_str());
+        internal_state.push_str(format!("Locals:\n{}", current_frame.locals).as_str());
         internal_state.push_str("Operand Stack:\n");
         for value in &self.operand_stack.0 {
-            internal_state.push_str(format!("{}\n", value.pretty_string()).as_str());
+            internal_state.push_str(format!("{}\n", value).as_str());
         }
         internal_state
     }
@@ -1063,7 +1075,7 @@ impl Stack {
     /// type or if the stack is empty.
     fn pop_as<T>(&mut self) -> VMResult<T>
     where
-        VMResult<T>: From<Value>,
+        Value: VMValueCast<T>,
     {
         self.pop()?.value_as()
     }

@@ -16,6 +16,7 @@ use once_cell::sync::Lazy;
 use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 use vm::{errors::*, CompiledModule};
 use vm_runtime::data_cache::RemoteCache;
+use vm_runtime_types::values::Struct;
 
 /// The write set encoded in the genesis transaction.
 pub static GENESIS_WRITE_SET: Lazy<WriteSet> = Lazy::new(|| {
@@ -84,7 +85,12 @@ impl FakeDataStore {
 
     /// Adds an [`AccountData`] to this data store.
     pub fn add_account_data(&mut self, account_data: &AccountData) {
-        match account_data.to_resource().simple_serialize() {
+        match account_data
+            .to_resource()
+            .value_as::<Struct>()
+            .unwrap()
+            .simple_serialize(&AccountData::layout())
+        {
             Some(blob) => {
                 self.set(account_data.make_access_path(), blob);
             }

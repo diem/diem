@@ -20,7 +20,7 @@ use vm::{
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
-use vm_runtime_types::value::Value;
+use vm_runtime_types::values::Value;
 
 static BLOCK_PROLOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("block_prologue").unwrap());
 

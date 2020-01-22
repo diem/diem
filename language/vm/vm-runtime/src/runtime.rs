@@ -32,7 +32,7 @@ use vm_cache_map::Arena;
 use vm_runtime_types::{
     loaded_data::{struct_def::StructDef, types::Type},
     type_context::TypeContext,
-    value::Value,
+    values::Value,
 };
 
 /// An instantiation of the MoveVM.

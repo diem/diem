@@ -38,7 +38,7 @@ use vm::{
 use vm_runtime::{
     chain_state::TransactionExecutionContext, data_cache::BlockDataCache, move_vm::MoveVM,
 };
-use vm_runtime_types::value::Value;
+use vm_runtime_types::values::Value;
 
 /// This function calls the Bytecode verifier to test it
 fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {

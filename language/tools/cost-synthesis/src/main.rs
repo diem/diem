@@ -41,7 +41,7 @@ use vm_runtime::{
     loaded_data::function::{FunctionRef, FunctionReference},
     runtime::VMRuntime,
 };
-use vm_runtime_types::{native_functions::hash, value::Value};
+use vm_runtime_types::{native_functions::hash, values::Value};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -265,7 +265,7 @@ macro_rules! bench_native {
                     let before = Instant::now();
                     let mut args = VecDeque::new();
                     args.push_front(Value::byte_array(stack_access.next_bytearray()));
-                    let _ = $function(args, &cost_table);
+                    let _ = $function(vec![], args, &cost_table);
                     acc + before.elapsed().as_nanos()
                 });
                 // Time per byte averaged over the number of iterations that we performed.

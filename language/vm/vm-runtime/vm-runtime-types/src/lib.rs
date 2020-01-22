@@ -3,13 +3,8 @@
 
 #![forbid(unsafe_code)]
 
-//! Types and data used by the VM runtime
-
-#[cfg(any(test, feature = "fuzzing"))]
-mod proptest_types;
-
 pub mod loaded_data;
 pub mod native_functions;
 pub mod native_structs;
 pub mod type_context;
-pub mod value;
+pub mod values;

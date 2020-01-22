@@ -3,5 +3,4 @@
 
 pub mod def;
 pub mod dispatch;
-pub mod vector;
-pub use def::{NativeStructType, NativeStructValue};
+pub use def::NativeStructType;

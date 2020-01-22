@@ -1,41 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::value::{MutVal, Value};
-use crate::{
-    loaded_data::{struct_def::StructDef, types::Type},
-    native_structs::vector::NativeVector,
-};
-use serde::{ser, Deserialize, Serialize};
-use vm::errors::VMResult;
-use vm::gas_schedule::{AbstractMemorySize, GasCarrier};
+use crate::loaded_data::types::Type;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum NativeStructTag {
     Vector = 0,
 }
 
+// TODO: Clean this up when we promote Vector to a primitive type.
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct NativeStructType {
     pub tag: NativeStructTag,
-    type_actuals: Vec<Type>,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum NativeStructValue {
-    Vector(NativeVector),
-}
-
-// TODO(#1307)
-impl ser::Serialize for NativeStructValue {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        match self {
-            NativeStructValue::Vector(v) => v.serialize(serializer),
-        }
-    }
+    pub type_actuals: Vec<Type>,
 }
 
 impl NativeStructType {
@@ -51,41 +29,5 @@ impl NativeStructType {
 
     pub fn type_actuals(&self) -> &[Type] {
         &self.type_actuals
-    }
-}
-
-impl NativeStructValue {
-    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
-        match self {
-            NativeStructValue::Vector(v) => v.size(),
-        }
-    }
-
-    /// Normal code should always know what type this value has. This is made available only for
-    /// tests.
-    #[allow(non_snake_case)]
-    #[doc(hidden)]
-    pub(crate) fn to_struct_def_FOR_TESTING(&self) -> StructDef {
-        match self {
-            NativeStructValue::Vector(v) => StructDef::Native(NativeStructType::new_vec(
-                v.get(0)
-                    .map(|v| v.to_type_FOR_TESTING())
-                    .unwrap_or(Type::Bool),
-            )),
-        }
-    }
-
-    pub(crate) fn copy_value(&self) -> VMResult<Value> {
-        match self {
-            NativeStructValue::Vector(v) => {
-                let mut values: Vec<MutVal> = vec![];
-                for value in &v.0 {
-                    values.push(MutVal::new(value.copy_value()?));
-                }
-                Ok(Value::native_struct(NativeStructValue::Vector(
-                    NativeVector(values),
-                )))
-            }
-        }
     }
 }
