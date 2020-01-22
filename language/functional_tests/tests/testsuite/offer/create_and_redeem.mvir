@@ -1,0 +1,79 @@
+//! account: alice
+//! account: bob
+//! account: carl
+
+// Just a dummy module with a test resource
+module M {
+    resource T { b: bool }
+
+    public create(): Self.T {
+        return T { b: true };
+    }
+
+    public publish(t: Self.T) {
+        move_to_sender<T>(move(t));
+        return;
+    }
+}
+
+//! new-transaction
+//! sender: alice
+import {{default}}.M;
+import 0x0.Offer;
+
+// Alice creates an offer for Bob that contains an M.T resource
+main() {
+    Offer.create<M.T>(
+        M.create(),
+        {{bob}}
+    );
+
+    assert(Offer.exists_at<M.T>(get_txn_sender()), 77);
+    assert(Offer.address_of<M.T>(get_txn_sender()) == {{bob}} , 78);
+    return;
+}
+
+//! new-transaction
+//! sender: carl
+import {{default}}.M;
+import 0x0.Offer;
+
+// Carl should *not* be able to claim Alice's offer for Bob
+main() {
+    M.publish(Offer.redeem<M.T>({{alice}}));
+
+    return;
+}
+
+// check: ABORTED
+// check: 11
+
+//! new-transaction
+//! sender: bob
+import {{default}}.M;
+import 0x0.Offer;
+
+// Bob should be able to claim Alice's offer for him
+main() {
+    let redeemed: M.T;
+    // claimed successfully
+    redeemed = Offer.redeem<M.T>({{alice}});
+
+    // offer should not longer exist
+    assert(!Offer.exists_at<M.T>({{alice}}), 79);
+
+    // create a new offer for Carl
+    Offer.create<M.T>(move(redeemed), {{carl}});
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+import {{default}}.M;
+import 0x0.Offer;
+
+// Bob should be able to reclaim his own offer for Carl
+main() {
+    M.publish(Offer.redeem<M.T>({{bob}}));
+    return;
+}
