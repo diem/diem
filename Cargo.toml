@@ -66,6 +66,7 @@ members = [
     "network/socket-bench-server",
     "mempool",
     "mempool/mempool-shared-proto",
+    "secure/net",
     "state-synchronizer",
     "storage/accumulator",
     "storage/backup-restore",
