@@ -56,6 +56,9 @@
 //! every Consensus commit request. We use a separate system TTL to ensure that a transaction won't
 //! remain stuck in Mempool forever, even if Consensus doesn't make progress
 
+/// This module provides mocks of shared mempool for tests.
+#[cfg(feature = "fuzzing")]
+pub mod mocks;
 pub mod proto;
 pub use runtime::MempoolRuntime;
 

@@ -1,279 +1,215 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{mocks::local_mock_mempool::LocalMockMempool, upstream_proxy};
 use admission_control_proto::proto::admission_control::{
+    admission_control_server::AdmissionControl, submit_transaction_response::Status,
     SubmitTransactionRequest, SubmitTransactionResponse as ProtoSubmitTransactionResponse,
 };
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
+use anyhow::Result;
 use futures::executor::block_on;
-use libra_config::config::{AdmissionControlConfig, RoleType};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED};
-use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
+use libra_mempool_shared_proto::proto::mempool_status::{
+    MempoolAddTransactionStatus, MempoolAddTransactionStatusCode,
+};
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
+    proto::types::{
+        UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, VmStatus as VmStatusProto,
+    },
     test_helpers::transaction_test_helpers::get_test_signed_txn,
+    transaction::SignedTransaction,
     vm_error::{StatusCode, VMStatus},
 };
-use network::validator_network::AdmissionControlNetworkSender;
 use rand::SeedableRng;
 use std::convert::TryFrom;
-use std::sync::Arc;
-use storage_service::mocks::mock_storage_client::MockStorageReadClient;
-use vm_validator::mocks::mock_vm_validator::MockVMValidator;
+use tonic::Request;
+use vm_validator::{
+    mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
+};
 
-fn assert_status(response: ProtoSubmitTransactionResponse, status: VMStatus) {
-    let rust_resp = SubmitTransactionResponse::try_from(response).unwrap();
-    if let Some(resp_ac_status) = rust_resp.ac_status {
+fn submit_transaction(
+    sender: AccountAddress,
+    ac_service: &MockAdmissionControlService,
+    are_keys_valid: bool,
+) -> SubmitTransactionResponse {
+    let keypair = compat::generate_keypair(None);
+    let public_key = if are_keys_valid {
+        keypair.1
+    } else {
+        let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+        let test_key = compat::generate_keypair(&mut rng);
+        test_key.1
+    };
+    let mut req = SubmitTransactionRequest::default();
+    req.transaction = Some(get_test_signed_txn(sender, 0, keypair.0, public_key, None).into());
+    SubmitTransactionResponse::try_from(
+        block_on(ac_service.submit_transaction(Request::new(req)))
+            .unwrap()
+            .into_inner(),
+    )
+    .unwrap()
+}
+
+fn test_vm_status_submission(
+    account_address: AccountAddress,
+    ac_service: &MockAdmissionControlService,
+    status: StatusCode,
+    are_keys_valid: bool,
+) {
+    let response = submit_transaction(account_address, ac_service, are_keys_valid);
+    if let Some(resp_ac_status) = response.ac_status {
         assert_eq!(resp_ac_status, AdmissionControlStatus::Accepted);
     } else {
-        let decoded_response = rust_resp.vm_error.unwrap();
-        assert_eq!(decoded_response.major_status, status.major_status);
-        assert_eq!(decoded_response.sub_status, status.sub_status);
+        let decoded_response = response.vm_error.unwrap();
+        assert_eq!(
+            decoded_response.major_status,
+            VMStatus::new(status).major_status
+        );
+        assert_eq!(
+            decoded_response.sub_status,
+            VMStatus::new(status).sub_status
+        );
     }
 }
 
-#[derive(Clone)]
-struct UpstreamProxyDataMock {
-    ac_config: AdmissionControlConfig,
-    network_sender: AdmissionControlNetworkSender,
-    role: RoleType,
-    mempool_client: Option<LocalMockMempool>,
-    storage_read_client: Arc<MockStorageReadClient>,
-    vm_validator: Arc<MockVMValidator>,
-    need_to_check_mempool_before_validation: bool,
+fn test_mempool_status_submission(
+    account_address: AccountAddress,
+    ac_service: &MockAdmissionControlService,
+    status: Option<MempoolAddTransactionStatusCode>,
+) {
+    let response = submit_transaction(account_address, ac_service, true);
+    if let Some(mempool_status) = status {
+        assert_eq!(response.mempool_error.unwrap().code, mempool_status,);
+    } else {
+        assert_eq!(
+            response.ac_status.unwrap(),
+            AdmissionControlStatus::Accepted,
+        );
+    }
 }
 
-impl UpstreamProxyDataMock {
-    pub fn new() -> Self {
-        let (network_reqs_tx, _) = channel::new_test(8);
-        let network_sender = AdmissionControlNetworkSender::new(network_reqs_tx);
+struct MockAdmissionControlService {
+    mock_vm: MockVMValidator,
+}
+
+impl MockAdmissionControlService {
+    fn new() -> Self {
         Self {
-            ac_config: AdmissionControlConfig::default(),
-            network_sender,
-            role: RoleType::Validator,
-            mempool_client: Some(LocalMockMempool::new()),
-            storage_read_client: Arc::new(MockStorageReadClient),
-            vm_validator: Arc::new(MockVMValidator),
-            need_to_check_mempool_before_validation: false,
+            mock_vm: MockVMValidator,
         }
+    }
+}
+
+#[tonic::async_trait]
+impl AdmissionControl for MockAdmissionControlService {
+    async fn submit_transaction(
+        &self,
+        request: tonic::Request<SubmitTransactionRequest>,
+    ) -> Result<tonic::Response<ProtoSubmitTransactionResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let transaction = SignedTransaction::try_from(req.clone().transaction.unwrap()).unwrap();
+
+        let mut resp = ProtoSubmitTransactionResponse::default();
+
+        match self.mock_vm.validate_transaction(transaction).await {
+            Ok(Some(vm_status)) => {
+                resp.status = Some(Status::VmStatus(VmStatusProto::from(vm_status)));
+            }
+            Ok(None) => {
+                let mut status = MempoolAddTransactionStatus::default();
+                let insufficient_balance_add = [100_u8; ADDRESS_LENGTH];
+                let invalid_seq_add = [101_u8; ADDRESS_LENGTH];
+                let sys_error_add = [102_u8; ADDRESS_LENGTH];
+                let accepted_add = [103_u8; ADDRESS_LENGTH];
+                let mempool_full = [104_u8; ADDRESS_LENGTH];
+                let transaction = SignedTransaction::try_from(req.transaction.unwrap()).unwrap();
+                let sender = transaction.sender();
+                let sender_ref = sender.as_ref();
+                if sender_ref == accepted_add {
+                    status.set_code(MempoolAddTransactionStatusCode::Valid);
+                } else if sender_ref == insufficient_balance_add {
+                    status.set_code(MempoolAddTransactionStatusCode::InsufficientBalance);
+                } else if sender_ref == invalid_seq_add {
+                    status.set_code(MempoolAddTransactionStatusCode::InvalidSeqNumber);
+                } else if sender_ref == sys_error_add {
+                    status.set_code(MempoolAddTransactionStatusCode::InvalidUpdate);
+                } else if sender_ref == mempool_full {
+                    status.set_code(MempoolAddTransactionStatusCode::MempoolIsFull);
+                }
+                resp.status = Some(Status::MempoolStatus(status));
+            }
+            _ => {
+                panic!("unexpected vm validation error");
+            }
+        }
+
+        if let Some(Status::MempoolStatus(status)) = resp.status.clone() {
+            let code: i32 = MempoolAddTransactionStatusCode::Valid.into();
+            if status.code == code {
+                resp.status = Some(Status::AcStatus(AdmissionControlStatus::Accepted.into()));
+            }
+        }
+
+        Ok(tonic::Response::new(resp))
+    }
+
+    async fn update_to_latest_ledger(
+        &self,
+        _request: tonic::Request<UpdateToLatestLedgerRequest>,
+    ) -> Result<tonic::Response<UpdateToLatestLedgerResponse>, tonic::Status> {
+        unimplemented!("This method is not needed for this test");
     }
 }
 
 #[test]
 fn test_submit_txn_inner_vm() {
-    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+    let ac_service = MockAdmissionControlService::new();
 
-    let mock_upstream_proxy_data = UpstreamProxyDataMock::new();
-    let upstream_proxy_data = upstream_proxy::UpstreamProxyData::new(
-        mock_upstream_proxy_data.ac_config,
-        mock_upstream_proxy_data.network_sender,
-        mock_upstream_proxy_data.role,
-        mock_upstream_proxy_data.mempool_client,
-        mock_upstream_proxy_data.storage_read_client,
-        mock_upstream_proxy_data.vm_validator,
-        mock_upstream_proxy_data.need_to_check_mempool_before_validation,
-    );
-
-    // create request
-    let mut req: SubmitTransactionRequest = SubmitTransactionRequest::default();
-    let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
-    let keypair = compat::generate_keypair(&mut rng);
-    req.transaction =
-        Some(get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into());
-    let response = block_on(upstream_proxy::submit_transaction_to_mempool(
-        upstream_proxy_data.clone(),
-        req.clone(),
-    ))
-    .unwrap();
-    assert_status(
-        response,
-        VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST),
-    );
-    let sender = AccountAddress::new([1; ADDRESS_LENGTH]);
-    req.transaction =
-        Some(get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into());
-    let response = block_on(upstream_proxy::submit_transaction_to_mempool(
-        upstream_proxy_data.clone(),
-        req.clone(),
-    ))
-    .unwrap();
-    assert_status(response, VMStatus::new(StatusCode::INVALID_SIGNATURE));
-    let sender = AccountAddress::new([2; ADDRESS_LENGTH]);
-    req.transaction =
-        Some(get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into());
-    let response = block_on(upstream_proxy::submit_transaction_to_mempool(
-        upstream_proxy_data.clone(),
-        req.clone(),
-    ))
-    .unwrap();
-    assert_status(
-        response,
-        VMStatus::new(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE),
-    );
-    let sender = AccountAddress::new([3; ADDRESS_LENGTH]);
-    req.transaction =
-        Some(get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into());
-    let response = block_on(upstream_proxy::submit_transaction_to_mempool(
-        upstream_proxy_data.clone(),
-        req.clone(),
-    ))
-    .unwrap();
-    assert_status(response, VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_NEW));
-    let sender = AccountAddress::new([4; ADDRESS_LENGTH]);
-    req.transaction =
-        Some(get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into());
-    let response = block_on(upstream_proxy::submit_transaction_to_mempool(
-        upstream_proxy_data.clone(),
-        req.clone(),
-    ))
-    .unwrap();
-    assert_status(response, VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD));
-    let sender = AccountAddress::new([5; ADDRESS_LENGTH]);
-    req.transaction =
-        Some(get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into());
-    let response = block_on(upstream_proxy::submit_transaction_to_mempool(
-        upstream_proxy_data.clone(),
-        req.clone(),
-    ))
-    .unwrap();
-    assert_status(response, VMStatus::new(StatusCode::TRANSACTION_EXPIRED));
-    let sender = AccountAddress::new([6; ADDRESS_LENGTH]);
-    req.transaction =
-        Some(get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into());
-    let response = block_on(upstream_proxy::submit_transaction_to_mempool(
-        upstream_proxy_data.clone(),
-        req.clone(),
-    ))
-    .unwrap();
-    assert_status(response, VMStatus::new(StatusCode::INVALID_AUTH_KEY));
-    let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
-    req.transaction =
-        Some(get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into());
-    let response = block_on(upstream_proxy::submit_transaction_to_mempool(
-        upstream_proxy_data.clone(),
-        req.clone(),
-    ))
-    .unwrap();
-    assert_status(response, VMStatus::new(StatusCode::EXECUTED));
-
-    let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
-    let test_key = compat::generate_keypair(&mut rng);
-    req.transaction = Some(get_test_signed_txn(sender, 0, keypair.0, test_key.1, None).into());
-    let response = block_on(upstream_proxy::submit_transaction_to_mempool(
-        upstream_proxy_data,
-        req,
-    ))
-    .unwrap();
-    assert_status(response, VMStatus::new(StatusCode::INVALID_SIGNATURE));
+    let test_cases = vec![
+        (0, StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST, true),
+        (1, StatusCode::INVALID_SIGNATURE, true),
+        (
+            2,
+            StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
+            true,
+        ),
+        (3, StatusCode::SEQUENCE_NUMBER_TOO_NEW, true),
+        (4, StatusCode::SEQUENCE_NUMBER_TOO_OLD, true),
+        (5, StatusCode::TRANSACTION_EXPIRED, true),
+        (6, StatusCode::INVALID_AUTH_KEY, true),
+        (8, StatusCode::EXECUTED, true),
+        (8, StatusCode::INVALID_SIGNATURE, false),
+    ];
+    for (sender_id, status, are_keys_valid) in test_cases.into_iter() {
+        test_vm_status_submission(
+            AccountAddress::new([sender_id as u8; ADDRESS_LENGTH]),
+            &ac_service,
+            status,
+            are_keys_valid,
+        );
+    }
 }
 
 #[test]
 fn test_submit_txn_inner_mempool() {
-    let mock_upstream_proxy_data = UpstreamProxyDataMock::new();
-    let upstream_proxy_data = upstream_proxy::UpstreamProxyData::new(
-        mock_upstream_proxy_data.ac_config,
-        mock_upstream_proxy_data.network_sender,
-        mock_upstream_proxy_data.role,
-        mock_upstream_proxy_data.mempool_client,
-        mock_upstream_proxy_data.storage_read_client,
-        mock_upstream_proxy_data.vm_validator,
-        mock_upstream_proxy_data.need_to_check_mempool_before_validation,
-    );
+    let ac_service = MockAdmissionControlService::new();
 
-    let mut req: SubmitTransactionRequest = SubmitTransactionRequest::default();
-    let keypair = compat::generate_keypair(None);
-    let insufficient_balance_add = AccountAddress::new([100; ADDRESS_LENGTH]);
-    req.transaction = Some(
-        get_test_signed_txn(
-            insufficient_balance_add,
-            0,
-            keypair.0.clone(),
-            keypair.1.clone(),
-            None,
-        )
-        .into(),
-    );
-    let response = SubmitTransactionResponse::try_from(
-        block_on(upstream_proxy::submit_transaction_to_mempool(
-            upstream_proxy_data.clone(),
-            req.clone(),
-        ))
-        .unwrap(),
-    )
-    .unwrap();
-    assert_eq!(
-        response.mempool_error.unwrap().code,
-        MempoolAddTransactionStatusCode::InsufficientBalance
-    );
-    let invalid_seq_add = AccountAddress::new([101; ADDRESS_LENGTH]);
-    req.transaction = Some(
-        get_test_signed_txn(
-            invalid_seq_add,
-            0,
-            keypair.0.clone(),
-            keypair.1.clone(),
-            None,
-        )
-        .into(),
-    );
-    let response = SubmitTransactionResponse::try_from(
-        block_on(upstream_proxy::submit_transaction_to_mempool(
-            upstream_proxy_data.clone(),
-            req.clone(),
-        ))
-        .unwrap(),
-    )
-    .unwrap();
-    assert_eq!(
-        response.mempool_error.unwrap().code,
-        MempoolAddTransactionStatusCode::InvalidSeqNumber
-    );
-    let sys_error_add = AccountAddress::new([102; ADDRESS_LENGTH]);
-    req.transaction = Some(
-        get_test_signed_txn(sys_error_add, 0, keypair.0.clone(), keypair.1.clone(), None).into(),
-    );
-    let response = SubmitTransactionResponse::try_from(
-        block_on(upstream_proxy::submit_transaction_to_mempool(
-            upstream_proxy_data.clone(),
-            req.clone(),
-        ))
-        .unwrap(),
-    )
-    .unwrap();
-    assert_eq!(
-        response.mempool_error.unwrap().code,
-        MempoolAddTransactionStatusCode::InvalidUpdate
-    );
-    let accepted_add = AccountAddress::new([103; ADDRESS_LENGTH]);
-    req.transaction = Some(
-        get_test_signed_txn(accepted_add, 0, keypair.0.clone(), keypair.1.clone(), None).into(),
-    );
-    let response = SubmitTransactionResponse::try_from(
-        block_on(upstream_proxy::submit_transaction_to_mempool(
-            upstream_proxy_data.clone(),
-            req.clone(),
-        ))
-        .unwrap(),
-    )
-    .unwrap();
-    assert_eq!(
-        response.ac_status.unwrap(),
-        AdmissionControlStatus::Accepted,
-    );
-    let accepted_add = AccountAddress::new([104; ADDRESS_LENGTH]);
-    req.transaction =
-        Some(get_test_signed_txn(accepted_add, 0, keypair.0.clone(), keypair.1, None).into());
-    let response = SubmitTransactionResponse::try_from(
-        block_on(upstream_proxy::submit_transaction_to_mempool(
-            upstream_proxy_data,
-            req,
-        ))
-        .unwrap(),
-    )
-    .unwrap();
-    assert_eq!(
-        response.mempool_error.unwrap().code,
-        MempoolAddTransactionStatusCode::MempoolIsFull,
-    );
+    let test_cases = vec![
+        (
+            100,
+            Some(MempoolAddTransactionStatusCode::InsufficientBalance),
+        ),
+        (101, Some(MempoolAddTransactionStatusCode::InvalidSeqNumber)),
+        (102, Some(MempoolAddTransactionStatusCode::InvalidUpdate)),
+        (103, None),
+        (104, Some(MempoolAddTransactionStatusCode::MempoolIsFull)),
+    ];
+    for (sender_id, status) in test_cases.into_iter() {
+        test_mempool_status_submission(
+            AccountAddress::new([sender_id as u8; ADDRESS_LENGTH]),
+            &ac_service,
+            status,
+        );
+    }
 }
