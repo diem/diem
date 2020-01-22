@@ -59,7 +59,7 @@ trap "echo Terminating on SIGINT; docker rm -f $CONTAINER >/dev/null" SIGINT
 trap "echo Terminating on SIGTERM; docker rm -f $CONTAINER >/dev/null" SIGTERM
 trap "echo Terminating on SIGHUP; docker rm -f $CONTAINER >/dev/null" SIGHUP
 
-VARS="-e SLACK_CHANGELOG_URL"
+VARS="-e RUST_LOG -e VERBOSE -e RUST_BACKTRACE -e SLACK_CHANGELOG_URL"
 
 # This could in theory fail due to concurrency, but it seem unlikely
 docker run $VARS -v /libra_rsa:/libra_rsa --name $CONTAINER --rm $DOCKER_IMAGE $* &

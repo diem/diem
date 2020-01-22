@@ -7,11 +7,20 @@ aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try
 ssh ssh.cluster-test-ci.aws.hlw3truzy4ls.com echo "ssh ok" >/dev/null || (echo "Failed to ssh to cluster test instance. Try renew corp canal cert with cc-certs"; exit 1)
 
 PR=""
+WORKSPACE="cluster-test-ci"
 
 while (( "$#" )); do
   case "$1" in
     -p|--pr)
       PR=$2
+      shift 2
+      ;;
+    -M|--master)
+      PR=MASTER
+      shift 1
+      ;;
+    -W|--workspace)
+      WORKSPACE=$2
       shift 2
       ;;
     -c|--container|-i|--image|--deploy)
@@ -28,23 +37,27 @@ if [ -z "$PR" ]
 then
       echo "No PR specified"
       echo "Usage:"
-      echo "cti --pr <PR> [cluster test arguments]"
-      echo "Example:"
+      echo "cti [--pr <PR>|--master] [--workspace <WORKSPACE>] <cluster test arguments>"
+      echo "Examples:"
       echo "cti --pr <PR> --run bench # Run benchmark"
+      echo "cti --master --emit-tx # Submit transactions until Ctrl+C pressed"
       exit 1
 fi
 
-./docker/validator-dynamic/build-aws.sh --version pull/$PR
-
-TAG=dev_${USER}_pull_${PR}
+if [ "$PR" = "MASTER" ]; then
+    TAG=master
+else
+    ./docker/validator-dynamic/build-aws.sh --version pull/$PR
+    TAG=dev_${USER}_pull_${PR}
+fi
 
 echo "Build succeed, will use tag $TAG"
 echo "**********"
 echo "Dashboard: https://fburl.com/os3pb0ot"
 echo "Logs:"
-echo " * ssh ssh.cluster-test-ci.aws.hlw3truzy4ls.com"
+echo " * ssh ssh.${WORKSPACE}.aws.hlw3truzy4ls.com"
 echo " * ssh-peer"
 echo " * tail -f /data/libra/libra.log"
 echo "**********"
 
-ssh -t ssh.cluster-test-ci.aws.hlw3truzy4ls.com ssh -i /libra_rsa ec2-user@ct.priv.cluster-test-ci.aws.hlw3truzy4ls.com ct -c cluster-test-ci --deploy $TAG $*
+ssh -t ssh.${WORKSPACE}.aws.hlw3truzy4ls.com ssh -t -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com ct -c cluster-test-ci --deploy $TAG $*
