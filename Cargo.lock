@@ -2239,6 +2239,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-secure-net"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-config 0.1.0",
+]
+
+[[package]]
 name = "libra-state-view"
 version = "0.1.0"
 dependencies = [
@@ -3888,6 +3896,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-secure-net 0.1.0",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",

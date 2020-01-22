@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    network::{NetworkClient, NetworkServer},
     persistent_storage::PersistentStorage,
     serializer::{SafetyRulesInput, SerializerClient, SerializerService, TSerializerClient},
     Error, SafetyRules,
 };
 use consensus_types::common::Payload;
+use libra_secure_net::{NetworkClient, NetworkServer};
 use libra_types::crypto_proxies::ValidatorSigner;
 use std::{marker::PhantomData, net::SocketAddr, sync::Arc};
 
