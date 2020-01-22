@@ -12,10 +12,6 @@ message HealthCheckerMsg {
   }
 }
 
-message Ping {
-  uint32 nonce = 1;
-}
+message Ping { uint32 nonce = 1; }
 
-message Pong {
-  uint32 nonce = 1;
-}
+message Pong { uint32 nonce = 1; }

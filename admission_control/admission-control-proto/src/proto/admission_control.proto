@@ -10,7 +10,8 @@ import "mempool_status.proto";
 import "transaction.proto";
 import "vm_errors.proto";
 
-// The request for submitting a transaction to an upstream validator or full node.
+// The request for submitting a transaction to an upstream validator or full
+// node.
 message AdmissionControlMsg {
   oneof message {
     SubmitTransactionRequest submit_transaction_request = 1;
@@ -85,7 +86,6 @@ service AdmissionControl {
   // the data. Note that if a client only wishes to update to the latest
   // LedgerInfo and receive the proof of this latest version, they can simply
   // omit the requested_items (or pass an empty list)
-  rpc UpdateToLatestLedger(
-      types.UpdateToLatestLedgerRequest)
+  rpc UpdateToLatestLedger(types.UpdateToLatestLedgerRequest)
       returns (types.UpdateToLatestLedgerResponse) {}
 }

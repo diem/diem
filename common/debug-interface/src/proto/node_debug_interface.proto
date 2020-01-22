@@ -15,9 +15,9 @@ message GetEventsRequest {}
 message GetEventsResponse { repeated Event events = 1; }
 
 message Event {
-    string name = 1;
-    int64 timestamp = 2;
-    string json = 3;
+  string name = 1;
+  int64 timestamp = 2;
+  string json = 3;
 }
 
 service NodeDebugInterface {

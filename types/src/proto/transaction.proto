@@ -13,73 +13,71 @@ import "google/protobuf/wrappers.proto";
 
 // An argument to the transaction if the transaction takes arguments
 message TransactionArgument {
-    enum ArgType {
-        U64 = 0;
-        ADDRESS = 1;
-        STRING = 2;
-        BYTEARRAY = 3;
-    }
+  enum ArgType {
+    U64 = 0;
+    ADDRESS = 1;
+    STRING = 2;
+    BYTEARRAY = 3;
+  }
 }
 
 // A generic structure that represents signed RawTransaction
 message SignedTransaction {
-    // LCS bytes representation of a SignedTransaction.
-    bytes txn_bytes = 5;
+  // LCS bytes representation of a SignedTransaction.
+  bytes txn_bytes = 5;
 }
 
 // A generic structure that represents a transaction, covering all possible
 // variants.
-message Transaction {
-    bytes transaction = 1;
-}
+message Transaction { bytes transaction = 1; }
 
 message TransactionWithProof {
-    // The version of the returned signed transaction.
-    uint64 version = 1;
+  // The version of the returned signed transaction.
+  uint64 version = 1;
 
-    // The transaction itself.
-    Transaction transaction = 2;
+  // The transaction itself.
+  Transaction transaction = 2;
 
-    // The proof authenticating the transaction.
-    TransactionProof proof = 3;
+  // The proof authenticating the transaction.
+  TransactionProof proof = 3;
 
-    // The events yielded by executing the transaction, if requested.
-    EventsList events = 4;
+  // The events yielded by executing the transaction, if requested.
+  EventsList events = 4;
 }
 
 // A generic structure that represents a block of transactions originated from a
 // particular validator instance.
 message SignedTransactionsBlock {
-    // Set of Signed Transactions
-    repeated SignedTransaction transactions = 1;
-    // Public key of the validator that created this block
-    bytes validator_public_key = 2;
-    // Signature of the validator that created this block
-    bytes validator_signature = 3;
+  // Set of Signed Transactions
+  repeated SignedTransaction transactions = 1;
+  // Public key of the validator that created this block
+  bytes validator_public_key = 2;
+  // Signature of the validator that created this block
+  bytes validator_signature = 3;
 }
 
 // Account state as a whole.
 // After execution, updates to accounts are passed in this form to storage for
 // persistence.
 message AccountState {
-    // Account address
-    bytes address = 1;
-    // Account state blob
-    bytes blob = 2;
+  // Account address
+  bytes address = 1;
+  // Account state blob
+  bytes blob = 2;
 }
 
 // Transaction struct to commit to storage
 message TransactionToCommit {
-    // The signed transaction which was executed
-    Transaction transaction = 1;
-    // State db updates
-    repeated AccountState account_states = 2;
-    // Events yielded by the transaction.
-    repeated Event events = 3;
-    // The amount of gas used.
-    uint64 gas_used = 4;
-    // The major status of executing the transaction.
-    uint64 major_status = 5;
+  // The signed transaction which was executed
+  Transaction transaction = 1;
+  // State db updates
+  repeated AccountState account_states = 2;
+  // Events yielded by the transaction.
+  repeated Event events = 3;
+  // The amount of gas used.
+  uint64 gas_used = 4;
+  // The major status of executing the transaction.
+  uint64 major_status = 5;
 }
 
 // A list of consecutive transactions with proof. This is mainly used for state
@@ -88,20 +86,21 @@ message TransactionToCommit {
 // the transactions are supposed to belong to the same epoch E, otherwise
 // verification will fail.
 message TransactionListWithProof {
-    // The list of transactions.
-    repeated Transaction transactions = 1;
+  // The list of transactions.
+  repeated Transaction transactions = 1;
 
-    // The list of corresponding Event objects (only present if fetch_events was set to true in req)
-    EventsForVersions events_for_versions = 2;
+  // The list of corresponding Event objects (only present if fetch_events was
+  // set to true in req)
+  EventsForVersions events_for_versions = 2;
 
-    // If the list is not empty, the version of the first transaction.
-    google.protobuf.UInt64Value first_transaction_version = 3;
+  // If the list is not empty, the version of the first transaction.
+  google.protobuf.UInt64Value first_transaction_version = 3;
 
-    // The proof authenticating the transactions and events.When this is used
-    // for state synchronization, the validator who requests the transactions
-    // will provide a version in the request and the proofs will be relative to
-    // the given version. When this is returned in GetTransactionsResponse, the
-    // proofs will be relative to the ledger info returned in
-    // UpdateToLatestLedgerResponse.
-    TransactionListProof proof = 4;
+  // The proof authenticating the transactions and events.When this is used
+  // for state synchronization, the validator who requests the transactions
+  // will provide a version in the request and the proofs will be relative to
+  // the given version. When this is returned in GetTransactionsResponse, the
+  // proofs will be relative to the ledger info returned in
+  // UpdateToLatestLedgerResponse.
+  TransactionListProof proof = 4;
 }

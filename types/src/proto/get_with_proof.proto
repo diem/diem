@@ -132,25 +132,25 @@ import "validator_change.proto";
 // ledger the client had, they can simply set the requested_items to an empty
 // list.
 message UpdateToLatestLedgerRequest {
-    // This is the version the client already trusts. Usually the client should
-    // set this to the version it obtained the last time it synced with the
-    // chain. If this is the first time ever the client sends a request, it must
-    // use the waypoint hard-coded in its software.
-    uint64 client_known_version = 1;
+  // This is the version the client already trusts. Usually the client should
+  // set this to the version it obtained the last time it synced with the
+  // chain. If this is the first time ever the client sends a request, it must
+  // use the waypoint hard-coded in its software.
+  uint64 client_known_version = 1;
 
-    // The items for which we are requesting data in this API call.
-    repeated RequestItem requested_items = 2;
+  // The items for which we are requesting data in this API call.
+  repeated RequestItem requested_items = 2;
 }
 
 message RequestItem {
-    oneof requested_items {
-        GetAccountStateRequest get_account_state_request = 1;
-        GetAccountTransactionBySequenceNumberRequest
+  oneof requested_items {
+    GetAccountStateRequest get_account_state_request = 1;
+    GetAccountTransactionBySequenceNumberRequest
         get_account_transaction_by_sequence_number_request = 2;
-        GetEventsByEventAccessPathRequest get_events_by_event_access_path_request =
+    GetEventsByEventAccessPathRequest get_events_by_event_access_path_request =
         3;
-        GetTransactionsRequest get_transactions_request = 4;
-    }
+    GetTransactionsRequest get_transactions_request = 4;
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -159,34 +159,35 @@ message RequestItem {
 
 // Response from getting latest ledger
 message UpdateToLatestLedgerResponse {
-    // Responses to the queries posed by the requests. The proofs generated will
-    // be relative to the version of the latest ledger provided below.
-    repeated ResponseItem response_items = 1;
+  // Responses to the queries posed by the requests. The proofs generated will
+  // be relative to the version of the latest ledger provided below.
+  repeated ResponseItem response_items = 1;
 
-    // The latest ledger info this node has. It will come with at least 2f+1
-    // validator signatures as well as a proof that shows the latest ledger
-    // extends the old ledger the client had.
-    LedgerInfoWithSignatures ledger_info_with_sigs = 2;
+  // The latest ledger info this node has. It will come with at least 2f+1
+  // validator signatures as well as a proof that shows the latest ledger
+  // extends the old ledger the client had.
+  LedgerInfoWithSignatures ledger_info_with_sigs = 2;
 
-    // A proof for Validator changes from what the client last knew. This is
-    // used to inform the client of validator changes from the client's last
-    // known version until the current version.
-    ValidatorChangeProof validator_change_proof = 3;
+  // A proof for Validator changes from what the client last knew. This is
+  // used to inform the client of validator changes from the client's last
+  // known version until the current version.
+  ValidatorChangeProof validator_change_proof = 3;
 
-    // A proof that shows the latest ledger accumulator is consistent with the
-    // old accumulator at "client_known_version".
-    AccumulatorConsistencyProof ledger_consistency_proof = 4;
+  // A proof that shows the latest ledger accumulator is consistent with the
+  // old accumulator at "client_known_version".
+  AccumulatorConsistencyProof ledger_consistency_proof = 4;
 }
 
 // Individual response items to the queries posed by the requests
 message ResponseItem {
-    oneof response_items {
-        GetAccountStateResponse get_account_state_response = 3;
-        GetAccountTransactionBySequenceNumberResponse
-            get_account_transaction_by_sequence_number_response = 4;
-        GetEventsByEventAccessPathResponse get_events_by_event_access_path_response = 5;
-        GetTransactionsResponse get_transactions_response = 6;
-    }
+  oneof response_items {
+    GetAccountStateResponse get_account_state_response = 3;
+    GetAccountTransactionBySequenceNumberResponse
+        get_account_transaction_by_sequence_number_response = 4;
+    GetEventsByEventAccessPathResponse
+        get_events_by_event_access_path_response = 5;
+    GetTransactionsResponse get_transactions_response = 6;
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -195,15 +196,15 @@ message ResponseItem {
 
 // Gets latest state for an account.
 message GetAccountStateRequest {
-    // Account for which we are fetching the state.
-    bytes address = 1;
+  // Account for which we are fetching the state.
+  bytes address = 1;
 }
 
 // State information returned by a get account state query.
 message GetAccountStateResponse {
-    // Blob value representing the account state together with proof the client
-    // can utilize to verify it.
-    AccountStateWithProof account_state_with_proof = 1;
+  // Blob value representing the account state together with proof the client
+  // can utilize to verify it.
+  AccountStateWithProof account_state_with_proof = 1;
 }
 
 // -----------------------------------------------------------------------------
@@ -233,13 +234,13 @@ message GetAccountStateResponse {
 // transaction that was submitted.  They should check that the hash matches what
 // they sent
 message GetAccountTransactionBySequenceNumberRequest {
-    // Account for which to query transactions
-    bytes account = 1;
+  // Account for which to query transactions
+  bytes account = 1;
 
-    uint64 sequence_number = 2;
+  uint64 sequence_number = 2;
 
-    // Set to true to fetch events for the transaction at this version
-    bool fetch_events = 3;
+  // Set to true to fetch events for the transaction at this version
+  bool fetch_events = 3;
 }
 
 // Transaction information for transactions requested by
@@ -262,35 +263,35 @@ message GetAccountTransactionBySequenceNumberResponse {
 // a user may specify events that were received, events that were sent, or any
 // event that modifies their account
 message GetEventsByEventAccessPathRequest {
-    AccessPath access_path = 1;
+  AccessPath access_path = 1;
 
-    // The sequence number of the event to start with for this query. Use a
-    // sequence number of MAX_INT to represent the latest.
-    uint64 start_event_seq_num = 2;
+  // The sequence number of the event to start with for this query. Use a
+  // sequence number of MAX_INT to represent the latest.
+  uint64 start_event_seq_num = 2;
 
-    // If ascending is true this query will return up to `limit` events that were
-    // emitted after `start_event_seq_num`. Otherwise it will return up to `limit`
-    // events before the offset. Both cases are inclusive.
-    bool ascending = 3;
+  // If ascending is true this query will return up to `limit` events that were
+  // emitted after `start_event_seq_num`. Otherwise it will return up to `limit`
+  // events before the offset. Both cases are inclusive.
+  bool ascending = 3;
 
-    // Limit number of results
-    uint64 limit = 4;
+  // Limit number of results
+  uint64 limit = 4;
 }
 
 message GetEventsByEventAccessPathResponse {
-    // Returns an event and proof of each of the events in the request. The first
-    // element of proofs will be the closest to `start_event_seq_num`.
-    repeated EventWithProof events_with_proof = 1;
+  // Returns an event and proof of each of the events in the request. The first
+  // element of proofs will be the closest to `start_event_seq_num`.
+  repeated EventWithProof events_with_proof = 1;
 
-    // If the number of events returned is less than `limit` for an ascending
-    // query or if start_event_seq_num > the latest seq_num for a descending
-    // query,  returns the state of the account containing the given access path
-    // in the latest state. This allows the client to verify that there are in
-    // fact no extra events.
-    //
-    // The LedgerInfoWithSignatures which is on the main
-    // UpdateToLatestLedgerResponse can be used to validate this.
-    AccountStateWithProof proof_of_latest_event = 2;
+  // If the number of events returned is less than `limit` for an ascending
+  // query or if start_event_seq_num > the latest seq_num for a descending
+  // query,  returns the state of the account containing the given access path
+  // in the latest state. This allows the client to verify that there are in
+  // fact no extra events.
+  //
+  // The LedgerInfoWithSignatures which is on the main
+  // UpdateToLatestLedgerResponse can be used to validate this.
+  AccountStateWithProof proof_of_latest_event = 2;
 }
 
 // -----------------------------------------------------------------------------
@@ -299,17 +300,17 @@ message GetEventsByEventAccessPathResponse {
 
 // Get up to limit transactions starting from start_version.
 message GetTransactionsRequest {
-    // The version of the transaction to start with for this query.  Use a version
-    // of MAX_INT to represent the latest.
-    uint64 start_version = 1;
+  // The version of the transaction to start with for this query.  Use a version
+  // of MAX_INT to represent the latest.
+  uint64 start_version = 1;
 
-    // Limit number of results
-    uint64 limit = 2;
+  // Limit number of results
+  uint64 limit = 2;
 
-    // Set to true to fetch events for the transaction at each version
-    bool fetch_events = 3;
+  // Set to true to fetch events for the transaction at each version
+  bool fetch_events = 3;
 }
 
 message GetTransactionsResponse {
-    TransactionListWithProof txn_list_with_proof = 1;
+  TransactionListWithProof txn_list_with_proof = 1;
 }
