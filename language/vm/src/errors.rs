@@ -37,6 +37,8 @@ pub const ECANT_PAY_GAS_DEPOSIT: u64 = 6; // insufficient balance to pay for gas
 /// Generic error codes. These codes don't have any special meaning for the VM, but they are useful
 /// conventions for debugging
 pub const EINSUFFICIENT_BALANCE: u64 = 10; // withdrawing more than an account contains
+pub const EINSUFFICIENT_PRIVILEGES: u64 = 11; // user lacks the credentials to do something
+
 pub const EASSERT_ERROR: u64 = 42; // catch-all error code for assert failures
 
 pub type VMResult<T> = ::std::result::Result<T, VMStatus>;

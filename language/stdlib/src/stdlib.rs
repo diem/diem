@@ -23,6 +23,8 @@ static VALIDATOR_CONFIG_MODULE: Lazy<ModuleDefinition> =
     Lazy::new(|| make_module_definition!("../modules/validator_config.mvir"));
 static LIBRA_SYSTEM_MODULE: Lazy<ModuleDefinition> =
     Lazy::new(|| make_module_definition!("../modules/libra_system.mvir"));
+static OFFER_MODULE: Lazy<ModuleDefinition> =
+    Lazy::new(|| make_module_definition!("../modules/offer.mvir"));
 static ADDRESS_UTIL_MODULE: Lazy<ModuleDefinition> =
     Lazy::new(|| make_module_definition!("../modules/address_util.mvir"));
 static U64_UTIL_MODULE: Lazy<ModuleDefinition> =
@@ -37,6 +39,7 @@ static MODULE_DEFS: Lazy<Vec<&'static ModuleDefinition>> = Lazy::new(|| {
     // Note: a module can depend on earlier modules in the list, but not vice versa. Don't try
     // to rearrange without considering this!
     vec![
+        &*OFFER_MODULE,
         &*ADDRESS_UTIL_MODULE,
         &*BYTEARRAY_UTIL_MODULE,
         &*COIN_MODULE,

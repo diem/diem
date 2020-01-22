@@ -1,0 +1,40 @@
+// TODO: add optional timeout for reclaiming by original publisher once we have implemented time
+module Offer {
+    // A wrapper around value `offered` that can be claimed by the address stored in `for`.
+    resource T<Offered> { offered: Offered, for: address }
+
+    // Publish a value of type `Offered` under the sender's account. The value can be claimed by
+    // either the `for` address or the transaction sender.
+    public create<Offered>(offered: Offered, for: address) {
+        move_to_sender<T<Offered>>(T<Offered> { offered: move(offered), for: move(for) });
+        return;
+    }
+
+    // Claim the value of type `Offered` published at `offer_address`.
+    // Only succeeds if the sender is the intended recipient stored in `for` or the original
+    // publisher `offer_address`.
+    // Also fails if no such value exists.
+    public redeem<Offered>(offer_address: address): Offered acquires T {
+        let offered: Offered;
+        let for: address;
+
+        T<Offered> { offered, for } = move_from<T<Offered>>(copy(offer_address));
+        assert(
+            get_txn_sender() == move(for) || get_txn_sender() == move(offer_address),
+            11 // fail with INSUFFICIENT_PRIVILEGES
+        );
+        return move(offered);
+    }
+
+    // Returns true if an offer of type `Offered` exists at `offer_address`.
+    public exists_at<Offered>(offer_address: address): bool {
+        return exists<T<Offered>>(move(offer_address));
+    }
+
+    // Returns the address of the `Offered` type stored at `offer_address.
+    // Fails if no such `Offer` exists.
+    public address_of<Offered>(offer_address: address): address acquires T {
+        return *&borrow_global<T<Offered>>(move(offer_address)).for;
+    }
+
+}
