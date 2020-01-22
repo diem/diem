@@ -387,25 +387,26 @@ fn parse_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList, Error
 //          | <U64>
 fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
     let start_loc = tokens.start_loc();
-    let val = token_match!(tokens.peek(), tokens.file_name(), start_loc, tokens.content(), {
+    let val = match tokens.peek() {
         Tok::AddressValue => {
             let addr = parse_address(tokens)?;
             Value_::Address(addr)
-        },
+        }
         Tok::True => {
             tokens.advance()?;
             Value_::Bool(true)
-        },
+        }
         Tok::False => {
             tokens.advance()?;
             Value_::Bool(false)
-        },
+        }
         Tok::U64Value => {
             let i = u64::from_str(tokens.content()).unwrap();
             tokens.advance()?;
             Value_::U64(i)
         }
-    });
+        _ => unreachable!("parse_value called with invalid token"),
+    };
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, val))
 }
