@@ -180,7 +180,7 @@ impl StorageService {
         self.db.save_transactions(
             &rust_req.txns_to_commit,
             rust_req.first_version,
-            &rust_req.ledger_info_with_signatures,
+            rust_req.ledger_info_with_signatures.as_ref(),
         )?;
         Ok(SaveTransactionsResponse::default())
     }

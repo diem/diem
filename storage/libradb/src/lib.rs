@@ -362,7 +362,7 @@ impl LibraDB {
         &self,
         txns_to_commit: &[TransactionToCommit],
         first_version: Version,
-        ledger_info_with_sigs: &Option<LedgerInfoWithSignatures>,
+        ledger_info_with_sigs: Option<&LedgerInfoWithSignatures>,
     ) -> Result<()> {
         let num_txns = txns_to_commit.len() as u64;
         // ledger_info_with_sigs could be None if we are doing state synchronization. In this case

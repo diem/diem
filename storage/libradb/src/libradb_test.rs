@@ -37,7 +37,7 @@ fn test_save_blocks_impl(input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSig
         db.save_transactions(
             &txns_to_commit,
             cur_ver, /* first_version */
-            &Some(ledger_info_with_sigs.clone()),
+            Some(ledger_info_with_sigs),
         )
         .unwrap();
 
@@ -92,14 +92,14 @@ fn test_sync_transactions_impl(input: Vec<(Vec<TransactionToCommit>, LedgerInfoW
             db.save_transactions(
                 &txns_to_commit[0..batch1_len],
                 cur_ver, /* first_version */
-                &None,
+                None,
             )
             .unwrap();
         }
         db.save_transactions(
             &txns_to_commit[batch1_len..],
             cur_ver + batch1_len as u64, /* first_version */
-            &Some(ledger_info_with_sigs.clone()),
+            Some(&ledger_info_with_sigs),
         )
         .unwrap();
 
