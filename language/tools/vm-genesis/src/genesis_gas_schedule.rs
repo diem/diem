@@ -16,7 +16,7 @@ use vm_runtime::{
     chain_state::TransactionExecutionContext, data_cache::RemoteCache, move_vm::MoveVM,
     system_module_names::GAS_SCHEDULE_MODULE,
 };
-use vm_runtime_types::value::Value;
+use vm_runtime_types::{loaded_data::types::Type, values::Value};
 
 static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
     use Bytecode::*;
@@ -127,5 +127,5 @@ pub(crate) fn initial_gas_schedule(move_vm: &MoveVM, data_view: &dyn RemoteCache
             &mut TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, data_view),
         )
         .expect("GasSchedule Module must exist");
-    Value::simple_deserialize(&INITIAL_GAS_SCHEDULE, struct_def).unwrap()
+    Value::simple_deserialize(&INITIAL_GAS_SCHEDULE, Type::Struct(struct_def)).unwrap()
 }

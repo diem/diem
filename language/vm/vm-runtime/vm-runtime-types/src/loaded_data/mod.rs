@@ -6,3 +6,6 @@
 
 pub mod struct_def;
 pub mod types;
+
+#[cfg(all(test, feature = "fuzzing"))]
+mod type_prop_tests;

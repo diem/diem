@@ -33,7 +33,7 @@ use vm_runtime::{
     chain_state::SystemExecutionContext, interpreter::InterpreterForCostSynthesis,
     loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
 };
-use vm_runtime_types::value::*;
+use vm_runtime_types::values::*;
 
 /// Specifies the data to be applied to the execution stack for the next valid stack state.
 ///
@@ -198,8 +198,8 @@ where
             let peek: VMResult<u8> = stk
                 .last()
                 .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
-                .clone()
-                .into();
+                .copy_value()
+                .value_as();
             self.gen.gen_range(
                 0,
                 peek.expect("[Next Integer] Unable to cast peeked stack value to a u8."),
@@ -214,8 +214,8 @@ where
             let peek: VMResult<u64> = stk
                 .last()
                 .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
-                .clone()
-                .into();
+                .copy_value()
+                .value_as();
             self.gen.gen_range(
                 0,
                 peek.expect("[Next Integer] Unable to cast peeked stack value to a u64."),
@@ -230,8 +230,8 @@ where
             let peek: VMResult<u128> = stk
                 .last()
                 .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
-                .clone()
-                .into();
+                .copy_value()
+                .value_as();
             self.gen.gen_range(
                 0,
                 peek.expect("[Next Integer] Unable to cast peeked stack value to a u128."),
@@ -498,8 +498,13 @@ where
             SignatureToken::U128 => Value::u128(self.next_u128(stk)),
             SignatureToken::Address => Value::address(self.next_addr(false)),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
-                let underlying_value = self.resolve_to_value(sig, stk);
-                Value::reference(Reference::new(underlying_value))
+                // TODO: The following code creates a dangling reference.
+                // Find a better way to handle this.
+                let mut locals = Locals::new(1);
+                locals
+                    .store_loc(0, self.resolve_to_value(sig, stk))
+                    .unwrap();
+                locals.borrow_loc(0).unwrap()
             }
             SignatureToken::ByteArray => Value::byte_array(self.next_bytearray()),
             SignatureToken::Struct(struct_handle_idx, _) => {
@@ -519,16 +524,13 @@ where
                 let fields = self
                     .root_module
                     .field_def_range(num_fields as MemberCount, index);
-                let values = fields
-                    .iter()
-                    .map(|field| {
-                        self.resolve_to_value(
-                            &self.root_module.type_signature_at(field.signature).0,
-                            stk,
-                        )
-                    })
-                    .collect();
-                Value::struct_(Struct::new(values))
+                let values = fields.iter().map(|field| {
+                    self.resolve_to_value(
+                        &self.root_module.type_signature_at(field.signature).0,
+                        stk,
+                    )
+                });
+                Value::struct_(Struct::pack(values))
             }
             SignatureToken::TypeParameter(_) => unimplemented!(),
         }
@@ -734,8 +736,8 @@ where
                     &[],
                 );
                 let field_size = struct_stack
-                    .clone()
-                    .value_as::<ReferenceValue>()
+                    .copy_value()
+                    .value_as::<StructRef>()
                     .expect("[BorrowField] Struct should be a reference.")
                     .borrow_field(usize::from(field_index))
                     .expect("[BorrowField] Unable to borrow field of generated struct to get field size.")

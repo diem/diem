@@ -18,7 +18,7 @@ use vm::{
 };
 use vm_runtime::chain_state::SystemExecutionContext;
 use vm_runtime::{loaded_data::loaded_module::LoadedModule, runtime::VMRuntime};
-use vm_runtime_types::value::*;
+use vm_runtime_types::{loaded_data::struct_def::StructDef, loaded_data::types::Type, values::*};
 
 /// A wrapper around state that is used to generate random valid inhabitants for types.
 pub struct RandomInhabitor<'alloc, 'txn>
@@ -145,18 +145,19 @@ where
     /// Build an inhabitant of the type given by `sig_token`. Note that as opposed to the
     /// inhabitant generation that is performed in the `StackGenerator` this does _not_ take the
     /// instruction and generates inhabitants in a semantically agnostic way.
-    pub fn inhabit(&mut self, sig_token: &SignatureToken) -> Value {
+    pub fn inhabit(&mut self, sig_token: &SignatureToken) -> (Type, Value) {
         match sig_token {
-            SignatureToken::Bool => Value::bool(self.next_bool()),
-            SignatureToken::U8 => Value::u8(self.next_u8()),
-            SignatureToken::U64 => Value::u64(self.next_u64()),
-            SignatureToken::U128 => Value::u128(self.next_u128()),
-            SignatureToken::Address => Value::address(self.next_addr()),
-            SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
-                let underlying_value = self.inhabit(&*sig);
-                Value::reference(Reference::new(underlying_value))
+            SignatureToken::Bool => (Type::Bool, Value::bool(self.next_bool())),
+            SignatureToken::U8 => (Type::U8, Value::u8(self.next_u8())),
+            SignatureToken::U64 => (Type::U64, Value::u64(self.next_u64())),
+            SignatureToken::U128 => (Type::U128, Value::u128(self.next_u128())),
+            SignatureToken::Address => (Type::Address, Value::address(self.next_addr())),
+            SignatureToken::Reference(_sig) | SignatureToken::MutableReference(_sig) => {
+                panic!("cannot inhabit references");
             }
-            SignatureToken::ByteArray => Value::byte_array(self.next_bytearray()),
+            SignatureToken::ByteArray => {
+                (Type::ByteArray, Value::byte_array(self.next_bytearray()))
+            }
             SignatureToken::Struct(struct_handle_idx, _) => {
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
@@ -174,13 +175,16 @@ where
                 let fields = self
                     .root_module
                     .field_def_range(num_fields as MemberCount, index);
-                let values = fields
+                let (layouts, values): (Vec<_>, Vec<_>) = fields
                     .iter()
                     .map(|field| {
                         self.inhabit(&self.root_module.type_signature_at(field.signature).0)
                     })
-                    .collect();
-                Value::struct_(Struct::new(values))
+                    .unzip();
+                (
+                    Type::Struct(StructDef::new(layouts)),
+                    Value::struct_(Struct::pack(values)),
+                )
             }
             SignatureToken::TypeParameter(_) => unimplemented!(),
         }

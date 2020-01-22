@@ -3,11 +3,12 @@
 
 use crate::{
     native_functions::dispatch::{native_gas, NativeResult},
-    value::Value,
+    values::Value,
 };
 use libra_crypto::HashValue;
 use libra_types::{
     byte_array::ByteArray,
+    language_storage::TypeTag,
     vm_error::{StatusCode, VMStatus},
 };
 use sha2::{Digest, Sha256};
@@ -18,6 +19,7 @@ use vm::{
 };
 
 pub fn native_sha2_256(
+    _ty_args: Vec<TypeTag>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {
@@ -36,6 +38,7 @@ pub fn native_sha2_256(
 }
 
 pub fn native_sha3_256(
+    _ty_args: Vec<TypeTag>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {

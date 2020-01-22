@@ -3,14 +3,14 @@
 
 use super::{hash, primitive_helpers, signature};
 use crate::{
-    native_structs::{dispatch::resolve_native_struct, vector::NativeVector},
-    value::Value,
+    native_structs::dispatch::resolve_native_struct,
+    values::{vector, Value},
 };
 use libra_types::{
     account_address::AccountAddress,
     account_config,
     identifier::{IdentStr, Identifier},
-    language_storage::ModuleId,
+    language_storage::{ModuleId, TypeTag},
     vm_error::{StatusCode, VMStatus},
 };
 use once_cell::sync::Lazy;
@@ -61,7 +61,7 @@ impl NativeResult {
 /// Struct representing the expected definition for a native function.
 pub struct NativeFunction {
     /// Given the vector of aguments, it executes the native function.
-    pub dispatch: fn(VecDeque<Value>, &CostTable) -> VMResult<NativeResult>,
+    pub dispatch: fn(Vec<TypeTag>, VecDeque<Value>, &CostTable) -> VMResult<NativeResult>,
     /// The signature as defined in it's declaring module.
     /// It should NOT be generally inspected outside of it's declaring module as the various
     /// struct handle indexes are not remapped into the local context.
@@ -209,7 +209,7 @@ static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
         addr,
         "Vector",
         "length",
-        NativeVector::native_length,
+        vector::native_length,
         vec![Kind::All],
         vec![Reference(Box::new(tstruct(
             addr,
@@ -224,7 +224,7 @@ static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
         addr,
         "Vector",
         "empty",
-        NativeVector::native_empty,
+        vector::native_empty,
         vec![Kind::All],
         vec![],
         vec![tstruct(addr, "Vector", "T", vec![TypeParameter(0)]),]
@@ -234,7 +234,7 @@ static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
         addr,
         "Vector",
         "borrow",
-        NativeVector::native_borrow,
+        vector::native_borrow,
         vec![Kind::All],
         vec![
             Reference(Box::new(tstruct(
@@ -252,7 +252,7 @@ static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
         addr,
         "Vector",
         "borrow_mut",
-        NativeVector::native_borrow,
+        vector::native_borrow,
         vec![Kind::All],
         vec![
             MutableReference(Box::new(tstruct(
@@ -270,7 +270,7 @@ static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
         addr,
         "Vector",
         "push_back",
-        NativeVector::native_push_back,
+        vector::native_push_back,
         vec![Kind::All],
         vec![
             MutableReference(Box::new(tstruct(
@@ -288,7 +288,7 @@ static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
         addr,
         "Vector",
         "pop_back",
-        NativeVector::native_pop,
+        vector::native_pop,
         vec![Kind::All],
         vec![MutableReference(Box::new(tstruct(
             addr,
@@ -303,7 +303,7 @@ static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
         addr,
         "Vector",
         "destroy_empty",
-        NativeVector::native_destroy_empty,
+        vector::native_destroy_empty,
         vec![Kind::All],
         vec![tstruct(addr, "Vector", "T", vec![TypeParameter(0)])],
         vec![]
@@ -313,7 +313,7 @@ static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
         addr,
         "Vector",
         "swap",
-        NativeVector::native_swap,
+        vector::native_swap,
         vec![Kind::All],
         vec![
             MutableReference(Box::new(tstruct(
@@ -344,7 +344,7 @@ static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
         addr,
         "LibraAccount",
         "write_to_event_store",
-        |_, _| {
+        |_, _, _| {
             Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
                 "write_to_event_store does not have a native implementation".to_string(),
             ))
@@ -359,7 +359,7 @@ static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
         addr,
         "LibraAccount",
         "save_account",
-        |_, _| {
+        |_, _, _| {
             Err(VMStatus::new(StatusCode::UNREACHABLE)
                 .with_message("save_account does not have a native implementation".to_string()))
         },

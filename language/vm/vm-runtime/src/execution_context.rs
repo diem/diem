@@ -15,7 +15,7 @@ use vm::{
 };
 use vm_runtime_types::{
     loaded_data::struct_def::StructDef,
-    value::{GlobalRef, Struct, Value},
+    values::{GlobalValue, Struct, Value},
 };
 
 /// The `InterpreterContext` context trait specifies the mutations that are allowed to the
@@ -36,7 +36,7 @@ pub trait InterpreterContext {
         def: StructDef,
     ) -> VMResult<(bool, AbstractMemorySize<GasCarrier>)>;
 
-    fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<GlobalRef>;
+    fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalValue>;
 
     fn push_event(&mut self, event: ContractEvent);
 
@@ -60,16 +60,18 @@ impl<T: ChainState> InterpreterContext for T {
     ) -> VMResult<()> {
         // a resource can be written to an AccessPath if the data does not exists or
         // it was deleted (MoveFrom)
-        let can_write = match self.load_data(ap, def) {
-            Ok(data) => data.is_deleted(),
+        let can_write = match self.load_data(ap, def.clone()) {
+            Ok(None) => true,
+            Ok(Some(_)) => false,
             Err(e) => match e.major_status {
                 StatusCode::MISSING_DATA => true,
                 _ => return Err(e),
             },
         };
         if can_write {
-            let new_root = GlobalRef::move_to(ap.clone(), resource);
-            self.publish_resource(ap, new_root)
+            let new_root = GlobalValue::new(Value::struct_(resource))?;
+            new_root.mark_dirty()?;
+            self.publish_resource(ap, (def, new_root))
         } else {
             warn!("[VM] Cannot write over existing resource {}", ap);
             Err(vm_error(
@@ -87,14 +89,13 @@ impl<T: ChainState> InterpreterContext for T {
                 return Err(e);
             }
         };
-        // is_loadable() checks ref count and whether the data was deleted
-        if root_ref.is_loadable() {
-            Ok(root_ref.move_from()?)
-        } else {
-            Err(
+
+        match root_ref.take() {
+            Some((_layout, global_val)) => Ok(Value::struct_(global_val.into_owned_struct()?)),
+            None => Err(
                 vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
                     .with_sub_status(sub_status::DRE_GLOBAL_ALREADY_BORROWED),
-            )
+            ),
         }
     }
 
@@ -104,34 +105,23 @@ impl<T: ChainState> InterpreterContext for T {
         def: StructDef,
     ) -> VMResult<(bool, AbstractMemorySize<GasCarrier>)> {
         Ok(match self.load_data(ap, def) {
-            Ok(gref) => {
-                if gref.is_deleted() {
-                    (false, AbstractMemorySize::new(0))
-                } else {
-                    (true, gref.size())
-                }
-            }
-            Err(_) => (false, AbstractMemorySize::new(0)),
+            Ok(Some((_, gref))) => (true, gref.size()),
+            Ok(None) | Err(_) => (false, AbstractMemorySize::new(0)),
         })
     }
 
-    fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<GlobalRef> {
-        let root_ref = match self.load_data(ap, def) {
-            Ok(gref) => gref,
-            Err(e) => {
-                error!("[VM] (BorrowGlobal) Error reading data for {}: {:?}", ap, e);
-                return Err(e);
-            }
-        };
-        // is_loadable() checks ref count and whether the data was deleted
-        if root_ref.is_loadable() {
-            // shallow_ref increment ref count
-            Ok(root_ref.clone())
-        } else {
-            Err(
+    fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalValue> {
+        match self.load_data(ap, def) {
+            Ok(Some((_, g))) => Ok(g),
+            Ok(None) => Err(
+                // TODO: wrong status code?
                 vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
                     .with_sub_status(sub_status::DRE_GLOBAL_ALREADY_BORROWED),
-            )
+            ),
+            Err(e) => {
+                error!("[VM] (BorrowGlobal) Error reading data for {}: {:?}", ap, e);
+                Err(e)
+            }
         }
     }
 

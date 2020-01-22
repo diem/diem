@@ -33,7 +33,7 @@ use vm::{
     gas_schedule::{self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
-use vm_runtime_types::value::Value;
+use vm_runtime_types::values::Value;
 
 #[derive(Clone)]
 /// A wrapper to make VMRuntime standalone and thread safe.
