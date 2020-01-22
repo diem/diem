@@ -6,6 +6,8 @@ set -e
 DOCKER_IMAGE=""
 WAIT_TO="45m"
 export CONTAINER="cluster-test-$RANDOM"
+LOCAL_LATEST_IMAGE="cluster-test:latest"
+MASTER_IMAGE="853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:master"
 
 while (( "$#" )); do
   case "$1" in
@@ -18,8 +20,6 @@ while (( "$#" )); do
       shift 1
       ;;
     -i|--image)
-      echo "Logging in to ECR repo"
-      $(aws ecr get-login --no-include-email --region us-west-2)
       DOCKER_IMAGE=$2
       shift 2
       ;;
@@ -28,7 +28,7 @@ while (( "$#" )); do
       shift 2
       ;;
     -L|--latest)
-      DOCKER_IMAGE="cluster-test:latest"
+      DOCKER_IMAGE="${LOCAL_LATEST_IMAGE}"
       shift 1
       ;;
     --) # end argument parsing
@@ -41,13 +41,16 @@ while (( "$#" )); do
   esac
 done
 
-if [ -z "$DOCKER_IMAGE" ]
-then
-      echo "Using master cluster test image"
-      $(aws ecr get-login --no-include-email --region us-west-2)
-      DOCKER_IMAGE="853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:master"
-      docker pull $DOCKER_IMAGE
+# Only pull when not using the local image
+if [ "${DOCKER_IMAGE}" != "${LOCAL_LATEST_IMAGE}" ]; then
+  if [ -z "${DOCKER_IMAGE}" ]; then
+    DOCKER_IMAGE="${MASTER_IMAGE}"
+  fi
+  $(aws ecr get-login --no-include-email --region us-west-2)
+  docker pull "${DOCKER_IMAGE}"
 fi
+
+echo "Using $DOCKER_IMAGE image for cluster-test"
 
 # Waiting for other runs to finish
 timeout $WAIT_TO bash -c 'while [ $(docker ps --quiet --filter name=$CONTAINER) ]; do echo "Another container is running, waiting..."; sleep 1m; done'
