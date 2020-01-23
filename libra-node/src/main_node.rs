@@ -39,7 +39,7 @@ const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 
 pub struct LibraHandle {
     _ac: Runtime,
-    _mempool: Option<MempoolRuntime>,
+    _mempool: MempoolRuntime,
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
     consensus: Option<Box<dyn ConsensusProvider>>,
@@ -252,11 +252,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
 
     instant = Instant::now();
-    let mempool = Some(MempoolRuntime::bootstrap(
-        node_config,
-        mempool_network_handles,
-        client_events,
-    ));
+    let mempool = MempoolRuntime::bootstrap(node_config, mempool_network_handles, client_events);
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
     let mut consensus = None;
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {
