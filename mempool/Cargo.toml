@@ -34,6 +34,7 @@ libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
+libradb = { path = "../storage/libradb" }
 
 proptest = { version = "0.9.4", optional = true }
 libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }

@@ -19,6 +19,7 @@ libra-state-view = { path = "../storage/state-view", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
+libradb = { path = "../storage/libradb" }
 
 [dev-dependencies]
 rand = "0.6.5"

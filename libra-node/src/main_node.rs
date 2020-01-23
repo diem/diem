@@ -13,6 +13,7 @@ use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
 use libra_metrics::metric_server;
+use libradb::LibraDB;
 use network::{
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
@@ -30,8 +31,6 @@ use state_synchronizer::StateSynchronizer;
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::{sync::Arc, thread, time::Instant};
-use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
-use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
 use vm_runtime::LibraVM;
 
@@ -43,7 +42,7 @@ pub struct LibraHandle {
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
     consensus: Option<Box<dyn ConsensusProvider>>,
-    _storage: Runtime,
+    _storage: Arc<LibraDB>,
     _debug: Runtime,
 }
 
@@ -55,19 +54,10 @@ impl Drop for LibraHandle {
     }
 }
 
-fn setup_executor(config: &NodeConfig) -> Arc<Executor<LibraVM>> {
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
-    let storage_write_client = Arc::new(StorageWriteServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
-
+fn setup_executor(config: &NodeConfig, libradb: Arc<LibraDB>) -> Arc<Executor<LibraVM>> {
     Arc::new(Executor::new(
-        storage_read_client,
-        storage_write_client,
+        Arc::clone(&libradb),
+        Arc::clone(&libradb),
         config,
     ))
 }
@@ -183,14 +173,14 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         .expect("Building rayon global thread pool should work.");
 
     let mut instant = Instant::now();
-    let storage = start_storage_service(&node_config);
+    let storage = Arc::new(LibraDB::new(&node_config.storage.dir()));
     debug!(
         "Storage service started in {} ms",
         instant.elapsed().as_millis()
     );
 
     instant = Instant::now();
-    let executor = setup_executor(&node_config);
+    let executor = setup_executor(&node_config, Arc::clone(&storage));
     debug!("Executor setup in {} ms", instant.elapsed().as_millis());
     let mut network_runtimes = vec![];
     let mut state_sync_network_handles = vec![];
@@ -247,12 +237,19 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         state_sync_network_handles,
         Arc::clone(&executor),
         &node_config,
+        Arc::clone(&storage),
     );
     let (ac_sender, client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
-    let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
+    let admission_control_runtime =
+        AdmissionControlService::bootstrap(&node_config, ac_sender, Arc::clone(&storage));
 
     instant = Instant::now();
-    let mempool = MempoolRuntime::bootstrap(node_config, mempool_network_handles, client_events);
+    let mempool = MempoolRuntime::bootstrap(
+        node_config,
+        mempool_network_handles,
+        client_events,
+        Arc::clone(&storage),
+    );
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
     let mut consensus = None;
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {
@@ -291,6 +288,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             consensus_network_events,
             executor,
             state_synchronizer.create_client(),
+            Arc::clone(&storage),
         );
         consensus_provider
             .start()

@@ -12,6 +12,8 @@
 mod state_view;
 
 pub use crate::state_view::VerifiedStateView;
+
+/*
 use anyhow::{Error, Result};
 use futures::stream::{BoxStream, StreamExt};
 use libra_crypto::HashValue;
@@ -391,3 +393,4 @@ pub trait StorageWrite: Send + Sync {
         ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Result<()>;
 }
+*/

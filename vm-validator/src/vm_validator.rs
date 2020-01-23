@@ -7,16 +7,16 @@ use libra_types::{
     account_address::AccountAddress, account_config::AccountResource,
     transaction::SignedTransaction, vm_error::VMStatus,
 };
+use libradb::LibraDB;
 use scratchpad::SparseMerkleTree;
 use std::convert::TryFrom;
 use std::sync::Arc;
-use storage_client::{StorageRead, VerifiedStateView};
-use tokio::runtime::Handle;
+use storage_client::VerifiedStateView;
 use vm_runtime::{LibraVM, VMVerifier};
 
-#[cfg(test)]
-#[path = "unit_tests/vm_validator_test.rs"]
-mod vm_validator_test;
+// #[cfg(test)]
+// #[path = "unit_tests/vm_validator_test.rs"]
+// mod vm_validator_test;
 
 #[async_trait::async_trait]
 pub trait TransactionValidation: Send + Sync + Clone {
@@ -27,20 +27,14 @@ pub trait TransactionValidation: Send + Sync + Clone {
 
 #[derive(Clone)]
 pub struct VMValidator {
-    storage_read_client: Arc<dyn StorageRead>,
-    rt_handle: Handle,
+    storage_read_client: Arc<LibraDB>,
     vm: LibraVM,
 }
 
 impl VMValidator {
-    pub fn new(
-        config: &NodeConfig,
-        storage_read_client: Arc<dyn StorageRead>,
-        rt_handle: Handle,
-    ) -> Self {
+    pub fn new(config: &NodeConfig, storage_read_client: Arc<LibraDB>) -> Self {
         VMValidator {
             storage_read_client,
-            rt_handle,
             vm: LibraVM::new(&config.vm_config),
         }
     }
@@ -51,9 +45,8 @@ impl TransactionValidation for VMValidator {
     type ValidationInstance = LibraVM;
 
     async fn validate_transaction(&self, txn: SignedTransaction) -> Result<Option<VMStatus>> {
-        let (version, state_root) = self.storage_read_client.get_latest_state_root().await?;
+        let (version, state_root) = self.storage_read_client.get_latest_state_root()?;
         let client = self.storage_read_client.clone();
-        let rt_handle = self.rt_handle.clone();
         let vm = self.vm.clone();
         // We have to be careful here. The storage read client only exposes async functions but the
         // whole VM is synchronous and async/await isn't currently using in the VM. Due to this
@@ -69,8 +62,7 @@ impl TransactionValidation for VMValidator {
         // starve other async tasks.
         tokio::task::spawn_blocking(move || {
             let smt = SparseMerkleTree::new(state_root);
-            let state_view =
-                VerifiedStateView::new(client, rt_handle, Some(version), state_root, &smt);
+            let state_view = VerifiedStateView::new(client, Some(version), state_root, &smt);
 
             vm.validate_transaction(txn, &state_view)
         })
@@ -82,12 +74,10 @@ impl TransactionValidation for VMValidator {
 /// read account state
 /// returns account's current sequence number and balance
 pub async fn get_account_state(
-    storage_read_client: Arc<dyn StorageRead>,
+    storage_read_client: Arc<LibraDB>,
     address: AccountAddress,
 ) -> Result<(u64, u64)> {
-    let account_state = storage_read_client
-        .get_latest_account_state(address)
-        .await?;
+    let account_state = storage_read_client.get_latest_account_state(address)?;
     Ok(if let Some(blob) = account_state {
         let account_resource = AccountResource::try_from(&blob)?;
         let sequence_number = account_resource.sequence_number();

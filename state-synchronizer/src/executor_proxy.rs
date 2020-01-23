@@ -4,13 +4,12 @@
 use crate::SynchronizerState;
 use anyhow::{ensure, format_err, Result};
 use executor::{ExecutedTrees, Executor};
-use libra_config::config::NodeConfig;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::TransactionListWithProof,
 };
+use libradb::LibraDB;
 use std::sync::Arc;
-use storage_client::{StorageRead, StorageReadServiceClient};
 use vm_runtime::LibraVM;
 
 /// Proxies interactions with execution and storage for state synchronization
@@ -48,16 +47,12 @@ pub trait ExecutorProxyTrait: Sync + Send {
 }
 
 pub(crate) struct ExecutorProxy {
-    storage_read_client: Arc<StorageReadServiceClient>,
+    storage_read_client: Arc<LibraDB>,
     executor: Arc<Executor<LibraVM>>,
 }
 
 impl ExecutorProxy {
-    pub(crate) fn new(executor: Arc<Executor<LibraVM>>, config: &NodeConfig) -> Self {
-        let storage_read_client = Arc::new(StorageReadServiceClient::new(
-            &config.storage.address,
-            config.storage.port,
-        ));
+    pub(crate) fn new(executor: Arc<Executor<LibraVM>>, storage_read_client: Arc<LibraDB>) -> Self {
         Self {
             storage_read_client,
             executor,
@@ -70,8 +65,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
     async fn get_local_storage_state(&self) -> Result<SynchronizerState> {
         let storage_info = self
             .storage_read_client
-            .get_startup_info()
-            .await?
+            .get_startup_info()?
             .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
 
         let current_verifier = storage_info.get_validator_set().into();
@@ -112,7 +106,6 @@ impl ExecutorProxyTrait for ExecutorProxy {
     ) -> Result<TransactionListWithProof> {
         self.storage_read_client
             .get_transactions(known_version + 1, limit, target_version, false)
-            .await
     }
 
     async fn get_epoch_proof(
@@ -120,18 +113,16 @@ impl ExecutorProxyTrait for ExecutorProxy {
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<ValidatorChangeProof> {
-        let validator_change_proof = self
+        let (x, y) = self
             .storage_read_client
-            .get_epoch_change_ledger_infos(start_epoch, end_epoch)
-            .await?;
-        Ok(validator_change_proof)
+            .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
+        Ok(ValidatorChangeProof::new(x, y))
     }
 
     async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         let (_, _, li_chain, _) = self
             .storage_read_client
-            .update_to_latest_ledger(version, vec![])
-            .await?;
+            .update_to_latest_ledger(version, vec![])?;
         let waypoint_li = li_chain
             .ledger_info_with_sigs
             .first()

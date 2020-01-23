@@ -9,8 +9,8 @@
 //! [`storage-client`](../storage-client/index.html) instead of via
 //! [`StorageClient`](../storage-proto/proto/storage_grpc/struct.StorageClient.html) directly.
 
-#[cfg(feature = "fuzzing")]
-pub mod mocks;
+// #[cfg(feature = "fuzzing")]
+// pub mod mocks;
 
 use anyhow::Result;
 use futures::channel::mpsc;
@@ -341,5 +341,5 @@ impl Storage for StorageService {
     }
 }
 
-#[cfg(test)]
-mod storage_service_test;
+// #[cfg(test)]
+// mod storage_service_test;

@@ -17,6 +17,7 @@ use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use libra_types::crypto_proxies::ValidatorChangeProof;
 use libra_types::waypoint::Waypoint;
+use libradb::LibraDB;
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
@@ -33,8 +34,9 @@ impl StateSynchronizer {
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         executor: Arc<Executor<LibraVM>>,
         config: &NodeConfig,
+        libradb: Arc<LibraDB>,
     ) -> Self {
-        let executor_proxy = ExecutorProxy::new(executor, config);
+        let executor_proxy = ExecutorProxy::new(executor, libradb);
         Self::bootstrap_with_executor_proxy(
             network,
             config.base.role,

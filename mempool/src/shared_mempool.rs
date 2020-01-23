@@ -34,6 +34,7 @@ use libra_types::{
     vm_error::{StatusCode::RESOURCE_DOES_NOT_EXIST, VMStatus},
     PeerId,
 };
+use libradb::LibraDB;
 use network::{
     proto::MempoolSyncMsg,
     validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender},
@@ -46,7 +47,6 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use storage_client::StorageRead;
 use tokio::{
     runtime::{Builder, Handle, Runtime},
     time::interval,
@@ -88,7 +88,7 @@ where
     mempool: Arc<Mutex<CoreMempool>>,
     config: MempoolConfig,
     network_senders: HashMap<PeerId, MempoolNetworkSender>,
-    storage_read_client: Arc<dyn StorageRead>,
+    storage_read_client: Arc<LibraDB>,
     validator: Arc<V>,
     peer_info: Arc<Mutex<PeerInfo>>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
@@ -486,7 +486,7 @@ pub(crate) fn start_shared_mempool<V>(
         SubmitTransactionRequest,
         oneshot::Sender<Result<SubmitTransactionResponse>>,
     )>,
-    storage_read_client: Arc<dyn StorageRead>,
+    storage_read_client: Arc<LibraDB>,
     validator: Arc<V>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
     timer: Option<IntervalStream>,

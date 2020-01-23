@@ -1,15 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::StorageRead;
 use anyhow::{format_err, Result};
-use futures::executor::block_on;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, proof::SparseMerkleProof,
     transaction::Version,
 };
+use libradb::LibraDB;
 use scratchpad::{AccountState, SparseMerkleTree};
 use std::{
     cell::RefCell,
@@ -17,15 +16,13 @@ use std::{
     convert::TryInto,
     sync::Arc,
 };
-use tokio::runtime::Handle;
 
 /// `VerifiedStateView` is like a snapshot of the global state comprised of state view at two
 /// levels, persistent storage and memory.
 pub struct VerifiedStateView<'a> {
     /// A gateway implementing persistent storage interface, which can be a RPC client or direct
     /// accessor.
-    reader: Arc<dyn StorageRead>,
-    rt_handle: Handle,
+    reader: Arc<LibraDB>,
 
     /// The most recent version in persistent storage.
     latest_persistent_version: Option<Version>,
@@ -81,15 +78,13 @@ impl<'a> VerifiedStateView<'a> {
     /// `latest_persistent_state_root` plus a storage reader, and the in-memory speculative state
     /// on top of it represented by `speculative_state`.
     pub fn new(
-        reader: Arc<dyn StorageRead>,
-        rt_handle: Handle,
+        reader: Arc<LibraDB>,
         latest_persistent_version: Option<Version>,
         latest_persistent_state_root: HashValue,
         speculative_state: &'a SparseMerkleTree,
     ) -> Self {
         Self {
             reader,
-            rt_handle,
             latest_persistent_version,
             latest_persistent_state_root,
             speculative_state,
@@ -133,15 +128,9 @@ impl<'a> StateView for VerifiedStateView<'a> {
                     // former case, we don't have the blob data but only its hash.
                     AccountState::ExistsInDB | AccountState::Unknown => {
                         let (blob, proof) = match self.latest_persistent_version {
-                            Some(version) => {
-                                let reader = self.reader.clone();
-                                block_on(self.rt_handle.spawn(async move {
-                                    reader
-                                        .get_account_state_with_proof_by_version(address, version)
-                                        .await
-                                }))
-                                .unwrap()?
-                            }
+                            Some(version) => self
+                                .reader
+                                .get_account_state_with_proof_by_version(address, version)?,
                             None => (None, SparseMerkleProof::new(None, vec![])),
                         };
                         proof

@@ -4,13 +4,12 @@
 #![forbid(unsafe_code)]
 #![allow(dead_code)]
 
-#[cfg(test)]
-mod executor_test;
+// #[cfg(test)]
+// mod executor_test;
 #[cfg(test)]
 mod mock_vm;
 
 use anyhow::{bail, ensure, format_err, Result};
-use futures::executor::block_on;
 use libra_config::config::NodeConfig;
 use libra_config::config::VMConfig;
 use libra_crypto::{
@@ -37,6 +36,7 @@ use libra_types::{
     },
     write_set::{WriteOp, WriteSet},
 };
+use libradb::LibraDB;
 use once_cell::sync::Lazy;
 use scratchpad::{ProofRead, SparseMerkleTree};
 use serde::{Deserialize, Serialize};
@@ -46,7 +46,7 @@ use std::{
     marker::PhantomData,
     sync::Arc,
 };
-use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
+use storage_client::VerifiedStateView;
 use storage_proto::TreeState;
 use tokio::runtime::Runtime;
 use vm_runtime::VMExecutor;
@@ -292,8 +292,8 @@ pub struct Executor<V> {
     rt: Runtime,
 
     /// Client to storage service.
-    storage_read_client: Arc<dyn StorageRead>,
-    storage_write_client: Arc<dyn StorageWrite>,
+    storage_read_client: Arc<LibraDB>,
+    storage_write_client: Arc<LibraDB>,
 
     /// Configuration for the VM. The block processor currently creates a new VM for each block.
     vm_config: VMConfig,
@@ -307,8 +307,8 @@ where
 {
     /// Constructs an `Executor`.
     pub fn new(
-        storage_read_client: Arc<dyn StorageRead>,
-        storage_write_client: Arc<dyn StorageWrite>,
+        storage_read_client: Arc<LibraDB>,
+        storage_write_client: Arc<LibraDB>,
         config: &NodeConfig,
     ) -> Self {
         let rt = Runtime::new().unwrap();
@@ -321,13 +321,9 @@ where
             phantom: PhantomData,
         };
 
-        let startup_info = block_on(executor.rt.spawn(async move {
-            storage_read_client
-                .get_startup_info()
-                .await
-                .expect("Shouldn't fail")
-        }))
-        .unwrap();
+        let startup_info = storage_read_client
+            .get_startup_info()
+            .expect("Shouldn't fail");
 
         if startup_info.is_none() {
             let genesis_txn = config
@@ -402,7 +398,6 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            self.rt.handle().clone(),
             committed_trees.version(),
             committed_trees.state_root(),
             parent_trees.state_tree(),
@@ -533,17 +528,11 @@ where
             let _timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
             OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
             assert_eq!(first_version_to_commit, version + 1 - num_txns_to_commit);
-            let write_client = self.storage_write_client.clone();
-            block_on(self.rt.spawn(async move {
-                write_client
-                    .save_transactions(
-                        txns_to_commit,
-                        first_version_to_commit,
-                        Some(ledger_info_with_sigs),
-                    )
-                    .await
-            }))
-            .unwrap()?;
+            self.storage_write_client.save_transactions(
+                &txns_to_commit,
+                first_version_to_commit,
+                Some(&ledger_info_with_sigs),
+            )?;
         }
         // Only bump the counter when the commit succeeds.
         OP_COUNTERS.inc_by("num_accounts", list_num_account_created.into_iter().sum());
@@ -593,7 +582,6 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            self.rt.handle().clone(),
             synced_trees.version(),
             synced_trees.state_root(),
             synced_trees.state_tree(),
@@ -639,14 +627,12 @@ where
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
             return Ok(());
         }
-        let write_client = self.storage_write_client.clone();
         let ledger_info = ledger_info_to_commit.clone();
-        block_on(self.rt.spawn(async move {
-            write_client
-                .save_transactions(txns_to_commit, first_version, ledger_info)
-                .await
-        }))
-        .unwrap()?;
+        self.storage_write_client.save_transactions(
+            &txns_to_commit,
+            first_version,
+            ledger_info.as_ref(),
+        )?;
 
         *synced_trees = output.executed_trees().clone();
         info!(

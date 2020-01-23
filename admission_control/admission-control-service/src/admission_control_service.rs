@@ -17,8 +17,8 @@ use futures::{
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
+use libradb::LibraDB;
 use std::{convert::TryFrom, net::ToSocketAddrs, sync::Arc};
-use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
 
 /// Struct implementing trait (service handle) AdmissionControlService.
@@ -29,7 +29,7 @@ pub struct AdmissionControlService {
         oneshot::Sender<Result<SubmitTransactionResponse>>,
     )>,
     /// gRPC client to send read requests to Storage.
-    storage_read_client: Arc<dyn StorageRead>,
+    storage_read_client: Arc<LibraDB>,
 }
 
 impl AdmissionControlService {
@@ -39,7 +39,7 @@ impl AdmissionControlService {
             SubmitTransactionRequest,
             oneshot::Sender<Result<SubmitTransactionResponse>>,
         )>,
-        storage_read_client: Arc<dyn StorageRead>,
+        storage_read_client: Arc<LibraDB>,
     ) -> Self {
         AdmissionControlService {
             ac_sender,
@@ -55,6 +55,7 @@ impl AdmissionControlService {
             SubmitTransactionRequest,
             oneshot::Sender<Result<SubmitTransactionResponse>>,
         )>,
+        storage_client: Arc<LibraDB>,
     ) -> Runtime {
         let runtime = Builder::new()
             .thread_name("ac-service-")
@@ -64,10 +65,6 @@ impl AdmissionControlService {
             .expect("[admission control] failed to create runtime");
 
         // Create storage read client
-        let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-            "localhost",
-            config.storage.port,
-        ));
         let admission_control_service = AdmissionControlService::new(ac_sender, storage_client);
 
         let port = config.admission_control.admission_control_service_port;
@@ -97,8 +94,7 @@ impl AdmissionControlService {
             ledger_consistency_proof,
         ) = self
             .storage_read_client
-            .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)
-            .await?;
+            .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)?;
         let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse::new(
             response_items,
             ledger_info_with_sigs,

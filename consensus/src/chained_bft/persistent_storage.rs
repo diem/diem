@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::consensusdb::ConsensusDB, consensus_provider::create_storage_read_client,
-};
+use crate::chained_bft::consensusdb::ConsensusDB;
 use anyhow::{format_err, Context, Result};
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
@@ -17,8 +15,8 @@ use libra_types::crypto_proxies::ValidatorPublicKeys;
 use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use libra_types::ledger_info::LedgerInfo;
+use libradb::LibraDB;
 use std::{collections::HashSet, sync::Arc};
-use storage_client::StorageRead;
 
 /// Persistent storage is essential for maintaining safety when a node crashes.  Specifically,
 /// upon a restart, a correct node will not equivocate.  Even if all nodes crash, safety is
@@ -247,12 +245,11 @@ impl<T: Payload> RecoveryData<T> {
 /// The proxy we use to persist data in libra db storage service via grpc.
 pub struct StorageWriteProxy {
     db: Arc<ConsensusDB>,
-    read_client: Arc<dyn StorageRead>,
+    read_client: Arc<LibraDB>,
 }
 
 impl StorageWriteProxy {
-    pub fn new(config: &NodeConfig) -> Self {
-        let read_client = create_storage_read_client(config);
+    pub fn new(config: &NodeConfig, read_client: Arc<LibraDB>) -> Self {
         let db = Arc::new(ConsensusDB::new(config.storage.dir()));
         StorageWriteProxy { db, read_client }
     }
@@ -312,7 +309,6 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         let startup_info = self
             .read_client
             .get_startup_info()
-            .await
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
         let validator_set = startup_info.get_validator_set().clone();

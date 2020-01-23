@@ -36,6 +36,7 @@ libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
 network = { path = "../../network", version = "0.1.0" }
 bounded-executor = { path = "../../common/bounded-executor", version = "0.1.0" }
 channel = { path = "../../common/channel", version = "0.1.0" }
+libradb = { path = "../../storage/libradb" }
 
 proptest = { version = "0.9.4", optional = true }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", optional = true }

@@ -12,12 +12,12 @@
 //! 1. SubmitTransaction, to submit transaction to associated validator.
 //! 2. UpdateToLatestLedger, to query storage, e.g. account state, transaction log, and proofs.
 
-#[cfg(test)]
-#[path = "unit_tests/admission_control_service_test.rs"]
-mod admission_control_service_test;
+// #[cfg(test)]
+// #[path = "unit_tests/admission_control_service_test.rs"]
+// mod admission_control_service_test;
 
-#[cfg(feature = "fuzzing")]
-/// Fuzzer for admission control
-pub mod admission_control_fuzzing;
+// #[cfg(feature = "fuzzing")]
+// /// Fuzzer for admission control
+// pub mod admission_control_fuzzing;
 /// AC gRPC service.
 pub mod admission_control_service;

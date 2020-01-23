@@ -12,12 +12,12 @@ use anyhow::Result;
 use futures::channel::{mpsc::Receiver, oneshot};
 use libra_config::config::NodeConfig;
 use libra_types::PeerId;
+use libradb::LibraDB;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
 use std::{
     net::ToSocketAddrs,
     sync::{Arc, Mutex},
 };
-use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::vm_validator::VMValidator;
 
@@ -40,6 +40,7 @@ impl MempoolRuntime {
             SubmitTransactionRequest,
             oneshot::Sender<Result<SubmitTransactionResponse>>,
         )>,
+        storage_client: Arc<LibraDB>,
     ) -> Self {
         let mempool_service_rt = Builder::new()
             .thread_name("mempool-service-")
@@ -52,15 +53,7 @@ impl MempoolRuntime {
             core_mempool: Arc::clone(&mempool),
         };
         // setup shared mempool
-        let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-            "localhost",
-            config.storage.port,
-        ));
-        let vm_validator = Arc::new(VMValidator::new(
-            &config,
-            Arc::clone(&storage_client),
-            mempool_service_rt.handle().clone(),
-        ));
+        let vm_validator = Arc::new(VMValidator::new(&config, Arc::clone(&storage_client)));
         let shared_mempool = start_shared_mempool(
             config,
             mempool,
