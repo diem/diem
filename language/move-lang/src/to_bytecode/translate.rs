@@ -8,8 +8,8 @@ use crate::{
     errors::*,
     naming::ast::{BuiltinTypeName_, TParam, TParamID, TypeName_},
     parser::ast::{
-        BinOp, BinOp_, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ModuleIdent_,
-        ModuleName, StructName, UnaryOp, UnaryOp_, Value_, Var,
+        BinOp, BinOp_, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
+        ModuleIdent_, ModuleName, StructName, UnaryOp, UnaryOp_, Value_, Var,
     },
     shared::*,
 };
@@ -81,6 +81,7 @@ impl FunctionFrame {
 // Compiled Unit
 //**************************************************************************************************
 
+#[derive(Debug)]
 pub enum CompiledUnit {
     Module(ModuleName, F::CompiledModule),
     Script(Loc, F::CompiledScript),
@@ -335,10 +336,11 @@ fn struct_def(
     sdef: G::StructDefinition,
 ) -> Result<()> {
     let struct_handle = context.struct_handle_index(m, &s)?;
-    bind_type_parameters(context, s.loc(), &sdef.type_parameters)?;
+    let s_loc = s.loc();
+    bind_type_parameters(context, s_loc, &sdef.type_parameters)?;
     let idx = context.declare_struct_definition_index(s)?;
     assert!(idx.0 as usize == struct_defs.len());
-    let field_information = fields(context, field_defs, struct_handle, idx, sdef.fields)?;
+    let field_information = fields(s_loc, context, field_defs, struct_handle, idx, sdef.fields)?;
     struct_defs.push(F::StructDefinition {
         struct_handle,
         field_information,
@@ -347,26 +349,43 @@ fn struct_def(
 }
 
 fn fields(
+    loc: Loc,
     context: &mut Context,
     field_defs: &mut Vec<F::FieldDefinition>,
     struct_handle: F::StructHandleIndex,
     struct_def_idx: F::StructDefinitionIndex,
-    fields: G::StructFields,
+    gfields: G::StructFields,
 ) -> Result<F::StructFieldInformation> {
     use F::StructFieldInformation as FF;
     use G::StructFields as GF;
-    Ok(match fields {
+    Ok(match gfields {
         GF::Native(_) => FF::Native,
-        GF::Defined(fields) => {
+        GF::Defined(field_vec) if field_vec.is_empty() => {
+            // empty fields are not allowed in the bytecode, add a dummy field
+            let fake_field = vec![(
+                Field(sp(loc, "dummy_field".to_string())),
+                G::BaseType_::bool(loc),
+            )];
+            fields(
+                loc,
+                context,
+                field_defs,
+                struct_handle,
+                struct_def_idx,
+                GF::Defined(fake_field),
+            )?
+        }
+
+        GF::Defined(field_vec) => {
             let pool_len = field_defs.len();
-            let field_count = fields.len();
+            let field_count = field_vec.len();
 
             let field_information = FF::Declared {
                 field_count: (field_count as F::MemberCount),
                 fields: F::FieldDefinitionIndex(pool_len as F::TableIndex),
             };
 
-            for (field, field_ty) in fields {
+            for (field, field_ty) in field_vec {
                 let name = context.identifier_index(&field)?;
                 let tloc = field_ty.loc;
                 let st = base_type(context, field_ty)?;
@@ -486,11 +505,14 @@ fn function_body(
     let locals_idx = context.locals_signature_index(loc, locals_signature)?;
 
     let mut code_blocks = Vec::new();
+    let mut label_map = HashMap::<u16, u16>::new();
     for (idx, (label, basic_block)) in blocks.into_iter().enumerate() {
         // first idx should be the start label
         assert!(idx != 0 || label == start);
-        assert!(idx == label.0);
         assert!(idx == code_blocks.len());
+        assert!(label_map
+            .insert(label.0.try_into().unwrap(), idx.try_into().unwrap())
+            .is_none());
 
         let mut code = Code::new();
         for cmd in basic_block {
@@ -499,6 +521,7 @@ fn function_body(
         code_blocks.push(code);
     }
 
+    super::remap_offsets(&mut code_blocks, &label_map);
     remove_fallthrough_jumps::code(&mut code_blocks);
     let code = labels_to_offsets::code(code_blocks);
 
@@ -537,6 +560,24 @@ fn bind_type_parameters(
         assert!(m.insert(tparam.id, idx).is_none());
     }
     context.bind_type_parameters(loc, m)
+}
+
+fn struct_definition_indices_base(
+    context: &mut Context,
+    sp!(loc, b_): G::BaseType,
+) -> Result<(F::StructDefinitionIndex, F::LocalsSignatureIndex)> {
+    use TypeName_ as TN;
+    use G::BaseType_ as B;
+    match b_ {
+        B::Apply(_, sp!(_, TN::ModuleType(m, s)), tys) => {
+            assert!(context.module_handle_index(&m).unwrap().0 == 0);
+            let def_idx = context.struct_definition_index(&s);
+            let local_sig = F::LocalsSignature(base_types(context, tys)?);
+            let tys_idx = context.locals_signature_index(loc, local_sig)?;
+            Ok((def_idx, tys_idx))
+        }
+        _ => panic!("ICE expected struct for struct definition index"),
+    }
 }
 
 fn struct_definition_index_base(
@@ -723,6 +764,22 @@ fn lvalue(
             code.push(B::StLoc(loc_idx));
             function_frame.pop();
         }
+        L::Unpack(s, tys, field_ls) if field_ls.is_empty() => {
+            // empty fields are not allowed in the bytecode, add a dummy field
+            // empty structs have a dummy field of type 'bool' added
+
+            let def_idx = context.struct_definition_index(&s);
+            let local_sig = F::LocalsSignature(base_types(context, tys)?);
+            let local_idx = context.locals_signature_index(loc, local_sig)?;
+
+            function_frame.pop();
+            code.push(B::Unpack(def_idx, local_idx));
+            // Pop off false
+            function_frame.pushn(loc, 1)?;
+            code.push(B::Pop);
+            function_frame.pop();
+        }
+
         L::Unpack(s, tys, field_ls) => {
             let def_idx = context.struct_definition_index(&s);
             let local_sig = F::LocalsSignature(base_types(context, tys)?);
@@ -858,6 +915,23 @@ fn exp_(
             function_frame.push(eloc)?;
         }
 
+        E::Pack(s, tys, field_args) if field_args.is_empty() => {
+            // empty fields are not allowed in the bytecode, add a dummy field
+            // empty structs have a dummy field of type 'bool' added
+
+            let def_idx = context.struct_definition_index(&s);
+            let local_sig = F::LocalsSignature(base_types(context, tys)?);
+            let local_idx = context.locals_signature_index(eloc, local_sig)?;
+
+            // Push on fake field
+            code.push(B::LdFalse);
+            function_frame.push(eloc)?;
+
+            function_frame.popn(1);
+            code.push(B::Pack(def_idx, local_idx));
+            function_frame.push(eloc)?;
+        }
+
         E::Pack(s, tys, field_args) => {
             let num_args = field_args.len();
             for (_, _, earg) in field_args {
@@ -963,20 +1037,30 @@ fn module_call(
     Ok(())
 }
 
-fn builtin(context: &mut Context, code: &mut Code, sp!(loc, b_): G::BuiltinFunction) -> Result<()> {
+fn builtin(context: &mut Context, code: &mut Code, sp!(_, b_): G::BuiltinFunction) -> Result<()> {
     use F::Bytecode as B;
     use G::BuiltinFunction_ as GB;
-    let tys_id = context.locals_signature_index(loc, F::LocalsSignature(vec![]))?;
     code.push(match b_ {
-        GB::MoveToSender(bt) => B::MoveToSender(struct_definition_index_base(context, &bt), tys_id),
-        GB::MoveFrom(bt) => B::MoveFrom(struct_definition_index_base(context, &bt), tys_id),
+        GB::MoveToSender(bt) => {
+            let (def_idx, tys_idx) = struct_definition_indices_base(context, bt)?;
+            B::MoveToSender(def_idx, tys_idx)
+        }
+        GB::MoveFrom(bt) => {
+            let (def_idx, tys_idx) = struct_definition_indices_base(context, bt)?;
+            B::MoveFrom(def_idx, tys_idx)
+        }
         GB::BorrowGlobal(false, bt) => {
-            B::ImmBorrowGlobal(struct_definition_index_base(context, &bt), tys_id)
+            let (def_idx, tys_idx) = struct_definition_indices_base(context, bt)?;
+            B::ImmBorrowGlobal(def_idx, tys_idx)
         }
         GB::BorrowGlobal(true, bt) => {
-            B::MutBorrowGlobal(struct_definition_index_base(context, &bt), tys_id)
+            let (def_idx, tys_idx) = struct_definition_indices_base(context, bt)?;
+            B::MutBorrowGlobal(def_idx, tys_idx)
         }
-        GB::Exists(bt) => B::Exists(struct_definition_index_base(context, &bt), tys_id),
+        GB::Exists(bt) => {
+            let (def_idx, tys_idx) = struct_definition_indices_base(context, bt)?;
+            B::Exists(def_idx, tys_idx)
+        }
     });
     Ok(())
 }

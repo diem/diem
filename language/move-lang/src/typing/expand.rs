@@ -219,9 +219,14 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
         | E::UnaryExp(_, er)
         | E::Borrow(_, er, _)
         | E::TempBorrow(_, er) => exp(context, er),
-        E::Mutate(el, er) | E::BinopExp(el, _, er) => {
+        E::Mutate(el, er) => {
             exp(context, el);
             exp(context, er)
+        }
+        E::BinopExp(el, _, operand_ty, er) => {
+            exp(context, el);
+            exp(context, er);
+            type_(context, operand_ty)
         }
 
         E::Pack(_, _, bs, fields) => {
@@ -232,6 +237,10 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
             }
         }
         E::ExpList(el) => exp_list(context, el),
+        E::Annotate(el, rhs_ty) => {
+            exp(context, el);
+            type_(context, rhs_ty);
+        }
     }
 }
 

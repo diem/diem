@@ -175,7 +175,7 @@ fn function_body(
                 context.error(e);
             }
 
-            cfgir::refine(
+            cfgir::refine_and_verify(
                 &mut context.errors,
                 signature,
                 &locals,

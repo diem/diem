@@ -660,7 +660,8 @@ fn assign(
                 assert!(idx == decl_idx);
                 let floc = tfa.loc;
                 let borrow_ = E::Borrow(mut_, Box::new(copy_tmp()), f);
-                let borrow = H::exp(H::Type_::base(bt), sp(floc, borrow_));
+                let borrow_ty = H::Type_::single(sp(floc, H::SingleType_::Ref(mut_, bt)));
+                let borrow = H::exp(borrow_ty, sp(floc, borrow_));
                 match assign_command(context, &mut after, floc, sp(floc, vec![tfa]), borrow) {
                     Unreachable { report, loc } => return Unreachable { report, loc },
                     Reachable(()) => (),
@@ -965,13 +966,14 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             let e = exp!(context, result, None, *te);
             HE::UnaryExp(op, e)
         }
-        TE::BinopExp(tl, op @ sp!(_, BinOp_::Eq), tr)
-        | TE::BinopExp(tl, op @ sp!(_, BinOp_::Neq), tr) => {
-            let el = exp!(context, result, None, *tl);
-            let er = exp!(context, result, Some(&el.ty), *tr);
+        TE::BinopExp(tl, op @ sp!(_, BinOp_::Eq), toperand_ty, tr)
+        | TE::BinopExp(tl, op @ sp!(_, BinOp_::Neq), toperand_ty, tr) => {
+            let operand_ty = type_(context, *toperand_ty);
+            let el = exp!(context, result, Some(&operand_ty), *tl);
+            let er = exp!(context, result, Some(&operand_ty), *tr);
             HE::BinopExp(el, op, er)
         }
-        TE::BinopExp(tl, op, tr) => {
+        TE::BinopExp(tl, op, _, tr) => {
             let el = exp!(context, result, None, *tl);
             let er = exp!(context, result, None, *tr);
             HE::BinopExp(el, op, er)
@@ -1041,6 +1043,11 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             };
             let tmp = bind_exp(context, result, eloc, st, e);
             HE::BorrowLocal(mut_, tmp)
+        }
+
+        TE::Annotate(te, rhs_ty) => {
+            let expected_ty = type_(context, *rhs_ty);
+            return maybe_exp(context, result, Some(&expected_ty), *te);
         }
         TE::UnresolvedError => {
             assert!(context.has_errors());

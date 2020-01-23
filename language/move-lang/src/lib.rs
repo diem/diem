@@ -85,6 +85,22 @@ pub fn move_compile(
     }
 }
 
+/// Move check but it returns the errors instead of reporting them to stderr
+pub fn move_compile_no_report(
+    targets: &[&'static str],
+    deps: &[&'static str],
+    sender_opt: Option<Address>,
+) -> io::Result<(
+    FilesSourceText,
+    Result<Vec<to_bytecode::translate::CompiledUnit>, Errors>,
+)> {
+    let (files, pprog_res) = parse_program(targets, deps)?;
+    Ok(match compile_program(pprog_res, sender_opt) {
+        Err(errors) => (files, Err(errors)),
+        Ok(units) => (files, Ok(units)),
+    })
+}
+
 /// Runs the bytecode verifier on the compiled units
 /// Fails if the bytecode verifier errors
 pub fn sanity_check_compiled_units(
