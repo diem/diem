@@ -21,7 +21,7 @@ use libra_types::proto::types::{
     UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, ValidatorChangeProof,
 };
 use libradb::LibraDB;
-use std::{convert::TryFrom, net::ToSocketAddrs, ops::Deref, path::Path, sync::Arc};
+use std::{convert::TryFrom, net::ToSocketAddrs, path::Path, sync::Arc};
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
     BackupAccountStateRequest, BackupAccountStateResponse, GetAccountStateRangeProofRequest,
@@ -59,35 +59,14 @@ pub fn start_storage_service(config: &NodeConfig) -> Runtime {
 /// [`LibraDB`].
 #[derive(Clone)]
 pub struct StorageService {
-    db: Arc<LibraDBWrapper>,
-}
-
-struct LibraDBWrapper {
-    db: Option<LibraDB>,
-}
-
-impl LibraDBWrapper {
-    pub fn new<P: AsRef<Path>>(path: &P) -> Self {
-        let db = LibraDB::new(path);
-        Self { db: Some(db) }
-    }
-}
-
-impl Deref for LibraDBWrapper {
-    type Target = LibraDB;
-
-    fn deref(&self) -> &Self::Target {
-        self.db.as_ref().expect("LibraDB is dropped unexpectedly")
-    }
+    db: Arc<LibraDB>,
 }
 
 impl StorageService {
     /// This opens a [`LibraDB`] at `path` and returns a [`StorageService`] instance serving it.
     pub fn new<P: AsRef<Path>>(path: &P) -> Self {
-        let db_wrapper = LibraDBWrapper::new(path);
-        Self {
-            db: Arc::new(db_wrapper),
-        }
+        let db = Arc::new(LibraDB::new(path));
+        Self { db }
     }
 }
 
