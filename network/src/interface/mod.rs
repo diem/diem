@@ -21,10 +21,10 @@ use crate::{
         rpc::{InboundRpcRequest, OutboundRpcRequest, RpcNotification, RpcRequest},
     },
     validator_network::{
-        AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ConsensusNetworkEvents,
-        ConsensusNetworkSender, DiscoveryNetworkEvents, DiscoveryNetworkSender,
-        HealthCheckerNetworkEvents, HealthCheckerNetworkSender, MempoolNetworkEvents,
-        MempoolNetworkSender, StateSynchronizerEvents, StateSynchronizerSender,
+        ConsensusNetworkEvents, ConsensusNetworkSender, DiscoveryNetworkEvents,
+        DiscoveryNetworkSender, HealthCheckerNetworkEvents, HealthCheckerNetworkSender,
+        MempoolNetworkEvents, MempoolNetworkSender, StateSynchronizerEvents,
+        StateSynchronizerSender,
     },
     ProtocolId,
 };
@@ -40,7 +40,6 @@ pub use crate::peer_manager::PeerManagerError;
 pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 pub const STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
-pub const ADMISSION_CONTROL_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 pub const HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 pub const DISCOVERY_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds.
 
@@ -96,10 +95,6 @@ pub trait LibraNetworkProvider {
         &mut self,
         state_sync_protocols: Vec<ProtocolId>,
     ) -> (StateSynchronizerSender, StateSynchronizerEvents);
-    fn add_admission_control(
-        &mut self,
-        ac_protocols: Vec<ProtocolId>,
-    ) -> (AdmissionControlNetworkSender, AdmissionControlNetworkEvents);
     fn add_health_checker(
         &mut self,
         hc_protocols: Vec<ProtocolId>,
@@ -202,23 +197,6 @@ where
             .map(|p| (p.clone(), state_sync_tx.clone()));
         self.upstream_handlers.extend(state_sync_handlers);
         (state_sync_network_sender, state_sync_network_events)
-    }
-
-    fn add_admission_control(
-        &mut self,
-        ac_protocols: Vec<ProtocolId>,
-    ) -> (AdmissionControlNetworkSender, AdmissionControlNetworkEvents) {
-        // Construct Admission Control network interfaces
-        let (ac_tx, ac_rx) = channel::new_with_timeout(
-            self.channel_size,
-            &counters::PENDING_ADMISSION_CONTROL_NETWORK_EVENTS,
-            Duration::from_millis(ADMISSION_CONTROL_INBOUND_MSG_TIMEOUT_MS),
-        );
-        let ac_network_sender = AdmissionControlNetworkSender::new(self.requests_tx.clone());
-        let ac_network_events = AdmissionControlNetworkEvents::new(ac_rx);
-        let ac_handlers = ac_protocols.iter().map(|p| (p.clone(), ac_tx.clone()));
-        self.upstream_handlers.extend(ac_handlers);
-        (ac_network_sender, ac_network_events)
     }
 
     fn add_health_checker(
