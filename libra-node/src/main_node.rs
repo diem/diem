@@ -117,10 +117,10 @@ pub fn setup_network(
         ])
         .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
     if config.is_permissioned {
-        // If the node wants to run in permissioned mode, it should also have authentication and
-        // encryption.
+        // If the node wants to run in permissioned mode, it should also use noise for
+        // authentication and encryption.
         assert!(
-            config.enable_encryption_and_authentication,
+            config.enable_noise,
             "Permissioned network end-points should use authentication"
         );
         let seed_peers = config.seed_peers.seed_peers.clone();
@@ -152,7 +152,7 @@ pub fn setup_network(
             .trusted_peers(trusted_peers)
             .signing_keys((signing_private, signing_public))
             .discovery_interval_ms(config.discovery_interval_ms);
-    } else if config.enable_encryption_and_authentication {
+    } else if config.enable_noise {
         let identity_private = config
             .network_keypairs
             .identity_keys

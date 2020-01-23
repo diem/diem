@@ -35,9 +35,9 @@ pub struct NetworkConfig {
     pub discovery_interval_ms: u64,
     pub connectivity_check_interval_ms: u64,
     // Flag to toggle if Noise is used for encryption and authentication.
-    pub enable_encryption_and_authentication: bool,
+    pub enable_noise: bool,
     // If the network is permissioned, only trusted peers are allowed to connect. Otherwise, any
-    // node can connect. If this flag is set to true, the `enable_encryption_and_authentication`
+    // node can connect. If this flag is set to true, `enable_noise`
     // must also be set to true.
     pub is_permissioned: bool,
     // network_keypairs contains the node's network keypairs.
@@ -67,7 +67,7 @@ impl Default for NetworkConfig {
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
-            enable_encryption_and_authentication: true,
+            enable_noise: true,
             is_permissioned: true,
             network_keypairs_file: PathBuf::new(),
             network_keypairs: keypair,
@@ -89,7 +89,7 @@ impl NetworkConfig {
             advertised_address: self.advertised_address.clone(),
             discovery_interval_ms: self.discovery_interval_ms,
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
-            enable_encryption_and_authentication: self.enable_encryption_and_authentication,
+            enable_noise: self.enable_noise,
             is_permissioned: self.is_permissioned,
             network_keypairs_file: self.network_keypairs_file.clone(),
             network_keypairs: NetworkKeyPairs::default(),
