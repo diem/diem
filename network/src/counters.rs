@@ -95,10 +95,6 @@ pub static PENDING_CONSENSUS_NETWORK_EVENTS: Lazy<IntGauge> =
 pub static PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS: Lazy<IntGauge> =
     Lazy::new(|| OP_COUNTERS.gauge("pending_state_sync_network_events"));
 
-/// Counter of pending network events to Admission Control
-pub static PENDING_ADMISSION_CONTROL_NETWORK_EVENTS: Lazy<IntGauge> =
-    Lazy::new(|| OP_COUNTERS.gauge("pending_admission_control_network_events"));
-
 /// Counter of pending network events to Health Checker.
 pub static PENDING_HEALTH_CHECKER_NETWORK_EVENTS: Lazy<IntGauge> =
     Lazy::new(|| OP_COUNTERS.gauge("pending_health_checker_network_events"));
