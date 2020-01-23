@@ -2,27 +2,28 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool::*,
+    core_mempool::{CoreMempool, TimelineState},
+    mempool_service::MempoolService,
+    proto::mempool::*,
     proto::mempool_client::MempoolClientWrapper,
 };
 use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::compat::generate_keypair;
-use libra_mempool_shared_proto::proto::mempool_status::*;
 use libra_types::{
     account_address::AccountAddress,
     test_helpers::transaction_test_helpers::get_test_signed_transaction,
     transaction::SignedTransaction,
 };
 use std::{
-    convert::TryFrom,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
-async fn setup_mempool() -> MempoolClientWrapper {
+async fn setup_mempool() -> (MempoolClientWrapper, Arc<Mutex<CoreMempool>>) {
     let node_config = NodeConfig::random();
 
     let core_mempool = Arc::new(Mutex::new(CoreMempool::new(&node_config)));
+    let mempool_clone = Arc::clone(&core_mempool);
     let handle = MempoolService { core_mempool };
     let service = mempool_server::MempoolServer::new(handle);
 
@@ -37,14 +38,16 @@ async fn setup_mempool() -> MempoolClientWrapper {
 
     while let Err(_) = client.health_check(HealthCheckRequest::default()).await {}
 
-    client
+    (client, mempool_clone)
 }
 
-fn create_add_transaction_request(expiration_time: u64) -> AddTransactionWithValidationRequest {
-    let mut req = AddTransactionWithValidationRequest::default();
+fn add_txn_to_mempool(
+    expiration_time: u64,
+    account_balance: Option<u64>,
+    mempool: Arc<Mutex<CoreMempool>>,
+) -> SignedTransaction {
     let sender = AccountAddress::random();
     let (private_key, public_key) = generate_keypair(None);
-
     let transaction = get_test_signed_transaction(
         sender,
         0,
@@ -54,64 +57,45 @@ fn create_add_transaction_request(expiration_time: u64) -> AddTransactionWithVal
         expiration_time,
         1,
         None,
-    )
-    .into();
-    req.transaction = Some(transaction);
-    req.max_gas_cost = 10;
-    req.account_balance = 1000;
-    req
-}
-
-#[tokio::test]
-async fn test_add_transaction() {
-    let mut client = setup_mempool().await;
-    // create request
-    let mut req = create_add_transaction_request(0);
-    req.account_balance = 100;
-    let response = client.add_transaction_with_validation(req).await.unwrap();
-    // check status
-    assert_eq!(
-        response.status.unwrap().code(),
-        MempoolAddTransactionStatusCode::Valid
     );
+    let balance = match account_balance {
+        Some(balance) => balance,
+        None => 1000,
+    };
+
+    mempool
+        .lock()
+        .expect("failed to acquire mempool lock")
+        .add_txn(transaction.clone(), 10, 0, balance, TimelineState::NotReady);
+
+    transaction
 }
 
 #[tokio::test]
 async fn test_get_block() {
-    let mut client = setup_mempool().await;
+    let (mut client, mempool) = setup_mempool().await;
 
-    // add transaction to mempool
-    let mut req = create_add_transaction_request(0);
-    req.account_balance = 100;
-    client
-        .add_transaction_with_validation(req.clone())
-        .await
-        .unwrap();
+    let transaction = add_txn_to_mempool(0, Some(100), mempool);
 
     // get next block
     let response = client.get_block(GetBlockRequest::default()).await.unwrap();
     let block = response.block.unwrap();
     assert_eq!(block.transactions.len(), 1);
-    assert_eq!(block.transactions[0], req.transaction.unwrap(),);
+    assert_eq!(block.transactions[0], transaction.into());
 }
 
 #[tokio::test]
 async fn test_consensus_callbacks() {
-    let mut client = setup_mempool().await;
+    let (mut client, mempool) = setup_mempool().await;
 
     // add transaction
-    let add_req = create_add_transaction_request(0);
-    client
-        .add_transaction_with_validation(add_req.clone())
-        .await
-        .unwrap();
+    let signed_txn = add_txn_to_mempool(0, None, mempool);
 
     let mut response = client.get_block(GetBlockRequest::default()).await.unwrap();
     assert_eq!(response.block.unwrap().transactions.len(), 1);
 
     // remove: transaction is committed
     let mut transaction = CommittedTransaction::default();
-    let signed_txn = SignedTransaction::try_from(add_req.transaction.unwrap()).unwrap();
     let sender = signed_txn.sender().as_ref().to_vec();
     transaction.sender = sender;
     transaction.sequence_number = 0;
@@ -125,14 +109,10 @@ async fn test_consensus_callbacks() {
 
 #[tokio::test]
 async fn test_gc_by_expiration_time() {
-    let mut client = setup_mempool().await;
+    let (mut client, mempool) = setup_mempool().await;
 
     // add transaction with expiration time 1
-    let add_req = create_add_transaction_request(1);
-    client
-        .add_transaction_with_validation(add_req)
-        .await
-        .unwrap();
+    add_txn_to_mempool(1, None, Arc::clone(&mempool));
 
     // commit empty block with block_time 2
     let mut req = CommitTransactionsRequest::default();
@@ -144,11 +124,8 @@ async fn test_gc_by_expiration_time() {
     assert!(response.block.unwrap().transactions.is_empty());
 
     // add transaction with expiration time 3
-    let add_req = create_add_transaction_request(3);
-    client
-        .add_transaction_with_validation(add_req)
-        .await
-        .unwrap();
+    add_txn_to_mempool(3, None, mempool);
+
     // commit empty block with block_time 3
     let mut req = CommitTransactionsRequest::default();
     req.block_timestamp_usecs = Duration::from_secs(3).as_micros() as u64;

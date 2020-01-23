@@ -12,14 +12,6 @@ import "mempool_status.proto";
 // ---------------- Mempool Service Definition
 // -----------------------------------------------------------------------------
 service Mempool {
-  // Adds a new transaction to the mempool with validation against existing
-  // transactions in the mempool.  Note that this function performs additional
-  // validation that AC is unable to perform. (because AC knows only about a
-  // single transaction, but mempool potentially knows about multiple pending
-  // transactions)
-  rpc AddTransactionWithValidation(AddTransactionWithValidationRequest)
-      returns (AddTransactionWithValidationResponse) {}
-
   // Fetch ordered block of transactions
   rpc GetBlock(GetBlockRequest) returns (GetBlockResponse) {}
 
@@ -29,34 +21,6 @@ service Mempool {
 
   // Check the health of mempool
   rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {}
-}
-
-// -----------------------------------------------------------------------------
-// ---------------- AddTransactionWithValidation
-// -----------------------------------------------------------------------------
-
-message AddTransactionWithValidationRequest {
-  // Transaction from a wallet
-  types.SignedTransaction transaction = 1;
-  // Max amount of gas required to execute the transaction
-  // Without running the program, it is very difficult to determine this number,
-  // so we use the max gas specified by the signed transaction.
-  // This field is still included separately from the signed transaction so that
-  // if we have a better methodology in the future, we can more accurately
-  // specify the max gas.
-  uint64 max_gas_cost = 2;
-  // Latest sequence number of the involved account from state db.
-  uint64 latest_sequence_number = 3;
-  // Latest account balance of the involved account from state db.
-  uint64 account_balance = 4;
-}
-
-message AddTransactionWithValidationResponse {
-  // The ledger version at the time of the transaction submitted. The submitted
-  // transaction will have version bigger than this 'current_version'
-  uint64 current_version = 1;
-  // The result of the transaction submission
-  mempool_status.MempoolAddTransactionStatus status = 2;
 }
 
 // -----------------------------------------------------------------------------
