@@ -33,10 +33,8 @@ use crate::{traits::*, HashValue};
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
 use ed25519_dalek;
-use libra_crypto_derive::{SilentDebug, SilentDisplay};
-use serde::{de, ser};
+use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 use std::cmp::Ordering;
-use std::fmt;
 
 /// The length of the Ed25519PrivateKey
 pub const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
@@ -52,18 +50,18 @@ const L: [u8; 32] = [
 ];
 
 /// An Ed25519 private key
-#[derive(SilentDisplay, SilentDebug)]
+#[derive(DeserializeKey, SilentDisplay, SilentDebug, SerializeKey)]
 pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
 
 #[cfg(feature = "assert-private-keys-not-cloneable")]
 static_assertions::assert_not_impl_any!(Ed25519PrivateKey: Clone);
 
 /// An Ed25519 public key
-#[derive(Clone)]
+#[derive(DeserializeKey, Clone, SerializeKey)]
 pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
 
 /// An Ed25519 signature
-#[derive(Clone, Debug)]
+#[derive(DeserializeKey, Clone, Debug, SerializeKey)]
 pub struct Ed25519Signature(ed25519_dalek::Signature);
 
 impl Ed25519PrivateKey {
@@ -199,6 +197,11 @@ impl TryFrom<&[u8]> for Ed25519PrivateKey {
         Ed25519PrivateKey::from_bytes_unchecked(bytes)
     }
 }
+
+impl Length for Ed25519PrivateKey {
+    const LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
+}
+
 impl ValidKey for Ed25519PrivateKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.to_bytes().to_vec()
@@ -299,6 +302,10 @@ impl TryFrom<&[u8]> for Ed25519PublicKey {
     }
 }
 
+impl Length for Ed25519PublicKey {
+    const LENGTH: usize = ed25519_dalek::PUBLIC_KEY_LENGTH;
+}
+
 impl ValidKey for Ed25519PublicKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes().to_vec()
@@ -357,6 +364,16 @@ impl Signature for Ed25519Signature {
         ed25519_dalek::verify_batch(&messages[..], &dalek_signatures[..], &dalek_public_keys[..])
             .map_err(|e| anyhow!("{}", e))?;
         Ok(())
+    }
+}
+
+impl Length for Ed25519Signature {
+    const LENGTH: usize = ED25519_SIGNATURE_LENGTH;
+}
+
+impl ValidKey for Ed25519Signature {
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes().to_vec()
     }
 }
 
@@ -472,112 +489,5 @@ pub mod compat {
             LazyJust::new(|| generate_keypair(None).1).boxed()
         }
         type Strategy = BoxedStrategy<Self>;
-    }
-}
-
-//////////////////////////////
-// Compact Serialization    //
-//////////////////////////////
-
-impl ser::Serialize for Ed25519PrivateKey {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        ed25519_dalek::SecretKey::serialize(&self.0, serializer)
-    }
-}
-
-impl ser::Serialize for Ed25519PublicKey {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        ed25519_dalek::PublicKey::serialize(&self.0, serializer)
-    }
-}
-
-impl ser::Serialize for Ed25519Signature {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        ed25519_dalek::Signature::serialize(&self.0, serializer)
-    }
-}
-
-struct Ed25519PrivateKeyVisitor;
-struct Ed25519PublicKeyVisitor;
-struct Ed25519SignatureVisitor;
-
-impl<'de> de::Visitor<'de> for Ed25519PrivateKeyVisitor {
-    type Value = Ed25519PrivateKey;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("ed25519_dalek private key in bytes")
-    }
-
-    fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Ed25519PrivateKey, E>
-    where
-        E: de::Error,
-    {
-        Ed25519PrivateKey::try_from(value).map_err(E::custom)
-    }
-}
-
-impl<'de> de::Visitor<'de> for Ed25519PublicKeyVisitor {
-    type Value = Ed25519PublicKey;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("public key in bytes")
-    }
-
-    fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Ed25519PublicKey, E>
-    where
-        E: de::Error,
-    {
-        Ed25519PublicKey::try_from(value).map_err(E::custom)
-    }
-}
-
-impl<'de> de::Visitor<'de> for Ed25519SignatureVisitor {
-    type Value = Ed25519Signature;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("ed25519_dalek signature in compact encoding")
-    }
-
-    fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Ed25519Signature, E>
-    where
-        E: de::Error,
-    {
-        Ed25519Signature::try_from(value).map_err(E::custom)
-    }
-}
-
-impl<'de> de::Deserialize<'de> for Ed25519PrivateKey {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        deserializer.deserialize_bytes(Ed25519PrivateKeyVisitor {})
-    }
-}
-
-impl<'de> de::Deserialize<'de> for Ed25519PublicKey {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        deserializer.deserialize_bytes(Ed25519PublicKeyVisitor {})
-    }
-}
-
-impl<'de> de::Deserialize<'de> for Ed25519Signature {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        deserializer.deserialize_bytes(Ed25519SignatureVisitor {})
     }
 }

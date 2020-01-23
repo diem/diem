@@ -57,11 +57,10 @@
 //! ```
 
 use crate::{hkdf::Hkdf, traits::*};
-use libra_crypto_derive::{Deref, SilentDebug, SilentDisplay};
+use libra_crypto_derive::{Deref, DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 use rand::{rngs::EntropyRng, RngCore};
-use serde::{de, ser};
 use sha2::Sha256;
-use std::{convert::TryFrom, fmt, ops::Deref};
+use std::{convert::TryFrom, ops::Deref};
 use x25519_dalek;
 
 /// TODO: move traits to the right file (possibly traits.rs)
@@ -81,7 +80,7 @@ pub const X25519_PRIVATE_KEY_LENGTH: usize = 32;
 pub struct X25519EphemeralPrivateKey(x25519_dalek::EphemeralSecret);
 
 /// An x25519 static private (secret) key
-#[derive(SilentDisplay, SilentDebug, Clone)]
+#[derive(Clone, DeserializeKey, SilentDisplay, SilentDebug, SerializeKey)]
 pub struct X25519StaticPrivateKey(x25519_dalek::StaticSecret);
 
 /// An x25519 public key
@@ -90,7 +89,7 @@ pub struct X25519PublicKey(x25519_dalek::PublicKey);
 
 /// An x25519 public key to match the X25519Static key type, which
 /// dereferences to an X25519PublicKey
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, DeserializeKey, Eq, Hash, PartialEq, SerializeKey)]
 pub struct X25519StaticPublicKey(X25519PublicKey);
 
 /// An x25519 shared key
@@ -226,6 +225,10 @@ impl TryFrom<&[u8]> for X25519StaticPrivateKey {
     }
 }
 
+impl Length for X25519StaticPrivateKey {
+    const LENGTH: usize = X25519_PRIVATE_KEY_LENGTH;
+}
+
 impl ValidKey for X25519StaticPrivateKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes().to_vec()
@@ -285,6 +288,10 @@ impl TryFrom<&[u8]> for X25519StaticPublicKey {
     }
 }
 
+impl Length for X25519StaticPublicKey {
+    const LENGTH: usize = X25519_PUBLIC_KEY_LENGTH;
+}
+
 impl ValidKey for X25519StaticPublicKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.deref().0.as_bytes().to_vec()
@@ -312,83 +319,6 @@ impl std::fmt::Display for X25519StaticPublicKey {
 impl std::fmt::Debug for X25519StaticPublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "X25519StaticPublicKey({})", self)
-    }
-}
-
-//////////////////////
-// SharedKey Traits //
-//////////////////////
-
-//////////////////////////////
-// Compact Serialization    //
-//////////////////////////////
-
-impl ser::Serialize for X25519StaticPrivateKey {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        serializer.serialize_bytes(&self.to_bytes())
-    }
-}
-
-impl ser::Serialize for X25519StaticPublicKey {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        serializer.serialize_bytes(&self.to_bytes())
-    }
-}
-
-struct X25519StaticPrivateKeyVisitor;
-struct X25519StaticPublicKeyVisitor;
-
-impl<'de> de::Visitor<'de> for X25519StaticPrivateKeyVisitor {
-    type Value = X25519StaticPrivateKey;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("x25519_dalek static key in bytes")
-    }
-
-    fn visit_bytes<E>(self, value: &[u8]) -> Result<X25519StaticPrivateKey, E>
-    where
-        E: de::Error,
-    {
-        X25519StaticPrivateKey::try_from(value).map_err(E::custom)
-    }
-}
-
-impl<'de> de::Visitor<'de> for X25519StaticPublicKeyVisitor {
-    type Value = X25519StaticPublicKey;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("x25519_dalek public key in bytes")
-    }
-
-    fn visit_bytes<E>(self, value: &[u8]) -> Result<X25519StaticPublicKey, E>
-    where
-        E: de::Error,
-    {
-        X25519StaticPublicKey::try_from(value).map_err(E::custom)
-    }
-}
-
-impl<'de> de::Deserialize<'de> for X25519StaticPrivateKey {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        deserializer.deserialize_bytes(X25519StaticPrivateKeyVisitor {})
-    }
-}
-
-impl<'de> de::Deserialize<'de> for X25519StaticPublicKey {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        deserializer.deserialize_bytes(X25519StaticPublicKeyVisitor {})
     }
 }
 
