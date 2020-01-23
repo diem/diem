@@ -231,6 +231,7 @@ jobs:
                 echo "$docker_file is renamed or removed in pull request."
               fi
             done
+          no_output_timeout: 45m
 
 workflows:
   commit-workflow:
