@@ -621,12 +621,8 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
             | SignatureToken::U64
             | SignatureToken::U128
             | SignatureToken::ByteArray
-            | SignatureToken::Address => false,
-
-            SignatureToken::TypeParameter(idx) => match type_formals[*idx as usize] {
-                Kind::Resource => true,
-                Kind::All | Kind::Unrestricted => false,
-            },
+            | SignatureToken::Address
+            | SignatureToken::TypeParameter(_) => false,
         }
     }
 

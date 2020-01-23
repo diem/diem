@@ -1,16 +1,11 @@
-//! no-run: verifier, runtime
-
 module M {
-    struct Foo<T> { x: T }
+    resource Foo<T> { x: T }
 
     struct Bar<T1, T2: resource, T3: unrestricted> { x: T3, y: T2, z: T1 }
 }
 
-
-
-
 //! new-transaction
-//! no-run: verifier, runtime
+//! no-run: runtime
 
 import {{default}}.M;
 
@@ -19,14 +14,8 @@ main() {
     return;
 }
 
-// check: StructHandle
-// check: [All]
-
-
-
-
 //! new-transaction
-//! no-run: verifier, runtime
+//! no-run: runtime
 
 import {{default}}.M;
 
@@ -34,6 +23,3 @@ main() {
     let x: M.Bar<u64, M.Foo<u64>, bool>;
     return;
 }
-
-// check: StructHandle
-// check: [All, Resource, Unrestricted]
