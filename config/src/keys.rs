@@ -43,7 +43,7 @@ where
         S: Serializer,
     {
         match self {
-            PrivateKeyContainer::Present(key) => serialize_key(key, serializer),
+            PrivateKeyContainer::Present(key) => key.serialize(serializer),
             _ => serializer.serialize_str(""),
         }
     }
@@ -51,14 +51,14 @@ where
 
 impl<'de, T> Deserialize<'de> for PrivateKeyContainer<T>
 where
-    T: ValidKeyStringExt + DeserializeOwned + 'static,
+    T: ValidKeyStringExt,
 {
     fn deserialize<D>(deserializer: D) -> std::result::Result<PrivateKeyContainer<T>, D::Error>
     where
         D: Deserializer<'de>,
     {
         // Note: Any error in parsing is assumed to be due to the private key being absent.
-        deserialize_key(deserializer)
+        T::deserialize(deserializer)
             .map(PrivateKeyContainer::Present)
             .or_else(|_| Ok(PrivateKeyContainer::Absent))
     }
@@ -69,12 +69,9 @@ where
 pub struct KeyPair<T>
 where
     T: PrivateKey + Serialize + ValidKeyStringExt,
-    T::PublicKeyMaterial: DeserializeOwned + 'static + Serialize + ValidKeyStringExt,
 {
     #[serde(bound(deserialize = "PrivateKeyContainer<T>: Deserialize<'de>"))]
     private_key: PrivateKeyContainer<T>,
-    #[serde(serialize_with = "serialize_key")]
-    #[serde(deserialize_with = "deserialize_key")]
     public_key: T::PublicKeyMaterial,
 }
 
@@ -115,24 +112,4 @@ where
     pub fn take_private(&mut self) -> Option<T> {
         self.private_key.take()
     }
-}
-
-pub fn serialize_key<S, K>(key: &K, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-    K: Serialize + ValidKeyStringExt,
-{
-    key.to_encoded_string()
-        .map_err(<S::Error as serde::ser::Error>::custom)
-        .and_then(|str| serializer.serialize_str(&str[..]))
-}
-
-pub fn deserialize_key<'de, D, K>(deserializer: D) -> Result<K, D::Error>
-where
-    D: Deserializer<'de>,
-    K: ValidKeyStringExt + DeserializeOwned + 'static,
-{
-    let encoded_key: &str = Deserialize::deserialize(deserializer)?;
-    ValidKeyStringExt::from_encoded_string(encoded_key)
-        .map_err(<D::Error as serde::de::Error>::custom)
 }

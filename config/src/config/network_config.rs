@@ -3,7 +3,7 @@
 
 use crate::{
     config::{PersistableConfig, RoleType, RootPath},
-    keys::{self, KeyPair},
+    keys::KeyPair,
     utils,
 };
 use anyhow::{anyhow, ensure, Result};
@@ -253,12 +253,8 @@ impl std::fmt::Debug for NetworkPeersConfig {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct NetworkPeerInfo {
-    #[serde(serialize_with = "keys::serialize_key")]
-    #[serde(deserialize_with = "keys::deserialize_key")]
     #[serde(rename = "ns")]
     pub signing_public_key: Ed25519PublicKey,
-    #[serde(serialize_with = "keys::serialize_key")]
-    #[serde(deserialize_with = "keys::deserialize_key")]
     #[serde(rename = "ni")]
     pub identity_public_key: X25519StaticPublicKey,
 }
