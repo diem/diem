@@ -4375,8 +4375,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
- "debug-interface 0.1.0",
- "executable-helpers 0.1.0",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
@@ -4391,7 +4389,6 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-client 0.1.0",
  "storage-proto 0.1.0",
- "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "tonic 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

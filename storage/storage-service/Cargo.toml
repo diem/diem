@@ -15,13 +15,10 @@ async-trait = "0.1"
 tokio = { version = "0.2.8", features = ["full"] }
 tonic = "0.1"
 futures = "0.3"
-structopt = "0.3.2"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
-executable-helpers = { path = "../../common/executable-helpers", version = "0.1.0" }
 libradb = { path = "../libradb", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
