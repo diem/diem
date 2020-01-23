@@ -178,8 +178,20 @@ jobs:
       - install_code_coverage_deps
       - install_rust_nightly_toolchain
       - run:
+          name: test by using a prior commit that has code cov
+          command: git checkout 1581c93852b22c3230819880522608ad5c096944
+      - run:
           name: Setup code coverage output
           command: echo "export CODECOV_OUTPUT=codecov" >> $BASH_ENV
+      - run:
+          name: Find next commit to run coverage
+          command: |
+            while $(curl --output /dev/null --silent --fail \
+              https://codecov.io/gh/libra/libra/commit/$(git rev-parse HEAD)); \
+            do \
+              echo "$(git rev-parse HEAD) has coverage. Trying its parent."; \
+              git checkout HEAD^; \
+            done
       - run:
           name: Run code coverage
           command: ./scripts/coverage_report.sh . $CODECOV_OUTPUT --batch
@@ -239,11 +251,12 @@ workflows:
       - build-docker
       - validate-cluster-test-dockerfile
       - terraform
+      - code-coverage
 
   scheduled-workflow:
     triggers:
       - schedule:
-          cron: "14 14 * * *"
+          cron: "14 1,3,5,7,9,11,13,15,17,19,21,23 * * *"
           filters:
             branches:
               only: master
