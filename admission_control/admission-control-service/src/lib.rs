@@ -21,6 +21,3 @@ mod admission_control_service_test;
 pub mod admission_control_fuzzing;
 /// AC gRPC service.
 pub mod admission_control_service;
-#[cfg(feature = "fuzzing")]
-/// Useful Mocks
-pub mod mocks;

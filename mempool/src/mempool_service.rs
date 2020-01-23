@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{CoreMempool, TimelineState, TxnPointer},
+    core_mempool::{CoreMempool, TxnPointer},
     proto::mempool::{
-        mempool_server::Mempool, AddTransactionWithValidationRequest,
-        AddTransactionWithValidationResponse, CommitTransactionsRequest,
-        CommitTransactionsResponse, GetBlockRequest, GetBlockResponse, HealthCheckRequest,
-        HealthCheckResponse,
+        mempool_server::Mempool, CommitTransactionsRequest, CommitTransactionsResponse,
+        GetBlockRequest, GetBlockResponse, HealthCheckRequest, HealthCheckResponse,
     },
     OP_COUNTERS,
 };
@@ -31,39 +29,6 @@ pub(crate) struct MempoolService {
 
 #[tonic::async_trait]
 impl Mempool for MempoolService {
-    async fn add_transaction_with_validation(
-        &self,
-        request: tonic::Request<AddTransactionWithValidationRequest>,
-    ) -> Result<tonic::Response<AddTransactionWithValidationResponse>, tonic::Status> {
-        let req = request.into_inner();
-        trace!("[GRPC] Mempool::add_transaction_with_validation");
-
-        let proto_transaction = req.transaction.unwrap_or_else(Default::default);
-        match SignedTransaction::try_from(proto_transaction) {
-            Err(e) => Err(tonic::Status::new(
-                tonic::Code::InvalidArgument,
-                e.to_string(),
-            )),
-            Ok(transaction) => {
-                let insertion_result = self
-                    .core_mempool
-                    .lock()
-                    .expect("[add txn] acquire mempool lock")
-                    .add_txn(
-                        transaction,
-                        req.max_gas_cost,
-                        req.latest_sequence_number,
-                        req.account_balance,
-                        TimelineState::NotReady,
-                    );
-
-                let mut response = AddTransactionWithValidationResponse::default();
-                response.status = Some(insertion_result.into());
-                Ok(tonic::Response::new(response))
-            }
-        }
-    }
-
     async fn get_block(
         &self,
         request: tonic::Request<GetBlockRequest>,
