@@ -99,7 +99,7 @@ default-members = [
 
 [profile.release]
 debug = true
-lto = true
+lto = 'thin'
 
 [profile.bench]
 debug = true
