@@ -131,7 +131,7 @@ fn exp(
         | E::UnaryExp(_, er)
         | E::Borrow(_, er, _)
         | E::TempBorrow(_, er) => exp(context, annotated_acquires, seen, er),
-        E::Mutate(el, er) | E::BinopExp(el, _, er) => {
+        E::Mutate(el, er) | E::BinopExp(el, _, _, er) => {
             exp(context, annotated_acquires, seen, el);
             exp(context, annotated_acquires, seen, er)
         }
@@ -142,6 +142,8 @@ fn exp(
             }
         }
         E::ExpList(el) => exp_list(context, annotated_acquires, seen, el),
+
+        E::Annotate(e, _) => exp(context, annotated_acquires, seen, e),
     }
 }
 

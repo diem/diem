@@ -21,7 +21,7 @@ use std::collections::BTreeSet;
 /// - References are "released"/popped after their last usage
 ///   - Might prove be a bit tricky to get exactly right as it might happen only at the statement
 ///     level instead of the expression level
-pub fn refine(
+pub fn refine_and_verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
     locals: &UniqueMap<Var, SingleType>,

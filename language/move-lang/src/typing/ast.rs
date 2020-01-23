@@ -168,7 +168,7 @@ pub enum UnannotatedExp_ {
 
     Dereference(Box<Exp>),
     UnaryExp(UnaryOp, Box<Exp>),
-    BinopExp(Box<Exp>, BinOp, Box<Exp>),
+    BinopExp(Box<Exp>, BinOp, Box<Type>, Box<Exp>),
 
     Pack(
         ModuleIdent,
@@ -181,6 +181,8 @@ pub enum UnannotatedExp_ {
     Borrow(bool, Box<Exp>, Field),
     TempBorrow(bool, Box<Exp>),
     BorrowLocal(bool, Var),
+
+    Annotate(Box<Exp>, Box<Type>),
 
     UnresolvedError,
 }
