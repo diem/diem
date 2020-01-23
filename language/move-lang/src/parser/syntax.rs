@@ -63,6 +63,15 @@ fn make_loc(file: &'static str, start: usize, end: usize) -> Loc {
     )
 }
 
+fn current_token_loc<'input>(tokens: &Lexer<'input>) -> Loc {
+    let start_loc = tokens.start_loc();
+    make_loc(
+        tokens.file_name(),
+        start_loc,
+        start_loc + tokens.content().len(),
+    )
+}
+
 fn spanned<T>(file: &'static str, start: usize, end: usize, value: T) -> Spanned<T> {
     Spanned {
         loc: make_loc(file, start, end),
@@ -256,9 +265,12 @@ fn parse_module_ident<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleIdent,
 //          <Name>
 //          | <ModuleName> "::" <Name>
 //          | <ModuleIdent> "::" <Name>
-fn parse_module_access<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleAccess, Error> {
+fn parse_module_access<'input, F: FnOnce() -> String>(
+    tokens: &mut Lexer<'input>,
+    item_description: F,
+) -> Result<ModuleAccess, Error> {
     let start_loc = tokens.start_loc();
-    let acc = token_match!(tokens.peek(), tokens.file_name(), start_loc, tokens.content(), {
+    let acc = match tokens.peek() {
         Tok::NameValue => {
             // Check if this is a ModuleName followed by "::".
             let m = parse_name(tokens)?;
@@ -268,7 +280,7 @@ fn parse_module_access<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleAcces
             } else {
                 ModuleAccess_::Name(m)
             }
-        },
+        }
 
         Tok::AddressValue => {
             let m = parse_module_ident(tokens)?;
@@ -276,7 +288,15 @@ fn parse_module_access<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleAcces
             let n = parse_name(tokens)?;
             ModuleAccess_::QualifiedModuleAccess(m, n)
         }
-    });
+
+        _ => {
+            let loc = current_token_loc(tokens);
+            return Err(vec![
+                (loc, format!("Unexpected '{}'", tokens.content())),
+                (loc, format!("Expected {}", item_description())),
+            ]);
+        }
+    };
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, acc))
 }
@@ -327,7 +347,10 @@ fn parse_bind<'input>(tokens: &mut Lexer<'input>) -> Result<Bind, Error> {
             return Ok(spanned(tokens.file_name(), start_loc, end_loc, v));
         }
     }
-    let ty = parse_module_access(tokens)?;
+    // The item description specified here should include the special case above for
+    // variable names, because if the current tokens cannot be parsed as a struct name
+    // it is possible that the user intention was to use a variable name.
+    let ty = parse_module_access(tokens, || "a variable or struct name".to_string())?;
     let ty_args = if tokens.peek() == Tok::Less {
         Some(parse_comma_list(
             tokens,
@@ -624,7 +647,9 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
 // Parse the subset of expression terms for pack and call operations.
 // This is a helper function for parse_term.
 fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
-    let n = parse_module_access(tokens)?;
+    let n = parse_module_access(tokens, || {
+        panic!("parse_pack_or_call with something other than a NameValue or AddressValue token")
+    })?;
     let tys = if tokens.peek() == Tok::Less {
         Some(parse_comma_list(
             tokens,
@@ -909,7 +934,7 @@ fn parse_dot_chain<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
 //      BaseType = <ModuleAccess> ("<" Comma<BaseType> ">")?
 fn parse_base_type<'input>(tokens: &mut Lexer<'input>) -> Result<SingleType, Error> {
     let start_loc = tokens.start_loc();
-    let tn = parse_module_access(tokens)?;
+    let tn = parse_module_access(tokens, || "a type name".to_string())?;
     let tys = if tokens.peek() == Tok::Less {
         parse_comma_list(tokens, Tok::Less, Tok::Greater, parse_base_type, "a type")?
     } else {
@@ -986,11 +1011,7 @@ fn parse_type_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Name, Kin
             Tok::Copyable => Kind_::Affine,
             Tok::Resource => Kind_::Resource,
             _ => {
-                let loc = make_loc(
-                    tokens.file_name(),
-                    start_loc,
-                    start_loc + tokens.content().len(),
-                );
+                let loc = current_token_loc(tokens);
                 let msg =
                     "Type parameter constraint can be either 'copyable' or 'resource'".to_string();
                 return Err(vec![
@@ -1094,7 +1115,9 @@ fn parse_function_decl<'input>(
     let mut acquires = vec![];
     if match_token(tokens, Tok::Acquires)? {
         loop {
-            acquires.push(parse_module_access(tokens)?);
+            acquires.push(parse_module_access(tokens, || {
+                "a resource struct name".to_string()
+            })?);
             if tokens.peek() == Tok::Semicolon || tokens.peek() == Tok::LBrace {
                 break;
             }
