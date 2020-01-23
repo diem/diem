@@ -274,7 +274,9 @@ fn get_transaction_parameters<'a>(
         }),
         gas_unit_price: 1,
         // TTL is 86400s. Initial time was set to 0.
-        expiration_time: Duration::from_secs(40000),
+        expiration_time: config
+            .expiration_time
+            .unwrap_or_else(|| Duration::from_secs(40000)),
     }
 }
 

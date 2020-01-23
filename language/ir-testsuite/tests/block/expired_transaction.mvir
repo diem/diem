@@ -1,0 +1,83 @@
+//! account: vivian, 1000000, 0, validator
+
+//! new-transaction
+import 0x0.LibraSystem;
+
+main() {
+    // TODO: this will stop working once we make the Block prologue private. We should delete this
+    // part (which will be done by the executor) and leave the second assert
+    LibraSystem.block_prologue(100000000, h"aa", h"bb", {{vivian}});
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! expiration-time: 100
+import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
+
+main() {
+    return;
+}
+// check: TRANSACTION_EXPIRED
+
+//! new-transaction
+//! expiration-time: 101
+import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
+
+main() {
+    return;
+}
+// check: EXECUTED
+
+// TODO: 100 + 86400 = 86500, should be rejected after we fix the mempool flakiness. See details in issues #2346.
+//! new-transaction
+//! expiration-time: 86500
+import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
+
+main() {
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+import 0x0.LibraSystem;
+
+main() {
+    // TODO: this will stop working once we make the Block prologue private. We should delete this
+    // part (which will be done by the executor) and leave the second assert
+    LibraSystem.block_prologue(101000000, h"aa", h"bb", {{vivian}});
+    return;
+}
+
+//! new-transaction
+//! expiration-time: 86500
+import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
+
+main() {
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+//! expiration-time: 101
+import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
+
+main() {
+    return;
+}
+// check: TRANSACTION_EXPIRED
+
+//! new-transaction
+//! expiration-time: 9223372036855
+import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
+
+main() {
+    return;
+}
+// check: TRANSACTION_EXPIRED

@@ -242,7 +242,8 @@ fn test_validate_max_gas_price_below_bounds() {
         &key,
         key.public_key(),
         Some(program),
-        0,
+        // Initial Time was set to 0 with a TTL 86400 secs.
+        40000,
         0, /* max gas price */
         None,
     );

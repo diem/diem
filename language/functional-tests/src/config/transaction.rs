@@ -4,7 +4,7 @@
 use crate::{common::strip, config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
 use language_e2e_tests::account::Account;
 use libra_types::transaction::{parse_as_transaction_argument, TransactionArgument};
-use std::{collections::BTreeSet, str::FromStr};
+use std::{collections::BTreeSet, str::FromStr, time::Duration};
 
 /// A partially parsed transaction argument.
 #[derive(Debug)]
@@ -35,6 +35,7 @@ pub enum Entry {
     Arguments(Vec<Argument>),
     MaxGas(u64),
     SequenceNumber(u64),
+    ExpirationTime(u64),
 }
 
 impl FromStr for Entry {
@@ -76,6 +77,9 @@ impl FromStr for Entry {
         if let Some(s) = strip(s, "sequence-number:") {
             return Ok(Entry::SequenceNumber(s.parse::<u64>()?));
         }
+        if let Some(s) = strip(s, "expiration-time:") {
+            return Ok(Entry::ExpirationTime(s.parse::<u64>()?));
+        }
         Err(ErrorKind::Other(format!(
             "failed to parse '{}' as transaction config entry",
             s
@@ -112,6 +116,7 @@ pub struct Config<'a> {
     pub args: Vec<TransactionArgument>,
     pub max_gas: Option<u64>,
     pub sequence_number: Option<u64>,
+    pub expiration_time: Option<Duration>,
 }
 
 impl<'a> Config<'a> {
@@ -122,6 +127,7 @@ impl<'a> Config<'a> {
         let mut args = None;
         let mut max_gas = None;
         let mut sequence_number = None;
+        let mut expiration_time = None;
 
         for entry in entries {
             match entry {
@@ -177,6 +183,14 @@ impl<'a> Config<'a> {
                         )
                     }
                 },
+                Entry::ExpirationTime(sn) => match expiration_time {
+                    None => expiration_time = Some(Duration::from_secs(*sn)),
+                    Some(_) => {
+                        return Err(
+                            ErrorKind::Other("expiration time already set".to_string()).into()
+                        )
+                    }
+                },
             }
         }
 
@@ -186,6 +200,7 @@ impl<'a> Config<'a> {
             args: args.unwrap_or_else(|| vec![]),
             max_gas,
             sequence_number,
+            expiration_time,
         })
     }
 
