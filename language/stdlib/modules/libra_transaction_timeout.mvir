@@ -48,6 +48,7 @@ module LibraTransactionTimeout {
         // TODO: Add LibraTimestamp.is_before_exclusive(&txn_time_microseconds, &max_txn_time)
         //       This is causing flaky test right now. The reason is that we will use this logic for AC, where its wall
         //       clock time might be out of sync with the real block time stored in StateStore.
+        //       See details in issue #2346.
         return copy(current_block_time) < move(txn_time_microseconds);
     }
 }
