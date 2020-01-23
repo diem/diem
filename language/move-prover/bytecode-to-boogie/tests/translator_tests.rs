@@ -42,7 +42,7 @@ fn test_aborts_if() {
 #[test]
 fn test_access_path() {
     test(
-        VERIFY,
+        &["--native-stubs"],
         &[
             &std_mvir("u64_util"),
             &std_mvir("address_util"),
