@@ -2,30 +2,7 @@
 //   1) type parameters have correct kind constraints
 //   2) fields have correct types
 
-//! no-run: verifier, runtime
-
 module M {
     struct Foo<T> { x: T }
+    struct Bar<T1, T2, T3: resource, T4: unrestricted> { x1: T2, x2: T3, x3: T4, x4: T1 }
 }
-
-// check: StructHandle
-// check: type_formals: [All]
-// check: type_signatures
-// check: [TypeSignature(TypeParameter(0))]
-
-
-
-//! new-transaction
-//! no-run: verifier, runtime
-
-module M {
-    struct Foo<T1, T2, T3: resource, T4: unrestricted> { x1: T2, x2: T3, x3: T4, x4: T1 }
-}
-
-// check: StructHandle
-// check: type_formals: [All, All, Resource, Unrestricted]
-// check: type_signatures
-// check: TypeSignature(TypeParameter(1))
-// check: TypeSignature(TypeParameter(2))
-// check: TypeSignature(TypeParameter(3))
-// check: TypeSignature(TypeParameter(0))

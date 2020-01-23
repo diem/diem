@@ -1,47 +1,35 @@
-//! no-run: verifier, runtime
-
 module M {
-    resource R {}
+    resource R { f: bool }
 
     public foo<T>(x: T) {
-        return;
+        abort 0;
     }
 
     public bar<T1, T2: resource, T3: unrestricted>(x: T3, y: T2, z: T1) {
-        return;
+        abort 0;
+    }
+
+    public r(): Self.R {
+        return R { f: false };
     }
 }
 
-
-
-
 //! new-transaction
-//! no-run: verifier, runtime
+//! no-run: runtime
 
 import {{default}}.M;
 
 main() {
-    M.foo<u64>();
-    return;
+    M.foo<u64>(0);
+    abort 0;
 }
 
-//! check: FunctionSignature
-//! check: TypeParameter(0)
-//! check: [All]
-
-
-
-
 //! new-transaction
-//! no-run: verifier, runtime
+//! no-run: runtime
 
 import {{default}}.M;
 
 main() {
-    M.bar<u64, M.R, bool>();
-    return;
+    M.bar<u64, M.R, bool>(false, M.r(), 0);
+    abort 0;
 }
-
-//! check: FunctionSignature
-//! check: [TypeParameter(2), TypeParameter(1), TypeParameter(0)]
-//! check: [Unrestricted, Resource, All]

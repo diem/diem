@@ -1,28 +1,20 @@
-//! no-run: verifier, runtime
-
 module M {
-    resource Foo {}
+    resource Foo { f: bool }
 
-    public id<T>(x: T) {
+    public id<T>(x: T): T {
         return move(x);
     }
 
     public bar<T1, T2>(x: T1, y: T2) {
+        abort 0;
     }
 
     foo() {
-        let x: u64;
-        let y: Self.Foo;
+        let x: Self.Foo;
 
-        x = Self.id<u64>(3);
-        y = Self.id<Self.Foo>(Foo {});
-        Self.bar<Self.Foo, bool>();
+        _ = Self.id<u64>(3);
+        x = Self.id<Self.Foo>(Foo { f: false });
+        Self.bar<Self.Foo, bool>(move(x), false);
+        return;
     }
 }
-
-// check: [LocalsSignature([TypeParameter(0)]), LocalsSignature([TypeParameter(0), TypeParameter(1)]), LocalsSignature([U64, Struct(StructHandleIndex(0), [])]), LocalsSignature([U64]), LocalsSignature([]), LocalsSignature([Struct(StructHandleIndex(0), [])]), LocalsSignature([Struct(StructHandleIndex(0), []), Bool])]
-
-// check: Call(0, LocalsSignatureIndex(3))
-// check: Pack(0, LocalsSignatureIndex(4))
-// check: Call(0, LocalsSignatureIndex(5))
-// check: Call(1, LocalsSignatureIndex(6))
