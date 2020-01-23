@@ -25,7 +25,7 @@ use crate::{
 use channel;
 use consensus_types::block::block_test_utils::gen_test_certificate;
 use consensus_types::block_retrieval::{
-    BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
+    BlockRetrievalMode, BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
 use consensus_types::{
     block::{
@@ -716,7 +716,7 @@ fn process_block_retrieval() {
         // first verify that we can retrieve the block if it's in the tree
         let (tx1, rx1) = oneshot::channel();
         let single_block_request = IncomingBlockRetrievalRequest {
-            req: BlockRetrievalRequest::new(block_id, 1),
+            req: BlockRetrievalRequest::new(block_id, BlockRetrievalMode::Ancestor(1)),
             response_sender: tx1,
         };
         node.event_processor
@@ -741,7 +741,7 @@ fn process_block_retrieval() {
         // verify that if a block is not there, return ID_NOT_FOUND
         let (tx2, rx2) = oneshot::channel();
         let missing_block_request = IncomingBlockRetrievalRequest {
-            req: BlockRetrievalRequest::new(HashValue::random(), 1),
+            req: BlockRetrievalRequest::new(HashValue::random(), BlockRetrievalMode::Ancestor(1)),
             response_sender: tx2,
         };
 
@@ -767,7 +767,7 @@ fn process_block_retrieval() {
         // if asked for many blocks, return NOT_ENOUGH_BLOCKS
         let (tx3, rx3) = oneshot::channel();
         let many_block_request = IncomingBlockRetrievalRequest {
-            req: BlockRetrievalRequest::new(block_id, 3),
+            req: BlockRetrievalRequest::new(block_id, BlockRetrievalMode::Ancestor(3)),
             response_sender: tx3,
         };
         node.event_processor
@@ -789,6 +789,86 @@ fn process_block_retrieval() {
                     node.block_store.root().id(),
                     response.blocks().get(1).unwrap().id()
                 );
+            }
+            _ => panic!("block retrieval failure"),
+        }
+    });
+}
+
+#[test]
+fn process_block_retrieval_initial_sync() {
+    let runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
+        .pop()
+        .unwrap();
+
+    let genesis = node.block_store.root();
+    let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
+    let a2 = inserter.insert_block(&a1, 2, None);
+    let a3 = inserter.insert_block(&a2, 3, None);
+    let a4 = inserter.insert_block(&a3, 4, Some(a1.block_info()));
+
+    block_on(async move {
+        // Verify we can retrieve the descendants of a1
+        let (tx1, rx1) = oneshot::channel();
+        let req = BlockRetrievalRequest::new(a1.id(), BlockRetrievalMode::InitialSync);
+        let incoming_request = IncomingBlockRetrievalRequest {
+            req: req.clone(),
+            response_sender: tx1,
+        };
+        node.event_processor
+            .process_block_retrieval(incoming_request)
+            .await;
+        match rx1.await {
+            Ok(Ok(bytes)) => {
+                let msg = ConsensusMsg::decode(bytes.as_ref()).unwrap();
+                let response = match msg.message {
+                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
+                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
+                    }
+                    _ => panic!("block retrieval failure"),
+                }
+                .unwrap();
+                response
+                    .verify(&req, &node.validators)
+                    .expect("Initial Sync Successful Retrieval Verification Failed");
+                assert_eq!(response.status(), BlockRetrievalStatus::Succeeded);
+                let block_ids = response
+                    .blocks()
+                    .iter()
+                    .map(|b| b.id())
+                    .collect::<Vec<HashValue>>();
+                assert_eq!(block_ids, vec![a4.id(), a3.id(), a2.id(), a1.id()]);
+            }
+            _ => panic!("block retrieval failure"),
+        }
+
+        // Verify we cannot retrieve descendants of a2
+        let (tx2, rx2) = oneshot::channel();
+        let req2 = BlockRetrievalRequest::new(a2.id(), BlockRetrievalMode::InitialSync);
+        let incoming_request2 = IncomingBlockRetrievalRequest {
+            req: req2.clone(),
+            response_sender: tx2,
+        };
+        node.event_processor
+            .process_block_retrieval(incoming_request2)
+            .await;
+        match rx2.await {
+            Ok(Ok(bytes)) => {
+                let msg = ConsensusMsg::decode(bytes.as_ref()).unwrap();
+                let response = match msg.message {
+                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
+                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
+                    }
+                    _ => panic!("block retrieval failure"),
+                }
+                .unwrap();
+                response
+                    .verify(&req2, &node.validators)
+                    .expect_err("Initial Sync Empty Retrieval Verification Failed");
+                assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
             }
             _ => panic!("block retrieval failure"),
         }

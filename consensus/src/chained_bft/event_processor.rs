@@ -46,7 +46,9 @@ use mirai_annotations::{
 use network::proto::{ConsensusMsg, ConsensusMsg_oneof};
 
 use crate::chained_bft::network::IncomingBlockRetrievalRequest;
-use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
+use consensus_types::block_retrieval::{
+    BlockRetrievalMode, BlockRetrievalResponse, BlockRetrievalStatus,
+};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
@@ -850,25 +852,37 @@ impl<T: Payload> EventProcessor<T> {
         }
     }
 
+    /// Retrieval Mode Ancestor(n):
     /// Retrieve a n chained blocks from the block store starting from
     /// an initial parent id, returning with <n (as many as possible) if
     /// id or its ancestors can not be found.
     ///
+    /// Retrieval Mode InitialSync:
+    /// Retrieve a 3 chain with the lowest block being the block identified
+    /// by block id.
+    ///
     /// The current version of the function is not really async, but keeping it this way for
     /// future possible changes.
     pub async fn process_block_retrieval(&self, request: IncomingBlockRetrievalRequest) {
-        let mut blocks = vec![];
         let mut status = BlockRetrievalStatus::Succeeded;
         let mut id = request.req.block_id();
-        while (blocks.len() as u64) < request.req.num_blocks() {
-            if let Some(executed_block) = self.block_store.get_block(id) {
-                id = executed_block.parent_id();
-                blocks.push(executed_block.block().clone());
-            } else {
-                status = BlockRetrievalStatus::NotEnoughBlocks;
-                break;
+
+        let blocks = match request.req.retrieval_mode() {
+            BlockRetrievalMode::Ancestor(num_blocks) => {
+                let mut blocks = Vec::with_capacity(num_blocks as usize);
+                for _i in 0..num_blocks {
+                    if let Some(executed_block) = self.block_store.get_block(id) {
+                        id = executed_block.parent_id();
+                        blocks.push(executed_block.block().clone());
+                    } else {
+                        status = BlockRetrievalStatus::NotEnoughBlocks;
+                        break;
+                    }
+                }
+                blocks
             }
-        }
+            BlockRetrievalMode::InitialSync => self.block_store.get_chain_for_committed_block(id),
+        };
 
         if blocks.is_empty() {
             status = BlockRetrievalStatus::IdNotFound;

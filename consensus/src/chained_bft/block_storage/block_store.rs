@@ -367,6 +367,16 @@ impl<T: Payload> BlockReader for BlockStore<T> {
         self.inner.read().unwrap().get_block(&block_id)
     }
 
+    fn get_chain_for_committed_block(&self, block_id: HashValue) -> Vec<Block<T>> {
+        self.inner
+            .read()
+            .unwrap()
+            .get_chain_for_committed_block(block_id)
+            .iter()
+            .map(|b| b.block().clone())
+            .collect()
+    }
+
     fn root(&self) -> Arc<ExecutedBlock<T>> {
         self.inner.read().unwrap().root()
     }

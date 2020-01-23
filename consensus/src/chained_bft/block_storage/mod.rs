@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::{
-    executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
+    block::Block, executed_block::ExecutedBlock, quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate,
 };
 use libra_crypto::HashValue;
 use libra_types::validator_verifier::VerifyError;
@@ -42,6 +43,12 @@ pub trait BlockReader: Send + Sync {
 
     /// Try to get a block with the block_id, return an Arc of it if found.
     fn get_block(&self, block_id: HashValue) -> Option<Arc<ExecutedBlock<Self::Payload>>>;
+
+    /// Retrieve the chain of descendants of a committed block.
+    /// The chain ends with the given block id, and includes
+    /// the LedgerInfo certifying the commit of the target block
+    /// In case no such chain can be found, an empty vector is returned.
+    fn get_chain_for_committed_block(&self, block_id: HashValue) -> Vec<Block<Self::Payload>>;
 
     /// Get the current root block of the BlockTree.
     fn root(&self) -> Arc<ExecutedBlock<Self::Payload>>;

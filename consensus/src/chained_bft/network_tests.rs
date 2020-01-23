@@ -331,7 +331,7 @@ impl DropConfig {
 use crate::chained_bft::network::NetworkTask;
 use crate::chained_bft::test_utils::TestPayload;
 use consensus_types::block_retrieval::{
-    BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
+    BlockRetrievalMode, BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
 use libra_crypto::HashValue;
 #[cfg(test)]
@@ -488,7 +488,7 @@ fn test_rpc() {
     block_on(async move {
         let response = nodes[0]
             .request_block::<TestPayload>(
-                BlockRetrievalRequest::new(HashValue::zero(), 1),
+                BlockRetrievalRequest::new(HashValue::zero(), BlockRetrievalMode::Ancestor(1)),
                 peer,
                 Duration::from_secs(5),
             )

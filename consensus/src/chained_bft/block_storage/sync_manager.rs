@@ -9,7 +9,9 @@ use crate::{
     counters,
 };
 use anyhow::{bail, format_err};
-use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
+use consensus_types::block_retrieval::{
+    BlockRetrievalMode, BlockRetrievalRequest, BlockRetrievalStatus,
+};
 use consensus_types::{
     block::Block,
     common::{Author, Payload},
@@ -246,7 +248,7 @@ impl BlockRetriever {
             let response = self
                 .network
                 .request_block(
-                    BlockRetrievalRequest::new(block_id, num_blocks),
+                    BlockRetrievalRequest::new(block_id, BlockRetrievalMode::Ancestor(num_blocks)),
                     peer,
                     timeout,
                 )

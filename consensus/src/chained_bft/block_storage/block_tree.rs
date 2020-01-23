@@ -359,6 +359,50 @@ where
     pub(super) fn get_all_block_id(&self) -> Vec<HashValue> {
         self.id_to_block.keys().cloned().collect()
     }
+
+    /// Returns a chain that certifies a commit of the given block id.
+    /// In case there is no such a chain return an empty vector.
+    /// For example, for the given tree:
+    ///
+    /// b1<--b2<--b3<-------b5<-----b7
+    ///       `--------b4<------b6<------b8
+    ///
+    /// `get_chain_for_committed_block`(b1) returns [b5, b3, b2, b1]
+    /// `get_chain_for_committed_block`(b2) returns []
+    pub(super) fn get_chain_for_committed_block(
+        &self,
+        block_id: HashValue,
+    ) -> Vec<Arc<ExecutedBlock<T>>> {
+        let mut highest_block_in_response = None;
+        let mut to_visit = VecDeque::new();
+        to_visit.push_back(block_id);
+
+        // Trying to find the child block that commits target block using DFS
+        while let Some(id) = to_visit.pop_back() {
+            if let Some(linkable_block) = self.get_linkable_block(&id) {
+                let block = linkable_block.executed_block.block();
+                if block.quorum_cert().commit_info().id() == block_id {
+                    highest_block_in_response.replace(linkable_block.executed_block());
+                    break;
+                }
+                for child_id in linkable_block.children() {
+                    to_visit.push_back(*child_id);
+                }
+            }
+        }
+
+        // Walk back from the found child block to construct the response chain
+        let mut res = vec![];
+        let mut next_block = highest_block_in_response.take().cloned();
+        while let Some(b) = next_block {
+            res.push(Arc::clone(&b));
+            if b.id() == block_id {
+                break;
+            }
+            next_block = self.get_block(&b.parent_id());
+        }
+        res
+    }
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
