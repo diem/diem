@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use difference;
 use move_lang::{move_compile_no_report, shared::Address};
 use std::{fs, path::Path};
-use text_diff;
 
 use move_lang::test_utils::*;
 
@@ -14,11 +14,13 @@ const KEEP_TMP: &str = "KEEP";
 const UPDATE_BASELINE: &str = "UPDATE_BASELINE";
 
 fn format_diff(expected: String, actual: String) -> String {
-    use text_diff::*;
-    let (_, changeset) = diff(&expected, &actual, "\n");
+    use difference::*;
+
+    let changeset = Changeset::new(&expected, &actual, "\n");
+
     let mut ret = String::new();
 
-    for seq in changeset {
+    for seq in changeset.diffs {
         match &seq {
             Difference::Same(x) => {
                 ret.push_str(x);
