@@ -222,91 +222,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "fill": 1,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 10
-      },
-      "id": 10,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "irate(num_req{method=\"mempool.Mempool.AddTransactionWithValidation\"}[1m])\n\n",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "AC add transaction",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "/s",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
       "description": "",
       "fill": 1,
       "gridPos": {
@@ -510,7 +425,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(mempool{op=\"commit_transactions.requested\"}[1m])\n",
+          "expr": "irate(libra_mempool_service{req_type=\"commit_transactions\", req_status=\"requested\"}}[1m])\n",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -596,7 +511,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(mempool{op=\"get_block.returned\"}[1m])",
+          "expr": "irate(libra_mempool_service{req_type=\"get_block\", req_status=\"returned\"}}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -694,7 +609,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(mempool{op=\"smp.sync_with_peers\"}[1m])",
+          "expr": "irate(libra_shared_mempool_transaction_broadcast[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -779,7 +694,7 @@
       "steppedLine": false,
       "targets": [
           {
-	      "expr": "label_replace(irate(mempool{op=~'smp.event.*'}[1m]), 'event', '$1', 'op', 'smp.event.(.*)')",
+	      "expr": "irate(libra_shared_mempool_events[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}: {{event}}",
@@ -864,7 +779,7 @@
       "steppedLine": false,
       "targets": [
           {
-	      "expr": "label_replace(irate(mempool{op=~'smp.transactions.received.*'}[1m]), 'sender', '$1', 'op', 'smp.transactions.received.(.{8}).*')",
+	      "expr": "irate(libra_shared_mempool_transactions_processed{status=\"received\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}} <- {{sender}}",
@@ -949,7 +864,7 @@
       "steppedLine": false,
       "targets": [
         {
-	    "expr": "label_replace(irate(mempool{op=~'smp.transactions.success.*'}[1m]), 'sender', '$1', 'op', 'smp.transactions.success.(.{8}).*')",
+	    "expr": "irate(libra_shared_mempool_transactions_processed{status=\"success\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}} <- {{sender}}",

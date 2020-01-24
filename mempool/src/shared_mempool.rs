@@ -3,11 +3,12 @@
 
 use crate::{
     core_mempool::{CoreMempool, TimelineState},
-    OP_COUNTERS,
+    counters,
 };
 use admission_control_proto::{
     proto::admission_control::{
-        submit_transaction_response::Status, SubmitTransactionRequest, SubmitTransactionResponse,
+        submit_transaction_response::Status, AdmissionControlStatusCode, SubmitTransactionRequest,
+        SubmitTransactionResponse,
     },
     AdmissionControlStatus,
 };
@@ -164,7 +165,8 @@ async fn sync_with_peers<'a>(
                 .read_timeline(timeline_id, batch_size);
 
             if !transactions.is_empty() {
-                OP_COUNTERS.inc_by("smp.sync_with_peers", transactions.len());
+                counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(transactions.len() as i64);
+
                 let mut msg = MempoolSyncMsg::default();
                 msg.peer_id = peer_id.into();
                 msg.transactions = transactions
@@ -272,10 +274,6 @@ where
                     balance,
                     timeline_state,
                 );
-                OP_COUNTERS.inc(&format!(
-                    "smp.transactions.status.{:?}",
-                    mempool_status.code
-                ));
 
                 if mempool_status.code == MempoolAddTransactionStatusCode::Valid {
                     statuses.push(Status::AcStatus(AdmissionControlStatus::Accepted.into()));
@@ -285,7 +283,6 @@ where
                     ));
                 }
             } else if let Ok(Some(validation_status)) = &validations[idx] {
-                OP_COUNTERS.inc("smp.transactions.status.validation_failed");
                 statuses.push(Status::VmStatus(VmStatusProto::from(
                     validation_status.clone(),
                 )));
@@ -320,6 +317,7 @@ async fn process_client_transaction_submission<V>(
             let mut statuses =
                 process_incoming_transactions(smp.clone(), vec![txn], TimelineState::NotReady)
                     .await;
+            log_txn_process_results(statuses.clone(), None);
             if statuses.is_empty() {
                 error!("[shared mempool] unexpected error happened");
             } else {
@@ -334,6 +332,52 @@ async fn process_client_transaction_submission<V>(
     {
         error!("[shared mempool] failed to send back transaction submission result to AC endpoint with error: {:?}", e);
     }
+}
+
+fn log_txn_process_results(results: Vec<Status>, sender: Option<PeerId>) {
+    let sender = match sender {
+        Some(peer) => peer.to_string(),
+        None => "client".to_string(),
+    };
+    for result in results.iter() {
+        match result {
+            Status::AcStatus(ac_status) => {
+                // log success
+                if ac_status.code() == AdmissionControlStatusCode::Accepted {
+                    counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
+                        .with_label_values(&["success".to_string().deref(), &sender])
+                        .inc();
+                }
+            }
+            Status::VmStatus(_) => {
+                // log vm validation failure
+                counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
+                    .with_label_values(&["validation_failed".to_string().deref(), &sender])
+                    .inc();
+            }
+            Status::MempoolStatus(mempool_status_proto) => {
+                // log mempool status failure
+                counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
+                    .with_label_values(&[
+                        format!("{:?}", mempool_status_proto.code).deref(),
+                        &sender,
+                    ])
+                    .inc();
+            }
+        }
+    }
+}
+
+async fn process_transaction_broadcast<V>(
+    smp: SharedMempool<V>,
+    transactions: Vec<SignedTransaction>,
+    timeline_state: TimelineState,
+    peer_id: PeerId,
+) where
+    V: TransactionValidation,
+{
+    let results = process_incoming_transactions(smp, transactions, timeline_state).await;
+    log_txn_process_results(results, Some(peer_id));
 }
 
 /// This task handles [`SyncEvent`], which is periodically emitted for us to
@@ -399,40 +443,47 @@ async fn inbound_network_task<V>(
                     Ok(network_event) => {
                         match network_event {
                             Event::NewPeer(peer_id) => {
-                                OP_COUNTERS.inc("smp.event.new_peer");
+                                counters::SHARED_MEMPOOL_EVENTS
+                                    .with_label_values(&["new_peer".to_string().deref()])
+                                    .inc();
                                 if node_config.is_upstream_peer(peer_id, network_id) {
                                     new_peer(&peer_info, peer_id, network_id);
                                 }
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                             }
                             Event::LostPeer(peer_id) => {
-                                OP_COUNTERS.inc("smp.event.lost_peer");
+                                counters::SHARED_MEMPOOL_EVENTS
+                                    .with_label_values(&["lost_peer".to_string().deref()])
+                                    .inc();
                                 if node_config.is_upstream_peer(peer_id, network_id) {
                                     lost_peer(&peer_info, peer_id);
                                 }
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                             }
                             Event::Message((peer_id, msg)) => {
-                                OP_COUNTERS.inc("smp.event.message");
+                                counters::SHARED_MEMPOOL_EVENTS
+                                    .with_label_values(&["message".to_string().deref()])
+                                    .inc();
                                 let transactions: Vec<_> = msg
                                     .transactions
                                     .clone()
                                     .into_iter()
                                     .filter_map(|txn| convert_txn_from_proto(txn))
                                     .collect();
-                                OP_COUNTERS.inc_by(
-                                    &format!("smp.transactions.received.{:?}", peer_id),
-                                    transactions.len(),
-                                );
+                                counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
+                                    .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
+                                    .inc_by(transactions.len() as i64);
+                                let smp_clone = smp.clone();
                                 let timeline_state = match node_config.is_upstream_peer(peer_id, network_id) {
                                     true => TimelineState::NonQualified,
-                                    false => TimelineState::NotReady
+                                    false => TimelineState::NotReady,
                                 };
                                 bounded_executor
-                                    .spawn(process_incoming_transactions(
-                                        smp.clone(),
+                                    .spawn(process_transaction_broadcast(
+                                        smp_clone,
                                         transactions,
                                         timeline_state,
+                                        peer_id
                                     ))
                                     .await;
                             }
