@@ -108,7 +108,7 @@ pub fn setup_network(
         role,
     );
     network_builder
-        .permissioned(config.is_permissioned)
+        .enable_remote_authentication(config.enable_remote_authentication)
         .advertised_address(config.advertised_address.clone())
         .direct_send_protocols(vec![
             ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
@@ -116,8 +116,8 @@ pub fn setup_network(
             ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ])
         .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
-    if config.is_permissioned {
-        // If the node wants to run in permissioned mode, it should also use noise for
+    if config.enable_remote_authentication {
+        // If the node wants to run in enable_remote_authentication mode, it should also use noise for
         // authentication and encryption.
         assert!(
             config.enable_noise,
@@ -159,8 +159,9 @@ pub fn setup_network(
             .take_private()
             .expect("Failed to take Network identity private key, key absent or already read");
         let identity_public = config.network_keypairs.identity_keys.public().clone();
-        // Even if a network end-point is permissionless, it might want to prove its identity to
-        // another peer it connects to. For this, we use TCP + Noise but in a permission-less way.
+        // Even if a network end-point operates without remote authentication, it might want to prove
+        // its identity to another peer it connects to. For this, we use TCP + Noise but without
+        // enforcing a trusted peers set.
         network_builder.transport(TransportType::TcpNoise(Some((
             identity_private,
             identity_public,

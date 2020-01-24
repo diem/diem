@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Permission-less vs Permissioned network end-points:
+//! Remotely authenticated vs. unauthenticated network end-points:
 //! ---------------------------------------------------
-//! A network end-point is permissioned if it only wants to accept connections from a known set
-//! of peers (`trusted_peers`) identified by their network identity keys. This does not mean
-//! that the other end-point of a connection also needs to run in permissioned mode --
-//! a network end-point running in permissioned mode will connect to or accept connections from
-//! an end-point running in permissionless mode as long as the latter is in its trusted peers
-//! set.
+//! A network end-point operates with remote authentication if it only accepts connections
+//! from a known set of peers (`trusted_peers`) identified by their network identity keys.
+//! This does not mean that the other end-point of a connection also needs to operate with
+//! authentication -- a network end-point running with remote authentication enabled will
+//! connect to or accept connections from an end-point running in authenticated mode as
+//! long as the latter is in its trusted peers set.
 use crate::{
     common::NetworkPublicKeys,
     connectivity_manager::ConnectivityManager,
@@ -99,7 +99,7 @@ pub struct NetworkBuilder {
     max_concurrent_network_notifs: u32,
     max_connection_delay_ms: u64,
     signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
-    is_permissioned: bool,
+    enable_remote_authentication: bool,
     health_checker_enabled: bool,
 }
 
@@ -136,7 +136,7 @@ impl NetworkBuilder {
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
             signing_keys: None,
-            is_permissioned: true,
+            enable_remote_authentication: true,
             health_checker_enabled: true,
         }
     }
@@ -287,9 +287,12 @@ impl NetworkBuilder {
         self
     }
 
-    /// Set the is_permissioned flag to make the network permissioned or permission-less.
-    pub fn permissioned(&mut self, is_permissioned: bool) -> &mut Self {
-        self.is_permissioned = is_permissioned;
+    /// Set the enable_remote_authentication flag to make the network operate with remote authentication.
+    pub fn enable_remote_authentication(
+        &mut self,
+        enable_remote_authentication: bool,
+    ) -> &mut Self {
+        self.enable_remote_authentication = enable_remote_authentication;
         self
     }
 
@@ -338,7 +341,7 @@ impl NetworkBuilder {
             }
             TransportType::PermissionlessMemoryNoise(ref mut keys) => {
                 let keys = keys.take().expect("Identity keys not set");
-                self.build_with_transport(build_permissionless_memory_noise_transport(
+                self.build_with_transport(build_unauthenticated_memory_noise_transport(
                     identity, keys,
                 ))
             }
@@ -349,7 +352,7 @@ impl NetworkBuilder {
             }
             TransportType::PermissionlessTcpNoise(ref mut keys) => {
                 let keys = keys.take().expect("Identity keys not set");
-                self.build_with_transport(build_permissionless_tcp_noise_transport(identity, keys))
+                self.build_with_transport(build_unauthenticated_tcp_noise_transport(identity, keys))
             }
         }
     }
@@ -423,10 +426,10 @@ impl NetworkBuilder {
         self.executor.spawn(rpc.start());
         debug!("Started RPC actor");
 
-        // We start the connectivity_manager module only if the network is
-        // permissioned.
+        // We start the connectivity_manager module only if the network
+        // operates with remote authentication.
         let mut net_conn_mgr_reqs_tx = None;
-        if self.is_permissioned {
+        if self.enable_remote_authentication {
             // Initialize and start connectivity manager.
             let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
                 self.channel_size,
@@ -516,10 +519,10 @@ impl NetworkBuilder {
             debug!("Started health checker");
         }
 
-        // We start the discovery module only if the network is permissioned.
-        // Note: We use the `is_permissioned` flag as a proxy for whether we need to run the
+        // We start the discovery module only if the network uses remote authentication.
+        // Note: We use the `enable_remote_authentication` flag as a proxy for whether we need to run the
         // discovery module or not. We should make this more explicit eventually.
-        if self.is_permissioned {
+        if self.enable_remote_authentication {
             // Initialize and start Discovery actor.
             let (signing_private_key, _signing_public_key) =
                 self.signing_keys.take().expect("Signing keys not set");

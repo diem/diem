@@ -358,7 +358,7 @@ where
             }
             NetworkRequest::UpdateEligibleNodes(nodes) => {
                 let mut conn_mgr_reqs_tx = conn_mgr_reqs_tx
-                    .expect("Received requst to update eligible nodes in permissionless network");
+                    .expect("Received request to update eligible nodes in network operating without remote authentication");
                 conn_mgr_reqs_tx
                     .send(ConnectivityRequest::UpdateEligibleNodes(nodes))
                     .await

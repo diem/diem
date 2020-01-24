@@ -207,10 +207,10 @@ fn test_mempool_sync() {
     runtime.block_on(join(f_dialer, f_listener));
 }
 
-// Test that a permissioned end-point can connect to a permission-less end-point if both are
-// correctly configured.
+// Test that an end-point operating with remote_authentication can connect to
+// an end-point without remote_authentication if both are correctly configured.
 #[test]
-fn test_permissionless_mempool_sync() {
+fn test_unauthenticated_remote_mempool_sync() {
     ::libra_logger::try_init_for_testing();
     let mut runtime = Runtime::new().unwrap();
     let mempool_sync_protocol = ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL);
@@ -257,7 +257,7 @@ fn test_permissionless_mempool_sync() {
         RoleType::Validator,
     )
     .signing_keys((listener_signing_private_key, listener_signing_public_key))
-    .permissioned(false)
+    .enable_remote_authentication(false)
     .transport(TransportType::PermissionlessMemoryNoise(Some((
         listener_identity_private_key,
         listener_identity_public_key,
