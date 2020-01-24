@@ -3,11 +3,11 @@
 
 use crate::{
     core_mempool::{CoreMempool, TxnPointer},
+    counters,
     proto::mempool::{
         mempool_server::Mempool, CommitTransactionsRequest, CommitTransactionsResponse,
         GetBlockRequest, GetBlockResponse, HealthCheckRequest, HealthCheckResponse,
     },
-    OP_COUNTERS,
 };
 use libra_logger::prelude::*;
 use libra_types::{
@@ -37,7 +37,10 @@ impl Mempool for MempoolService {
         trace!("[GRPC] Mempool::get_block");
 
         let block_size = cmp::max(req.max_block_size, 1);
-        OP_COUNTERS.inc_by("get_block.requested", block_size as usize);
+        counters::MEMPOOL_SERVICE
+            .with_label_values(&["get_block", "requested"])
+            .inc_by(block_size as i64);
+
         let exclude_transactions: HashSet<TxnPointer> = req
             .transactions
             .iter()
@@ -56,7 +59,9 @@ impl Mempool for MempoolService {
 
         let mut block = SignedTransactionsBlock::default();
         block.transactions = transactions;
-        OP_COUNTERS.inc_by("get_block.returned", block.transactions.len());
+        counters::MEMPOOL_SERVICE
+            .with_label_values(&["get_block", "returned"])
+            .inc_by(block.transactions.len() as i64);
         let mut response = GetBlockResponse::default();
         response.block = Some(block);
         Ok(tonic::Response::new(response))
@@ -68,7 +73,9 @@ impl Mempool for MempoolService {
     ) -> Result<tonic::Response<CommitTransactionsResponse>, tonic::Status> {
         let request = request.into_inner();
         trace!("[GRPC] Mempool::commit_transaction");
-        OP_COUNTERS.inc_by("commit_transactions.requested", request.transactions.len());
+        counters::MEMPOOL_SERVICE
+            .with_label_values(&["commit_transactions", "requested"])
+            .inc_by(request.transactions.len() as i64);
         let mut pool = self.core_mempool.lock().unwrap();
 
         for transaction in &request.transactions {
