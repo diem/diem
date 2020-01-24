@@ -101,7 +101,7 @@ tool does not support the creation of trees of Full node networks.
         -s $SHARED_SECRET \
         [ -i $I -f $TOTAL_NUMBER_OF_FULL_NODES -c $FULL_NODE_SHARED_SECRET | -p ]
 
-Here's an example of adding a 4 membered permissioned network connecting to the
+Here's an example of adding a 4 membered and authenticated network connecting to the
 node above:
 
     config-builder full-node create \

@@ -36,16 +36,16 @@ pub struct NetworkConfig {
     pub connectivity_check_interval_ms: u64,
     // Flag to toggle if Noise is used for encryption and authentication.
     pub enable_noise: bool,
-    // If the network is permissioned, only trusted peers are allowed to connect. Otherwise, any
-    // node can connect. If this flag is set to true, `enable_noise`
-    // must also be set to true.
-    pub is_permissioned: bool,
+    // If the network uses remote authentication, only trusted peers are allowed to connect.
+    // Otherwise, any node can connect. If this flag is set to true, `enable_noise` must
+    // also be set to true.
+    pub enable_remote_authentication: bool,
     // network_keypairs contains the node's network keypairs.
     // it is filled later on from network_keypairs_file.
     #[serde(skip)]
     pub network_keypairs: NetworkKeyPairs,
     pub network_keypairs_file: PathBuf,
-    // network peers are the nodes allowed to connect when the network is started in permissioned
+    // network peers are the nodes allowed to connect when the network is started in authenticated
     // mode.
     #[serde(skip)]
     pub network_peers: NetworkPeersConfig,
@@ -68,7 +68,7 @@ impl Default for NetworkConfig {
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
             enable_noise: true,
-            is_permissioned: true,
+            enable_remote_authentication: true,
             network_keypairs_file: PathBuf::new(),
             network_keypairs: keypair,
             network_peers_file: PathBuf::new(),
@@ -90,7 +90,7 @@ impl NetworkConfig {
             discovery_interval_ms: self.discovery_interval_ms,
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
             enable_noise: self.enable_noise,
-            is_permissioned: self.is_permissioned,
+            enable_remote_authentication: self.enable_remote_authentication,
             network_keypairs_file: self.network_keypairs_file.clone(),
             network_keypairs: NetworkKeyPairs::default(),
             network_peers_file: self.network_peers_file.clone(),
@@ -140,10 +140,10 @@ impl NetworkConfig {
                 self.network_peers.peers.is_empty(),
                 "Validators should not define network_peers"
             );
-        } else if self.is_permissioned {
+        } else if self.enable_remote_authentication {
             ensure!(
                 self.peer_id == key_peer_id,
-                "For permissioned, full-node networks, the peer_id must be derived from the identity key.",
+                "For full-nodes that use remote authentication, the peer_id must be derived from the identity key.",
             );
         }
         Ok(())
@@ -154,7 +154,7 @@ impl NetworkConfig {
     }
 
     pub fn save(&mut self, root_dir: &RootPath) -> Result<()> {
-        if self.is_permissioned {
+        if self.enable_remote_authentication {
             if self.network_keypairs_file.as_os_str().is_empty() {
                 let file_name = self.default_path(NETWORK_KEYPAIRS_DEFAULT);
                 self.network_keypairs_file = PathBuf::from(file_name);
