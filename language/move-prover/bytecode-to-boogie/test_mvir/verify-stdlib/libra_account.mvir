@@ -335,8 +335,7 @@ module LibraAccount {
         ensures global_exists<Self.T>(payee)
         ensures old(global_exists<Self.T>(payee)) ==>
                     global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + amount
-        // TODO: we currently cannot verify the case where account did not exist.
-        //   ensures !old(global_exists<Self.T>(payee)) ==> global<Self.T>(payee).balance.value == amount
+        ensures old(global_exists<Self.T>(payee)) || global<Self.T>(payee).balance.value == amount
         ensures global<Self.T>(txn_sender).balance.value == old(global<Self.T>(txn_sender).balance.value) - amount
     {
         // TODO: note we added this assertion. Is it a bug?
@@ -366,8 +365,7 @@ module LibraAccount {
         ensures global_exists<Self.T>(payee)
         ensures old(global_exists<Self.T>(payee)) ==>
             global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + amount
-        // TODO: we currently cannot verify the case where account did not exist.
-        //   ensures !old(global_exists<Self.T>(payee)) ==> global<Self.T>(payee).balance.value == amount
+        ensures old(global_exists<Self.T>(payee)) || global<Self.T>(payee).balance.value == amount
         ensures global<Self.T>(txn_sender).balance.value == old(global<Self.T>(txn_sender).balance.value) - amount
     {
         // TODO: note we added this assertion. Is it a bug?
