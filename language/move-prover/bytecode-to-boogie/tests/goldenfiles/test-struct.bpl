@@ -13,7 +13,7 @@ function TestStruct_B_type_value(): TypeValue {
 procedure {:inline 1} Pack_TestStruct_B(addr: Value, val: Value) returns (_struct: Value)
 {
     assume is#Address(addr);
-    assume IsValidInteger(val);
+    assume IsValidU64(val);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, addr), val));
 
 }
@@ -24,7 +24,7 @@ procedure {:inline 1} Unpack_TestStruct_B(_struct: Value) returns (addr: Value, 
     addr := SelectField(_struct, TestStruct_B_addr);
     assume is#Address(addr);
     val := SelectField(_struct, TestStruct_B_val);
-    assume IsValidInteger(val);
+    assume IsValidU64(val);
 }
 
 const unique TestStruct_A: TypeName;
@@ -37,7 +37,7 @@ function TestStruct_A_type_value(): TypeValue {
 }
 procedure {:inline 1} Pack_TestStruct_A(val: Value, b: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(val);
+    assume IsValidU64(val);
     assume is#Vector(b);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, val), b));
 
@@ -47,7 +47,7 @@ procedure {:inline 1} Unpack_TestStruct_A(_struct: Value) returns (val: Value, b
 {
     assume is#Vector(_struct);
     val := SelectField(_struct, TestStruct_A_val);
-    assume IsValidInteger(val);
+    assume IsValidU64(val);
     b := SelectField(_struct, TestStruct_A_b);
     assume is#Vector(b);
 }
@@ -62,7 +62,7 @@ function TestStruct_C_type_value(): TypeValue {
 }
 procedure {:inline 1} Pack_TestStruct_C(val: Value, b: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(val);
+    assume IsValidU64(val);
     assume is#Vector(b);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, val), b));
 
@@ -72,7 +72,7 @@ procedure {:inline 1} Unpack_TestStruct_C(_struct: Value) returns (val: Value, b
 {
     assume is#Vector(_struct);
     val := SelectField(_struct, TestStruct_C_val);
-    assume IsValidInteger(val);
+    assume IsValidU64(val);
     b := SelectField(_struct, TestStruct_C_b);
     assume is#Vector(b);
 }
@@ -85,7 +85,7 @@ function TestStruct_T_type_value(): TypeValue {
 }
 procedure {:inline 1} Pack_TestStruct_T(x: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(x);
+    assume IsValidU64(x);
     _struct := Vector(ExtendValueArray(EmptyValueArray, x));
 
 }
@@ -94,7 +94,7 @@ procedure {:inline 1} Unpack_TestStruct_T(_struct: Value) returns (x: Value)
 {
     assume is#Vector(_struct);
     x := SelectField(_struct, TestStruct_T_x);
-    assume IsValidInteger(x);
+    assume IsValidU64(x);
 }
 
 
@@ -363,7 +363,7 @@ Label_11:
     call t16 := CopyOrMoveRef(t4);
 
     call tmp := ReadRef(t16);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 17, tmp);
 

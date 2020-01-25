@@ -42,7 +42,7 @@ function TestSpecs_R_type_value(): TypeValue {
 }
 procedure {:inline 1} Pack_TestSpecs_R(x: Value, s: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(x);
+    assume IsValidU64(x);
     assume is#Vector(s);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, x), s));
 
@@ -52,7 +52,7 @@ procedure {:inline 1} Unpack_TestSpecs_R(_struct: Value) returns (x: Value, s: V
 {
     assume is#Vector(_struct);
     x := SelectField(_struct, TestSpecs_R_x);
-    assume IsValidInteger(x);
+    assume IsValidU64(x);
     s := SelectField(_struct, TestSpecs_R_s);
     assume is#Vector(s);
 }
@@ -83,8 +83,8 @@ ensures old(b#Boolean(Boolean(i#Integer(x1) <= i#Integer(Integer(0))))) ==> abor
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(x1);
-    assume IsValidInteger(x2);
+    assume IsValidU64(x1);
+    assume IsValidU64(x2);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -411,7 +411,7 @@ ensures b#Boolean(Boolean(b#Boolean(number_in_range(x)) && b#Boolean(Boolean(i#I
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(x);
+    assume IsValidU64(x);
 
     old_size := local_counter;
     local_counter := local_counter + 2;

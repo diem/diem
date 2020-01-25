@@ -5,6 +5,16 @@ mod driver;
 use driver::*;
 
 #[test]
+fn verify_addition() {
+    test(VERIFY, &["test_mvir/verify-addition.mvir"]);
+}
+
+#[test]
+fn verify_cast() {
+    test(VERIFY, &["test_mvir/verify-cast.mvir"]);
+}
+
+#[test]
 fn verify_create_resource() {
     test(VERIFY, &["test_mvir/verify-create-resource.mvir"]);
 }
@@ -17,6 +27,11 @@ fn verify_div() {
 #[test]
 fn verify_local_ref() {
     test(VERIFY, &["test_mvir/verify-local-ref.mvir"]);
+}
+
+#[test]
+fn verify_multiplication() {
+    test(VERIFY, &["test_mvir/verify-multiplication.mvir"]);
 }
 
 #[test]

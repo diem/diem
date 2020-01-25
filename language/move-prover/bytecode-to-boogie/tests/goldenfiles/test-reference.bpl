@@ -10,7 +10,7 @@ function TestReference_T_type_value(): TypeValue {
 }
 procedure {:inline 1} Pack_TestReference_T(value: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(value);
+    assume IsValidU64(value);
     _struct := Vector(ExtendValueArray(EmptyValueArray, value));
 
 }
@@ -19,7 +19,7 @@ procedure {:inline 1} Unpack_TestReference_T(_struct: Value) returns (value: Val
 {
     assume is#Vector(_struct);
     value := SelectField(_struct, TestReference_T_value);
-    assume IsValidInteger(value);
+    assume IsValidU64(value);
 }
 
 
@@ -41,7 +41,7 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(Dereference(m, b));
+    assume IsValidU64(Dereference(m, b));
     assume IsValidReferenceParameter(m, local_counter, b);
 
     old_size := local_counter;
@@ -118,7 +118,7 @@ ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
     call t5 := CopyOrMoveRef(t1);
 
     call tmp := ReadRef(t5);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
 

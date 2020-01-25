@@ -21,7 +21,7 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(Dereference(m, b));
+    assume IsValidU64(Dereference(m, b));
     assume IsValidReferenceParameter(m, local_counter, b);
 
     old_size := local_counter;
@@ -97,7 +97,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     call t5 := CopyOrMoveRef(t1);
 
     call tmp := ReadRef(t5);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
 
@@ -187,7 +187,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     call t5 := CopyOrMoveRef(t1);
 
     call tmp := ReadRef(t5);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
 
