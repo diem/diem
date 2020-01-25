@@ -244,6 +244,16 @@ impl Command_ {
         }
     }
 
+    pub fn is_unit(&self) -> bool {
+        use Command_ as C;
+        match self {
+            C::Assign(ls, e) => ls.is_empty() && e.is_unit(),
+            C::IgnoreAndPop { exp: e, .. } => e.is_unit(),
+
+            C::Mutate(_, _) | C::Return(_) | C::Abort(_) | C::JumpIf { .. } | C::Jump(_) => false,
+        }
+    }
+
     pub fn successors(&self) -> BTreeSet<Label> {
         use Command_::*;
 
@@ -264,6 +274,21 @@ impl Command_ {
             }
         }
         successors
+    }
+}
+
+impl Exp {
+    pub fn is_unit(&self) -> bool {
+        self.exp.value.is_unit()
+    }
+}
+
+impl UnannotatedExp_ {
+    pub fn is_unit(&self) -> bool {
+        match self {
+            UnannotatedExp_::Unit => true,
+            _ => false,
+        }
     }
 }
 

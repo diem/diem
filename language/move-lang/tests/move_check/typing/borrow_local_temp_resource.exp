@@ -10,7 +10,7 @@ error:
    │ ╰─────^ Invalid return
    ·
  6 │         &R{};
-   │         ---- The resource is created but not used. The resource must be consumed before the function returns
+   │          --- The resource is created but not used. The resource must be consumed before the function returns
    │
 
 error: 
@@ -25,6 +25,6 @@ error:
    │ ╰─────^ Invalid return
    ·
  7 │         &mut R{};
-   │         -------- The resource is created but not used. The resource must be consumed before the function returns
+   │              --- The resource is created but not used. The resource must be consumed before the function returns
    │
 

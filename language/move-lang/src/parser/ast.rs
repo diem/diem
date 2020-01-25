@@ -441,6 +441,35 @@ impl Type_ {
     }
 }
 
+impl BinOp_ {
+    pub fn is_pure(&self) -> bool {
+        use BinOp_ as B;
+        match self {
+            B::Add | B::Sub | B::Mul | B::Mod | B::Div => false,
+            B::BitOr
+            | B::BitAnd
+            | B::Xor
+            | B::And
+            | B::Or
+            | B::Eq
+            | B::Neq
+            | B::Lt
+            | B::Gt
+            | B::Le
+            | B::Ge => true,
+        }
+    }
+}
+
+impl UnaryOp_ {
+    pub fn is_pure(&self) -> bool {
+        use UnaryOp_ as U;
+        match self {
+            U::Not | U::Neg => true,
+        }
+    }
+}
+
 //**************************************************************************************************
 // Display
 //**************************************************************************************************

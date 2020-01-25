@@ -66,9 +66,9 @@ impl Compiler for MoveSourceCompiler {
     }
 }
 
-fn run_test(path: &Path) -> datatest_stable::Result<()> {
+fn functional_testsuite(path: &Path) -> datatest_stable::Result<()> {
     let compiler = MoveSourceCompiler::new(stdlib_files());
     testsuite::functional_tests(compiler, path)
 }
 
-datatest_stable::harness!(run_test, "tests/functional", r".*\.move");
+datatest_stable::harness!(functional_testsuite, "tests/functional", r".*\.move");

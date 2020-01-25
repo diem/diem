@@ -130,7 +130,7 @@ error:
     │ ╰─────^ Invalid return
     ·
  28 │         let _ = &R{};
-    │                 ---- The resource is created but not used. The resource must be consumed before the function returns
+    │                  --- The resource is created but not used. The resource must be consumed before the function returns
     │
 
 error: 

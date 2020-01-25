@@ -29,7 +29,7 @@ fn new_temp_name() -> String {
     new_name(TEMP_PREFIX)
 }
 
-fn is_temp_name(s: &str) -> bool {
+pub fn is_temp_name(s: &str) -> bool {
     s.starts_with(TEMP_PREFIX)
 }
 
@@ -392,6 +392,18 @@ macro_rules! exp {
     }};
 }
 
+macro_rules! exp_evaluation_order {
+    ($context:ident, $block:expr, $tes:expr) => {{
+        match maybe_exp_evaluation_order($context, $block, $tes) {
+            Unreachable { report, loc } => {
+                dead_code_err($context, report, loc);
+                return Unreachable { report: false, loc };
+            }
+            Reachable(e) => e,
+        }
+    }};
+}
+
 macro_rules! statement_exp {
     ($context:ident, $block:expr, $expected_type:expr, $typed_exp:expr) => {{
         match maybe_exp($context, $block, $expected_type, $typed_exp) {
@@ -405,7 +417,7 @@ macro_rules! statement_exp {
 }
 
 fn unit_() -> H::UnannotatedExp_ {
-    H::UnannotatedExp_::ExpList(vec![])
+    H::UnannotatedExp_::Unit
 }
 
 fn unit_result(loc: Loc) -> ExpResult {
@@ -486,14 +498,15 @@ fn statement(context: &mut Context, result: &mut Block, e: T::Exp) {
             }
         }
         TE::While(tb, loop_body) => {
-            let cond = statement_exp!(context, result, None, *tb);
+            let mut cond_block = Block::new();
+            let cond_exp = statement_exp!(context, &mut cond_block, None, *tb);
 
             let mut loop_block = Block::new();
             let el = maybe_exp(context, &mut loop_block, None, *loop_body);
             ignore_and_pop(context, &mut loop_block, true, el);
 
             S::While {
-                cond,
+                cond: (cond_block, cond_exp),
                 block: loop_block,
             }
         }
@@ -704,9 +717,6 @@ fn ignore_and_pop(
         Unreachable { .. } if last_stmt => (),
         Unreachable { report, loc } => dead_code_err(context, report, loc),
         Reachable(exp) => {
-            if let H::UnannotatedExp_::Unit = &exp.exp.value {
-                return;
-            }
             let pop_num = match &exp.ty.value {
                 H::Type_::Unit => 0,
                 H::Type_::Single(_) => 1,
@@ -739,6 +749,11 @@ fn maybe_exp(
         }
         (res, _) => res,
     }
+}
+
+enum TmpItem {
+    Single(Box<H::SingleType>),
+    Splat(Loc, Vec<H::SingleType>),
 }
 
 fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult {
@@ -789,14 +804,15 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             }
         }
         TE::While(tb, loop_body) => {
-            let cond = exp!(context, result, None, *tb);
+            let mut cond_block = Block::new();
+            let cond_exp = exp!(context, &mut cond_block, None, *tb);
 
             let mut loop_block = Block::new();
             let el = maybe_exp(context, &mut loop_block, None, *loop_body);
             ignore_and_pop(context, &mut loop_block, true, el);
 
             let s_ = S::While {
-                cond,
+                cond: (cond_block, cond_exp),
                 block: loop_block,
             };
             result.push_back(sp(eloc, s_));
@@ -823,6 +839,7 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             unit_()
         }
         TE::Block(seq) => return block(context, result, eloc, None, seq),
+
         // Command-like expressions
         TE::Return(te) => {
             let expected_type = context.return_type.clone();
@@ -900,12 +917,12 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
                 parameter_types,
                 acquires,
             } = *call;
-            let a_m_f = (
+            let (a, m, f) = (
                 &module.0.value.address,
                 module.0.value.name.value(),
                 name.value(),
             );
-            if let (&Address::LIBRA_CORE, TXN::MOD, TXN::ASSERT) = a_m_f {
+            if let (&Address::LIBRA_CORE, TXN::MOD, TXN::ASSERT) = (a, m, f) {
                 let tbool = N::SingleType_::bool(eloc);
                 let tu64 = N::SingleType_::u64(eloc);
                 let tunit = sp(eloc, N::Type_::Unit);
@@ -969,13 +986,25 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
         TE::BinopExp(tl, op @ sp!(_, BinOp_::Eq), toperand_ty, tr)
         | TE::BinopExp(tl, op @ sp!(_, BinOp_::Neq), toperand_ty, tr) => {
             let operand_ty = type_(context, *toperand_ty);
-            let el = exp!(context, result, Some(&operand_ty), *tl);
-            let er = exp!(context, result, Some(&operand_ty), *tr);
+            let (el, er) = {
+                let tes = vec![(*tl, Some(operand_ty.clone())), (*tr, Some(operand_ty))];
+                let mut es = exp_evaluation_order!(context, result, tes);
+                assert!(es.len() == 2, "ICE exp_evaluation_order changed arity");
+                let er = es.pop().unwrap();
+                let el = es.pop().unwrap();
+                (Box::new(el), Box::new(er))
+            };
             HE::BinopExp(el, op, er)
         }
         TE::BinopExp(tl, op, _, tr) => {
-            let el = exp!(context, result, None, *tl);
-            let er = exp!(context, result, None, *tr);
+            let (el, er) = {
+                let tes = vec![(*tl, None), (*tr, None)];
+                let mut es = exp_evaluation_order!(context, result, tes);
+                assert!(es.len() == 2, "ICE exp_evaluation_order changed arity");
+                let er = es.pop().unwrap();
+                let el = es.pop().unwrap();
+                (Box::new(el), Box::new(er))
+            };
             HE::BinopExp(el, op, er)
         }
         TE::Pack(_, s, tbs, tfields) => {
@@ -990,45 +1019,74 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
                 .collect();
             texp_fields.sort_by(|(_, _, eidx1, _, _), (_, _, eidx2, _, _)| eidx1.cmp(eidx2));
 
-            let mut fields = (0..decl_fields.len()).map(|_| None).collect::<Vec<_>>();
-            for (decl_idx, f, exp_idx, bt, tf) in texp_fields {
-                let bt = base_type(context, bt);
-                let t = H::Type_::base(bt.clone());
-                let ef = exp_!(context, result, Some(&t), tf);
-                assert!(fields.get(decl_idx).unwrap().is_none());
-                if decl_idx == exp_idx {
-                    fields[decl_idx] = Some((f, bt, ef))
-                } else {
-                    let floc = ef.exp.loc;
-                    let st = H::SingleType_::base(bt.clone());
-                    let tmp = bind_exp(context, result, floc, st, ef);
-                    let move_ = HE::Move {
-                        from_user: false,
-                        var: tmp,
-                    };
-                    let move_tmp = H::exp(t, sp(eloc, move_));
+            let bind_all_fields = texp_fields
+                .iter()
+                .any(|(decl_idx, _, exp_idx, _, _)| decl_idx != exp_idx);
+            let fields = if !bind_all_fields {
+                let mut fs = vec![];
+                let tes = texp_fields
+                    .into_iter()
+                    .map(|(_, f, _, bt, te)| {
+                        let bt = base_type(context, bt);
+                        fs.push((f, bt.clone()));
+                        let t = H::Type_::base(bt);
+                        (te, Some(t))
+                    })
+                    .collect();
+                let es = exp_evaluation_order!(context, result, tes);
+                assert!(
+                    fs.len() == es.len(),
+                    "ICE exp_evaluation_order changed arity"
+                );
+                es.into_iter()
+                    .zip(fs)
+                    .map(|(e, (f, bt))| (f, bt, e))
+                    .collect()
+            } else {
+                let mut fields = (0..decl_fields.len()).map(|_| None).collect::<Vec<_>>();
+                for (decl_idx, f, _exp_idx, bt, tf) in texp_fields {
+                    let bt = base_type(context, bt);
+                    let t = H::Type_::base(bt.clone());
+                    let ef = exp_!(context, result, Some(&t), tf);
+                    assert!(fields.get(decl_idx).unwrap().is_none());
+                    let move_tmp = bind_exp(context, result, ef);
                     fields[decl_idx] = Some((f, bt, move_tmp))
                 }
-            }
-            HE::Pack(s, bs, fields.into_iter().map(|o| o.unwrap()).collect())
+                fields.into_iter().map(|o| o.unwrap()).collect()
+            };
+            HE::Pack(s, bs, fields)
         }
         TE::ExpList(titems) => {
-            let mut items = vec![];
+            assert!(!titems.is_empty());
+            let mut tmp_items = vec![];
+            let mut tes = vec![];
             for titem in titems {
-                let item = match titem {
+                match titem {
                     T::ExpListItem::Single(te, ts) => {
-                        let e = exp_!(context, result, None, te);
                         let s = single_type(context, *ts);
-                        H::ExpListItem::Single(e, Box::new(s))
+                        tmp_items.push(TmpItem::Single(Box::new(s)));
+                        tes.push((te, None));
                     }
                     T::ExpListItem::Splat(sloc, te, tss) => {
-                        let e = exp_!(context, result, None, te);
                         let ss = single_types(context, tss);
-                        H::ExpListItem::Splat(sloc, e, ss)
+                        tmp_items.push(TmpItem::Splat(sloc, ss));
+                        tes.push((te, None));
                     }
-                };
-                items.push(item)
+                }
             }
+            let es = exp_evaluation_order!(context, result, tes);
+            assert!(
+                es.len() == tmp_items.len(),
+                "ICE exp_evaluation_order changed arity"
+            );
+            let items = es
+                .into_iter()
+                .zip(tmp_items)
+                .map(|(e, tmp_item)| match tmp_item {
+                    TmpItem::Single(s) => H::ExpListItem::Single(e, s),
+                    TmpItem::Splat(loc, ss) => H::ExpListItem::Splat(loc, e, ss),
+                })
+                .collect();
             HE::ExpList(items)
         }
         TE::Borrow(mut_, te, f) => {
@@ -1036,12 +1094,14 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             HE::Borrow(mut_, e, f)
         }
         TE::TempBorrow(mut_, te) => {
-            let e = exp_!(context, result, None, *te);
-            let st = match &e.ty.value {
-                H::Type_::Single(s) => s.clone(),
-                _ => panic!("ICE borrow unit or multiple values"),
+            let eb = exp_!(context, result, None, *te);
+            let tmp = match bind_exp(context, result, eb).exp.value {
+                HE::Move {
+                    from_user: false,
+                    var,
+                } => var,
+                _ => panic!("ICE invalid bind_exp for single value"),
             };
-            let tmp = bind_exp(context, result, eloc, st, e);
             HE::BorrowLocal(mut_, tmp)
         }
 
@@ -1057,6 +1117,38 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
     Reachable(H::exp(ty, sp(eloc, res)))
 }
 
+fn maybe_exp_evaluation_order(
+    context: &mut Context,
+    result: &mut Block,
+    tes: Vec<(T::Exp, Option<H::Type>)>,
+) -> ReachableResult<Vec<H::Exp>> {
+    let mut needs_binding = false;
+    let mut e_results = vec![];
+    for (te, expected_type) in tes.into_iter().rev() {
+        let mut tmp_result = Block::new();
+        let e = *exp!(context, &mut tmp_result, expected_type.as_ref(), te);
+        // If evaluating this expression introduces statements, all previous exps need to be bound
+        // to preserve left-to-right evaluation order
+        let adds_to_result = !tmp_result.is_empty();
+
+        let e = if needs_binding {
+            bind_exp(context, &mut tmp_result, e)
+        } else {
+            e
+        };
+        e_results.push((tmp_result, e));
+
+        needs_binding = needs_binding || adds_to_result;
+    }
+
+    let mut es = vec![];
+    for (mut tmp_result, e) in e_results.into_iter().rev() {
+        result.append(&mut tmp_result);
+        es.push(e)
+    }
+    Reachable(es)
+}
+
 fn make_temps(context: &mut Context, loc: Loc, ty: H::Type) -> Vec<(Var, H::SingleType)> {
     use H::Type_ as T;
     match ty.value {
@@ -1069,56 +1161,72 @@ fn make_temps(context: &mut Context, loc: Loc, ty: H::Type) -> Vec<(Var, H::Sing
     }
 }
 
-fn bind_exp(
-    context: &mut Context,
-    result: &mut Block,
-    loc: Loc,
-    st: H::SingleType,
-    e: H::Exp,
-) -> Var {
-    let tmp = context.new_temp(loc, st.clone());
-    let lvalue = sp(tmp.loc(), H::LValue_::Var(tmp.clone(), Box::new(st)));
-    let assign = sp(loc, H::Command_::Assign(vec![lvalue], Box::new(e)));
-    result.push_back(sp(loc, H::Statement_::Command(assign)));
-    tmp
-}
-
 fn bind_result(
     result: &mut Block,
     loc: Loc,
     tmps: Vec<(Var, H::SingleType)>,
     eres: ExpResult,
 ) -> ExpResult {
-    use H::{Command_ as C, Statement_ as S, UnannotatedExp_ as E};
-
     match eres {
         res @ Unreachable { .. } => res,
-        Reachable(e) => {
-            let ty = e.ty.clone();
-            let lvalues = tmps
-                .iter()
-                .map(|(v, st)| sp(v.loc(), H::LValue_::Var(v.clone(), Box::new(st.clone()))))
-                .collect();
-            let asgn = sp(loc, C::Assign(lvalues, Box::new(e)));
-            result.push_back(sp(loc, S::Command(asgn)));
+        Reachable(e) => Reachable(H::exp(
+            e.ty.clone(),
+            sp(loc, bind_exp_(result, loc, tmps, e)),
+        )),
+    }
+}
 
-            let etemps = tmps
-                .into_iter()
-                .map(|(var, st)| {
-                    let evar_ = sp(
-                        var.loc(),
-                        E::Move {
-                            from_user: false,
-                            var,
-                        },
-                    );
-                    let ty = sp(st.loc, H::Type_::Single(st.clone()));
-                    let evar = H::exp(ty, evar_);
-                    H::ExpListItem::Single(evar, Box::new(st))
-                })
-                .collect();
-            Reachable(H::exp(ty, sp(loc, E::ExpList(etemps))))
-        }
+fn bind_exp(context: &mut Context, result: &mut Block, e: H::Exp) -> H::Exp {
+    let loc = e.exp.loc;
+    let ty = e.ty.clone();
+    let tmps = make_temps(context, loc, ty.clone());
+    H::exp(ty, sp(loc, bind_exp_(result, loc, tmps, e)))
+}
+
+fn bind_exp_(
+    result: &mut Block,
+    loc: Loc,
+    tmps: Vec<(Var, H::SingleType)>,
+    e: H::Exp,
+) -> H::UnannotatedExp_ {
+    use H::{Command_ as C, Statement_ as S, UnannotatedExp_ as E};
+
+    if tmps.is_empty() {
+        let cmd = sp(loc, C::IgnoreAndPop { pop_num: 0, exp: e });
+        result.push_back(sp(loc, S::Command(cmd)));
+        return E::Unit;
+    }
+    let lvalues = tmps
+        .iter()
+        .map(|(v, st)| sp(v.loc(), H::LValue_::Var(v.clone(), Box::new(st.clone()))))
+        .collect();
+    let asgn = sp(loc, C::Assign(lvalues, Box::new(e)));
+    result.push_back(sp(loc, S::Command(asgn)));
+
+    let mut etemps = tmps
+        .into_iter()
+        .map(|(var, st)| {
+            let evar_ = sp(var.loc(), use_tmp(var));
+            let ty = sp(st.loc, H::Type_::Single(st.clone()));
+            let evar = H::exp(ty, evar_);
+            H::ExpListItem::Single(evar, Box::new(st))
+        })
+        .collect::<Vec<_>>();
+    match etemps.len() {
+        0 => unreachable!(),
+        1 => match etemps.pop().unwrap() {
+            H::ExpListItem::Single(e, _) => e.exp.value,
+            H::ExpListItem::Splat(_, _, _) => unreachable!(),
+        },
+        _ => E::ExpList(etemps),
+    }
+}
+
+fn use_tmp(var: Var) -> H::UnannotatedExp_ {
+    use H::UnannotatedExp_ as E;
+    E::Move {
+        from_user: false,
+        var,
     }
 }
 
@@ -1233,13 +1341,7 @@ fn freeze(context: &mut Context, result: &mut Block, expected_type: &H::Type, e:
                 .into_iter()
                 .zip(points)
                 .map(|((var, ty), needs_freeze)| {
-                    let e_ = sp(
-                        loc,
-                        E::Move {
-                            from_user: false,
-                            var,
-                        },
-                    );
+                    let e_ = sp(loc, use_tmp(var));
                     let e = H::exp(T::single(ty), e_);
                     if needs_freeze {
                         freeze_point(e)
