@@ -1454,7 +1454,7 @@ fn parse_unary_spec_exp<'input>(
         }
         Tok::Exclaim => {
             tokens.advance()?;
-            let exp = parse_spec_exp(tokens)?;
+            let exp = parse_unary_spec_exp(tokens)?;
             SpecExp::Not(Box::new(exp))
         }
         Tok::Old => {
