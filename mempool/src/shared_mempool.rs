@@ -31,7 +31,6 @@ use libra_mempool_shared_proto::proto::mempool_status::{
 use libra_types::{
     proto::types::{SignedTransaction as SignedTransactionProto, VmStatus as VmStatusProto},
     transaction::SignedTransaction,
-    vm_error::{StatusCode::RESOURCE_DOES_NOT_EXIST, VMStatus},
     PeerId,
 };
 use network::{
@@ -238,12 +237,6 @@ where
                 if t.sequence_number() >= sequence_number {
                     return Some((t, sequence_number, balance));
                 }
-            } else {
-                // failed to get transaction
-                statuses.push(Status::VmStatus(VmStatusProto::from(
-                    VMStatus::new(RESOURCE_DOES_NOT_EXIST)
-                        .with_message("[shared mempool] failed to get account state".to_string()),
-                )));
             }
             None
         })
