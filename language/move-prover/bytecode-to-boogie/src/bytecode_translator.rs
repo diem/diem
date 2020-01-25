@@ -513,18 +513,24 @@ impl<'env> ModuleTranslator<'env> {
                     format!("call tmp := LdConst({});", num),
                     format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
                 ],
-            CastU8(dest, src) => vec![
-                // TODO: u8 bounds check
-                format!("m := UpdateLocal(m, old_size + {}, GetLocal(m, old_size + {}));", dest, src),
-            ],
+            CastU8(dest, src) =>
+                vec![
+                    format!("call tmp := CastU8(GetLocal(m, old_size + {}));", src),
+                    propagate_abort,
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
+                ],
             CastU64(dest, src) =>
                 vec![
-                    // TODO: u64 bounds check
-                    format!("m := UpdateLocal(m, old_size + {}, GetLocal(m, old_size + {}));", dest, src),
+                    format!("call tmp := CastU64(GetLocal(m, old_size + {}));", src),
+                    propagate_abort,
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
                 ],
-            CastU128(dest, src) => vec![
-                format!("m := UpdateLocal(m, old_size + {}, GetLocal(m, old_size + {}));", dest, src),
-            ],
+            CastU128(dest, src) =>
+                vec![
+                    format!("call tmp := CastU128(GetLocal(m, old_size + {}));", src),
+                    propagate_abort,
+                    format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
+                ],
             LdAddr(idx, addr_idx) => {
                 let addr_int = self.module_env.get_address(addr_idx);
                 vec![
@@ -536,14 +542,22 @@ impl<'env> ModuleTranslator<'env> {
                 format!("call tmp := Not(GetLocal(m, old_size + {}));", operand),
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
-            Add(dest, op1, op2) => vec![
+            Add(dest, op1, op2) => {
+                let add_type = match self.get_local_type(func_env, *dest) {
+                    GlobalType::U8 => "U8",
+                    GlobalType::U64 => "U64",
+                    GlobalType::U128 => "U128",
+                    _ => unreachable!()
+                };
+                vec![
                 format!(
-                    "call tmp := Add(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
-                    op1, op2
+                    "call tmp := Add{}(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
+                    add_type, op1, op2
                 ),
                 propagate_abort,
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
-            ],
+                ]
+            }
             Sub(dest, op1, op2) => vec![
                 format!(
                     "call tmp := Sub(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
@@ -552,14 +566,23 @@ impl<'env> ModuleTranslator<'env> {
                 propagate_abort,
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
             ],
-            Mul(dest, op1, op2) => vec![
+            Mul(dest, op1, op2) => {
+                let mul_type = match self.get_local_type(func_env, *dest) {
+                    GlobalType::U8 => "U8",
+                    GlobalType::U64 => "U64",
+                    GlobalType::U128 => "U128",
+                    _ => unreachable!()
+                };
+                vec![
                 format!(
-                    "call tmp := Mul(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
+                    "call tmp := Mul{}(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",
+                    mul_type,
                     op1, op2
                 ),
                 propagate_abort,
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", dest),
-            ],
+            ]
+            }
             Div(dest, op1, op2) => vec![
                 format!(
                     "call tmp := Div(GetLocal(m, old_size + {}), GetLocal(m, old_size + {}));",

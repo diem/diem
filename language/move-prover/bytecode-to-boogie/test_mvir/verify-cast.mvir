@@ -1,0 +1,31 @@
+module CastBad {
+
+    // fails because can abort with cast failure
+    public aborting_u8_cast_bad(x: u64): u8
+        aborts_if false //! postcondition might not hold
+    {
+        return to_u8(move(x));
+    }
+
+    // succeeds because aborts_if is correct
+    public aborting_u8_cast_ok(x: u64): u8
+        aborts_if x > 255 // U8_MAX
+    {
+        return to_u8(move(x));
+    }
+
+    // fails because can abort with cast failure
+    public aborting_u64_cast_bad(x: u128): u64
+        aborts_if false //! postcondition might not hold
+    {
+        return to_u64(move(x));
+    }
+
+    // succeeds because aborts_if is correct
+    public aborting_u64_cast_ok(x: u128): u64
+        aborts_if x > 9223372036854775807u128 // U64_MAX as a u128 type
+    {
+        return to_u64(move(x));
+    }
+
+}

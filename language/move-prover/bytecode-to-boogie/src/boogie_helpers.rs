@@ -76,7 +76,9 @@ pub fn boogie_type_check(env: &GlobalEnv, name: &str, sig: &GlobalType) -> Strin
     let mut params = name.to_string();
     let mut ret = String::new();
     let check = match sig {
-        GlobalType::U8 | GlobalType::U64 | GlobalType::U128 => "IsValidInteger",
+        GlobalType::U8 => "IsValidU8",
+        GlobalType::U64 => "IsValidU64",
+        GlobalType::U128 => "IsValidU128",
         GlobalType::Bool => "is#Boolean",
         GlobalType::Address => "is#Address",
         GlobalType::ByteArray => "is#ByteArray",

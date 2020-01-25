@@ -69,8 +69,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(x1);
-    assume IsValidInteger(x2);
+    assume IsValidU64(x1);
+    assume IsValidU64(x2);
 
     old_size := local_counter;
     local_counter := local_counter + 12;

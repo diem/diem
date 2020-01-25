@@ -231,31 +231,32 @@ impl<'env> SpecTranslator<'env> {
 
     /// Translates a binary operator.
     fn translate_binop(&mut self, op: &BinOp, left: BoogieExpr, right: BoogieExpr) -> BoogieExpr {
+        let operand_type = left.1.clone();
         match op {
             // u64
             BinOp::Add => {
-                self.translate_op_helper("+", &GlobalType::U64, GlobalType::U64, left, right)
+                self.translate_op_helper("+", &operand_type, operand_type.clone(), left, right)
             }
             BinOp::Sub => {
-                self.translate_op_helper("-", &GlobalType::U64, GlobalType::U64, left, right)
+                self.translate_op_helper("-", &operand_type, operand_type.clone(), left, right)
             }
             BinOp::Mul => {
-                self.translate_op_helper("*", &GlobalType::U64, GlobalType::U64, left, right)
+                self.translate_op_helper("*", &operand_type, operand_type.clone(), left, right)
             }
             BinOp::Mod => {
-                self.translate_op_helper("mod", &GlobalType::U64, GlobalType::U64, left, right)
+                self.translate_op_helper("mod", &operand_type, operand_type.clone(), left, right)
             }
             BinOp::Div => {
-                self.translate_op_helper("div", &GlobalType::U64, GlobalType::U64, left, right)
+                self.translate_op_helper("div", &operand_type, operand_type.clone(), left, right)
             }
             BinOp::BitAnd => {
-                self.translate_op_helper("&", &GlobalType::U64, GlobalType::U64, left, right)
+                self.translate_op_helper("&", &operand_type, operand_type.clone(), left, right)
             }
             BinOp::BitOr => {
-                self.translate_op_helper("|", &GlobalType::U64, GlobalType::U64, left, right)
+                self.translate_op_helper("|", &operand_type, operand_type.clone(), left, right)
             }
             BinOp::Xor => {
-                self.translate_op_helper("^", &GlobalType::U64, GlobalType::U64, left, right)
+                self.translate_op_helper("^", &operand_type, operand_type.clone(), left, right)
             }
             BinOp::Shl => unimplemented!(),
             BinOp::Shr => unimplemented!(),
@@ -281,16 +282,16 @@ impl<'env> SpecTranslator<'env> {
             // Ordering
             // TODO: is this defined also for non-integer types?
             BinOp::Lt => {
-                self.translate_op_helper("<", &GlobalType::U64, GlobalType::Bool, left, right)
+                self.translate_op_helper("<", &operand_type, GlobalType::Bool, left, right)
             }
             BinOp::Gt => {
-                self.translate_op_helper(">", &GlobalType::U64, GlobalType::Bool, left, right)
+                self.translate_op_helper(">", &operand_type, GlobalType::Bool, left, right)
             }
             BinOp::Le => {
-                self.translate_op_helper("<=", &GlobalType::U64, GlobalType::Bool, left, right)
+                self.translate_op_helper("<=", &operand_type, GlobalType::Bool, left, right)
             }
             BinOp::Ge => {
-                self.translate_op_helper(">=", &GlobalType::U64, GlobalType::Bool, left, right)
+                self.translate_op_helper(">=", &operand_type, GlobalType::Bool, left, right)
             }
         }
     }
@@ -308,12 +309,16 @@ impl<'env> SpecTranslator<'env> {
         let _ = self.require_type(rt, expected_operand_type);
         let _ = self.require_type(lt, expected_operand_type);
         let expr = match expected_operand_type {
-            GlobalType::U64 => format!("i#Integer({}) {} i#Integer({})", l, op, r),
+            GlobalType::U8 | GlobalType::U64 | GlobalType::U128 => {
+                format!("i#Integer({}) {} i#Integer({})", l, op, r)
+            }
             GlobalType::Bool => format!("b#Boolean({}) {} b#Boolean({})", l, op, r),
             _ => panic!("unexpected type"),
         };
         match result_type {
-            GlobalType::U64 => BoogieExpr(format!("Integer({})", expr), result_type),
+            GlobalType::U8 | GlobalType::U64 | GlobalType::U128 => {
+                BoogieExpr(format!("Integer({})", expr), result_type)
+            }
             GlobalType::Bool => BoogieExpr(format!("Boolean({})", expr), result_type),
             _ => panic!("unexpected type"),
         }
@@ -326,9 +331,9 @@ impl<'env> SpecTranslator<'env> {
                 format!("Address({})", self.translate_account_address(addr)),
                 GlobalType::Address,
             ),
-            CopyableVal::U8(_) => unimplemented!(),
+            CopyableVal::U8(val) => BoogieExpr(format!("Integer({})", val), GlobalType::U8),
             CopyableVal::U64(val) => BoogieExpr(format!("Integer({})", val), GlobalType::U64),
-            CopyableVal::U128(_) => unimplemented!(),
+            CopyableVal::U128(val) => BoogieExpr(format!("Integer({})", val), GlobalType::U128),
             CopyableVal::Bool(val) => BoogieExpr(format!("Boolean({})", val), GlobalType::Bool),
             // TODO: byte arrays
             CopyableVal::ByteArray(_arr) => BoogieExpr(
@@ -422,6 +427,7 @@ impl<'env> SpecTranslator<'env> {
     /// Checks for an expected type.
     fn require_type(&mut self, t: GlobalType, expected: &GlobalType) -> GlobalType {
         if t != ERROR_TYPE && t != UNKNOWN_TYPE && t != *expected {
+            println!("t: {:?} expected {:?}", t, expected);
             self.error(
                 &format!(
                     "incompatible types: expected `{}`, found `{}`",

@@ -10,7 +10,7 @@ function LibraCoin_T_type_value(): TypeValue {
 }
 procedure {:inline 1} Pack_LibraCoin_T(value: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(value);
+    assume IsValidU64(value);
     _struct := Vector(ExtendValueArray(EmptyValueArray, value));
 
 }
@@ -19,7 +19,7 @@ procedure {:inline 1} Unpack_LibraCoin_T(_struct: Value) returns (value: Value)
 {
     assume is#Vector(_struct);
     value := SelectField(_struct, LibraCoin_T_value);
-    assume IsValidInteger(value);
+    assume IsValidU64(value);
 }
 
 const unique LibraCoin_MintCapability: TypeName;
@@ -50,7 +50,7 @@ function LibraCoin_MarketCap_type_value(): TypeValue {
 }
 procedure {:inline 1} Pack_LibraCoin_MarketCap(total_value: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(total_value);
+    assume IsValidU64(total_value);
     _struct := Vector(ExtendValueArray(EmptyValueArray, total_value));
 
 }
@@ -59,7 +59,7 @@ procedure {:inline 1} Unpack_LibraCoin_MarketCap(_struct: Value) returns (total_
 {
     assume is#Vector(_struct);
     total_value := SelectField(_struct, LibraCoin_MarketCap_total_value);
-    assume IsValidInteger(total_value);
+    assume IsValidU64(total_value);
 }
 
 
@@ -87,7 +87,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MintCapabi
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(amount);
+    assume IsValidU64(amount);
 
     old_size := local_counter;
     local_counter := local_counter + 5;
@@ -163,7 +163,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(value);
+    assume IsValidU64(value);
     assume is#Vector(Dereference(m, capability));
     assume IsValidReferenceParameter(m, local_counter, capability);
 
@@ -185,7 +185,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_
     call tmp := LdConst(1000000);
     m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := Mul(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
+    call tmp := MulU64(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
     if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 8, tmp);
 
@@ -217,7 +217,7 @@ Label_11:
     call t15 := BorrowField(t14, LibraCoin_MarketCap_total_value);
 
     call tmp := ReadRef(t15);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 16, tmp);
 
@@ -230,7 +230,7 @@ Label_11:
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
     m := UpdateLocal(m, old_size + 18, tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 17), GetLocal(m, old_size + 18));
+    call tmp := AddU64(GetLocal(m, old_size + 17), GetLocal(m, old_size + 18));
     if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 19, tmp);
 
@@ -379,7 +379,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_
     call t2 := BorrowField(t1, LibraCoin_MarketCap_total_value);
 
     call tmp := ReadRef(t2);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
 
@@ -469,7 +469,7 @@ ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, coin_ref), Libra
     call t2 := BorrowField(t1, LibraCoin_T_value);
 
     call tmp := ReadRef(t2);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
 
@@ -511,7 +511,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
 
     // assume arguments are of correct types
     assume is#Vector(coin);
-    assume IsValidInteger(amount);
+    assume IsValidU64(amount);
 
     old_size := local_counter;
     local_counter := local_counter + 8;
@@ -591,7 +591,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(m, coin_ref), Li
     // assume arguments are of correct types
     assume is#Vector(Dereference(m, coin_ref));
     assume IsValidReferenceParameter(m, local_counter, coin_ref);
-    assume IsValidInteger(amount);
+    assume IsValidU64(amount);
 
     old_size := local_counter;
     local_counter := local_counter + 18;
@@ -603,7 +603,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(m, coin_ref), Li
     call t4 := BorrowField(t3, LibraCoin_T_value);
 
     call tmp := ReadRef(t4);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 5, tmp);
 
@@ -764,7 +764,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     call t5 := BorrowField(t4, LibraCoin_T_value);
 
     call tmp := ReadRef(t5);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 6, tmp);
 
@@ -786,7 +786,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
     m := UpdateLocal(m, old_size + 10, tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
+    call tmp := AddU64(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
     if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 11, tmp);
 

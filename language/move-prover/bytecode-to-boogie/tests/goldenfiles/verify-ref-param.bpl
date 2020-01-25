@@ -10,7 +10,7 @@ function TestSpecs_T_type_value(): TypeValue {
 }
 procedure {:inline 1} Pack_TestSpecs_T(value: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(value);
+    assume IsValidU64(value);
     _struct := Vector(ExtendValueArray(EmptyValueArray, value));
 
 }
@@ -19,7 +19,7 @@ procedure {:inline 1} Unpack_TestSpecs_T(_struct: Value) returns (value: Value)
 {
     assume is#Vector(_struct);
     value := SelectField(_struct, TestSpecs_T_value);
-    assume IsValidInteger(value);
+    assume IsValidU64(value);
 }
 
 
@@ -55,7 +55,7 @@ ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, ref), TestSpecs_
     call t2 := BorrowField(t1, TestSpecs_T_value);
 
     call tmp := ReadRef(t2);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 3, tmp);
 

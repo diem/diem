@@ -27,8 +27,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(x);
-    assume IsValidInteger(y);
+    assume IsValidU64(x);
+    assume IsValidU64(y);
 
     old_size := local_counter;
     local_counter := local_counter + 10;
@@ -42,7 +42,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
+    call tmp := AddU64(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
     if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 6, tmp);
 
@@ -98,9 +98,9 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(x);
-    assume IsValidInteger(y);
-    assume IsValidInteger(z);
+    assume IsValidU64(x);
+    assume IsValidU64(y);
+    assume IsValidU64(z);
 
     old_size := local_counter;
     local_counter := local_counter + 10;
@@ -115,14 +115,14 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
     m := UpdateLocal(m, old_size + 5, tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
+    call tmp := AddU64(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
     if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 6, tmp);
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
     m := UpdateLocal(m, old_size + 7, tmp);
 
-    call tmp := Mul(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
+    call tmp := MulU64(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
     if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 8, tmp);
 
@@ -181,8 +181,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(a);
-    assume IsValidInteger(b);
+    assume IsValidU64(a);
+    assume IsValidU64(b);
 
     old_size := local_counter;
     local_counter := local_counter + 23;
@@ -304,8 +304,8 @@ requires ExistsTxnSenderAccount(m, txn);
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(a);
-    assume IsValidInteger(b);
+    assume IsValidU64(a);
+    assume IsValidU64(b);
 
     old_size := local_counter;
     local_counter := local_counter + 21;
@@ -319,7 +319,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := LdConst(4);
     m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
+    call tmp := AddU64(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
     if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 5, tmp);
 
@@ -333,7 +333,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := LdConst(2);
     m := UpdateLocal(m, old_size + 8, tmp);
 
-    call tmp := Mul(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8));
+    call tmp := MulU64(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8));
     if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 9, tmp);
 
@@ -434,7 +434,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := LdConst(1);
     m := UpdateLocal(m, old_size + 4, tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
+    call tmp := AddU64(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
     if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 5, tmp);
 

@@ -10,7 +10,7 @@ function TestSpecs_R_type_value(): TypeValue {
 }
 procedure {:inline 1} Pack_TestSpecs_R(x: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(x);
+    assume IsValidU64(x);
     _struct := Vector(ExtendValueArray(EmptyValueArray, x));
 
 }
@@ -19,7 +19,7 @@ procedure {:inline 1} Unpack_TestSpecs_R(_struct: Value) returns (x: Value)
 {
     assume is#Vector(_struct);
     x := SelectField(_struct, TestSpecs_R_x);
-    assume IsValidInteger(x);
+    assume IsValidU64(x);
 }
 
 

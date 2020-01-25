@@ -43,7 +43,7 @@ requires ExistsTxnSenderAccount(m, txn);
     call tmp := LdConst(2);
     m := UpdateLocal(m, old_size + 3, tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3));
+    call tmp := AddU64(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3));
     if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 4, tmp);
 

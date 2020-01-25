@@ -25,8 +25,8 @@ ensures old(b#Boolean(Boolean(i#Integer(y) > i#Integer(Integer(0))))) ==> !abort
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(x);
-    assume IsValidInteger(y);
+    assume IsValidU64(x);
+    assume IsValidU64(y);
 
     old_size := local_counter;
     local_counter := local_counter + 7;
@@ -84,8 +84,8 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     saved_m := m;
 
     // assume arguments are of correct types
-    assume IsValidInteger(x);
-    assume IsValidInteger(y);
+    assume IsValidU64(x);
+    assume IsValidU64(y);
 
     old_size := local_counter;
     local_counter := local_counter + 7;

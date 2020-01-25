@@ -52,8 +52,12 @@ type ByteArray;
 type String;
 type {:datatype} Value;
 
+const MAX_U8: int;
+axiom MAX_U8 == 255;
 const MAX_U64: int;
 axiom MAX_U64 == 9223372036854775807;
+const MAX_U128: int;
+axiom MAX_U128 == 340282366920938463463374607431768211456;
 
 function {:constructor} Boolean(b: bool): Value;
 function {:constructor} Integer(i: int): Value;
@@ -64,10 +68,17 @@ function {:constructor} Vector(v: ValueArray): Value; // used to both represent 
 const DefaultValue: Value;
 function {:builtin "MapConst"} MapConstValue(v: Value): [int]Value;
 
-function {:inline} IsValidInteger(v: Value): bool {
-  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= 9223372036854775807
+function {:inline} IsValidU8(v: Value): bool {
+  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U8
 }
 
+function {:inline} IsValidU64(v: Value): bool {
+  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U64
+}
+
+function {:inline} IsValidU128(v: Value): bool {
+  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U128
+}
 
 // Value Array
 // -----------
@@ -460,12 +471,60 @@ procedure {:inline 1} FreezeRef(src: Reference) returns (dst: Reference)
     dst := src;
 }
 
-// Pack and Unpack are auto-generated for each type T
-
-procedure {:inline 1} Add(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} CastU8(src: Value) returns (dst: Value)
 {
-    assume is#Integer(src1) && is#Integer(src2);
+    assume is#Integer(src);
+    if (i#Integer(src) > MAX_U8) {
+        abort_flag := true;
+        return;
+    }
+    dst := src;
+}
+
+procedure {:inline 1} CastU64(src: Value) returns (dst: Value)
+{
+    assume is#Integer(src);
+    if (i#Integer(src) > MAX_U64) {
+        abort_flag := true;
+        return;
+    }
+    dst := src;
+}
+
+procedure {:inline 1} CastU128(src: Value) returns (dst: Value)
+{
+    assume is#Integer(src);
+    if (i#Integer(src) > MAX_U128) {
+        abort_flag := true;
+        return;
+    }
+    dst := src;
+}
+
+procedure {:inline 1} AddU8(src1: Value, src2: Value) returns (dst: Value)
+{
+    assume IsValidU8(src1) && IsValidU8(src2);
+    if (i#Integer(src1) + i#Integer(src2) > MAX_U8) {
+        abort_flag := true;
+        return;
+    }
+    dst := Integer(i#Integer(src1) + i#Integer(src2));
+}
+
+procedure {:inline 1} AddU64(src1: Value, src2: Value) returns (dst: Value)
+{
+    assume IsValidU64(src1) && IsValidU64(src2);
     if (i#Integer(src1) + i#Integer(src2) > MAX_U64) {
+        abort_flag := true;
+        return;
+    }
+    dst := Integer(i#Integer(src1) + i#Integer(src2));
+}
+
+procedure {:inline 1} AddU128(src1: Value, src2: Value) returns (dst: Value)
+{
+    assume IsValidU128(src1) && IsValidU128(src2);
+    if (i#Integer(src1) + i#Integer(src2) > MAX_U128) {
         abort_flag := true;
         return;
     }
@@ -482,10 +541,30 @@ procedure {:inline 1} Sub(src1: Value, src2: Value) returns (dst: Value)
     dst := Integer(i#Integer(src1) - i#Integer(src2));
 }
 
-procedure {:inline 1} Mul(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} MulU8(src1: Value, src2: Value) returns (dst: Value)
 {
-    assume is#Integer(src1) && is#Integer(src2);
+    assume IsValidU8(src1) && IsValidU8(src2);
+    if (i#Integer(src1) * i#Integer(src2) > MAX_U8) {
+        abort_flag := true;
+        return;
+    }
+    dst := Integer(i#Integer(src1) * i#Integer(src2));
+}
+
+procedure {:inline 1} MulU64(src1: Value, src2: Value) returns (dst: Value)
+{
+    assume IsValidU64(src1) && IsValidU64(src2);
     if (i#Integer(src1) * i#Integer(src2) > MAX_U64) {
+        abort_flag := true;
+        return;
+    }
+    dst := Integer(i#Integer(src1) * i#Integer(src2));
+}
+
+procedure {:inline 1} MulU128(src1: Value, src2: Value) returns (dst: Value)
+{
+    assume IsValidU128(src1) && IsValidU128(src2);
+    if (i#Integer(src1) * i#Integer(src2) > MAX_U128) {
         abort_flag := true;
         return;
     }
@@ -553,6 +632,8 @@ procedure {:inline 1} Not(src: Value) returns (dst: Value)
     assume is#Boolean(src);
     dst := Boolean(!b#Boolean(src));
 }
+
+// Pack and Unpack are auto-generated for each type T
 
 procedure {:inline 1} LdConst(val: int) returns (ret: Value)
 {

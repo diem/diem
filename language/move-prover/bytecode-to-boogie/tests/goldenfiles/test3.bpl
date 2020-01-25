@@ -12,8 +12,8 @@ function Test3_T_type_value(): TypeValue {
 }
 procedure {:inline 1} Pack_Test3_T(f: Value, g: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(f);
-    assume IsValidInteger(g);
+    assume IsValidU64(f);
+    assume IsValidU64(g);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, f), g));
 
 }
@@ -22,9 +22,9 @@ procedure {:inline 1} Unpack_Test3_T(_struct: Value) returns (f: Value, g: Value
 {
     assume is#Vector(_struct);
     f := SelectField(_struct, Test3_T_f);
-    assume IsValidInteger(f);
+    assume IsValidU64(f);
     g := SelectField(_struct, Test3_T_g);
-    assume IsValidInteger(g);
+    assume IsValidU64(g);
 }
 
 
@@ -201,7 +201,7 @@ Label_28:
     call t32 := CopyOrMoveRef(t5);
 
     call tmp := ReadRef(t32);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 33, tmp);
 
@@ -211,7 +211,7 @@ Label_28:
     call t34 := CopyOrMoveRef(t6);
 
     call tmp := ReadRef(t34);
-    assume IsValidInteger(tmp);
+    assume IsValidU64(tmp);
 
     m := UpdateLocal(m, old_size + 35, tmp);
 
