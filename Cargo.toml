@@ -67,6 +67,7 @@ members = [
     "mempool",
     "mempool/mempool-shared-proto",
     "secure/net",
+    "secure/storage",
     "state-synchronizer",
     "storage/accumulator",
     "storage/backup-restore",
