@@ -1,0 +1,23 @@
+[package]
+name = "libra-secure-storage"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+repository = "https://github.com/libra/libra"
+description = "Libra's Persistent, Secure Storage"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+serde = { version = "1.0.99", features = ["rc"], default-features = false }
+thiserror = "1.0"
+
+[dev-dependencies]
+libra-config = { path = "../../config", version = "0.1.0" }
+rand = "0.6.5"
+
+[features]
+fuzzing = ["libra-crypto/fuzzing"]
