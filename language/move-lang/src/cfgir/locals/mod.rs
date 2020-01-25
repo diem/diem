@@ -242,7 +242,7 @@ fn use_local(context: &mut Context, loc: &Loc, local: &Var) {
             };
             let unavailable = *unavailable;
             let vstr = match display_var(local.value()) {
-                DisplayVar::Tmp => panic!("ICE invalid use tmp local"),
+                DisplayVar::Tmp => panic!("ICE invalid use tmp local {}", local.value()),
                 DisplayVar::Orig(s) => s,
             };
             context.error(vec![

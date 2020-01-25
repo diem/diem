@@ -128,7 +128,7 @@ pub enum Statement_ {
         else_block: Block,
     },
     While {
-        cond: Box<Exp>,
+        cond: (Block, Box<Exp>),
         block: Block,
     },
     Loop {
@@ -530,9 +530,20 @@ impl AstDebug for Statement_ {
                 w.write(" else ");
                 w.block(|w| else_block.ast_debug(w));
             }
-            S::While { cond, block } => {
+            S::While {
+                cond: (cond_block, cond_exp),
+                block,
+            } => {
                 w.write("while (");
-                cond.ast_debug(w);
+                if cond_block.is_empty() {
+                    cond_exp.ast_debug(w);
+                } else {
+                    w.block(|w| {
+                        cond_block.ast_debug(w);
+                        w.writeln(";");
+                        cond_exp.ast_debug(w);
+                    })
+                }
                 w.write(")");
                 w.block(|w| block.ast_debug(w))
             }
