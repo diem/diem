@@ -49,6 +49,12 @@ impl<PrivateKey: SigningKey> ValidatorSigner<PrivateKey> {
     pub fn public_key(&self) -> PrivateKey::VerifyingKeyMaterial {
         self.public_key.clone()
     }
+
+    /// Returns the private key associated with this signer. Only available for testing purposes.
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn private_key(&self) -> &PrivateKey {
+        &self.private_key
+    }
 }
 
 impl<PrivateKey: SigningKey + Genesis> ValidatorSigner<PrivateKey> {

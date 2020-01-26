@@ -6,9 +6,9 @@ use crate::{
     remote_service::{self, RemoteService},
     safety_rules_manager,
 };
-use consensus_types::common::{Payload, Round};
+use consensus_types::common::{Author, Payload, Round};
 use libra_config::config::{ConsensusType, NodeConfig, SafetyRulesService};
-use libra_types::{crypto_proxies::ValidatorSigner, transaction::SignedTransaction};
+use libra_types::transaction::SignedTransaction;
 use std::net::SocketAddr;
 
 pub struct ProcessService {
@@ -19,7 +19,7 @@ pub struct ProcessService {
 
 impl ProcessService {
     pub fn new(mut config: NodeConfig) -> Self {
-        let (validator_signer, storage) = safety_rules_manager::extract_service_inputs(&mut config);
+        let (author, storage) = safety_rules_manager::extract_service_inputs(&mut config);
 
         let service = &config.consensus.safety_rules.service;
         let service = match &service {
@@ -30,10 +30,7 @@ impl ProcessService {
 
         Self {
             consensus_type: service.consensus_type,
-            data: Some(ProcessServiceData {
-                validator_signer,
-                storage,
-            }),
+            data: Some(ProcessServiceData { author, storage }),
             server_addr: service.server_address,
         }
     }
@@ -51,7 +48,7 @@ impl ProcessService {
             .data
             .take()
             .expect("Unable to retrieve ProcessServiceData");
-        remote_service::execute::<T>(data.storage, data.validator_signer, self.server_addr);
+        remote_service::execute::<T>(data.author, data.storage, self.server_addr);
     }
 }
 
@@ -62,6 +59,6 @@ impl<T: Payload> RemoteService<T> for ProcessService {
 }
 
 struct ProcessServiceData {
-    validator_signer: ValidatorSigner,
+    author: Author,
     storage: PersistentStorage,
 }

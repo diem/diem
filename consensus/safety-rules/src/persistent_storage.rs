@@ -3,6 +3,7 @@
 
 use anyhow::Result;
 use consensus_types::common::Round;
+use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::{InMemoryStorage, Permissions, Storage, Value};
 
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
@@ -14,20 +15,27 @@ pub struct PersistentStorage {
     internal_store: Box<dyn Storage>,
 }
 
+const CONSENSUS_KEY: &str = "consensus_key";
 const EPOCH: &str = "epoch";
 const LAST_VOTED_ROUND: &str = "last_voted_round";
 const PREFERRED_ROUND: &str = "preferred_round";
 
 impl PersistentStorage {
-    pub fn in_memory() -> Self {
+    pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
         let storage = Box::new(InMemoryStorage::new());
-        Self::initialize(storage)
+        Self::initialize(storage, private_key)
     }
 
     /// Use this to instantiate a PersistentStorage for a new data store, one that has no
     /// SafetyRules values set.
-    pub fn initialize(mut internal_store: Box<dyn Storage>) -> Self {
+    pub fn initialize(
+        mut internal_store: Box<dyn Storage>,
+        private_key: Ed25519PrivateKey,
+    ) -> Self {
         let perms = Permissions::anyone();
+        internal_store
+            .create_if_not_exists(CONSENSUS_KEY, Value::Ed25519PrivateKey(private_key), &perms)
+            .expect("Unable to initialize backend storage");
         internal_store
             .create_if_not_exists(EPOCH, Value::U64(1), &perms)
             .expect("Unable to initialize backend storage");
@@ -44,6 +52,19 @@ impl PersistentStorage {
     /// for constructed environments.
     pub fn new(internal_store: Box<dyn Storage>) -> Self {
         Self { internal_store }
+    }
+
+    pub fn consensus_key(&self) -> Result<Ed25519PrivateKey> {
+        Ok(self
+            .internal_store
+            .get(CONSENSUS_KEY)
+            .and_then(|value| value.ed25519_private_key())?)
+    }
+
+    pub fn set_consensus_key(&mut self, consensus_key: Ed25519PrivateKey) -> Result<()> {
+        self.internal_store
+            .set(CONSENSUS_KEY, Value::Ed25519PrivateKey(consensus_key))?;
+        Ok(())
     }
 
     pub fn epoch(&self) -> Result<u64> {
@@ -89,11 +110,13 @@ impl PersistentStorage {
 mod tests {
     use super::*;
     use libra_secure_storage::InMemoryStorage;
+    use libra_types::crypto_proxies::ValidatorSigner;
 
     #[test]
     fn test() {
+        let private_key = ValidatorSigner::from_int(0).private_key().clone();
         let internal = Box::new(InMemoryStorage::new());
-        let mut storage = PersistentStorage::initialize(internal);
+        let mut storage = PersistentStorage::initialize(internal, private_key);
         assert_eq!(storage.epoch().unwrap(), 1);
         assert_eq!(storage.last_voted_round().unwrap(), 0);
         assert_eq!(storage.preferred_round().unwrap(), 0);

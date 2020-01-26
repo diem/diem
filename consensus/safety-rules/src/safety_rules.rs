@@ -6,8 +6,14 @@ use crate::{
     t_safety_rules::TSafetyRules,
 };
 use consensus_types::{
-    block::Block, block_data::BlockData, common::Payload, quorum_cert::QuorumCert,
-    timeout::Timeout, vote::Vote, vote_data::VoteData, vote_proposal::VoteProposal,
+    block::Block,
+    block_data::BlockData,
+    common::{Author, Payload},
+    quorum_cert::QuorumCert,
+    timeout::Timeout,
+    vote::Vote,
+    vote_data::VoteData,
+    vote_proposal::VoteProposal,
 };
 use libra_crypto::hash::HashValue;
 use libra_types::{
@@ -15,7 +21,7 @@ use libra_types::{
     crypto_proxies::{Signature, ValidatorSigner},
     ledger_info::LedgerInfo,
 };
-use std::{marker::PhantomData, sync::Arc};
+use std::marker::PhantomData;
 
 /// SafetyRules is responsible for the safety of the consensus:
 /// 1) voting rules
@@ -28,7 +34,7 @@ use std::{marker::PhantomData, sync::Arc};
 /// set)
 pub struct SafetyRules<T> {
     persistent_storage: PersistentStorage,
-    validator_signer: Arc<ValidatorSigner>,
+    validator_signer: ValidatorSigner,
     marker: PhantomData<T>,
 }
 
@@ -36,11 +42,11 @@ impl<T: Payload> SafetyRules<T> {
     /// Constructs a new instance of SafetyRules with the given persistent storage and the
     /// consensus private keys
     /// @TODO replace this with an API that takes in a SafetyRulesConfig
-    /// @TODO load private key from persistent store
-    pub fn new(
-        persistent_storage: PersistentStorage,
-        validator_signer: Arc<ValidatorSigner>,
-    ) -> Self {
+    pub fn new(author: Author, persistent_storage: PersistentStorage) -> Self {
+        let consensus_key = persistent_storage
+            .consensus_key()
+            .expect("Unable to retrieve consensus private key");
+        let validator_signer = ValidatorSigner::new(author, consensus_key);
         Self {
             persistent_storage,
             validator_signer,

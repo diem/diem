@@ -31,5 +31,5 @@ harness = false
 
 [features]
 default = []
-fuzzing = ["consensus-types/fuzzing"]
+fuzzing = ["consensus-types/fuzzing", "libra-config/fuzzing"]
 testing = []
