@@ -17,12 +17,8 @@ mod t_safety_rules;
 mod thread;
 
 pub use crate::{
-    consensus_state::ConsensusState,
-    error::Error,
-    persistent_storage::{InMemoryStorage, OnDiskStorage},
-    process::ProcessService,
-    safety_rules::SafetyRules,
-    safety_rules_manager::SafetyRulesManager,
+    consensus_state::ConsensusState, error::Error, persistent_storage::PersistentStorage,
+    process::ProcessService, safety_rules::SafetyRules, safety_rules_manager::SafetyRulesManager,
     t_safety_rules::TSafetyRules,
 };
 

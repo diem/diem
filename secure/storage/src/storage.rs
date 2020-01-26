@@ -1,13 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, permissions::Permissions, value::Value};
+use crate::{Error, Permissions, Value};
 
 /// Libra interface into storage. Create takes a set of permissions that are enforced internally by
 /// the actual backend. The permissions contain public identities that the backend can translate
 /// into a unique and private token for another service. Hence get and set internally will pass the
 /// current service private token to the backend to gain its permissions.
-pub trait Storage {
+pub trait Storage: Send + Sync {
     /// Creates a new value if it does not exist fails only if there is some other issue.
     fn create_if_not_exists(
         &mut self,

@@ -14,8 +14,6 @@ pub struct InMemoryStorage {
     data: HashMap<String, Value>,
 }
 
-// @TODO make some non-test calls into this
-#[cfg(test)]
 impl InMemoryStorage {
     pub fn new() -> Self {
         Self {

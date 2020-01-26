@@ -22,9 +22,7 @@ pub struct OnDiskStorage {
     temp_path: TempPath,
 }
 
-// @TODO make some non-test calls into this
 impl OnDiskStorage {
-    #[cfg(test)]
     pub fn new(file_path: PathBuf) -> Self {
         if !file_path.exists() {
             File::create(&file_path).expect("Unable to create storage");

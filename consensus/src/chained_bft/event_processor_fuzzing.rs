@@ -23,7 +23,7 @@ use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, Val
 use network::{proto::Proposal, validator_network::ConsensusNetworkSender};
 use once_cell::sync::Lazy;
 use prost::Message as _;
-use safety_rules::{InMemoryStorage, SafetyRules};
+use safety_rules::{PersistentStorage as SafetyStorage, SafetyRules};
 use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -90,8 +90,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing(validator_set);
 
     // TODO: remove
-    let safety_rules =
-        SafetyRules::new(InMemoryStorage::default_storage(), Arc::new(signer.clone()));
+    let safety_rules = SafetyRules::new(SafetyStorage::in_memory(), Arc::new(signer.clone()));
 
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) = channel::new_test(8);

@@ -10,5 +10,14 @@ mod permissions;
 mod storage;
 mod value;
 
+pub use crate::{
+    error::Error,
+    in_memory::InMemoryStorage,
+    on_disk::OnDiskStorage,
+    permissions::{Id, Permission, Permissions},
+    storage::Storage,
+    value::Value,
+};
+
 #[cfg(test)]
 mod tests;

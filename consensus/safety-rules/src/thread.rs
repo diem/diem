@@ -29,7 +29,7 @@ pub struct ThreadService<T> {
 }
 
 impl<T: Payload> ThreadService<T> {
-    pub fn new(storage: Box<dyn PersistentStorage>, validator_signer: ValidatorSigner) -> Self {
+    pub fn new(storage: PersistentStorage, validator_signer: ValidatorSigner) -> Self {
         let listen_port = utils::get_available_port();
         let listen_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), listen_port);
         let server_addr = listen_addr;
