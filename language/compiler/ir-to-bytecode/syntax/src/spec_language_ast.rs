@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::ast::{BinOp, CopyableVal, Field, QualifiedStructIdent, Type};
+use crate::ast::{BinOp, CopyableVal, Field, QualifiedStructIdent, Spanned, Type};
 use libra_types::account_address::AccountAddress;
 
 /// AST for the Move Prover specification language. Just postconditions for now
@@ -71,3 +71,6 @@ pub enum Condition {
     /// If the given expression is true, the procedure *must* terminate in a succeeding state
     SucceedsIf(SpecExp),
 }
+
+/// Specification directive with span.
+pub type Condition_ = Spanned<Condition>;

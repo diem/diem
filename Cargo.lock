@@ -410,6 +410,7 @@ dependencies = [
  "bytecode-verifier 0.1.0",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "functional-tests 0.1.0",
  "goldenfile 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ir-to-bytecode 0.1.0",

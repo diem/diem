@@ -1647,7 +1647,10 @@ fn parse_function_decl<'input>(
     // parse each specification directive--there may be zero or more
     let mut specifications = Vec::new();
     while tokens.peek().is_spec_directive() {
-        specifications.push(parse_spec_condition(tokens)?)
+        let start_loc = tokens.start_loc();
+        let cond = parse_spec_condition(tokens)?;
+        let end_loc = tokens.previous_end_loc();
+        specifications.push(spanned(start_loc, end_loc, cond));
     }
 
     let func_name = FunctionName::parse(name)?;

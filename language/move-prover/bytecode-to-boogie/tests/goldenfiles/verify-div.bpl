@@ -7,8 +7,8 @@
 // ** functions of module TestSpecs
 
 procedure {:inline 1} TestSpecs_div (x: Value, y: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures old(b#Boolean(Boolean(i#Integer(y) > i#Integer(Integer(0))))) ==> !abort_flag;
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures old(b#Boolean(Boolean(i#Integer(y) > i#Integer(Integer(0))))) ==> !__abort_flag;
 {
     // declare local variables
     var t2: Value; // IntegerType()
@@ -16,58 +16,57 @@ ensures old(b#Boolean(Boolean(i#Integer(y) > i#Integer(Integer(0))))) ==> !abort
     var t4: Value; // IntegerType()
     var t5: Value; // IntegerType()
     var t6: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 7;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
+    // process and type check arguments
     assume IsValidU64(x);
+    __m := UpdateLocal(__m, __frame + 0, x);
     assume IsValidU64(y);
-
-    old_size := local_counter;
-    local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, x);
-    m := UpdateLocal(m, old_size + 1, y);
+    __m := UpdateLocal(__m, __frame + 1, y);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call tmp := Div(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := Div(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    ret0 := GetLocal(m, old_size + 6);
+    ret0 := GetLocal(__m, __frame + 6);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
     ret0 := DefaultValue;
 }
 
 procedure TestSpecs_div_verify (x: Value, y: Value) returns (ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call ret0 := TestSpecs_div(x, y);
 }
 
 procedure {:inline 1} TestSpecs_div_by_zero_detected (x: Value, y: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
 {
     // declare local variables
     var t2: Value; // IntegerType()
@@ -75,51 +74,50 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     var t4: Value; // IntegerType()
     var t5: Value; // IntegerType()
     var t6: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 7;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
+    // process and type check arguments
     assume IsValidU64(x);
+    __m := UpdateLocal(__m, __frame + 0, x);
     assume IsValidU64(y);
-
-    old_size := local_counter;
-    local_counter := local_counter + 7;
-    m := UpdateLocal(m, old_size + 0, x);
-    m := UpdateLocal(m, old_size + 1, y);
+    __m := UpdateLocal(__m, __frame + 1, y);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call tmp := Div(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := Div(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    ret0 := GetLocal(m, old_size + 6);
+    ret0 := GetLocal(__m, __frame + 6);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
     ret0 := DefaultValue;
 }
 
 procedure TestSpecs_div_by_zero_detected_verify (x: Value, y: Value) returns (ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call ret0 := TestSpecs_div_by_zero_detected(x, y);
 }

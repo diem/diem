@@ -3,28 +3,33 @@
 
 #![forbid(unsafe_code)]
 
+use crate::boogie_wrapper::BoogieWrapper;
 use crate::bytecode_translator::BoogieTranslator;
-use crate::cli::{abort_on_error, abort_with_error, Options, INLINE_PRELUDE};
-use crate::env::GlobalEnv;
+use crate::cli::{abort_on_error, Options, INLINE_PRELUDE};
+use crate::code_writer::CodeWriter;
+use crate::env::{GlobalEnv, ModuleIndex};
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::compiler::compile_module;
 use ir_to_bytecode::parser::ast::ModuleDefinition;
 use ir_to_bytecode::parser::parse_module;
-use ir_to_bytecode_syntax::spec_language_ast::Condition;
+use ir_to_bytecode_syntax::ast::Loc;
+use ir_to_bytecode_syntax::spec_language_ast::Condition_;
 use itertools::Itertools;
 use libra_types::account_address::AccountAddress;
 use libra_types::identifier::Identifier;
-use log::{debug, error, info};
-use regex::Regex;
+use log::info;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
-use std::process::Command;
 use vm::access::ModuleAccess;
 use vm::file_format::{FunctionDefinitionIndex, StructDefinitionIndex};
 
 /// Content of the default prelude.
 const DEFAULT_PRELUDE: &[u8] = include_bytes!("prelude.bpl");
+
+/// A module index which we use as marker that generated code belongs to the boogie prelude
+/// in CodeWriter.
+pub const PSEUDO_PRELUDE_MODULE: ModuleIndex = std::usize::MAX;
 
 /// Represents the driver for translation. Owns the environment used for translation.
 pub struct Driver {
@@ -32,33 +37,45 @@ pub struct Driver {
     env: GlobalEnv,
 
     /// Generated output.
-    output: String,
+    writer: CodeWriter,
 }
 
 impl Driver {
     pub fn new(options: Options) -> Self {
         Driver {
             env: GlobalEnv::new(options),
-            output: String::new(),
+            writer: CodeWriter::new(PSEUDO_PRELUDE_MODULE, Loc::default()),
         }
     }
 
-    /// Runs standard translation. When this finishes, the generated code is in `self.output`.
-    pub fn run(&mut self) {
+    /// Runs standard translation. When this finishes, the generated code is in `self.writer`.
+    pub fn run(&mut self) -> bool {
         let sources = self.env.options.mvir_sources.clone();
         self.load_modules(&sources);
         self.add_prelude();
         self.add_helpers();
         self.translate_modules();
-        // write resulting code
-        info!("writing boogie to {}", self.env.options.output_path);
-        abort_on_error(
-            fs::write(&self.env.options.output_path, &self.output),
-            "cannot write boogie file",
-        );
-        if !self.env.options.generate_only {
-            self.call_boogie_and_verify_output(&self.env.options.output_path);
+        let mut has_errors = self.env.get_modules().any(|me| me.has_errors());
+        if !has_errors {
+            // write resulting code
+            info!("writing boogie to {}", self.env.options.output_path);
+            abort_on_error(
+                self.writer
+                    .process_result(|result| fs::write(&self.env.options.output_path, result)),
+                "cannot write boogie file",
+            );
+            if !self.env.options.generate_only {
+                has_errors = self
+                    .new_boogie_wrapper()
+                    .call_boogie_and_verify_output(&self.env.options.output_path);
+            }
         }
+        // Report any diagnostics.
+        for module_env in self.env.get_modules() {
+            has_errors = has_errors || module_env.has_errors();
+            module_env.report_diagnostics();
+        }
+        has_errors
     }
 
     /// Runs translation in a test context. Instead of writing output to a file, returns
@@ -67,12 +84,15 @@ impl Driver {
         let sources = self.env.options.mvir_sources.clone();
         self.load_modules(&sources);
         self.add_prelude();
-        // Extract the prelude from the generated output, as we want to return it in a separate
-        // string.
-        let prelude = std::mem::replace(&mut self.output, String::new());
+        let prelude_end = self.writer.process_result(|result| result.len());
         self.add_helpers();
         self.translate_modules();
-        (prelude, std::mem::replace(&mut self.output, String::new()))
+        self.writer.process_result(|result| {
+            (
+                result[0..prelude_end].to_string(),
+                result[prelude_end..].to_string(),
+            )
+        })
     }
 
     /// Compiles the list of mvir modules and adds them to the state. On errors, this
@@ -125,8 +145,13 @@ impl Driver {
                     )
                 })
                 .collect();
-            self.env
-                .add(verified_module, source_map, struct_data, function_data);
+            self.env.add(
+                file_name,
+                verified_module,
+                source_map,
+                struct_data,
+                function_data,
+            );
         }
     }
 
@@ -134,7 +159,8 @@ impl Driver {
     fn extract_function_infos(
         &self,
         parsed_module: &ModuleDefinition,
-    ) -> BTreeMap<FunctionDefinitionIndex, (Vec<Identifier>, Vec<Identifier>, Vec<Condition>)> {
+    ) -> BTreeMap<FunctionDefinitionIndex, (Vec<Identifier>, Vec<Identifier>, Vec<Condition_>)>
+    {
         let mut result = BTreeMap::new();
         for (raw_index, (_, def)) in parsed_module.functions.iter().enumerate() {
             let type_arg_names = def
@@ -162,21 +188,21 @@ impl Driver {
 
     /// Adds the prelude to the generated output.
     pub fn add_prelude(&mut self) {
-        self.output.push_str(&format!(
+        emit!(
+            self.writer,
             "\n// ** prelude from {}\n\n",
             self.env.options.prelude_path
-        ));
+        );
         if self.env.options.prelude_path == INLINE_PRELUDE {
             info!("using inline prelude");
-            self.output
-                .push_str(&String::from_utf8_lossy(DEFAULT_PRELUDE));
+            emitln!(self.writer, &String::from_utf8_lossy(DEFAULT_PRELUDE));
         } else {
             info!("using prelude at {}", &self.env.options.prelude_path);
             let content = abort_on_error(
                 fs::read_to_string(&self.env.options.prelude_path),
                 "cannot read prelude file",
             );
-            self.output.push_str(&content);
+            emitln!(self.writer, &content);
         }
     }
 
@@ -204,53 +230,22 @@ impl Driver {
             );
             if let Ok(content) = fs::read_to_string(helper) {
                 info!("reading helper functions from {}", helper);
-                self.output
-                    .push_str(&format!("\n// ** helpers from {}", helper));
-                self.output.push_str(&content);
+                emitln!(self.writer, "\n// ** helpers from {}", helper);
+                emit!(self.writer, &content);
             }
         }
     }
 
     /// Translates all modules.
     pub fn translate_modules(&mut self) {
-        self.output
-            .push_str(&BoogieTranslator::new(&self.env).translate());
+        BoogieTranslator::new(&self.env, &self.writer).translate();
     }
 
-    /// Calls boogie on the given file. On success, returns a pair of a string with the standard
-    /// output and a vector of lines in the output which contain boogie errors.
-    pub fn call_boogie(&self, boogie_file: &str) -> Option<(String, Vec<String>)> {
-        let args = self.env.options.get_boogie_command(boogie_file);
-        info!("calling boogie");
-        debug!("command line: {}", args.iter().join(" "));
-        let output = abort_on_error(
-            Command::new(&args[0]).args(&args[1..]).output(),
-            "error executing boogie",
-        );
-        if !output.status.success() {
-            error!("boogie exited with status {:?}", output.status.code());
-            None
-        } else {
-            let out = String::from_utf8_lossy(&output.stdout).to_string();
-            let mut diag = vec![];
-            let diag_re = Regex::new(r"(?m)^.*(Error BP|Error:|error:).*$").unwrap();
-            for cap in diag_re.captures_iter(&out) {
-                diag.push(cap[0].to_string());
-            }
-            Some((out, diag))
-        }
-    }
-
-    /// Calls boogie, analyzes output, and aborts if errors found.
-    pub fn call_boogie_and_verify_output(&self, boogie_file: &str) {
-        match self.call_boogie(boogie_file) {
-            None => abort_with_error("exiting"), // we already reported boogie error
-            Some((stdout, diag)) => {
-                println!("{}", stdout);
-                if !diag.is_empty() {
-                    abort_with_error("boogie reported errors")
-                }
-            }
+    /// Creates a BoogieWrapper which allows to call boogie and analyze results.
+    pub fn new_boogie_wrapper<'env>(&'env self) -> BoogieWrapper<'env> {
+        BoogieWrapper {
+            env: &self.env,
+            writer: &self.writer,
         }
     }
 }
