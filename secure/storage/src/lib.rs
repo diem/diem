@@ -5,6 +5,7 @@
 
 mod error;
 mod in_memory;
+mod on_disk;
 mod permissions;
 mod storage;
 mod value;
