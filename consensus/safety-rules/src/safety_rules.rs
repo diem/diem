@@ -27,7 +27,7 @@ use std::{marker::PhantomData, sync::Arc};
 /// @TODO update storage with hash of ledger info (waypoint) during epoch changes (includes a new validator
 /// set)
 pub struct SafetyRules<T> {
-    persistent_storage: Box<dyn PersistentStorage>,
+    persistent_storage: PersistentStorage,
     validator_signer: Arc<ValidatorSigner>,
     marker: PhantomData<T>,
 }
@@ -38,7 +38,7 @@ impl<T: Payload> SafetyRules<T> {
     /// @TODO replace this with an API that takes in a SafetyRulesConfig
     /// @TODO load private key from persistent store
     pub fn new(
-        persistent_storage: Box<dyn PersistentStorage>,
+        persistent_storage: PersistentStorage,
         validator_signer: Arc<ValidatorSigner>,
     ) -> Self {
         Self {
@@ -78,9 +78,9 @@ impl<T: Payload> SafetyRules<T> {
 impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         Ok(ConsensusState::new(
-            self.persistent_storage.epoch(),
-            self.persistent_storage.last_voted_round(),
-            self.persistent_storage.preferred_round(),
+            self.persistent_storage.epoch()?,
+            self.persistent_storage.last_voted_round()?,
+            self.persistent_storage.preferred_round()?,
         ))
     }
 
@@ -94,7 +94,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     /// @TODO if public key does not match private key in validator set, access persistent storage
     /// to identify new key
     fn update(&mut self, qc: &QuorumCert) -> Result<(), Error> {
-        if qc.parent_block().round() > self.persistent_storage.preferred_round() {
+        if qc.parent_block().round() > self.persistent_storage.preferred_round()? {
             self.persistent_storage
                 .set_preferred_round(qc.parent_block().round())?;
         }
@@ -102,7 +102,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     }
 
     fn start_new_epoch(&mut self, qc: &QuorumCert) -> Result<(), Error> {
-        if qc.commit_info().epoch() > self.persistent_storage.epoch() {
+        if qc.commit_info().epoch() > self.persistent_storage.epoch()? {
             self.persistent_storage
                 .set_epoch(qc.commit_info().epoch())?;
             self.persistent_storage.set_last_voted_round(0)?;
@@ -118,19 +118,19 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal<T>) -> Result<Vote, Error> {
         let proposed_block = vote_proposal.block();
 
-        if proposed_block.round() <= self.persistent_storage.last_voted_round() {
+        if proposed_block.round() <= self.persistent_storage.last_voted_round()? {
             return Err(Error::OldProposal {
                 proposal_round: proposed_block.round(),
-                last_voted_round: self.persistent_storage.last_voted_round(),
+                last_voted_round: self.persistent_storage.last_voted_round()?,
             });
         }
 
         let respects_preferred_block = proposed_block.quorum_cert().certified_block().round()
-            >= self.persistent_storage.preferred_round();
+            >= self.persistent_storage.preferred_round()?;
 
         if !respects_preferred_block {
             return Err(Error::ProposalRoundLowerThenPreferredBlock {
-                preferred_round: self.persistent_storage.preferred_round(),
+                preferred_round: self.persistent_storage.preferred_round()?,
             });
         }
 

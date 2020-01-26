@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(test)]
 use crate::error::Error;
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use serde::{Deserialize, Serialize};
@@ -13,7 +12,6 @@ pub enum Value {
     U64(u64),
 }
 
-#[cfg(test)]
 impl Value {
     pub fn u64(self) -> Result<u64, Error> {
         if let Value::U64(value) = self {

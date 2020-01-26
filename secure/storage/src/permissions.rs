@@ -24,3 +24,12 @@ pub enum Permission {
 /// intended for only safety_rules to own. The specifics are left to the implementation of the
 /// storage backend interface layer.
 pub type Id = String;
+
+impl Permissions {
+    pub fn anyone() -> Self {
+        Self {
+            readers: Permission::Anyone,
+            writers: Permission::Anyone,
+        }
+    }
+}

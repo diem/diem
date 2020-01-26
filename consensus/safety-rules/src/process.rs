@@ -63,5 +63,5 @@ impl<T: Payload> RemoteService<T> for ProcessService {
 
 struct ProcessServiceData {
     validator_signer: ValidatorSigner,
-    storage: Box<dyn PersistentStorage>,
+    storage: PersistentStorage,
 }

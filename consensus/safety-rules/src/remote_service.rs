@@ -22,7 +22,7 @@ pub trait RemoteService<T: Payload> {
 }
 
 pub fn execute<T: Payload>(
-    storage: Box<dyn PersistentStorage>,
+    storage: PersistentStorage,
     validator_signer: ValidatorSigner,
     listen_addr: SocketAddr,
 ) {

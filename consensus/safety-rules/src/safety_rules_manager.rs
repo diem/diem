@@ -8,16 +8,15 @@ use crate::{
     serializer::{SerializerClient, SerializerService},
     spawned_process::SpawnedProcess,
     thread::ThreadService,
-    InMemoryStorage, OnDiskStorage, SafetyRules, TSafetyRules,
+    SafetyRules, TSafetyRules,
 };
 use consensus_types::common::Payload;
 use libra_config::config::{NodeConfig, SafetyRulesBackend, SafetyRulesService};
+use libra_secure_storage::{InMemoryStorage, OnDiskStorage, Storage};
 use libra_types::crypto_proxies::ValidatorSigner;
 use std::sync::{Arc, RwLock};
 
-pub fn extract_service_inputs(
-    config: &mut NodeConfig,
-) -> (ValidatorSigner, Box<dyn PersistentStorage>) {
+pub fn extract_service_inputs(config: &mut NodeConfig) -> (ValidatorSigner, PersistentStorage) {
     let private_key = config
         .test
         .as_mut()
@@ -36,20 +35,20 @@ pub fn extract_service_inputs(
 
     let validator_signer = ValidatorSigner::new(author, private_key);
 
-    let storage = match &config.consensus.safety_rules.backend {
-        SafetyRulesBackend::InMemoryStorage => InMemoryStorage::default_storage(),
+    let backend = &config.consensus.safety_rules.backend;
+    let (initialize, storage): (bool, Box<dyn Storage>) = match backend {
+        SafetyRulesBackend::InMemoryStorage => (true, Box::new(InMemoryStorage::new())),
         SafetyRulesBackend::OnDiskStorage(config) => {
-            if config.default {
-                OnDiskStorage::default_storage(config.path())
-                    .expect("Unable to allocate SafetyRules storage")
-            } else {
-                OnDiskStorage::new_storage(config.path())
-                    .expect("Unable to instantiate SafetyRules storage")
-            }
+            (config.default, Box::new(OnDiskStorage::new(config.path())))
         }
     };
 
-    (validator_signer, storage)
+    let persistent_storage = if initialize {
+        PersistentStorage::initialize(storage)
+    } else {
+        PersistentStorage::new(storage)
+    };
+    (validator_signer, persistent_storage)
 }
 
 enum SafetyRulesWrapper<T> {
@@ -79,10 +78,7 @@ impl<T: Payload> SafetyRulesManager<T> {
         }
     }
 
-    pub fn new_local(
-        storage: Box<dyn PersistentStorage>,
-        validator_signer: ValidatorSigner,
-    ) -> Self {
+    pub fn new_local(storage: PersistentStorage, validator_signer: ValidatorSigner) -> Self {
         let safety_rules = SafetyRules::new(storage, Arc::new(validator_signer));
 
         Self {
@@ -90,10 +86,7 @@ impl<T: Payload> SafetyRulesManager<T> {
         }
     }
 
-    pub fn new_serializer(
-        storage: Box<dyn PersistentStorage>,
-        validator_signer: ValidatorSigner,
-    ) -> Self {
+    pub fn new_serializer(storage: PersistentStorage, validator_signer: ValidatorSigner) -> Self {
         let safety_rules = SafetyRules::new(storage, Arc::new(validator_signer));
         let serializer_service = SerializerService::new(safety_rules);
 
@@ -111,10 +104,7 @@ impl<T: Payload> SafetyRulesManager<T> {
         }
     }
 
-    pub fn new_thread(
-        storage: Box<dyn PersistentStorage>,
-        validator_signer: ValidatorSigner,
-    ) -> Self {
+    pub fn new_thread(storage: PersistentStorage, validator_signer: ValidatorSigner) -> Self {
         let thread = ThreadService::<T>::new(storage, validator_signer);
 
         Self {

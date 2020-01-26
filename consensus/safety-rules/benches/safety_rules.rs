@@ -4,11 +4,12 @@
 use consensus_types::{block::block_test_utils, block::Block};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use libra_config::config::{OnDiskStorageConfig, SafetyRulesBackend};
+use libra_secure_storage::{InMemoryStorage, OnDiskStorage};
 use libra_types::crypto_proxies::ValidatorSigner;
 use rand::Rng;
 use safety_rules::{
-    process_client_wrapper::ProcessClientWrapper,
-    test_utils, {InMemoryStorage, OnDiskStorage, SafetyRulesManager, TSafetyRules},
+    process_client_wrapper::ProcessClientWrapper, test_utils, PersistentStorage,
+    SafetyRulesManager, TSafetyRules,
 };
 use tempfile::NamedTempFile;
 
@@ -53,7 +54,8 @@ fn lsr(mut safety_rules: Box<dyn TSafetyRules<Vec<u8>>>, signer: ValidatorSigner
 
 fn in_memory(n: u64) {
     let signer = ValidatorSigner::from_int(0);
-    let storage = Box::new(InMemoryStorage::default());
+    let storage = InMemoryStorage::new();
+    let storage = PersistentStorage::initialize(Box::new(storage));
     let safety_rules_manager = SafetyRulesManager::new_local(storage, signer.clone());
     lsr(safety_rules_manager.client(), signer, n);
 }
@@ -61,7 +63,8 @@ fn in_memory(n: u64) {
 fn on_disk(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
-    let storage = OnDiskStorage::default_storage(file_path).unwrap();
+    let storage = OnDiskStorage::new(file_path);
+    let storage = PersistentStorage::initialize(Box::new(storage));
     let safety_rules_manager = SafetyRulesManager::new_local(storage, signer.clone());
     lsr(safety_rules_manager.client(), signer, n);
 }
@@ -69,7 +72,8 @@ fn on_disk(n: u64) {
 fn serializer(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
-    let storage = OnDiskStorage::default_storage(file_path).unwrap();
+    let storage = OnDiskStorage::new(file_path);
+    let storage = PersistentStorage::initialize(Box::new(storage));
     let safety_rules_manager = SafetyRulesManager::new_serializer(storage, signer.clone());
     lsr(safety_rules_manager.client(), signer, n);
 }
@@ -77,7 +81,8 @@ fn serializer(n: u64) {
 fn thread(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
-    let storage = OnDiskStorage::default_storage(file_path).unwrap();
+    let storage = OnDiskStorage::new(file_path);
+    let storage = PersistentStorage::initialize(Box::new(storage));
     let safety_rules_manager = SafetyRulesManager::new_thread(storage, signer.clone());
     lsr(safety_rules_manager.client(), signer, n);
 }
