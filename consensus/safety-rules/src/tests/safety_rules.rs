@@ -13,9 +13,7 @@ fn test() {
 
 fn safety_rules<T: Payload>() -> (Box<dyn TSafetyRules<T>>, Arc<ValidatorSigner>) {
     let signer = Arc::new(ValidatorSigner::from_int(0));
-    let safety_rules = Box::new(SafetyRules::<T>::new(
-        PersistentStorage::in_memory(),
-        signer.clone(),
-    ));
+    let storage = PersistentStorage::in_memory(signer.private_key().clone());
+    let safety_rules = Box::new(SafetyRules::<T>::new(signer.author(), storage));
     (safety_rules, signer)
 }

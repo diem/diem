@@ -10,45 +10,41 @@ use crate::{
     thread::ThreadService,
     SafetyRules, TSafetyRules,
 };
-use consensus_types::common::Payload;
+use consensus_types::common::{Author, Payload};
 use libra_config::config::{NodeConfig, SafetyRulesBackend, SafetyRulesService};
 use libra_secure_storage::{InMemoryStorage, OnDiskStorage, Storage};
-use libra_types::crypto_proxies::ValidatorSigner;
 use std::sync::{Arc, RwLock};
 
-pub fn extract_service_inputs(config: &mut NodeConfig) -> (ValidatorSigner, PersistentStorage) {
-    let private_key = config
-        .test
-        .as_mut()
-        .expect("Missing test config")
-        .consensus_keypair
-        .as_mut()
-        .expect("Missing consensus keypair in test config")
-        .take_private()
-        .expect("Failed to take Consensus private key, key absent or already read");
-
+pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentStorage) {
     let author = config
         .validator_network
         .as_ref()
         .expect("Missing validator network")
         .peer_id;
 
-    let validator_signer = ValidatorSigner::new(author, private_key);
-
     let backend = &config.consensus.safety_rules.backend;
-    let (initialize, storage): (bool, Box<dyn Storage>) = match backend {
+    let (initialize, internal_storage): (bool, Box<dyn Storage>) = match backend {
         SafetyRulesBackend::InMemoryStorage => (true, Box::new(InMemoryStorage::new())),
         SafetyRulesBackend::OnDiskStorage(config) => {
             (config.default, Box::new(OnDiskStorage::new(config.path())))
         }
     };
 
-    let persistent_storage = if initialize {
-        PersistentStorage::initialize(storage)
+    let storage = if initialize {
+        let test_config = config.test.as_mut().expect("Missing test config");
+        let private_key = test_config
+            .consensus_keypair
+            .as_mut()
+            .expect("Missing consensus keypair in test config")
+            .take_private()
+            .expect("Failed to take Consensus private key, key absent or already read");
+
+        PersistentStorage::initialize(internal_storage, private_key)
     } else {
-        PersistentStorage::new(storage)
+        PersistentStorage::new(internal_storage)
     };
-    (validator_signer, persistent_storage)
+
+    (author, storage)
 }
 
 enum SafetyRulesWrapper<T> {
@@ -68,28 +64,26 @@ impl<T: Payload> SafetyRulesManager<T> {
             return Self::new_spawned_process(config);
         }
 
-        let (validator_signer, storage) = extract_service_inputs(config);
+        let (author, storage) = extract_service_inputs(config);
         let sr_config = &config.consensus.safety_rules;
         match sr_config.service {
-            SafetyRulesService::Local => Self::new_local(storage, validator_signer),
-            SafetyRulesService::Serializer => Self::new_serializer(storage, validator_signer),
-            SafetyRulesService::Thread => Self::new_thread(storage, validator_signer),
+            SafetyRulesService::Local => Self::new_local(author, storage),
+            SafetyRulesService::Serializer => Self::new_serializer(author, storage),
+            SafetyRulesService::Thread => Self::new_thread(author, storage),
             _ => panic!("Unimplemented SafetyRulesService: {:?}", sr_config.service),
         }
     }
 
-    pub fn new_local(storage: PersistentStorage, validator_signer: ValidatorSigner) -> Self {
-        let safety_rules = SafetyRules::new(storage, Arc::new(validator_signer));
-
+    pub fn new_local(author: Author, storage: PersistentStorage) -> Self {
+        let safety_rules = SafetyRules::new(author, storage);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Local(Arc::new(RwLock::new(safety_rules))),
         }
     }
 
-    pub fn new_serializer(storage: PersistentStorage, validator_signer: ValidatorSigner) -> Self {
-        let safety_rules = SafetyRules::new(storage, Arc::new(validator_signer));
+    pub fn new_serializer(author: Author, storage: PersistentStorage) -> Self {
+        let safety_rules = SafetyRules::new(author, storage);
         let serializer_service = SerializerService::new(safety_rules);
-
         Self {
             internal_safety_rules: SafetyRulesWrapper::Serializer(Arc::new(RwLock::new(
                 serializer_service,
@@ -104,9 +98,8 @@ impl<T: Payload> SafetyRulesManager<T> {
         }
     }
 
-    pub fn new_thread(storage: PersistentStorage, validator_signer: ValidatorSigner) -> Self {
-        let thread = ThreadService::<T>::new(storage, validator_signer);
-
+    pub fn new_thread(author: Author, storage: PersistentStorage) -> Self {
+        let thread = ThreadService::<T>::new(author, storage);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Thread(thread),
         }

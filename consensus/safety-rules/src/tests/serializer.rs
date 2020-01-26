@@ -13,8 +13,8 @@ fn test() {
 
 fn safety_rules<T: Payload>() -> (Box<dyn TSafetyRules<T>>, Arc<ValidatorSigner>) {
     let signer = ValidatorSigner::from_int(0);
-    let safety_rules_manager =
-        SafetyRulesManager::new_serializer(PersistentStorage::in_memory(), signer.clone());
+    let storage = PersistentStorage::in_memory(signer.private_key().clone());
+    let safety_rules_manager = SafetyRulesManager::new_serializer(signer.author(), storage);
     let safety_rules = safety_rules_manager.client();
     (safety_rules, Arc::new(signer))
 }

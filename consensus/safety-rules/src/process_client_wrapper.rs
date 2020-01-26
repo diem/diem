@@ -52,12 +52,19 @@ impl<T: Payload> ProcessClientWrapper<T> {
         config.consensus.safety_rules.backend = backend;
         config.consensus.safety_rules.service = SafetyRulesService::SpawnedProcess(remote_service);
 
+        let mut test_config = config.test.as_ref().unwrap().clone();
         let safety_rules_manager = SafetyRulesManager::new(&mut config);
         let safety_rules = safety_rules_manager.client();
-        let (signer, _) = safety_rules_manager::extract_service_inputs(&mut config);
+        let (author, _) = safety_rules_manager::extract_service_inputs(&mut config);
+        let private_key = test_config
+            .consensus_keypair
+            .as_mut()
+            .unwrap()
+            .take_private()
+            .unwrap();
 
         Self {
-            signer,
+            signer: ValidatorSigner::new(author, private_key),
             _safety_rules_manager: safety_rules_manager,
             safety_rules,
         }

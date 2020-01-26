@@ -90,7 +90,10 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing(validator_set);
 
     // TODO: remove
-    let safety_rules = SafetyRules::new(SafetyStorage::in_memory(), Arc::new(signer.clone()));
+    let safety_rules = SafetyRules::new(
+        signer.author(),
+        SafetyStorage::in_memory(signer.private_key().clone()),
+    );
 
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) = channel::new_test(8);
