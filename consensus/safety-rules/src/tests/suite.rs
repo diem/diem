@@ -9,7 +9,6 @@ use consensus_types::{
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::crypto_proxies::ValidatorSigner;
 use rand::Rng;
-use std::sync::Arc;
 
 type Proof = test_utils::Proof;
 
@@ -31,8 +30,8 @@ fn make_proposal_with_parent(
     test_utils::make_proposal_with_parent(round, round, parent, committed, signer)
 }
 
-type RoundCallback = fn() -> (Box<dyn TSafetyRules<Round>>, Arc<ValidatorSigner>);
-type ByteArrayCallback = fn() -> (Box<dyn TSafetyRules<Vec<u8>>>, Arc<ValidatorSigner>);
+type RoundCallback = fn() -> (Box<dyn TSafetyRules<Round>>, ValidatorSigner);
+type ByteArrayCallback = fn() -> (Box<dyn TSafetyRules<Vec<u8>>>, ValidatorSigner);
 
 pub fn run_test_suite(round_func: RoundCallback, byte_func: ByteArrayCallback) {
     test_initial_state(round_func);
