@@ -5,7 +5,10 @@
 
 //! Move prover modules
 
+#[macro_use]
+pub mod code_writer;
 pub mod boogie_helpers;
+pub mod boogie_wrapper;
 pub mod bytecode_translator;
 pub mod cli;
 pub mod driver;

@@ -85,10 +85,9 @@ pub fn boogie_type_check(env: &GlobalEnv, name: &str, sig: &GlobalType) -> Strin
         // Only need to check Struct for top-level; fields will be checked as we extract them.
         GlobalType::Struct(_, _, _) => "is#Vector",
         GlobalType::Reference(rtype) | GlobalType::MutableReference(rtype) => {
-            let n = format!("Dereference(m, {})", params);
+            let n = format!("Dereference(__m, {})", params);
             ret = boogie_type_check(env, &n, rtype);
-            ret += "    ";
-            params = format!("m, local_counter, {}", params);
+            params = format!("__m, __frame, {}", params);
             "IsValidReferenceParameter"
         }
         // Otherwise it is a type parameter which is opaque

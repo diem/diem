@@ -7,209 +7,209 @@
 // ** functions of module TestMultiplication
 
 procedure {:inline 1} TestMultiplication_overflow_u8_mul_bad (x: Value, y: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(false)))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
+
 {
     // declare local variables
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 5;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
+    // process and type check arguments
     assume IsValidU8(x);
+    __m := UpdateLocal(__m, __frame + 0, x);
     assume IsValidU8(y);
-
-    old_size := local_counter;
-    local_counter := local_counter + 5;
-    m := UpdateLocal(m, old_size + 0, x);
-    m := UpdateLocal(m, old_size + 1, y);
+    __m := UpdateLocal(__m, __frame + 1, y);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := MulU8(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := MulU8(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    ret0 := GetLocal(m, old_size + 4);
+    ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
     ret0 := DefaultValue;
 }
 
 procedure TestMultiplication_overflow_u8_mul_bad_verify (x: Value, y: Value) returns (ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call ret0 := TestMultiplication_overflow_u8_mul_bad(x, y);
 }
 
 procedure {:inline 1} TestMultiplication_overflow_u8_mul_ok (x: Value, y: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) * i#Integer(y))) > i#Integer(Integer(255)))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) * i#Integer(y))) > i#Integer(Integer(255))))) ==> abort_flag;
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) * i#Integer(y))) > i#Integer(Integer(255)))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) * i#Integer(y))) > i#Integer(Integer(255))))) ==> __abort_flag;
+
 {
     // declare local variables
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 5;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
+    // process and type check arguments
     assume IsValidU8(x);
+    __m := UpdateLocal(__m, __frame + 0, x);
     assume IsValidU8(y);
-
-    old_size := local_counter;
-    local_counter := local_counter + 5;
-    m := UpdateLocal(m, old_size + 0, x);
-    m := UpdateLocal(m, old_size + 1, y);
+    __m := UpdateLocal(__m, __frame + 1, y);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := MulU8(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := MulU8(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    ret0 := GetLocal(m, old_size + 4);
+    ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
     ret0 := DefaultValue;
 }
 
 procedure TestMultiplication_overflow_u8_mul_ok_verify (x: Value, y: Value) returns (ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call ret0 := TestMultiplication_overflow_u8_mul_ok(x, y);
 }
 
 procedure {:inline 1} TestMultiplication_overflow_u64_mul_bad (x: Value, y: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(false)))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
+
 {
     // declare local variables
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 5;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
+    // process and type check arguments
     assume IsValidU64(x);
+    __m := UpdateLocal(__m, __frame + 0, x);
     assume IsValidU64(y);
-
-    old_size := local_counter;
-    local_counter := local_counter + 5;
-    m := UpdateLocal(m, old_size + 0, x);
-    m := UpdateLocal(m, old_size + 1, y);
+    __m := UpdateLocal(__m, __frame + 1, y);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := MulU64(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := MulU64(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    ret0 := GetLocal(m, old_size + 4);
+    ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
     ret0 := DefaultValue;
 }
 
 procedure TestMultiplication_overflow_u64_mul_bad_verify (x: Value, y: Value) returns (ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call ret0 := TestMultiplication_overflow_u64_mul_bad(x, y);
 }
 
 procedure {:inline 1} TestMultiplication_overflow_u128_mul_bad (x: Value, y: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(false)))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
+
 {
     // declare local variables
     var t2: Value; // IntegerType()
     var t3: Value; // IntegerType()
     var t4: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 5;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
+    // process and type check arguments
     assume IsValidU128(x);
+    __m := UpdateLocal(__m, __frame + 0, x);
     assume IsValidU128(y);
-
-    old_size := local_counter;
-    local_counter := local_counter + 5;
-    m := UpdateLocal(m, old_size + 0, x);
-    m := UpdateLocal(m, old_size + 1, y);
+    __m := UpdateLocal(__m, __frame + 1, y);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := MulU128(GetLocal(m, old_size + 2), GetLocal(m, old_size + 3));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := MulU128(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    ret0 := GetLocal(m, old_size + 4);
+    ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
     ret0 := DefaultValue;
 }
 
 procedure TestMultiplication_overflow_u128_mul_bad_verify (x: Value, y: Value) returns (ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call ret0 := TestMultiplication_overflow_u128_mul_bad(x, y);
 }

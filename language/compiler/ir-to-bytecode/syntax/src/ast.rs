@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::spec_language_ast::Condition;
+use crate::spec_language_ast::Condition_;
 use crate::syntax::ParseError;
 use codespan::{ByteIndex, Span};
 use libra_types::{
@@ -295,7 +295,7 @@ pub struct Function {
     /// of references into global storage
     pub acquires: Vec<StructName>,
     /// List of specifications for the Move prover (experimental)
-    pub specifications: Vec<Condition>,
+    pub specifications: Vec<Condition_>,
     /// The code for the procedure
     pub body: FunctionBody,
 }
@@ -851,7 +851,7 @@ impl Function {
         return_type: Vec<Type>,
         type_formals: Vec<(TypeVar_, Kind)>,
         acquires: Vec<StructName>,
-        specifications: Vec<Condition>,
+        specifications: Vec<Condition_>,
         body: FunctionBody,
     ) -> Self {
         let signature = FunctionSignature::new(formals, return_type, type_formals);

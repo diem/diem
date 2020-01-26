@@ -15,7 +15,6 @@ procedure {:inline 1} Pack_Test3_T(f: Value, g: Value) returns (_struct: Value)
     assume IsValidU64(f);
     assume IsValidU64(g);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, f), g));
-
 }
 
 procedure {:inline 1} Unpack_Test3_T(_struct: Value) returns (f: Value, g: Value)
@@ -32,9 +31,10 @@ procedure {:inline 1} Unpack_Test3_T(_struct: Value) returns (f: Value, g: Value
 // ** functions of module Test3
 
 procedure {:inline 1} Test3_test3 (flag: Value) returns ()
-requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean(false)))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
+
 {
     // declare local variables
     var t1: Value; // Test3_T_type_value()
@@ -93,43 +93,42 @@ ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
     var t54: Value; // BooleanType()
     var t55: Value; // BooleanType()
     var t56: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 57;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
+    // process and type check arguments
     assume is#Boolean(flag);
-
-    old_size := local_counter;
-    local_counter := local_counter + 57;
-    m := UpdateLocal(m, old_size + 0, flag);
+    __m := UpdateLocal(__m, __frame + 0, flag);
 
     // bytecode translation starts here
-    call tmp := LdConst(0);
-    m := UpdateLocal(m, old_size + 9, tmp);
+    call __tmp := LdConst(0);
+    __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    call tmp := LdConst(0);
-    m := UpdateLocal(m, old_size + 10, tmp);
+    call __tmp := LdConst(0);
+    __m := UpdateLocal(__m, __frame + 10, __tmp);
 
-    call tmp := Pack_Test3_T(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
-    m := UpdateLocal(m, old_size + 11, tmp);
+    call __tmp := Pack_Test3_T(GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 10));
+    __m := UpdateLocal(__m, __frame + 11, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 11));
-    m := UpdateLocal(m, old_size + 1, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 11));
+    __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    call t12 := BorrowLoc(old_size+1);
+    call t12 := BorrowLoc(__frame + 1);
 
     call t2 := CopyOrMoveRef(t12);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 13, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 13, __tmp);
 
-    tmp := GetLocal(m, old_size + 13);
-    if (!b#Boolean(tmp)) { goto Label_12; }
+    __tmp := GetLocal(__m, __frame + 13);
+    if (!b#Boolean(__tmp)) { goto Label_12; }
 
     call t14 := CopyOrMoveRef(t2);
 
@@ -147,21 +146,21 @@ Label_12:
     call t3 := CopyOrMoveRef(t17);
 
 Label_15:
-    call tmp := LdConst(10);
-    m := UpdateLocal(m, old_size + 18, tmp);
+    call __tmp := LdConst(10);
+    __m := UpdateLocal(__m, __frame + 18, __tmp);
 
     call t19 := CopyOrMoveRef(t3);
 
-    call WriteRef(t19, GetLocal(m, old_size + 18));
+    call WriteRef(t19, GetLocal(__m, __frame + 18));
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 20, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 20, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 20));
-    m := UpdateLocal(m, old_size + 21, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 20));
+    __m := UpdateLocal(__m, __frame + 21, __tmp);
 
-    tmp := GetLocal(m, old_size + 21);
-    if (!b#Boolean(tmp)) { goto Label_25; }
+    __tmp := GetLocal(__m, __frame + 21);
+    if (!b#Boolean(__tmp)) { goto Label_25; }
 
     call t22 := CopyOrMoveRef(t2);
 
@@ -179,12 +178,12 @@ Label_25:
     call t4 := CopyOrMoveRef(t25);
 
 Label_28:
-    call tmp := LdConst(20);
-    m := UpdateLocal(m, old_size + 26, tmp);
+    call __tmp := LdConst(20);
+    __m := UpdateLocal(__m, __frame + 26, __tmp);
 
     call t27 := CopyOrMoveRef(t4);
 
-    call WriteRef(t27, GetLocal(m, old_size + 26));
+    call WriteRef(t27, GetLocal(__m, __frame + 26));
 
     call t28 := CopyOrMoveRef(t2);
 
@@ -200,68 +199,66 @@ Label_28:
 
     call t32 := CopyOrMoveRef(t5);
 
-    call tmp := ReadRef(t32);
-    assume IsValidU64(tmp);
+    call __tmp := ReadRef(t32);
+    assume IsValidU64(__tmp);
+    __m := UpdateLocal(__m, __frame + 33, __tmp);
 
-    m := UpdateLocal(m, old_size + 33, tmp);
-
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 33));
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 33));
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     call t34 := CopyOrMoveRef(t6);
 
-    call tmp := ReadRef(t34);
-    assume IsValidU64(tmp);
+    call __tmp := ReadRef(t34);
+    assume IsValidU64(__tmp);
+    __m := UpdateLocal(__m, __frame + 35, __tmp);
 
-    m := UpdateLocal(m, old_size + 35, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 35));
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 35));
-    m := UpdateLocal(m, old_size + 8, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 36, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 36, tmp);
+    __tmp := GetLocal(__m, __frame + 36);
+    if (!b#Boolean(__tmp)) { goto Label_60; }
 
-    tmp := GetLocal(m, old_size + 36);
-    if (!b#Boolean(tmp)) { goto Label_60; }
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 7));
+    __m := UpdateLocal(__m, __frame + 37, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
-    m := UpdateLocal(m, old_size + 37, tmp);
+    call __tmp := LdConst(10);
+    __m := UpdateLocal(__m, __frame + 38, __tmp);
 
-    call tmp := LdConst(10);
-    m := UpdateLocal(m, old_size + 38, tmp);
+    __tmp := Boolean(IsEqual(GetLocal(__m, __frame + 37), GetLocal(__m, __frame + 38)));
+    __m := UpdateLocal(__m, __frame + 39, __tmp);
 
-    tmp := Boolean(IsEqual(GetLocal(m, old_size + 37), GetLocal(m, old_size + 38)));
-    m := UpdateLocal(m, old_size + 39, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 39));
+    __m := UpdateLocal(__m, __frame + 40, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 39));
-    m := UpdateLocal(m, old_size + 40, tmp);
+    __tmp := GetLocal(__m, __frame + 40);
+    if (!b#Boolean(__tmp)) { goto Label_52; }
 
-    tmp := GetLocal(m, old_size + 40);
-    if (!b#Boolean(tmp)) { goto Label_52; }
-
-    call tmp := LdConst(42);
-    m := UpdateLocal(m, old_size + 41, tmp);
+    call __tmp := LdConst(42);
+    __m := UpdateLocal(__m, __frame + 41, __tmp);
 
     goto Label_Abort;
 
 Label_52:
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
-    m := UpdateLocal(m, old_size + 42, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
+    __m := UpdateLocal(__m, __frame + 42, __tmp);
 
-    call tmp := LdConst(20);
-    m := UpdateLocal(m, old_size + 43, tmp);
+    call __tmp := LdConst(20);
+    __m := UpdateLocal(__m, __frame + 43, __tmp);
 
-    tmp := Boolean(IsEqual(GetLocal(m, old_size + 42), GetLocal(m, old_size + 43)));
-    m := UpdateLocal(m, old_size + 44, tmp);
+    __tmp := Boolean(IsEqual(GetLocal(__m, __frame + 42), GetLocal(__m, __frame + 43)));
+    __m := UpdateLocal(__m, __frame + 44, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 44));
-    m := UpdateLocal(m, old_size + 45, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 44));
+    __m := UpdateLocal(__m, __frame + 45, __tmp);
 
-    tmp := GetLocal(m, old_size + 45);
-    if (!b#Boolean(tmp)) { goto Label_59; }
+    __tmp := GetLocal(__m, __frame + 45);
+    if (!b#Boolean(__tmp)) { goto Label_59; }
 
-    call tmp := LdConst(42);
-    m := UpdateLocal(m, old_size + 46, tmp);
+    call __tmp := LdConst(42);
+    __m := UpdateLocal(__m, __frame + 46, __tmp);
 
     goto Label_Abort;
 
@@ -269,44 +266,44 @@ Label_59:
     goto Label_74;
 
 Label_60:
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
-    m := UpdateLocal(m, old_size + 47, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 7));
+    __m := UpdateLocal(__m, __frame + 47, __tmp);
 
-    call tmp := LdConst(20);
-    m := UpdateLocal(m, old_size + 48, tmp);
+    call __tmp := LdConst(20);
+    __m := UpdateLocal(__m, __frame + 48, __tmp);
 
-    tmp := Boolean(IsEqual(GetLocal(m, old_size + 47), GetLocal(m, old_size + 48)));
-    m := UpdateLocal(m, old_size + 49, tmp);
+    __tmp := Boolean(IsEqual(GetLocal(__m, __frame + 47), GetLocal(__m, __frame + 48)));
+    __m := UpdateLocal(__m, __frame + 49, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 49));
-    m := UpdateLocal(m, old_size + 50, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 49));
+    __m := UpdateLocal(__m, __frame + 50, __tmp);
 
-    tmp := GetLocal(m, old_size + 50);
-    if (!b#Boolean(tmp)) { goto Label_67; }
+    __tmp := GetLocal(__m, __frame + 50);
+    if (!b#Boolean(__tmp)) { goto Label_67; }
 
-    call tmp := LdConst(42);
-    m := UpdateLocal(m, old_size + 51, tmp);
+    call __tmp := LdConst(42);
+    __m := UpdateLocal(__m, __frame + 51, __tmp);
 
     goto Label_Abort;
 
 Label_67:
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
-    m := UpdateLocal(m, old_size + 52, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
+    __m := UpdateLocal(__m, __frame + 52, __tmp);
 
-    call tmp := LdConst(10);
-    m := UpdateLocal(m, old_size + 53, tmp);
+    call __tmp := LdConst(10);
+    __m := UpdateLocal(__m, __frame + 53, __tmp);
 
-    tmp := Boolean(IsEqual(GetLocal(m, old_size + 52), GetLocal(m, old_size + 53)));
-    m := UpdateLocal(m, old_size + 54, tmp);
+    __tmp := Boolean(IsEqual(GetLocal(__m, __frame + 52), GetLocal(__m, __frame + 53)));
+    __m := UpdateLocal(__m, __frame + 54, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 54));
-    m := UpdateLocal(m, old_size + 55, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 54));
+    __m := UpdateLocal(__m, __frame + 55, __tmp);
 
-    tmp := GetLocal(m, old_size + 55);
-    if (!b#Boolean(tmp)) { goto Label_74; }
+    __tmp := GetLocal(__m, __frame + 55);
+    if (!b#Boolean(__tmp)) { goto Label_74; }
 
-    call tmp := LdConst(42);
-    m := UpdateLocal(m, old_size + 56, tmp);
+    call __tmp := LdConst(42);
+    __m := UpdateLocal(__m, __frame + 56, __tmp);
 
     goto Label_Abort;
 
@@ -314,12 +311,12 @@ Label_74:
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
 }
 
 procedure Test3_test3_verify (flag: Value) returns ()
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call Test3_test3(flag);
 }

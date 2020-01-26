@@ -20,7 +20,6 @@ pub const INLINE_PRELUDE: &str = "<inline-prelude>";
 
 const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-doModSetAnalysis",
-    "-useArrayTheory",
     "-noinfer",
     "-printVerifiedProceduresCount:0",
 ];
@@ -57,6 +56,8 @@ pub struct Options {
     pub generate_only: bool,
     /// Whether to generate stubs for native functions.
     pub native_stubs: bool,
+    /// Whether to minimize execution traces in errors.
+    pub minimize_execution_trace: bool,
 }
 
 impl Default for Options {
@@ -73,6 +74,7 @@ impl Default for Options {
             boogie_flags: vec![],
             generate_only: false,
             native_stubs: false,
+            minimize_execution_trace: true,
         }
     }
 }
@@ -247,6 +249,11 @@ impl Options {
         }
         add(&[boogie_file]);
         result
+    }
+
+    /// Returns name of file where to log boogie output.
+    pub fn get_boogie_log_file(&self, boogie_file: &str) -> String {
+        format!("{}.log", boogie_file)
     }
 }
 

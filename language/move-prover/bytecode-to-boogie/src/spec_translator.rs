@@ -6,16 +6,19 @@
 use itertools::Itertools;
 use num::{BigInt, Num};
 
-use ir_to_bytecode_syntax::ast::{BinOp, CopyableVal, Field, QualifiedStructIdent, Type};
+use ir_to_bytecode_syntax::ast::{BinOp, CopyableVal, Field, Loc, QualifiedStructIdent, Type};
 use ir_to_bytecode_syntax::spec_language_ast::{Condition, SpecExp, StorageLocation};
 use libra_types::account_address::AccountAddress;
 
 use crate::boogie_helpers::{boogie_field_name, boogie_type_value};
-use crate::cli::abort_with_error;
+use crate::code_writer::CodeWriter;
 use crate::env::{FunctionEnv, GlobalType, Parameter};
+use codespan_reporting::{Diagnostic, Label};
 
 pub struct SpecTranslator<'env> {
     func_env: &'env FunctionEnv<'env>,
+    writer: &'env CodeWriter,
+    current_loc: Loc, // Location used for type checking errors
 }
 
 /// Represents a boogie expression as a string and its type. The type is used to access
@@ -40,25 +43,35 @@ const ERROR_TYPE: GlobalType = GlobalType::TypeParameter(std::u16::MAX);
 const UNKNOWN_TYPE: GlobalType = GlobalType::TypeParameter(std::u16::MAX - 1);
 
 impl<'env> SpecTranslator<'env> {
-    pub fn new(func_env: &'env FunctionEnv<'env>) -> SpecTranslator<'env> {
-        SpecTranslator { func_env }
+    pub fn new(
+        func_env: &'env FunctionEnv<'env>,
+        writer: &'env CodeWriter,
+    ) -> SpecTranslator<'env> {
+        SpecTranslator {
+            func_env,
+            writer,
+            current_loc: Loc::default(),
+        }
     }
 
-    /// Reports an error. At the moment, we simply abort.
-    // TODO: extend this to collect errors and add source info. Code needs to expect this
-    //   returns with the given `pass_through` value.
-    pub fn error<T>(&mut self, msg: &str, _pass_through: T) -> T {
-        abort_with_error(&format!(
-            "[in function `{}`] {}",
-            self.func_env.get_name(),
-            msg
-        ))
+    /// Reports a type checking error.
+    pub fn error<T>(&self, msg: &str, pass_through: T) -> T {
+        let diag = Diagnostic::new_error(msg).with_label(Label::new_primary(self.current_loc));
+        self.func_env.module_env.add_diag(diag);
+        pass_through
     }
 
-    /// Generates a boogie string containing pre/post conditions.
-    pub fn translate(&mut self) -> String {
-        let mut res = String::new();
+    /// Helper to update the current location. This is both used for informing the `error` function
+    /// above for type checking errors and the CodeWriter for being able to map boogie errors
+    /// back to the source.
+    fn update_location(&mut self, loc: Loc) {
+        self.current_loc = loc;
+        self.writer
+            .set_location(self.func_env.module_env.get_module_idx(), loc);
+    }
 
+    /// Generates a boogie containing pre/post conditions.
+    pub fn translate(&mut self) {
         // Generate pre-conditions
         // For this transaction to be executed, it MUST have had
         // a valid signature for the sender's account. Therefore,
@@ -66,14 +79,16 @@ impl<'env> SpecTranslator<'env> {
         // must have existed! So we can assume txn_sender account
         // exists in pre-condition.
         for cond in self.func_env.get_specification() {
-            if let Condition::Requires(expr) = cond {
-                res.push_str(&format!(
-                    "requires b#Boolean({});\n",
+            if let Condition::Requires(expr) = &cond.value {
+                self.update_location(cond.span);
+                emitln!(
+                    self.writer,
+                    "requires b#Boolean({});",
                     self.translate_expr(expr).result()
-                ))
+                );
             }
         }
-        res.push_str("requires ExistsTxnSenderAccount(m, txn);\n");
+        emitln!(self.writer, "requires ExistsTxnSenderAccount(__m, __txn);");
 
         // Generate succeeds_if and aborts_if setup (for post conditions)
 
@@ -82,8 +97,9 @@ impl<'env> SpecTranslator<'env> {
             .func_env
             .get_specification()
             .iter()
-            .filter_map(|c| match c {
+            .filter_map(|c| match &c.value {
                 Condition::SucceedsIf(expr) => {
+                    self.update_location(c.span);
                     Some(format!("b#Boolean({})", self.translate_expr(expr).result()))
                 }
                 _ => None,
@@ -96,8 +112,9 @@ impl<'env> SpecTranslator<'env> {
             .func_env
             .get_specification()
             .iter()
-            .filter_map(|c| match c {
+            .filter_map(|c| match &c.value {
                 Condition::AbortsIf(expr) => {
+                    self.update_location(c.span);
                     Some(format!("b#Boolean({})", self.translate_expr(expr).result()))
                 }
                 _ => None,
@@ -123,40 +140,42 @@ impl<'env> SpecTranslator<'env> {
 
         // Generate explicit ensures conditions
         for cond in self.func_env.get_specification() {
-            if let Condition::Ensures(expr) = cond {
+            if let Condition::Ensures(expr) = &cond.value {
                 // FIXME: Do we really need to check whether succeeds_if & aborts_if are
                 // empty, below?
-                res.push_str(&format!(
-                    "ensures {}b#Boolean({});\n",
+                self.update_location(cond.span);
+                emitln!(
+                    self.writer,
+                    "ensures {}b#Boolean({});",
                     if !succeeds_if_string.is_empty() || !aborts_if_string.is_empty() {
                         // Guard the condition to be only effective if not aborted.
-                        "!abort_flag ==> "
+                        "!__abort_flag ==> "
                     } else {
                         ""
                     },
                     self.translate_expr(expr).result()
-                ));
+                );
             }
         }
 
         // emit the Boogie ensures condition for succeeds_if
         if !succeeds_if_string.is_empty() {
             // If succeeds_if condition is met, function must NOT abort.
-            res.push_str(&format!(
-                "ensures old({}) ==> !abort_flag;\n",
+            emitln!(
+                self.writer,
+                "ensures old({}) ==> !__abort_flag;",
                 succeeds_if_string
-            ));
+            );
         }
 
         // emit Boogie ensures condition for aborts_if
         if !aborts_if_string.is_empty() {
-            res.push_str(&format!(
-                "ensures old({}) ==> abort_flag;\n",
+            emitln!(
+                self.writer,
+                "ensures old({}) ==> __abort_flag;\n",
                 aborts_if_string
-            ));
+            );
         }
-
-        res
     }
 
     /// Translates a specification expression into boogie.
@@ -175,7 +194,7 @@ impl<'env> SpecTranslator<'env> {
                 let _ = self.require_type(at, &GlobalType::Address);
                 BoogieExpr(
                     format!(
-                        "ExistsResource(m, {}, a#Address({}))",
+                        "ExistsResource(__m, {}, a#Address({}))",
                         self.translate_resource_type(type_, type_actuals).0,
                         a
                     ),
@@ -217,7 +236,7 @@ impl<'env> SpecTranslator<'env> {
     fn translate_dref(&mut self, loc: &StorageLocation) -> BoogieExpr {
         let BoogieExpr(s, t) = self.translate_location_as_reference(loc);
         if let GlobalType::Reference(sig) | GlobalType::MutableReference(sig) = t {
-            BoogieExpr(format!("Dereference(m, {})", s), *sig)
+            BoogieExpr(format!("Dereference(__m, {})", s), *sig)
         } else {
             self.error(
                 &format!(
@@ -353,7 +372,7 @@ impl<'env> SpecTranslator<'env> {
 
             StorageLocation::Ret(index) => self.translate_return(*index as usize),
             StorageLocation::TxnSenderAddress => BoogieExpr(
-                "Address(TxnSenderAddress(txn))".to_string(),
+                "Address(TxnSenderAddress(__txn))".to_string(),
                 GlobalType::Address,
             ),
             StorageLocation::Address(addr) => BoogieExpr(
@@ -364,7 +383,7 @@ impl<'env> SpecTranslator<'env> {
                 let BoogieExpr(mut res, mut t) = self.translate_location_as_value(base);
                 // If the type of the location is a reference, dref it now.
                 if let GlobalType::Reference(vt) | GlobalType::MutableReference(vt) = t {
-                    res = format!("Dereference(m, {})", res);
+                    res = format!("Dereference(__m, {})", res);
                     t = *vt;
                 }
                 for f in fields {

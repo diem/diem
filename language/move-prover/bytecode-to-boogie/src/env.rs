@@ -12,7 +12,7 @@ use num::{BigInt, Num};
 use bytecode_source_map::source_map::ModuleSourceMap;
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode_syntax::ast::Loc;
-use ir_to_bytecode_syntax::spec_language_ast::Condition;
+use ir_to_bytecode_syntax::spec_language_ast::Condition_;
 use libra_types::{identifier::IdentStr, identifier::Identifier, language_storage::ModuleId};
 use vm::access::ModuleAccess;
 use vm::file_format::{
@@ -26,38 +26,15 @@ use vm::views::{
 };
 
 use crate::cli::Options;
+use codespan::{CodeMap, ColumnIndex, FileMap, FileName, LineIndex};
+use codespan_reporting::termcolor::{ColorChoice, StandardStream};
+use codespan_reporting::{emit, Diagnostic, Severity};
+use std::fs;
 
-/// # Diagnostics
+/// # Types
 
 /// An index for a module, pointing into the table of modules loaded into an environment.
 pub type ModuleIndex = usize;
-
-/// A global unique location, consisting of a module index and a Span in its source.
-#[derive(Debug, Copy, Clone)]
-pub struct GlobalLocation(ModuleIndex, Loc);
-
-/// Type to represent diagnosis, like an error message.
-#[derive(Debug)]
-pub struct Diag {
-    /// A location for this diagnosis.
-    pub location: GlobalLocation,
-
-    /// The severity.
-    pub level: DiagLevel,
-
-    /// The message.
-    pub message: String,
-}
-
-/// The severity level of a diagnosis.
-#[derive(Debug)]
-pub enum DiagLevel {
-    ERROR,
-    WARNING,
-    HINT,
-}
-
-/// # Types
 
 /// The type declaration of a location. This is the same as `SignatureToken` except it is not scoped
 /// to a single module, and can contain Struct types coming from any of the modules in the
@@ -85,6 +62,9 @@ impl GlobalType {
     }
 }
 
+/// Line/Column position pair.
+pub type Position = (LineIndex, ColumnIndex);
+
 /// # Global Environment
 
 /// Global environment for a set of modules.
@@ -93,11 +73,8 @@ pub struct GlobalEnv {
     /// Options passed via the cli.
     pub options: Options,
 
-    /// List of loaded modules, in order they have been provided using add().
-    pub module_data: Vec<ModuleData>,
-
-    // Accumulated diagnostics.
-    pub diags: RefCell<Vec<Diag>>,
+    /// List of loaded modules, in order they have been provided using `add`.
+    module_data: Vec<ModuleData>,
 }
 
 impl GlobalEnv {
@@ -106,17 +83,7 @@ impl GlobalEnv {
         GlobalEnv {
             options,
             module_data: vec![],
-            diags: RefCell::new(vec![]),
         }
-    }
-
-    /// Adds diagnosis to the environment.
-    pub fn add_diag(&self, loc: &GlobalLocation, level: DiagLevel, msg: &str) {
-        self.diags.borrow_mut().push(Diag {
-            location: *loc,
-            level,
-            message: msg.to_string(),
-        })
     }
 
     /// Adds a new module to the environment. StructData and FunctionData need to be provided
@@ -124,6 +91,7 @@ impl GlobalEnv {
     /// to create them.
     pub fn add(
         &mut self,
+        source_file_path: &str,
         module: VerifiedModule,
         source_map: ModuleSourceMap<Loc>,
         struct_data: Vec<StructData>,
@@ -137,6 +105,9 @@ impl GlobalEnv {
             struct_data,
             function_data,
             source_map,
+            source_file_path: source_file_path.to_owned(),
+            source_text: RefCell::new(None),
+            diags: RefCell::new(vec![]),
         });
     }
 
@@ -148,7 +119,7 @@ impl GlobalEnv {
         def_idx: FunctionDefinitionIndex,
         arg_names: Vec<Identifier>,
         type_arg_names: Vec<Identifier>,
-        spec: Vec<Condition>,
+        spec: Vec<Condition_>,
     ) -> FunctionData {
         let handle_idx = module.function_def_at(def_idx).function;
         FunctionData {
@@ -250,6 +221,15 @@ pub struct ModuleData {
 
     /// Module source location information.
     source_map: ModuleSourceMap<Loc>,
+
+    /// File path to the source of this module.
+    source_file_path: String,
+
+    /// Cached source for text position calculation.
+    source_text: RefCell<Option<String>>,
+
+    // Accumulated diagnostics.
+    diags: RefCell<Vec<Diagnostic>>,
 }
 
 /// Represents a module environment.
@@ -264,13 +244,66 @@ pub struct ModuleEnv<'env> {
 
 impl<'env> ModuleEnv<'env> {
     /// Returns the index of this module in the global env.
-    pub fn get_module_idx(&self) -> usize {
+    pub fn get_module_idx(&self) -> ModuleIndex {
         self.data.idx
     }
 
-    /// Returns the name of this module.
+    /// Returns the id of this module.
     pub fn get_id(&'env self) -> &'env ModuleId {
         &self.data.id
+    }
+
+    /// Adds diagnostic to the environment.
+    pub fn add_diag(&self, diag: Diagnostic) {
+        self.data.diags.borrow_mut().push(diag);
+    }
+
+    /// Returns true if diagnostics have error severity or worse.
+    pub fn has_errors(&self) -> bool {
+        self.data
+            .diags
+            .borrow()
+            .iter()
+            .any(|d| d.severity >= Severity::Error)
+    }
+
+    /// Reports diagnostics associated with this module.
+    pub fn report_diagnostics(&self) {
+        if !self.has_errors() {
+            return;
+        }
+        self.ensure_source_available();
+        let mut codemap = CodeMap::new();
+        codemap.add_filemap(
+            FileName::real(&self.data.source_file_path),
+            self.data.source_text.borrow().as_ref().unwrap().clone(),
+        );
+        for diag in self.data.diags.borrow().iter() {
+            let writer = StandardStream::stderr(ColorChoice::Auto);
+            emit(writer, &codemap, diag).expect("emitting diagnostic failed")
+        }
+    }
+
+    /// Returns file name and line/column position for location in this module.
+    pub fn get_position(&self, loc: Loc) -> (String, Position) {
+        self.ensure_source_available();
+        let source = self.data.source_text.borrow();
+        let source_ref = source.as_ref().unwrap();
+        let file_map = FileMap::new(FileName::real(&self.data.source_file_path), source_ref);
+        (
+            self.data.source_file_path.clone(),
+            file_map.location(loc.start()).unwrap(),
+        )
+    }
+
+    /// Helper to ensure source text is available.
+    fn ensure_source_available(&self) {
+        if self.data.source_text.borrow().is_some() {
+            return;
+        }
+        let source =
+            fs::read_to_string(&self.data.source_file_path).expect("original source not found");
+        *self.data.source_text.borrow_mut() = Some(source);
     }
 
     /// Gets the underlying bytecode module.
@@ -438,6 +471,7 @@ impl<'env> ModuleEnv<'env> {
 }
 
 /// # Struct Environment
+
 #[derive(Debug)]
 pub struct StructData {
     /// The definition index of this struct in its module.
@@ -469,6 +503,20 @@ impl<'env> StructEnv<'env> {
             .struct_handle_at(self.data.handle_idx);
         let view = StructHandleView::new(&self.module_env.data.module, handle);
         view.name()
+    }
+
+    /// Returns the location of this struct.
+    pub fn get_loc(&self) -> Loc {
+        if let Ok(source_map) = self
+            .module_env
+            .data
+            .source_map
+            .get_struct_source_map(self.data.def_idx)
+        {
+            source_map.decl_location
+        } else {
+            Loc::default()
+        }
     }
 
     /// Gets the definition index associated with this struct.
@@ -533,6 +581,7 @@ impl<'env> StructEnv<'env> {
 }
 
 /// # Field Environment
+
 #[derive(Debug)]
 pub struct FieldData {
     /// The definition index of this field in its module.
@@ -605,7 +654,7 @@ pub struct FunctionData {
     type_arg_names: Vec<Identifier>,
 
     /// List of specification conditions. Not in bytecode but obtained from AST.
-    spec: Vec<Condition>,
+    spec: Vec<Condition_>,
 }
 
 #[derive(Debug)]
@@ -627,6 +676,35 @@ impl<'env> FunctionEnv<'env> {
             .function_handle_at(self.data.handle_idx);
         let view = FunctionHandleView::new(&self.module_env.data.module, handle);
         view.name()
+    }
+
+    /// Returns the location of this function.
+    pub fn get_loc(&self) -> Loc {
+        if let Ok(source_map) = self
+            .module_env
+            .data
+            .source_map
+            .get_function_source_map(self.data.def_idx)
+        {
+            source_map.decl_location
+        } else {
+            Loc::default()
+        }
+    }
+
+    /// Returns the location of the bytecode at the given offset.
+    pub fn get_bytecode_loc(&self, offset: u16) -> Loc {
+        if let Ok(fmap) = self
+            .module_env
+            .data
+            .source_map
+            .get_function_source_map(self.data.def_idx)
+        {
+            if let Some(loc) = fmap.get_code_location(offset) {
+                return loc;
+            }
+        }
+        self.get_loc()
     }
 
     /// Returns true if this function is native.
@@ -711,7 +789,7 @@ impl<'env> FunctionEnv<'env> {
     }
 
     /// Returns specification conditions associated with this function.
-    pub fn get_specification(&'env self) -> &'env [Condition] {
+    pub fn get_specification(&'env self) -> &'env [Condition_] {
         &self.data.spec
     }
 }
