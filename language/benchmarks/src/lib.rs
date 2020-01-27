@@ -3,4 +3,5 @@
 
 #![forbid(unsafe_code)]
 
+pub mod move_vm;
 pub mod transactions;
