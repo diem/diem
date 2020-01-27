@@ -3,9 +3,11 @@
 
 use consensus_types::{block::block_test_utils, block::Block};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use libra_config::config::{OnDiskStorageConfig, SafetyRulesBackend};
 use libra_types::crypto_proxies::ValidatorSigner;
 use rand::Rng;
 use safety_rules::{
+    process_client_wrapper::ProcessClientWrapper,
     test_utils, {InMemoryStorage, OnDiskStorage, SafetyRulesManager, TSafetyRules},
 };
 use tempfile::NamedTempFile;
@@ -68,7 +70,7 @@ fn serializer(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
     let storage = OnDiskStorage::default_storage(file_path).unwrap();
-    let safety_rules_manager = SafetyRulesManager::new_local(storage, signer.clone());
+    let safety_rules_manager = SafetyRulesManager::new_serializer(storage, signer.clone());
     lsr(safety_rules_manager.client(), signer, n);
 }
 
@@ -76,8 +78,20 @@ fn thread(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
     let storage = OnDiskStorage::default_storage(file_path).unwrap();
-    let safety_rules_manager = SafetyRulesManager::new_local(storage, signer.clone());
+    let safety_rules_manager = SafetyRulesManager::new_thread(storage, signer.clone());
     lsr(safety_rules_manager.client(), signer, n);
+}
+
+fn process(n: u64) {
+    let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
+    let mut config = OnDiskStorageConfig::default();
+    config.default = true;
+    config.path = file_path;
+    let backend = SafetyRulesBackend::OnDiskStorage(config);
+    let client_wrapper = ProcessClientWrapper::new(backend);
+    let signer = client_wrapper.signer();
+
+    lsr(Box::new(client_wrapper), signer, n);
 }
 
 pub fn benchmark(c: &mut Criterion) {
@@ -87,6 +101,7 @@ pub fn benchmark(c: &mut Criterion) {
     group.bench_function("OnDisk", |b| b.iter(|| on_disk(black_box(count))));
     group.bench_function("Serializer", |b| b.iter(|| serializer(black_box(count))));
     group.bench_function("Thread", |b| b.iter(|| thread(black_box(count))));
+    group.bench_function("Process", |b| b.iter(|| process(black_box(count))));
 }
 
 criterion_group!(benches, benchmark);

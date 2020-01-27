@@ -28,6 +28,10 @@ pub use crate::{
 };
 
 #[cfg(any(test, feature = "testing"))]
+#[path = "process_client_wrapper.rs"]
+pub mod process_client_wrapper;
+
+#[cfg(any(test, feature = "testing"))]
 #[path = "test_utils.rs"]
 pub mod test_utils;
 
