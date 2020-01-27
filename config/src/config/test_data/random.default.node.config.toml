@@ -1,7 +1,13 @@
 [validator_network]
 peer_id = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654"
-network_keypairs_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654.network.keys.toml"
 seed_peers_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654.seed_peers.toml"
+
+[validator_network.network_keypairs.signing_keys]
+private_key = "55f8f8956dde49b412e105460193381bf3fca57565a8a096e60ac7bdd6a0953f"
+public_key = "f5c974b9ead1ca6a6d5d93eb3bd5906e2b7cf5f710c8a7c86c8c6e918f42c4b1"
+[validator_network.network_keypairs.identity_keys]
+private_key = "70389b2e9483015d869e620ec46209f1e84b5f94b2339f6d327e0508cd5e3857"
+public_key = "c73d4a865295534a9440275892a0dbcf346c633e7bf3ea7933ed50f4b478030c"
 
 [test.account_keypair]
 private_key = "a9ccbb14534fa25b8e2c8062f82592ca4a6ecd228895ef48a21faf480f4fdb9f"

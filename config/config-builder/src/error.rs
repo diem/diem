@@ -11,6 +11,8 @@ pub enum Error {
     MissingConfigs { found: usize },
     #[error("Missing full node network")]
     MissingFullNodeNetwork,
+    #[error("Network config is missing network keypairs")]
+    MissingNetworkKeyPairs,
     #[error("Config does not contain a validator network")]
     MissingValidatorNetwork,
     #[error("Unable to find any configs")]
