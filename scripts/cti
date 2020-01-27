@@ -60,4 +60,4 @@ echo " * ssh-peer"
 echo " * tail -f /data/libra/libra.log"
 echo "**********"
 
-ssh -t ssh.cluster-test-ci.aws.hlw3truzy4ls.com ssh -i /libra_rsa ec2-user@ct.priv.cluster-test-ci.aws.hlw3truzy4ls.com ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" --deploy $TAG $*
+ssh -t ssh.cluster-test-ci.aws.hlw3truzy4ls.com ssh -i /libra_rsa ec2-user@ct.priv.cluster-test-ci.aws.hlw3truzy4ls.com REMOTE_USER=$USER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" --deploy $TAG $*
