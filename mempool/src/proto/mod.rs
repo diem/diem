@@ -13,7 +13,7 @@ pub mod mempool {
 pub mod mempool_client {
     use super::mempool::{
         mempool_client::MempoolClient, CommitTransactionsRequest, CommitTransactionsResponse,
-        GetBlockRequest, GetBlockResponse, HealthCheckRequest, HealthCheckResponse,
+        GetBlockRequest, GetBlockResponse,
     };
 
     // Allow for lazily creating a Client
@@ -63,17 +63,6 @@ pub mod mempool_client {
             self.client()
                 .await?
                 .commit_transactions(request)
-                .await
-                .map(tonic::Response::into_inner)
-        }
-
-        pub async fn health_check(
-            &mut self,
-            request: HealthCheckRequest,
-        ) -> Result<HealthCheckResponse, tonic::Status> {
-            self.client()
-                .await?
-                .health_check(request)
                 .await
                 .map(tonic::Response::into_inner)
         }

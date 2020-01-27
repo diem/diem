@@ -28,16 +28,13 @@ async fn setup_mempool() -> (MempoolClientWrapper, Arc<Mutex<CoreMempool>>) {
     let service = mempool_server::MempoolServer::new(handle);
 
     let port = libra_config::utils::get_available_port();
-    let mut client = MempoolClientWrapper::new("127.0.0.1", port);
+    let client = MempoolClientWrapper::new("127.0.0.1", port);
 
     tokio::spawn(
         tonic::transport::Server::builder()
             .add_service(service)
             .serve(([127, 0, 0, 1], port).into()),
     );
-
-    while let Err(_) = client.health_check(HealthCheckRequest::default()).await {}
-
     (client, mempool_clone)
 }
 
