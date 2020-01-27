@@ -151,10 +151,9 @@ impl AccountResource {
 
     /// Given an account map (typically from storage) retrieves the Account resource associated.
     pub fn make_from(account_map: &BTreeMap<Vec<u8>, Vec<u8>>) -> Result<Self> {
-        let ap = account_resource_path();
-        match account_map.get(&ap) {
+        match account_map.get(&*ACCOUNT_RESOURCE_PATH) {
             Some(bytes) => lcs::from_bytes(bytes).map_err(Into::into),
-            None => bail!("No data for {:?}", ap),
+            None => bail!("No data for {:?}", ACCOUNT_RESOURCE_PATH),
         }
     }
 
@@ -213,16 +212,15 @@ impl TryFrom<&AccountStateBlob> for AccountResource {
     }
 }
 
-/// Return the path to the Account resource. It can be used to create an AccessPath for an
-/// Account resource.
-pub fn account_resource_path() -> Vec<u8> {
-    AccessPath::resource_access_vec(&account_struct_tag(), &Accesses::empty())
-}
+/// Path to the Account resource.
+/// It can be used to create an AccessPath for an Account resource.
+pub static ACCOUNT_RESOURCE_PATH: Lazy<Vec<u8>> =
+    Lazy::new(|| AccessPath::resource_access_vec(&account_struct_tag(), &Accesses::empty()));
 
 /// The path to the sent event counter for an Account resource.
 /// It can be used to query the event DB for the given event.
 pub static ACCOUNT_SENT_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    let mut path = account_resource_path();
+    let mut path = ACCOUNT_RESOURCE_PATH.to_vec();
     path.extend_from_slice(b"/sent_events_count/");
     path
 });
@@ -230,7 +228,7 @@ pub static ACCOUNT_SENT_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
 /// Returns the path to the received event counter for an Account resource.
 /// It can be used to query the event DB for the given event.
 pub static ACCOUNT_RECEIVED_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    let mut path = account_resource_path();
+    let mut path = ACCOUNT_RESOURCE_PATH.to_vec();
     path.extend_from_slice(b"/received_events_count/");
     path
 });

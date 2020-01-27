@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(any(test, feature = "fuzzing"))]
-use crate::account_config::account_resource_path;
+use crate::account_config::ACCOUNT_RESOURCE_PATH;
 use crate::{
     account_address::AccountAddress, account_config::AccountResource, ledger_info::LedgerInfo,
     proof::AccountStateProof, transaction::Version,
@@ -94,7 +94,7 @@ impl From<AccountResource> for AccountStateBlob {
     fn from(account_resource: AccountResource) -> Self {
         let mut account_state: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
         account_state.insert(
-            account_resource_path(),
+            ACCOUNT_RESOURCE_PATH.to_vec(),
             lcs::to_bytes(&account_resource).unwrap(),
         );
         AccountStateBlob::try_from(&account_state).unwrap()

@@ -216,7 +216,7 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
 
     let mut version_data = BTreeMap::new();
     version_data.insert(
-        libra_types::account_config::account_resource_path(),
+        libra_types::account_config::ACCOUNT_RESOURCE_PATH.to_vec(),
         lcs::to_bytes(&account_resource).unwrap(),
     );
 
