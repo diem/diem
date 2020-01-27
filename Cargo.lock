@@ -589,7 +589,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "client"
+name = "cli"
 version = "0.1.0"
 dependencies = [
  "admission-control-proto 0.1.0",
@@ -2251,7 +2251,7 @@ name = "libra-swarm"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
- "client 0.1.0",
+ "cli 0.1.0",
  "config-builder 0.1.0",
  "ctrlc 3.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "debug-interface 0.1.0",
@@ -4580,7 +4580,7 @@ dependencies = [
 name = "testsuite"
 version = "0.1.0"
 dependencies = [
- "client 0.1.0",
+ "cli 0.1.0",
  "generate-keypair 0.1.0",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",

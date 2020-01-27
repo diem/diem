@@ -1,0 +1,44 @@
+[package]
+name = "cli"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra client"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+chrono = "0.4.7"
+tonic = "0.1"
+hex = "0.3.2"
+itertools = "0.8.0"
+proptest = { version = "0.9.2", optional = true }
+rustyline = "5.0.3"
+rust_decimal = "1.0.2"
+num-traits = "0.2"
+reqwest = { version = "0.10.1", features = ["blocking"], default-features = false }
+serde = { version = "1.0.96", features = ["derive"] }
+serde_json = "1.0.40"
+structopt = "0.3.2"
+
+admission-control-proto = { path = "../../admission_control/admission-control-proto", version = "0.1.0" }
+libra-config = { path = "../../config", version = "0.1.0" }
+crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-wallet = { path = "../libra_wallet", version = "0.1.0" }
+libra-logger =  { path = "../../common/logger", version = "0.1.0" }
+libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+libra-temppath = { path = "../../common/temppath/", version = "0.1.0" }
+transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
+
+[dev-dependencies]
+proptest = "0.9.2"
+
+[features]
+default = []
+fuzzing = ["proptest", "libra-crypto/fuzzing", "libra-types/fuzzing"]

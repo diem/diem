@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use client_lib::{client_proxy::ClientProxy, commands};
+use cli::{client_proxy::ClientProxy, commands};
 use std::{
     collections::HashMap,
     io::{self, Write},

@@ -38,4 +38,4 @@ else
 	echo "Building and running client in release mode."
 fi
 
-cargo run -p client $RELEASE -- $RUN_PARAMS "$@"
+cargo run -p cli $RELEASE -- $RUN_PARAMS "$@"
