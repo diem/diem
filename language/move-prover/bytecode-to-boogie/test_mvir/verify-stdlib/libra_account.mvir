@@ -82,7 +82,11 @@ module LibraAccount {
 
     // Creates a new LibraAccount.T
     // Invoked by the `create_account` builtin
-    make(fresh_address: address): Self.T {
+    make(fresh_address: address): Self.T
+        ensures RET.balance.value == 0
+        ensures !RET.delegated_key_rotation_capability && !RET.delegated_withdrawal_capability
+        ensures RET.received_events.counter == 0 && RET.sent_events.counter == 0
+    {
         let zero_balance: LibraCoin.T;
         let generator: Self.EventHandleGenerator;
         let sent_handle: Self.EventHandle<Self.SentPaymentEvent>;
@@ -113,7 +117,9 @@ module LibraAccount {
         aborts_if !global_exists<Self.T>(txn_sender)
         aborts_if !global_exists<Self.T>(payee)
         aborts_if to_deposit.value == 0
-        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > max_balance()
+        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > max_u64()
+        aborts_if global<Self.T>(txn_sender).sent_events.counter + 1 > max_u64()
+        aborts_if global<Self.T>(payee).received_events.counter + 1 > max_u64()
         ensures global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + to_deposit.value
     {
         Self.deposit_with_metadata(move(payee), move(to_deposit), h"");
@@ -130,7 +136,9 @@ module LibraAccount {
         aborts_if !global_exists<Self.T>(txn_sender)
         aborts_if !global_exists<Self.T>(payee)
         aborts_if to_deposit.value == 0
-        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > max_balance()
+        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > max_u64()
+        aborts_if global<Self.T>(txn_sender).sent_events.counter + 1 > max_u64()
+        aborts_if global<Self.T>(payee).received_events.counter + 1 > max_u64()
         ensures global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + to_deposit.value
     {
         Self.deposit_with_sender_and_metadata(
@@ -154,7 +162,9 @@ module LibraAccount {
         aborts_if !global_exists<Self.T>(payee)
         aborts_if !global_exists<Self.T>(sender)
         aborts_if to_deposit.value == 0
-        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > max_balance()
+        aborts_if global<Self.T>(payee).balance.value + to_deposit.value > max_u64()
+        aborts_if global<Self.T>(sender).sent_events.counter + 1 > max_u64()
+        aborts_if global<Self.T>(payee).received_events.counter + 1 > max_u64()
         ensures global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + to_deposit.value
     {
         let deposit_value: u64;
@@ -197,7 +207,22 @@ module LibraAccount {
     // and those account will be charged for gas. If those account don't have enough gas to pay
     // for the transaction cost they will fail minting.
     // However those account can also mint to themselves so that is a decent workaround
-    public mint_to_address(payee: address, amount: u64) acquires T {
+    public mint_to_address(payee: address, amount: u64) acquires T
+        aborts_if !global_exists<LibraCoin.MintCapability>(txn_sender)
+        aborts_if !global_exists<LibraCoin.MarketCap>(0xA550C18)
+        // Over mint-able amount
+        aborts_if amount > 1000000000000000
+        aborts_if amount == 0
+        aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > max_u64()
+        aborts_if global<Self.T>(txn_sender).sent_events.counter + 1 > max_u64()
+        aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).received_events.counter + 1 > max_u64()
+        // MarketCap overflow
+        aborts_if amount + global<LibraCoin.MarketCap>(0xA550C18).total_value > max_u64()
+        ensures global_exists<Self.T>(payee)
+        ensures !old(global_exists<Self.T>(payee)) ==> global<Self.T>(payee).balance.value == amount
+        ensures old(global_exists<Self.T>(payee)) ==> global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + amount
+        ensures global<LibraCoin.MarketCap>(0xA550C18).total_value == old(global<LibraCoin.MarketCap>(0xA550C18).total_value) + amount
+    {
         // Create an account if it does not exist
         if (!exists<T>(copy(payee))) {
             Self.create_account(copy(payee));
@@ -305,7 +330,18 @@ module LibraAccount {
         cap: &Self.WithdrawalCapability,
         amount: u64,
         metadata: bytearray
-    ) acquires T {
+    ) acquires T
+        // aborts_if amount == 0
+        // aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > max_u64()
+        // aborts_if global<Self.T>(cap.account_address).sent_events.counter + 1 > max_u64()
+        // aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).received_events.counter + 1 > max_u64()
+        // aborts_if !global_exists<Self.T>(cap.account_address)
+        // aborts_if global<Self.T>(cap.account_address).balance.value < amount
+        ensures global_exists<Self.T>(payee)
+        ensures !old(global_exists<Self.T>(payee)) ==> global<Self.T>(payee).balance.value == amount
+        // ensures old(global_exists<Self.T>(payee)) ==> global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + amount
+        // ensures global<Self.T>(cap.account_address).balance.value == old(global<Self.T>(cap.account_address).balance.value) - amount
+    {
         if (!exists<T>(copy(payee))) {
             Self.create_account(copy(payee));
         }
@@ -330,15 +366,17 @@ module LibraAccount {
         aborts_if global<Self.T>(txn_sender).delegated_withdrawal_capability
         aborts_if txn_sender == payee
         aborts_if amount == 0
-        aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > max_balance()
+        aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > max_u64()
         aborts_if global<Self.T>(txn_sender).balance.value < amount
+        aborts_if global<Self.T>(txn_sender).sent_events.counter + 1 > max_u64()
+        aborts_if global<Self.T>(payee).received_events.counter + 1 > max_u64()
         ensures global_exists<Self.T>(payee)
         ensures old(global_exists<Self.T>(payee)) ==>
                     global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + amount
         ensures !old(global_exists<Self.T>(payee)) ==> global<Self.T>(payee).balance.value == amount
         ensures global<Self.T>(txn_sender).balance.value == old(global<Self.T>(txn_sender).balance.value) - amount
     {
-        // TODO: note we added this assertion. Is it a bug?
+        // note we added this assertion. Is it a bug?
         assert(copy(payee) != get_txn_sender(), 12);
 
         if (!exists<T>(copy(payee))) {
@@ -360,15 +398,17 @@ module LibraAccount {
         aborts_if global<Self.T>(txn_sender).delegated_withdrawal_capability
         aborts_if txn_sender == payee
         aborts_if amount == 0
-        aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > max_balance()
+        aborts_if global_exists<Self.T>(payee) && global<Self.T>(payee).balance.value + amount > max_u64()
         aborts_if global<Self.T>(txn_sender).balance.value < amount
+        aborts_if global<Self.T>(txn_sender).sent_events.counter + 1 > max_u64()
+        aborts_if global<Self.T>(payee).received_events.counter + 1 > max_u64()
         ensures global_exists<Self.T>(payee)
         ensures old(global_exists<Self.T>(payee)) ==>
             global<Self.T>(payee).balance.value == old(global<Self.T>(payee).balance.value) + amount
         ensures !old(global_exists<Self.T>(payee)) ==> global<Self.T>(payee).balance.value == amount
         ensures global<Self.T>(txn_sender).balance.value == old(global<Self.T>(txn_sender).balance.value) - amount
     {
-        // TODO: note we added this assertion. Is it a bug?
+        // note we added this assertion. Is it a bug?
         assert(copy(payee) != get_txn_sender(), 12);
 
         Self.pay_from_sender_with_metadata(move(payee), move(amount), h"");
@@ -413,7 +453,6 @@ module LibraAccount {
     )
         acquires T
         aborts_if !global_exists<Self.T>(cap.account_address)
-        // TODO: below does not work currently
         // ensures global<Self.T>(cap.account_address).authentication_key == new_authentication_key
     {
         Self.rotate_authentication_key_for_account(
@@ -497,7 +536,7 @@ module LibraAccount {
         aborts_if global_exists<Self.T>(fresh_address)
         aborts_if global<Self.T>(txn_sender).delegated_withdrawal_capability
         aborts_if global<Self.T>(txn_sender).balance.value < initial_balance
-        aborts_if initial_balance > max_balance()
+        aborts_if initial_balance > max_u64()
         ensures global_exists<Self.T>(fresh_address)
         ensures global<Self.T>(fresh_address).balance.value == initial_balance
         ensures !global<Self.T>(fresh_address).delegated_withdrawal_capability
@@ -571,7 +610,7 @@ module LibraAccount {
 
     // Return a reference to the address associated with the given withdrawal capability
     public withdrawal_capability_address(cap: &Self.WithdrawalCapability): &address
-        // TODO: this doesn't work probably because we are returning an address
+        // TODO: we don't support comparing references yet
         // ensures RET == &cap.account_address
     {
         return &move(cap).account_address;
@@ -579,7 +618,7 @@ module LibraAccount {
 
     // Return a reference to the address associated with the given key rotation capability
     public key_rotation_capability_address(cap: &Self.KeyRotationCapability): &address
-        // TODO: this doesn't work probably because we are returning an address
+        // TODO: we don't support comparing references yet
         // ensures RET == &cap.account_address
     {
         return &move(cap).account_address;
@@ -685,8 +724,7 @@ module LibraAccount {
     // such counter is going to give distinct value for each of the new event stream under each sender. And since we
     // hash it with the sender's address, the result is guaranteed to be globally unique.
     fresh_guid(counter: &mut Self.EventHandleGenerator, sender: address): bytearray
-        succeeds_if true
-        // aborts_if counter.counter + 1 > max_balance()
+        aborts_if counter.counter + 1 > max_u64()
     {
         let count: &mut u64;
         let count_bytes: bytearray;
@@ -697,12 +735,7 @@ module LibraAccount {
         sender_bytes = AddressUtil.address_to_bytes(move(sender));
 
         count_bytes = U64Util.u64_to_bytes(*copy(count));
-        // TODO: the below is supposed to be
-        //   *move(count) = *copy(count) + 1;
-        // However, this creates the obligation to deal with potential even counter overflow in about every
-        // precondition. We need to find some way to turn perhaps overflow checking off if its pragmatically
-        // unnecessary.
-        *move(count) = *copy(count);
+        *move(count) = *copy(count) + 1;
 
         // EventHandleGenerator goes first just in case we want to extend address in the future.
         preimage = BytearrayUtil.bytearray_concat(move(count_bytes), move(sender_bytes));
@@ -712,15 +745,14 @@ module LibraAccount {
 
     // Use EventHandleGenerator to generate a unique event handle that one can emit an event to.
     new_event_handle_impl<T: unrestricted>(counter: &mut Self.EventHandleGenerator, sender: address): Self.EventHandle<T>
-        succeeds_if true
-        // aborts_if counter.counter + 1 > max_balance()
+        aborts_if counter.counter + 1 > max_u64()
     {
         return EventHandle<T> {counter: 0, guid: Self.fresh_guid(move(counter), move(sender))};
     }
 
     // Use sender's EventHandleGenerator to generate a unique event handle that one can emit an event to.
     public new_event_handle<T: unrestricted>(): Self.EventHandle<T> acquires T
-        succeeds_if true
+        aborts_if global<Self.T>(txn_sender).event_generator.counter + 1 > max_u64()
     {
         let sender_account_ref: &mut Self.T;
         let sender_bytes: bytearray;
@@ -731,7 +763,7 @@ module LibraAccount {
     // Emit an event with payload `msg` by using handle's key and counter. Will change the payload from bytearray to a
     // generic type parameter once we have generics.
     public emit_event<T: unrestricted>(handle_ref: &mut Self.EventHandle<T>, msg: T)
-        succeeds_if true
+        aborts_if handle_ref.counter + 1 > max_u64()
     {
         let count: &mut u64;
         let guid: bytearray;
@@ -740,22 +772,19 @@ module LibraAccount {
         count = &mut move(handle_ref).counter;
 
         Self.write_to_event_store<T>(move(guid), *copy(count), move(msg));
-        // TODO: the below is supposed to be
-        //   *move(count) = *copy(count) + 1;
-        // However, this creates the obligation to deal with potential even counter overflow in about every
-        // precondition. We need to find some way to turn perhaps overflow checking off if its pragmatically
-        // unnecessary.
-        *move(count) = *copy(count);
+        *move(count) = *copy(count) + 1;
         return;
     }
 
     // Native procedure that writes to the actual event stream in Event store
     // This will replace the "native" portion of EmitEvent bytecode
     native write_to_event_store<T: unrestricted>(guid: bytearray, count: u64, msg: T)
-        succeeds_if true;
+        aborts_if false;
 
     // Destroy a unique handle.
-    public destroy_handle<T: unrestricted>(handle: Self.EventHandle<T>) {
+    public destroy_handle<T: unrestricted>(handle: Self.EventHandle<T>)
+        aborts_if false
+    {
         let guid: bytearray;
         let count: u64;
         EventHandle<T> { count, guid } = move(handle);

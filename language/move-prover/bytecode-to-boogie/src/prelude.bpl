@@ -72,6 +72,14 @@ function {:inline} IsValidU8(v: Value): bool {
   is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U8
 }
 
+function {:inline 1} max_u64(): Value {
+  Integer(9223372036854775807)
+}
+
+function {:inline} IsValidInteger(v: Value): bool {
+  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= i#Integer(max_u64())
+}
+
 function {:inline} IsValidU64(v: Value): bool {
   is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U64
 }
