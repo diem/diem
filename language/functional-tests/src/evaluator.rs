@@ -23,6 +23,7 @@ use libra_types::{
     },
     vm_error::{StatusCode, VMStatus},
 };
+use mirai_annotations::checked_verify;
 use std::{
     fmt::{self, Debug},
     str::FromStr,
@@ -343,7 +344,10 @@ fn run_transaction(
                     Err(ErrorKind::VMExecutionFailure(output).into())
                 }
             }
-            TransactionStatus::Discard(_) => Err(ErrorKind::DiscardedTransaction(output).into()),
+            TransactionStatus::Discard(_) => {
+                checked_verify!(output.write_set().is_empty());
+                Err(ErrorKind::DiscardedTransaction(output).into())
+            }
         }
     } else {
         unreachable!("transaction outputs size mismatch")

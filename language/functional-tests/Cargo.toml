@@ -24,3 +24,4 @@ thiserror = "1.0"
 aho-corasick = "0.7.6"
 termcolor = "1.0.5"
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
+mirai-annotations = "1.6.0"
