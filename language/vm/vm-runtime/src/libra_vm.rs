@@ -53,7 +53,7 @@ impl LibraVM {
         }
     }
 
-    fn load_gas_schedule(&mut self, data_cache: &dyn RemoteCache) {
+    pub fn load_gas_schedule(&mut self, data_cache: &dyn RemoteCache) {
         let mut ctx = SystemExecutionContext::new(data_cache, GasUnits::new(0));
         self.gas_schedule = self.move_vm.load_gas_schedule(&mut ctx, data_cache).ok();
     }
@@ -284,14 +284,31 @@ impl LibraVM {
             failed_gas_left = ctx.gas_left();
             let mut gas_free_ctx = SystemExecutionContext::from(ctx);
             self.run_epilogue(&mut gas_free_ctx, txn_data)
-                .and_then(|_| gas_free_ctx.get_transaction_output(txn_data, Ok(())))
+                .and_then(|_| {
+                    gas_free_ctx
+                        .get_transaction_output(txn_data, VMStatus::new(StatusCode::EXECUTED))
+                })
         })
         .unwrap_or_else(|err| {
-            let mut gas_free_ctx = SystemExecutionContext::new(remote_cache, failed_gas_left);
-            self.run_epilogue(&mut gas_free_ctx, txn_data)
-                .and_then(|_| gas_free_ctx.get_transaction_output(txn_data, Err(err)))
-                .unwrap_or_else(discard_error_output)
+            self.failed_transaction_cleanup(err, failed_gas_left, txn_data, remote_cache)
         })
+    }
+
+    pub fn failed_transaction_cleanup(
+        &self,
+        error_code: VMStatus,
+        gas_left: GasUnits<GasCarrier>,
+        txn_data: &TransactionMetadata,
+        remote_cache: &mut BlockDataCache<'_>,
+    ) -> TransactionOutput {
+        let mut gas_free_ctx = SystemExecutionContext::new(remote_cache, gas_left);
+        match TransactionStatus::from(error_code) {
+            TransactionStatus::Keep(status) => self
+                .run_epilogue(&mut gas_free_ctx, txn_data)
+                .and_then(|_| gas_free_ctx.get_transaction_output(txn_data, status))
+                .unwrap_or_else(discard_error_output),
+            TransactionStatus::Discard(status) => discard_error_output(status),
+        }
     }
 
     fn execute_user_transaction(

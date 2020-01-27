@@ -97,7 +97,7 @@ impl<'txn> TransactionExecutionContext<'txn> {
     pub fn get_transaction_output(
         &mut self,
         txn_data: &TransactionMetadata,
-        result: VMResult<()>,
+        status: VMStatus,
     ) -> VMResult<TransactionOutput> {
         let gas_used: u64 = txn_data
             .max_gas_amount()
@@ -106,15 +106,11 @@ impl<'txn> TransactionExecutionContext<'txn> {
             .get();
         let write_set = self.make_write_set()?;
         record_stats!(observe | TXN_TOTAL_GAS_USAGE | gas_used);
-
         Ok(TransactionOutput::new(
             write_set,
             self.events().to_vec(),
             gas_used,
-            match result {
-                Ok(()) => TransactionStatus::from(VMStatus::new(StatusCode::EXECUTED)),
-                Err(err) => TransactionStatus::from(err),
-            },
+            TransactionStatus::Keep(status),
         ))
     }
 }
@@ -188,9 +184,9 @@ impl<'txn> SystemExecutionContext<'txn> {
     pub fn get_transaction_output(
         &mut self,
         txn_data: &TransactionMetadata,
-        result: VMResult<()>,
+        status: VMStatus,
     ) -> VMResult<TransactionOutput> {
-        self.0.get_transaction_output(txn_data, result)
+        self.0.get_transaction_output(txn_data, status)
     }
 }
 
