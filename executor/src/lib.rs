@@ -799,15 +799,15 @@ where
                     txn_info_hashes.push(real_txn_info_hash);
                     txn_info_hash = Some(real_txn_info_hash);
                 }
-                TransactionStatus::Discard(_) => {
-                    ensure!(
-                        vm_output.write_set().is_empty(),
-                        "Discarded transaction has non-empty write set.",
-                    );
-                    ensure!(
-                        vm_output.events().is_empty(),
-                        "Discarded transaction has non-empty events.",
-                    );
+                TransactionStatus::Discard(status) => {
+                    if !vm_output.write_set().is_empty() || !vm_output.events().is_empty() {
+                        crit!(
+                            "Discarded transaction has non-empty write set or events. \
+                             Transaction: {:?}. Status: {}.",
+                            txn,
+                            status,
+                        );
+                    }
                 }
             }
 
