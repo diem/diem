@@ -7,7 +7,7 @@ use chrono::{
     prelude::{SecondsFormat, Utc},
     DateTime,
 };
-use client::{
+use cli::{
     client_proxy::ClientProxy,
     commands::{get_commands, parse_cmd, report_error, Command},
 };
