@@ -577,6 +577,13 @@ impl TransactionStatus {
             TransactionStatus::Discard(vm_status) | TransactionStatus::Keep(vm_status) => vm_status,
         }
     }
+
+    pub fn is_discarded(&self) -> bool {
+        match self {
+            TransactionStatus::Discard(_) => true,
+            TransactionStatus::Keep(_) => false,
+        }
+    }
 }
 
 impl From<VMStatus> for TransactionStatus {

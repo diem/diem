@@ -227,4 +227,7 @@ impl FakeExecutor {
     pub fn get_state_view(&self) -> &FakeDataStore {
         &self.data_store
     }
+    pub fn config(&self) -> &VMConfig {
+        &self.config
+    }
 }

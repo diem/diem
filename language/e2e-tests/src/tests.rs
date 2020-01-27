@@ -11,6 +11,7 @@
 
 mod account_universe;
 mod create_account;
+mod failed_transaction_tests;
 mod genesis;
 mod mint;
 mod module_publishing;
