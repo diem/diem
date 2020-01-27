@@ -51,7 +51,7 @@ fn bad_module_address() {
     // execute and fail for the same reason
     let output = executor.execute_transaction(txn);
     let status = match output.status() {
-        TransactionStatus::Discard(status) => {
+        TransactionStatus::Keep(status) => {
             assert!(status.is(StatusType::Verification));
             status
         }
