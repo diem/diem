@@ -6,5 +6,5 @@ main(val: u64, addr: address) {
     return;
 }
 
-// check: Discard
+// check: Keep
 // check: TYPE_MISMATCH

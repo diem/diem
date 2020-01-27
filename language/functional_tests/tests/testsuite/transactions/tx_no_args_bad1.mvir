@@ -6,5 +6,5 @@ main() {
     return;
 }
 
-// check: Discard
+// check: Keep
 // check: TYPE_MISMATCH
