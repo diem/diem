@@ -4,5 +4,5 @@ main(x: u64) {
     return;
 }
 
-// check: Discard
+// check: Keep
 // check: TYPE_MISMATCH
