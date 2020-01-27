@@ -199,9 +199,14 @@ impl FullNodeConfig {
             network.advertised_address = network.listen_address.clone();
             network.enable_remote_authentication = self.enable_remote_authentication;
 
-            network_peers
-                .peers
-                .insert(network.peer_id, network.network_keypairs.as_peer_info());
+            network_peers.peers.insert(
+                network.peer_id,
+                network
+                    .network_keypairs
+                    .as_ref()
+                    .ok_or(Error::MissingNetworkKeyPairs)?
+                    .as_peer_info(),
+            );
 
             configs.push(config);
         }
