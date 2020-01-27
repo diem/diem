@@ -10,13 +10,19 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 criterion = "0.3.0"
 proptest = "0.9.4"
 
+bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
 language-e2e-tests = { path = "../e2e-tests", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
+libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+move-lang = { path = "../move-lang", version = "0.0.1" }
+vm = { path = "../vm", version = "0.1.0" }
+vm-runtime = { path = "../vm/vm-runtime", version = "0.1.0" }
 
 [[bench]]
-name = "transactions"
+name = "benchmarks"
 harness = false

@@ -1984,11 +1984,17 @@ dependencies = [
 name = "language_benchmarks"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytecode-verifier 0.1.0",
  "criterion 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "language-e2e-tests 0.1.0",
  "libra-proptest-helpers 0.1.0",
+ "libra-state-view 0.1.0",
  "libra-types 0.1.0",
+ "move-lang 0.0.1",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm 0.1.0",
+ "vm-runtime 0.1.0",
 ]
 
 [[package]]
