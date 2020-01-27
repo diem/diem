@@ -30,7 +30,9 @@ function {:constructor} ByteArrayType() : TypeValue;
 function {:constructor} StrType() : TypeValue;
 function {:constructor} VectorType(t: TypeValue) : TypeValue;
 function {:constructor} StructType(name: TypeName, ts: TypeValueArray) : TypeValue;
+function {:constructor} ErrorType() : TypeValue;
 const DefaultTypeValue: TypeValue;
+axiom DefaultTypeValue == ErrorType();
 function {:builtin "MapConst"} MapConstTypeValue(tv: TypeValue): [int]TypeValue;
 
 type {:datatype} TypeValueArray;
@@ -65,7 +67,9 @@ function {:constructor} Address(a: Address): Value;
 function {:constructor} ByteArray(b: ByteArray): Value;
 function {:constructor} Str(a: String): Value;
 function {:constructor} Vector(v: ValueArray): Value; // used to both represent move Struct and Vector
+function {:constructor} Error(): Value;
 const DefaultValue: Value;
+axiom DefaultValue == Error();
 function {:builtin "MapConst"} MapConstValue(v: Value): [int]Value;
 
 function {:inline} IsValidU8(v: Value): bool {
@@ -103,7 +107,7 @@ function {:inline 1} AddValueArray(a: ValueArray, v: Value): ValueArray {
 }
 
 function {:inline 1} RemoveValueArray(a: ValueArray): ValueArray {
-    ValueArray(v#ValueArray(a)[l#ValueArray(a) := DefaultValue], l#ValueArray(a) - 1)
+    ValueArray(v#ValueArray(a)[l#ValueArray(a) - 1 := DefaultValue], l#ValueArray(a) - 1)
 }
 function {:inline 1} ConcatValueArray(a1: ValueArray, a2: ValueArray): ValueArray {
     ValueArray(

@@ -40,6 +40,17 @@ fn verify_ref_param() {
 }
 
 #[test]
+fn verify_vector() {
+    test(
+        VERIFY,
+        &[
+            "test_mvir/verify-stdlib/vector.mvir",
+            "test_mvir/verify-vector.mvir",
+        ],
+    );
+}
+
+#[test]
 fn verify_libra_coin() {
     test(VERIFY, &[verified_std_mvir("libra_coin").as_str()])
 }

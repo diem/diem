@@ -1,0 +1,28 @@
+module VerifyVector {
+    import 0x0.Vector;
+
+    public test_empty1() : Vector.T<u64> * Vector.T<u64>
+    ensures RET(0) == RET(1)
+    {
+	let ev1: Vector.T<u64>;
+	let ev2: Vector.T<u64>;
+	ev1 = Vector.empty<u64>();
+	ev2 = Vector.empty<u64>();
+	return (move(ev1), move(ev2));
+    }
+
+
+    public test_empty2() : Vector.T<u64> * Vector.T<u64>
+    // This fails to verify due to a mystery bug in the verifier
+    ensures RET(0) == RET(1)
+    {
+	let ev1: Vector.T<u64>;
+	let ev2: Vector.T<u64>;
+	let x: u64;
+	ev1 = Vector.empty<u64>();
+	ev2 = Vector.empty<u64>();
+	Vector.push_back<u64>(&mut ev1, 1);
+	x = Vector.pop_back<u64>(&mut ev1);
+	return (move(ev1), move(ev2));
+    }
+}

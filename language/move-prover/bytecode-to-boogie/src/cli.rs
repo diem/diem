@@ -17,8 +17,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub const INLINE_PRELUDE: &str = "<inline-prelude>";
 
 /// Default flags passed to boogie. Additional flags will be added to this via the -B option.
+
 const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-doModSetAnalysis",
+    "-useArrayTheory",
     "-noinfer",
     "-printVerifiedProceduresCount:0",
 ];
