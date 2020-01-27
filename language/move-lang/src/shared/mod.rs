@@ -11,6 +11,7 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering as AtomicOrdering},
 };
 
+pub mod ast_debug;
 pub mod fake_natives;
 pub mod remembering_unique_map;
 pub mod unique_map;
@@ -225,6 +226,12 @@ impl<T: fmt::Display> fmt::Display for Spanned<T> {
 impl<T: fmt::Debug> fmt::Debug for Spanned<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", &self.value)
+    }
+}
+
+impl<T: ast_debug::AstDebug> ast_debug::AstDebug for Spanned<T> {
+    fn ast_debug(&self, w: &mut ast_debug::AstWriter) {
+        self.value.ast_debug(w)
     }
 }
 
