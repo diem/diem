@@ -5,8 +5,12 @@ use crate::{
     core_mempool::{CoreMempool, TxnPointer},
     counters,
     proto::mempool::{
-        mempool_server::Mempool, CommitTransactionsRequest, CommitTransactionsResponse,
-        GetBlockRequest, GetBlockResponse, HealthCheckRequest, HealthCheckResponse,
+        mempool_server::Mempool,
+        CommitTransactionsRequest,
+        CommitTransactionsResponse,
+        GetBlockRequest,
+        GetBlockResponse,
+        //        HealthCheckRequest, HealthCheckResponse,
     },
 };
 use libra_logger::prelude::*;
@@ -91,16 +95,5 @@ impl Mempool for MempoolService {
         }
 
         Ok(tonic::Response::new(CommitTransactionsResponse::default()))
-    }
-
-    async fn health_check(
-        &self,
-        _request: tonic::Request<HealthCheckRequest>,
-    ) -> Result<tonic::Response<HealthCheckResponse>, tonic::Status> {
-        trace!("[GRPC] Mempool::health_check");
-        let pool = self.core_mempool.lock().unwrap();
-        let mut response = HealthCheckResponse::default();
-        response.is_healthy = pool.health_check();
-        Ok(tonic::Response::new(response))
     }
 }

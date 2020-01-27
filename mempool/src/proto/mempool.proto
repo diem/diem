@@ -18,9 +18,6 @@ service Mempool {
   // Remove committed transactions from Mempool
   rpc CommitTransactions(CommitTransactionsRequest)
       returns (CommitTransactionsResponse) {}
-
-  // Check the health of mempool
-  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {}
 }
 
 // -----------------------------------------------------------------------------
@@ -54,14 +51,4 @@ message CommittedTransaction {
   bytes sender = 1;
   uint64 sequence_number = 2;
   bool is_rejected = 3;
-}
-
-// -----------------------------------------------------------------------------
-// ---------------- HealthCheck
-// -----------------------------------------------------------------------------
-message HealthCheckRequest {}
-
-message HealthCheckResponse {
-  // Indicate whether Mempool is in healthy condition.
-  bool is_healthy = 1;
 }
