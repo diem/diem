@@ -24,7 +24,7 @@ def create_client():
         ac_port = os.environ['AC_PORT']
 
         print("Connecting to ac on: {}:{}".format(ac_host, ac_port))
-        cmd = "/opt/libra/bin/client --host {} --port {} -m {}".format(
+        cmd = "/opt/libra/bin/cli --host {} --port {} -m {}".format(
             ac_host,
             ac_port,
             "/opt/libra/etc/mint.key")

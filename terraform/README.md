@@ -16,4 +16,4 @@ This directory contains [Terraform](https://www.terraform.io/) configuration to 
 6. Run `terraform apply` to startup the system in AWS.
 7. In the AWS console go to the EC2 service in your region, and list the Load Balancers. Note the DNS name of the "default-ac" and "default-faucet" load balancers.
 8. Run the client as follows:
-  `cargo run -p client --bin client -- -a <default-ac LB DNS name> -p 8000 -f <faucet-ac LB DNS name> -s terraform/validator-sets/dev/consensus_peers.config.toml`
+  `cargo run -p cli --bin cli -- -a <default-ac LB DNS name> -p 8000 -f <faucet-ac LB DNS name> -s terraform/validator-sets/dev/consensus_peers.config.toml`
