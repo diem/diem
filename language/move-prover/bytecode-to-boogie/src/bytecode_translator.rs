@@ -222,8 +222,24 @@ impl<'env> ModuleTranslator<'env> {
             "\n\n// ** functions of module {}\n\n",
             self.module_env.get_id().name()
         ));
+        let mut num_fun_specified = 0;
+        let mut num_fun = 0;
         for func_env in self.module_env.get_functions() {
+            if !func_env.is_native() {
+                num_fun += 1;
+            }
+            if !func_env.get_specification().is_empty() && !func_env.is_native() {
+                num_fun_specified += 1;
+            }
             res.push_str(&self.translate_function(&func_env));
+        }
+        if num_fun > 0 {
+            info!(
+                "{} out of {} functions are specified in module {}",
+                num_fun_specified,
+                num_fun,
+                self.module_env.get_id().name()
+            );
         }
         res
     }

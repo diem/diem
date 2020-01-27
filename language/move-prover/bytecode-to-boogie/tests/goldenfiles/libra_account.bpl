@@ -46,10 +46,6 @@ procedure {:inline 1} LibraAccount_write_to_event_store (tv0: TypeValue, arg0: V
   requires ExistsTxnSenderAccount(m, txn);
   ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
 
-function {:inline 1} max_balance(): Value {
-  Integer(9223372036854775807)
-}
-
 
 // ** structs of module LibraCoin
 
@@ -1173,6 +1169,9 @@ procedure {:inline 1} Unpack_LibraAccount_EventHandle(_struct: Value) returns (c
 
 procedure {:inline 1} LibraAccount_make (fresh_address: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
+ensures b#Boolean(Boolean((SelectField(SelectField(ret0, LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(0))));
+ensures b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(SelectField(ret0, LibraAccount_T_delegated_key_rotation_capability))))) && b#Boolean(Boolean(!(b#Boolean(SelectField(ret0, LibraAccount_T_delegated_withdrawal_capability)))))));
+ensures b#Boolean(Boolean(b#Boolean(Boolean((SelectField(SelectField(ret0, LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) == (Integer(0)))) && b#Boolean(Boolean((SelectField(SelectField(ret0, LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) == (Integer(0))))));
 {
     // declare local variables
     var t1: Value; // LibraCoin_T_type_value()
@@ -1319,8 +1318,8 @@ procedure LibraAccount_make_verify (fresh_address: Value) returns (ret0: Value)
 procedure {:inline 1} LibraAccount_deposit (payee: Value, to_deposit: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
 ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value))) + i#Integer(SelectField(to_deposit, LibraCoin_T_value))))));
-ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_balance()))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_balance())))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t2: Value; // AddressType()
@@ -1371,8 +1370,8 @@ procedure LibraAccount_deposit_verify (payee: Value, to_deposit: Value) returns 
 procedure {:inline 1} LibraAccount_deposit_with_metadata (payee: Value, to_deposit: Value, metadata: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
 ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value))) + i#Integer(SelectField(to_deposit, LibraCoin_T_value))))));
-ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_balance()))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_balance())))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t3: Value; // AddressType()
@@ -1430,8 +1429,8 @@ procedure LibraAccount_deposit_with_metadata_verify (payee: Value, to_deposit: V
 procedure {:inline 1} LibraAccount_deposit_with_sender_and_metadata (payee: Value, sender: Value, to_deposit: Value, metadata: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
 ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value))) + i#Integer(SelectField(to_deposit, LibraCoin_T_value))))));
-ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(sender)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_balance()))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(sender)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_balance())))) ==> abort_flag;
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(sender)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(sender))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(sender)))))) || b#Boolean(Boolean((SelectField(to_deposit, LibraCoin_T_value)) == (Integer(0)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(SelectField(to_deposit, LibraCoin_T_value)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(sender))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t4: Value; // IntegerType()
@@ -1596,6 +1595,12 @@ procedure LibraAccount_deposit_with_sender_and_metadata_verify (payee: Value, se
 
 procedure {:inline 1} LibraAccount_mint_to_address (payee: Value, amount: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)));
+ensures !abort_flag ==> b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(Boolean(!(b#Boolean(old(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))))))) || b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) == (amount)))));
+ensures !abort_flag ==> b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(old(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))))))) || b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value))) + i#Integer(amount)))))));
+ensures !abort_flag ==> b#Boolean(Boolean((SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)) == (Integer(i#Integer(old(SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value))) + i#Integer(amount)))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))) || b#Boolean(Boolean(i#Integer(amount) > i#Integer(Integer(1000000000000000)))) || b#Boolean(Boolean((amount) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(amount))) > i#Integer(max_u64()))))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(amount) + i#Integer(SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)))) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))) || b#Boolean(Boolean(i#Integer(amount) > i#Integer(Integer(1000000000000000)))) || b#Boolean(Boolean((amount) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(amount))) > i#Integer(max_u64()))))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(amount) + i#Integer(SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)))) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t2: Value; // AddressType()
@@ -2070,6 +2075,8 @@ procedure LibraAccount_restore_withdrawal_capability_verify (cap: Value) returns
 
 procedure {:inline 1} LibraAccount_pay_from_capability (payee: Value, cap: Reference, amount: Value, metadata: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)));
+ensures b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(Boolean(!(b#Boolean(old(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))))))) || b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) == (amount)))));
 {
     // declare local variables
     var t4: Value; // AddressType()
@@ -2170,9 +2177,10 @@ procedure {:inline 1} LibraAccount_pay_from_sender_with_metadata (payee: Value, 
 requires ExistsTxnSenderAccount(m, txn);
 ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)));
 ensures !abort_flag ==> b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(old(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))))))) || b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value))) + i#Integer(amount)))))));
+ensures !abort_flag ==> b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(Boolean(!(b#Boolean(old(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))))))) || b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) == (amount)))));
 ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value))) - i#Integer(amount)))));
-ensures old(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (payee))) || b#Boolean(Boolean((amount) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(amount))) > i#Integer(max_balance()))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(amount))))) ==> !abort_flag;
-ensures old(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (payee))) || b#Boolean(Boolean((amount) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(amount))) > i#Integer(max_balance()))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(amount)))) ==> abort_flag;
+ensures old(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (payee))) || b#Boolean(Boolean((amount) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(amount))) > i#Integer(max_u64()))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(amount))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (payee))) || b#Boolean(Boolean((amount) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(amount))) > i#Integer(max_u64()))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(amount))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t3: Value; // AddressType()
@@ -2283,9 +2291,10 @@ procedure {:inline 1} LibraAccount_pay_from_sender (payee: Value, amount: Value)
 requires ExistsTxnSenderAccount(m, txn);
 ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)));
 ensures !abort_flag ==> b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(old(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))))))) || b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value))) + i#Integer(amount)))))));
+ensures !abort_flag ==> b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(Boolean(!(b#Boolean(old(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee)))))))))) || b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) == (amount)))));
 ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value))) - i#Integer(amount)))));
-ensures old(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (payee))) || b#Boolean(Boolean((amount) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(amount))) > i#Integer(max_balance()))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(amount))))) ==> !abort_flag;
-ensures old(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (payee))) || b#Boolean(Boolean((amount) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(amount))) > i#Integer(max_balance()))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(amount)))) ==> abort_flag;
+ensures old(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (payee))) || b#Boolean(Boolean((amount) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(amount))) > i#Integer(max_u64()))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(amount))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean((Address(TxnSenderAddress(txn))) == (payee))) || b#Boolean(Boolean((amount) == (Integer(0)))) || b#Boolean(Boolean(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(payee))) && b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_balance), LibraCoin_T_value)) + i#Integer(amount))) > i#Integer(max_u64()))))) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(amount))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_sent_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(payee))), LibraAccount_T_received_events), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t2: Value; // AddressType()
@@ -2840,8 +2849,8 @@ ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraAccount_T_type_value(),
 ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(fresh_address))), LibraAccount_T_balance), LibraCoin_T_value)) == (initial_balance)));
 ensures !abort_flag ==> b#Boolean(Boolean(!(b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(fresh_address))), LibraAccount_T_delegated_withdrawal_capability)))));
 ensures !abort_flag ==> b#Boolean(Boolean((SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value))) - i#Integer(initial_balance)))));
-ensures old(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(fresh_address))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(initial_balance))) || b#Boolean(Boolean(i#Integer(initial_balance) > i#Integer(max_balance()))))) ==> !abort_flag;
-ensures old(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(fresh_address))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(initial_balance))) || b#Boolean(Boolean(i#Integer(initial_balance) > i#Integer(max_balance())))) ==> abort_flag;
+ensures old(!(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(fresh_address))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(initial_balance))) || b#Boolean(Boolean(i#Integer(initial_balance) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(ExistsResource(m, LibraAccount_T_type_value(), a#Address(fresh_address))) || b#Boolean(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_delegated_withdrawal_capability)) || b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_balance), LibraCoin_T_value)) < i#Integer(initial_balance))) || b#Boolean(Boolean(i#Integer(initial_balance) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t2: Value; // AddressType()
@@ -3793,7 +3802,8 @@ procedure LibraAccount_epilogue_verify (txn_sequence_number: Value, txn_gas_pric
 
 procedure {:inline 1} LibraAccount_fresh_guid (counter: Reference, sender: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereference(m, counter), LibraAccount_EventHandleGenerator_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereference(m, counter), LibraAccount_EventHandleGenerator_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t2: Reference; // ReferenceType(IntegerType())
@@ -3809,11 +3819,13 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     var t12: Value; // ByteArrayType()
     var t13: Reference; // ReferenceType(IntegerType())
     var t14: Value; // IntegerType()
-    var t15: Reference; // ReferenceType(IntegerType())
-    var t16: Value; // ByteArrayType()
-    var t17: Value; // ByteArrayType()
+    var t15: Value; // IntegerType()
+    var t16: Value; // IntegerType()
+    var t17: Reference; // ReferenceType(IntegerType())
     var t18: Value; // ByteArrayType()
     var t19: Value; // ByteArrayType()
+    var t20: Value; // ByteArrayType()
+    var t21: Value; // ByteArrayType()
 
     var tmp: Value;
     var old_size: int;
@@ -3828,7 +3840,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     assume is#Address(sender);
 
     old_size := local_counter;
-    local_counter := local_counter + 20;
+    local_counter := local_counter + 22;
     m := UpdateLocal(m, old_size + 1, sender);
 
     // bytecode translation starts here
@@ -3873,29 +3885,36 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
 
     m := UpdateLocal(m, old_size + 14, tmp);
 
-    call t15 := CopyOrMoveRef(t2);
+    call tmp := LdConst(1);
+    m := UpdateLocal(m, old_size + 15, tmp);
 
-    call WriteRef(t15, GetLocal(m, old_size + 14));
-
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    call tmp := AddU64(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
+    if (abort_flag) { goto Label_Abort; }
     m := UpdateLocal(m, old_size + 16, tmp);
 
+    call t17 := CopyOrMoveRef(t2);
+
+    call WriteRef(t17, GetLocal(m, old_size + 16));
+
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
+    m := UpdateLocal(m, old_size + 18, tmp);
+
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 17, tmp);
+    m := UpdateLocal(m, old_size + 19, tmp);
 
-    call t18 := BytearrayUtil_bytearray_concat(GetLocal(m, old_size + 16), GetLocal(m, old_size + 17));
+    call t20 := BytearrayUtil_bytearray_concat(GetLocal(m, old_size + 18), GetLocal(m, old_size + 19));
     if (abort_flag) { goto Label_Abort; }
-    assume is#ByteArray(t18);
+    assume is#ByteArray(t20);
 
-    m := UpdateLocal(m, old_size + 18, t18);
+    m := UpdateLocal(m, old_size + 20, t20);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 18));
+    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 20));
     m := UpdateLocal(m, old_size + 4, tmp);
 
     call tmp := CopyOrMoveValue(GetLocal(m, old_size + 4));
-    m := UpdateLocal(m, old_size + 19, tmp);
+    m := UpdateLocal(m, old_size + 21, tmp);
 
-    ret0 := GetLocal(m, old_size + 19);
+    ret0 := GetLocal(m, old_size + 21);
     return;
 
 Label_Abort:
@@ -3912,7 +3931,8 @@ procedure LibraAccount_fresh_guid_verify (counter: Reference, sender: Value) ret
 
 procedure {:inline 1} LibraAccount_new_event_handle_impl (tv0: TypeValue, counter: Reference, sender: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereference(m, counter), LibraAccount_EventHandleGenerator_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereference(m, counter), LibraAccount_EventHandleGenerator_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t2: Value; // IntegerType()
@@ -3972,7 +3992,8 @@ procedure LibraAccount_new_event_handle_impl_verify (tv0: TypeValue, counter: Re
 
 procedure {:inline 1} LibraAccount_new_event_handle (tv0: TypeValue) returns (ret0: Value)
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_event_generator), LibraAccount_EventHandleGenerator_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectField(Dereference(m, GetResourceReference(LibraAccount_T_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraAccount_T_event_generator), LibraAccount_EventHandleGenerator_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -4035,7 +4056,8 @@ procedure LibraAccount_new_event_handle_verify (tv0: TypeValue) returns (ret0: V
 
 procedure {:inline 1} LibraAccount_emit_event (tv0: TypeValue, handle_ref: Reference, msg: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
-ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
+ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereference(m, handle_ref), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64()))))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereference(m, handle_ref), LibraAccount_EventHandle_counter)) + i#Integer(Integer(1)))) > i#Integer(max_u64())))) ==> abort_flag;
 {
     // declare local variables
     var t2: Reference; // ReferenceType(IntegerType())
@@ -4051,7 +4073,9 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     var t12: Value; // tv0
     var t13: Reference; // ReferenceType(IntegerType())
     var t14: Value; // IntegerType()
-    var t15: Reference; // ReferenceType(IntegerType())
+    var t15: Value; // IntegerType()
+    var t16: Value; // IntegerType()
+    var t17: Reference; // ReferenceType(IntegerType())
 
     var tmp: Value;
     var old_size: int;
@@ -4065,7 +4089,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
     assume IsValidReferenceParameter(m, local_counter, handle_ref);
 
     old_size := local_counter;
-    local_counter := local_counter + 16;
+    local_counter := local_counter + 18;
     m := UpdateLocal(m, old_size + 1, msg);
 
     // bytecode translation starts here
@@ -4110,9 +4134,16 @@ ensures old(b#Boolean(Boolean(true))) ==> !abort_flag;
 
     m := UpdateLocal(m, old_size + 14, tmp);
 
-    call t15 := CopyOrMoveRef(t2);
+    call tmp := LdConst(1);
+    m := UpdateLocal(m, old_size + 15, tmp);
 
-    call WriteRef(t15, GetLocal(m, old_size + 14));
+    call tmp := AddU64(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
+    if (abort_flag) { goto Label_Abort; }
+    m := UpdateLocal(m, old_size + 16, tmp);
+
+    call t17 := CopyOrMoveRef(t2);
+
+    call WriteRef(t17, GetLocal(m, old_size + 16));
 
     return;
 
@@ -4129,6 +4160,8 @@ procedure LibraAccount_emit_event_verify (tv0: TypeValue, handle_ref: Reference,
 
 procedure {:inline 1} LibraAccount_destroy_handle (tv0: TypeValue, handle: Value) returns ()
 requires ExistsTxnSenderAccount(m, txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> abort_flag;
 {
     // declare local variables
     var t1: Value; // ByteArrayType()
