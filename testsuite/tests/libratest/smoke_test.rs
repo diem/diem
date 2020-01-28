@@ -874,3 +874,28 @@ fn test_client_waypoints() {
         .test_validator_connection()
         .is_err());
 }
+
+#[test]
+fn test_malformed_script() {
+    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy
+        .mint_coins(&["mintb", "0", "100"], true)
+        .unwrap();
+
+    let script_path = workspace_builder::workspace_root()
+        .join("language/stdlib/transaction_scripts/peer_to_peer_transfer_with_metadata.mvir");
+    let unwrapped_script_path = script_path.to_str().unwrap();
+    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+    let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
+
+    // P2P script is expecting three arguments. Passing only one in the test.
+    client_proxy
+        .execute_script(&["execute", "0", &script_compiled_path[..], "10"])
+        .unwrap();
+
+    // Previous transaction should not choke the system.
+    client_proxy
+        .mint_coins(&["mintb", "0", "10"], true)
+        .unwrap();
+}
