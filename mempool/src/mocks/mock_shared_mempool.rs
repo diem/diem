@@ -15,7 +15,7 @@ use libra_types::PeerId;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
 use std::sync::{Arc, Mutex};
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 /// Creates a mock of a running instance of shared mempool
@@ -28,6 +28,13 @@ pub fn mock_shared_mempool() -> (
         oneshot::Sender<Result<SubmitTransactionResponse>>,
     )>,
 ) {
+    let runtime = Builder::new()
+        .thread_name("shared-mem-")
+        .threaded_scheduler()
+        .enable_all()
+        .build()
+        .expect("[shared mempool] failed to create runtime");
+
     let peer_id = PeerId::random();
     let mut validator_network_config = NetworkConfig::default();
     validator_network_config.peer_id = peer_id;
@@ -41,18 +48,21 @@ pub fn mock_shared_mempool() -> (
     let network_events = MempoolNetworkEvents::new(network_notifs_rx);
     let (sender, _subscriber) = unbounded();
     let (ac_sender, client_events) = mpsc::channel(1_024);
+    let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
     let network_handles = vec![(peer_id, network_sender, network_events)];
 
-    let smp = start_shared_mempool(
+    start_shared_mempool(
+        runtime.handle(),
         &config,
         mempool,
         network_handles,
         client_events,
+        consensus_events,
         Arc::new(MockStorageReadClient),
         Arc::new(MockVMValidator),
         vec![sender],
         None,
     );
 
-    (smp, ac_sender)
+    (runtime, ac_sender)
 }
