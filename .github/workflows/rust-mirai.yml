@@ -26,6 +26,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         path: 'libra'
+        fetch-depth: 50 # this is to make sure we obtain the target base commit
     # github base_ref is a lie, we obtain the target base the hard way
     - name: Obtain base reference
       id: obtain_base_ref
@@ -39,13 +40,7 @@ jobs:
             repo: context.repo.repo,
             pull_number: context.payload.pull_request.number,
           });
-          const commit_ref = commits.data[0].sha;
-          const commit = await github.repos.getCommit({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            ref: commit_ref
-          });
-          return commit.data.parents[0].sha;
+          return commits.data[0].parents[0].sha;
     # we build the target base first to only run MIRAI on the changes
     - name: Build target base then checkout PR
       working-directory: ./libra
@@ -54,15 +49,12 @@ jobs:
       run: |
         rustup override set `cat ../MIRAI/rust-toolchain`
         rustup component add rustc-dev
-        git fetch origin $SHA
         git checkout $SHA
         RUSTFLAGS="-Z always_encode_mir" cargo build
         git checkout -
     - name: Run MIRAI on PR
       working-directory: ./libra
-      run: |
-        rustup show
-        RUSTC_WRAPPER=mirai RUSTFLAGS="-Z always_encode_mir" cargo build -q 2> ../mirai_results
+      run: RUSTC_WRAPPER=mirai RUSTFLAGS="-Z always_encode_mir" cargo build -q 2>&1 | tee ../mirai_results
     - name: Post comment with MIRAI warnings
       if: success()
       uses: actions/github-script@0.4.0
