@@ -13,6 +13,7 @@ use crate::{
     util::unix_timestamp_now,
 };
 use futures::future::{join_all, BoxFuture, FutureExt};
+use slog_scope::info;
 use std::{
     collections::HashSet,
     fmt::{Display, Error, Formatter},
@@ -82,14 +83,19 @@ impl Experiment for PerformanceBenchmarkNodesDown {
                 .collect();
             let futures = stop_effects.iter().map(|e| e.activate());
             join_all(futures).await;
-            let window = Duration::from_secs(180);
+            let window = Duration::from_secs(240);
             context
                 .tx_emitter
-                .emit_txn_for(window + Duration::from_secs(60), self.up_instances.clone())
+                .emit_txn_for(window, self.up_instances.clone())
                 .await?;
-            let end = unix_timestamp_now();
-            let start = end - window;
+            let buffer = Duration::from_secs(30);
+            let end = unix_timestamp_now() - buffer;
+            let start = end - window + 2 * buffer;
             let (avg_tps, avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
+            info!(
+                "Link to dashboard : {}",
+                context.prometheus.link_to_dashboard(start, end)
+            );
             let futures = stop_effects.iter().map(|e| e.deactivate());
             join_all(futures).await;
             Ok(Some(format!(

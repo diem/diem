@@ -335,6 +335,7 @@ impl ClusterUtil {
             cluster
                 .prometheus_ip()
                 .expect("Failed to discover prometheus ip in aws"),
+            aws.workspace(),
         );
         info!(
             "Discovered {} peers in {} workspace",
@@ -414,6 +415,7 @@ impl ClusterTestRunner {
             Err(..) => 15,
         };
         let experiment_interval = Duration::from_secs(experiment_interval_sec);
+        let workspace = aws.workspace().clone();
         let deployment_manager = DeploymentManager::new(aws, cluster.clone());
         let slack = SlackClient::new();
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
@@ -424,6 +426,7 @@ impl ClusterTestRunner {
             cluster
                 .prometheus_ip()
                 .expect("Failed to discover prometheus ip in aws"),
+            &workspace,
         );
         let github = GitHub::new();
         let runtime = Runtime::new().expect("Failed to create tokio runtime");
