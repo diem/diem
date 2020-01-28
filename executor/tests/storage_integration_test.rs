@@ -5,9 +5,7 @@ use anyhow::{ensure, format_err, Result};
 use config_builder;
 use executor::{ExecutedTrees, Executor};
 use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
-use libra_crypto::{
-    ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue, PrivateKey,
-};
+use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
 use libra_types::crypto_proxies::EpochInfo;
 use libra_types::validator_change::VerifierType;
 use libra_types::{
@@ -147,15 +145,8 @@ fn test_reconfiguration() {
     // Create a dummy block prologue transaction that will emit a ValidatorSetChanged event
     let txn3 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
     let txn_block = vec![txn1, txn2, txn3];
-    let block1_id = gen_block_id(1);
     let vm_output = executor
-        .execute_block(
-            txn_block,
-            &committed_trees,
-            &committed_trees,
-            *GENESIS_BLOCK_ID,
-            block1_id,
-        )
+        .execute_block(txn_block, &committed_trees, &committed_trees)
         .unwrap();
 
     // Make sure the execution result sees the reconfiguration
@@ -176,15 +167,8 @@ fn test_reconfiguration() {
     );
     let txn5 = encode_block_prologue_script(gen_block_metadata(2, validator_account));
     let txn_block = vec![txn4, txn5];
-    let block2_id = gen_block_id(2);
     let output = executor
-        .execute_block(
-            txn_block,
-            &committed_trees,
-            &committed_trees,
-            block1_id,
-            block2_id,
-        )
+        .execute_block(txn_block, &committed_trees, &committed_trees)
         .unwrap();
 
     assert!(
@@ -297,13 +281,7 @@ fn test_execution_with_storage() {
     }
 
     let output1 = executor
-        .execute_block(
-            block1.clone(),
-            &committed_trees,
-            &committed_trees,
-            *GENESIS_BLOCK_ID,
-            block1_id,
-        )
+        .execute_block(block1.clone(), &committed_trees, &committed_trees)
         .unwrap();
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(6, output1.accu_root(), block1_id);
     let committed_trees_copy = committed_trees.clone();
@@ -553,13 +531,7 @@ fn test_execution_with_storage() {
 
     // Execution the 2nd block.
     let output2 = executor
-        .execute_block(
-            block2.clone(),
-            &committed_trees,
-            &committed_trees,
-            block1_id,
-            block2_id,
-        )
+        .execute_block(block2.clone(), &committed_trees, &committed_trees)
         .unwrap();
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(20, output2.accu_root(), block2_id);
     executor
