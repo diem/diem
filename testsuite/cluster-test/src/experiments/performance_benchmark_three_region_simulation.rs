@@ -54,16 +54,14 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 ),
             );
             join_all(network_effects.iter().map(|e| e.activate())).await;
-            let window = Duration::from_secs(180);
+            let window = Duration::from_secs(240);
             context
                 .tx_emitter
-                .emit_txn_for(
-                    window + Duration::from_secs(60),
-                    self.cluster.validator_instances().clone(),
-                )
+                .emit_txn_for(window, self.cluster.validator_instances().clone())
                 .await?;
-            let end = unix_timestamp_now();
-            let start = end - window;
+            let buffer = Duration::from_secs(30);
+            let end = unix_timestamp_now() - buffer;
+            let start = end - window + 2 * buffer;
             let (avg_tps, avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
             join_all(network_effects.iter().map(|e| e.deactivate())).await;
             Ok(Some(format!(
