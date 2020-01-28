@@ -237,7 +237,7 @@ fn get_mock_txn_data(
         let txn = Transaction::UserTransaction(get_test_signed_txn(
             address,
             i,
-            priv_key.clone(),
+            &priv_key,
             pub_key.clone(),
             None,
         ));

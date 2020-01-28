@@ -160,7 +160,7 @@ fn test_mempool_sync() {
     mempool_msg.peer_id = dialer_peer_id.into();
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    let txn: SignedTransaction = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None)
+    let txn: SignedTransaction = get_test_signed_txn(sender, 0, &keypair.0, keypair.1, None)
         .try_into()
         .unwrap();
     mempool_msg.transactions.push(txn.clone());
@@ -301,7 +301,7 @@ fn test_unauthenticated_remote_mempool_sync() {
     mempool_msg.peer_id = dialer_peer_id.into();
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    let txn: SignedTransaction = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None)
+    let txn: SignedTransaction = get_test_signed_txn(sender, 0, &keypair.0, keypair.1, None)
         .try_into()
         .unwrap();
     mempool_msg.transactions.push(txn.clone());

@@ -42,7 +42,7 @@ fn submit_transaction(
         test_key.1
     };
     let mut req = SubmitTransactionRequest::default();
-    req.transaction = Some(get_test_signed_txn(sender, 0, keypair.0, public_key, None).into());
+    req.transaction = Some(get_test_signed_txn(sender, 0, &keypair.0, public_key, None).into());
     SubmitTransactionResponse::try_from(
         block_on(ac_service.submit_transaction(Request::new(req)))
             .unwrap()

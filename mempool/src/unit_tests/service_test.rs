@@ -51,7 +51,7 @@ fn add_txn_to_mempool(
     let transaction = get_test_signed_transaction(
         sender,
         0,
-        private_key,
+        &private_key,
         public_key,
         None,
         expiration_time,

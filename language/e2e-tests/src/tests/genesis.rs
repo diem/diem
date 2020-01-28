@@ -26,7 +26,7 @@ fn invalid_genesis_write_set() {
     let txn = transaction_test_helpers::get_write_set_txn(
         address,
         0,
-        private_key,
+        &private_key,
         public_key,
         Some(write_set),
     )
