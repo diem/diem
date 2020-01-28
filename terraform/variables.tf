@@ -157,3 +157,30 @@ variable "monitoring_ebs_volume" {
   default     = 100
   description = "Size of monitoring instance EBS volume in GB"
 }
+
+variable "log_to_file" {
+  type        = bool
+  default     = false
+  description = "Set to true to log to /opt/libra/data/libra.log (in container) and /data/libra/libra.log (on host). This file won't be log rotated, you need to handle log rotation on your own if you choose this option"
+}
+
+variable "log_path" {
+  type        = string
+  default     = "/opt/libra/data/libra.log"
+}
+
+variable "enable_logstash" {
+  type    = bool
+  description = "Enable logstash instance on validator to send logs to elasticservice, this will enable log_to_file"
+  default = false
+}
+
+variable "logstash_image" {
+  type    = string
+  default = ""
+}
+
+variable "logstash_version" {
+  type    = string
+  default = "latest"
+}
