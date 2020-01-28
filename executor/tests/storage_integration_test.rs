@@ -93,7 +93,7 @@ fn get_test_signed_transaction(
     Transaction::UserTransaction(get_test_signed_txn(
         sender,
         sequence_number,
-        private_key,
+        &private_key,
         public_key,
         program,
     ))

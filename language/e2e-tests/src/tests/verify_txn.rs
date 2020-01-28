@@ -36,7 +36,7 @@ fn verify_signature() {
         let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
             *sender.address(),
             0,
-            private_key,
+            &private_key,
             sender.account().pubkey.clone(),
             Some(program),
         );
@@ -60,7 +60,7 @@ fn verify_reserved_sender() {
         let signed_txn = transaction_test_helpers::get_test_signed_txn(
             core_code_address(),
             0,
-            private_key,
+            &private_key,
             public_key,
             Some(program),
         );
@@ -81,7 +81,7 @@ fn verify_rejected_write_set() {
         let signed_txn = transaction_test_helpers::get_write_set_txn(
             *sender.address(),
             0,
-            sender.account().privkey.clone(),
+            &sender.account().privkey,
             sender.account().pubkey.clone(),
             None,
         )

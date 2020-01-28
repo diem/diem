@@ -97,7 +97,7 @@ fn test_validate_transaction() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
     );
@@ -121,7 +121,7 @@ fn test_validate_invalid_signature() {
     let transaction = transaction_test_helpers::get_test_unchecked_txn(
         address,
         1,
-        other_private_key,
+        &other_private_key,
         key.public_key(),
         Some(program),
     );
@@ -140,7 +140,7 @@ fn test_validate_known_script_too_large_args() {
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(Script::new(vec![42; MAX_TRANSACTION_SIZE_IN_BYTES], vec![])), /* generate a
                                                                              * program with args
@@ -166,7 +166,7 @@ fn test_validate_max_gas_units_above_max() {
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         None,
         0,
@@ -189,7 +189,7 @@ fn test_validate_max_gas_units_below_min() {
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         None,
         0,
@@ -212,7 +212,7 @@ fn test_validate_max_gas_price_above_bounds() {
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         None,
         0,
@@ -239,7 +239,7 @@ fn test_validate_max_gas_price_below_bounds() {
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
         0,
@@ -261,13 +261,8 @@ fn test_validate_unknown_script() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let transaction = transaction_test_helpers::get_test_signed_txn(
-        address,
-        1,
-        key.clone(),
-        key.public_key(),
-        None,
-    );
+    let transaction =
+        transaction_test_helpers::get_test_signed_txn(address, 1, &key, key.public_key(), None);
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
@@ -286,7 +281,7 @@ fn test_validate_module_publishing() {
     let transaction = transaction_test_helpers::get_test_signed_module_publishing_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Module::new(vec![]),
     );
@@ -310,7 +305,7 @@ fn test_validate_invalid_auth_key() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        other_private_key,
+        &other_private_key,
         other_public_key,
         Some(program),
     );
@@ -330,7 +325,7 @@ fn test_validate_balance_below_gas_fee() {
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
         0,
@@ -359,7 +354,7 @@ fn test_validate_account_doesnt_exist() {
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
         0,
@@ -385,7 +380,7 @@ fn test_validate_sequence_number_too_new() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
     );
@@ -406,7 +401,7 @@ fn test_validate_invalid_arguments() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
     );
@@ -423,14 +418,9 @@ fn test_validate_non_genesis_write_set() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let transaction = transaction_test_helpers::get_write_set_txn(
-        address,
-        1,
-        key.clone(),
-        key.public_key(),
-        None,
-    )
-    .into_inner();
+    let transaction =
+        transaction_test_helpers::get_write_set_txn(address, 1, &key, key.public_key(), None)
+            .into_inner();
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();

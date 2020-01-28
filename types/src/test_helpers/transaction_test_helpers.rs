@@ -18,7 +18,7 @@ const MAX_GAS_PRICE: u64 = 1;
 pub fn get_test_signed_module_publishing_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: Ed25519PrivateKey,
+    private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     module: Module,
 ) -> SignedTransaction {
@@ -45,7 +45,7 @@ pub fn get_test_signed_module_publishing_transaction(
 pub fn get_test_signed_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: Ed25519PrivateKey,
+    private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     script: Option<Script>,
     expiration_time: u64,
@@ -70,7 +70,7 @@ pub fn get_test_signed_transaction(
 pub fn get_test_unchecked_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: Ed25519PrivateKey,
+    private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     script: Option<Script>,
     expiration_time: u64,
@@ -96,7 +96,7 @@ pub fn get_test_unchecked_transaction(
 pub fn get_test_signed_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: Ed25519PrivateKey,
+    private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     script: Option<Script>,
 ) -> SignedTransaction {
@@ -120,7 +120,7 @@ pub fn get_test_signed_txn(
 pub fn get_test_unchecked_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: Ed25519PrivateKey,
+    private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     script: Option<Script>,
 ) -> SignedTransaction {
@@ -148,7 +148,7 @@ pub fn placeholder_script() -> Script {
 pub fn get_write_set_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: Ed25519PrivateKey,
+    private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     write_set: Option<WriteSet>,
 ) -> SignatureCheckedTransaction {
