@@ -3,9 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 set -e
 
-aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
-ssh ssh.cluster-test-ci.aws.hlw3truzy4ls.com echo "ssh ok" >/dev/null || (echo "Failed to ssh to cluster test instance. Try renew corp canal cert with cc-certs"; exit 1)
-
 PR=""
 WORKSPACE="cluster-test-ci"
 
@@ -44,6 +41,11 @@ then
       exit 1
 fi
 
+JUMPHOST=ssh.${WORKSPACE}.aws.hlw3truzy4ls.com
+
+aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
+ssh $JUMPHOST echo "ssh ok" >/dev/null || (echo "Failed to ssh to jump host $JUMPHOST. Try renew corp canal cert with cc-certs"; exit 1)
+
 if [ "$PR" = "MASTER" ]; then
     TAG=master
 else
@@ -51,13 +53,13 @@ else
     TAG=dev_${USER}_pull_${PR}
 fi
 
-echo "Build succeed, will use tag $TAG"
+echo "Will use tag $TAG"
 echo "**********"
-echo "Dashboard: https://fburl.com/os3pb0ot"
+echo "Dashboard: http://prometheus.${WORKSPACE}.aws.hlw3truzy4ls.com:9091/"
 echo "Logs:"
 echo " * ssh ssh.${WORKSPACE}.aws.hlw3truzy4ls.com"
 echo " * ssh-peer"
 echo " * tail -f /data/libra/libra.log"
 echo "**********"
 
-ssh -t ssh.cluster-test-ci.aws.hlw3truzy4ls.com ssh -i /libra_rsa ec2-user@ct.priv.cluster-test-ci.aws.hlw3truzy4ls.com REMOTE_USER=$USER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" --deploy $TAG $*
+ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com REMOTE_USER=$USER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" --deploy $TAG $*
