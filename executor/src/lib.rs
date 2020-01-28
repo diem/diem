@@ -16,8 +16,7 @@ use libra_config::config::VMConfig;
 use libra_crypto::{
     hash::{
         CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher,
-        ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID,
-        SPARSE_MERKLE_PLACEHOLDER_HASH,
+        ACCUMULATOR_PLACEHOLDER_HASH, PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
@@ -351,13 +350,7 @@ where
         // We create `PRE_GENESIS_BLOCK_ID` as the parent of the genesis block.
         let pre_genesis_trees = ExecutedTrees::new_empty();
         let output = self
-            .execute_block(
-                genesis_txns.clone(),
-                &pre_genesis_trees,
-                &pre_genesis_trees,
-                *PRE_GENESIS_BLOCK_ID,
-                *GENESIS_BLOCK_ID,
-            )
+            .execute_block(genesis_txns.clone(), &pre_genesis_trees, &pre_genesis_trees)
             .expect("Failed to execute genesis block.");
 
         let root_hash = output.accu_root();
@@ -390,14 +383,7 @@ where
         transactions: Vec<Transaction>,
         parent_trees: &ExecutedTrees,
         committed_trees: &ExecutedTrees,
-        parent_id: HashValue,
-        id: HashValue,
     ) -> Result<ProcessedVMOutput> {
-        debug!(
-            "Received request to execute block. Parent id: {:x}. Id: {:x}.",
-            parent_id, id
-        );
-
         let _timer = OP_COUNTERS.timer("block_execute_time_s");
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
