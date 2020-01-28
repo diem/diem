@@ -1,4 +1,17 @@
 [
+  %{ if logstash }
+    {
+      "name": "logstash",
+      "image": "${logstash_image}${logstash_version}",
+      "environment": [{"name": "LOGSTASH_CONFIG", "value": "${logstash_config}"}],
+      "cpu": 384,
+      "memory": 1024,
+      "essential": false,
+      "mountPoints": [
+          {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
+      ]
+  },
+  %{ endif }
     {
         "name": "validator",
         "image": "${image}${image_version}",
