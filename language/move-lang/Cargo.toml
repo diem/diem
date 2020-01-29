@@ -20,10 +20,19 @@ move-bytecode-verifier = { path = "../bytecode-verifier", package = "bytecode-ve
 libra-types = { path = "../../types" }
 borrow-graph = { path = "../borrow-graph" }
 
+[dev-dependencies]
+anyhow = "1.0"
+functional-tests = { path = "../functional-tests", version = "0.1.0" }
+tempfile = "3.1.0"
+
 [[test]]
 name = "move_check_testsuite"
 harness = false
 
 [[test]]
 name = "stdlib_sanity_check"
+harness = false
+
+[[test]]
+name = "functional_testsuite"
 harness = false

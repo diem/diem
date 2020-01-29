@@ -26,20 +26,17 @@ impl std::error::Error for StringError {
     }
 }
 
-pub fn stdlib_files() -> Vec<&'static str> {
-    let mut files: Vec<&'static str> = vec![];
+pub fn stdlib_files() -> Vec<String> {
     let dirfiles = datatest_stable::utils::iterate_directory(Path::new(STD_LIB));
-    let filtered = dirfiles.filter(|path| {
-        path.extension()
-            .map(|ext| ext.to_str().map(|s| s == "move").unwrap_or(false))
-            .unwrap_or(false)
-    });
-    for path in filtered {
-        let s: String = path.into_os_string().into_string().unwrap();
-        let s: &'static str = Box::leak(Box::new(s));
-        files.push(s)
-    }
-    files
+    dirfiles
+        .flat_map(|path| {
+            if path.extension()?.to_str()? == "move" {
+                path.into_os_string().into_string().ok()
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 pub fn read_env_var(v: &str) -> String {
