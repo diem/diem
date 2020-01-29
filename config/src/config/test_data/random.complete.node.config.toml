@@ -30,8 +30,6 @@ public_metrics_server_port = 9102
 address = "0.0.0.0"
 
 [execution]
-address = "localhost"
-port = 6183
 genesis_file_location = ""
 
 [logger]
