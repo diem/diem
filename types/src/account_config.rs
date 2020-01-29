@@ -4,21 +4,16 @@
 use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
-    account_state_blob::AccountStateBlob,
     byte_array::ByteArray,
     event::EventHandle,
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Result};
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::BTreeMap,
-    convert::{TryFrom, TryInto},
-};
 
 // LibraCoin
 static COIN_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("LibraCoin").unwrap());
@@ -149,14 +144,6 @@ impl AccountResource {
         }
     }
 
-    /// Given an account map (typically from storage) retrieves the Account resource associated.
-    pub fn make_from(account_map: &BTreeMap<Vec<u8>, Vec<u8>>) -> Result<Self> {
-        match account_map.get(&*ACCOUNT_RESOURCE_PATH) {
-            Some(bytes) => lcs::from_bytes(bytes).map_err(Into::into),
-            None => bail!("No data for {:?}", ACCOUNT_RESOURCE_PATH),
-        }
-    }
-
     /// Return the sequence_number field for the given AccountResource
     pub fn sequence_number(&self) -> u64 {
         self.sequence_number
@@ -200,15 +187,6 @@ impl AccountResource {
         } else {
             bail!("Unrecognized query path: {:?}", query_path);
         }
-    }
-}
-
-impl TryFrom<&AccountStateBlob> for AccountResource {
-    type Error = Error;
-
-    fn try_from(account_state_blob: &AccountStateBlob) -> Result<Self> {
-        let account_btree = account_state_blob.try_into()?;
-        AccountResource::make_from(&account_btree)
     }
 }
 

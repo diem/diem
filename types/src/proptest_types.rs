@@ -41,6 +41,7 @@ use proptest::{
     prelude::*,
 };
 use proptest_derive::Arbitrary;
+use std::convert::TryFrom;
 use std::{
     borrow::Cow,
     iter::{FromIterator, Iterator},
@@ -678,7 +679,7 @@ impl AccountStateBlobGen {
         let account_resource = self
             .account_resource_gen
             .materialize(account_index, universe);
-        AccountStateBlob::from(account_resource)
+        AccountStateBlob::try_from(&account_resource).unwrap()
     }
 }
 

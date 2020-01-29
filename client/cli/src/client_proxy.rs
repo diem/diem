@@ -10,6 +10,7 @@ use libra_crypto::{
 };
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
+use libra_types::account_state::AccountState;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use libra_types::waypoint::Waypoint;
 use libra_types::{
@@ -34,7 +35,7 @@ use num_traits::{
 };
 use rust_decimal::Decimal;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     convert::TryFrom,
     fmt, fs,
     io::{stdout, Write},
@@ -567,8 +568,8 @@ impl ClientProxy {
         for path in paths {
             if path.address != core_code_address() {
                 if let (Some(blob), _) = self.client.get_account_blob(path.address)? {
-                    let map = BTreeMap::<Vec<u8>, Vec<u8>>::try_from(&blob)?;
-                    if let Some(code) = map.get(&path.path) {
+                    let account_state = AccountState::try_from(&blob)?;
+                    if let Some(code) = account_state.get(&path.path) {
                         dependencies.push(code.clone());
                     }
                 }
