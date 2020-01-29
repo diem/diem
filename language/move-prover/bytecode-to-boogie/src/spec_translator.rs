@@ -202,7 +202,7 @@ impl<'env> SpecTranslator<'env> {
                 )
             }
             SpecExp::Dereference(loc) => self.translate_dref(loc),
-            SpecExp::Reference(loc) => self.translate_dref(loc),
+            SpecExp::Reference(loc) => self.translate_location_as_reference(loc),
             SpecExp::Not(expr) => {
                 let BoogieExpr(s, t) = self.translate_expr(expr);
                 BoogieExpr(
@@ -405,8 +405,8 @@ impl<'env> SpecTranslator<'env> {
         match loc {
             StorageLocation::Formal(name) => {
                 let BoogieExpr(s, t) = self.translate_param(name);
-                if let GlobalType::Reference(_) | GlobalType::MutableReference(_) = t {
-                    BoogieExpr(s, GlobalType::Reference(Box::new(t)))
+                if let GlobalType::Reference(d) | GlobalType::MutableReference(d) = t {
+                    BoogieExpr(s, GlobalType::Reference(Box::new(*d)))
                 } else {
                     self.error(
                         &format!("`{}` expected to be a reference", name),
