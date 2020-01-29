@@ -44,7 +44,7 @@ pub struct HealthCheckerNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
-    let (sender, receiver) = network.add_protocol_handler(
+    let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
         vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)],
         vec![],
         QueueStyle::LIFO,
@@ -52,7 +52,7 @@ pub fn add_to_network(
     );
     (
         HealthCheckerNetworkSender::new(sender),
-        HealthCheckerNetworkEvents::new(receiver),
+        HealthCheckerNetworkEvents::new(receiver, control_notifs_rx),
     )
 }
 
@@ -101,7 +101,7 @@ impl HealthCheckerNetworkSender {
 mod tests {
     use super::*;
     use crate::{
-        peer_manager::{PeerManagerNotification, PeerManagerRequest},
+        peer_manager::{conn_status_channel, PeerManagerNotification, PeerManagerRequest},
         protocols::rpc::InboundRpcRequest,
         utils::MessageExt,
         validator_network::Event,
@@ -114,9 +114,10 @@ mod tests {
     // `HealthCheckerNetworkEvents` should deserialize inbound RPC requests
     #[test]
     fn test_health_checker_inbound_rpc() {
+        let (_, control_notifs_rx) = conn_status_channel::new();
         let (mut network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let mut stream = HealthCheckerNetworkEvents::new(network_reqs_rx);
+        let mut stream = HealthCheckerNetworkEvents::new(network_reqs_rx, control_notifs_rx);
 
         // build rpc request
         let req_msg = Ping { nonce: 1234 };
@@ -151,7 +152,6 @@ mod tests {
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, expected_event);
     }
-
     // When health_checker sends an rpc request, network should get a
     // `PeerManagerRequest::SendRpc` with the serialized request.
     #[test]

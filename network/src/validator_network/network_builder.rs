@@ -14,16 +14,16 @@ use crate::{
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
     counters,
     peer_manager::{
-        PeerManager, PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
+        conn_status_channel, PeerManager, PeerManagerNotification, PeerManagerRequest,
+        PeerManagerRequestSender,
     },
     proto::PeerInfo,
     protocols::{discovery::Discovery, health_checker::HealthChecker, identity::Identity},
     transport::*,
     validator_network, ProtocolId,
 };
-use channel;
-use channel::libra_channel;
 use channel::message_queues::QueueStyle;
+use channel::{self, libra_channel};
 use futures::stream::StreamExt;
 use libra_config::config::RoleType;
 use libra_crypto::{
@@ -58,8 +58,8 @@ pub const INBOUND_RPC_TIMEOUT_MS: u64 = 10_000;
 pub const MAX_CONCURRENT_OUTBOUND_RPCS: u32 = 100;
 pub const MAX_CONCURRENT_INBOUND_RPCS: u32 = 100;
 pub const PING_FAILURES_TOLERATED: u64 = 10;
-pub const MAX_CONCURRENT_NETWORK_REQS: u32 = 100;
-pub const MAX_CONCURRENT_NETWORK_NOTIFS: u32 = 100;
+pub const MAX_CONCURRENT_NETWORK_REQS: usize = 100;
+pub const MAX_CONCURRENT_NETWORK_NOTIFS: usize = 100;
 pub const MAX_CONNECTION_DELAY_MS: u64 = 10 * 60 * 1000 /* 10 minutes */;
 
 /// The type of the transport layer, i.e., running on memory or TCP stream,
@@ -96,8 +96,7 @@ pub struct NetworkBuilder {
     ping_failures_tolerated: u64,
     upstream_handlers:
         HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
-    connection_event_handlers:
-        Vec<libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+    connection_event_handlers: Vec<conn_status_channel::Sender>,
     pm_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
     pm_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
@@ -105,8 +104,8 @@ pub struct NetworkBuilder {
     inbound_rpc_timeout_ms: u64,
     max_concurrent_outbound_rpcs: u32,
     max_concurrent_inbound_rpcs: u32,
-    max_concurrent_network_reqs: u32,
-    max_concurrent_network_notifs: u32,
+    max_concurrent_network_reqs: usize,
+    max_concurrent_network_notifs: usize,
     max_connection_delay_ms: u64,
     signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
     enable_remote_authentication: bool,
@@ -255,7 +254,7 @@ impl NetworkBuilder {
     }
 
     /// The maximum number of concurrent NetworkRequests we will service in NetworkProvider.
-    pub fn max_concurrent_network_reqs(&mut self, max_concurrent_network_reqs: u32) -> &mut Self {
+    pub fn max_concurrent_network_reqs(&mut self, max_concurrent_network_reqs: usize) -> &mut Self {
         self.max_concurrent_network_reqs = max_concurrent_network_reqs;
         self
     }
@@ -264,7 +263,7 @@ impl NetworkBuilder {
     /// NetworkProvider.
     pub fn max_concurrent_network_notifs(
         &mut self,
-        max_concurrent_network_notifs: u32,
+        max_concurrent_network_notifs: usize,
     ) -> &mut Self {
         self.max_concurrent_network_notifs = max_concurrent_network_notifs;
         self
@@ -314,6 +313,7 @@ impl NetworkBuilder {
     ) -> (
         libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
         libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        conn_status_channel::Receiver,
     ) {
         self.direct_send_protocols
             .extend(direct_send_protocols.clone());
@@ -331,22 +331,23 @@ impl NetworkBuilder {
             self.upstream_handlers
                 .insert(protocol, network_notifs_tx.clone());
         }
+        let (control_notifs_tx, control_notifs_rx) = conn_status_channel::new();
         // Auto-subscribe all application level handlers to connection events.
-        self.connection_event_handlers.push(network_notifs_tx);
-        (self.pm_reqs_tx.clone(), network_notifs_rx)
+        self.connection_event_handlers.push(control_notifs_tx);
+        (
+            self.pm_reqs_tx.clone(),
+            network_notifs_rx,
+            control_notifs_rx,
+        )
     }
 
     pub fn add_connection_event_listener(
         &mut self,
     ) -> (
         libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
-        libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        conn_status_channel::Receiver,
     ) {
-        let (tx, rx) = libra_channel::new(
-            QueueStyle::FIFO,
-            NonZeroUsize::new(self.channel_size).unwrap(),
-            None,
-        );
+        let (tx, rx) = conn_status_channel::new();
         self.connection_event_handlers.push(tx);
         (self.pm_reqs_tx.clone(), rx)
     }
@@ -492,6 +493,8 @@ impl NetworkBuilder {
             HashSet::from_iter(self.direct_send_protocols.into_iter()),
             self.upstream_handlers,
             self.connection_event_handlers,
+            self.max_concurrent_network_reqs,
+            self.max_concurrent_network_notifs,
             self.channel_size,
         );
         let listen_addr = peer_mgr.listen_addr().clone();

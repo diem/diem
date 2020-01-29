@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::peer_manager::{PeerManagerNotification, PeerManagerRequest};
+use crate::peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest};
 use crate::proto::DiscoveryMsg;
 use crate::protocols::direct_send::Message;
 use crate::validator_network::DISCOVERY_DIRECT_SEND_PROTOCOL;
@@ -80,6 +80,7 @@ fn setup_discovery(
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     channel::Receiver<ConnectivityRequest>,
     libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    conn_status_channel::Sender,
     channel::Sender<()>,
 ) {
     let (network_reqs_tx, network_reqs_rx) =
@@ -87,6 +88,7 @@ fn setup_discovery(
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(1);
     let (network_notifs_tx, network_notifs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (control_notifs_tx, control_notifs_rx) = conn_status_channel::new();
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let role = RoleType::Validator;
     let discovery = {
@@ -99,7 +101,7 @@ fn setup_discovery(
             trusted_peers,
             ticker_rx,
             DiscoveryNetworkSender::new(network_reqs_tx),
-            DiscoveryNetworkEvents::new(network_notifs_rx),
+            DiscoveryNetworkEvents::new(network_notifs_rx, control_notifs_rx),
             conn_mgr_reqs_tx,
         )
     };
@@ -108,6 +110,7 @@ fn setup_discovery(
         network_reqs_rx,
         conn_mgr_reqs_rx,
         network_notifs_tx,
+        control_notifs_tx,
         ticker_tx,
     )
 }
@@ -165,7 +168,7 @@ fn inbound() {
     ));
 
     // Setup discovery.
-    let (_, mut conn_mgr_reqs_rx, mut network_notifs_tx, _) = setup_discovery(
+    let (_, mut conn_mgr_reqs_rx, mut network_notifs_tx, _, _) = setup_discovery(
         &mut rt,
         peer_id,
         addrs,
@@ -305,29 +308,30 @@ fn outbound() {
     ));
 
     // Setup discovery.
-    let (mut network_reqs_rx, _conn_mgr_req_rx, mut network_notifs_tx, mut ticker_tx) =
-        setup_discovery(
-            &mut rt,
-            peer_id,
-            addrs.clone(),
-            seed_peer_id,
-            seed_peer_info.clone(),
-            self_signer,
-            trusted_peers,
-        );
+    let (
+        mut network_reqs_rx,
+        _conn_mgr_req_rx,
+        _network_notifs_tx,
+        mut control_notifs_tx,
+        mut ticker_tx,
+    ) = setup_discovery(
+        &mut rt,
+        peer_id,
+        addrs.clone(),
+        seed_peer_id,
+        seed_peer_info.clone(),
+        self_signer,
+        trusted_peers,
+    );
 
     // Fake connectivity manager and dialer.
     let f_network = async move {
-        // Notify discovery actor of connection to seed peer.
-        let key = (
-            seed_peer_id,
-            ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
-        );
         let (delivered_tx, delivered_rx) = oneshot::channel();
-        network_notifs_tx
+        // Notify discovery actor of connection to seed peer.
+        control_notifs_tx
             .push_with_feedback(
-                key.clone(),
-                PeerManagerNotification::NewPeer(
+                seed_peer_id,
+                peer_manager::ConnectionStatusNotification::NewPeer(
                     seed_peer_id,
                     Multiaddr::try_from(seed_peer_info.addrs.get(0).unwrap().clone()).unwrap(),
                 ),
@@ -382,7 +386,7 @@ fn addr_update_includes_seed_addrs() {
     ));
 
     // Setup discovery.
-    let (_, mut conn_mgr_reqs_rx, mut network_notifs_tx, _) = setup_discovery(
+    let (_, mut conn_mgr_reqs_rx, mut network_notifs_tx, _, _) = setup_discovery(
         &mut rt,
         peer_id,
         addrs,

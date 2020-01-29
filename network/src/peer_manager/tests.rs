@@ -113,6 +113,8 @@ fn build_test_peer_manager(
         HashSet::new(),                                               /* direct-send protocols */
         HashMap::from_iter([(hello_protocol, hello_tx)].iter().cloned()),
         vec![],
+        1024, /* max concurrent network requests */
+        1024, /* max concurrent network notifications */
         1024, /* channel size */
     );
 

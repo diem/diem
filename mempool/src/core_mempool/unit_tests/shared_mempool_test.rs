@@ -14,7 +14,10 @@ use futures::{
 use libra_config::config::{NetworkConfig, NodeConfig};
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
-    peer_manager::{PeerManagerNotification, PeerManagerRequest},
+    peer_manager::{
+        conn_status_channel, ConnectionStatusNotification, PeerManagerNotification,
+        PeerManagerRequest,
+    },
     proto::MempoolSyncMsg,
     validator_network::{MempoolNetworkEvents, MempoolNetworkSender},
     DisconnectReason, ProtocolId,
@@ -38,6 +41,7 @@ struct SharedMempoolNetwork {
         HashMap<PeerId, libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
     network_notifs_txs:
         HashMap<PeerId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+    network_conn_event_notifs_txs: HashMap<PeerId, conn_status_channel::Sender>,
     runtimes: HashMap<PeerId, Runtime>,
     subscribers: HashMap<PeerId, UnboundedReceiver<SharedMempoolNotification>>,
     timers: HashMap<PeerId, UnboundedSender<SyncEvent>>,
@@ -61,8 +65,9 @@ impl SharedMempoolNetwork {
                 libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
             let (network_notifs_tx, network_notifs_rx) =
                 libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            let (conn_status_tx, conn_status_rx) = conn_status_channel::new();
             let network_sender = MempoolNetworkSender::new(network_reqs_tx);
-            let network_events = MempoolNetworkEvents::new(network_notifs_rx);
+            let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_status_rx);
             let (sender, subscriber) = unbounded();
             let (timer_sender, timer_receiver) = unbounded();
             let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
@@ -92,6 +97,8 @@ impl SharedMempoolNetwork {
             smp.mempools.insert(peer_id, mempool);
             smp.network_reqs_rxs.insert(peer_id, network_reqs_rx);
             smp.network_notifs_txs.insert(peer_id, network_notifs_tx);
+            smp.network_conn_event_notifs_txs
+                .insert(peer_id, conn_status_tx);
             smp.subscribers.insert(peer_id, subscriber);
             smp.timers.insert(peer_id, timer_sender);
             smp.runtimes.insert(peer_id, runtime);
@@ -107,19 +114,9 @@ impl SharedMempoolNetwork {
         }
     }
 
-    fn send_event(&mut self, peer: &PeerId, notif: PeerManagerNotification) {
-        let network_notifs_tx = self.network_notifs_txs.get_mut(peer).unwrap();
-        network_notifs_tx
-            .push(
-                (
-                    *peer,
-                    ProtocolId::from_static(
-                        network::validator_network::MEMPOOL_DIRECT_SEND_PROTOCOL,
-                    ),
-                ),
-                notif,
-            )
-            .unwrap();
+    fn send_connection_event(&mut self, peer: &PeerId, notif: ConnectionStatusNotification) {
+        let conn_notifs_tx = self.network_conn_event_notifs_txs.get_mut(peer).unwrap();
+        conn_notifs_tx.push(*peer, notif).unwrap();
         self.wait_for_event(peer, SharedMempoolNotification::PeerStateChange);
     }
 
@@ -201,9 +198,9 @@ fn test_basic_flow() {
     );
 
     // A discovers new peer B
-    smp.send_event(
+    smp.send_connection_event(
         &peer_a,
-        PeerManagerNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
     );
 
     for seq in 0..3 {
@@ -233,9 +230,9 @@ fn test_metric_cache_ignore_shared_txns() {
     assert_eq!(smp.exist_in_metrics_cache(&peer_a, &txns[2]), true);
 
     // Let peer_a discover new peer_b.
-    smp.send_event(
+    smp.send_connection_event(
         &peer_a,
-        PeerManagerNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
     );
     for txn in txns.iter().take(3) {
         // Let peer_a share txns with peer_b
@@ -256,13 +253,13 @@ fn test_interruption_in_sync() {
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 0, 1)]);
 
     // A discovers 2 peers
-    smp.send_event(
+    smp.send_connection_event(
         &peer_a,
-        PeerManagerNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
     );
-    smp.send_event(
+    smp.send_connection_event(
         &peer_a,
-        PeerManagerNotification::NewPeer(*peer_c, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_c, Multiaddr::empty()),
     );
 
     // make sure it delivered first transaction to both nodes
@@ -276,9 +273,9 @@ fn test_interruption_in_sync() {
     assert_eq!(peers, expected_peers);
 
     // A loses connection to B
-    smp.send_event(
+    smp.send_connection_event(
         &peer_a,
-        PeerManagerNotification::LostPeer(
+        ConnectionStatusNotification::LostPeer(
             *peer_b,
             Multiaddr::empty(),
             DisconnectReason::ConnectionLost,
@@ -297,9 +294,9 @@ fn test_interruption_in_sync() {
     assert_eq!(txn.sequence_number(), 2);
 
     // A reconnects to B
-    smp.send_event(
+    smp.send_connection_event(
         &peer_a,
-        PeerManagerNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
     );
 
     // B should receive transaction 2
@@ -317,9 +314,9 @@ fn test_ready_transactions() {
         vec![TestTransaction::new(1, 0, 1), TestTransaction::new(1, 2, 1)],
     );
     // first message delivery
-    smp.send_event(
+    smp.send_connection_event(
         &peer_a,
-        PeerManagerNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
     );
     smp.deliver_message(&peer_a);
 
@@ -339,13 +336,13 @@ fn test_broadcast_self_transactions() {
     smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 1)]);
 
     // A and B discover each other
-    smp.send_event(
+    smp.send_connection_event(
         &peer_a,
-        PeerManagerNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
     );
-    smp.send_event(
+    smp.send_connection_event(
         &peer_b,
-        PeerManagerNotification::NewPeer(*peer_a, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_a, Multiaddr::empty()),
     );
 
     // A sends txn to B
@@ -372,13 +369,13 @@ fn test_broadcast_dependencies() {
     smp.add_txns(&peer_b, vec![TestTransaction::new(0, 1, 1)]);
 
     // A and B discover each other
-    smp.send_event(
+    smp.send_connection_event(
         &peer_a,
-        PeerManagerNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
     );
-    smp.send_event(
+    smp.send_connection_event(
         &peer_b,
-        PeerManagerNotification::NewPeer(*peer_a, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_a, Multiaddr::empty()),
     );
 
     // B receives 0
@@ -400,13 +397,13 @@ fn test_broadcast_updated_transaction() {
     smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 1)]);
 
     // A and B discover each other
-    smp.send_event(
+    smp.send_connection_event(
         &peer_a,
-        PeerManagerNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
     );
-    smp.send_event(
+    smp.send_connection_event(
         &peer_b,
-        PeerManagerNotification::NewPeer(*peer_a, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_a, Multiaddr::empty()),
     );
 
     // B receives 0

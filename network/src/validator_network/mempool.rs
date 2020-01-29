@@ -42,7 +42,7 @@ pub struct MempoolNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (MempoolNetworkSender, MempoolNetworkEvents) {
-    let (sender, receiver) = network.add_protocol_handler(
+    let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
         vec![],
         vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)],
         QueueStyle::LIFO,
@@ -50,7 +50,7 @@ pub fn add_to_network(
     );
     (
         MempoolNetworkSender::new(sender),
-        MempoolNetworkEvents::new(receiver),
+        MempoolNetworkEvents::new(receiver, control_notifs_rx),
     )
 }
 
@@ -75,7 +75,7 @@ impl MempoolNetworkSender {
 mod tests {
     use super::*;
     use crate::{
-        peer_manager::{PeerManagerNotification, PeerManagerRequest},
+        peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest},
         protocols::direct_send::Message,
         utils::MessageExt,
         validator_network::Event,
@@ -95,9 +95,10 @@ mod tests {
     // `MempoolNetworkEvents` stream.
     #[test]
     fn test_mempool_network_events() {
+        let (mut control_notifs_tx, control_notifs_rx) = conn_status_channel::new();
         let (mut mempool_tx, mempool_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let mut stream = MempoolNetworkEvents::new(mempool_rx);
+        let mut stream = MempoolNetworkEvents::new(mempool_rx, control_notifs_rx);
 
         let peer_id = PeerId::random();
         let mempool_msg = new_test_sync_msg(peer_id);
@@ -118,14 +119,22 @@ mod tests {
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, Event::Message((peer_id, mempool_msg)));
 
-        mempool_tx
-            .push(
-                (peer_id, ProtocolId::default()),
-                PeerManagerNotification::NewPeer(peer_id, Multiaddr::empty()),
-            )
-            .unwrap();
-        let event = block_on(stream.next()).unwrap().unwrap();
-        assert_eq!(event, Event::NewPeer(peer_id));
+        let f = async {
+            // Network notifies mempool about new peer.
+            control_notifs_tx
+                .push(
+                    peer_id,
+                    peer_manager::ConnectionStatusNotification::NewPeer(
+                        peer_id,
+                        Multiaddr::empty(),
+                    ),
+                )
+                .unwrap();
+            // Mempool should receive notification.
+            let event = stream.next().await.unwrap().unwrap();
+            assert_eq!(event, Event::NewPeer(peer_id));
+        };
+        block_on(f);
     }
 
     // `MempoolNetworkSender` should serialize outbound messages
