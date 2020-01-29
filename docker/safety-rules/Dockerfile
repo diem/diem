@@ -17,16 +17,17 @@ FROM toolchain AS builder
 COPY . /libra
 
 RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
-RUN strip target/release/cli
 
 ### Production Image ###
 FROM debian:buster AS prod
 
-RUN mkdir -p /opt/libra/bin /opt/libra/etc
-COPY --from=builder /libra/target/release/cli /opt/libra/bin/libra_client
+RUN addgroup --system --gid 6180 libra && adduser --system --ingroup libra --no-create-home --uid 6180 libra
 
-ENTRYPOINT ["/opt/libra/bin/libra_client"]
-CMD ["--host", "ac.testnet.libra.org", "--port", "8000"]
+RUN mkdir -p /opt/libra/bin
+COPY --from=builder /libra/target/release/safety-rules /opt/libra/bin
+
+ENV RUST_BACKTRACE 1
+CMD /opt/libra/bin/safety-rules
 
 ARG BUILD_DATE
 ARG GIT_REV
