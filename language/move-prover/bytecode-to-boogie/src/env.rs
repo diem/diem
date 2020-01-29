@@ -785,7 +785,18 @@ impl<'env> FunctionEnv<'env> {
         if (idx as usize) < self.data.arg_names.len() {
             return self.data.arg_names[idx as usize].to_string();
         }
-        format!("t{}", idx)
+        // Try to obtain name from source map.
+        if let Ok(fmap) = self
+            .module_env
+            .data
+            .source_map
+            .get_function_source_map(self.data.def_idx)
+        {
+            if let Some((ident, _)) = fmap.get_local_name(idx as u64) {
+                return ident.to_string();
+            }
+        }
+        format!("__t{}", idx)
     }
 
     /// Returns specification conditions associated with this function.

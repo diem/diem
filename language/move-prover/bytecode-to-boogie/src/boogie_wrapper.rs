@@ -42,10 +42,6 @@ pub enum BoogieErrorKind {
     Verification,
 }
 
-pub struct BoogieLocation {
-    pub position: Position,
-}
-
 /// A boogie error.
 pub struct BoogieError {
     pub kind: BoogieErrorKind,
@@ -123,7 +119,9 @@ impl<'env> BoogieWrapper<'env> {
     /// Helper to add a boogie error as a codespan Diagnostic.
     fn add_error(&self, error: &BoogieError, diags_on_target: &mut Vec<Diagnostic>) {
         let (index, location) = self.get_locations(error.position);
-        let on_source = location.is_some() && location.unwrap().0 != PSEUDO_PRELUDE_MODULE;
+        let on_source = error.kind == BoogieErrorKind::Verification
+            && location.is_some()
+            && location.unwrap().0 != PSEUDO_PRELUDE_MODULE;
         let label = Label::new_primary(if on_source {
             // Location is on original source.
             location.unwrap().1
@@ -138,7 +136,12 @@ impl<'env> BoogieWrapper<'env> {
                 diags_on_target.push(diag);
             }
         };
-        add_diag(Diagnostic::new(Severity::Error, &error.message).with_label(label));
+        let severity = if on_source {
+            Severity::Error
+        } else {
+            Severity::Bug
+        };
+        add_diag(Diagnostic::new(severity, &error.message).with_label(label));
         if error.kind == BoogieErrorKind::Verification && !error.execution_trace.is_empty() {
             let mut trace = error
                 .execution_trace

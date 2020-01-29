@@ -6,18 +6,18 @@
 
 // ** functions of module TestArithmetic
 
-procedure {:inline 1} TestArithmetic_add_two_number (x: Value, y: Value) returns (ret0: Value, ret1: Value)
+procedure {:inline 1} TestArithmetic_add_two_number (x: Value, y: Value) returns (__ret0: Value, __ret1: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // IntegerType()
+    var res: Value; // IntegerType()
+    var z: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -60,34 +60,34 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 8);
-    ret1 := GetLocal(__m, __frame + 9);
+    __ret0 := GetLocal(__m, __frame + 8);
+    __ret1 := GetLocal(__m, __frame + 9);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
-    ret1 := DefaultValue;
+    __ret0 := DefaultValue;
+    __ret1 := DefaultValue;
 }
 
-procedure TestArithmetic_add_two_number_verify (x: Value, y: Value) returns (ret0: Value, ret1: Value)
+procedure TestArithmetic_add_two_number_verify (x: Value, y: Value) returns (__ret0: Value, __ret1: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0, ret1 := TestArithmetic_add_two_number(x, y);
+    call __ret0, __ret1 := TestArithmetic_add_two_number(x, y);
 }
 
-procedure {:inline 1} TestArithmetic_multiple_ops (x: Value, y: Value, z: Value) returns (ret0: Value)
+procedure {:inline 1} TestArithmetic_multiple_ops (x: Value, y: Value, z: Value) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // IntegerType()
+    var res: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -130,46 +130,46 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 9);
+    __ret0 := GetLocal(__m, __frame + 9);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestArithmetic_multiple_ops_verify (x: Value, y: Value, z: Value) returns (ret0: Value)
+procedure TestArithmetic_multiple_ops_verify (x: Value, y: Value, z: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestArithmetic_multiple_ops(x, y, z);
+    call __ret0 := TestArithmetic_multiple_ops(x, y, z);
 }
 
 procedure {:inline 1} TestArithmetic_bool_ops (a: Value, b: Value) returns ()
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t2: Value; // BooleanType()
-    var t3: Value; // BooleanType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // BooleanType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // BooleanType()
-    var t10: Value; // BooleanType()
-    var t11: Value; // IntegerType()
-    var t12: Value; // IntegerType()
-    var t13: Value; // BooleanType()
-    var t14: Value; // IntegerType()
-    var t15: Value; // IntegerType()
-    var t16: Value; // BooleanType()
-    var t17: Value; // BooleanType()
-    var t18: Value; // BooleanType()
-    var t19: Value; // BooleanType()
-    var t20: Value; // BooleanType()
-    var t21: Value; // BooleanType()
-    var t22: Value; // IntegerType()
+    var c: Value; // BooleanType()
+    var d: Value; // BooleanType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // BooleanType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // BooleanType()
+    var __t10: Value; // BooleanType()
+    var __t11: Value; // IntegerType()
+    var __t12: Value; // IntegerType()
+    var __t13: Value; // BooleanType()
+    var __t14: Value; // IntegerType()
+    var __t15: Value; // IntegerType()
+    var __t16: Value; // BooleanType()
+    var __t17: Value; // BooleanType()
+    var __t18: Value; // BooleanType()
+    var __t19: Value; // BooleanType()
+    var __t20: Value; // BooleanType()
+    var __t21: Value; // BooleanType()
+    var __t22: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -269,29 +269,29 @@ procedure TestArithmetic_bool_ops_verify (a: Value, b: Value) returns ()
     call TestArithmetic_bool_ops(a, b);
 }
 
-procedure {:inline 1} TestArithmetic_arithmetic_ops (a: Value, b: Value) returns (ret0: Value, ret1: Value)
+procedure {:inline 1} TestArithmetic_arithmetic_ops (a: Value, b: Value) returns (__ret0: Value, __ret1: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // IntegerType()
-    var t10: Value; // IntegerType()
-    var t11: Value; // IntegerType()
-    var t12: Value; // IntegerType()
-    var t13: Value; // IntegerType()
-    var t14: Value; // IntegerType()
-    var t15: Value; // IntegerType()
-    var t16: Value; // BooleanType()
-    var t17: Value; // BooleanType()
-    var t18: Value; // IntegerType()
-    var t19: Value; // IntegerType()
-    var t20: Value; // IntegerType()
+    var c: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // IntegerType()
+    var __t10: Value; // IntegerType()
+    var __t11: Value; // IntegerType()
+    var __t12: Value; // IntegerType()
+    var __t13: Value; // IntegerType()
+    var __t14: Value; // IntegerType()
+    var __t15: Value; // IntegerType()
+    var __t16: Value; // BooleanType()
+    var __t17: Value; // BooleanType()
+    var __t18: Value; // IntegerType()
+    var __t19: Value; // IntegerType()
+    var __t20: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -377,33 +377,33 @@ Label_19:
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 20, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 19);
-    ret1 := GetLocal(__m, __frame + 20);
+    __ret0 := GetLocal(__m, __frame + 19);
+    __ret1 := GetLocal(__m, __frame + 20);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
-    ret1 := DefaultValue;
+    __ret0 := DefaultValue;
+    __ret1 := DefaultValue;
 }
 
-procedure TestArithmetic_arithmetic_ops_verify (a: Value, b: Value) returns (ret0: Value, ret1: Value)
+procedure TestArithmetic_arithmetic_ops_verify (a: Value, b: Value) returns (__ret0: Value, __ret1: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0, ret1 := TestArithmetic_arithmetic_ops(a, b);
+    call __ret0, __ret1 := TestArithmetic_arithmetic_ops(a, b);
 }
 
 procedure {:inline 1} TestArithmetic_overflow () returns ()
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
+    var x: Value; // IntegerType()
+    var y: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -453,12 +453,12 @@ procedure {:inline 1} TestArithmetic_underflow () returns ()
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
+    var x: Value; // IntegerType()
+    var y: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -508,12 +508,12 @@ procedure {:inline 1} TestArithmetic_div_by_zero () returns ()
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
+    var x: Value; // IntegerType()
+    var y: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;

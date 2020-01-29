@@ -33,11 +33,11 @@ ensures old(b#Boolean(ExistsResource(__m, TestSpecs_R_type_value(), a#Address(Ad
 
 {
     // declare local variables
-    var t0: Value; // AddressType()
-    var t1: Value; // BooleanType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // TestSpecs_R_type_value()
+    var __t0: Value; // AddressType()
+    var __t1: Value; // BooleanType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // TestSpecs_R_type_value()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -96,9 +96,9 @@ ensures old(b#Boolean(ExistsResource(__m, TestSpecs_R_type_value(), a#Address(Ad
 
 {
     // declare local variables
-    var t0: Value; // AddressType()
-    var t1: Value; // BooleanType()
-    var t2: Value; // IntegerType()
+    var __t0: Value; // AddressType()
+    var __t1: Value; // BooleanType()
+    var __t2: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;

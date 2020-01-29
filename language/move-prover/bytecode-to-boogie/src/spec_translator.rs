@@ -545,7 +545,7 @@ impl<'env> SpecTranslator<'env> {
                 BoogieExpr("<ret>".to_string(), GlobalType::U64),
             )
         } else {
-            BoogieExpr(format!("ret{}", index), return_types[index].clone())
+            BoogieExpr(format!("__ret{}", index), return_types[index].clone())
         }
     }
 

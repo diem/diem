@@ -37,62 +37,62 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
 {
     // declare local variables
-    var t1: Value; // Test3_T_type_value()
-    var t2: Reference; // ReferenceType(Test3_T_type_value())
-    var t3: Reference; // ReferenceType(IntegerType())
-    var t4: Reference; // ReferenceType(IntegerType())
-    var t5: Reference; // ReferenceType(IntegerType())
-    var t6: Reference; // ReferenceType(IntegerType())
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // IntegerType()
-    var t10: Value; // IntegerType()
-    var t11: Value; // Test3_T_type_value()
-    var t12: Reference; // ReferenceType(Test3_T_type_value())
-    var t13: Value; // BooleanType()
-    var t14: Reference; // ReferenceType(Test3_T_type_value())
-    var t15: Reference; // ReferenceType(IntegerType())
-    var t16: Reference; // ReferenceType(Test3_T_type_value())
-    var t17: Reference; // ReferenceType(IntegerType())
-    var t18: Value; // IntegerType()
-    var t19: Reference; // ReferenceType(IntegerType())
-    var t20: Value; // BooleanType()
-    var t21: Value; // BooleanType()
-    var t22: Reference; // ReferenceType(Test3_T_type_value())
-    var t23: Reference; // ReferenceType(IntegerType())
-    var t24: Reference; // ReferenceType(Test3_T_type_value())
-    var t25: Reference; // ReferenceType(IntegerType())
-    var t26: Value; // IntegerType()
-    var t27: Reference; // ReferenceType(IntegerType())
-    var t28: Reference; // ReferenceType(Test3_T_type_value())
-    var t29: Reference; // ReferenceType(IntegerType())
-    var t30: Reference; // ReferenceType(Test3_T_type_value())
-    var t31: Reference; // ReferenceType(IntegerType())
-    var t32: Reference; // ReferenceType(IntegerType())
-    var t33: Value; // IntegerType()
-    var t34: Reference; // ReferenceType(IntegerType())
-    var t35: Value; // IntegerType()
-    var t36: Value; // BooleanType()
-    var t37: Value; // IntegerType()
-    var t38: Value; // IntegerType()
-    var t39: Value; // BooleanType()
-    var t40: Value; // BooleanType()
-    var t41: Value; // IntegerType()
-    var t42: Value; // IntegerType()
-    var t43: Value; // IntegerType()
-    var t44: Value; // BooleanType()
-    var t45: Value; // BooleanType()
-    var t46: Value; // IntegerType()
-    var t47: Value; // IntegerType()
-    var t48: Value; // IntegerType()
-    var t49: Value; // BooleanType()
-    var t50: Value; // BooleanType()
-    var t51: Value; // IntegerType()
-    var t52: Value; // IntegerType()
-    var t53: Value; // IntegerType()
-    var t54: Value; // BooleanType()
-    var t55: Value; // BooleanType()
-    var t56: Value; // IntegerType()
+    var x: Value; // Test3_T_type_value()
+    var x_ref: Reference; // ReferenceType(Test3_T_type_value())
+    var f_or_g_ref: Reference; // ReferenceType(IntegerType())
+    var f_or_g_ref2: Reference; // ReferenceType(IntegerType())
+    var f_ref: Reference; // ReferenceType(IntegerType())
+    var g_ref: Reference; // ReferenceType(IntegerType())
+    var f: Value; // IntegerType()
+    var g: Value; // IntegerType()
+    var __t9: Value; // IntegerType()
+    var __t10: Value; // IntegerType()
+    var __t11: Value; // Test3_T_type_value()
+    var __t12: Reference; // ReferenceType(Test3_T_type_value())
+    var __t13: Value; // BooleanType()
+    var __t14: Reference; // ReferenceType(Test3_T_type_value())
+    var __t15: Reference; // ReferenceType(IntegerType())
+    var __t16: Reference; // ReferenceType(Test3_T_type_value())
+    var __t17: Reference; // ReferenceType(IntegerType())
+    var __t18: Value; // IntegerType()
+    var __t19: Reference; // ReferenceType(IntegerType())
+    var __t20: Value; // BooleanType()
+    var __t21: Value; // BooleanType()
+    var __t22: Reference; // ReferenceType(Test3_T_type_value())
+    var __t23: Reference; // ReferenceType(IntegerType())
+    var __t24: Reference; // ReferenceType(Test3_T_type_value())
+    var __t25: Reference; // ReferenceType(IntegerType())
+    var __t26: Value; // IntegerType()
+    var __t27: Reference; // ReferenceType(IntegerType())
+    var __t28: Reference; // ReferenceType(Test3_T_type_value())
+    var __t29: Reference; // ReferenceType(IntegerType())
+    var __t30: Reference; // ReferenceType(Test3_T_type_value())
+    var __t31: Reference; // ReferenceType(IntegerType())
+    var __t32: Reference; // ReferenceType(IntegerType())
+    var __t33: Value; // IntegerType()
+    var __t34: Reference; // ReferenceType(IntegerType())
+    var __t35: Value; // IntegerType()
+    var __t36: Value; // BooleanType()
+    var __t37: Value; // IntegerType()
+    var __t38: Value; // IntegerType()
+    var __t39: Value; // BooleanType()
+    var __t40: Value; // BooleanType()
+    var __t41: Value; // IntegerType()
+    var __t42: Value; // IntegerType()
+    var __t43: Value; // IntegerType()
+    var __t44: Value; // BooleanType()
+    var __t45: Value; // BooleanType()
+    var __t46: Value; // IntegerType()
+    var __t47: Value; // IntegerType()
+    var __t48: Value; // IntegerType()
+    var __t49: Value; // BooleanType()
+    var __t50: Value; // BooleanType()
+    var __t51: Value; // IntegerType()
+    var __t52: Value; // IntegerType()
+    var __t53: Value; // IntegerType()
+    var __t54: Value; // BooleanType()
+    var __t55: Value; // BooleanType()
+    var __t56: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -120,9 +120,9 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 11));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    call t12 := BorrowLoc(__frame + 1);
+    call __t12 := BorrowLoc(__frame + 1);
 
-    call t2 := CopyOrMoveRef(t12);
+    call x_ref := CopyOrMoveRef(__t12);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 13, __tmp);
@@ -130,28 +130,28 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __tmp := GetLocal(__m, __frame + 13);
     if (!b#Boolean(__tmp)) { goto Label_12; }
 
-    call t14 := CopyOrMoveRef(t2);
+    call __t14 := CopyOrMoveRef(x_ref);
 
-    call t15 := BorrowField(t14, Test3_T_f);
+    call __t15 := BorrowField(__t14, Test3_T_f);
 
-    call t3 := CopyOrMoveRef(t15);
+    call f_or_g_ref := CopyOrMoveRef(__t15);
 
     goto Label_15;
 
 Label_12:
-    call t16 := CopyOrMoveRef(t2);
+    call __t16 := CopyOrMoveRef(x_ref);
 
-    call t17 := BorrowField(t16, Test3_T_g);
+    call __t17 := BorrowField(__t16, Test3_T_g);
 
-    call t3 := CopyOrMoveRef(t17);
+    call f_or_g_ref := CopyOrMoveRef(__t17);
 
 Label_15:
     call __tmp := LdConst(10);
     __m := UpdateLocal(__m, __frame + 18, __tmp);
 
-    call t19 := CopyOrMoveRef(t3);
+    call __t19 := CopyOrMoveRef(f_or_g_ref);
 
-    call WriteRef(t19, GetLocal(__m, __frame + 18));
+    call WriteRef(__t19, GetLocal(__m, __frame + 18));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 20, __tmp);
@@ -162,53 +162,53 @@ Label_15:
     __tmp := GetLocal(__m, __frame + 21);
     if (!b#Boolean(__tmp)) { goto Label_25; }
 
-    call t22 := CopyOrMoveRef(t2);
+    call __t22 := CopyOrMoveRef(x_ref);
 
-    call t23 := BorrowField(t22, Test3_T_f);
+    call __t23 := BorrowField(__t22, Test3_T_f);
 
-    call t4 := CopyOrMoveRef(t23);
+    call f_or_g_ref2 := CopyOrMoveRef(__t23);
 
     goto Label_28;
 
 Label_25:
-    call t24 := CopyOrMoveRef(t2);
+    call __t24 := CopyOrMoveRef(x_ref);
 
-    call t25 := BorrowField(t24, Test3_T_g);
+    call __t25 := BorrowField(__t24, Test3_T_g);
 
-    call t4 := CopyOrMoveRef(t25);
+    call f_or_g_ref2 := CopyOrMoveRef(__t25);
 
 Label_28:
     call __tmp := LdConst(20);
     __m := UpdateLocal(__m, __frame + 26, __tmp);
 
-    call t27 := CopyOrMoveRef(t4);
+    call __t27 := CopyOrMoveRef(f_or_g_ref2);
 
-    call WriteRef(t27, GetLocal(__m, __frame + 26));
+    call WriteRef(__t27, GetLocal(__m, __frame + 26));
 
-    call t28 := CopyOrMoveRef(t2);
+    call __t28 := CopyOrMoveRef(x_ref);
 
-    call t29 := BorrowField(t28, Test3_T_f);
+    call __t29 := BorrowField(__t28, Test3_T_f);
 
-    call t5 := CopyOrMoveRef(t29);
+    call f_ref := CopyOrMoveRef(__t29);
 
-    call t30 := CopyOrMoveRef(t2);
+    call __t30 := CopyOrMoveRef(x_ref);
 
-    call t31 := BorrowField(t30, Test3_T_g);
+    call __t31 := BorrowField(__t30, Test3_T_g);
 
-    call t6 := CopyOrMoveRef(t31);
+    call g_ref := CopyOrMoveRef(__t31);
 
-    call t32 := CopyOrMoveRef(t5);
+    call __t32 := CopyOrMoveRef(f_ref);
 
-    call __tmp := ReadRef(t32);
+    call __tmp := ReadRef(__t32);
     assume IsValidU64(__tmp);
     __m := UpdateLocal(__m, __frame + 33, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 33));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call t34 := CopyOrMoveRef(t6);
+    call __t34 := CopyOrMoveRef(g_ref);
 
-    call __tmp := ReadRef(t34);
+    call __tmp := ReadRef(__t34);
     assume IsValidU64(__tmp);
     __m := UpdateLocal(__m, __frame + 35, __tmp);
 

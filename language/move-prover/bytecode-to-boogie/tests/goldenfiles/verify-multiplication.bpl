@@ -6,16 +6,16 @@
 
 // ** functions of module TestMultiplication
 
-procedure {:inline 1} TestMultiplication_overflow_u8_mul_bad (x: Value, y: Value) returns (ret0: Value)
+procedure {:inline 1} TestMultiplication_overflow_u8_mul_bad (x: Value, y: Value) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 ensures old(!(b#Boolean(Boolean(false)))) ==> !__abort_flag;
 ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
 {
     // declare local variables
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -43,31 +43,31 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     if (__abort_flag) { goto Label_Abort; }
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 4);
+    __ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestMultiplication_overflow_u8_mul_bad_verify (x: Value, y: Value) returns (ret0: Value)
+procedure TestMultiplication_overflow_u8_mul_bad_verify (x: Value, y: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestMultiplication_overflow_u8_mul_bad(x, y);
+    call __ret0 := TestMultiplication_overflow_u8_mul_bad(x, y);
 }
 
-procedure {:inline 1} TestMultiplication_overflow_u8_mul_ok (x: Value, y: Value) returns (ret0: Value)
+procedure {:inline 1} TestMultiplication_overflow_u8_mul_ok (x: Value, y: Value) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) * i#Integer(y))) > i#Integer(Integer(255)))))) ==> !__abort_flag;
 ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) * i#Integer(y))) > i#Integer(Integer(255))))) ==> __abort_flag;
 
 {
     // declare local variables
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -95,31 +95,31 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) * i#Integer(y))) > 
     if (__abort_flag) { goto Label_Abort; }
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 4);
+    __ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestMultiplication_overflow_u8_mul_ok_verify (x: Value, y: Value) returns (ret0: Value)
+procedure TestMultiplication_overflow_u8_mul_ok_verify (x: Value, y: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestMultiplication_overflow_u8_mul_ok(x, y);
+    call __ret0 := TestMultiplication_overflow_u8_mul_ok(x, y);
 }
 
-procedure {:inline 1} TestMultiplication_overflow_u64_mul_bad (x: Value, y: Value) returns (ret0: Value)
+procedure {:inline 1} TestMultiplication_overflow_u64_mul_bad (x: Value, y: Value) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 ensures old(!(b#Boolean(Boolean(false)))) ==> !__abort_flag;
 ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
 {
     // declare local variables
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -147,31 +147,31 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     if (__abort_flag) { goto Label_Abort; }
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 4);
+    __ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestMultiplication_overflow_u64_mul_bad_verify (x: Value, y: Value) returns (ret0: Value)
+procedure TestMultiplication_overflow_u64_mul_bad_verify (x: Value, y: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestMultiplication_overflow_u64_mul_bad(x, y);
+    call __ret0 := TestMultiplication_overflow_u64_mul_bad(x, y);
 }
 
-procedure {:inline 1} TestMultiplication_overflow_u128_mul_bad (x: Value, y: Value) returns (ret0: Value)
+procedure {:inline 1} TestMultiplication_overflow_u128_mul_bad (x: Value, y: Value) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 ensures old(!(b#Boolean(Boolean(false)))) ==> !__abort_flag;
 ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
 {
     // declare local variables
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -199,17 +199,17 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     if (__abort_flag) { goto Label_Abort; }
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 4);
+    __ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestMultiplication_overflow_u128_mul_bad_verify (x: Value, y: Value) returns (ret0: Value)
+procedure TestMultiplication_overflow_u128_mul_bad_verify (x: Value, y: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestMultiplication_overflow_u128_mul_bad(x, y);
+    call __ret0 := TestMultiplication_overflow_u128_mul_bad(x, y);
 }

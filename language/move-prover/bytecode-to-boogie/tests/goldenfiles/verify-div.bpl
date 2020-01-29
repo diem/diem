@@ -6,16 +6,16 @@
 
 // ** functions of module TestSpecs
 
-procedure {:inline 1} TestSpecs_div (x: Value, y: Value) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_div (x: Value, y: Value) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 ensures old(b#Boolean(Boolean(i#Integer(y) > i#Integer(Integer(0))))) ==> !__abort_flag;
 {
     // declare local variables
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
+    var r: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -49,31 +49,31 @@ ensures old(b#Boolean(Boolean(i#Integer(y) > i#Integer(Integer(0))))) ==> !__abo
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 6);
+    __ret0 := GetLocal(__m, __frame + 6);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestSpecs_div_verify (x: Value, y: Value) returns (ret0: Value)
+procedure TestSpecs_div_verify (x: Value, y: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestSpecs_div(x, y);
+    call __ret0 := TestSpecs_div(x, y);
 }
 
-procedure {:inline 1} TestSpecs_div_by_zero_detected (x: Value, y: Value) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_div_by_zero_detected (x: Value, y: Value) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
 {
     // declare local variables
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
+    var r: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -107,17 +107,17 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 6);
+    __ret0 := GetLocal(__m, __frame + 6);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestSpecs_div_by_zero_detected_verify (x: Value, y: Value) returns (ret0: Value)
+procedure TestSpecs_div_by_zero_detected_verify (x: Value, y: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestSpecs_div_by_zero_detected(x, y);
+    call __ret0 := TestSpecs_div_by_zero_detected(x, y);
 }

@@ -25,14 +25,14 @@ procedure {:inline 1} Unpack_TestSpecs_T(_struct: Value) returns (value: Value)
 
 // ** functions of module TestSpecs
 
-procedure {:inline 1} TestSpecs_value (ref: Reference) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_value (ref: Reference) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures b#Boolean(Boolean(IsEqual(ret0, SelectField(Dereference(__m, ref), TestSpecs_T_value))));
+ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, ref), TestSpecs_T_value))));
 {
     // declare local variables
-    var t1: Reference; // ReferenceType(TestSpecs_T_type_value())
-    var t2: Reference; // ReferenceType(IntegerType())
-    var t3: Value; // IntegerType()
+    var __t1: Reference; // ReferenceType(TestSpecs_T_type_value())
+    var __t2: Reference; // ReferenceType(IntegerType())
+    var __t3: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -48,25 +48,25 @@ ensures b#Boolean(Boolean(IsEqual(ret0, SelectField(Dereference(__m, ref), TestS
     assume IsValidReferenceParameter(__m, __frame, ref);
 
     // bytecode translation starts here
-    call t1 := CopyOrMoveRef(ref);
+    call __t1 := CopyOrMoveRef(ref);
 
-    call t2 := BorrowField(t1, TestSpecs_T_value);
+    call __t2 := BorrowField(__t1, TestSpecs_T_value);
 
-    call __tmp := ReadRef(t2);
+    call __tmp := ReadRef(__t2);
     assume IsValidU64(__tmp);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 3);
+    __ret0 := GetLocal(__m, __frame + 3);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestSpecs_value_verify (ref: Reference) returns (ret0: Value)
+procedure TestSpecs_value_verify (ref: Reference) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestSpecs_value(ref);
+    call __ret0 := TestSpecs_value(ref);
 }
