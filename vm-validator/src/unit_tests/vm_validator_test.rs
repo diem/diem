@@ -316,34 +316,6 @@ fn test_validate_invalid_auth_key() {
 }
 
 #[test]
-fn test_validate_balance_below_gas_fee() {
-    let (config, key) = config_builder::test_config();
-    let (vm_validator, mut rt) = TestValidator::new(&config);
-
-    let address = account_config::association_address();
-    let program = encode_transfer_script(&address, 100);
-    let transaction = transaction_test_helpers::get_test_signed_transaction(
-        address,
-        1,
-        &key,
-        key.public_key(),
-        Some(program),
-        0,
-        // Note that this will be dependent upon the max gas price and gas amounts that are set. So
-        // changing those may cause this test to fail.
-        10_000, /* max gas price */
-        Some(1_000_000),
-    );
-    let ret = rt
-        .block_on(vm_validator.validate_transaction(transaction))
-        .unwrap();
-    assert_eq!(
-        ret.unwrap().major_status,
-        StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
-    );
-}
-
-#[test]
 fn test_validate_account_doesnt_exist() {
     let (config, key) = config_builder::test_config();
     let (vm_validator, mut rt) = TestValidator::new(&config);
