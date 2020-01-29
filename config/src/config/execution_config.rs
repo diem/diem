@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{config::RootPath, utils};
+use crate::config::RootPath;
 use anyhow::Result;
 use libra_types::transaction::Transaction;
 use serde::{Deserialize, Serialize};
@@ -16,8 +16,6 @@ const GENESIS_DEFAULT: &str = "genesis.blob";
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ExecutionConfig {
-    pub address: String,
-    pub port: u16,
     #[serde(skip)]
     pub genesis: Option<Transaction>,
     pub genesis_file_location: PathBuf,
@@ -26,8 +24,6 @@ pub struct ExecutionConfig {
 impl Default for ExecutionConfig {
     fn default() -> ExecutionConfig {
         ExecutionConfig {
-            address: "localhost".to_string(),
-            port: 6183,
             genesis: None,
             genesis_file_location: PathBuf::new(),
         }
@@ -58,10 +54,6 @@ impl ExecutionConfig {
             file.write_all(&lcs::to_bytes(&genesis)?)?;
         }
         Ok(())
-    }
-
-    pub fn randomize_ports(&mut self) {
-        self.port = utils::get_available_port();
     }
 }
 

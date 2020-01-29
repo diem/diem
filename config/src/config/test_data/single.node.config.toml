@@ -8,8 +8,6 @@ dir = "metrics"
 enabled = false
 
 [execution]
-address = "localhost"
-port = 6183
 genesis_file_location = ""
 
 [admission_control]
