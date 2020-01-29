@@ -1,8 +1,16 @@
 name: Rust_MIRAI
 
+# Why `on: repository_dispatch`?
+#
+# If we trigger this action on pull_request events,
+# then it will run with the forked repo GITHUB_TOKEN
+# this is a problem as it won't allow the action to write
+# a comment on the PR in the last step.
+#
+# instead, we trigger this remotely via a bot we're running ourselves.
 on:
-  pull_request:
-    types: ['opened', 'synchronize']
+  repository_dispatch:
+    types: [new_PR]
 
 jobs:
   install_and_run_MIRAI:
@@ -59,7 +67,7 @@ jobs:
       if: success()
       uses: actions/github-script@0.4.0
       with:
-        github-token: ${{secrets.GITHUB_TOKEN}}
+        github-token: ${{secrets.MIRAI_BOT}}
         script: |
           const fs = require('fs');
           fs.readFile('mirai_results', 'utf-8', (err, data) => {
@@ -68,7 +76,6 @@ jobs:
               return;
             }
             if (data) {
-              console.log(data);
               data = `Hello!
 
           It looks like MIRAI found some warnings:
