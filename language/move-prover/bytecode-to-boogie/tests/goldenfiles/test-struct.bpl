@@ -106,18 +106,28 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
+    var debug#TestStruct#identity#0#a: [Position]Value;
+    var debug#TestStruct#identity#1#c: [Position]Value;
+    var debug#TestStruct#identity#2#__ret: [Position]Value;
+    var debug#TestStruct#identity#3#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
+    debug#TestStruct#identity#0#a := EmptyPositionMap;
+    debug#TestStruct#identity#1#c := EmptyPositionMap;
+    debug#TestStruct#identity#2#__ret := EmptyPositionMap;
+    debug#TestStruct#identity#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(a);
     __m := UpdateLocal(__m, __frame + 0, a);
+    debug#TestStruct#identity#0#a := debug#TestStruct#identity#0#a[Position(252) := a];
     assume is#Vector(c);
     __m := UpdateLocal(__m, __frame + 1, c);
+    debug#TestStruct#identity#1#c := debug#TestStruct#identity#1#c[Position(252) := c];
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -127,19 +137,23 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 2);
+    debug#TestStruct#identity#2#__ret := debug#TestStruct#identity#2#__ret[Position(315) := __ret0];
     __ret1 := GetLocal(__m, __frame + 3);
+    debug#TestStruct#identity#3#__ret := debug#TestStruct#identity#3#__ret[Position(315) := __ret1];
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
+    debug#TestStruct#identity#2#__ret := debug#TestStruct#identity#2#__ret[Position(344) := __ret0];
     __ret1 := DefaultValue;
+    debug#TestStruct#identity#3#__ret := debug#TestStruct#identity#3#__ret[Position(344) := __ret1];
 }
 
 procedure TestStruct_identity_verify (a: Value, c: Value) returns (__ret0: Value, __ret1: Value)
 {
-    assume ExistsTxnSenderAccount(__m, __txn);
+    call InitVerification();
     call __ret0, __ret1 := TestStruct_identity(a, c);
 }
 
@@ -169,16 +183,29 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
+    var debug#TestStruct#module_builtins#0#a: [Position]Value;
+    var debug#TestStruct#module_builtins#1#t: [Position]Value;
+    var debug#TestStruct#module_builtins#2#t_ref1: [Position]Value;
+    var debug#TestStruct#module_builtins#3#t_ref2: [Position]Value;
+    var debug#TestStruct#module_builtins#4#b: [Position]Value;
+    var debug#TestStruct#module_builtins#5#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 20;
+    debug#TestStruct#module_builtins#0#a := EmptyPositionMap;
+    debug#TestStruct#module_builtins#1#t := EmptyPositionMap;
+    debug#TestStruct#module_builtins#2#t_ref1 := EmptyPositionMap;
+    debug#TestStruct#module_builtins#3#t_ref2 := EmptyPositionMap;
+    debug#TestStruct#module_builtins#4#b := EmptyPositionMap;
+    debug#TestStruct#module_builtins#5#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(a);
     __m := UpdateLocal(__m, __frame + 0, a);
+    debug#TestStruct#module_builtins#0#a := debug#TestStruct#module_builtins#0#a[Position(351) := a];
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -189,6 +216,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
+    debug#TestStruct#module_builtins#4#b := debug#TestStruct#module_builtins#4#b[Position(528) := __tmp];
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -239,6 +267,7 @@ Label_8:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 17));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
+    debug#TestStruct#module_builtins#1#t := debug#TestStruct#module_builtins#1#t[Position(737) := __tmp];
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 18, __tmp);
@@ -250,17 +279,19 @@ Label_8:
     __m := UpdateLocal(__m, __frame + 19, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 19);
+    debug#TestStruct#module_builtins#5#__ret := debug#TestStruct#module_builtins#5#__ret[Position(808) := __ret0];
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
+    debug#TestStruct#module_builtins#5#__ret := debug#TestStruct#module_builtins#5#__ret[Position(828) := __ret0];
 }
 
 procedure TestStruct_module_builtins_verify (a: Value) returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(__m, __txn);
+    call InitVerification();
     call __ret0 := TestStruct_module_builtins(a);
 }
 
@@ -297,16 +328,31 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
+    var debug#TestStruct#nested_struct#0#a: [Position]Value;
+    var debug#TestStruct#nested_struct#1#var_a: [Position]Value;
+    var debug#TestStruct#nested_struct#2#var_b: [Position]Value;
+    var debug#TestStruct#nested_struct#3#var_b_ref: [Position]Value;
+    var debug#TestStruct#nested_struct#4#b_val_ref: [Position]Value;
+    var debug#TestStruct#nested_struct#5#b_val: [Position]Value;
+    var debug#TestStruct#nested_struct#6#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 24;
+    debug#TestStruct#nested_struct#0#a := EmptyPositionMap;
+    debug#TestStruct#nested_struct#1#var_a := EmptyPositionMap;
+    debug#TestStruct#nested_struct#2#var_b := EmptyPositionMap;
+    debug#TestStruct#nested_struct#3#var_b_ref := EmptyPositionMap;
+    debug#TestStruct#nested_struct#4#b_val_ref := EmptyPositionMap;
+    debug#TestStruct#nested_struct#5#b_val := EmptyPositionMap;
+    debug#TestStruct#nested_struct#6#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(a);
     __m := UpdateLocal(__m, __frame + 0, a);
+    debug#TestStruct#nested_struct#0#a := debug#TestStruct#nested_struct#0#a[Position(835) := a];
 
     // bytecode translation starts here
     call __tmp := LdFalse();
@@ -326,6 +372,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
+    debug#TestStruct#nested_struct#2#var_b := debug#TestStruct#nested_struct#2#var_b[Position(1076) := __tmp];
 
     goto Label_11;
 
@@ -341,6 +388,7 @@ Label_7:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 12));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
+    debug#TestStruct#nested_struct#2#var_b := debug#TestStruct#nested_struct#2#var_b[Position(1142) := __tmp];
 
 Label_11:
     call __t13 := BorrowLoc(__frame + 2);
@@ -361,6 +409,7 @@ Label_11:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 17));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
+    debug#TestStruct#nested_struct#5#b_val := debug#TestStruct#nested_struct#5#b_val[Position(1268) := __tmp];
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 18, __tmp);
@@ -387,17 +436,19 @@ Label_26:
     __m := UpdateLocal(__m, __frame + 23, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 23);
+    debug#TestStruct#nested_struct#6#__ret := debug#TestStruct#nested_struct#6#__ret[Position(1341) := __ret0];
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
+    debug#TestStruct#nested_struct#6#__ret := debug#TestStruct#nested_struct#6#__ret[Position(1365) := __ret0];
 }
 
 procedure TestStruct_nested_struct_verify (a: Value) returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(__m, __txn);
+    call InitVerification();
     call __ret0 := TestStruct_nested_struct(a);
 }
 
@@ -426,16 +477,27 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
+    var debug#TestStruct#try_unpack#0#a: [Position]Value;
+    var debug#TestStruct#try_unpack#1#v: [Position]Value;
+    var debug#TestStruct#try_unpack#2#b: [Position]Value;
+    var debug#TestStruct#try_unpack#3#aa: [Position]Value;
+    var debug#TestStruct#try_unpack#4#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 16;
+    debug#TestStruct#try_unpack#0#a := EmptyPositionMap;
+    debug#TestStruct#try_unpack#1#v := EmptyPositionMap;
+    debug#TestStruct#try_unpack#2#b := EmptyPositionMap;
+    debug#TestStruct#try_unpack#3#aa := EmptyPositionMap;
+    debug#TestStruct#try_unpack#4#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(a);
     __m := UpdateLocal(__m, __frame + 0, a);
+    debug#TestStruct#try_unpack#0#a := debug#TestStruct#try_unpack#0#a[Position(1372) := a];
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -449,6 +511,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
+    debug#TestStruct#try_unpack#2#b := debug#TestStruct#try_unpack#2#b[Position(1509) := __tmp];
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -459,9 +522,11 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
+    debug#TestStruct#try_unpack#1#v := debug#TestStruct#try_unpack#1#v[Position(1559) := __tmp];
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
+    debug#TestStruct#try_unpack#3#aa := debug#TestStruct#try_unpack#3#aa[Position(1555) := __tmp];
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
@@ -488,16 +553,18 @@ Label_15:
     __m := UpdateLocal(__m, __frame + 15, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 15);
+    debug#TestStruct#try_unpack#4#__ret := debug#TestStruct#try_unpack#4#__ret[Position(1622) := __ret0];
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
+    debug#TestStruct#try_unpack#4#__ret := debug#TestStruct#try_unpack#4#__ret[Position(1642) := __ret0];
 }
 
 procedure TestStruct_try_unpack_verify (a: Value) returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(__m, __txn);
+    call InitVerification();
     call __ret0 := TestStruct_try_unpack(a);
 }

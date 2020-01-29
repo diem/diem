@@ -29,6 +29,7 @@ use crate::cli::Options;
 use codespan::{CodeMap, ColumnIndex, FileMap, FileName, LineIndex};
 use codespan_reporting::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::{emit, Diagnostic, Severity};
+use libra_types::account_address::AccountAddress;
 use std::fs;
 
 /// # Types
@@ -54,10 +55,37 @@ pub enum GlobalType {
 }
 
 impl GlobalType {
+    /// Determines whether this is a reference.
     pub fn is_reference(&self) -> bool {
         match self {
             GlobalType::Reference(_) | GlobalType::MutableReference(_) => true,
             _ => false,
+        }
+    }
+
+    /// Determines whether this is a mutual reference.
+    pub fn is_mutual_reference(&self) -> bool {
+        if let GlobalType::MutableReference(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Instantiates type parameters in this type.
+    pub fn instantiate(&self, params: &[GlobalType]) -> GlobalType {
+        match self {
+            GlobalType::TypeParameter(i) => params[*i as usize].clone(),
+            GlobalType::Reference(bt) => GlobalType::Reference(Box::new(bt.instantiate(params))),
+            GlobalType::MutableReference(bt) => {
+                GlobalType::MutableReference(Box::new(bt.instantiate(params)))
+            }
+            GlobalType::Struct(midx, sidx, args) => GlobalType::Struct(
+                *midx,
+                *sidx,
+                args.iter().map(|t| t.instantiate(params)).collect_vec(),
+            ),
+            _ => self.clone(),
         }
     }
 }
@@ -233,7 +261,7 @@ pub struct ModuleData {
 }
 
 /// Represents a module environment.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleEnv<'env> {
     /// Reference to the outer env.
     pub env: &'env GlobalEnv,
@@ -341,6 +369,19 @@ impl<'env> ModuleEnv<'env> {
             module_env: self,
             data,
         })
+    }
+
+    /// Returns the FunctionEnv which contains the location. This returns any function
+    /// which location encloses the given one.
+    pub fn get_enclosing_function(&'env self, loc: Loc) -> Option<FunctionEnv<'env>> {
+        // Currently we do a brute-force linear search, may need to speed this up if it appears
+        // to be a bottleneck.
+        for func_env in self.get_functions() {
+            if func_env.get_loc().contains(loc) {
+                return Some(func_env);
+            }
+        }
+        None
     }
 
     /// Get ModuleEnv which declares the function called by this module, as described by a
@@ -484,7 +525,7 @@ pub struct StructData {
     field_data: Vec<FieldData>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StructEnv<'env> {
     /// Reference to enclosing module.
     pub module_env: &'env ModuleEnv<'env>,
@@ -528,6 +569,13 @@ impl<'env> StructEnv<'env> {
     pub fn is_native(&self) -> bool {
         let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
         def.field_information == StructFieldInformation::Native
+    }
+
+    /// Determines whether this struct is the well-known vector type.
+    pub fn is_vector(&self) -> bool {
+        let name = self.module_env.get_id().name();
+        let addr = self.module_env.get_id().address();
+        name.as_str() == "Vector" && addr == &AccountAddress::from_hex_literal("0x0").unwrap()
     }
 
     /// Get an iterator for the fields.
@@ -669,12 +717,7 @@ pub struct FunctionEnv<'env> {
 impl<'env> FunctionEnv<'env> {
     /// Returns the name of this function.
     pub fn get_name(&self) -> &IdentStr {
-        let handle = self
-            .module_env
-            .data
-            .module
-            .function_handle_at(self.data.handle_idx);
-        let view = FunctionHandleView::new(&self.module_env.data.module, handle);
+        let view = self.handle_view();
         view.name()
     }
 
@@ -709,27 +752,22 @@ impl<'env> FunctionEnv<'env> {
 
     /// Returns true if this function is native.
     pub fn is_native(&self) -> bool {
-        let view = FunctionDefinitionView::new(
-            &self.module_env.data.module,
-            self.module_env
-                .data
-                .module
-                .function_def_at(self.data.def_idx),
-        );
+        let view = self.definition_view();
         view.is_native()
+    }
+
+    /// Returns true if this function mutates any references (i.e. has &mut parameters).
+    pub fn is_mutating(&self) -> bool {
+        self.get_parameters()
+            .iter()
+            .any(|Parameter(_, ty)| ty.is_mutual_reference())
     }
 
     /// Returns the type parameters associated with this function.
     pub fn get_type_parameters(&self) -> Vec<TypeParameter> {
         // TODO: currently the translation scheme isn't working with using real type
         //   parameter names, so use indices instead.
-        let view = FunctionDefinitionView::new(
-            &self.module_env.data.module,
-            self.module_env
-                .data
-                .module
-                .function_def_at(self.data.def_idx),
-        );
+        let view = self.definition_view();
         view.signature()
             .type_formals()
             .iter()
@@ -740,13 +778,7 @@ impl<'env> FunctionEnv<'env> {
 
     /// Returns the regular parameters associated with this function.
     pub fn get_parameters(&self) -> Vec<Parameter> {
-        let view = FunctionDefinitionView::new(
-            &self.module_env.data.module,
-            self.module_env
-                .data
-                .module
-                .function_def_at(self.data.def_idx),
-        );
+        let view = self.definition_view();
         view.signature()
             .arg_tokens()
             .map(|tv: SignatureTokenView<VerifiedModule>| {
@@ -759,19 +791,19 @@ impl<'env> FunctionEnv<'env> {
 
     /// Returns return types of this function.
     pub fn get_return_types(&self) -> Vec<GlobalType> {
-        let view = FunctionDefinitionView::new(
-            &self.module_env.data.module,
-            self.module_env
-                .data
-                .module
-                .function_def_at(self.data.def_idx),
-        );
+        let view = self.definition_view();
         view.signature()
             .return_tokens()
             .map(|tv: SignatureTokenView<VerifiedModule>| {
                 self.module_env.globalize_signature(tv.signature_token())
             })
             .collect_vec()
+    }
+
+    /// Returns the number of return values of this function.
+    pub fn get_return_count(&self) -> usize {
+        let view = self.definition_view();
+        view.signature().return_count()
     }
 
     /// Gets the definition index of this function.
@@ -799,9 +831,49 @@ impl<'env> FunctionEnv<'env> {
         format!("__t{}", idx)
     }
 
+    /// Gets the number of proper locals of this function. Those are locals which are declared
+    /// by the user and also have a user assigned name which can be discovered via `get_local_name`.
+    /// Note we may have more anonymous locals generated e.g by the 'stackless' transformation.
+    pub fn get_local_count(&self) -> usize {
+        let view = self.definition_view();
+        view.locals_signature().len()
+    }
+
+    /// Gets the type of the local at index. This must use an index in the range as determined by
+    /// `get_local_count`.
+    /// TODO: we currently do not have a way to determine type of anonymous locals like those
+    ///   generated by the stackless transformation via the environment. We may want to add a
+    ///   feature to register such types with the environment to better support program
+    ///   transformations.
+    pub fn get_local_type(&self, idx: u8) -> GlobalType {
+        let view = self.definition_view();
+        self.module_env
+            .globalize_signature(view.locals_signature().token_at(idx).signature_token())
+    }
+
     /// Returns specification conditions associated with this function.
     pub fn get_specification(&'env self) -> &'env [Condition_] {
         &self.data.spec
+    }
+
+    fn handle_view(&'env self) -> FunctionHandleView<'env, VerifiedModule> {
+        FunctionHandleView::new(
+            &self.module_env.data.module,
+            self.module_env
+                .data
+                .module
+                .function_handle_at(self.data.handle_idx),
+        )
+    }
+
+    fn definition_view(&'env self) -> FunctionDefinitionView<'env, VerifiedModule> {
+        FunctionDefinitionView::new(
+            &self.module_env.data.module,
+            self.module_env
+                .data
+                .module
+                .function_def_at(self.data.def_idx),
+        )
     }
 }
 

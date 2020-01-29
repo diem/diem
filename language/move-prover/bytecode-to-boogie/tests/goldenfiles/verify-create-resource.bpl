@@ -84,7 +84,7 @@ Label_Abort:
 
 procedure TestSpecs_create_resource_verify () returns ()
 {
-    assume ExistsTxnSenderAccount(__m, __txn);
+    call InitVerification();
     call TestSpecs_create_resource();
 }
 
@@ -136,6 +136,6 @@ Label_Abort:
 
 procedure TestSpecs_create_resource_error_verify () returns ()
 {
-    assume ExistsTxnSenderAccount(__m, __txn);
+    call InitVerification();
     call TestSpecs_create_resource_error();
 }

@@ -8,6 +8,7 @@ use std::collections::BTreeSet;
 use itertools::Itertools;
 use log::info;
 
+use ir_to_bytecode_syntax::ast::Loc;
 use libra_types::account_address::AccountAddress;
 use libra_types::language_storage::ModuleId;
 use stackless_bytecode_generator::{
@@ -20,11 +21,12 @@ use crate::boogie_helpers::{
     boogie_struct_type_value, boogie_type_check, boogie_type_value, boogie_type_values,
 };
 use crate::code_writer::CodeWriter;
+use crate::driver::PSEUDO_PRELUDE_MODULE;
 use crate::env::{
     FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, Parameter, StructEnv, TypeParameter,
 };
 use crate::spec_translator::SpecTranslator;
-use ir_to_bytecode_syntax::ast::Loc;
+use codespan::ByteOffset;
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -266,7 +268,6 @@ impl<'env> ModuleTranslator<'env> {
         self.generate_function_sig(func_env, true); // inlined version of function
         self.generate_function_spec(func_env);
         self.generate_inline_function_body(func_env);
-        // generate function body
         emitln!(self.writer);
 
         // generate the _verify version of the function which calls inline version for standalone
@@ -281,14 +282,34 @@ impl<'env> ModuleTranslator<'env> {
         func_env: &FunctionEnv<'_>,
         offset: u16,
         bytecode: &StacklessBytecode,
+        mutual_local_borrows: &BTreeSet<u8>,
     ) {
-        // For debugging purposes, might temporarily activate this.
-        // emitln!(self.writer, "        // {:?}", bytecode);
+        // Set location of this code in the CodeWriter.
+        let loc = func_env.get_bytecode_loc(offset);
+        self.writer
+            .set_location(self.module_env.get_module_idx(), loc);
 
-        self.writer.set_location(
-            self.module_env.get_module_idx(),
-            func_env.get_bytecode_loc(offset),
-        );
+        // Helper functions to update a local including debug information.
+        let update_local =
+            |idx: usize, value: &str| self.update_local(func_env, loc, idx as u8, value);
+        let update_debug_var = |idx: usize, value: &str| {
+            self.generate_model_debug_update(func_env, loc, idx as u8, value)
+        };
+
+        // Helper function to update debug info for mutual borrows.
+        let update_mutual_refs = || {
+            for idx in mutual_local_borrows {
+                let update = self.generate_model_debug_update(
+                    func_env,
+                    loc,
+                    *idx,
+                    &format!("GetLocal(__m, __frame + {})", idx),
+                );
+                if !update.is_empty() {
+                    emitln!(self.writer, &update)
+                }
+            }
+        };
 
         let propagate_abort = "if (__abort_flag) { goto Label_Abort; }";
         match bytecode {
@@ -319,11 +340,7 @@ impl<'env> ModuleTranslator<'env> {
                         "call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + {}));",
                         src
                     );
-                    emitln!(
-                        self.writer,
-                        "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                        dest
-                    );
+                    emitln!(self.writer, &update_local(*dest, "__tmp"));
                 }
             }
             CopyLoc(dest, src) => {
@@ -340,11 +357,7 @@ impl<'env> ModuleTranslator<'env> {
                         "call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + {}));",
                         src
                     );
-                    emitln!(
-                        self.writer,
-                        "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                        dest
-                    );
+                    emitln!(self.writer, &update_local(*dest, "__tmp"));
                 }
             }
             StLoc(dest, src) => {
@@ -361,19 +374,17 @@ impl<'env> ModuleTranslator<'env> {
                         "call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + {}));",
                         src
                     );
-                    emitln!(
-                        self.writer,
-                        "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                        dest
-                    );
+                    emitln!(self.writer, &update_local(*dest as usize, "__tmp"));
                 }
             }
-            BorrowLoc(dest, src) => emitln!(
-                self.writer,
-                "call __t{} := BorrowLoc(__frame + {});",
-                dest,
-                src
-            ),
+            BorrowLoc(dest, src) => {
+                emitln!(
+                    self.writer,
+                    "call __t{} := BorrowLoc(__frame + {});",
+                    dest,
+                    src
+                );
+            }
             ReadRef(dest, src) => {
                 emitln!(self.writer, "call __tmp := ReadRef(__t{});", src);
                 emit!(
@@ -384,18 +395,17 @@ impl<'env> ModuleTranslator<'env> {
                         &self.get_local_type(func_env, *dest)
                     )
                 );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
+            }
+            WriteRef(dest, src) => {
                 emitln!(
                     self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
+                    "call WriteRef(__t{}, GetLocal(__m, __frame + {}));",
+                    dest,
+                    src
                 );
+                update_mutual_refs();
             }
-            WriteRef(dest, src) => emitln!(
-                self.writer,
-                "call WriteRef(__t{}, GetLocal(__m, __frame + {}));",
-                dest,
-                src
-            ),
             FreezeRef(dest, src) => emitln!(self.writer, "call __t{} := FreezeRef(__t{});", dest, src),
             Call(dests, callee_index, type_actuals, args) => {
                 let (callee_module_env, callee_def_idx) =
@@ -437,10 +447,10 @@ impl<'env> ModuleTranslator<'env> {
                                 dest_type,
                             ));
                             if !dest_type.is_reference() {
-                                tmp_assignments.push(format!(
-                                    "__m := UpdateLocal(__m, __frame + {}, __t{});",
-                                    dest_idx, dest_idx
-                                ));
+                                tmp_assignments.push(
+                                    update_local(*dest_idx, &dest));
+                            } else {
+                                tmp_assignments.push(update_debug_var(*dest_idx, &dest));
                             }
                             dest
                         })
@@ -469,6 +479,9 @@ impl<'env> ModuleTranslator<'env> {
                 for s in &tmp_assignments {
                     emitln!(self.writer, s);
                 }
+                if callee_env.is_mutating() {
+                    update_mutual_refs();
+                }
             }
             Pack(dest, struct_def_index, type_actuals, fields) => {
                 let struct_env = func_env.module_env.get_struct(struct_def_index);
@@ -489,10 +502,10 @@ impl<'env> ModuleTranslator<'env> {
                     boogie_struct_name(&struct_env),
                     args_str
                 );
+
                 emitln!(
                     self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
+                    &update_local(*dest, "__tmp")
                 );
             }
             Unpack(dests, struct_def_index, _, src) => {
@@ -507,10 +520,9 @@ impl<'env> ModuleTranslator<'env> {
                     let dest_type = &self.get_local_type(func_env, *dest);
                     dests_str.push_str(dest_str);
                     if !dest_type.is_reference() {
-                        tmp_assignments.push(format!(
-                            "__m := UpdateLocal(__m, __frame + {}, __t{});",
-                            dest, dest
-                        ));
+                        tmp_assignments.push(update_local(*dest, &dest_str));
+                    } else {
+                        tmp_assignments.push(update_debug_var(*dest, &dest_str));
                     }
                 }
                 emitln!(
@@ -548,11 +560,7 @@ impl<'env> ModuleTranslator<'env> {
                     addr,
                     resource_type
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             BorrowGlobal(dest, addr, struct_def_index, type_actuals) => {
                 let resource_type = boogie_struct_type_value(
@@ -598,11 +606,7 @@ impl<'env> ModuleTranslator<'env> {
                     src,
                     resource_type,
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
                 emit!(
                     self.writer,
                     &boogie_type_check(
@@ -620,48 +624,32 @@ impl<'env> ModuleTranslator<'env> {
                     } else {
                         emitln!(self.writer, "__ret{} := GetLocal(__m, __frame + {});", i, r);
                     }
+                    let update = self.generate_model_ret_debug_update(func_env, loc, i, &format!("__ret{}", i));
+                    if !update.is_empty() {
+                        emitln!(self.writer, &update);
+                    }
                 }
                 emitln!(self.writer, "return;");
             }
             LdTrue(idx) => {
                 emitln!(self.writer, "call __tmp := LdTrue();");
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             LdFalse(idx) => {
                 emitln!(self.writer, "call __tmp := LdFalse();");
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             LdU8(idx, num) => {
                 emitln!(self.writer, "call __tmp := LdConst({});", num);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             LdU64(idx, num) => {
                 emitln!(self.writer, "call __tmp := LdConst({});", num);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             LdU128(idx, num) => {
                 emitln!(self.writer, "call __tmp := LdConst({});", num);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             CastU8(dest, src) => {
                 emitln!(
@@ -670,11 +658,7 @@ impl<'env> ModuleTranslator<'env> {
                     src
                 );
                 emitln!(self.writer, propagate_abort);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             CastU64(dest, src) => {
                 emitln!(
@@ -683,11 +667,7 @@ impl<'env> ModuleTranslator<'env> {
                     src
                 );
                 emitln!(self.writer, propagate_abort);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             CastU128(dest, src) => {
                 emitln!(
@@ -696,20 +676,12 @@ impl<'env> ModuleTranslator<'env> {
                     src
                 );
                 emitln!(self.writer, propagate_abort);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             LdAddr(idx, addr_idx) => {
                 let addr_int = self.module_env.get_address(addr_idx);
                 emitln!(self.writer, "call __tmp := LdAddr({});", addr_int);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             Not(dest, operand) => {
                 emitln!(
@@ -717,11 +689,7 @@ impl<'env> ModuleTranslator<'env> {
                     "call __tmp := Not(GetLocal(__m, __frame + {}));",
                     operand
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Add(dest, op1, op2) => {
                 let add_type = match self.get_local_type(func_env, *dest) {
@@ -738,11 +706,7 @@ impl<'env> ModuleTranslator<'env> {
                     op2
                 );
                 emitln!(self.writer, propagate_abort);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Sub(dest, op1, op2) => {
                 emitln!(
@@ -752,11 +716,7 @@ impl<'env> ModuleTranslator<'env> {
                     op2
                 );
                 emitln!(self.writer, propagate_abort);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Mul(dest, op1, op2) => {
                 let mul_type = match self.get_local_type(func_env, *dest) {
@@ -773,11 +733,7 @@ impl<'env> ModuleTranslator<'env> {
                     op2
                 );
                 emitln!(self.writer, propagate_abort);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Div(dest, op1, op2) => {
                 emitln!(
@@ -787,11 +743,7 @@ impl<'env> ModuleTranslator<'env> {
                     op2
                 );
                 emitln!(self.writer, propagate_abort);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Mod(dest, op1, op2) => {
                 emitln!(
@@ -801,11 +753,7 @@ impl<'env> ModuleTranslator<'env> {
                     op2
                 );
                 emitln!(self.writer, propagate_abort);
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Lt(dest, op1, op2) => {
                 emitln!(
@@ -814,11 +762,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Gt(dest, op1, op2) => {
                 emitln!(
@@ -827,11 +771,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Le(dest, op1, op2) => {
                 emitln!(
@@ -840,11 +780,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Ge(dest, op1, op2) => {
                 emitln!(
@@ -853,11 +789,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Or(dest, op1, op2) => {
                 emitln!(
@@ -866,11 +798,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             And(dest, op1, op2) => {
                 emitln!(
@@ -879,11 +807,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Eq(dest, op1, op2) => {
                 emitln!(
@@ -892,11 +816,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             Neq(dest, op1, op2) => {
                 emitln!(
@@ -905,11 +825,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    dest
-                );
+                emitln!(self.writer, &update_local(*dest, "__tmp"));
             }
             BitOr(_, _, _) | BitAnd(_, _, _) | Xor(_, _, _) => {
                 emitln!(
@@ -921,51 +837,27 @@ impl<'env> ModuleTranslator<'env> {
             Abort(_) => emitln!(self.writer, "goto Label_Abort;"),
             GetGasRemaining(idx) => {
                 emitln!(self.writer, "call __tmp := GetGasRemaining();");
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             GetTxnSequenceNumber(idx) => {
                 emitln!(self.writer, "call __tmp := GetTxnSequenceNumber();");
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             GetTxnPublicKey(idx) => {
                 emitln!(self.writer, "call __tmp := GetTxnPublicKey();");
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             GetTxnSenderAddress(idx) => {
                 emitln!(self.writer, "call __tmp := GetTxnSenderAddress();");
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             GetTxnMaxGasUnits(idx) => {
                 emitln!(self.writer, "call __tmp := GetTxnMaxGasUnits();");
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             GetTxnGasUnitPrice(idx) => {
                 emitln!(self.writer, "call __tmp := GetTxnGasUnitPrice();");
-                emitln!(
-                    self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, __tmp);",
-                    idx
-                );
+                emitln!(self.writer, &update_local(*idx, "__tmp"));
             }
             _ => emitln!(self.writer, "// unimplemented instruction: {:?}", bytecode),
         }
@@ -1029,6 +921,10 @@ impl<'env> ModuleTranslator<'env> {
     /// Return string for body of verify function, which is just a call to the
     /// inline version of the function.
     fn generate_verify_function_body(&self, func_env: &FunctionEnv<'_>) {
+        // Set the location to pseudo module so it won't be counted for execution traces
+        self.writer
+            .set_location(PSEUDO_PRELUDE_MODULE, Loc::default());
+
         let args = func_env
             .get_type_parameters()
             .iter()
@@ -1040,10 +936,10 @@ impl<'env> ModuleTranslator<'env> {
                     .map(|Parameter(i, _)| i.as_str().to_string()),
             )
             .join(", ");
-        let rets = (0..func_env.get_return_types().len())
+        let rets = (0..func_env.get_return_count())
             .map(|i| format!("__ret{}", i))
             .join(", ");
-        let assumptions = "    assume ExistsTxnSenderAccount(__m, __txn);\n";
+        let assumptions = "    call InitVerification();\n";
         if rets.is_empty() {
             emit!(
                 self.writer,
@@ -1093,6 +989,7 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "var __tmp: Value;");
         emitln!(self.writer, "var __frame: int;");
         emitln!(self.writer, "var __saved_m: Memory;");
+        self.generate_model_debug_declarations(func_env);
 
         emitln!(self.writer, "\n// initialize function execution");
         emitln!(self.writer, "assume !__abort_flag;");
@@ -1103,6 +1000,7 @@ impl<'env> ModuleTranslator<'env> {
             "__local_counter := __local_counter + {};",
             code.local_types.len()
         );
+        self.generate_model_debug_initialization(func_env);
 
         emitln!(self.writer, "\n// process and type check arguments");
         for i in 0..num_args {
@@ -1113,22 +1011,36 @@ impl<'env> ModuleTranslator<'env> {
             if !local_type.is_reference() {
                 emitln!(
                     self.writer,
-                    "__m := UpdateLocal(__m, __frame + {}, {});",
-                    i,
-                    local_name
+                    &self.update_local(func_env, func_env.get_loc(), i as u8, &local_name)
+                );
+            } else {
+                emitln!(
+                    self.writer,
+                    &self.generate_model_debug_update(
+                        func_env,
+                        func_env.get_loc(),
+                        i as u8,
+                        &local_name
+                    )
                 );
             }
         }
-        // Local counter needs to be updated after type checks.
 
         emitln!(self.writer, "\n// bytecode translation starts here");
 
-        // Identify all the branching targets so we can insert labels in front of them
-        let mut branching_targets: BTreeSet<usize> = BTreeSet::new();
+        // Identify all the branching targets so we can insert labels in front of them, as well
+        // as mutual borrows of locals.
+        let mut branching_targets = BTreeSet::new();
+        let mut mutual_local_borrows = BTreeSet::new();
         for bytecode in code.code.iter() {
             match bytecode {
                 Branch(target) | BrTrue(target, _) | BrFalse(target, _) => {
                     branching_targets.insert(*target as usize);
+                }
+                BorrowLoc(dst, src) => {
+                    if self.get_local_type(func_env, *dst).is_mutual_reference() {
+                        mutual_local_borrows.insert(*src);
+                    }
                 }
                 _ => {}
             }
@@ -1142,20 +1054,31 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, "Label_{}:", offset);
                 self.writer.indent();
             }
-            self.translate_bytecode(func_env, offset as u16, bytecode);
+            self.translate_bytecode(func_env, offset as u16, bytecode, &mutual_local_borrows);
         }
 
         // Generate abort exit.
+        let mut end_loc = func_env.get_loc();
+        if end_loc.end().0 > 0 {
+            end_loc = Loc::new(end_loc.end() - ByteOffset(1), end_loc.end())
+        }
+        self.writer
+            .set_location(self.module_env.get_module_idx(), end_loc);
         self.writer.unindent();
         emitln!(self.writer, "Label_Abort:");
         self.writer.indent();
         emitln!(self.writer, "__abort_flag := true;");
         emitln!(self.writer, "__m := __saved_m;");
-        for (i, ref sig) in func_env.get_return_types().iter().enumerate() {
+        for (i, sig) in func_env.get_return_types().iter().enumerate() {
+            let ret_str = format!("__ret{}", i);
             if sig.is_reference() {
-                emitln!(self.writer, "__ret{} := DefaultReference;", i);
+                emitln!(self.writer, "{} := DefaultReference;", &ret_str);
             } else {
-                emitln!(self.writer, "__ret{} := DefaultValue;", i);
+                emitln!(self.writer, "{} := DefaultValue;", &ret_str);
+            }
+            let update = self.generate_model_ret_debug_update(func_env, end_loc, i, &ret_str);
+            if !update.is_empty() {
+                emitln!(self.writer, &update);
             }
         }
         self.writer.unindent();
@@ -1167,5 +1090,156 @@ impl<'env> ModuleTranslator<'env> {
         self.module_env.globalize_signature(
             &self.stackless_bytecode[func_env.get_def_idx().0 as usize].local_types[local_idx],
         )
+    }
+
+    /// Generates variable declarations for model debugging of given function.
+    /// This creates an `[Position]Value` array for each named local and for returns.
+    fn generate_model_debug_declarations(&self, func_env: &FunctionEnv<'_>) {
+        if self.module_env.env.options.omit_model_debug {
+            return;
+        }
+        for (idx, name, _) in &self.get_named_locals(func_env) {
+            emitln!(
+                self.writer,
+                "var {}: [Position]Value;",
+                self.debug_var_name(func_env, *idx, name)
+            )
+        }
+        for idx in 0..func_env.get_return_types().len() {
+            emitln!(
+                self.writer,
+                "var {}: [Position]Value;",
+                self.debug_ret_var_name(func_env, idx)
+            )
+        }
+    }
+
+    /// Returns the name of a debug variable.
+    fn debug_var_name(&self, func_env: &FunctionEnv<'_>, idx: u8, name: &str) -> String {
+        format!(
+            "debug#{}#{}#{}#{}",
+            func_env.module_env.get_id().name(),
+            func_env.get_name(),
+            idx,
+            name
+        )
+    }
+
+    /// Returns the name of a debug return variable.
+    fn debug_ret_var_name(&self, func_env: &FunctionEnv<'_>, idx: usize) -> String {
+        format!(
+            "debug#{}#{}#{}#__ret",
+            func_env.module_env.get_id().name(),
+            func_env.get_name(),
+            // We use `local_count + idx` to assign a unique index to return variables.
+            // This allows to deal with them mostly the same way as other variables in
+            // model analysis.
+            func_env.get_local_count() + idx,
+        )
+    }
+
+    /// Generates variable initialization for model debugging of given function.
+    fn generate_model_debug_initialization(&self, func_env: &FunctionEnv<'_>) {
+        if self.module_env.env.options.omit_model_debug {
+            return;
+        }
+        for (idx, name, _) in &self.get_named_locals(func_env) {
+            let debug_name = self.debug_var_name(func_env, *idx, name);
+            emitln!(self.writer, "{} := EmptyPositionMap;", debug_name);
+        }
+        for idx in 0..func_env.get_return_count() {
+            let debug_name = self.debug_ret_var_name(func_env, idx);
+            emitln!(self.writer, "{} := EmptyPositionMap;", debug_name);
+        }
+    }
+
+    /// Updates a local, injecting debug information if available.
+    fn update_local(&self, func_env: &FunctionEnv<'_>, loc: Loc, idx: u8, value: &str) -> String {
+        let update = format!("__m := UpdateLocal(__m, __frame + {}, {});", idx, value);
+        let debug_update = self.generate_model_debug_update(func_env, loc, idx, value);
+        if !debug_update.is_empty() {
+            format!("{}\n{}", update, debug_update)
+        } else {
+            update
+        }
+    }
+
+    /// Generates an update of the model debug variable at given location.
+    fn generate_model_debug_update(
+        &self,
+        func_env: &FunctionEnv<'_>,
+        loc: Loc,
+        idx: u8,
+        value: &str,
+    ) -> String {
+        if self.module_env.env.options.omit_model_debug {
+            return "".to_string();
+        }
+        let name = func_env.get_local_name(idx);
+        if name.starts_with("__") {
+            // Do not generate anything for anonymous local.
+            return "".to_string();
+        }
+        let sig = self.module_env.globalize_signature(
+            &self.stackless_bytecode[func_env.get_def_idx().0 as usize].local_types[idx as usize],
+        );
+        let actual_value = if sig.is_reference() {
+            format!("Dereference(__m, {})", value)
+        } else {
+            value.to_string()
+        };
+        let debug_var = self.debug_var_name(func_env, idx, &name);
+        format!(
+            "{} := {}[Position({}) := {}];",
+            debug_var,
+            debug_var,
+            loc.start(),
+            actual_value
+        )
+    }
+
+    /// Generates update for the return debug variable.
+    fn generate_model_ret_debug_update(
+        &self,
+        func_env: &FunctionEnv<'_>,
+        loc: Loc,
+        idx: usize,
+        value: &str,
+    ) -> String {
+        if self.module_env.env.options.omit_model_debug {
+            return "".to_string();
+        }
+        let sig = &func_env.get_return_types()[idx];
+        let actual_value = if sig.is_reference() {
+            format!("Dereference(__m, {})", value)
+        } else {
+            value.to_string()
+        };
+        let debug_var = self.debug_ret_var_name(func_env, idx);
+        format!(
+            "{} := {}[Position({}) := {}];",
+            debug_var,
+            debug_var,
+            loc.start(),
+            actual_value
+        )
+    }
+
+    /// Get list of all named locals of the function.
+    fn get_named_locals(&self, func_env: &FunctionEnv<'_>) -> Vec<(u8, String, GlobalType)> {
+        self.stackless_bytecode[func_env.get_def_idx().0 as usize]
+            .local_types
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, sig)| {
+                let name = func_env.get_local_name(idx as u8);
+                if name.starts_with("__") {
+                    // anonymous local, skip
+                    None
+                } else {
+                    Some((idx as u8, name, self.module_env.globalize_signature(sig)))
+                }
+            })
+            .collect_vec()
     }
 }
