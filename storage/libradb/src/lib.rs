@@ -68,7 +68,8 @@ use libra_types::{
 use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
-use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
+use std::convert::TryFrom;
+use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::StartupInfo;
 use storage_proto::TreeState;
 
@@ -241,7 +242,7 @@ impl LibraDB {
             self.get_account_state_with_proof(query_path.address, ledger_version, ledger_version)?;
 
         let account_resource = if let Some(account_blob) = &account_state_with_proof.blob {
-            AccountResource::make_from(&(&account_blob.try_into()?))?
+            AccountResource::try_from(account_blob)?
         } else {
             return Ok((Vec::new(), account_state_with_proof));
         };

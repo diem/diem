@@ -8,6 +8,7 @@ use futures::stream::BoxStream;
 use libra_crypto::{ed25519::*, HashValue};
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_state::AccountState,
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     event::EventHandle,
@@ -28,7 +29,7 @@ use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,
 };
-use std::{collections::BTreeMap, convert::TryFrom};
+use std::convert::TryFrom;
 use storage_client::StorageRead;
 use storage_proto::{BackupAccountStateResponse, StartupInfo};
 
@@ -214,13 +215,13 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
         0,
     );
 
-    let mut version_data = BTreeMap::new();
-    version_data.insert(
+    let mut account_state = AccountState::default();
+    account_state.insert(
         libra_types::account_config::ACCOUNT_RESOURCE_PATH.to_vec(),
         lcs::to_bytes(&account_resource).unwrap(),
     );
 
-    AccountStateBlob::from(lcs::to_bytes(&version_data).unwrap())
+    AccountStateBlob::try_from(&account_state).unwrap()
 }
 
 fn get_mock_txn_data(

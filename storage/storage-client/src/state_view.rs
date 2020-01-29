@@ -7,13 +7,13 @@ use futures::executor::block_on;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_state_view::StateView;
 use libra_types::{
-    access_path::AccessPath, account_address::AccountAddress, proof::SparseMerkleProof,
-    transaction::Version,
+    access_path::AccessPath, account_address::AccountAddress, account_state::AccountState,
+    proof::SparseMerkleProof, transaction::Version,
 };
 use scratchpad::{AccountStatus, SparseMerkleTree};
 use std::{
     cell::RefCell,
-    collections::{hash_map::Entry, BTreeMap, HashMap},
+    collections::{hash_map::Entry, HashMap},
     convert::TryInto,
     sync::Arc,
 };
@@ -61,7 +61,7 @@ pub struct VerifiedStateView<'a> {
     ///                                    |                     |
     ///        +---------------------------+---------------------+-------+
     ///        | +-------------------------+---------------------+-----+ |
-    ///        | |    account_to_btree_cache, account_to_proof_cache   | |
+    ///        | |    account_to_state_cache, account_to_proof_cache   | |
     ///        | +---------------^---------------------------^---------+ |
     ///        |                 |                           |           |
     ///        |     account state blob only        account state blob   |
@@ -72,7 +72,7 @@ pub struct VerifiedStateView<'a> {
     ///        | +------------------------------+ +--------------------+ |
     ///        +---------------------------------------------------------+
     /// ```
-    account_to_btree_cache: RefCell<HashMap<AccountAddress, BTreeMap<Vec<u8>, Vec<u8>>>>,
+    account_to_state_cache: RefCell<HashMap<AccountAddress, AccountState>>,
     account_to_proof_cache: RefCell<HashMap<HashValue, SparseMerkleProof>>,
 }
 
@@ -93,7 +93,7 @@ impl<'a> VerifiedStateView<'a> {
             latest_persistent_version,
             latest_persistent_state_root,
             speculative_state,
-            account_to_btree_cache: RefCell::new(HashMap::new()),
+            account_to_state_cache: RefCell::new(HashMap::new()),
             account_to_proof_cache: RefCell::new(HashMap::new()),
         }
     }
@@ -101,18 +101,18 @@ impl<'a> VerifiedStateView<'a> {
 
 impl<'a>
     Into<(
-        HashMap<AccountAddress, BTreeMap<Vec<u8>, Vec<u8>>>,
+        HashMap<AccountAddress, AccountState>,
         HashMap<HashValue, SparseMerkleProof>,
     )> for VerifiedStateView<'a>
 {
     fn into(
         self,
     ) -> (
-        HashMap<AccountAddress, BTreeMap<Vec<u8>, Vec<u8>>>,
+        HashMap<AccountAddress, AccountState>,
         HashMap<HashValue, SparseMerkleProof>,
     ) {
         (
-            self.account_to_btree_cache.into_inner(),
+            self.account_to_state_cache.into_inner(),
             self.account_to_proof_cache.into_inner(),
         )
     }
@@ -122,7 +122,7 @@ impl<'a> StateView for VerifiedStateView<'a> {
     fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
         let address = access_path.address;
         let path = &access_path.path;
-        match self.account_to_btree_cache.borrow_mut().entry(address) {
+        match self.account_to_state_cache.borrow_mut().entry(address) {
             Entry::Occupied(occupied) => Ok(occupied.get().get(path).cloned()),
             Entry::Vacant(vacant) => {
                 let address_hash = address.hash();

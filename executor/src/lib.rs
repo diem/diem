@@ -23,6 +23,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_logger::prelude::*;
+use libra_types::account_state::AccountState;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -415,9 +416,9 @@ where
             debug!("Execution status: {:?}", status);
         }
 
-        let (account_to_btree, account_to_proof) = state_view.into();
+        let (account_to_state, account_to_proof) = state_view.into();
         let output = Self::process_vm_outputs(
-            account_to_btree,
+            account_to_state,
             account_to_proof,
             &transactions,
             vm_outputs,
@@ -604,10 +605,10 @@ where
             }
         }
 
-        let (account_to_btree, account_to_proof) = state_view.into();
+        let (account_to_state, account_to_proof) = state_view.into();
 
         let output = Self::process_vm_outputs(
-            account_to_btree,
+            account_to_state,
             account_to_proof,
             &transactions,
             vm_outputs,
@@ -738,7 +739,7 @@ where
 
     /// Post-processing of what the VM outputs. Returns the entire block's output.
     fn process_vm_outputs(
-        mut account_to_btree: HashMap<AccountAddress, BTreeMap<Vec<u8>, Vec<u8>>>,
+        mut account_to_state: HashMap<AccountAddress, AccountState>,
         account_to_proof: HashMap<HashValue, SparseMerkleProof>,
         transactions: &[Transaction],
         vm_outputs: Vec<TransactionOutput>,
@@ -759,7 +760,7 @@ where
         for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
             let (blobs, state_tree, num_accounts_created) = Self::process_write_set(
                 txn,
-                &mut account_to_btree,
+                &mut account_to_state,
                 &proof_reader,
                 vm_output.write_set().clone(),
                 &current_state_tree,
@@ -844,7 +845,7 @@ where
     /// constructed state tree.
     fn process_write_set(
         transaction: &Transaction,
-        account_to_btree: &mut HashMap<AccountAddress, BTreeMap<Vec<u8>, Vec<u8>>>,
+        account_to_state: &mut HashMap<AccountAddress, AccountState>,
         proof_reader: &ProofReader,
         write_set: WriteSet,
         previous_state_tree: &SparseMerkleTree,
@@ -861,15 +862,15 @@ where
         for (access_path, write_op) in write_set.into_iter() {
             let address = access_path.address;
             let path = access_path.path;
-            match account_to_btree.entry(address) {
+            match account_to_state.entry(address) {
                 hash_map::Entry::Occupied(mut entry) => {
-                    let account_btree = entry.get_mut();
+                    let account_state = entry.get_mut();
                     // TODO(gzh): we check account creation here for now. Will remove it once we
                     // have a better way.
-                    if account_btree.is_empty() {
+                    if account_state.is_empty() {
                         num_accounts_created += 1;
                     }
-                    Self::update_account_btree(account_btree, path, write_op);
+                    Self::update_account_state(account_state, path, write_op);
                 }
                 hash_map::Entry::Vacant(entry) => {
                     // Before writing to an account, VM should always read that account. So we
@@ -884,17 +885,17 @@ where
                         TransactionPayload::WriteSet(_) => (),
                     }
 
-                    let mut account_btree = BTreeMap::new();
-                    Self::update_account_btree(&mut account_btree, path, write_op);
-                    entry.insert(account_btree);
+                    let mut account_state = Default::default();
+                    Self::update_account_state(&mut account_state, path, write_op);
+                    entry.insert(account_state);
                 }
             }
             addrs.insert(address);
         }
 
         for addr in addrs {
-            let account_btree = account_to_btree.get(&addr).expect("Address should exist.");
-            let account_blob = AccountStateBlob::try_from(account_btree)?;
+            let account_state = account_to_state.get(&addr).expect("Address should exist.");
+            let account_blob = AccountStateBlob::try_from(account_state)?;
             updated_blobs.insert(addr, account_blob);
         }
         let state_tree = Arc::new(
@@ -912,14 +913,10 @@ where
         Ok((updated_blobs, state_tree, num_accounts_created))
     }
 
-    fn update_account_btree(
-        account_btree: &mut BTreeMap<Vec<u8>, Vec<u8>>,
-        path: Vec<u8>,
-        write_op: WriteOp,
-    ) {
+    fn update_account_state(account_state: &mut AccountState, path: Vec<u8>, write_op: WriteOp) {
         match write_op {
-            WriteOp::Value(new_value) => account_btree.insert(path, new_value),
-            WriteOp::Deletion => account_btree.remove(&path),
+            WriteOp::Value(new_value) => account_state.insert(path, new_value),
+            WriteOp::Deletion => account_state.remove(&path),
         };
     }
 }

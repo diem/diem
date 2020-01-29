@@ -5,7 +5,9 @@ use super::*;
 use crate::test_helper::{arb_blocks_to_commit, arb_mock_genesis};
 use libra_crypto::hash::CryptoHash;
 use libra_temppath::TempPath;
-use libra_types::{contract_event::ContractEvent, ledger_info::LedgerInfo};
+use libra_types::{
+    account_config::AccountResource, contract_event::ContractEvent, ledger_info::LedgerInfo,
+};
 use proptest::prelude::*;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -270,11 +272,7 @@ fn group_events_by_query_path(
     let mut event_key_to_query_path = HashMap::new();
     for txn in txns_to_commit {
         for (address, account_blob) in txn.account_states().iter() {
-            let account_btree = account_blob
-                .try_into()
-                .expect("The stored account blob can't be parsed as BTreeMap");
-            let account =
-                AccountResource::make_from(&account_btree).expect("AccountResource is not found");
+            let account = AccountResource::try_from(account_blob).unwrap();
             event_key_to_query_path.insert(
                 account.sent_events().key().clone(),
                 AccessPath::new_for_sent_event(*address),

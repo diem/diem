@@ -1,13 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(any(test, feature = "fuzzing"))]
-use crate::account_config::ACCOUNT_RESOURCE_PATH;
 use crate::{
-    account_address::AccountAddress, account_config::AccountResource, ledger_info::LedgerInfo,
-    proof::AccountStateProof, transaction::Version,
+    account_address::AccountAddress, account_config::AccountResource, account_state::AccountState,
+    ledger_info::LedgerInfo, proof::AccountStateProof, transaction::Version,
 };
-use anyhow::{ensure, format_err, Error, Result};
+use anyhow::{anyhow, ensure, format_err, Error, Result};
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},
     HashValue,
@@ -19,7 +17,6 @@ use proptest::{arbitrary::Arbitrary, prelude::*};
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::BTreeMap,
     convert::{TryFrom, TryInto},
     fmt,
 };
@@ -31,8 +28,8 @@ pub struct AccountStateBlob {
 
 impl fmt::Debug for AccountStateBlob {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let decoded = AccountResource::try_from(self)
-            .map(|resource| format!("{:#?}", resource))
+        let decoded = lcs::from_bytes(&self.blob)
+            .map(|account_state: AccountState| format!("{:#?}", account_state))
             .unwrap_or_else(|_| String::from("[fail]"));
 
         write!(
@@ -65,16 +62,6 @@ impl From<Vec<u8>> for AccountStateBlob {
     }
 }
 
-impl TryFrom<&BTreeMap<Vec<u8>, Vec<u8>>> for AccountStateBlob {
-    type Error = Error;
-
-    fn try_from(map: &BTreeMap<Vec<u8>, Vec<u8>>) -> Result<Self> {
-        Ok(Self {
-            blob: lcs::to_bytes(map)?,
-        })
-    }
-}
-
 impl TryFrom<crate::proto::types::AccountStateBlob> for AccountStateBlob {
     type Error = Error;
 
@@ -89,23 +76,39 @@ impl From<AccountStateBlob> for crate::proto::types::AccountStateBlob {
     }
 }
 
-#[cfg(any(test, feature = "fuzzing"))]
-impl From<AccountResource> for AccountStateBlob {
-    fn from(account_resource: AccountResource) -> Self {
-        let mut account_state: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
-        account_state.insert(
-            ACCOUNT_RESOURCE_PATH.to_vec(),
-            lcs::to_bytes(&account_resource).unwrap(),
-        );
-        AccountStateBlob::try_from(&account_state).unwrap()
+impl TryFrom<&AccountState> for AccountStateBlob {
+    type Error = Error;
+
+    fn try_from(account_state: &AccountState) -> Result<Self> {
+        Ok(Self {
+            blob: lcs::to_bytes(account_state)?,
+        })
     }
 }
 
-impl TryFrom<&AccountStateBlob> for BTreeMap<Vec<u8>, Vec<u8>> {
+impl TryFrom<&AccountStateBlob> for AccountState {
     type Error = Error;
 
     fn try_from(account_state_blob: &AccountStateBlob) -> Result<Self> {
         lcs::from_bytes(&account_state_blob.blob).map_err(Into::into)
+    }
+}
+
+impl TryFrom<&AccountResource> for AccountStateBlob {
+    type Error = Error;
+
+    fn try_from(account_resource: &AccountResource) -> Result<Self> {
+        Self::try_from(&AccountState::try_from(account_resource)?)
+    }
+}
+
+impl TryFrom<&AccountStateBlob> for AccountResource {
+    type Error = Error;
+
+    fn try_from(account_state_blob: &AccountStateBlob) -> Result<Self> {
+        AccountState::try_from(account_state_blob)?
+            .get_account_resource()?
+            .ok_or_else(|| anyhow!("AccountResource not found."))
     }
 }
 
@@ -121,8 +124,8 @@ impl CryptoHash for AccountStateBlob {
 
 #[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
-    pub fn account_state_blob_strategy()(account_resource in any::<AccountResource>()) -> AccountStateBlob {
-        AccountStateBlob::from(account_resource)
+    fn account_state_blob_strategy()(account_resource in any::<AccountResource>()) -> AccountStateBlob {
+        AccountStateBlob::try_from(&account_resource).unwrap()
     }
 }
 
