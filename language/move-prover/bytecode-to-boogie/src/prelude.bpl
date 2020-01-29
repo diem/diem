@@ -1,6 +1,16 @@
 // ================================================================================
 // Domains
 
+// Source Position type
+// --------------------
+
+type {:datatype} Position;
+function {:constructor} Position(index: int) : Position;
+
+const EmptyPositionMap: [Position]Value;
+axiom EmptyPositionMap == (lambda p: Position :: DefaultValue);
+
+
 
 // Path type
 // ---------
@@ -133,7 +143,6 @@ function {:inline 1} SwapValueArray(a: ValueArray, i: int, j: int): ValueArray {
 function {:inline 1} IsEmpty(a: ValueArray): bool {
     l#ValueArray(a) == 0
 }
-
 
 // Stratified Functions on Values
 // ------------------------------
@@ -323,9 +332,11 @@ function {:inline 1} UpdateLocal(m: Memory, idx: int, v: Value): Memory {
     Memory(domain#Memory(m)[Local(idx) := true], contents#Memory(m)[Local(idx) := v])
 }
 
-procedure {:inline 1} InitMemory() {
-  __m := EmptyMemory;
+procedure {:inline 1} InitVerification() {
+  // Set local counter to 0
   __local_counter := 0;
+  // Assume sender account exists.
+  assume ExistsTxnSenderAccount(__m, __txn);
 }
 
 // ============================================================================================

@@ -22,6 +22,7 @@ const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-doModSetAnalysis",
     "-noinfer",
     "-printVerifiedProceduresCount:0",
+    "-printModel:4",
 ];
 
 /// Atomic used to prevent re-initialization of logging.
@@ -58,6 +59,8 @@ pub struct Options {
     pub native_stubs: bool,
     /// Whether to minimize execution traces in errors.
     pub minimize_execution_trace: bool,
+    /// Whether to omit debug information in generated model.
+    pub omit_model_debug: bool,
 }
 
 impl Default for Options {
@@ -75,6 +78,7 @@ impl Default for Options {
             generate_only: false,
             native_stubs: false,
             minimize_execution_trace: true,
+            omit_model_debug: false,
         }
     }
 }
@@ -123,6 +127,11 @@ impl Options {
                 Arg::with_name("native-stubs")
                     .long("native-stubs")
                     .help("whether to generate stubs for native functions"),
+            )
+            .arg(
+                Arg::with_name("omit-model-debug")
+                    .long("omit-model-debug")
+                    .help("whether to omit code for model debugging"),
             )
             .arg(
                 Arg::with_name("boogie-exe")
@@ -198,6 +207,7 @@ impl Options {
         };
         self.generate_only = matches.is_present("generate-only");
         self.native_stubs = matches.is_present("native-stubs");
+        self.omit_model_debug = matches.is_present("omit-model-debug");
         self.use_cvc4 = matches.is_present("use-cvc4");
         self.boogie_exe = get_with_default("boogie-exe");
         self.z3_exe = get_with_default("z3-exe");
