@@ -5,6 +5,7 @@
 //! from external clients (such as wallets) and performs necessary processing before sending them to
 //! next step.
 
+use crate::counters;
 use admission_control_proto::proto::admission_control::{
     admission_control_server::{AdmissionControl, AdmissionControlServer},
     SubmitTransactionRequest, SubmitTransactionResponse,
@@ -119,6 +120,9 @@ impl AdmissionControl for AdmissionControlService {
         request: tonic::Request<SubmitTransactionRequest>,
     ) -> Result<tonic::Response<SubmitTransactionResponse>, tonic::Status> {
         debug!("[GRPC] AdmissionControl::submit_transaction");
+        counters::REQUESTS
+            .with_label_values(&["submit_transaction"])
+            .inc();
         let req = request.into_inner();
 
         let (req_sender, res_receiver) = oneshot::channel();
@@ -160,6 +164,9 @@ impl AdmissionControl for AdmissionControlService {
         request: tonic::Request<UpdateToLatestLedgerRequest>,
     ) -> Result<tonic::Response<UpdateToLatestLedgerResponse>, tonic::Status> {
         debug!("[GRPC] AdmissionControl::update_to_latest_ledger");
+        counters::REQUESTS
+            .with_label_values(&["update_to_latest_ledger"])
+            .inc();
         let req = request.into_inner();
         let resp = self
             .update_to_latest_ledger_inner(req)
