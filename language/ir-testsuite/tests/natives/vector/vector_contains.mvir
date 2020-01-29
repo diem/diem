@@ -35,3 +35,31 @@ main() {
 }
 
 // check: EXECUTED
+
+//! new-transaction
+main() {
+  let vec: Vector.T<u64>;
+
+  vec = Vector.empty<u64>();
+
+  assert(!Vector.contains_unrestricted<u64>(&vec, 0), 1);
+
+  Vector.push_back<u64>(&mut vec, copy(zero));
+  assert(Vector.contains_unrestricted<u64>(&vec, 0), 2);
+  assert(!Vector.contains_unrestricted<u64>(&vec, 1), 3);
+
+  Vector.push_back<u64>(&mut vec, copy(one));
+  assert(Vector.contains_unrestricted<u64>(&vec, 0), 4);
+  assert(Vector.contains_unrestricted<u64>(&vec, 1), 5);
+  assert(!Vector.contains_unrestricted<u64>(&vec, 2), 6);
+
+  Vector.push_back<u64>(&mut vec, copy(two));
+  assert(Vector.contains_unrestricted<u64>(&vec, 0), 7);
+  assert(Vector.contains_unrestricted<u64>(&vec, 1), 8);
+  assert(Vector.contains_unrestricted<u64>(&vec, 2), 9);
+  assert(!Vector.contains_unrestricted<u64>(&vec, 3), 10);
+
+  return;
+}
+
+// check: EXECUTED

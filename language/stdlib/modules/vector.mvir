@@ -29,6 +29,15 @@ module Vector {
   // Aborts if either index is out of bounds.
   native public swap<Element>(v: &mut Self.T<Element>, i: u64, j: u64);
 
+  // Return a single-element vector containing `e`
+  public singleton<Element>(e: Element): Self.T<Element> {
+      let v: Self.T<Element>;
+
+      v = Self.empty<Element>();
+      Self.push_back<Element>(&mut v, move(e));
+      return move(v);
+  }
+
   // Reverses the order of the elements in the vector in place.
   public reverse<Element>(v: &mut Self.T<Element>) {
       let front_index: u64;
@@ -88,7 +97,8 @@ module Vector {
     return;
   }
 
-  // Return true if `e` is in the vector `v`
+  // Return true if there is an element in the vector `v` that is structurally equal to the
+  // referent of `e`
   public contains<Element>(v: &Self.T<Element>, e: &Element): bool {
     let len: u64;
     let i: u64;
@@ -104,6 +114,11 @@ module Vector {
     }
 
     return false;
+  }
+
+  // Return true if unrestricted value `e` is in the vector `v`
+  public contains_unrestricted<Element: unrestricted>(v: &Self.T<Element>, e: Element): bool {
+    return Self.contains<Element>(move(v), &e);
   }
 
   // Remove the `i`th element E of the vector by swapping it with the last element L, popping E

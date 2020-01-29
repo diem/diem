@@ -1,0 +1,10 @@
+
+import 0x0.Vector;
+main() {
+    let v: Vector.T<u64>;
+
+    v = Vector.singleton<u64>(7);
+    assert(Vector.length<u64>(&v) == 1, 100);
+    assert(Vector.get<u64>(&v, 0) == 7, 101);
+    return;
+}
