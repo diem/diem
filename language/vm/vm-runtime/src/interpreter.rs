@@ -953,9 +953,16 @@ impl<'txn> Interpreter<'txn> {
     /// Given an `VMStatus` generate a core dump if the error is an `InvariantViolation`.
     fn maybe_core_dump(
         &self,
-        err: VMStatus,
+        mut err: VMStatus,
         current_frame: &Frame<'txn, FunctionRef<'txn>>,
     ) -> VMStatus {
+        // a verification error cannot happen at runtime so change it into an invariant violation.
+        if err.status_type() == StatusType::Verification {
+            crit!("Verification error during runtime: {:?}", err);
+            let mut new_err = VMStatus::new(StatusCode::VERIFICATION_ERROR);
+            new_err.message = err.message;
+            err = new_err;
+        }
         if err.is(StatusType::InvariantViolation) {
             let state = self.get_internal_state(current_frame);
             crit!(

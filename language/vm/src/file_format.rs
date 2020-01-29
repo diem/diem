@@ -1832,3 +1832,50 @@ pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
     module.function_defs.push(fun_def);
     module.freeze().unwrap()
 }
+
+/// Return a simple script that contains only a return in the main()
+pub fn empty_script() -> CompiledScriptMut {
+    let default_address = AccountAddress::new([3u8; 32]);
+    let self_module_name = self_module_name().to_owned();
+    let main_name = Identifier::new("main").unwrap();
+    let void_void_sig = FunctionSignature {
+        arg_types: vec![],
+        return_types: vec![],
+        type_formals: vec![],
+    };
+    let no_args_no_locals = LocalsSignature(vec![]);
+    let self_module_handle = ModuleHandle {
+        address: AddressPoolIndex(0),
+        name: IdentifierIndex(0),
+    };
+    let main = FunctionHandle {
+        module: ModuleHandleIndex(0),
+        name: IdentifierIndex(1),
+        signature: FunctionSignatureIndex(0),
+    };
+    let code = CodeUnit {
+        max_stack_size: 1,
+        locals: LocalsSignatureIndex(0),
+        code: vec![Bytecode::Ret],
+    };
+    let main_def = FunctionDefinition {
+        function: FunctionHandleIndex(0),
+        flags: CodeUnit::PUBLIC,
+        acquires_global_resources: vec![],
+        code,
+    };
+    CompiledScriptMut {
+        module_handles: vec![self_module_handle],
+        struct_handles: vec![],
+        function_handles: vec![main],
+
+        type_signatures: vec![],
+        function_signatures: vec![void_void_sig],
+        locals_signatures: vec![no_args_no_locals],
+
+        identifiers: vec![self_module_name, main_name],
+        byte_array_pool: vec![],
+        address_pool: vec![default_address],
+        main: main_def,
+    }
+}

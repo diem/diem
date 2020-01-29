@@ -186,6 +186,13 @@ pub trait ScriptAccess: Sync {
     /// Returns the `CompiledScript` that will be used for accesses.
     fn as_script(&self) -> &CompiledScript;
 
+    /// Returns the `ModuleHandle` for `self`.
+    fn self_handle(&self) -> &ModuleHandle {
+        self.module_handle_at(ModuleHandleIndex::new(
+            CompiledModule::IMPLEMENTED_MODULE_INDEX,
+        ))
+    }
+
     fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle {
         &self.as_script().as_inner().module_handles[idx.into_index()]
     }

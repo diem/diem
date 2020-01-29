@@ -102,7 +102,7 @@ pub(crate) fn run_and_assert_gas_cost_stability(
     universe: AccountUniverseGen,
     transaction_gens: Vec<impl AUTransactionGen + Clone>,
 ) -> Result<(), TestCaseError> {
-    test_all_genesis_impl({
+    test_all_genesis_impl(None, {
         |mut executor| {
             let mut universe = universe.clone().setup_gas_cost_stability(&mut executor);
             let (transactions, expected_values): (Vec<_>, Vec<_>) = transaction_gens
@@ -135,7 +135,7 @@ pub(crate) fn run_and_assert_universe(
     universe: AccountUniverseGen,
     transaction_gens: Vec<impl AUTransactionGen + Clone>,
 ) -> Result<(), TestCaseError> {
-    test_all_genesis_impl({
+    test_all_genesis_impl(None, {
         |mut executor| {
             let mut universe = universe.clone().setup(&mut executor);
             let (transactions, expected_values): (Vec<_>, Vec<_>) = transaction_gens

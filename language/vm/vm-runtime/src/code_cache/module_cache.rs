@@ -172,35 +172,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         if let Some(m) = self.map.get(id) {
             return Ok(&*m);
         }
-
-        let comp_module = match data_view.load_module(id) {
-            Ok(blob) => match CompiledModule::deserialize(&blob) {
-                Ok(module) => module,
-                Err(err) => {
-                    crit!("[VM] Storage contains a malformed module with id {:?}", id);
-                    return Err(err);
-                }
-            },
-            Err(err) => {
-                crit!("[VM] Error fetching module with id {:?}", id);
-                return Err(err);
-            }
-        };
-        let module = match VerifiedModule::new(comp_module) {
-            Ok(module) => module,
-            Err((_, mut errors)) => {
-                // If there are errors there should be at least one otherwise there's an internal
-                // error in the verifier. We only give back the first error. If the user wants to
-                // debug things, they can do that offline.
-                let error = if errors.is_empty() {
-                    VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
-                } else {
-                    errors.remove(0)
-                };
-                return Err(error);
-            }
-        };
-
+        let module = load_and_verify_module_id(id, data_view)?;
         let loaded_module = LoadedModule::new(module);
         Ok(self.map.or_insert(id.clone(), loaded_module))
     }
@@ -271,6 +243,36 @@ impl<'alloc> VMModuleCache<'alloc> {
                     self.resolve_signature_token(module, sub_tok, type_context, data_view)?;
                 Ok(Type::MutableReference(Box::new(inner_ty)))
             }
+        }
+    }
+}
+
+pub fn load_and_verify_module_id(
+    id: &ModuleId,
+    data_view: &dyn InterpreterContext,
+) -> VMResult<VerifiedModule> {
+    let comp_module = match data_view.load_module(id) {
+        Ok(blob) => match CompiledModule::deserialize(&blob) {
+            Ok(module) => module,
+            Err(err) => {
+                crit!("[VM] Storage contains a malformed module with id {:?}", id);
+                return Err(err);
+            }
+        },
+        Err(err) => {
+            crit!("[VM] Error fetching module with id {:?}", id);
+            return Err(err);
+        }
+    };
+    match VerifiedModule::new(comp_module) {
+        Ok(module) => Ok(module),
+        Err((_, mut errors)) => {
+            // If there are errors there should be at least one otherwise there's an internal
+            // error in the verifier. We only give back the first error. If the user wants to
+            // debug things, they can do that offline.
+            Err(errors
+                .pop()
+                .unwrap_or_else(|| VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)))
         }
     }
 }
