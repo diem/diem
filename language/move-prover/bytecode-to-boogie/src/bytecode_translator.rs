@@ -309,7 +309,7 @@ impl<'env> ModuleTranslator<'env> {
                 if self.get_local_type(func_env, *dest).is_reference() {
                     emitln!(
                         self.writer,
-                        "call t{} := CopyOrMoveRef({});",
+                        "call __t{} := CopyOrMoveRef({});",
                         dest,
                         func_env.get_local_name(*src)
                     )
@@ -330,7 +330,7 @@ impl<'env> ModuleTranslator<'env> {
                 if self.get_local_type(func_env, *dest).is_reference() {
                     emitln!(
                         self.writer,
-                        "call t{} := CopyOrMoveRef({});",
+                        "call __t{} := CopyOrMoveRef({});",
                         dest,
                         func_env.get_local_name(*src)
                     )
@@ -351,7 +351,7 @@ impl<'env> ModuleTranslator<'env> {
                 if self.get_local_type(func_env, *dest as usize).is_reference() {
                     emitln!(
                         self.writer,
-                        "call {} := CopyOrMoveRef(t{});",
+                        "call {} := CopyOrMoveRef(__t{});",
                         func_env.get_local_name(*dest),
                         src
                     )
@@ -370,12 +370,12 @@ impl<'env> ModuleTranslator<'env> {
             }
             BorrowLoc(dest, src) => emitln!(
                 self.writer,
-                "call t{} := BorrowLoc(__frame + {});",
+                "call __t{} := BorrowLoc(__frame + {});",
                 dest,
                 src
             ),
             ReadRef(dest, src) => {
-                emitln!(self.writer, "call __tmp := ReadRef(t{});", src);
+                emitln!(self.writer, "call __tmp := ReadRef(__t{});", src);
                 emit!(
                     self.writer,
                     &boogie_type_check(
@@ -392,11 +392,11 @@ impl<'env> ModuleTranslator<'env> {
             }
             WriteRef(dest, src) => emitln!(
                 self.writer,
-                "call WriteRef(t{}, GetLocal(__m, __frame + {}));",
+                "call WriteRef(__t{}, GetLocal(__m, __frame + {}));",
                 dest,
                 src
             ),
-            FreezeRef(dest, src) => emitln!(self.writer, "call t{} := FreezeRef(t{});", dest, src),
+            FreezeRef(dest, src) => emitln!(self.writer, "call __t{} := FreezeRef(__t{});", dest, src),
             Call(dests, callee_index, type_actuals, args) => {
                 let (callee_module_env, callee_def_idx) =
                     self.module_env.get_callee_info(callee_index);
@@ -418,7 +418,7 @@ impl<'env> ModuleTranslator<'env> {
                         .iter()
                         .map(|arg_idx| {
                             if self.get_local_type(func_env, *arg_idx).is_reference() {
-                                format!("t{}", arg_idx)
+                                format!("__t{}", arg_idx)
                             } else {
                                 format!("GetLocal(__m, __frame + {})", arg_idx)
                             }
@@ -429,7 +429,7 @@ impl<'env> ModuleTranslator<'env> {
                     &dests
                         .iter()
                         .map(|dest_idx| {
-                            let dest = format!("t{}", dest_idx);
+                            let dest = format!("__t{}", dest_idx);
                             let dest_type = &self.get_local_type(func_env, *dest_idx);
                             dest_type_assumptions.push(boogie_type_check(
                                 self.module_env.env,
@@ -438,7 +438,7 @@ impl<'env> ModuleTranslator<'env> {
                             ));
                             if !dest_type.is_reference() {
                                 tmp_assignments.push(format!(
-                                    "__m := UpdateLocal(__m, __frame + {}, t{});",
+                                    "__m := UpdateLocal(__m, __frame + {}, __t{});",
                                     dest_idx, dest_idx
                                 ));
                             }
@@ -503,12 +503,12 @@ impl<'env> ModuleTranslator<'env> {
                     if !dests_str.is_empty() {
                         dests_str.push_str(", ");
                     }
-                    let dest_str = &format!("t{}", dest);
+                    let dest_str = &format!("__t{}", dest);
                     let dest_type = &self.get_local_type(func_env, *dest);
                     dests_str.push_str(dest_str);
                     if !dest_type.is_reference() {
                         tmp_assignments.push(format!(
-                            "__m := UpdateLocal(__m, __frame + {}, t{});",
+                            "__m := UpdateLocal(__m, __frame + {}, __t{});",
                             dest, dest
                         ));
                     }
@@ -529,7 +529,7 @@ impl<'env> ModuleTranslator<'env> {
                 let field_env = &struct_env.get_field(field_def_index);
                 emitln!(
                     self.writer,
-                    "call t{} := BorrowField(t{}, {});",
+                    "call __t{} := BorrowField(__t{}, {});",
                     dest,
                     src,
                     boogie_field_name(field_env)
@@ -563,7 +563,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(
                     self.writer,
-                    "call t{} := BorrowGlobal(GetLocal(__m, __frame + {}), {});",
+                    "call __t{} := BorrowGlobal(GetLocal(__m, __frame + {}), {});",
                     dest,
                     addr,
                     resource_type,
@@ -607,7 +607,7 @@ impl<'env> ModuleTranslator<'env> {
                     self.writer,
                     &boogie_type_check(
                         self.module_env.env,
-                        &format!("t{}", dest),
+                        &format!("__t{}", dest),
                         &self.get_local_type(func_env, *dest)
                     )
                 );
@@ -616,9 +616,9 @@ impl<'env> ModuleTranslator<'env> {
             Ret(rets) => {
                 for (i, r) in rets.iter().enumerate() {
                     if self.get_local_type(func_env, *r).is_reference() {
-                        emitln!(self.writer, "ret{} := t{};", i, r);
+                        emitln!(self.writer, "__ret{} := __t{};", i, r);
                     } else {
-                        emitln!(self.writer, "ret{} := GetLocal(__m, __frame + {});", i, r);
+                        emitln!(self.writer, "__ret{} := GetLocal(__m, __frame + {});", i, r);
                     }
                 }
                 emitln!(self.writer, "return;");
@@ -1015,7 +1015,7 @@ impl<'env> ModuleTranslator<'env> {
             .get_return_types()
             .iter()
             .enumerate()
-            .map(|(i, ref s)| format!("ret{}: {}", i, boogie_local_type(s)))
+            .map(|(i, ref s)| format!("__ret{}: {}", i, boogie_local_type(s)))
             .join(", ");
         (args, rets)
     }
@@ -1041,7 +1041,7 @@ impl<'env> ModuleTranslator<'env> {
             )
             .join(", ");
         let rets = (0..func_env.get_return_types().len())
-            .map(|i| format!("ret{}", i))
+            .map(|i| format!("__ret{}", i))
             .join(", ");
         let assumptions = "    assume ExistsTxnSenderAccount(__m, __txn);\n";
         if rets.is_empty() {
@@ -1153,9 +1153,9 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "__m := __saved_m;");
         for (i, ref sig) in func_env.get_return_types().iter().enumerate() {
             if sig.is_reference() {
-                emitln!(self.writer, "ret{} := DefaultReference;", i);
+                emitln!(self.writer, "__ret{} := DefaultReference;", i);
             } else {
-                emitln!(self.writer, "ret{} := DefaultValue;", i);
+                emitln!(self.writer, "__ret{} := DefaultValue;", i);
             }
         }
         self.writer.unindent();

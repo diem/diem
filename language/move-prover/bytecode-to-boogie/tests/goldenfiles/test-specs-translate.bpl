@@ -56,20 +56,20 @@ procedure {:inline 1} Unpack_TestSpecs_R(_struct: Value) returns (x: Value, s: V
 
 // ** functions of module TestSpecs
 
-procedure {:inline 1} TestSpecs_div (x1: Value, x2: Value) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_div (x1: Value, x2: Value) returns (__ret0: Value)
 requires b#Boolean(Boolean(i#Integer(x2) > i#Integer(Integer(0))));
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(ret0, Integer(i#Integer(x1) * i#Integer(x2)))));
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(__ret0, Integer(i#Integer(x1) * i#Integer(x2)))));
 ensures old(!(b#Boolean(Boolean(i#Integer(x1) <= i#Integer(Integer(0))))) && (b#Boolean(Boolean(i#Integer(x1) > i#Integer(Integer(1)))))) ==> !__abort_flag;
 ensures old(b#Boolean(Boolean(i#Integer(x1) <= i#Integer(Integer(0))))) ==> __abort_flag;
 
 {
     // declare local variables
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
+    var r: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -103,19 +103,19 @@ ensures old(b#Boolean(Boolean(i#Integer(x1) <= i#Integer(Integer(0))))) ==> __ab
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 6);
+    __ret0 := GetLocal(__m, __frame + 6);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestSpecs_div_verify (x1: Value, x2: Value) returns (ret0: Value)
+procedure TestSpecs_div_verify (x1: Value, x2: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestSpecs_div(x1, x2);
+    call __ret0 := TestSpecs_div(x1, x2);
 }
 
 procedure {:inline 1} TestSpecs_create_resource () returns ()
@@ -183,12 +183,12 @@ procedure TestSpecs_select_from_global_resource_verify () returns ()
     call TestSpecs_select_from_global_resource();
 }
 
-procedure {:inline 1} TestSpecs_select_from_resource (r: Value) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_select_from_resource (r: Value) returns (__ret0: Value)
 requires b#Boolean(Boolean(i#Integer(SelectField(r, TestSpecs_R_x)) > i#Integer(Integer(0))));
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t1: Value; // TestSpecs_R_type_value()
+    var __t1: Value; // TestSpecs_R_type_value()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -207,27 +207,27 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 1);
+    __ret0 := GetLocal(__m, __frame + 1);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestSpecs_select_from_resource_verify (r: Value) returns (ret0: Value)
+procedure TestSpecs_select_from_resource_verify (r: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestSpecs_select_from_resource(r);
+    call __ret0 := TestSpecs_select_from_resource(r);
 }
 
-procedure {:inline 1} TestSpecs_select_from_resource_nested (r: Value) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_select_from_resource_nested (r: Value) returns (__ret0: Value)
 requires b#Boolean(Boolean(IsEqual(SelectField(SelectField(r, TestSpecs_R_s), TestSpecs_S_a), Address(1))));
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t1: Value; // TestSpecs_R_type_value()
+    var __t1: Value; // TestSpecs_R_type_value()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -246,27 +246,27 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 1);
+    __ret0 := GetLocal(__m, __frame + 1);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestSpecs_select_from_resource_nested_verify (r: Value) returns (ret0: Value)
+procedure TestSpecs_select_from_resource_nested_verify (r: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestSpecs_select_from_resource_nested(r);
+    call __ret0 := TestSpecs_select_from_resource_nested(r);
 }
 
-procedure {:inline 1} TestSpecs_select_from_global_resource_dynamic_address (r: Value) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_select_from_global_resource_dynamic_address (r: Value) returns (__ret0: Value)
 requires b#Boolean(Boolean(i#Integer(SelectField(Dereference(__m, GetResourceReference(TestSpecs_R_type_value(), a#Address(SelectField(SelectField(r, TestSpecs_R_s), TestSpecs_S_a)))), TestSpecs_R_x)) > i#Integer(Integer(0))));
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t1: Value; // TestSpecs_R_type_value()
+    var __t1: Value; // TestSpecs_R_type_value()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -285,19 +285,19 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 1);
+    __ret0 := GetLocal(__m, __frame + 1);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestSpecs_select_from_global_resource_dynamic_address_verify (r: Value) returns (ret0: Value)
+procedure TestSpecs_select_from_global_resource_dynamic_address_verify (r: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestSpecs_select_from_global_resource_dynamic_address(r);
+    call __ret0 := TestSpecs_select_from_global_resource_dynamic_address(r);
 }
 
 procedure {:inline 1} TestSpecs_select_from_reference (r: Reference) returns ()
@@ -334,16 +334,16 @@ procedure TestSpecs_select_from_reference_verify (r: Reference) returns ()
     call TestSpecs_select_from_reference(r);
 }
 
-procedure {:inline 1} TestSpecs_ret_values () returns (ret0: Value, ret1: Value, ret2: Value)
+procedure {:inline 1} TestSpecs_ret_values () returns (__ret0: Value, __ret1: Value, __ret2: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures b#Boolean(Boolean(IsEqual(ret0, Integer(7))));
-ensures b#Boolean(Boolean(IsEqual(ret1, Boolean(false))));
-ensures b#Boolean(Boolean(IsEqual(ret2, Integer(10))));
+ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(7))));
+ensures b#Boolean(Boolean(IsEqual(__ret1, Boolean(false))));
+ensures b#Boolean(Boolean(IsEqual(__ret2, Integer(10))));
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // BooleanType()
-    var t2: Value; // IntegerType()
+    var __t0: Value; // IntegerType()
+    var __t1: Value; // BooleanType()
+    var __t2: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -366,31 +366,31 @@ ensures b#Boolean(Boolean(IsEqual(ret2, Integer(10))));
     call __tmp := LdConst(10);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 0);
-    ret1 := GetLocal(__m, __frame + 1);
-    ret2 := GetLocal(__m, __frame + 2);
+    __ret0 := GetLocal(__m, __frame + 0);
+    __ret1 := GetLocal(__m, __frame + 1);
+    __ret2 := GetLocal(__m, __frame + 2);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
-    ret1 := DefaultValue;
-    ret2 := DefaultValue;
+    __ret0 := DefaultValue;
+    __ret1 := DefaultValue;
+    __ret2 := DefaultValue;
 }
 
-procedure TestSpecs_ret_values_verify () returns (ret0: Value, ret1: Value, ret2: Value)
+procedure TestSpecs_ret_values_verify () returns (__ret0: Value, __ret1: Value, __ret2: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0, ret1, ret2 := TestSpecs_ret_values();
+    call __ret0, __ret1, __ret2 := TestSpecs_ret_values();
 }
 
-procedure {:inline 1} TestSpecs_helper_function (x: Value) returns (ret0: Value)
+procedure {:inline 1} TestSpecs_helper_function (x: Value) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 ensures b#Boolean(Boolean(b#Boolean(number_in_range(x)) && b#Boolean(Boolean(i#Integer(x) < i#Integer(max_u64())))));
 {
     // declare local variables
-    var t1: Value; // IntegerType()
+    var __t1: Value; // IntegerType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -409,17 +409,17 @@ ensures b#Boolean(Boolean(b#Boolean(number_in_range(x)) && b#Boolean(Boolean(i#I
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 1);
+    __ret0 := GetLocal(__m, __frame + 1);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestSpecs_helper_function_verify (x: Value) returns (ret0: Value)
+procedure TestSpecs_helper_function_verify (x: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestSpecs_helper_function(x);
+    call __ret0 := TestSpecs_helper_function(x);
 }

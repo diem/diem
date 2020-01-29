@@ -48,16 +48,16 @@ procedure {:inline 1} TestGenerics_move2 (x1: Value, x2: Value) returns ()
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t2: Value; // Vector_T_type_value(IntegerType())
-    var t3: Value; // TestGenerics_R_type_value()
-    var t4: Value; // Vector_T_type_value(IntegerType())
-    var t5: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
-    var t6: Value; // IntegerType()
-    var t7: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
-    var t8: Value; // IntegerType()
-    var t9: Value; // Vector_T_type_value(IntegerType())
-    var t10: Value; // TestGenerics_R_type_value()
-    var t11: Value; // TestGenerics_R_type_value()
+    var v: Value; // Vector_T_type_value(IntegerType())
+    var r: Value; // TestGenerics_R_type_value()
+    var __t4: Value; // Vector_T_type_value(IntegerType())
+    var __t5: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t6: Value; // IntegerType()
+    var __t7: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // Vector_T_type_value(IntegerType())
+    var __t10: Value; // TestGenerics_R_type_value()
+    var __t11: Value; // TestGenerics_R_type_value()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -75,29 +75,29 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 1, x2);
 
     // bytecode translation starts here
-    call t4 := Vector_empty(IntegerType());
+    call __t4 := Vector_empty(IntegerType());
     if (__abort_flag) { goto Label_Abort; }
-    assume is#Vector(t4);
+    assume is#Vector(__t4);
 
-    __m := UpdateLocal(__m, __frame + 4, t4);
+    __m := UpdateLocal(__m, __frame + 4, __t4);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call t5 := BorrowLoc(__frame + 2);
+    call __t5 := BorrowLoc(__frame + 2);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    call Vector_push_back(IntegerType(), t5, GetLocal(__m, __frame + 6));
+    call Vector_push_back(IntegerType(), __t5, GetLocal(__m, __frame + 6));
     if (__abort_flag) { goto Label_Abort; }
 
-    call t7 := BorrowLoc(__frame + 2);
+    call __t7 := BorrowLoc(__frame + 2);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    call Vector_push_back(IntegerType(), t7, GetLocal(__m, __frame + 8));
+    call Vector_push_back(IntegerType(), __t7, GetLocal(__m, __frame + 8));
     if (__abort_flag) { goto Label_Abort; }
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
@@ -128,16 +128,16 @@ procedure TestGenerics_move2_verify (x1: Value, x2: Value) returns ()
     call TestGenerics_move2(x1, x2);
 }
 
-procedure {:inline 1} TestGenerics_create (tv0: TypeValue, x: Value) returns (ret0: Value)
+procedure {:inline 1} TestGenerics_create (tv0: TypeValue, x: Value) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t1: Value; // Vector_T_type_value(tv0)
-    var t2: Value; // Vector_T_type_value(tv0)
-    var t3: Reference; // ReferenceType(Vector_T_type_value(tv0))
-    var t4: Value; // tv0
-    var t5: Value; // Vector_T_type_value(tv0)
-    var t6: Value; // TestGenerics_T_type_value(tv0)
+    var v: Value; // Vector_T_type_value(tv0)
+    var __t2: Value; // Vector_T_type_value(tv0)
+    var __t3: Reference; // ReferenceType(Vector_T_type_value(tv0))
+    var __t4: Value; // tv0
+    var __t5: Value; // Vector_T_type_value(tv0)
+    var __t6: Value; // TestGenerics_T_type_value(tv0)
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -152,21 +152,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 0, x);
 
     // bytecode translation starts here
-    call t2 := Vector_empty(tv0);
+    call __t2 := Vector_empty(tv0);
     if (__abort_flag) { goto Label_Abort; }
-    assume is#Vector(t2);
+    assume is#Vector(__t2);
 
-    __m := UpdateLocal(__m, __frame + 2, t2);
+    __m := UpdateLocal(__m, __frame + 2, __t2);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    call t3 := BorrowLoc(__frame + 1);
+    call __t3 := BorrowLoc(__frame + 1);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call Vector_push_back(tv0, t3, GetLocal(__m, __frame + 4));
+    call Vector_push_back(tv0, __t3, GetLocal(__m, __frame + 4));
     if (__abort_flag) { goto Label_Abort; }
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
@@ -175,36 +175,36 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := Pack_TestGenerics_T(tv0, GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 6);
+    __ret0 := GetLocal(__m, __frame + 6);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestGenerics_create_verify (tv0: TypeValue, x: Value) returns (ret0: Value)
+procedure TestGenerics_create_verify (tv0: TypeValue, x: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestGenerics_create(tv0, x);
+    call __ret0 := TestGenerics_create(tv0, x);
 }
 
-procedure {:inline 1} TestGenerics_overcomplicated_equals (tv0: TypeValue, x: Value, y: Value) returns (ret0: Value)
+procedure {:inline 1} TestGenerics_overcomplicated_equals (tv0: TypeValue, x: Value, y: Value) returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t2: Value; // BooleanType()
-    var t3: Value; // TestGenerics_T_type_value(tv0)
-    var t4: Value; // TestGenerics_T_type_value(tv0)
-    var t5: Value; // tv0
-    var t6: Value; // TestGenerics_T_type_value(tv0)
-    var t7: Value; // tv0
-    var t8: Value; // TestGenerics_T_type_value(tv0)
-    var t9: Value; // TestGenerics_T_type_value(tv0)
-    var t10: Value; // TestGenerics_T_type_value(tv0)
-    var t11: Value; // BooleanType()
-    var t12: Value; // BooleanType()
+    var r: Value; // BooleanType()
+    var x1: Value; // TestGenerics_T_type_value(tv0)
+    var y1: Value; // TestGenerics_T_type_value(tv0)
+    var __t5: Value; // tv0
+    var __t6: Value; // TestGenerics_T_type_value(tv0)
+    var __t7: Value; // tv0
+    var __t8: Value; // TestGenerics_T_type_value(tv0)
+    var __t9: Value; // TestGenerics_T_type_value(tv0)
+    var __t10: Value; // TestGenerics_T_type_value(tv0)
+    var __t11: Value; // BooleanType()
+    var __t12: Value; // BooleanType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -223,11 +223,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call t6 := TestGenerics_create(tv0, GetLocal(__m, __frame + 5));
+    call __t6 := TestGenerics_create(tv0, GetLocal(__m, __frame + 5));
     if (__abort_flag) { goto Label_Abort; }
-    assume is#Vector(t6);
+    assume is#Vector(__t6);
 
-    __m := UpdateLocal(__m, __frame + 6, t6);
+    __m := UpdateLocal(__m, __frame + 6, __t6);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
@@ -235,11 +235,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call t8 := TestGenerics_create(tv0, GetLocal(__m, __frame + 7));
+    call __t8 := TestGenerics_create(tv0, GetLocal(__m, __frame + 7));
     if (__abort_flag) { goto Label_Abort; }
-    assume is#Vector(t8);
+    assume is#Vector(__t8);
 
-    __m := UpdateLocal(__m, __frame + 8, t8);
+    __m := UpdateLocal(__m, __frame + 8, __t8);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -259,30 +259,30 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 12);
+    __ret0 := GetLocal(__m, __frame + 12);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestGenerics_overcomplicated_equals_verify (tv0: TypeValue, x: Value, y: Value) returns (ret0: Value)
+procedure TestGenerics_overcomplicated_equals_verify (tv0: TypeValue, x: Value, y: Value) returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestGenerics_overcomplicated_equals(tv0, x, y);
+    call __ret0 := TestGenerics_overcomplicated_equals(tv0, x, y);
 }
 
-procedure {:inline 1} TestGenerics_test () returns (ret0: Value)
+procedure {:inline 1} TestGenerics_test () returns (__ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // BooleanType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // BooleanType()
-    var t4: Value; // BooleanType()
+    var r: Value; // BooleanType()
+    var __t1: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // BooleanType()
+    var __t4: Value; // BooleanType()
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -302,11 +302,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call t3 := TestGenerics_overcomplicated_equals(IntegerType(), GetLocal(__m, __frame + 1), GetLocal(__m, __frame + 2));
+    call __t3 := TestGenerics_overcomplicated_equals(IntegerType(), GetLocal(__m, __frame + 1), GetLocal(__m, __frame + 2));
     if (__abort_flag) { goto Label_Abort; }
-    assume is#Boolean(t3);
+    assume is#Boolean(__t3);
 
-    __m := UpdateLocal(__m, __frame + 3, t3);
+    __m := UpdateLocal(__m, __frame + 3, __t3);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
@@ -314,17 +314,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 4);
+    __ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
+    __ret0 := DefaultValue;
 }
 
-procedure TestGenerics_test_verify () returns (ret0: Value)
+procedure TestGenerics_test_verify () returns (__ret0: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0 := TestGenerics_test();
+    call __ret0 := TestGenerics_test();
 }

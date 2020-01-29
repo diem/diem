@@ -6,17 +6,17 @@
 
 // ** functions of module VerifyVector
 
-procedure {:inline 1} VerifyVector_test_empty1 () returns (ret0: Value, ret1: Value)
+procedure {:inline 1} VerifyVector_test_empty1 () returns (__ret0: Value, __ret1: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures b#Boolean(Boolean(IsEqual(ret0, ret1)));
+ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
 {
     // declare local variables
-    var t0: Value; // Vector_T_type_value(IntegerType())
-    var t1: Value; // Vector_T_type_value(IntegerType())
-    var t2: Value; // Vector_T_type_value(IntegerType())
-    var t3: Value; // Vector_T_type_value(IntegerType())
-    var t4: Value; // Vector_T_type_value(IntegerType())
-    var t5: Value; // Vector_T_type_value(IntegerType())
+    var ev1: Value; // Vector_T_type_value(IntegerType())
+    var ev2: Value; // Vector_T_type_value(IntegerType())
+    var __t2: Value; // Vector_T_type_value(IntegerType())
+    var __t3: Value; // Vector_T_type_value(IntegerType())
+    var __t4: Value; // Vector_T_type_value(IntegerType())
+    var __t5: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -30,20 +30,20 @@ ensures b#Boolean(Boolean(IsEqual(ret0, ret1)));
     // process and type check arguments
 
     // bytecode translation starts here
-    call t2 := Vector_empty(IntegerType());
+    call __t2 := Vector_empty(IntegerType());
     if (__abort_flag) { goto Label_Abort; }
-    assume is#Vector(t2);
+    assume is#Vector(__t2);
 
-    __m := UpdateLocal(__m, __frame + 2, t2);
+    __m := UpdateLocal(__m, __frame + 2, __t2);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    call t3 := Vector_empty(IntegerType());
+    call __t3 := Vector_empty(IntegerType());
     if (__abort_flag) { goto Label_Abort; }
-    assume is#Vector(t3);
+    assume is#Vector(__t3);
 
-    __m := UpdateLocal(__m, __frame + 3, t3);
+    __m := UpdateLocal(__m, __frame + 3, __t3);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
@@ -54,39 +54,39 @@ ensures b#Boolean(Boolean(IsEqual(ret0, ret1)));
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 4);
-    ret1 := GetLocal(__m, __frame + 5);
+    __ret0 := GetLocal(__m, __frame + 4);
+    __ret1 := GetLocal(__m, __frame + 5);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
-    ret1 := DefaultValue;
+    __ret0 := DefaultValue;
+    __ret1 := DefaultValue;
 }
 
-procedure VerifyVector_test_empty1_verify () returns (ret0: Value, ret1: Value)
+procedure VerifyVector_test_empty1_verify () returns (__ret0: Value, __ret1: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0, ret1 := VerifyVector_test_empty1();
+    call __ret0, __ret1 := VerifyVector_test_empty1();
 }
 
-procedure {:inline 1} VerifyVector_test_empty2 () returns (ret0: Value, ret1: Value)
+procedure {:inline 1} VerifyVector_test_empty2 () returns (__ret0: Value, __ret1: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures b#Boolean(Boolean(IsEqual(ret0, ret1)));
+ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
 {
     // declare local variables
-    var t0: Value; // Vector_T_type_value(IntegerType())
-    var t1: Value; // Vector_T_type_value(IntegerType())
-    var t2: Value; // IntegerType()
-    var t3: Value; // Vector_T_type_value(IntegerType())
-    var t4: Value; // Vector_T_type_value(IntegerType())
-    var t5: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
-    var t6: Value; // IntegerType()
-    var t7: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
-    var t8: Value; // IntegerType()
-    var t9: Value; // Vector_T_type_value(IntegerType())
-    var t10: Value; // Vector_T_type_value(IntegerType())
+    var ev1: Value; // Vector_T_type_value(IntegerType())
+    var ev2: Value; // Vector_T_type_value(IntegerType())
+    var x: Value; // IntegerType()
+    var __t3: Value; // Vector_T_type_value(IntegerType())
+    var __t4: Value; // Vector_T_type_value(IntegerType())
+    var __t5: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t6: Value; // IntegerType()
+    var __t7: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // Vector_T_type_value(IntegerType())
+    var __t10: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -100,39 +100,39 @@ ensures b#Boolean(Boolean(IsEqual(ret0, ret1)));
     // process and type check arguments
 
     // bytecode translation starts here
-    call t3 := Vector_empty(IntegerType());
+    call __t3 := Vector_empty(IntegerType());
     if (__abort_flag) { goto Label_Abort; }
-    assume is#Vector(t3);
+    assume is#Vector(__t3);
 
-    __m := UpdateLocal(__m, __frame + 3, t3);
+    __m := UpdateLocal(__m, __frame + 3, __t3);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    call t4 := Vector_empty(IntegerType());
+    call __t4 := Vector_empty(IntegerType());
     if (__abort_flag) { goto Label_Abort; }
-    assume is#Vector(t4);
+    assume is#Vector(__t4);
 
-    __m := UpdateLocal(__m, __frame + 4, t4);
+    __m := UpdateLocal(__m, __frame + 4, __t4);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    call t5 := BorrowLoc(__frame + 0);
+    call __t5 := BorrowLoc(__frame + 0);
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    call Vector_push_back(IntegerType(), t5, GetLocal(__m, __frame + 6));
+    call Vector_push_back(IntegerType(), __t5, GetLocal(__m, __frame + 6));
     if (__abort_flag) { goto Label_Abort; }
 
-    call t7 := BorrowLoc(__frame + 0);
+    call __t7 := BorrowLoc(__frame + 0);
 
-    call t8 := Vector_pop_back(IntegerType(), t7);
+    call __t8 := Vector_pop_back(IntegerType(), __t7);
     if (__abort_flag) { goto Label_Abort; }
-    assume IsValidU64(t8);
+    assume IsValidU64(__t8);
 
-    __m := UpdateLocal(__m, __frame + 8, t8);
+    __m := UpdateLocal(__m, __frame + 8, __t8);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
@@ -143,19 +143,19 @@ ensures b#Boolean(Boolean(IsEqual(ret0, ret1)));
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
-    ret0 := GetLocal(__m, __frame + 9);
-    ret1 := GetLocal(__m, __frame + 10);
+    __ret0 := GetLocal(__m, __frame + 9);
+    __ret1 := GetLocal(__m, __frame + 10);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
-    ret0 := DefaultValue;
-    ret1 := DefaultValue;
+    __ret0 := DefaultValue;
+    __ret1 := DefaultValue;
 }
 
-procedure VerifyVector_test_empty2_verify () returns (ret0: Value, ret1: Value)
+procedure VerifyVector_test_empty2_verify () returns (__ret0: Value, __ret1: Value)
 {
     assume ExistsTxnSenderAccount(__m, __txn);
-    call ret0, ret1 := VerifyVector_test_empty2();
+    call __ret0, __ret1 := VerifyVector_test_empty2();
 }

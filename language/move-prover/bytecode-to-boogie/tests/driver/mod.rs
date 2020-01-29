@@ -132,10 +132,10 @@ fn verify_boogie_output(sources: &[&str], boogie_str: &str, mut out: BoogieOutpu
         path = Path::new(path.file_name().unwrap());
         let basename = path.file_stem().unwrap().to_str().unwrap();
         info!("Test failure for {}!!!", basename);
-        info!("Writing boogie output to `{}.bpl`", basename);
-        fs::write(&format!("{}.bpl", basename), &boogie_str).unwrap_or(());
-        info!("Writing boogie log to `{}.bpl.log`", basename);
-        fs::write(&format!("{}.bpl.log", basename), &out.all_output).unwrap_or(());
+        info!("Writing boogie output to `failed_{}.bpl`", basename);
+        fs::write(&format!("failed_{}.bpl", basename), &boogie_str).unwrap_or(());
+        info!("Writing boogie log to `failed_{}.bpl.log`", basename);
+        fs::write(&format!("failed_{}.bpl.log", basename), &out.all_output).unwrap_or(());
         panic!(msg.join("\n"));
     }
 }
