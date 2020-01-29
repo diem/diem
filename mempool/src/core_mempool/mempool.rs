@@ -249,4 +249,9 @@ impl Mempool {
     ) -> (Vec<SignedTransaction>, u64) {
         self.transactions.read_timeline(timeline_id, count)
     }
+
+    /// Check the health of core mempool.
+    pub(crate) fn health_check(&self) -> bool {
+        self.transactions.health_check()
+    }
 }

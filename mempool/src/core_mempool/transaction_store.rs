@@ -147,6 +147,11 @@ impl TransactionStore {
         OP_COUNTERS.set("txn.priority_index", self.priority_index.size());
     }
 
+    /// Check if mempool can handle new insertion requests
+    pub(crate) fn health_check(&self) -> bool {
+        self.system_ttl_index.size() < self.capacity || self.parking_lot_index.size() > 0
+    }
+
     /// checks if Mempool is full
     /// If it's full, tries to free some space by evicting transactions from ParkingLot
     fn check_if_full(&mut self) -> bool {

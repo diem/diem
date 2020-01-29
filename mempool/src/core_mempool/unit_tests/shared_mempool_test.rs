@@ -25,7 +25,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::Runtime;
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 #[derive(Default)]
@@ -60,21 +60,12 @@ impl SharedMempoolNetwork {
             let (timer_sender, timer_receiver) = unbounded();
             let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
             let network_handles = vec![(peer_id, network_sender, network_events)];
-            let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
 
-            let runtime = Builder::new()
-                .thread_name("shared-mem-")
-                .threaded_scheduler()
-                .enable_all()
-                .build()
-                .expect("[shared mempool] failed to create runtime");
-            start_shared_mempool(
-                runtime.handle(),
+            let runtime = start_shared_mempool(
                 &config,
                 Arc::clone(&mempool),
                 network_handles,
                 ac_endpoint_receiver,
-                consensus_events,
                 Arc::new(MockStorageReadClient),
                 Arc::new(MockVMValidator),
                 vec![sender],

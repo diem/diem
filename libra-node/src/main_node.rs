@@ -11,6 +11,7 @@ use executor::Executor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_logger::prelude::*;
+use libra_mempool::MempoolRuntime;
 use libra_metrics::metric_server;
 use network::{
     validator_network::{
@@ -38,7 +39,7 @@ const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 
 pub struct LibraHandle {
     _ac: Runtime,
-    _mempool: Runtime,
+    _mempool: MempoolRuntime,
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
     consensus: Option<Box<dyn ConsensusProvider>>,
@@ -251,13 +252,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let (ac_sender, client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
     let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
 
+    instant = Instant::now();
+    let mempool = MempoolRuntime::bootstrap(node_config, mempool_network_handles, client_events);
+    debug!("Mempool started in {} ms", instant.elapsed().as_millis());
     let mut consensus = None;
-    let (_, rcv) = channel(1_024); // TODO replace this placeholder with connection with state sync for full nodes
-    let mut consensus_events = rcv;
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {
-        let (mempool_channel, consensus_mp_receiver) = channel(1_024);
-        consensus_events = consensus_mp_receiver;
-
         // Note: We need to start network provider before consensus, because the consensus
         // initialization is blocked on state synchronizer to sync to the initial root ledger
         // info, which in turn cannot make progress before network initialization
@@ -293,7 +292,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             consensus_network_events,
             executor,
             state_synchronizer.create_client(),
-            mempool_channel,
         );
         consensus_provider
             .start()
@@ -301,15 +299,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         consensus = Some(consensus_provider);
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
-
-    instant = Instant::now();
-    let mempool = libra_mempool::bootstrap(
-        node_config,
-        mempool_network_handles,
-        client_events,
-        consensus_events,
-    );
-    debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
     LibraHandle {
         _network_runtimes: network_runtimes,

@@ -62,15 +62,19 @@ extern crate prometheus;
 /// This module provides mocks of shared mempool for tests.
 #[cfg(feature = "fuzzing")]
 pub mod mocks;
-pub use shared_mempool::{
-    bootstrap, CommittedTransaction, MempoolRequest, MempoolResponse, TransactionExclusion,
-};
+pub mod proto;
+pub use runtime::MempoolRuntime;
 
 mod core_mempool;
 mod counters;
+mod mempool_service;
+mod runtime;
 mod shared_mempool;
 
 // module op counters
 use libra_metrics::OpMetrics;
 use once_cell::sync::Lazy;
 static OP_COUNTERS: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("mempool"));
+
+#[cfg(test)]
+mod unit_tests;
