@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::{
-    peer_manager::{PeerManagerNotification, PeerManagerRequest},
+    peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest},
     protocols::rpc::InboundRpcRequest,
     validator_network::HEALTH_CHECKER_RPC_PROTOCOL,
     ProtocolId,
@@ -25,6 +25,7 @@ fn setup_permissive_health_checker(
 ) -> (
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    conn_status_channel::Sender,
     channel::Sender<()>,
 ) {
     let (ticker_tx, ticker_rx) = channel::new_test(0);
@@ -35,7 +36,8 @@ fn setup_permissive_health_checker(
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
 
     let hc_network_tx = HealthCheckerNetworkSender::new(network_reqs_tx);
-    let hc_network_rx = HealthCheckerNetworkEvents::new(network_notifs_rx);
+    let (control_notifs_tx, control_notifs_rx) = conn_status_channel::new();
+    let hc_network_rx = HealthCheckerNetworkEvents::new(network_notifs_rx, control_notifs_rx);
 
     let health_checker = HealthChecker::new(
         ticker_rx,
@@ -45,7 +47,12 @@ fn setup_permissive_health_checker(
         ping_failures_tolerated,
     );
     rt.spawn(health_checker.start());
-    (network_reqs_rx, network_notifs_tx, ticker_tx)
+    (
+        network_reqs_rx,
+        network_notifs_tx,
+        control_notifs_tx,
+        ticker_tx,
+    )
 }
 
 fn setup_strict_health_checker(
@@ -53,6 +60,7 @@ fn setup_strict_health_checker(
 ) -> (
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    conn_status_channel::Sender,
     channel::Sender<()>,
 ) {
     setup_permissive_health_checker(rt, 0 /* ping_failures_tolerated */)
@@ -167,19 +175,15 @@ async fn expect_disconnect(
     res_tx.send(Ok(())).unwrap();
 }
 
-async fn send_newpeer_notification(
+async fn send_new_peer_notification(
     peer_id: PeerId,
-    network_notifs_tx: &mut libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    control_notifs_tx: &mut conn_status_channel::Sender,
 ) {
-    let key = (
-        peer_id,
-        ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL),
-    );
     let (delivered_tx, delivered_rx) = oneshot::channel();
-    network_notifs_tx
+    control_notifs_tx
         .push_with_feedback(
-            key.clone(),
-            PeerManagerNotification::NewPeer(
+            peer_id,
+            peer_manager::ConnectionStatusNotification::NewPeer(
                 peer_id,
                 Multiaddr::from_str("/ip6/::1/tcp/8081").unwrap(),
             ),
@@ -193,7 +197,7 @@ async fn send_newpeer_notification(
 fn outbound() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (mut network_reqs_rx, mut network_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut control_notifs_tx, mut ticker_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
@@ -202,7 +206,7 @@ fn outbound() {
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_newpeer_notification(peer_id, &mut network_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
 
         // Trigger ping to a peer. This should ping the newly added peer.
         ticker_tx.send(()).await.unwrap();
@@ -217,13 +221,13 @@ fn outbound() {
 fn inbound() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (_network_reqs_rx, mut network_notifs_tx, _ticker_tx) =
+    let (_network_reqs_rx, mut network_notifs_tx, mut control_notifs_tx, _ticker_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_newpeer_notification(peer_id, &mut network_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
 
         // Receive ping from peer.
         let ping_msg = Ping { nonce: 0 };
@@ -240,7 +244,7 @@ fn outbound_failure_permissive() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let ping_failures_tolerated = 10;
-    let (mut network_reqs_rx, mut network_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut control_notifs_tx, mut ticker_tx) =
         setup_permissive_health_checker(&mut rt, ping_failures_tolerated);
 
     let events_f = async move {
@@ -249,7 +253,7 @@ fn outbound_failure_permissive() {
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_newpeer_notification(peer_id, &mut network_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
 
         // Trigger pings to a peer. These should ping the newly added peer, but not disconnect from
         // it.
@@ -271,7 +275,7 @@ fn ping_success_resets_fail_counter() {
     let mut rt = Runtime::new().unwrap();
     let failures_triggered = 10;
     let ping_failures_tolerated = 2 * 10;
-    let (mut network_reqs_rx, mut network_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut control_notifs_tx, mut ticker_tx) =
         setup_permissive_health_checker(&mut rt, ping_failures_tolerated);
 
     let events_f = async move {
@@ -279,7 +283,7 @@ fn ping_success_resets_fail_counter() {
         ticker_tx.send(()).await.unwrap();
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_newpeer_notification(peer_id, &mut network_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
         // Trigger pings to a peer. These should ping the newly added peer, but not disconnect from
         // it.
         {
@@ -315,7 +319,7 @@ fn ping_success_resets_fail_counter() {
 fn outbound_failure_strict() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (mut network_reqs_rx, mut network_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut control_notifs_tx, mut ticker_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
@@ -324,7 +328,7 @@ fn outbound_failure_strict() {
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_newpeer_notification(peer_id, &mut network_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
 
         // Trigger ping to a peer. This should ping the newly added peer.
         ticker_tx.send(()).await.unwrap();
@@ -342,7 +346,7 @@ fn outbound_failure_strict() {
 fn ping_timeout() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (mut network_reqs_rx, mut network_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut control_notifs_tx, mut ticker_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
@@ -351,7 +355,7 @@ fn ping_timeout() {
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_newpeer_notification(peer_id, &mut network_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
 
         // Trigger ping to a peer. This should ping the newly added peer.
         ticker_tx.send(()).await.unwrap();

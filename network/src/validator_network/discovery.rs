@@ -40,7 +40,7 @@ pub struct DiscoveryNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
-    let (sender, receiver) = network.add_protocol_handler(
+    let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
         vec![],
         vec![ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL)],
         QueueStyle::LIFO,
@@ -48,7 +48,7 @@ pub fn add_to_network(
     );
     (
         DiscoveryNetworkSender::new(sender),
-        DiscoveryNetworkEvents::new(receiver),
+        DiscoveryNetworkEvents::new(receiver, control_notifs_rx),
     )
 }
 

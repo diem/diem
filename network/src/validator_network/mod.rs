@@ -6,7 +6,7 @@
 pub use crate::protocols::rpc::error::RpcError;
 use crate::{
     error::NetworkError,
-    peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
+    peer_manager::{self, PeerManagerNotification, PeerManagerRequestSender},
     utils::MessageExt,
     ProtocolId,
 };
@@ -14,8 +14,7 @@ use bytes::Bytes;
 use channel::libra_channel;
 use futures::{
     channel::oneshot,
-    ready,
-    stream::{FusedStream, Stream},
+    stream::{FusedStream, Map, Select, Stream, StreamExt},
     task::{Context, Poll},
 };
 use parity_multiaddr::Multiaddr;
@@ -100,24 +99,41 @@ impl<TMessage: PartialEq> PartialEq for Event<TMessage> {
 #[pin_project]
 pub struct NetworkEvents<TMessage: Message + Default> {
     #[pin]
-    inner: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+    event_stream: Select<
+        Map<
+            libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+            fn(PeerManagerNotification) -> Result<Event<TMessage>, NetworkError>,
+        >,
+        Map<
+            libra_channel::Receiver<PeerId, peer_manager::ConnectionStatusNotification>,
+            fn(peer_manager::ConnectionStatusNotification) -> Result<Event<TMessage>, NetworkError>,
+        >,
+    >,
     _marker: PhantomData<TMessage>,
 }
 
 impl<TMessage: Message + Default> NetworkEvents<TMessage> {
     pub fn new(
-        inner: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        control_notifs_rx: libra_channel::Receiver<
+            PeerId,
+            peer_manager::ConnectionStatusNotification,
+        >,
     ) -> Self {
+        let data_event_stream = peer_mgr_notifs_rx.map(
+            peer_mgr_notif_to_event
+                as fn(PeerManagerNotification) -> Result<Event<TMessage>, NetworkError>,
+        );
+        let control_event_stream = control_notifs_rx.map(
+            control_msg_to_event
+                as fn(
+                    peer_manager::ConnectionStatusNotification,
+                ) -> Result<Event<TMessage>, NetworkError>,
+        );
         Self {
-            inner,
+            event_stream: ::futures::stream::select(data_event_stream, control_event_stream),
             _marker: PhantomData,
         }
-    }
-
-    pub fn into_inner(
-        self,
-    ) -> libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification> {
-        self.inner
     }
 }
 
@@ -125,32 +141,48 @@ impl<TMessage: Message + Default> Stream for NetworkEvents<TMessage> {
     type Item = Result<Event<TMessage>, NetworkError>;
 
     fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        let maybe_notif = ready!(self.project().inner.poll_next(context));
-
-        Poll::Ready(maybe_notif.map(|notif| match notif {
-            PeerManagerNotification::NewPeer(peer_id, _addr) => Ok(Event::NewPeer(peer_id)),
-            PeerManagerNotification::LostPeer(peer_id, _addr, _reason) => {
-                Ok(Event::LostPeer(peer_id))
-            }
-            PeerManagerNotification::RecvRpc(peer_id, rpc_req) => {
-                let req_msg = TMessage::decode(rpc_req.data.as_ref())?;
-                Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
-            }
-            PeerManagerNotification::RecvMessage(peer_id, msg) => {
-                let msg = TMessage::decode(msg.mdata.as_ref())?;
-                Ok(Event::Message((peer_id, msg)))
-            }
-        }))
+        self.project().event_stream.poll_next(context)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.inner.size_hint()
+        self.event_stream.size_hint()
+    }
+}
+
+fn peer_mgr_notif_to_event<TMessage>(
+    notif: PeerManagerNotification,
+) -> Result<Event<TMessage>, NetworkError>
+where
+    TMessage: Message + Default,
+{
+    match notif {
+        PeerManagerNotification::RecvRpc(peer_id, rpc_req) => {
+            let req_msg = TMessage::decode(rpc_req.data.as_ref())?;
+            Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
+        }
+        PeerManagerNotification::RecvMessage(peer_id, msg) => {
+            let msg = TMessage::decode(msg.mdata.as_ref())?;
+            Ok(Event::Message((peer_id, msg)))
+        }
+    }
+}
+
+fn control_msg_to_event<TMessage>(
+    notif: peer_manager::ConnectionStatusNotification,
+) -> Result<Event<TMessage>, NetworkError> {
+    match notif {
+        peer_manager::ConnectionStatusNotification::NewPeer(peer_id, _addr) => {
+            Ok(Event::NewPeer(peer_id))
+        }
+        peer_manager::ConnectionStatusNotification::LostPeer(peer_id, _addr, _reason) => {
+            Ok(Event::LostPeer(peer_id))
+        }
     }
 }
 
 impl<TMessage: Message + Default> FusedStream for NetworkEvents<TMessage> {
     fn is_terminated(&self) -> bool {
-        self.inner.is_terminated()
+        self.event_stream.is_terminated()
     }
 }
 

@@ -15,12 +15,9 @@
 //! to the peer.
 use crate::{
     common::NetworkPublicKeys,
-    peer_manager::PeerManagerNotification,
-    peer_manager::{PeerManagerError, PeerManagerRequestSender},
-    ProtocolId,
+    peer_manager::{self, conn_status_channel, PeerManagerError, PeerManagerRequestSender},
 };
-use channel;
-use channel::libra_channel;
+use channel::{self};
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
@@ -54,7 +51,7 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
     /// Channel to send requests to PeerManager.
     peer_mgr_reqs_tx: PeerManagerRequestSender,
     /// Channel to receive notifications from PeerManager.
-    peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+    control_notifs_rx: conn_status_channel::Receiver,
     /// Channel over which we receive requests from other actors.
     requests_rx: channel::Receiver<ConnectivityRequest>,
     /// Peers queued to be dialed, potentially with some delay. The dial can be cancelled by
@@ -111,7 +108,7 @@ where
         eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
         ticker: TTicker,
         peer_mgr_reqs_tx: PeerManagerRequestSender,
-        peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        control_notifs_rx: conn_status_channel::Receiver,
         requests_rx: channel::Receiver<ConnectivityRequest>,
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
@@ -122,7 +119,7 @@ where
             peer_addresses: HashMap::new(),
             ticker,
             peer_mgr_reqs_tx,
-            peer_mgr_notifs_rx,
+            control_notifs_rx,
             requests_rx,
             dial_queue: HashMap::new(),
             dial_states: HashMap::new(),
@@ -153,9 +150,9 @@ where
                     trace!("Event Id: {}, type: ConnectivityRequest, req: {:?}", self.event_id, req);
                     self.handle_request(req);
                 },
-                notif = self.peer_mgr_notifs_rx.select_next_some() => {
-                    trace!("Event Id: {}, type: PeerManagerNotification, notif: {:?}", self.event_id, notif);
-                    self.handle_peer_mgr_notification(notif);
+                notif = self.control_notifs_rx.select_next_some() => {
+                    trace!("Event Id: {}, type: peer_manager::ConnectionStatusNotification, notif: {:?}", self.event_id, notif);
+                    self.handle_control_notification(notif);
                 },
                 peer_id = pending_dials.select_next_some() => {
                     trace!("Event Id: {}, type: Dial complete, peer: {}", self.event_id, peer_id.short_str());
@@ -347,15 +344,15 @@ where
         }
     }
 
-    fn handle_peer_mgr_notification(&mut self, notif: PeerManagerNotification) {
+    fn handle_control_notification(&mut self, notif: peer_manager::ConnectionStatusNotification) {
         match notif {
-            PeerManagerNotification::NewPeer(peer_id, addr) => {
+            peer_manager::ConnectionStatusNotification::NewPeer(peer_id, addr) => {
                 self.connected.insert(peer_id, addr);
                 // Cancel possible queued dial to this peer.
                 self.dial_states.remove(&peer_id);
                 self.dial_queue.remove(&peer_id);
             }
-            PeerManagerNotification::LostPeer(peer_id, addr, _reason) => {
+            peer_manager::ConnectionStatusNotification::LostPeer(peer_id, addr, _reason) => {
                 match self.connected.get(&peer_id) {
                     Some(curr_addr) if *curr_addr == addr => {
                         // Remove node from connected peers list.
@@ -369,9 +366,6 @@ where
                         );
                     }
                 }
-            }
-            _ => {
-                panic!("Received unexpected notification from peer manager");
             }
         }
     }

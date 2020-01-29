@@ -44,7 +44,7 @@ pub struct StateSynchronizerSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (StateSynchronizerSender, StateSynchronizerEvents) {
-    let (sender, receiver) = network.add_protocol_handler(
+    let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
         vec![],
         vec![ProtocolId::from_static(
             STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
@@ -54,7 +54,7 @@ pub fn add_to_network(
     );
     (
         StateSynchronizerSender::new(sender),
-        StateSynchronizerEvents::new(receiver),
+        StateSynchronizerEvents::new(receiver, control_notifs_rx),
     )
 }
 
@@ -79,7 +79,7 @@ impl StateSynchronizerSender {
 mod tests {
     use super::*;
     use crate::{
-        peer_manager::{PeerManagerNotification, PeerManagerRequest},
+        peer_manager::{conn_status_channel, PeerManagerNotification, PeerManagerRequest},
         proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg_oneof},
         protocols::direct_send::Message,
         utils::MessageExt,
@@ -126,9 +126,10 @@ mod tests {
     // Direct send messages should get deserialized through the `StateSynchronizerEvents` stream.
     #[test]
     fn test_inbound_msg() {
+        let (_, control_notifs_rx) = conn_status_channel::new();
         let (mut state_sync_tx, state_sync_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let mut stream = StateSynchronizerEvents::new(state_sync_rx);
+        let mut stream = StateSynchronizerEvents::new(state_sync_rx, control_notifs_rx);
         let peer_id = PeerId::random();
 
         // Create GetChunkResponse and embed in StateSynchronizerMsg.

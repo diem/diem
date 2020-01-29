@@ -18,11 +18,10 @@ use crate::{
     protocols::direct_send::Message,
     protocols::identity::Identity,
     protocols::rpc::{error::RpcError, InboundRpcRequest, OutboundRpcRequest},
-    transport, validator_network, ProtocolId,
+    transport, ProtocolId,
 };
 use bytes::Bytes;
-use channel;
-use channel::libra_channel;
+use channel::{self, libra_channel};
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
@@ -43,6 +42,7 @@ use std::{
 };
 use tokio::runtime::Handle;
 
+pub mod conn_status_channel;
 mod error;
 #[cfg(test)]
 mod tests;
@@ -67,14 +67,18 @@ pub enum PeerManagerRequest {
 /// Notifications sent by PeerManager to upstream actors.
 #[derive(Debug)]
 pub enum PeerManagerNotification {
-    /// Connection with a new peer has been established.
-    NewPeer(PeerId, Multiaddr),
-    /// Connection to a peer has been terminated. This could have been triggered from either end.
-    LostPeer(PeerId, Multiaddr, DisconnectReason),
     /// A new RPC request has been received from a remote peer.
     RecvRpc(PeerId, InboundRpcRequest),
     /// A new message has been received from a remote peer.
     RecvMessage(PeerId, Message),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum ConnectionStatusNotification {
+    /// Connection with a new peer has been established.
+    NewPeer(PeerId, Multiaddr),
+    /// Connection to a peer has been terminated. This could have been triggered from either end.
+    LostPeer(PeerId, Multiaddr, DisconnectReason),
 }
 
 /// Convenience wrapper around a `channel::Sender<PeerManagerRequest>` which makes it easy to issue
@@ -100,7 +104,7 @@ impl PeerManagerRequestSender {
         let (oneshot_tx, oneshot_rx) = oneshot::channel();
         let request = PeerManagerRequest::DialPeer(peer_id, addr, oneshot_tx);
         self.inner
-            .push((peer_id, ProtocolId::default()), request)
+            .push((peer_id, ProtocolId::from_static(b"DialPeer")), request)
             .unwrap();
         oneshot_rx.await?
     }
@@ -111,7 +115,10 @@ impl PeerManagerRequestSender {
         let (oneshot_tx, oneshot_rx) = oneshot::channel();
         let request = PeerManagerRequest::DisconnectPeer(peer_id, oneshot_tx);
         self.inner
-            .push((peer_id, ProtocolId::default()), request)
+            .push(
+                (peer_id, ProtocolId::from_static(b"DisconnectPeer")),
+                request,
+            )
             .unwrap();
         oneshot_rx.await?
     }
@@ -227,8 +234,7 @@ where
     upstream_handlers:
         HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     /// Channels to send NewPeer/LostPeer notifications to.
-    connection_event_handlers:
-        Vec<libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+    connection_event_handlers: Vec<conn_status_channel::Sender>,
     /// Channel used to send Dial requests to the ConnectionHandler actor
     dial_request_tx: channel::Sender<ConnectionHandlerRequest>,
     /// Sender for connection events.
@@ -239,6 +245,10 @@ where
     outstanding_disconnect_requests: HashMap<PeerId, oneshot::Sender<Result<(), PeerManagerError>>>,
     /// Pin the transport type corresponding to this PeerManager instance
     phantom_transport: PhantomData<TTransport>,
+    /// Maximum concurrent network requests to any peer.
+    max_concurrent_network_reqs: usize,
+    /// Maximum concurrent network notifications processed for a peer.
+    max_concurrent_network_notifs: usize,
     /// Size of channels between different actors.
     channel_size: usize,
 }
@@ -261,10 +271,10 @@ where
             ProtocolId,
             libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
         >,
-        connection_event_handlers: Vec<
-            libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
-        >,
+        connection_event_handlers: Vec<conn_status_channel::Sender>,
         channel_size: usize,
+        max_concurrent_network_reqs: usize,
+        max_concurrent_network_notifs: usize,
     ) -> Self {
         let (connection_notifs_tx, connection_notifs_rx) = channel::new(
             channel_size,
@@ -301,6 +311,8 @@ where
             phantom_transport: PhantomData,
             upstream_handlers,
             connection_event_handlers,
+            max_concurrent_network_reqs,
+            max_concurrent_network_notifs,
             channel_size,
         }
     }
@@ -410,9 +422,10 @@ where
                 // Send a CloseConnection request to NetworkProvider and drop the send end of the
                 // NetworkRequest channel.
                 if let Some((_, _, mut sender)) = self.active_peers.remove(&peer_id) {
-                    if let Err(close_err) =
-                        sender.push(ProtocolId::default(), NetworkRequest::CloseConnection)
-                    {
+                    if let Err(close_err) = sender.push(
+                        ProtocolId::from_static(b"DisconnectPeer"),
+                        NetworkRequest::CloseConnection,
+                    ) {
                         info!(
                             "Failed to initiate connection close. CloseConnection request could not be delivered. Error: {:?}",
                             close_err
@@ -524,9 +537,10 @@ where
             if Self::simultaneous_dial_tie_breaking(self.own_peer_id, peer_id, curr_origin, origin)
             {
                 // Drop the existing connection and replace it with the new connection
-                if let Err(err) =
-                    peer_handle.push(ProtocolId::default(), NetworkRequest::CloseConnection)
-                {
+                if let Err(err) = peer_handle.push(
+                    ProtocolId::from_static(b"DisconnectPeer"),
+                    NetworkRequest::CloseConnection,
+                ) {
                     // Clean shutdown failed, but connection will be closed once existing handle to
                     // NetworkProvider is dropped.
                     warn!(
@@ -573,9 +587,9 @@ where
             self.connection_notifs_tx.clone(),
             self.rpc_protocols.clone(),
             self.direct_send_protocols.clone(),
+            self.max_concurrent_network_reqs,
+            self.max_concurrent_network_notifs,
             self.channel_size,
-            validator_network::network_builder::MAX_CONCURRENT_NETWORK_REQS,
-            validator_network::network_builder::MAX_CONCURRENT_NETWORK_NOTIFS,
         );
         // Start background task to handle events (RPCs and DirectSend messages) received from
         // peer.
@@ -588,8 +602,8 @@ where
             for handler in self.connection_event_handlers.iter_mut() {
                 handler
                     .push(
-                        (peer_id, ProtocolId::default()),
-                        PeerManagerNotification::NewPeer(peer_id, address.clone()),
+                        peer_id,
+                        ConnectionStatusNotification::NewPeer(peer_id, address.clone()),
                     )
                     .unwrap();
             }
@@ -605,8 +619,8 @@ where
         // Send LostPeer notification to connection event handlers.
         for handler in self.connection_event_handlers.iter_mut() {
             if let Err(e) = handler.push(
-                (peer_id, ProtocolId::default()),
-                PeerManagerNotification::LostPeer(peer_id, addr.clone(), reason.clone()),
+                peer_id,
+                ConnectionStatusNotification::LostPeer(peer_id, addr.clone(), reason.clone()),
             ) {
                 warn!(
                     "Failed to send lost peer notification to handler for peer: {}. Error: {:?}",
@@ -639,13 +653,13 @@ where
         network_events: libra_channel::Receiver<ProtocolId, NetworkNotification>,
     ) {
         let mut upstream_handlers = self.upstream_handlers.clone();
-        self.executor.spawn(
-            // TODO: Add a limit?
-            network_events.for_each_concurrent(None, move |inbound_event| {
+        self.executor.spawn(network_events.for_each_concurrent(
+            self.max_concurrent_network_reqs,
+            move |inbound_event| {
                 Self::handle_inbound_event(inbound_event, peer_id, &mut upstream_handlers);
                 futures::future::ready(())
-            }),
-        );
+            },
+        ));
     }
 
     fn handle_inbound_event(
@@ -746,7 +760,6 @@ where
             .listen_on(listen_addr)
             .expect("Transport listen on fails");
         debug!("listening on {:?}", listen_addr);
-
         (
             Self {
                 transport,

@@ -135,7 +135,9 @@ where
                     match maybe_substream {
                         Some(Ok(substream)) => {
                             trace!("New inbound substream from peer: {}", self_peer_id.short_str());
-                            self.handle_inbound_substream(&mut pending_inbound_substreams, substream);
+                            pending_inbound_substreams.push(
+                                Self::negotiate_inbound_substream(
+                                    substream, self.own_supported_protocols.clone()));
                         }
                         Some(Err(e)) => {
                             warn!("Inbound substream error {:?} with peer {}",
@@ -287,22 +289,6 @@ where
                 protocol
             );
         }
-    }
-
-    fn handle_inbound_substream<'a>(
-        &'a mut self,
-        pending: &'a mut FuturesUnordered<
-            BoxFuture<'static, Result<NegotiatedSubstream<TMuxer::Substream>, PeerManagerError>>,
-        >,
-        substream: TMuxer::Substream,
-    ) {
-        trace!(
-            "New inbound substream from peer '{}'",
-            self.identity.peer_id().short_str()
-        );
-        let negotiate =
-            Self::negotiate_inbound_substream(substream, self.own_supported_protocols.clone());
-        pending.push(negotiate.boxed());
     }
 
     async fn negotiate_inbound_substream(

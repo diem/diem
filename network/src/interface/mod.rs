@@ -80,9 +80,9 @@ where
         connection_notifs_tx: channel::Sender<ConnectionNotification<TMuxer>>,
         rpc_protocols: HashSet<ProtocolId>,
         direct_send_protocols: HashSet<ProtocolId>,
+        max_concurrent_reqs: usize,
+        max_concurrent_notifs: usize,
         channel_size: usize,
-        max_concurrent_reqs: u32,
-        max_concurrent_notifs: u32,
     ) -> (
         libra_channel::Sender<ProtocolId, NetworkRequest>,
         libra_channel::Receiver<ProtocolId, NetworkNotification>,
@@ -208,7 +208,7 @@ where
         // Handle notifications from Peer actor.
         let connection_notifs_tx = connection_notifs_tx;
         executor.spawn(
-            peer_notifs_rx.for_each_concurrent(max_concurrent_notifs as usize, move |notif| {
+            peer_notifs_rx.for_each_concurrent(max_concurrent_notifs, move |notif| {
                 Self::handle_peer_notification(notif, connection_notifs_tx.clone())
             }),
         );
@@ -216,7 +216,7 @@ where
         // Handle network requests.
         executor.spawn(
             requests_rx
-                .for_each_concurrent(max_concurrent_reqs as usize, move |req| {
+                .for_each_concurrent(max_concurrent_reqs, move |req| {
                     Self::handle_network_request(
                         peer_id,
                         req,

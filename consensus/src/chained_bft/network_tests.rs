@@ -16,7 +16,7 @@ use libra_prost_ext::MessageExt;
 use libra_types::block_info::BlockInfo;
 use libra_types::PeerId;
 use network::{
-    peer_manager::{PeerManagerNotification, PeerManagerRequest},
+    peer_manager::{conn_status_channel, PeerManagerNotification, PeerManagerRequest},
     proto::{ConsensusMsg, ConsensusMsg_oneof},
     protocols::rpc::InboundRpcRequest,
     validator_network::{
@@ -389,8 +389,9 @@ fn test_network_api() {
         let (consensus_tx, consensus_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
+        let (_, conn_status_rx) = conn_status_channel::new();
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
-        let network_events = ConsensusNetworkEvents::new(consensus_rx);
+        let network_events = ConsensusNetworkEvents::new(consensus_rx, conn_status_rx);
 
         playground.add_node(*peer, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
         let (self_sender, self_receiver) = channel::new_test(8);
@@ -460,8 +461,9 @@ fn test_rpc() {
         let (consensus_tx, consensus_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
+        let (_, conn_status_rx) = conn_status_channel::new();
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
-        let network_events = ConsensusNetworkEvents::new(consensus_rx);
+        let network_events = ConsensusNetworkEvents::new(consensus_rx, conn_status_rx);
 
         playground.add_node(*peer, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
         let (self_sender, self_receiver) = channel::new_test(8);

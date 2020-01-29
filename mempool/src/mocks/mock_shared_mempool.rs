@@ -13,6 +13,7 @@ use futures::channel::{
 };
 use libra_config::config::{NetworkConfig, NodeConfig};
 use libra_types::PeerId;
+use network::peer_manager::conn_status_channel;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
 use std::num::NonZeroUsize;
 use std::sync::{Arc, Mutex};
@@ -48,8 +49,9 @@ pub fn mock_shared_mempool() -> (
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (_network_notifs_tx, network_notifs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let (_, conn_notifs_rx) = conn_status_channel::new();
     let network_sender = MempoolNetworkSender::new(network_reqs_tx);
-    let network_events = MempoolNetworkEvents::new(network_notifs_rx);
+    let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_notifs_rx);
     let (sender, _subscriber) = unbounded();
     let (ac_sender, client_events) = mpsc::channel(1_024);
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
