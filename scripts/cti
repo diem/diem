@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 set -e
 
+TAG=""
 PR=""
 WORKSPACE="cluster-test-ci"
 
@@ -13,8 +14,12 @@ while (( "$#" )); do
       shift 2
       ;;
     -M|--master)
-      PR=MASTER
+      TAG=master
       shift 1
+      ;;
+    -T|--tag)
+      TAG=$2
+      shift 2
       ;;
     -W|--workspace)
       WORKSPACE=$2
@@ -30,11 +35,11 @@ while (( "$#" )); do
   esac
 done
 
-if [ -z "$PR" ]
+if [ -z "$PR" ] && [ -z "$TAG" ]
 then
-      echo "No PR specified"
+      echo "No PR or tag specified"
       echo "Usage:"
-      echo "cti [--pr <PR>|--master] [--workspace <WORKSPACE>] <cluster test arguments>"
+      echo "cti [--pr <PR>|--master|--tag <TAG>] [--workspace <WORKSPACE>] <cluster test arguments>"
       echo "Examples:"
       echo "cti --pr <PR> --run bench # Run benchmark"
       echo "cti --master --emit-tx # Submit transactions until Ctrl+C pressed"
@@ -46,14 +51,12 @@ JUMPHOST=ssh.${WORKSPACE}.aws.hlw3truzy4ls.com
 aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
 ssh $JUMPHOST echo "ssh ok" >/dev/null || (echo "Failed to ssh to jump host $JUMPHOST. Try renew corp canal cert with cc-certs"; exit 1)
 
-if [ "$PR" = "MASTER" ]; then
-    TAG=master
-else
+if [ -z "$TAG" ]; then
     ./docker/build-aws.sh --build-all --version pull/$PR
     TAG=dev_${USER}_pull_${PR}
+    echo "**TIP Use cti -T $TAG <...> to restart this run with same tag without rebuilding it"
 fi
 
-echo "Will use tag $TAG"
 echo "**********"
 echo "Dashboard: http://prometheus.${WORKSPACE}.aws.hlw3truzy4ls.com:9091/"
 echo "Logs:"
