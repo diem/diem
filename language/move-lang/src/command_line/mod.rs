@@ -19,7 +19,3 @@ pub const DEFAULT_OUTPUT_DIR: &str = "output";
 pub fn parse_address(s: &str) -> Result<Address, String> {
     Address::parse_str(s).map_err(|msg| format!("Invalid argument to '{}': {}", SENDER, msg))
 }
-
-pub fn leak_str(s: &str) -> &'static str {
-    Box::leak(Box::new(s.to_owned()))
-}

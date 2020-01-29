@@ -45,7 +45,7 @@ fn format_diff(expected: String, actual: String) -> String {
 
 // Runs all tests under the test/testsuite directory.
 fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
-    let targets: Vec<&'static str> = vec![Box::leak(Box::new(path.to_str().unwrap().to_owned()))];
+    let targets: Vec<String> = vec![path.to_str().unwrap().to_owned()];
     let deps = stdlib_files();
     let sender = Some(Address::parse_str(SENDER).unwrap());
 

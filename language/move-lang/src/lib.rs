@@ -30,10 +30,6 @@ use std::{
     io::{self, Read, Write},
 };
 
-// fn run(_targets: &[&str], _deps: &[&str]) -> io::Result<()> {
-//     panic!()
-// }
-
 //**************************************************************************************************
 // Entry
 //**************************************************************************************************
@@ -44,8 +40,8 @@ use std::{
 /// Very large programs might fail on compilation even though they have been checked due to size
 ///   limitations of the Move bytecode
 pub fn move_check(
-    targets: &[&'static str],
-    deps: &[&'static str],
+    targets: &[String],
+    deps: &[String],
     sender_opt: Option<Address>,
 ) -> io::Result<()> {
     let (files, errors) = move_check_no_report(targets, deps, sender_opt)?;
@@ -57,8 +53,8 @@ pub fn move_check(
 
 /// Move check but it returns the errors instead of reporting them to stderr
 pub fn move_check_no_report(
-    targets: &[&'static str],
-    deps: &[&'static str],
+    targets: &[String],
+    deps: &[String],
     sender_opt: Option<Address>,
 ) -> io::Result<(FilesSourceText, Errors)> {
     let (files, pprog_res) = parse_program(targets, deps)?;
@@ -74,8 +70,8 @@ pub fn move_check_no_report(
 /// Does not run the Move bytecode verifier on the compiled targets, as the Move front end should
 ///   be more restrictive
 pub fn move_compile(
-    targets: &[&'static str],
-    deps: &[&'static str],
+    targets: &[String],
+    deps: &[String],
     sender_opt: Option<Address>,
 ) -> io::Result<(FilesSourceText, Vec<to_bytecode::translate::CompiledUnit>)> {
     let (files, pprog_res) = parse_program(targets, deps)?;
@@ -87,8 +83,8 @@ pub fn move_compile(
 
 /// Move check but it returns the errors instead of reporting them to stderr
 pub fn move_compile_no_report(
-    targets: &[&'static str],
-    deps: &[&'static str],
+    targets: &[String],
+    deps: &[String],
     sender_opt: Option<Address>,
 ) -> io::Result<(
     FilesSourceText,
@@ -179,9 +175,17 @@ fn check_errors(errors: Errors) -> Result<(), Errors> {
 //**************************************************************************************************
 
 fn parse_program(
-    targets: &[&'static str],
-    deps: &[&'static str],
+    targets: &[String],
+    deps: &[String],
 ) -> io::Result<(FilesSourceText, Result<parser::ast::Program, Errors>)> {
+    let targets = targets
+        .iter()
+        .map(|s| leak_str(s))
+        .collect::<Vec<&'static str>>();
+    let deps = deps
+        .iter()
+        .map(|s| leak_str(s))
+        .collect::<Vec<&'static str>>();
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
     let mut lib_definitions = Vec::new();
@@ -212,6 +216,11 @@ fn parse_program(
         Err(errors)
     };
     Ok((files, res))
+}
+
+// TODO replace with some sort of intern table
+fn leak_str(s: &str) -> &'static str {
+    Box::leak(Box::new(s.to_owned()))
 }
 
 fn parse_file(
