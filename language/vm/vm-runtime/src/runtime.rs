@@ -152,7 +152,7 @@ impl<'alloc> VMRuntime<'alloc> {
         script: Vec<u8>,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        let main = self.script_cache.cache_script(&script)?;
+        let main = self.script_cache.cache_script(&script, context)?;
 
         if !verify_actuals(main.signature(), &args) {
             return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)

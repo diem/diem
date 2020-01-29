@@ -4,7 +4,7 @@
 use crate::{
     account::{Account, AccountData},
     common_transactions::peer_to_peer_txn,
-    executor::{test_all_genesis, FakeExecutor},
+    executor::{test_all_genesis_default, FakeExecutor},
     gas_costs, transaction_status_eq,
 };
 use libra_config::config::VMPublishingOption;
@@ -19,7 +19,7 @@ use std::{convert::TryFrom, time::Instant};
 fn single_peer_to_peer_with_event() {
     ::libra_logger::try_init_for_testing();
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
         let sender = AccountData::new(1_000_000, 10);
         let receiver = AccountData::new(100_000, 10);
@@ -120,7 +120,7 @@ fn single_peer_to_peer_with_padding() {
 #[test]
 fn few_peer_to_peer_with_event() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
         let sender = AccountData::new(1_000_000, 10);
         let receiver = AccountData::new(100_000, 10);
@@ -188,7 +188,7 @@ fn few_peer_to_peer_with_event() {
 /// Test that a zero-amount transaction fails, per policy.
 #[test]
 fn zero_amount_peer_to_peer() {
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         let sequence_number = 10;
         let sender = AccountData::new(1_000_000, sequence_number);
         let receiver = AccountData::new(100_000, sequence_number);
@@ -215,7 +215,7 @@ fn zero_amount_peer_to_peer() {
 #[test]
 fn peer_to_peer_create_account() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish a sender with 1_000_000 coins
         let sender = AccountData::new(1_000_000, 10);
         executor.add_account_data(&sender);
@@ -405,7 +405,7 @@ fn print_accounts(executor: &FakeExecutor, accounts: &[Account]) {
 #[test]
 fn cycle_peer_to_peer() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish accounts with 2_000_000 coins
         let account_size = 100usize;
         let initial_balance = 2_000_000u64;
@@ -438,7 +438,7 @@ fn cycle_peer_to_peer() {
 #[test]
 fn cycle_peer_to_peer_multi_block() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish accounts with 1_000_000 coins
         let account_size = 100usize;
         let initial_balance = 1_000_000u64;
@@ -485,7 +485,7 @@ fn cycle_peer_to_peer_multi_block() {
 #[test]
 fn one_to_many_peer_to_peer() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish accounts with 4_000_000 coins
         let account_size = 100usize;
         let initial_balance = 4_000_000u64;
@@ -532,7 +532,7 @@ fn one_to_many_peer_to_peer() {
 #[test]
 fn many_to_one_peer_to_peer() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish accounts with 1_000_000 coins
         let account_size = 100usize;
         let initial_balance = 1_000_000u64;

@@ -33,19 +33,33 @@ pub struct FakeExecutor {
     data_store: FakeDataStore,
 }
 
-pub fn test_all_genesis_impl<T, F>(test_fn: F) -> Result<(), T>
+pub fn test_all_genesis_impl<T, F>(
+    publishing_options: Option<VMPublishingOption>,
+    test_fn: F,
+) -> Result<(), T>
 where
     F: Fn(FakeExecutor) -> Result<(), T>,
 {
     let genesis: Vec<&WriteSet> = vec![&GENESIS_WRITE_SET];
     genesis
         .iter()
-        .map(|ws| test_fn(FakeExecutor::from_genesis(ws, None)))
+        .map(|ws| test_fn(FakeExecutor::from_genesis(ws, publishing_options.clone())))
         .collect()
 }
 
-pub fn test_all_genesis(test_fn: fn(FakeExecutor) -> ()) {
-    let result: Result<(), ()> = test_all_genesis_impl(|executor| {
+pub fn test_all_genesis_default(test_fn: fn(FakeExecutor) -> ()) {
+    let result: Result<(), ()> = test_all_genesis_impl(None, |executor| {
+        test_fn(executor);
+        Ok(())
+    });
+    result.unwrap()
+}
+
+pub fn test_all_genesis(
+    publishing_options: Option<VMPublishingOption>,
+    test_fn: fn(FakeExecutor) -> (),
+) {
+    let result: Result<(), ()> = test_all_genesis_impl(publishing_options, |executor| {
         test_fn(executor);
         Ok(())
     });

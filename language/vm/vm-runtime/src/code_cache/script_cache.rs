@@ -2,18 +2,24 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Cache for commonly executed scripts
 
-use crate::loaded_data::{
-    function::{FunctionRef, FunctionReference},
-    loaded_module::LoadedModule,
+use crate::{
+    code_cache::module_cache::load_and_verify_module_id,
+    execution_context::InterpreterContext,
+    loaded_data::{
+        function::{FunctionRef, FunctionReference},
+        loaded_module::LoadedModule,
+    },
 };
-use bytecode_verifier::VerifiedScript;
+use bytecode_verifier::{verify_script_dependencies, VerifiedScript};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
+    language_storage::ModuleId,
     transaction::SCRIPT_HASH_LENGTH,
     vm_error::{StatusCode, VMStatus},
 };
 use vm::{
+    access::ScriptAccess,
     errors::{vm_error, Location, VMResult},
     file_format::CompiledScript,
 };
@@ -35,7 +41,11 @@ impl<'alloc> ScriptCache<'alloc> {
 
     /// Compiles, verifies, caches and resolves `raw_bytes` into a `FunctionRef` that can be
     /// executed.
-    pub fn cache_script(&self, raw_bytes: &[u8]) -> VMResult<FunctionRef<'alloc>> {
+    pub fn cache_script(
+        &self,
+        raw_bytes: &[u8],
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<FunctionRef<'alloc>> {
         let hash_value = HashValue::from_sha3_256(raw_bytes);
 
         // XXX We may want to put in some negative caching for scripts that fail verification.
@@ -44,7 +54,7 @@ impl<'alloc> ScriptCache<'alloc> {
             Ok(f)
         } else {
             trace!("[VM] Script cache miss");
-            let script = Self::deserialize_and_verify(raw_bytes)?;
+            let script = Self::deserialize_and_verify(raw_bytes, context)?;
             let fake_module = script.into_module();
             let loaded_module = LoadedModule::new(fake_module);
             Ok(self.map.or_insert_with_transform(
@@ -55,7 +65,10 @@ impl<'alloc> ScriptCache<'alloc> {
         }
     }
 
-    fn deserialize_and_verify(raw_bytes: &[u8]) -> VMResult<VerifiedScript> {
+    fn deserialize_and_verify(
+        raw_bytes: &[u8],
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<VerifiedScript> {
         let script = match CompiledScript::deserialize(raw_bytes) {
             Ok(script) => script,
             Err(err) => {
@@ -66,24 +79,38 @@ impl<'alloc> ScriptCache<'alloc> {
             }
         };
 
-        match VerifiedScript::new(script) {
-            Ok(script) => Ok(script),
-            Err((_, mut errs)) => {
-                warn!(
-                    "[VM] bytecode verifier returned errors for script: {:?}",
-                    errs
-                );
-                // If there are errors there should be at least one otherwise there's an internal
-                // error in the verifier. We only give back the first error. If the user wants to
-                // debug things, they can do that offline.
-                let error = if errs.is_empty() {
-                    VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
-                } else {
-                    errs.remove(0)
-                };
-
-                Err(error)
+        let mut errs = match VerifiedScript::new(script) {
+            Ok(script) => {
+                // verify dependencies
+                let script_module = script.self_handle();
+                let mut deps = vec![];
+                for module in script.module_handles() {
+                    if module == script_module {
+                        continue;
+                    }
+                    let module_id = ModuleId::new(
+                        *script.as_inner().address_at(module.address),
+                        script.as_inner().identifier_at(module.name).to_owned(),
+                    );
+                    deps.push(load_and_verify_module_id(&module_id, context)?);
+                }
+                let errs = verify_script_dependencies(&script, &deps);
+                if errs.is_empty() {
+                    return Ok(script);
+                }
+                errs
             }
-        }
+            Err((_, errs)) => errs,
+        };
+        warn!(
+            "[VM] bytecode verifier returned errors for script: {:?}",
+            errs
+        );
+        // If there are errors there should be at least one otherwise there's an internal
+        // error in the verifier. We only give back the first error. If the user wants to
+        // debug things, they can do that offline.
+        Err(errs
+            .pop()
+            .unwrap_or_else(|| VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)))
     }
 }

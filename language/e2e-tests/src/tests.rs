@@ -16,5 +16,6 @@ mod mint;
 mod module_publishing;
 mod peer_to_peer;
 mod rotate_key;
+mod scripts;
 mod validator_set_management;
 mod verify_txn;
