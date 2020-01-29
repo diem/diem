@@ -28,9 +28,15 @@ impl OnDiskStorage {
             File::create(&file_path).expect("Unable to create storage");
         }
 
+        // The parent will be one when only a filename is supplied. Therefore use the current
+        // working directory provided by PathBuf::new().
+        let file_dir = file_path
+            .parent()
+            .map_or(PathBuf::new(), |p| p.to_path_buf());
+
         Self {
             file_path,
-            temp_path: TempPath::new(),
+            temp_path: TempPath::new_with_temp_dir(file_dir),
         }
     }
 
