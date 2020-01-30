@@ -3,8 +3,8 @@
 
 use anyhow::{ensure, format_err, Result};
 use config_builder;
-use executor::{ExecutedTrees, Executor};
-use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
+use executor::utils::create_storage_service_and_executor;
+use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
 use libra_types::crypto_proxies::EpochInfo;
 use libra_types::validator_change::VerifierType;
@@ -23,14 +23,12 @@ use libra_types::{
 };
 use rand::SeedableRng;
 use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
-use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
-use storage_service::start_storage_service;
+use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::Runtime;
 use transaction_builder::{
     encode_block_prologue_script, encode_create_account_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_script,
 };
-use vm_runtime::LibraVM;
 
 fn gen_block_id(index: u8) -> HashValue {
     HashValue::new([index; HashValue::LENGTH])
@@ -50,26 +48,6 @@ fn gen_ledger_info_with_sigs(
 
 fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
     BlockMetadata::new(gen_block_id(index), index as u64, BTreeMap::new(), proposer)
-}
-
-fn create_storage_service_and_executor(
-    config: &NodeConfig,
-) -> (Runtime, Executor<LibraVM>, ExecutedTrees) {
-    let mut rt = start_storage_service(config);
-
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
-    let storage_write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
-
-    let executor = Executor::new(storage_read_client, storage_write_client, config);
-
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
-
-    let startup_info = rt
-        .block_on(storage_read_client.get_startup_info())
-        .expect("unable to read ledger info from storage")
-        .expect("startup info is None");
-    let committed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
-    (rt, executor, committed_trees)
 }
 
 fn get_test_signed_transaction(
