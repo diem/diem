@@ -57,21 +57,12 @@ fn create_storage_service_and_executor(
 ) -> (Runtime, Executor<LibraVM>, ExecutedTrees) {
     let mut rt = start_storage_service(config);
 
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
-    let storage_write_client = Arc::new(StorageWriteServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
+    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
+    let storage_write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
 
     let executor = Executor::new(storage_read_client, storage_write_client, config);
 
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
+    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
     let startup_info = rt
         .block_on(storage_read_client.get_startup_info())
@@ -187,10 +178,7 @@ fn test_execution_with_storage() {
     let (_storage_server_handle, executor, mut committed_trees) =
         create_storage_service_and_executor(&config);
 
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
+    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
     let seed = [1u8; 32];
     // TEST_SEED is also used to generate a random validator set in get_test_config. Each account

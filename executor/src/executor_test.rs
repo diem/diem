@@ -31,19 +31,10 @@ fn create_storage_server(config: &mut NodeConfig) -> Runtime {
 
 fn create_executor(config: &NodeConfig) -> (Executor<MockVM>, ExecutedTrees) {
     let mut rt = Runtime::new().unwrap();
-    let read_client = Arc::new(StorageReadServiceClient::new(
-        "localhost",
-        config.storage.port,
-    ));
-    let write_client = Arc::new(StorageWriteServiceClient::new(
-        "localhost",
-        config.storage.port,
-    ));
+    let read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
+    let write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
     let executor = Executor::new(read_client, write_client, config);
-    let read_client = Arc::new(StorageReadServiceClient::new(
-        "localhost",
-        config.storage.port,
-    ));
+    let read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
     let startup_info = rt
         .block_on(read_client.get_startup_info())
         .expect("unable to read ledger info from storage")
@@ -320,7 +311,7 @@ fn create_transaction_chunks(
         )
         .unwrap();
 
-    let storage_client = StorageReadServiceClient::new("localhost", config.storage.port);
+    let storage_client = StorageReadServiceClient::new(&config.storage.address);
 
     let batches: Vec<_> = chunk_ranges
         .into_iter()
@@ -363,7 +354,7 @@ fn test_executor_execute_and_commit_chunk() {
     let (mut config, _) = config_builder::test_config();
     let storage_server = create_storage_server(&mut config);
     let (executor, mut committed_trees) = create_executor(&config);
-    let storage_client = StorageReadServiceClient::new("localhost", config.storage.port);
+    let storage_client = StorageReadServiceClient::new(&config.storage.address);
 
     // Execute the first chunk. After that we should still get the genesis ledger info from DB.
     executor
@@ -464,7 +455,7 @@ fn test_executor_execute_and_commit_chunk_restart() {
     // First we simulate syncing the first chunk of transactions.
     {
         let (executor, mut committed_trees) = create_executor(&config);
-        let storage_client = StorageReadServiceClient::new("localhost", config.storage.port);
+        let storage_client = StorageReadServiceClient::new(&config.storage.address);
 
         executor
             .execute_and_commit_chunk(
@@ -485,7 +476,7 @@ fn test_executor_execute_and_commit_chunk_restart() {
     // Then we restart executor and resume to the next chunk.
     {
         let (executor, _) = create_executor(&config);
-        let storage_client = StorageReadServiceClient::new("localhost", config.storage.port);
+        let storage_client = StorageReadServiceClient::new(&config.storage.address);
 
         executor
             .execute_and_commit_chunk(

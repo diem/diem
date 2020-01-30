@@ -735,10 +735,8 @@ pub fn bootstrap(
         .expect("[shared mempool] failed to create runtime");
     let executor = runtime.handle();
     let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-    let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-        "localhost",
-        config.storage.port,
-    ));
+    let storage_client: Arc<dyn StorageRead> =
+        Arc::new(StorageReadServiceClient::new(&config.storage.address));
     let vm_validator = Arc::new(VMValidator::new(
         &config,
         Arc::clone(&storage_client),

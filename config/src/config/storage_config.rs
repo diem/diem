@@ -3,13 +3,13 @@
 
 use crate::utils;
 use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 use std::path::PathBuf;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct StorageConfig {
-    pub address: String,
-    pub port: u16,
+    pub address: SocketAddr,
     pub dir: PathBuf,
     pub grpc_max_receive_len: Option<i32>,
     #[serde(skip)]
@@ -19,8 +19,7 @@ pub struct StorageConfig {
 impl Default for StorageConfig {
     fn default() -> StorageConfig {
         StorageConfig {
-            address: "localhost".to_string(),
-            port: 6184,
+            address: "127.0.0.1:6184".parse().unwrap(),
             dir: PathBuf::from("libradb/db"),
             grpc_max_receive_len: Some(100_000_000),
             data_dir: PathBuf::from("/opt/libra/data/common"),
@@ -42,6 +41,6 @@ impl StorageConfig {
     }
 
     pub fn randomize_ports(&mut self) {
-        self.port = utils::get_available_port();
+        self.address.set_port(utils::get_available_port());
     }
 }

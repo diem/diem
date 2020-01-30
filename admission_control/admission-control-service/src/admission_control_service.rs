@@ -65,10 +65,8 @@ impl AdmissionControlService {
             .expect("[admission control] failed to create runtime");
 
         // Create storage read client
-        let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-            "localhost",
-            config.storage.port,
-        ));
+        let storage_client: Arc<dyn StorageRead> =
+            Arc::new(StorageReadServiceClient::new(&config.storage.address));
         let admission_control_service = AdmissionControlService::new(ac_sender, storage_client);
 
         runtime.spawn(

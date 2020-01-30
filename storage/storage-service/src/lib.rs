@@ -21,7 +21,7 @@ use libra_types::proto::types::{
     UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, ValidatorChangeProof,
 };
 use libradb::LibraDB;
-use std::{convert::TryFrom, net::ToSocketAddrs, path::Path, sync::Arc};
+use std::{convert::TryFrom, path::Path, sync::Arc};
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
     BackupAccountStateRequest, BackupAccountStateResponse, GetAccountStateRangeProofRequest,
@@ -40,15 +40,10 @@ pub fn start_storage_service(config: &NodeConfig) -> Runtime {
 
     let storage_service = StorageService::new(&config.storage.dir());
 
-    let addr = format!("{}:{}", config.storage.address, config.storage.port)
-        .to_socket_addrs()
-        .unwrap()
-        .next()
-        .unwrap();
     rt.spawn(
         tonic::transport::Server::builder()
             .add_service(StorageServer::new(storage_service))
-            .serve(addr),
+            .serve(config.storage.address),
     );
     rt
 }

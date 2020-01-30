@@ -31,15 +31,11 @@ impl TestValidator {
         let storage = start_storage_service(&config);
 
         // setup execution
-        let storage_read_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-            &config.storage.address,
-            config.storage.port,
-        ));
+        let storage_read_client: Arc<dyn StorageRead> =
+            Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
-        let storage_write_client = Arc::new(StorageWriteServiceClient::new(
-            &config.storage.address,
-            config.storage.port,
-        ));
+        let storage_write_client =
+            Arc::new(StorageWriteServiceClient::new(&config.storage.address));
 
         // Create executor to initialize genesis state. Otherwise gprc will report error when
         // fetching data from storage.
@@ -47,10 +43,8 @@ impl TestValidator {
 
         // Create another client for the vm_validator since the one used for the executor will be
         // run on another runtime which will be dropped before this function returns.
-        let read_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-            &config.storage.address,
-            config.storage.port,
-        ));
+        let read_client: Arc<dyn StorageRead> =
+            Arc::new(StorageReadServiceClient::new(&config.storage.address));
         let vm_validator = VMValidator::new(config, read_client, rt.handle().clone());
 
         (

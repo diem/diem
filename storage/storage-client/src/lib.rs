@@ -26,6 +26,7 @@ use libra_types::{
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
 use std::convert::TryFrom;
+use std::net::SocketAddr;
 use std::sync::Mutex;
 use storage_proto::{
     proto::storage::{
@@ -41,24 +42,24 @@ use storage_proto::{
 
 /// This provides storage read interfaces backed by real storage service.
 pub struct StorageReadServiceClient {
-    addr: String,
+    http_addr: String,
     client: Mutex<Option<StorageClient<tonic::transport::Channel>>>,
 }
 
 impl StorageReadServiceClient {
-    /// Constructs a `StorageReadServiceClient` with given host and port.
-    pub fn new(host: &str, port: u16) -> Self {
-        let addr = format!("http://{}:{}", host, port);
+    /// Constructs a `StorageReadServiceClient` with given SocketAddr.
+    pub fn new(address: &SocketAddr) -> Self {
+        let http_addr = format!("http://{}", address.to_string());
 
         Self {
             client: Mutex::new(None),
-            addr,
+            http_addr,
         }
     }
 
     async fn client(&self) -> Result<StorageClient<tonic::transport::Channel>, tonic::Status> {
         if self.client.lock().unwrap().is_none() {
-            let client = StorageClient::connect(self.addr.clone())
+            let client = StorageClient::connect(self.http_addr.clone())
                 .await
                 .map_err(|e| tonic::Status::new(tonic::Code::Unavailable, e.to_string()))?;
             *self.client.lock().unwrap() = Some(client);
@@ -236,24 +237,24 @@ impl StorageRead for StorageReadServiceClient {
 
 /// This provides storage write interfaces backed by real storage service.
 pub struct StorageWriteServiceClient {
-    addr: String,
+    http_addr: String,
     client: Mutex<Option<StorageClient<tonic::transport::Channel>>>,
 }
 
 impl StorageWriteServiceClient {
-    /// Constructs a `StorageWriteServiceClient` with given host and port.
-    pub fn new(host: &str, port: u16) -> Self {
-        let addr = format!("http://{}:{}", host, port);
+    /// Constructs a `StorageWriteServiceClient` with given SocketAddr.
+    pub fn new(address: &SocketAddr) -> Self {
+        let http_addr = format!("http://{}", address.to_string());
 
         Self {
             client: Mutex::new(None),
-            addr,
+            http_addr,
         }
     }
 
     async fn client(&self) -> Result<StorageClient<tonic::transport::Channel>, tonic::Status> {
         if self.client.lock().unwrap().is_none() {
-            let client = StorageClient::connect(self.addr.clone())
+            let client = StorageClient::connect(self.http_addr.clone())
                 .await
                 .map_err(|e| tonic::Status::new(tonic::Code::Unavailable, e.to_string()))?;
             *self.client.lock().unwrap() = Some(client);
