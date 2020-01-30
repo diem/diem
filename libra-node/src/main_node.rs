@@ -55,14 +55,8 @@ impl Drop for LibraHandle {
 }
 
 fn setup_executor(config: &NodeConfig) -> Arc<Executor<LibraVM>> {
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
-    let storage_write_client = Arc::new(StorageWriteServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
+    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
+    let storage_write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
 
     Arc::new(Executor::new(
         storage_read_client,

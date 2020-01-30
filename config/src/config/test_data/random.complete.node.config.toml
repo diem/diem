@@ -23,7 +23,6 @@ type = "in_memory_storage"
 
 [debug_interface]
 admission_control_node_debug_port = 6191
-storage_node_debug_port = 6194
 metrics_server_port = 9101
 public_metrics_server_port = 9102
 address = "0.0.0.0"
@@ -63,8 +62,7 @@ max_timeout_ms = 120000
 upstream_peers = []
 
 [storage]
-address = "localhost"
-port = 6184
+address = "127.0.0.1:6184"
 dir = "libradb/db"
 grpc_max_receive_len = 100000000
 

@@ -28,8 +28,8 @@ fn start_test_storage_with_read_write_client() -> (
 
     let storage_server_handle = start_storage_service(&config);
 
-    let read_client = StorageReadServiceClient::new(&config.storage.address, config.storage.port);
-    let write_client = StorageWriteServiceClient::new(&config.storage.address, config.storage.port);
+    let read_client = StorageReadServiceClient::new(&config.storage.address);
+    let write_client = StorageWriteServiceClient::new(&config.storage.address);
     (storage_server_handle, tmp_dir, read_client, write_client)
 }
 

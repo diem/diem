@@ -55,8 +55,5 @@ pub fn make_consensus_provider(
 
 /// Create a storage read client based on the config
 pub fn create_storage_read_client(config: &NodeConfig) -> Arc<dyn StorageRead> {
-    Arc::new(StorageReadServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ))
+    Arc::new(StorageReadServiceClient::new(&config.storage.address))
 }
