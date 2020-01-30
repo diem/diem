@@ -8,7 +8,7 @@
 
 procedure {:inline 1} VerifyVector_test_empty1 () returns (ret0: Value, ret1: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures b#Boolean(Boolean((ret0) == (ret1)));
+ensures b#Boolean(Boolean(IsEqual(ret0, ret1)));
 {
     // declare local variables
     var t0: Value; // Vector_T_type_value(IntegerType())
@@ -73,7 +73,7 @@ procedure VerifyVector_test_empty1_verify () returns (ret0: Value, ret1: Value)
 
 procedure {:inline 1} VerifyVector_test_empty2 () returns (ret0: Value, ret1: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures b#Boolean(Boolean((ret0) == (ret1)));
+ensures b#Boolean(Boolean(IsEqual(ret0, ret1)));
 {
     // declare local variables
     var t0: Value; // Vector_T_type_value(IntegerType())

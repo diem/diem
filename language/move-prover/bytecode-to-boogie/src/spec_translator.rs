@@ -290,11 +290,19 @@ impl<'env> SpecTranslator<'env> {
 
             // generic equality
             BinOp::Eq => BoogieExpr(
-                format!("Boolean(({}) == ({}))", left.0, right.0),
+                if left.1.is_reference() || right.1.is_reference() {
+                    format!("Boolean(({}) == ({}))", left.0, right.0)
+                } else {
+                    format!("Boolean(IsEqual({}, {}))", left.0, right.0)
+                },
                 GlobalType::Bool,
             ),
             BinOp::Neq => BoogieExpr(
-                format!("Boolean(({}) != ({}))", left.0, right.0),
+                if left.1.is_reference() || right.1.is_reference() {
+                    format!("Boolean(({}) != ({}))", left.0, right.0)
+                } else {
+                    format!("Boolean(!IsEqual({}, {}))", left.0, right.0)
+                },
                 GlobalType::Bool,
             ),
 

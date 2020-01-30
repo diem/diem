@@ -415,7 +415,7 @@ procedure TestAbortIf_abort7_verify (x: Value, y: Value) returns ()
 
 procedure {:inline 1} TestAbortIf_abort8 (x: Value, y: Value) returns (ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures !__abort_flag ==> b#Boolean(Boolean((ret0) == (Boolean(true))));
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(ret0, Boolean(true))));
 ensures old(!(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) && (b#Boolean(Boolean(i#Integer(x) > i#Integer(y))))) ==> !__abort_flag;
 ensures old(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> __abort_flag;
 
@@ -500,7 +500,7 @@ procedure TestAbortIf_abort8_verify (x: Value, y: Value) returns (ret0: Value)
 
 procedure {:inline 1} TestAbortIf_abort9 (x: Value, y: Value) returns ()
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures !__abort_flag ==> b#Boolean(Boolean((x) == (y)));
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(x, y)));
 ensures old(!(b#Boolean(Boolean(i#Integer(x) > i#Integer(y))) || b#Boolean(Boolean(i#Integer(x) < i#Integer(y))))) ==> !__abort_flag;
 ensures old(b#Boolean(Boolean(i#Integer(x) > i#Integer(y))) || b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> __abort_flag;
 
