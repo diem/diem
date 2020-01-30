@@ -5,11 +5,11 @@ use crate::{
     context::{Context, MaterializedPools},
     errors::*,
     parser::ast::{
-        self, BinOp, Block, Builtin, Cmd, Cmd_, CopyableVal, Exp, Exp_, FunctionBody, FunctionCall,
-        FunctionCall_, FunctionName, FunctionSignature as AstFunctionSignature, FunctionVisibility,
-        Function_, IfElse, ImportDefinition, LValue, LValue_, Loc, Loop, ModuleDefinition,
+        self, BinOp, Block_, Builtin, Cmd, Cmd_, CopyableVal_, Exp, Exp_, Function, FunctionBody,
+        FunctionCall, FunctionCall_, FunctionName, FunctionSignature as AstFunctionSignature,
+        FunctionVisibility, IfElse, ImportDefinition, LValue, LValue_, Loc, Loop, ModuleDefinition,
         ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script,
-        Statement, StructDefinitionFields, StructDefinition_ as MoveStruct_, Type, TypeVar,
+        Statement, StructDefinition as MoveStruct_, StructDefinitionFields, Type, TypeVar,
         TypeVar_, UnaryOp, Var, Var_, While,
     },
 };
@@ -195,7 +195,7 @@ impl InferredType {
 #[derive(Debug, Default)]
 struct FunctionFrame {
     local_count: u8,
-    locals: HashMap<Var, u8>,
+    locals: HashMap<Var_, u8>,
     local_types: LocalsSignature,
     // i64 to allow the bytecode verifier to catch errors of
     // - negative stack sizes
@@ -230,7 +230,7 @@ impl FunctionFrame {
         Ok(())
     }
 
-    fn get_local(&self, var: &Var) -> Result<u8> {
+    fn get_local(&self, var: &Var_) -> Result<u8> {
         match self.locals.get(var) {
             None => bail!("variable {} undefined", var),
             Some(idx) => Ok(*idx),
@@ -244,7 +244,7 @@ impl FunctionFrame {
             .ok_or_else(|| format_err!("variable {} undefined", idx))
     }
 
-    fn define_local(&mut self, var: &Var, type_: SignatureToken) -> Result<u8> {
+    fn define_local(&mut self, var: &Var_, type_: SignatureToken) -> Result<u8> {
         if self.local_count >= u8::max_value() {
             bail!("Max number of locals reached");
         }
@@ -469,7 +469,7 @@ fn compile_imports(
     Ok(())
 }
 
-fn type_formals(ast_tys: &[(TypeVar_, ast::Kind)]) -> Result<(HashMap<TypeVar, usize>, Vec<Kind>)> {
+fn type_formals(ast_tys: &[(TypeVar, ast::Kind)]) -> Result<(HashMap<TypeVar_, usize>, Vec<Kind>)> {
     let mut m = HashMap::new();
     let mut tys = vec![];
     for (idx, (ty_var, k)) in ast_tys.iter().enumerate() {
@@ -607,7 +607,7 @@ fn compile_fields(
 fn compile_functions(
     context: &mut Context,
     self_name: &ModuleName,
-    functions: Vec<(FunctionName, Function_)>,
+    functions: Vec<(FunctionName, Function)>,
 ) -> Result<Vec<FunctionDefinition>> {
     functions
         .into_iter()
@@ -622,7 +622,7 @@ fn compile_function(
     context: &mut Context,
     self_name: &ModuleName,
     name: FunctionName,
-    ast_function: Function_,
+    ast_function: Function,
     function_index: usize,
 ) -> Result<FunctionDefinition> {
     record_src_loc!(function_decl: context, ast_function.span, function_index);
@@ -670,9 +670,9 @@ fn compile_function(
 
 fn compile_function_body(
     context: &mut Context,
-    formals: Vec<(Var_, Type)>,
-    locals: Vec<(Var_, Type)>,
-    block: Block,
+    formals: Vec<(Var, Type)>,
+    locals: Vec<(Var, Type)>,
+    block: Block_,
 ) -> Result<CodeUnit> {
     let mut function_frame = FunctionFrame::new();
     let mut locals_signature = LocalsSignature(vec![]);
@@ -710,7 +710,7 @@ fn compile_block(
     context: &mut Context,
     function_frame: &mut FunctionFrame,
     code: &mut Vec<Bytecode>,
-    block: Block,
+    block: Block_,
 ) -> Result<ControlFlowInfo> {
     let mut cf_info = ControlFlowInfo {
         reachable_break: false,
@@ -859,7 +859,7 @@ fn compile_command(
     context: &mut Context,
     function_frame: &mut FunctionFrame,
     code: &mut Vec<Bytecode>,
-    cmd: Cmd_,
+    cmd: Cmd,
 ) -> Result<ControlFlowInfo> {
     make_push_instr!(context, code);
     let (reachable_break, terminal_node) = match &cmd.value {
@@ -868,30 +868,30 @@ fn compile_command(
             //   `while (cond) { body }`
             // as `
             //   `loop { if (cond) { body; continue; } else { break; } }`
-            Cmd::Continue |
+            Cmd_::Continue |
             // `return` and `abort` alway makes a terminal node
-            Cmd::Abort(_) |
-            Cmd::Return(_) => (false, true),
-            Cmd::Break => (true, false),
+            Cmd_::Abort(_) |
+            Cmd_::Return(_) => (false, true),
+            Cmd_::Break => (true, false),
             _ => (false, false),
         };
     match cmd.value {
-        Cmd::Return(exps) => {
+        Cmd_::Return(exps) => {
             compile_expression(context, function_frame, code, *exps)?;
             push_instr!(cmd.span, Bytecode::Ret);
         }
-        Cmd::Abort(exp_opt) => {
+        Cmd_::Abort(exp_opt) => {
             if let Some(exp) = exp_opt {
                 compile_expression(context, function_frame, code, *exp)?;
             }
             push_instr!(cmd.span, Bytecode::Abort);
             function_frame.pop()?;
         }
-        Cmd::Assign(lvalues, rhs_expressions) => {
+        Cmd_::Assign(lvalues, rhs_expressions) => {
             compile_expression(context, function_frame, code, rhs_expressions)?;
             compile_lvalues(context, function_frame, code, lvalues)?;
         }
-        Cmd::Unpack(name, tys, bindings, e) => {
+        Cmd_::Unpack(name, tys, bindings, e) => {
             let tokens = LocalsSignature(compile_types(context, &tys)?);
             let type_actuals_id = context.locals_signature_index(tokens)?;
 
@@ -907,16 +907,16 @@ fn compile_command(
                 push_instr!(field_.span, st_loc);
             }
         }
-        Cmd::Continue => {
+        Cmd_::Continue => {
             let loc = function_frame.get_loop_start()?;
             push_instr!(cmd.span, Bytecode::Branch(loc as u16));
         }
-        Cmd::Break => {
+        Cmd_::Break => {
             function_frame.push_loop_break(code.len())?;
             // placeholder, to be replaced when the enclosing while is compiled
             push_instr!(cmd.span, Bytecode::Branch(0));
         }
-        Cmd::Exp(e) => {
+        Cmd_::Exp(e) => {
             compile_expression(context, function_frame, code, *e)?;
         }
     }
@@ -930,23 +930,23 @@ fn compile_lvalues(
     context: &mut Context,
     function_frame: &mut FunctionFrame,
     code: &mut Vec<Bytecode>,
-    lvalues: Vec<LValue_>,
+    lvalues: Vec<LValue>,
 ) -> Result<()> {
     make_push_instr!(context, code);
     for lvalue_ in lvalues.into_iter().rev() {
         match lvalue_.value {
-            LValue::Var(v) => {
+            LValue_::Var(v) => {
                 let loc_idx = function_frame.get_local(&v.value)?;
                 push_instr!(lvalue_.span, Bytecode::StLoc(loc_idx));
                 function_frame.pop()?;
             }
-            LValue::Mutate(e) => {
+            LValue_::Mutate(e) => {
                 compile_expression(context, function_frame, code, e)?;
                 push_instr!(lvalue_.span, Bytecode::WriteRef);
                 function_frame.pop()?;
                 function_frame.pop()?;
             }
-            LValue::Pop => {
+            LValue_::Pop => {
                 push_instr!(lvalue_.span, Bytecode::Pop);
                 function_frame.pop()?;
             }
@@ -981,11 +981,11 @@ fn compile_expression(
     context: &mut Context,
     function_frame: &mut FunctionFrame,
     code: &mut Vec<Bytecode>,
-    exp: Exp_,
+    exp: Exp,
 ) -> Result<VecDeque<InferredType>> {
     make_push_instr!(context, code);
     Ok(match exp.value {
-        Exp::Move(v) => {
+        Exp_::Move(v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
             let load_loc = Bytecode::MoveLoc(loc_idx);
             push_instr!(exp.span, load_loc);
@@ -993,7 +993,7 @@ fn compile_expression(
             let loc_type = function_frame.get_local_type(loc_idx)?;
             vec_deque![InferredType::from_signature_token(loc_type)]
         }
-        Exp::Copy(v) => {
+        Exp_::Copy(v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
             let load_loc = Bytecode::CopyLoc(loc_idx);
             push_instr!(exp.span, load_loc);
@@ -1001,7 +1001,7 @@ fn compile_expression(
             let loc_type = function_frame.get_local_type(loc_idx)?;
             vec_deque![InferredType::from_signature_token(loc_type)]
         }
-        Exp::BorrowLocal(is_mutable, v) => {
+        Exp_::BorrowLocal(is_mutable, v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
             let loc_type = function_frame.get_local_type(loc_idx)?;
             let inner_token = Box::new(InferredType::from_signature_token(loc_type));
@@ -1015,35 +1015,35 @@ fn compile_expression(
                 vec_deque![InferredType::Reference(inner_token)]
             }
         }
-        Exp::Value(cv) => match cv.value {
-            CopyableVal::Address(address) => {
+        Exp_::Value(cv) => match cv.value {
+            CopyableVal_::Address(address) => {
                 let addr_idx = context.address_index(address)?;
                 push_instr!(exp.span, Bytecode::LdAddr(addr_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::Address]
             }
-            CopyableVal::U8(i) => {
+            CopyableVal_::U8(i) => {
                 push_instr!(exp.span, Bytecode::LdU8(i));
                 function_frame.push()?;
                 vec_deque![InferredType::U8]
             }
-            CopyableVal::U64(i) => {
+            CopyableVal_::U64(i) => {
                 push_instr!(exp.span, Bytecode::LdU64(i));
                 function_frame.push()?;
                 vec_deque![InferredType::U64]
             }
-            CopyableVal::U128(i) => {
+            CopyableVal_::U128(i) => {
                 push_instr!(exp.span, Bytecode::LdU128(i));
                 function_frame.push()?;
                 vec_deque![InferredType::U128]
             }
-            CopyableVal::ByteArray(buf) => {
+            CopyableVal_::ByteArray(buf) => {
                 let buf_idx = context.byte_array_index(&buf)?;
                 push_instr!(exp.span, Bytecode::LdByteArray(buf_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::ByteArray]
             }
-            CopyableVal::Bool(b) => {
+            CopyableVal_::Bool(b) => {
                 push_instr! {exp.span,
                     if b {
                         Bytecode::LdTrue
@@ -1055,7 +1055,7 @@ fn compile_expression(
                 vec_deque![InferredType::Bool]
             }
         },
-        Exp::Pack(name, tys, fields) => {
+        Exp_::Pack(name, tys, fields) => {
             let tokens = LocalsSignature(compile_types(context, &tys)?);
             let type_actuals_id = context.locals_signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&name)?;
@@ -1085,7 +1085,7 @@ fn compile_expression(
 
             vec_deque![InferredType::Struct(sh_idx)]
         }
-        Exp::UnaryExp(op, e) => {
+        Exp_::UnaryExp(op, e) => {
             compile_expression(context, function_frame, code, *e)?;
             match op {
                 UnaryOp::Not => {
@@ -1094,7 +1094,7 @@ fn compile_expression(
                 }
             }
         }
-        Exp::BinopExp(e1, op, e2) => {
+        Exp_::BinopExp(e1, op, e2) => {
             let tys1 = compile_expression(context, function_frame, code, *e1)?;
             let tys2 = compile_expression(context, function_frame, code, *e2)?;
 
@@ -1174,7 +1174,7 @@ fn compile_expression(
                 }
             }
         }
-        Exp::Dereference(e) => {
+        Exp_::Dereference(e) => {
             let loc_type = compile_expression(context, function_frame, code, *e)?.pop_front();
             push_instr!(exp.span, Bytecode::ReadRef);
             match loc_type {
@@ -1183,7 +1183,7 @@ fn compile_expression(
                 _ => vec_deque![InferredType::Anything],
             }
         }
-        Exp::Borrow {
+        Exp_::Borrow {
             is_mutable,
             exp: inner_exp,
             field,
@@ -1206,14 +1206,14 @@ fn compile_expression(
                 vec_deque![InferredType::Reference(inner_token)]
             }
         }
-        Exp::FunctionCall(f, exps) => {
+        Exp_::FunctionCall(f, exps) => {
             let mut actuals_tys = vec_deque![];
             for types in compile_expression(context, function_frame, code, *exps)? {
                 actuals_tys.push_back(types);
             }
             compile_call(context, function_frame, code, f, actuals_tys)?
         }
-        Exp::ExprList(exps) => {
+        Exp_::ExprList(exps) => {
             let mut result = vec_deque![];
             for e in exps {
                 result.append(&mut compile_expression(context, function_frame, code, e)?);
@@ -1227,12 +1227,12 @@ fn compile_call(
     context: &mut Context,
     function_frame: &mut FunctionFrame,
     code: &mut Vec<Bytecode>,
-    call: FunctionCall_,
+    call: FunctionCall,
     mut argument_types: VecDeque<InferredType>,
 ) -> Result<VecDeque<InferredType>> {
     make_push_instr!(context, code);
     Ok(match call.value {
-        FunctionCall::Builtin(function) => {
+        FunctionCall_::Builtin(function) => {
             match function {
                 Builtin::GetTxnSender => {
                     push_instr!(call.span, Bytecode::GetTxnSenderAddress);
@@ -1332,7 +1332,7 @@ fn compile_call(
                 }
             }
         }
-        FunctionCall::ModuleFunctionCall {
+        FunctionCall_::ModuleFunctionCall {
             module,
             name,
             type_actuals,

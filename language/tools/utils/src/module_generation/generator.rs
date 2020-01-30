@@ -98,7 +98,7 @@ impl<'a> ModuleGenerator<'a> {
         Identifier::new(random_string(&mut self.gen, len)).unwrap()
     }
 
-    fn base_type(&mut self, ty_param_context: &[(TypeVar_, Kind)]) -> Type {
+    fn base_type(&mut self, ty_param_context: &[(TypeVar, Kind)]) -> Type {
         // TODO: Don't generate nested resources for now. Once we allow functions to take resources
         // (and have type parameters of kind Resource or All) then we should revisit this here.
         let structs: Vec<_> = self
@@ -145,7 +145,7 @@ impl<'a> ModuleGenerator<'a> {
         }
     }
 
-    fn typ(&mut self, ty_param_context: &[(TypeVar_, Kind)]) -> Type {
+    fn typ(&mut self, ty_param_context: &[(TypeVar, Kind)]) -> Type {
         let typ = self.base_type(ty_param_context);
         // TODO: Always change the base type to a reference if it's resource type. Then we can
         // allow functions to take resources.
@@ -158,7 +158,7 @@ impl<'a> ModuleGenerator<'a> {
         }
     }
 
-    fn type_formals(&mut self) -> Vec<(TypeVar_, Kind)> {
+    fn type_formals(&mut self) -> Vec<(TypeVar, Kind)> {
         // Don't generate type parameters if we're generating simple types only
         if self.options.simple_types_only {
             vec![]
@@ -167,7 +167,7 @@ impl<'a> ModuleGenerator<'a> {
             init!(
                 num_ty_params,
                 (
-                    Spanned::no_loc(TypeVar::new(self.identifier())),
+                    Spanned::no_loc(TypeVar_::new(self.identifier())),
                     Kind::Unrestricted,
                 )
             )
@@ -179,8 +179,8 @@ impl<'a> ModuleGenerator<'a> {
     fn function_signature(&mut self) -> FunctionSignature {
         let ty_params = self.type_formals();
         let number_of_args = self.index(self.options.max_function_call_size);
-        let mut formals: Vec<(Var_, Type)> = init!(number_of_args, {
-            let param_name = Var::new_(self.identifier());
+        let mut formals: Vec<(Var, Type)> = init!(number_of_args, {
+            let param_name = Spanned::no_loc(Var_::new(self.identifier()));
             let ty = self.typ(&ty_params);
             (param_name, ty)
         });
@@ -189,7 +189,7 @@ impl<'a> ModuleGenerator<'a> {
             let mut ty_formals = ty_params
                 .iter()
                 .map(|(ty_var_, _)| {
-                    let param_name = Var::new_(self.identifier());
+                    let param_name = Spanned::no_loc(Var_::new(self.identifier()));
                     let ty = Type::TypeParameter(ty_var_.value.clone());
                     (param_name, ty)
                 })
@@ -201,13 +201,13 @@ impl<'a> ModuleGenerator<'a> {
         FunctionSignature::new(formals, vec![], ty_params)
     }
 
-    fn struct_fields(&mut self, ty_params: &[(TypeVar_, Kind)]) -> StructDefinitionFields {
+    fn struct_fields(&mut self, ty_params: &[(TypeVar, Kind)]) -> StructDefinitionFields {
         let num_fields = self
             .gen
             .gen_range(self.options.min_fields, self.options.max_fields);
         let fields: Fields<Type> = init!(num_fields, {
             (
-                Spanned::no_loc(Field::new(self.identifier())),
+                Spanned::no_loc(Field_::new(self.identifier())),
                 self.base_type(ty_params),
             )
         });
@@ -220,20 +220,20 @@ impl<'a> ModuleGenerator<'a> {
         let num_locals = self.index(self.options.max_locals);
         let locals = init!(num_locals, {
             (
-                Var::new_(self.identifier()),
+                Spanned::no_loc(Var_::new(self.identifier())),
                 self.typ(&signature.type_formals),
             )
         });
-        let fun = Function {
+        let fun = Function_ {
             visibility: FunctionVisibility::Public,
             acquires: Vec::new(),
             specifications: Vec::new(),
             signature,
             body: FunctionBody::Move {
                 locals,
-                code: Block {
+                code: Block_ {
                     stmts: VecDeque::from(vec![Statement::CommandStatement(Spanned::no_loc(
-                        Cmd::return_empty(),
+                        Cmd_::return_empty(),
                     ))]),
                 },
             },
@@ -248,7 +248,7 @@ impl<'a> ModuleGenerator<'a> {
         let name = StructName::new(self.identifier());
         let type_formals = self.type_formals();
         let fields = self.struct_fields(&type_formals);
-        let strct = StructDefinition {
+        let strct = StructDefinition_ {
             is_nominal_resource,
             name,
             type_formals,

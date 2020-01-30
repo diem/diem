@@ -65,7 +65,7 @@ pub struct Script {
     /// The dependencies of `main`, i.e. of the transaction script
     pub imports: Vec<ImportDefinition>,
     /// The transaction script's `main` procedure
-    pub main: Function_,
+    pub main: Function,
 }
 
 //**************************************************************************************************
@@ -94,9 +94,9 @@ pub struct ModuleDefinition {
     /// the module's dependencies
     pub imports: Vec<ImportDefinition>,
     /// the structs (including resources) that the module defines
-    pub structs: Vec<StructDefinition_>,
+    pub structs: Vec<StructDefinition>,
     /// the procedure that the module defines
-    pub functions: Vec<(FunctionName, Function_)>,
+    pub functions: Vec<(FunctionName, Function)>,
 }
 
 /// Either a qualified module name like `addr.m` or `Transaction.m`, which refers to a module in
@@ -128,17 +128,17 @@ pub struct ImportDefinition {
 
 /// Newtype for a variable/local
 #[derive(Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
-pub struct Var(Identifier);
+pub struct Var_(Identifier);
 
 /// The type of a variable with a location
-pub type Var_ = Spanned<Var>;
+pub type Var = Spanned<Var_>;
 
 /// New type that represents a type variable. Used to declare type formals & reference them.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct TypeVar(Identifier);
+pub struct TypeVar_(Identifier);
 
 /// The type of a type variable with a location.
-pub type TypeVar_ = Spanned<TypeVar>;
+pub type TypeVar = Spanned<TypeVar_>;
 
 //**************************************************************************************************
 // Kinds
@@ -181,7 +181,7 @@ pub enum Type {
     /// A reference type, the bool flag indicates whether the reference is mutable
     Reference(bool, Box<Type>),
     /// A type parameter
-    TypeParameter(TypeVar),
+    TypeParameter(TypeVar_),
 }
 
 //**************************************************************************************************
@@ -200,13 +200,13 @@ pub struct QualifiedStructIdent {
 }
 
 /// The field newtype
-pub type Field = libra_types::access_path::Field;
+pub type Field_ = libra_types::access_path::Field;
 
 /// A field coupled with source location information
-pub type Field_ = Spanned<Field>;
+pub type Field = Spanned<Field_>;
 
 /// A field map
-pub type Fields<T> = Vec<(Field_, T)>;
+pub type Fields<T> = Vec<(Field, T)>;
 
 /// Newtype for the name of a struct
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -214,20 +214,20 @@ pub struct StructName(Identifier);
 
 /// A Move struct
 #[derive(Clone, Debug, PartialEq)]
-pub struct StructDefinition {
+pub struct StructDefinition_ {
     /// The struct will have kind resource if `is_nominal_resource` is true
     /// and will be dependent on it's type arguments otherwise
     pub is_nominal_resource: bool,
     /// Human-readable name for the struct that also serves as a nominal type
     pub name: StructName,
     /// Kind constraints of the type parameters
-    pub type_formals: Vec<(TypeVar_, Kind)>,
+    pub type_formals: Vec<(TypeVar, Kind)>,
     /// the fields each instance has
     pub fields: StructDefinitionFields,
 }
 
 /// The type of a StructDefinition along with its source location information
-pub type StructDefinition_ = Spanned<StructDefinition>;
+pub type StructDefinition = Spanned<StructDefinition_>;
 
 /// The fields of a Move struct definition
 #[derive(Clone, Debug, PartialEq)]
@@ -250,11 +250,11 @@ pub struct FunctionName(Identifier);
 #[derive(PartialEq, Debug, Clone)]
 pub struct FunctionSignature {
     /// Possibly-empty list of (formal name, formal type) pairs. Names are unique.
-    pub formals: Vec<(Var_, Type)>,
+    pub formals: Vec<(Var, Type)>,
     /// Optional return types
     pub return_type: Vec<Type>,
     /// Possibly-empty list of (TypeVar, Kind) pairs.s.
-    pub type_formals: Vec<(TypeVar_, Kind)>,
+    pub type_formals: Vec<(TypeVar, Kind)>,
 }
 
 /// Public or internal modifier for a procedure
@@ -275,8 +275,8 @@ pub enum FunctionBody {
     /// `locals` are all of the declared locals
     /// `code` is the code that defines the procedure
     Move {
-        locals: Vec<(Var_, Type)>,
-        code: Block,
+        locals: Vec<(Var, Type)>,
+        code: Block_,
     },
     /// The body is provided by the runtime
     Native,
@@ -284,7 +284,7 @@ pub enum FunctionBody {
 
 /// A Move function/procedure
 #[derive(PartialEq, Debug, Clone)]
-pub struct Function {
+pub struct Function_ {
     /// The visibility (public or internal)
     pub visibility: FunctionVisibility,
     /// The type signature
@@ -301,7 +301,7 @@ pub struct Function {
 }
 
 /// The type of a Function coupled with its source location information.
-pub type Function_ = Spanned<Function>;
+pub type Function = Spanned<Function_>;
 
 //**************************************************************************************************
 // Statements
@@ -338,7 +338,7 @@ pub enum Builtin {
 
 /// Enum for different function calls
 #[derive(Debug, PartialEq, Clone)]
-pub enum FunctionCall {
+pub enum FunctionCall_ {
     /// functions defined in the host environment
     Builtin(Builtin),
     /// The call of a module defined procedure
@@ -349,73 +349,73 @@ pub enum FunctionCall {
     },
 }
 /// The type for a function call and its location
-pub type FunctionCall_ = Spanned<FunctionCall>;
+pub type FunctionCall = Spanned<FunctionCall_>;
 
 /// Enum for Move lvalues
 #[derive(Debug, Clone, PartialEq)]
-pub enum LValue {
+pub enum LValue_ {
     /// `x`
-    Var(Var_),
+    Var(Var),
     /// `*e`
-    Mutate(Exp_),
+    Mutate(Exp),
     /// `_`
     Pop,
 }
-pub type LValue_ = Spanned<LValue>;
+pub type LValue = Spanned<LValue_>;
 
 /// Enum for Move commands
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq)]
-pub enum Cmd {
+pub enum Cmd_ {
     /// `l_1, ..., l_n = e`
-    Assign(Vec<LValue_>, Exp_),
+    Assign(Vec<LValue>, Exp),
     /// `n { f_1: x_1, ... , f_j: x_j  } = e`
-    Unpack(StructName, Vec<Type>, Fields<Var_>, Box<Exp_>),
+    Unpack(StructName, Vec<Type>, Fields<Var>, Box<Exp>),
     /// `abort e`
-    Abort(Option<Box<Exp_>>),
+    Abort(Option<Box<Exp>>),
     /// `return e_1, ... , e_j`
-    Return(Box<Exp_>),
+    Return(Box<Exp>),
     /// `break`
     Break,
     /// `continue`
     Continue,
-    Exp(Box<Exp_>),
+    Exp(Box<Exp>),
 }
 /// The type of a command with its location
-pub type Cmd_ = Spanned<Cmd>;
+pub type Cmd = Spanned<Cmd_>;
 
 /// Struct defining an if statement
 #[derive(Debug, PartialEq, Clone)]
 pub struct IfElse {
     /// the if's condition
-    pub cond: Exp_,
+    pub cond: Exp,
     /// the block taken if the condition is `true`
-    pub if_block: Block_,
+    pub if_block: Block,
     /// the block taken if the condition is `false`
-    pub else_block: Option<Block_>,
+    pub else_block: Option<Block>,
 }
 
 /// Struct defining a while statement
 #[derive(Debug, PartialEq, Clone)]
 pub struct While {
     /// The condition for a while statement
-    pub cond: Exp_,
+    pub cond: Exp,
     /// The block taken if the condition is `true`
-    pub block: Block_,
+    pub block: Block,
 }
 
 /// Struct defining a loop statement
 #[derive(Debug, PartialEq, Clone)]
 pub struct Loop {
     /// The body of the loop
-    pub block: Block_,
+    pub block: Block,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum Statement {
     /// `c;`
-    CommandStatement(Cmd_),
+    CommandStatement(Cmd),
     /// `if (e) { s_1 } else { s_2 }`
     IfElseStatement(IfElse),
     /// `while (e) { s }`
@@ -428,13 +428,13 @@ pub enum Statement {
 
 #[derive(Debug, PartialEq, Clone)]
 /// `{ s }`
-pub struct Block {
+pub struct Block_ {
     /// The statements that make up the block
     pub stmts: VecDeque<Statement>,
 }
 
 /// The type of a Block coupled with source location information.
-pub type Block_ = Spanned<Block>;
+pub type Block = Spanned<Block_>;
 
 //**************************************************************************************************
 // Expressions
@@ -443,7 +443,7 @@ pub type Block_ = Spanned<Block>;
 /// Bottom of the value hierarchy. These values can be trivially copyable and stored in statedb as a
 /// single entry.
 #[derive(Debug, PartialEq, Clone)]
-pub enum CopyableVal {
+pub enum CopyableVal_ {
     /// An address in the global storage
     Address(AccountAddress),
     /// An unsigned 8-bit integer
@@ -459,10 +459,10 @@ pub enum CopyableVal {
 }
 
 /// The type of a value and its location
-pub type CopyableVal_ = Spanned<CopyableVal>;
+pub type CopyableVal = Spanned<CopyableVal_>;
 
 /// The type for fields and their bound expressions
-pub type ExpFields = Fields<Exp_>;
+pub type ExpFields = Fields<Exp>;
 
 /// Enum for unary operators
 #[derive(Debug, Clone, PartialEq)]
@@ -519,16 +519,16 @@ pub enum BinOp {
 
 /// Enum for all expressions
 #[derive(Debug, Clone, PartialEq)]
-pub enum Exp {
+pub enum Exp_ {
     /// `*e`
-    Dereference(Box<Exp_>),
+    Dereference(Box<Exp>),
     /// `op e`
-    UnaryExp(UnaryOp, Box<Exp_>),
+    UnaryExp(UnaryOp, Box<Exp>),
     /// `e_1 op e_2`
-    BinopExp(Box<Exp_>, BinOp, Box<Exp_>),
+    BinopExp(Box<Exp>, BinOp, Box<Exp>),
     /// Wrapper to lift `CopyableVal` into `Exp`
     /// `v`
-    Value(CopyableVal_),
+    Value(CopyableVal),
     /// Takes the given field values and instantiates the struct
     /// Returns a fresh `StructInstance` whose type and kind (resource or otherwise)
     /// as the current struct class (i.e., the class of the method we're currently executing).
@@ -539,24 +539,24 @@ pub enum Exp {
         /// mutable or not
         is_mutable: bool,
         /// the expression containing the reference
-        exp: Box<Exp_>,
+        exp: Box<Exp>,
         /// the field being borrowed
-        field: Field,
+        field: Field_,
     },
     /// `move(x)`
-    Move(Var_),
+    Move(Var),
     /// `copy(x)`
-    Copy(Var_),
+    Copy(Var),
     /// `&x` or `&mut x`
-    BorrowLocal(bool, Var_),
+    BorrowLocal(bool, Var),
     /// `f(e)` or `f(e_1, e_2, ..., e_j)`
-    FunctionCall(FunctionCall_, Box<Exp_>),
+    FunctionCall(FunctionCall, Box<Exp>),
     /// (e_1, e_2, e_3, ..., e_j)
-    ExprList(Vec<Exp_>),
+    ExprList(Vec<Exp>),
 }
 
-/// The type for a `Exp` and its location
-pub type Exp_ = Spanned<Exp>;
+/// The type for a `Exp_` and its location
+pub type Exp = Spanned<Exp_>;
 
 //**************************************************************************************************
 // impls
@@ -581,12 +581,12 @@ impl Program {
 
 impl Script {
     /// Create a new `Script` from the imports and the main function
-    pub fn new(imports: Vec<ImportDefinition>, main: Function_) -> Self {
+    pub fn new(imports: Vec<ImportDefinition>, main: Function) -> Self {
         Script { imports, main }
     }
 
     /// Accessor for the body of the 'main' procedure
-    pub fn body(&self) -> &Block {
+    pub fn body(&self) -> &Block_ {
         match self.main.body {
             FunctionBody::Move { ref code, .. } => &code,
             FunctionBody::Native => panic!("main() can't be native"),
@@ -668,8 +668,8 @@ impl ModuleDefinition {
     pub fn new<L>(
         name: impl Into<Box<str>>,
         imports: Vec<ImportDefinition>,
-        structs: Vec<StructDefinition_>,
-        functions: Vec<(FunctionName, Function_)>,
+        structs: Vec<StructDefinition>,
+        functions: Vec<(FunctionName, Function)>,
     ) -> Result<Self, ParseError<L, anyhow::Error>> {
         Ok(ModuleDefinition {
             name: ModuleName::parse(name.into())?,
@@ -768,7 +768,7 @@ impl StructName {
     }
 }
 
-impl StructDefinition {
+impl StructDefinition_ {
     /// Creates a new StructDefinition from the resource kind (true if resource), the string
     /// representation of the name, and the user specified fields, a map from their names to their
     /// types
@@ -777,10 +777,10 @@ impl StructDefinition {
     pub fn move_declared<L>(
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
-        type_formals: Vec<(TypeVar_, Kind)>,
+        type_formals: Vec<(TypeVar, Kind)>,
         fields: Fields<Type>,
     ) -> Result<Self, ParseError<L, anyhow::Error>> {
-        Ok(StructDefinition {
+        Ok(StructDefinition_ {
             is_nominal_resource,
             name: StructName::parse(name)?,
             type_formals,
@@ -794,9 +794,9 @@ impl StructDefinition {
     pub fn native<L>(
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
-        type_formals: Vec<(TypeVar_, Kind)>,
+        type_formals: Vec<(TypeVar, Kind)>,
     ) -> Result<Self, ParseError<L, anyhow::Error>> {
-        Ok(StructDefinition {
+        Ok(StructDefinition_ {
             is_nominal_resource,
             name: StructName::parse(name)?,
             type_formals,
@@ -830,9 +830,9 @@ impl FunctionName {
 impl FunctionSignature {
     /// Creates a new function signature from the parameters and the return types
     pub fn new(
-        formals: Vec<(Var_, Type)>,
+        formals: Vec<(Var, Type)>,
         return_type: Vec<Type>,
-        type_formals: Vec<(TypeVar_, Kind)>,
+        type_formals: Vec<(TypeVar, Kind)>,
     ) -> Self {
         FunctionSignature {
             formals,
@@ -842,20 +842,20 @@ impl FunctionSignature {
     }
 }
 
-impl Function {
+impl Function_ {
     /// Creates a new function declaration from the components of the function
     /// See the declaration of the struct `Function` for more details
     pub fn new(
         visibility: FunctionVisibility,
-        formals: Vec<(Var_, Type)>,
+        formals: Vec<(Var, Type)>,
         return_type: Vec<Type>,
-        type_formals: Vec<(TypeVar_, Kind)>,
+        type_formals: Vec<(TypeVar, Kind)>,
         acquires: Vec<StructName>,
         specifications: Vec<Condition_>,
         body: FunctionBody,
     ) -> Self {
         let signature = FunctionSignature::new(formals, return_type, type_formals);
-        Function {
+        Function_ {
             visibility,
             signature,
             acquires,
@@ -865,20 +865,15 @@ impl Function {
     }
 }
 
-impl Var {
+impl Var_ {
     /// Creates a new `Var` from an identifier.
     pub fn new(s: Identifier) -> Self {
-        Var(s)
-    }
-
-    /// Creates a new `Var_` identifier from an identifier with an empty location.
-    pub fn new_(s: Identifier) -> Var_ {
-        Spanned::no_loc(Var::new(s))
+        Var_(s)
     }
 
     /// Creates a new `Var` from a raw string. Intended for use by the parser.
     pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
-        Ok(Var::new(parse_identifier(s.into())?))
+        Ok(Var_::new(parse_identifier(s.into())?))
     }
 
     /// Accessor for the name of the var
@@ -887,15 +882,15 @@ impl Var {
     }
 }
 
-impl TypeVar {
+impl TypeVar_ {
     /// Creates a new `TypeVar` from an identifier.
     pub fn new(s: Identifier) -> Self {
-        TypeVar(s)
+        TypeVar_(s)
     }
 
     /// Creates a new `TypeVar` from a raw string. Intended for use by the parser.
     pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
-        Ok(TypeVar::new(parse_identifier(s.into())?))
+        Ok(TypeVar_::new(parse_identifier(s.into())?))
     }
 
     /// Accessor for the name of the var.
@@ -904,10 +899,10 @@ impl TypeVar {
     }
 }
 
-impl FunctionCall {
+impl FunctionCall_ {
     /// Creates a `FunctionCall::ModuleFunctionCall` variant
     pub fn module_call(module: ModuleName, name: FunctionName, type_actuals: Vec<Type>) -> Self {
-        FunctionCall::ModuleFunctionCall {
+        FunctionCall_::ModuleFunctionCall {
             module,
             name,
             type_actuals,
@@ -915,26 +910,26 @@ impl FunctionCall {
     }
 
     /// Creates a `FunctionCall::Builtin` variant with no location information
-    pub fn builtin(bif: Builtin) -> FunctionCall_ {
-        Spanned::no_loc(FunctionCall::Builtin(bif))
+    pub fn builtin(bif: Builtin) -> FunctionCall {
+        Spanned::no_loc(FunctionCall_::Builtin(bif))
     }
 }
 
-impl Cmd {
+impl Cmd_ {
     /// Creates a command that returns no values
     pub fn return_empty() -> Self {
-        Cmd::Return(Box::new(Spanned::no_loc(Exp::ExprList(vec![]))))
+        Cmd_::Return(Box::new(Spanned::no_loc(Exp_::ExprList(vec![]))))
     }
 
     /// Creates a command that returns a single value
-    pub fn return_(op: Exp_) -> Self {
-        Cmd::Return(Box::new(op))
+    pub fn return_(op: Exp) -> Self {
+        Cmd_::Return(Box::new(op))
     }
 }
 
 impl IfElse {
     /// Creates an if-statement with no else branch
-    pub fn if_block(cond: Exp_, if_block: Block_) -> Self {
+    pub fn if_block(cond: Exp, if_block: Block) -> Self {
         IfElse {
             cond,
             if_block,
@@ -943,7 +938,7 @@ impl IfElse {
     }
 
     /// Creates an if-statement with an else branch
-    pub fn if_else(cond: Exp_, if_block: Block_, else_block: Block_) -> Self {
+    pub fn if_else(cond: Exp, if_block: Block, else_block: Block) -> Self {
         IfElse {
             cond,
             if_block,
@@ -954,91 +949,91 @@ impl IfElse {
 
 impl Statement {
     /// Lifts a command into a statement
-    pub fn cmd(c: Cmd_) -> Self {
+    pub fn cmd(c: Cmd) -> Self {
         Statement::CommandStatement(c)
     }
 
     /// Creates an `Statement::IfElseStatement` variant with no else branch
-    pub fn if_block(cond: Exp_, if_block: Block_) -> Self {
+    pub fn if_block(cond: Exp, if_block: Block) -> Self {
         Statement::IfElseStatement(IfElse::if_block(cond, if_block))
     }
 
     /// Creates an `Statement::IfElseStatement` variant with an else branch
-    pub fn if_else(cond: Exp_, if_block: Block_, else_block: Block_) -> Self {
+    pub fn if_else(cond: Exp, if_block: Block, else_block: Block) -> Self {
         Statement::IfElseStatement(IfElse::if_else(cond, if_block, else_block))
     }
 }
 
-impl Block {
+impl Block_ {
     /// Creates a new block from the vector of statements
     pub fn new(stmts: Vec<Statement>) -> Self {
-        Block {
+        Block_ {
             stmts: VecDeque::from(stmts),
         }
     }
 
     /// Creates an empty block
     pub fn empty() -> Self {
-        Block {
+        Block_ {
             stmts: VecDeque::new(),
         }
     }
 }
 
-impl Exp {
+impl Exp_ {
     /// Creates a new address `Exp` with no location information
-    pub fn address(addr: AccountAddress) -> Exp_ {
-        Spanned::no_loc(Exp::Value(Spanned::no_loc(CopyableVal::Address(addr))))
+    pub fn address(addr: AccountAddress) -> Exp {
+        Spanned::no_loc(Exp_::Value(Spanned::no_loc(CopyableVal_::Address(addr))))
     }
 
     /// Creates a new value `Exp` with no location information
-    pub fn value(b: CopyableVal) -> Exp_ {
-        Spanned::no_loc(Exp::Value(Spanned::no_loc(b)))
+    pub fn value(b: CopyableVal_) -> Exp {
+        Spanned::no_loc(Exp_::Value(Spanned::no_loc(b)))
     }
 
     /// Creates a new u64 `Exp` with no location information
-    pub fn u64(i: u64) -> Exp_ {
-        Exp::value(CopyableVal::U64(i))
+    pub fn u64(i: u64) -> Exp {
+        Exp_::value(CopyableVal_::U64(i))
     }
 
     /// Creates a new bool `Exp` with no location information
-    pub fn bool(b: bool) -> Exp_ {
-        Exp::value(CopyableVal::Bool(b))
+    pub fn bool(b: bool) -> Exp {
+        Exp_::value(CopyableVal_::Bool(b))
     }
 
     /// Creates a new bytearray `Exp` with no location information
-    pub fn byte_array(buf: ByteArray) -> Exp_ {
-        Exp::value(CopyableVal::ByteArray(buf))
+    pub fn byte_array(buf: ByteArray) -> Exp {
+        Exp_::value(CopyableVal_::ByteArray(buf))
     }
 
     /// Creates a new pack/struct-instantiation `Exp` with no location information
-    pub fn instantiate(n: StructName, tys: Vec<Type>, s: ExpFields) -> Exp_ {
-        Spanned::no_loc(Exp::Pack(n, tys, s))
+    pub fn instantiate(n: StructName, tys: Vec<Type>, s: ExpFields) -> Exp {
+        Spanned::no_loc(Exp_::Pack(n, tys, s))
     }
 
     /// Creates a new binary operator `Exp` with no location information
-    pub fn binop(lhs: Exp_, op: BinOp, rhs: Exp_) -> Exp_ {
-        Spanned::no_loc(Exp::BinopExp(Box::new(lhs), op, Box::new(rhs)))
+    pub fn binop(lhs: Exp, op: BinOp, rhs: Exp) -> Exp {
+        Spanned::no_loc(Exp_::BinopExp(Box::new(lhs), op, Box::new(rhs)))
     }
 
     /// Creates a new `e+e` `Exp` with no location information
-    pub fn add(lhs: Exp_, rhs: Exp_) -> Exp_ {
-        Exp::binop(lhs, BinOp::Add, rhs)
+    pub fn add(lhs: Exp, rhs: Exp) -> Exp {
+        Exp_::binop(lhs, BinOp::Add, rhs)
     }
 
     /// Creates a new `e-e` `Exp` with no location information
-    pub fn sub(lhs: Exp_, rhs: Exp_) -> Exp_ {
-        Exp::binop(lhs, BinOp::Sub, rhs)
+    pub fn sub(lhs: Exp, rhs: Exp) -> Exp {
+        Exp_::binop(lhs, BinOp::Sub, rhs)
     }
 
     /// Creates a new `*e` `Exp` with no location information
-    pub fn dereference(e: Exp_) -> Exp_ {
-        Spanned::no_loc(Exp::Dereference(Box::new(e)))
+    pub fn dereference(e: Exp) -> Exp {
+        Spanned::no_loc(Exp_::Dereference(Box::new(e)))
     }
 
     /// Creates a new borrow field `Exp` with no location information
-    pub fn borrow(is_mutable: bool, exp: Box<Exp_>, field: Field) -> Exp_ {
-        Spanned::no_loc(Exp::Borrow {
+    pub fn borrow(is_mutable: bool, exp: Box<Exp>, field: Field_) -> Exp {
+        Spanned::no_loc(Exp_::Borrow {
             is_mutable,
             exp,
             field,
@@ -1046,28 +1041,28 @@ impl Exp {
     }
 
     /// Creates a new copy-local `Exp` with no location information
-    pub fn copy(v: Var_) -> Exp_ {
-        Spanned::no_loc(Exp::Copy(v))
+    pub fn copy(v: Var) -> Exp {
+        Spanned::no_loc(Exp_::Copy(v))
     }
 
     /// Creates a new move-local `Exp` with no location information
-    pub fn move_(v: Var_) -> Exp_ {
-        Spanned::no_loc(Exp::Move(v))
+    pub fn move_(v: Var) -> Exp {
+        Spanned::no_loc(Exp_::Move(v))
     }
 
     /// Creates a new function call `Exp` with no location information
-    pub fn function_call(f: FunctionCall_, e: Exp_) -> Exp_ {
-        Spanned::no_loc(Exp::FunctionCall(f, Box::new(e)))
+    pub fn function_call(f: FunctionCall, e: Exp) -> Exp {
+        Spanned::no_loc(Exp_::FunctionCall(f, Box::new(e)))
     }
 
-    pub fn expr_list(exps: Vec<Exp_>) -> Exp_ {
-        Spanned::no_loc(Exp::ExprList(exps))
+    pub fn expr_list(exps: Vec<Exp>) -> Exp {
+        Spanned::no_loc(Exp_::ExprList(exps))
     }
 }
 
 /// Parses a field.
-pub fn parse_field<L>(s: impl Into<Box<str>>) -> Result<Field, ParseError<L, anyhow::Error>> {
-    Ok(Field::new(parse_identifier(s.into())?))
+pub fn parse_field<L>(s: impl Into<Box<str>>) -> Result<Field_, ParseError<L, anyhow::Error>> {
+    Ok(Field_::new(parse_identifier(s.into())?))
 }
 
 fn parse_identifier<L>(s: Box<str>) -> Result<Identifier, ParseError<L, anyhow::Error>> {
@@ -1118,7 +1113,7 @@ impl<T> Spanned<T> {
     }
 }
 
-impl Iterator for Block {
+impl Iterator for Block_ {
     type Item = Statement;
 
     fn next(&mut self) -> Option<Statement> {
@@ -1139,7 +1134,7 @@ where
     }
 }
 
-impl fmt::Display for TypeVar {
+impl fmt::Display for TypeVar_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -1221,7 +1216,7 @@ impl fmt::Display for ModuleDefinition {
     }
 }
 
-impl fmt::Display for StructDefinition {
+impl fmt::Display for StructDefinition_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
@@ -1237,7 +1232,7 @@ impl fmt::Display for StructDefinition {
     }
 }
 
-impl fmt::Display for Function {
+impl fmt::Display for Function_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({})", self.signature, self.body)
     }
@@ -1280,7 +1275,7 @@ fn intersperse<T: fmt::Display>(items: &[T], join: &str) -> String {
     })
 }
 
-fn format_fields<T: fmt::Display>(fields: &[(Field_, T)]) -> String {
+fn format_fields<T: fmt::Display>(fields: &[(Field, T)]) -> String {
     fields.iter().fold(String::new(), |acc, (field, val)| {
         format!("{} {}: {},", acc, field.value, val)
     })
@@ -1312,7 +1307,7 @@ fn format_type_actuals(tys: &[Type]) -> String {
     }
 }
 
-fn format_type_formals(formals: &[(TypeVar_, Kind)]) -> String {
+fn format_type_formals(formals: &[(TypeVar, Kind)]) -> String {
     if formals.is_empty() {
         "".to_string()
     } else {
@@ -1342,7 +1337,7 @@ impl fmt::Display for Type {
     }
 }
 
-impl fmt::Display for Var {
+impl fmt::Display for Var_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -1375,11 +1370,11 @@ impl fmt::Display for Builtin {
     }
 }
 
-impl fmt::Display for FunctionCall {
+impl fmt::Display for FunctionCall_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FunctionCall::Builtin(fun) => write!(f, "{}", fun),
-            FunctionCall::ModuleFunctionCall {
+            FunctionCall_::Builtin(fun) => write!(f, "{}", fun),
+            FunctionCall_::ModuleFunctionCall {
                 module,
                 name,
                 type_actuals,
@@ -1394,27 +1389,27 @@ impl fmt::Display for FunctionCall {
     }
 }
 
-impl fmt::Display for LValue {
+impl fmt::Display for LValue_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LValue::Var(x) => write!(f, "{}", x),
-            LValue::Mutate(e) => write!(f, "*{}", e),
-            LValue::Pop => write!(f, "_"),
+            LValue_::Var(x) => write!(f, "{}", x),
+            LValue_::Mutate(e) => write!(f, "*{}", e),
+            LValue_::Pop => write!(f, "_"),
         }
     }
 }
 
-impl fmt::Display for Cmd {
+impl fmt::Display for Cmd_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Cmd::Assign(var_list, e) => {
+            Cmd_::Assign(var_list, e) => {
                 if var_list.is_empty() {
                     write!(f, "{};", e)
                 } else {
                     write!(f, "{} = ({});", intersperse(var_list, ", "), e)
                 }
             }
-            Cmd::Unpack(n, tys, bindings, e) => write!(
+            Cmd_::Unpack(n, tys, bindings, e) => write!(
                 f,
                 "{}{} {{ {} }} = {}",
                 n,
@@ -1427,12 +1422,12 @@ impl fmt::Display for Cmd {
                     )),
                 e
             ),
-            Cmd::Abort(None) => write!(f, "abort;"),
-            Cmd::Abort(Some(err)) => write!(f, "abort {};", err),
-            Cmd::Return(exps) => write!(f, "return {};", exps),
-            Cmd::Break => write!(f, "break;"),
-            Cmd::Continue => write!(f, "continue;"),
-            Cmd::Exp(e) => write!(f, "({});", e),
+            Cmd_::Abort(None) => write!(f, "abort;"),
+            Cmd_::Abort(Some(err)) => write!(f, "abort {};", err),
+            Cmd_::Return(exps) => write!(f, "return {};", exps),
+            Cmd_::Break => write!(f, "break;"),
+            Cmd_::Continue => write!(f, "continue;"),
+            Cmd_::Exp(e) => write!(f, "({});", e),
         }
     }
 }
@@ -1485,7 +1480,7 @@ impl fmt::Display for Statement {
     }
 }
 
-impl fmt::Display for Block {
+impl fmt::Display for Block_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for stmt in self.stmts.iter() {
             writeln!(f, "{}", stmt)?;
@@ -1494,15 +1489,15 @@ impl fmt::Display for Block {
     }
 }
 
-impl fmt::Display for CopyableVal {
+impl fmt::Display for CopyableVal_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CopyableVal::U8(v) => write!(f, "{}u8", v),
-            CopyableVal::U64(v) => write!(f, "{}", v),
-            CopyableVal::U128(v) => write!(f, "{}u128", v),
-            CopyableVal::Bool(v) => write!(f, "{}", v),
-            CopyableVal::ByteArray(v) => write!(f, "{}", v),
-            CopyableVal::Address(v) => write!(f, "0x{}", hex::encode(&v)),
+            CopyableVal_::U8(v) => write!(f, "{}u8", v),
+            CopyableVal_::U64(v) => write!(f, "{}", v),
+            CopyableVal_::U128(v) => write!(f, "{}u128", v),
+            CopyableVal_::Bool(v) => write!(f, "{}", v),
+            CopyableVal_::ByteArray(v) => write!(f, "{}", v),
+            CopyableVal_::Address(v) => write!(f, "0x{}", hex::encode(&v)),
         }
     }
 }
@@ -1552,14 +1547,14 @@ impl fmt::Display for BinOp {
     }
 }
 
-impl fmt::Display for Exp {
+impl fmt::Display for Exp_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Exp::Dereference(e) => write!(f, "*({})", e),
-            Exp::UnaryExp(o, e) => write!(f, "({}{})", o, e),
-            Exp::BinopExp(e1, o, e2) => write!(f, "({} {} {})", o, e1, e2),
-            Exp::Value(v) => write!(f, "{}", v),
-            Exp::Pack(n, tys, s) => write!(
+            Exp_::Dereference(e) => write!(f, "*({})", e),
+            Exp_::UnaryExp(o, e) => write!(f, "({}{})", o, e),
+            Exp_::BinopExp(e1, o, e2) => write!(f, "({} {} {})", o, e1, e2),
+            Exp_::Value(v) => write!(f, "{}", v),
+            Exp_::Pack(n, tys, s) => write!(
                 f,
                 "{}{}{{{}}}",
                 n,
@@ -1569,7 +1564,7 @@ impl fmt::Display for Exp {
                     acc, field, op,
                 ))
             ),
-            Exp::Borrow {
+            Exp_::Borrow {
                 is_mutable,
                 exp,
                 field,
@@ -1580,13 +1575,13 @@ impl fmt::Display for Exp {
                 exp,
                 field
             ),
-            Exp::Move(v) => write!(f, "move({})", v),
-            Exp::Copy(v) => write!(f, "copy({})", v),
-            Exp::BorrowLocal(is_mutable, v) => {
+            Exp_::Move(v) => write!(f, "move({})", v),
+            Exp_::Copy(v) => write!(f, "copy({})", v),
+            Exp_::BorrowLocal(is_mutable, v) => {
                 write!(f, "&{}{}", if *is_mutable { "mut " } else { "" }, v)
             }
-            Exp::FunctionCall(func, e) => write!(f, "{}({})", func, e),
-            Exp::ExprList(exps) => {
+            Exp_::FunctionCall(func, e) => write!(f, "{}({})", func, e),
+            Exp_::ExprList(exps) => {
                 if exps.is_empty() {
                     write!(f, "()")
                 } else {

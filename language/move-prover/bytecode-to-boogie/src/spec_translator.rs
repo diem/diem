@@ -6,7 +6,7 @@
 use itertools::Itertools;
 use num::{BigInt, Num};
 
-use ir_to_bytecode_syntax::ast::{BinOp, CopyableVal, Field, Loc, QualifiedStructIdent, Type};
+use ir_to_bytecode_syntax::ast::{BinOp, CopyableVal_, Field_, Loc, QualifiedStructIdent, Type};
 use ir_to_bytecode_syntax::spec_language_ast::{Condition, SpecExp, StorageLocation};
 use libra_types::account_address::AccountAddress;
 
@@ -352,18 +352,18 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Translates a constant.
-    fn translate_constant(&mut self, val: &CopyableVal) -> BoogieExpr {
+    fn translate_constant(&mut self, val: &CopyableVal_) -> BoogieExpr {
         match val {
-            CopyableVal::Address(addr) => BoogieExpr(
+            CopyableVal_::Address(addr) => BoogieExpr(
                 format!("Address({})", self.translate_account_address(addr)),
                 GlobalType::Address,
             ),
-            CopyableVal::U8(val) => BoogieExpr(format!("Integer({})", val), GlobalType::U8),
-            CopyableVal::U64(val) => BoogieExpr(format!("Integer({})", val), GlobalType::U64),
-            CopyableVal::U128(val) => BoogieExpr(format!("Integer({})", val), GlobalType::U128),
-            CopyableVal::Bool(val) => BoogieExpr(format!("Boolean({})", val), GlobalType::Bool),
+            CopyableVal_::U8(val) => BoogieExpr(format!("Integer({})", val), GlobalType::U8),
+            CopyableVal_::U64(val) => BoogieExpr(format!("Integer({})", val), GlobalType::U64),
+            CopyableVal_::U128(val) => BoogieExpr(format!("Integer({})", val), GlobalType::U128),
+            CopyableVal_::Bool(val) => BoogieExpr(format!("Boolean({})", val), GlobalType::Bool),
             // TODO: byte arrays
-            CopyableVal::ByteArray(_arr) => BoogieExpr(
+            CopyableVal_::ByteArray(_arr) => BoogieExpr(
                 self.error("ByteArray not implemented", "<bytearray>".to_string()),
                 GlobalType::ByteArray,
             ),
@@ -551,7 +551,7 @@ impl<'env> SpecTranslator<'env> {
 
     /// Translates a field name, where `sig` is the type from which the field is selected.
     /// Returns boogie field name and type.
-    fn translate_field(&mut self, mut sig: &GlobalType, field: &Field) -> (String, GlobalType) {
+    fn translate_field(&mut self, mut sig: &GlobalType, field: &Field_) -> (String, GlobalType) {
         // If this is a reference, use the underlying type. This function works with both
         // references and non-references.
         let is_ref = if let GlobalType::Reference(s) = sig {
