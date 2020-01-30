@@ -58,8 +58,6 @@ struct Args {
         help = "If set, tries to connect to a libra-swarm instead of aws"
     )]
     swarm: bool,
-    #[structopt(long, help = "Time to run swarm test for in seconds")]
-    swarm_duration: Option<u64>,
 
     #[structopt(long, group = "action")]
     wipe_all_db: bool,
@@ -109,6 +107,12 @@ struct Args {
     burst: bool,
     #[structopt(long, default_value = "mint.key")]
     mint_file: String,
+    #[structopt(
+        long,
+        help = "Time to run --emit-tx for in seconds",
+        default_value = "60"
+    )]
+    duration: u64,
 
     //stop_experiment options
     #[structopt(long, default_value = "10")]
@@ -130,14 +134,14 @@ pub fn main() {
             wait_millis: args.wait_millis,
             wait_committed: !args.burst,
         };
+        let duration = Duration::from_secs(args.duration);
         if args.swarm {
             let util = BasicSwarmUtil::setup(&args);
-            let duration = args.swarm_duration.map(Duration::from_secs);
             rt.block_on(util.emit_tx(args.accounts_per_client, thread_params, duration));
             return;
         } else {
             let util = ClusterUtil::setup(&args);
-            rt.block_on(util.emit_tx(args.accounts_per_client, thread_params));
+            rt.block_on(util.emit_tx(args.accounts_per_client, thread_params, duration));
             return;
         }
     } else if args.discovery {
@@ -302,7 +306,7 @@ impl BasicSwarmUtil {
         self,
         accounts_per_client: usize,
         thread_params: EmitThreadParams,
-        duration: Option<Duration>,
+        duration: Duration,
     ) {
         let mut emitter = TxEmitter::new(&self.cluster);
         let job = emitter
@@ -313,12 +317,8 @@ impl BasicSwarmUtil {
             })
             .await
             .expect("Failed to start emit job");
-        if let Some(duration) = duration {
-            thread::sleep(duration);
-            emitter.stop_job(job);
-        } else {
-            thread::park();
-        }
+        thread::sleep(duration);
+        emitter.stop_job(job);
     }
 }
 
@@ -367,7 +367,12 @@ impl ClusterUtil {
         runtime.block_on(join_all(futures));
     }
 
-    pub async fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
+    pub async fn emit_tx(
+        self,
+        accounts_per_client: usize,
+        thread_params: EmitThreadParams,
+        duration: Duration,
+    ) {
         let mut emitter = TxEmitter::new(&self.cluster);
         emitter
             .start_job(EmitJobRequest {
@@ -377,13 +382,17 @@ impl ClusterUtil {
             })
             .await
             .expect("Failed to start emit job");
-        self.run_stat_loop();
+        self.run_stat_loop(duration);
     }
 
-    fn run_stat_loop(&self) {
+    fn run_stat_loop(&self, duration: Duration) {
+        let deadline = Instant::now() + duration;
         let window = Duration::from_secs(30);
         thread::sleep(Duration::from_secs(30)); // warm up
         loop {
+            if Instant::now() > deadline {
+                return;
+            }
             thread::sleep(Duration::from_secs(10));
             let now = unix_timestamp_now();
             match stats::txn_stats(&self.prometheus, now - window, now) {
