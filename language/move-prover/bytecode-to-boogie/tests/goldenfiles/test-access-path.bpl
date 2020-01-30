@@ -3802,8 +3802,8 @@ procedure {:inline 1} Unpack_AccessPathTest_ProverGhostTypes(_struct: Value) ret
 
 procedure {:inline 1} AccessPathTest_fail_if_empty_balance (a: Value) returns ()
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address(a)))))) || b#Boolean(Boolean((SelectField(SelectField(Dereference(__m, GetResourceReference(LibraAccount_T_type_value(), a#Address(a))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(0)))))) ==> !__abort_flag;
-ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address(a)))))) || b#Boolean(Boolean((SelectField(SelectField(Dereference(__m, GetResourceReference(LibraAccount_T_type_value(), a#Address(a))), LibraAccount_T_balance), LibraCoin_T_value)) == (Integer(0))))) ==> __abort_flag;
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address(a)))))) || b#Boolean(Boolean(IsEqual(SelectField(SelectField(Dereference(__m, GetResourceReference(LibraAccount_T_type_value(), a#Address(a))), LibraAccount_T_balance), LibraCoin_T_value), Integer(0)))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address(a)))))) || b#Boolean(Boolean(IsEqual(SelectField(SelectField(Dereference(__m, GetResourceReference(LibraAccount_T_type_value(), a#Address(a))), LibraAccount_T_balance), LibraCoin_T_value), Integer(0))))) ==> __abort_flag;
 
 {
     // declare local variables

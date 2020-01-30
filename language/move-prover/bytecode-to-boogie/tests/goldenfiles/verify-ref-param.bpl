@@ -27,7 +27,7 @@ procedure {:inline 1} Unpack_TestSpecs_T(_struct: Value) returns (value: Value)
 
 procedure {:inline 1} TestSpecs_value (ref: Reference) returns (ret0: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(__m, ref), TestSpecs_T_value))));
+ensures b#Boolean(Boolean(IsEqual(ret0, SelectField(Dereference(__m, ref), TestSpecs_T_value))));
 {
     // declare local variables
     var t1: Reference; // ReferenceType(TestSpecs_T_type_value())

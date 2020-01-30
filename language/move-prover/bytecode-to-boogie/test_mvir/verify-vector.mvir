@@ -13,8 +13,7 @@ module VerifyVector {
 
 
     public test_empty2() : Vector.T<u64> * Vector.T<u64>
-    // This fails to verify due to a mystery bug in the verifier
-    ensures RET(0) == RET(1) //! A postcondition might not hold
+    ensures RET(0) == RET(1)
     {
 	let ev1: Vector.T<u64>;
 	let ev2: Vector.T<u64>;

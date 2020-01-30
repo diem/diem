@@ -59,7 +59,7 @@ procedure {:inline 1} Unpack_TestSpecs_R(_struct: Value) returns (x: Value, s: V
 procedure {:inline 1} TestSpecs_div (x1: Value, x2: Value) returns (ret0: Value)
 requires b#Boolean(Boolean(i#Integer(x2) > i#Integer(Integer(0))));
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures !__abort_flag ==> b#Boolean(Boolean((ret0) == (Integer(i#Integer(x1) * i#Integer(x2)))));
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(ret0, Integer(i#Integer(x1) * i#Integer(x2)))));
 ensures old(!(b#Boolean(Boolean(i#Integer(x1) <= i#Integer(Integer(0))))) && (b#Boolean(Boolean(i#Integer(x1) > i#Integer(Integer(1)))))) ==> !__abort_flag;
 ensures old(b#Boolean(Boolean(i#Integer(x1) <= i#Integer(Integer(0))))) ==> __abort_flag;
 
@@ -223,7 +223,7 @@ procedure TestSpecs_select_from_resource_verify (r: Value) returns (ret0: Value)
 }
 
 procedure {:inline 1} TestSpecs_select_from_resource_nested (r: Value) returns (ret0: Value)
-requires b#Boolean(Boolean((SelectField(SelectField(r, TestSpecs_R_s), TestSpecs_S_a)) == (Address(1))));
+requires b#Boolean(Boolean(IsEqual(SelectField(SelectField(r, TestSpecs_R_s), TestSpecs_S_a), Address(1))));
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
@@ -301,9 +301,9 @@ procedure TestSpecs_select_from_global_resource_dynamic_address_verify (r: Value
 }
 
 procedure {:inline 1} TestSpecs_select_from_reference (r: Reference) returns ()
-requires b#Boolean(Boolean((SelectField(SelectField(Dereference(__m, r), TestSpecs_R_s), TestSpecs_S_a)) == (Address(1))));
+requires b#Boolean(Boolean(IsEqual(SelectField(SelectField(Dereference(__m, r), TestSpecs_R_s), TestSpecs_S_a), Address(1))));
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures b#Boolean(Boolean((SelectField(SelectField(Dereference(__m, r), TestSpecs_R_s), TestSpecs_S_a)) == (old(SelectField(SelectField(Dereference(__m, r), TestSpecs_R_s), TestSpecs_S_a)))));
+ensures b#Boolean(Boolean(IsEqual(SelectField(SelectField(Dereference(__m, r), TestSpecs_R_s), TestSpecs_S_a), old(SelectField(SelectField(Dereference(__m, r), TestSpecs_R_s), TestSpecs_S_a)))));
 {
     // declare local variables
     var __tmp: Value;
@@ -336,9 +336,9 @@ procedure TestSpecs_select_from_reference_verify (r: Reference) returns ()
 
 procedure {:inline 1} TestSpecs_ret_values () returns (ret0: Value, ret1: Value, ret2: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
-ensures b#Boolean(Boolean((ret0) == (Integer(7))));
-ensures b#Boolean(Boolean((ret1) == (Boolean(false))));
-ensures b#Boolean(Boolean((ret2) == (Integer(10))));
+ensures b#Boolean(Boolean(IsEqual(ret0, Integer(7))));
+ensures b#Boolean(Boolean(IsEqual(ret1, Boolean(false))));
+ensures b#Boolean(Boolean(IsEqual(ret2, Integer(10))));
 {
     // declare local variables
     var t0: Value; // IntegerType()

@@ -102,6 +102,7 @@ const EmptyValueArray: ValueArray;
 
 axiom l#ValueArray(EmptyValueArray) == 0;
 axiom v#ValueArray(EmptyValueArray) == MapConstValue(DefaultValue);
+
 function {:inline 1} AddValueArray(a: ValueArray, v: Value): ValueArray {
     ValueArray(v#ValueArray(a)[l#ValueArray(a) := v], l#ValueArray(a) + 1)
 }
@@ -738,6 +739,7 @@ procedure {:inline 1} Vector_is_empty(ta: TypeValue, r: Reference) returns (b: V
     var v: Value;
     v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     b := Boolean(vlen(v) == 0);
 }
 
@@ -745,6 +747,7 @@ procedure {:inline 1} Vector_push_back(ta: TypeValue, r: Reference, val: Value) 
     var v: Value;
     v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     call WriteRef(r, push_back_vector(v, val));
 }
 
@@ -753,6 +756,7 @@ procedure {:inline 1} Vector_pop_back(ta: TypeValue, r: Reference) returns (e: V
     var len: int;
     v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     len := vlen(v);
     if (len == 0) {
         __abort_flag := true;
@@ -766,6 +770,7 @@ procedure {:inline 1} Vector_append(ta: TypeValue, r: Reference, other: Value) {
     var v: Value;
     v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     assume is#Vector(other);
     call WriteRef(r, append_vector(v, other));
 }
@@ -774,6 +779,7 @@ procedure {:inline 1} Vector_reverse(ta: TypeValue, r: Reference) {
     var v: Value;
     v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     call WriteRef(r, reverse_vector(v));
 }
 
@@ -781,6 +787,7 @@ procedure {:inline 1} Vector_length(ta: TypeValue, r: Reference) returns (l: Val
     var v: Value;
     v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     l := Integer(vlen(v));
 }
 
@@ -798,6 +805,7 @@ procedure {:inline 1} Vector_borrow_mut(ta: TypeValue, src: Reference, index: Va
     i_ind := i#Integer(index);
     v := Dereference(__m, src);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, src);
     if (i_ind < 0 || i_ind >= vlen(v)) {
         __abort_flag := true;
         return;
@@ -825,6 +833,8 @@ procedure {:inline 1} Vector_swap(ta: TypeValue, src: Reference, i: Value, j: Va
     i_ind := i#Integer(i);
     j_ind := i#Integer(j);
     v := Dereference(__m, src);
+    assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, src);
     if (i_ind >= vlen(v) || j_ind >= vlen(v) || i_ind < 0 || j_ind < 0) {
         __abort_flag := true;
         return;
@@ -843,6 +853,7 @@ requires vlen(Dereference(__m, src)) > i#Integer(i);
     i_ind := i#Integer(i);
     v := Dereference(__m, src);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, src);
     if (i_ind < 0 || i_ind >= vlen(v)) {
         __abort_flag := true;
         return;
@@ -858,6 +869,7 @@ procedure {:inline 1} Vector_set(ta: TypeValue, src: Reference, i: Value, e: Val
     i_ind := i#Integer(i);
     v := Dereference(__m, src);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, src);
     if (i_ind < 0 || i_ind >= vlen(v)) {
         __abort_flag := true;
         return;
