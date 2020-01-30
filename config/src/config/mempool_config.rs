@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::utils;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -16,8 +15,6 @@ pub struct MempoolConfig {
     pub capacity_per_user: usize,
     pub system_transaction_timeout_secs: u64,
     pub system_transaction_gc_interval_ms: u64,
-    pub mempool_service_port: u16,
-    pub address: String,
 }
 
 impl Default for MempoolConfig {
@@ -30,15 +27,7 @@ impl Default for MempoolConfig {
             capacity: 1_000_000,
             capacity_per_user: 100,
             system_transaction_timeout_secs: 86400,
-            address: "localhost".to_string(),
-            mempool_service_port: 6182,
             system_transaction_gc_interval_ms: 180_000,
         }
-    }
-}
-
-impl MempoolConfig {
-    pub fn randomize_ports(&mut self) {
-        self.mempool_service_port = utils::get_available_port();
     }
 }
