@@ -18,7 +18,7 @@ use futures::{
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
-use std::{convert::TryFrom, net::ToSocketAddrs, sync::Arc};
+use std::{convert::TryFrom, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
 
@@ -71,16 +71,10 @@ impl AdmissionControlService {
         ));
         let admission_control_service = AdmissionControlService::new(ac_sender, storage_client);
 
-        let port = config.admission_control.admission_control_service_port;
-        let addr = format!("{}:{}", config.admission_control.address, port)
-            .to_socket_addrs()
-            .unwrap()
-            .next()
-            .unwrap();
         runtime.spawn(
             tonic::transport::Server::builder()
                 .add_service(AdmissionControlServer::new(admission_control_service))
-                .serve(addr),
+                .serve(config.admission_control.address),
         );
         runtime
     }

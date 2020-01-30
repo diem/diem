@@ -83,9 +83,7 @@ fn main() {
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
     println!(
         "\tcargo run --bin cli -- -a localhost -p {} -m {:?}",
-        validator_config
-            .admission_control
-            .admission_control_service_port,
+        validator_config.admission_control.address.port(),
         faucet_key_file_path,
     );
     let node_address_list = validator_swarm
@@ -96,7 +94,8 @@ fn main() {
             let port = NodeConfig::load(config)
                 .unwrap()
                 .admission_control
-                .admission_control_service_port;
+                .address
+                .port();
             format!("localhost:{}", port)
         })
         .collect::<Vec<String>>()
@@ -111,9 +110,7 @@ fn main() {
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
             "\tcargo run --bin cli -- -a localhost -p {} -m {:?}",
-            full_node_config
-                .admission_control
-                .admission_control_service_port,
+            full_node_config.admission_control.address.port(),
             faucet_key_file_path,
         );
     }

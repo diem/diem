@@ -13,8 +13,7 @@ port = 6183
 genesis_file_location = ""
 
 [admission_control]
-address = "0.0.0.0"
-admission_control_service_port = 8000
+address = "0.0.0.0:8000"
 need_to_check_mempool_before_validation = false
 max_concurrent_inbound_syncs = 100
 

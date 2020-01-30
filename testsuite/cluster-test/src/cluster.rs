@@ -90,7 +90,7 @@ impl Cluster {
                 }
                 Ok(r) => r,
             };
-            let ac_port = AdmissionControlConfig::default().admission_control_service_port as u32;
+            let ac_port = AdmissionControlConfig::default().address.port() as u32;
             for reservation in result.reservations.expect("no reservations") {
                 for aws_instance in reservation.instances.expect("no instances") {
                     let ip = aws_instance
