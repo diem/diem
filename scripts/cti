@@ -6,6 +6,7 @@ set -e
 TAG=""
 PR=""
 WORKSPACE="cluster-test-ci"
+ENV="env"
 
 while (( "$#" )); do
   case "$1" in
@@ -25,6 +26,10 @@ while (( "$#" )); do
       WORKSPACE=$2
       shift 2
       ;;
+    -E|--env)
+      ENV="$ENV $2"
+      shift 2
+      ;;
     -c|--container|-i|--image|--deploy)
       echo "$1 command is not allowed in cti"
       exit 1
@@ -39,7 +44,16 @@ if [ -z "$PR" ] && [ -z "$TAG" ]
 then
       echo "No PR or tag specified"
       echo "Usage:"
-      echo "cti [--pr <PR>|--master|--tag <TAG>] [--workspace <WORKSPACE>] <cluster test arguments>"
+      echo "cti [--pr <PR>|--master|--tag <TAG>] [--workspace <WORKSPACE>] [-E <env>] <cluster test arguments>"
+      echo
+      echo "--pr <PR>: Build image from pull request #<PR>"
+      echo "-M|--master: Use latest image available in CI"
+      echo "-T|--tag <TAG>: Use image with tag TAG"
+      echo "-W|--workspace <WORKSPACE>: Use custom workplace <WORKSPACE>"
+      echo "-E|--env <ENV>: Set environment variable, ex. -E RUST_LOG=debug. Can be repeated, e.g. -E A=B -E C=D"
+      echo
+      echo "To see cluster test runner arguments run cti --master"
+      echo
       echo "Examples:"
       echo "cti --pr <PR> --run bench # Run benchmark"
       echo "cti --master --emit-tx # Submit transactions until Ctrl+C pressed"
@@ -65,4 +79,4 @@ echo " * ssh-peer"
 echo " * tail -f /data/libra/libra.log"
 echo "**********"
 
-ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com REMOTE_USER=$USER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" --deploy $TAG $*
+ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com $ENV REMOTE_USER=$USER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" --deploy $TAG $*
