@@ -1277,6 +1277,7 @@ dependencies = [
  "storage-client 0.1.0",
  "storage-proto 0.1.0",
  "storage-service 0.1.0",
+ "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "vm-genesis 0.1.0",

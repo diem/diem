@@ -18,6 +18,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::BTreeMap,
     convert::TryFrom,
+    path::PathBuf,
     sync::{mpsc, Arc},
 };
 use storage_client::{StorageRead, StorageReadServiceClient};
@@ -235,8 +236,13 @@ pub fn run_benchmark(
     init_account_balance: u64,
     block_size: usize,
     num_transfer_blocks: usize,
+    db_dir: Option<PathBuf>,
 ) {
-    let (config, genesis_key) = config_builder::test_config();
+    let (mut config, genesis_key) = config_builder::test_config();
+    if let Some(path) = db_dir {
+        config.storage.dir = path;
+    }
+
     let (_storage_server_handle, executor, committed_trees) =
         create_storage_service_and_executor(&config);
     let storage_client = StorageReadServiceClient::new(&config.storage.address);
