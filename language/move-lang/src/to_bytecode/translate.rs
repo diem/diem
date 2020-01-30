@@ -34,7 +34,11 @@ impl FunctionFrame {
 
         for (idx, local) in locals_iter.enumerate() {
             if idx >= (F::LocalIndex::max_value() as usize) {
-                bail!(loc, "Max number of locals reached. The Move VM only supports up to u8::max_value locals");
+                bail!(
+                    loc,
+                    "Max number of locals reached. The Move VM only supports up to u8::max_value \
+                     locals"
+                );
             }
             assert!(locals.insert(local, idx as F::LocalIndex).is_none());
         }
@@ -53,7 +57,11 @@ impl FunctionFrame {
     fn pushn(&mut self, loc: Loc, n: usize) -> Result<()> {
         let n: u16 = n.try_into().unwrap();
         if self.cur_stack_depth >= u16::max_value() - n {
-            bail!(loc, "ICE Stack depth accounting overflow. The Move VM can only support a maximum stack depth of up to u16::max_value")
+            bail!(
+                loc,
+                "ICE Stack depth accounting overflow. The Move VM can only support a maximum stack \
+                depth of up to u16::max_value"
+            )
         }
         self.cur_stack_depth += n;
         self.max_stack_depth = std::cmp::max(self.max_stack_depth, self.cur_stack_depth);

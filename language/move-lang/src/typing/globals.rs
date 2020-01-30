@@ -29,8 +29,9 @@ pub fn function_body_(
 
     for annotated_acquire in annotated_acquires {
         if !seen.contains(&annotated_acquire) {
-            let msg =                 format!(
-                "Invalid 'acquires' list. The resource '{}::{}' was never acquired by '{}', '{}', '{}', or a transitive call",
+            let msg = format!(
+                "Invalid 'acquires' list. The resource '{}::{}' was never acquired by '{}', '{}', \
+                 '{}', or a transitive call",
                 context.current_module.as_ref().unwrap(),
                 annotated_acquire,
                 N::BuiltinFunction_::MOVE_FROM,
@@ -228,7 +229,8 @@ fn check_acquire_listed<F>(
 {
     if !annotated_acquires.contains(global_type) {
         let tmsg = format!(
-            "The call acquires '{}::{}', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list",
+            "The call acquires '{}::{}', but the 'acquires' list for the current function does not \
+            contain this type. It must be present in the calling context's acquires list",
             context.current_module.as_ref().unwrap(),
             global_type
         );
@@ -289,7 +291,11 @@ where
     match &context.current_module {
         Some(current_module) if current_module != &declared_module => {
             let ty_debug = global_type.value.subst_format(&HashMap::new());
-            let tmsg =  format!("The type '{}' was not declared in the current module. Global storage access is internal to the module'", ty_debug);
+            let tmsg = format!(
+                "The type '{}' was not declared in the current module. Global storage access is \
+                 internal to the module'",
+                ty_debug
+            );
             context.error(vec![(*loc, msg()), (*tloc, tmsg)]);
             return None;
         }

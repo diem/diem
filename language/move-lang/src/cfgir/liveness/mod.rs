@@ -298,7 +298,11 @@ mod last_usage {
                     match display_var(v.value()) {
                         DisplayVar::Tmp => (),
                         DisplayVar::Orig(v_str) => {
-                            let msg = format!("Unused assignment or binding for local '{}'. Consider removing or replacing it with '_'", v_str);
+                            let msg = format!(
+                                "Unused assignment or binding for local '{}'. Consider \
+                                 removing or replacing it with '_'",
+                                v_str
+                            );
                             context.error(vec![(l.loc, msg)]);
                             if !context.is_resourceful(v) {
                                 l.value = L::Ignore
@@ -329,7 +333,11 @@ mod last_usage {
                     match display_var(var.value()) {
                         DisplayVar::Tmp => (),
                         DisplayVar::Orig(v_str) => {
-                            let msg = format!("Invalid 'copy'. The local '{}' is not live following this expression. Remove the 'copy' annotation or re-annotate as 'move'", v_str);
+                            let msg = format!(
+                                "Invalid 'copy'. The local '{}' is not live following this \
+                                 expression. Remove the 'copy' annotation or re-annotate as 'move'",
+                                v_str
+                            );
                             context.error(vec![(parent_e.exp.loc, msg)])
                         }
                     }

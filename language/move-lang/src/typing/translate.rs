@@ -713,19 +713,22 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                     let st = match ty {
                         sp!(tloc, t@Type_::Unit) | sp!(tloc, t@Type_::Multiple(_)) => {
                             let subst_t = t.subst_format(&context.subst);
-                            context.error(vec![
-                            (eloc, format!("Invalid use of '{}'. Expected an expression of a single type but got an expression of the list: {}", &bop, subst_t)),
-                            (tloc, "Type found here".into()),
-                        ]);
+                            let msg = format!(
+                                "Invalid use of '{}'. Expected an expression of a single \
+                                 type but got an expression of the list: {}",
+                                &bop, subst_t
+                            );
+                            context.error(vec![(eloc, msg), (tloc, "Type found here".into())]);
                             SingleType_::anything(eloc)
                         }
                         sp!(_, Type_::Single(t)) => t,
                     };
-                    context.add_copyable_constraint(
-                        eloc,
-                        format!("Cannot use '{}' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'", &bop),
-                        st.clone(),
+                    let msg = format!(
+                        "Cannot use '{}' on resource values. This would destroy the resource. \
+                         Try borrowing the values with '&' first.'",
+                        &bop
                     );
+                    context.add_copyable_constraint(eloc, msg, st.clone());
 
                     (Type_::bool(eloc), Type_::single(st))
                 }
@@ -744,21 +747,26 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         NE::ExpList(nes) => {
             assert!(!nes.is_empty());
             let es = exp_vec(context, nes);
-            let tys = es.iter().map(|e| {
-                use Type_::*;
-                match &e.ty {
-                    sp!(tloc, t@Unit) |
-                    sp!(tloc, t@Multiple(_)) => {
-                        let subst_t =  t.subst_format(&context.subst);
-                        context.error(vec![
-                            (e.exp.loc, format!("Invalid result list item. Expected an expression of a single type but got an expression of the list: {}", subst_t)),
-                            (*tloc, "Type found here".into()),
-                        ]);
-                        SingleType_::anything(e.exp.loc)
+            let tys = es
+                .iter()
+                .map(|e| {
+                    use Type_::*;
+                    match &e.ty {
+                        sp!(tloc, t@Unit) | sp!(tloc, t@Multiple(_)) => {
+                            let subst_t = t.subst_format(&context.subst);
+                            let msg = format!(
+                                "Invalid result list item. Expected an expression of a \
+                                 single type but got an expression of the list: {}",
+                                subst_t
+                            );
+                            context
+                                .error(vec![(e.exp.loc, msg), (*tloc, "Type found here".into())]);
+                            SingleType_::anything(e.exp.loc)
+                        }
+                        sp!(_, Single(t)) => t.clone(),
                     }
-                    sp!(_, Single(t)) => t.clone()
-                }
-            }).collect();
+                })
+                .collect();
             let items_opt = es
                 .into_iter()
                 .map(T::single_item_opt)
@@ -792,12 +800,12 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 (idx, (fty, arg))
             });
             if m != current_module {
-                context.error(
-                    vec![
-                        (eloc, format!("Invalid instantiation of '{}::{}'", &m, &n)),
-                        (current_module.loc(), "Currently, all structs can only be instantiated in module that they were declared".into())
-                    ]
-                )
+                let msg = "Currently, all structs can only be instantiated in module that they \
+                           were declared";
+                context.error(vec![
+                    (eloc, format!("Invalid instantiation of '{}::{}'", &m, &n)),
+                    (current_module.loc(), msg.into()),
+                ])
             }
             (Type_::base(bt), TE::Pack(m, n, targs, tfields))
         }
@@ -914,14 +922,13 @@ fn get_local(context: &mut Context, loc: Loc, verb: &str, var: &Var) -> SingleTy
             SingleType_::anything(loc)
         }
         Some(LocalStatus::Declared(dloc)) => {
+            let msg = format!(
+                "Invalid {}. Local '{}' was declared but could not infer the type. Try annotating \
+                 the type here",
+                verb, var
+            );
             context.error(vec![
-                (
-                    loc,
-                    format!(
-                        "Invalid {}. Local '{}' was declared but could not infer the type. Try annotating the type here",
-                        verb, var
-                    ),
-                ),
+                (loc, msg),
                 (dloc, "Local declared but not assigned here".into()),
             ]);
             SingleType_::anything(loc)
@@ -1091,12 +1098,10 @@ fn bind(
                 (idx, (fty, tb))
             });
             if &m != current_module {
-                context.error(
-                    vec![
-                        (loc, format!("Invalid deconstruction binding of '{}::{}'", &m, &n)),
-                        (current_module.loc(), "Currently, all structs can only be deconstructed in module that they were declared".into())
-                    ]
-                )
+                let bmsg = format!("Invalid deconstruction binding of '{}::{}'", &m, &n);
+                let dmsg = "Currently, all structs can only be deconstructed in module that they \
+                            were declared";
+                context.error(vec![(loc, bmsg), (current_module.loc(), dmsg.into())])
             }
             match ref_mut {
                 None => TB::Unpack(m, n, targs, tfields),
@@ -1267,12 +1272,10 @@ fn assign(
                 (idx, (fty, tb))
             });
             if &m != current_module {
-                context.error(
-                    vec![
-                        (aloc, format!("Invalid deconstruction assignment of '{}::{}'", &m, &n)),
-                        (current_module.loc(), "Currently, all structs can only be deconstructed in module that they were declared".into())
-                    ]
-                )
+                let amsg = format!("Invalid deconstruction assignment of '{}::{}'", &m, &n);
+                let dmsg = "Currently, all structs can only be deconstructed in module that they \
+                            were declared";
+                context.error(vec![(aloc, amsg), (current_module.loc(), dmsg.into())])
             }
             match ref_mut {
                 None => TA::Unpack(m, n, targs, tfields),
@@ -1371,10 +1374,12 @@ fn resolve_field(context: &mut Context, loc: Loc, ty: BaseType, field: &Field) -
         sp!(_, Apply(_, sp!(_, ModuleType(m, n)), targs)) => {
             let current_module = context.current_module.clone().unwrap();
             if m != current_module {
-                context.error(vec![
-                    (loc, format!("Invalid access of field '{}' on '{}::{}'. Fields can only be accessed inside the struct's module", field, &m, &n)),
-
-                ])
+                let msg = format!(
+                    "Invalid access of field '{}' on '{}::{}'. \
+                     Fields can only be accessed inside the struct's module",
+                    field, &m, &n
+                );
+                context.error(vec![(loc, msg)])
             }
             core::make_field_type(context, loc, &m, &n, targs, field)
         }
@@ -1407,10 +1412,12 @@ fn add_field_types<T>(
     let mut fields_ty = match maybe_fields_ty {
         N::StructFields::Defined(m) => m,
         N::StructFields::Native(nloc) => {
-            context.error(vec![
-                (loc, format!("Invalid {} usage for native struct '{}::{}'. Native structs cannot be directly constructed/deconstructd, and their fields cannot be dirctly accessed", verb, m, n)),
-                (nloc, "Declared 'native' here".into())
-            ]);
+            let msg = format!(
+                "Invalid {} usage for native struct '{}::{}'. Native structs cannot \
+                 be directly constructed/deconstructd, and their fields cannot be dirctly accessed",
+                verb, m, n
+            );
+            context.error(vec![(loc, msg), (nloc, "Declared 'native' here".into())]);
             return fields.map(|f, (idx, x)| (idx, (sp(f.loc(), BaseType_::Anything), x)));
         }
     };
@@ -1459,10 +1466,12 @@ fn exp_dotted(
             let (borrow_needed, bt) = match &e.ty {
                 sp!(tloc, t@Unit) | sp!(tloc, t@Multiple(_)) => {
                     let subst_t = t.subst_format(&context.subst);
-                    context.error(vec![
-                        (e.exp.loc, format!("Invalid {}. Expected an expression of a single type but got an expression of type: '{}'", verb, subst_t)),
-                        (*tloc, "Type found here".into()),
-                    ]);
+                    let msg = format!(
+                        "Invalid {}. Expected an expression of a single type but got an \
+                         expression of type: '{}'",
+                        verb, subst_t
+                    );
+                    context.error(vec![(e.exp.loc, msg), (*tloc, "Type found here".into())]);
                     return None;
                 }
                 sp!(_, Single(t @ sp!(_, Ref(_, _)))) => {
@@ -1530,7 +1539,10 @@ fn exp_dotted_to_borrow(
             let lhs_borrow = exp_dotted_to_borrow(context, eloc, mut_, *lhs);
             let lhs_mut = match &lhs_borrow.ty.value {
                 Type_::Single(sp!(_, S::Ref(lhs_mut, _))) => *lhs_mut,
-                _ => panic!("ICE expected a ref from exp_dotted borrow, otherwise should have gotten a TmpBorrow"),
+                _ => panic!(
+                    "ICE expected a ref from exp_dotted borrow, otherwise should have gotten a \
+                     TmpBorrow"
+                ),
             };
             // lhs is immutable and current borrow is mutable
             if !lhs_mut && mut_ {

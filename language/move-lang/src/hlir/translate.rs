@@ -366,7 +366,9 @@ enum ReachableResult<T> {
 type ExpResult = ReachableResult<H::Exp>;
 use ReachableResult::*;
 
-const DEAD_CODE_ERR: &str = "Invalid use of a divergent expression. The code following the evaluation of this expression will be dead and should be removed. In some cases, this is necessary to prevent unused resource values.";
+const DEAD_CODE_ERR: &str = "Invalid use of a divergent expression. The code following the \
+evaluation of this expression will be dead and should be removed. In some cases, this is necessary \
+to prevent unused resource values.";
 
 fn dead_code_err(context: &mut Context, report: bool, loc: Loc) {
     if report {
