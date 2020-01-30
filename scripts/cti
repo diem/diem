@@ -62,10 +62,10 @@ fi
 
 JUMPHOST=ssh.${WORKSPACE}.aws.hlw3truzy4ls.com
 
-aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
 ssh $JUMPHOST echo "ssh ok" >/dev/null || (echo "Failed to ssh to jump host $JUMPHOST. Try renew corp canal cert with cc-certs"; exit 1)
 
 if [ -z "$TAG" ]; then
+    aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
     ./docker/build-aws.sh --build-all --version pull/$PR
     TAG=dev_${USER}_pull_${PR}
     echo "**TIP Use cti -T $TAG <...> to restart this run with same tag without rebuilding it"
