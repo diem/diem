@@ -21,36 +21,48 @@ jobs:
     - name: Install Z3
       uses: pavpanchekha/setup-z3@v1.2
     - name: Checkout MIRAI
+      if: success()
       uses: actions/checkout@v2
       with:
         repository: 'facebookexperimental/MIRAI'
         path: 'MIRAI'
     - name: Install MIRAI
+      if: success()
       working-directory: ./MIRAI
       run: |
         rustup component add rustc-dev
         RUSTFLAGS='-Clink-arg=-L./binaries -Clink-arg=-lstdc++' cargo install --path ./checker
     - name: Checkout libra
+      if: success()
       uses: actions/checkout@v2
       with:
         path: 'libra'
         fetch-depth: 50 # this is to make sure we obtain the target base commit
+        repository: ${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }} # repo of the forked libra/libra
+        ref: ${{ github.event.client_payload.pull_ref }} # commit that triggered the PR
     # github base_ref is a lie, we obtain the target base the hard way
     - name: Obtain base reference
+      if: success()
       id: obtain_base_ref
       uses: actions/github-script@0.4.0
+      env:
+        OWNER: ${{ github.event.client_payload.owner }}
+        REPO: ${{ github.event.client_payload.repo }}
+        PULL_ID: ${{ github.event.client_payload.pull_id }}
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         result-encoding: string
         script: |
+          console.log("thing:", process.env.OWNER);
           const commits = await github.pulls.listCommits({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            pull_number: context.payload.pull_request.number,
+            owner: process.env.OWNER,
+            repo: process.env.REPO,
+            pull_number: process.env.PULL_ID,
           });
           return commits.data[0].parents[0].sha;
     # we build the target base first to only run MIRAI on the changes
     - name: Build target base then checkout PR
+      if: success()
       working-directory: ./libra
       env:
         SHA: ${{ steps.obtain_base_ref.outputs.result }}
@@ -61,11 +73,16 @@ jobs:
         RUSTFLAGS="-Z always_encode_mir" cargo build
         git checkout -
     - name: Run MIRAI on PR
+      if: success()
       working-directory: ./libra
       run: RUSTC_WRAPPER=mirai RUSTFLAGS="-Z always_encode_mir" cargo build -q 2>&1 | tee ../mirai_results
     - name: Post comment with MIRAI warnings
       if: success()
       uses: actions/github-script@0.4.0
+      env:
+        OWNER: ${{ github.event.client_payload.owner }}
+        REPO: ${{ github.event.client_payload.repo }}
+        PULL_ID: ${{ github.event.client_payload.pull_id
       with:
         github-token: ${{secrets.MIRAI_BOT}}
         script: |
@@ -86,9 +103,9 @@ jobs:
 
           `;
               github.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
+                owner: process.env.OWNER,
+                repo: process.env.REPO,
+                issue_number: process.env.PULL_ID,
                 body: data
               });
             }
