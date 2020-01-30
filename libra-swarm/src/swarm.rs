@@ -93,7 +93,7 @@ impl LibraNode {
             validator_peer_id,
             role,
             debug_client,
-            ac_port: config.admission_control.admission_control_service_port,
+            ac_port: config.admission_control.address.port(),
             log: log_path,
         })
     }
