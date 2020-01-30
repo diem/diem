@@ -352,9 +352,14 @@ fn main_function(
         Some((unused_aliases, addr, name, f)) => {
             check_unused_aliases(context, unused_aliases);
             if let Some((tparam, _)) = f.signature.type_parameters.get(0) {
-                context.error(
-                    vec![(tparam.loc, format!("Invalid '{}' declaration. Found type parameter '{}'. The main function cannot have type parameters", &name, tparam))]
-                );
+                context.error(vec![(
+                    tparam.loc,
+                    format!(
+                        "Invalid '{}' declaration. Found type parameter \
+                         '{}'. The main function cannot have type parameters",
+                        &name, tparam
+                    ),
+                )]);
             }
             Some((addr, name.clone(), function(context, name, f)))
         }
@@ -464,7 +469,11 @@ fn acquires_type_struct(
         None => false,
     };
     if !declared_in_current {
-        let tmsg =  format!("The struct '{}' was not declared in the current module. Global storage access is internal to the module'", n);
+        let tmsg = format!(
+            "The struct '{}' was not declared in the current module. Global \
+             storage access is internal to the module'",
+            n
+        );
         context.error(vec![(loc, "Invalid acquires item".into()), (n.loc(), tmsg)]);
         return None;
     }
@@ -525,17 +534,31 @@ fn check_no_nominal_resources(
     use N::BaseType_ as T;
     match ty {
         sp!(tloc, T::Apply(Some(sp!(kloc, Kind_::Resource)), _, _)) => {
+            let field_msg = format!(
+                "Invalid resource field '{}' for struct '{}'. Structs cannot \
+                 contain resource types, except through type parameters",
+                field, s
+            );
+            let tmsg = format!(
+                "Field '{}' is a resource due to the type: '{}'",
+                field,
+                ty.value.subst_format(&HashMap::new())
+            );
+            let kmsg = format!(
+                "Type '{}' was declared as a resource here",
+                ty.value.subst_format(&HashMap::new())
+            );
             context.error(vec![
-                (field.loc(), format!("Invalid resource field '{}' for struct '{}'. Structs cannot contain resource types, except through type parameters", field, s)),
-                (*tloc, format!("Field '{}' is a resource due to the type: '{}'", field, ty.value.subst_format(&HashMap::new()))),
-                (*kloc, format!("Type '{}' was declared as a resource here", ty.value.subst_format(&HashMap::new()))),
+                (field.loc(), field_msg),
+                (*tloc, tmsg),
+                (*kloc, kmsg),
                 (s.loc(), format!("'{}' declared as a `struct` here", s)),
             ])
         }
-        sp!(_, T::Apply(None, _, tyl)) => {
-            tyl.iter().for_each(|t| check_no_nominal_resources(context, s, field, t))
-        }
-        _ => ()
+        sp!(_, T::Apply(None, _, tyl)) => tyl
+            .iter()
+            .for_each(|t| check_no_nominal_resources(context, s, field, t)),
+        _ => (),
     }
 }
 
@@ -622,8 +645,12 @@ fn base_type(context: &mut Context, ty: E::SingleType) -> N::BaseType {
             }
         }
         t @ ES::Ref(_, _) => {
-            context
-                    .error(vec![(tyloc, format!("Invalid usage of reference type: '{}'. Reference types cannot be used as type arguments.", t))]);
+            let msg = format!(
+                "Invalid usage of reference type: '{}'. Reference types cannot be used as type \
+                 arguments.",
+                t
+            );
+            context.error(vec![(tyloc, msg)]);
             NB::Anything
         }
     };

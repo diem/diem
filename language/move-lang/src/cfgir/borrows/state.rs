@@ -57,6 +57,13 @@ impl Value {
         }
     }
 
+    pub fn as_vref(&self) -> Option<RefID> {
+        match self {
+            Value::Ref(id) => Some(*id),
+            Value::NonRef => None,
+        }
+    }
+
     fn remap_refs(&mut self, id_map: &BTreeMap<RefID, RefID>) {
         match self {
             Value::Ref(id) if id_map.contains_key(id) => *id = id_map[id],
@@ -107,8 +114,10 @@ impl BorrowState {
                 let adj = mut_adj(*borrower);
                 let field = match field_lbl {
                     Label::Field(f) => f,
-                    Label::Local(_) |
-                    Label::Resource(_) => panic!("ICE local/resource should not be field borrows as they only exist from the virtual 'root' reference"),
+                    Label::Local(_) | Label::Resource(_) => panic!(
+                        "ICE local/resource should not be field borrows \
+                         as they only exist from the virtual 'root' reference"
+                    ),
                 };
                 error.push((
                     *rloc,
@@ -210,14 +219,13 @@ impl BorrowState {
         let mut_field_borrows = field_borrows
             .into_iter()
             .filter_map(|(f, borrowers)| {
-                let valid_field = at_field_opt
-                    .map(|at_field| match &f {
-                        Label::Field(f_) => f_ == at_field.value(),
-                        _ => false,
-                    })
-                    .unwrap_or(true);
-                if !valid_field {
-                    return None;
+                match (at_field_opt, &f) {
+                    // Borrow at the same field, so keep
+                    (Some(at_field), Label::Field(f_)) if f_ == at_field.value() => (),
+                    // Borrow not at the same field, so skip
+                    (Some(_at_field), _) => return None,
+                    // Not freezing at a field, so consider any field borrows
+                    (None, _) => (),
                 }
                 let borrowers = mut_filter_set(borrowers);
                 if borrowers.is_empty() {
@@ -227,7 +235,6 @@ impl BorrowState {
                 }
             })
             .collect();
-
         Self::borrow_error(
             &self.borrows,
             loc,
@@ -350,6 +357,7 @@ impl BorrowState {
         }
         released.into_iter().for_each(|id| self.release(id));
 
+        // Check locals are not borrowed
         let mut errors = Errors::new();
         for (local, stored_value) in self.locals.iter() {
             if let Value::NonRef = stored_value {
@@ -362,12 +370,15 @@ impl BorrowState {
             }
         }
 
+        // check any returned reference is not borrowed
         for rvalue in rvalues {
             match rvalue {
                 Value::Ref(id) if self.borrows.is_mutable(id) => {
                     let (fulls, fields) = self.borrows.borrowed_by(id);
                     let msg = || {
-                        "Invalid return of reference. Cannot transfer a mutable reference that is being borrowed".into()
+                        "Invalid return of reference. Cannot transfer a mutable reference that is \
+                         being borrowed"
+                            .into()
                     };
                     let mut es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
                     errors.append(&mut es);
@@ -431,10 +442,10 @@ impl BorrowState {
         let errors = if mut_ {
             Self::check_use_borrowed_by(borrows, loc, local, &borrowed_by, "mutable borrow")
         } else {
-            let filtered_mut = borrowed_by
+            let mut_borrows = borrowed_by
                 .into_iter()
-                .filter(|(id, _loc)| borrows.is_mutable(*id));
-            let mut_borrows = filtered_mut.collect::<BTreeMap<_, _>>();
+                .filter(|(id, _loc)| borrows.is_mutable(*id))
+                .collect();
             Self::check_use_borrowed_by(borrows, loc, local, &mut_borrows, "borrow")
         };
         self.add_local_borrow(loc, local, new_id);
@@ -504,10 +515,10 @@ impl BorrowState {
         let errors = if mut_ {
             Self::borrow_error(borrows, loc, &borrowed_by, &BTreeMap::new(), msg)
         } else {
-            let filtered_mut = borrowed_by
+            let mut_borrows = borrowed_by
                 .into_iter()
-                .filter(|(id, _loc)| borrows.is_mutable(*id));
-            let mut_borrows = filtered_mut.collect::<BTreeMap<_, _>>();
+                .filter(|(id, _loc)| borrows.is_mutable(*id))
+                .collect();
             Self::borrow_error(borrows, loc, &mut_borrows, &BTreeMap::new(), msg)
         };
         self.add_resource_borrow(loc, resource, new_id);
@@ -534,6 +545,7 @@ impl BorrowState {
         return_ty: &Type,
     ) -> (Errors, Values) {
         let mut errors = vec![];
+        // Check acquires
         for resource in resources {
             let borrowed_by = self.resource_borrowed_by(resource);
             let borrows = &self.borrows;
@@ -542,30 +554,31 @@ impl BorrowState {
             let mut es = Self::borrow_error(borrows, loc, &borrowed_by, &BTreeMap::new(), msg);
             errors.append(&mut es);
         }
-        for arg in &args {
-            match arg {
-                Value::Ref(id) if self.borrows.is_mutable(*id) => {
-                    let (fulls, fields) = self.borrows.borrowed_by(*id);
-                    let msg = || {
-                        "Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed".into()
-                    };
-                    let mut es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
-                    errors.append(&mut es);
-                }
-                _ => (),
-            }
-        }
+
+        // Check mutable arguments are not borrowed
+        args.iter()
+            .filter_map(|arg| arg.as_vref().filter(|id| self.borrows.is_mutable(*id)))
+            .for_each(|mut_id| {
+                let (fulls, fields) = self.borrows.borrowed_by(mut_id);
+                let msg = || {
+                    "Invalid usage of reference as function argument. Cannot transfer a mutable \
+                     reference that is being borrowed"
+                        .into()
+                };
+                let mut es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
+                errors.append(&mut es);
+            });
 
         let mut all_parents = BTreeSet::new();
         let mut mut_parents = BTreeSet::new();
-        for arg in args {
-            if let Value::Ref(id) = arg {
+        args.into_iter()
+            .filter_map(|arg| arg.as_vref())
+            .for_each(|id| {
                 all_parents.insert(id);
                 if self.borrows.is_mutable(id) {
                     mut_parents.insert(id);
                 }
-            }
-        }
+            });
 
         let values = match &return_ty.value {
             Type_::Unit => vec![],

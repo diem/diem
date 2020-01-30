@@ -527,7 +527,9 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                             Ok(x) => x,
                             Err(mut e) => {
                                 let loc = make_loc(tokens.file_name(), next_start, next_start);
-                                e.push((loc, "Perhaps you need a blank space before this '<' operator?".to_string()));
+                                let msg =
+                                    "Perhaps you need a blank space before this '<' operator?";
+                                e.push((loc, msg.to_owned()));
                                 return Err(e)
                             },
                         }

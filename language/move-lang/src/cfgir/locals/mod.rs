@@ -138,10 +138,11 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                                     l, verb
                                 ),
                             };
-                            errors.push(vec![
-                                (*loc, "Invalid return".into()),
-                                (available, format!("{}. The resource must be consumed before the function returns", stmt))
-                            ])
+                            let msg = format!(
+                                "{}. The resource must be consumed before the function returns",
+                                stmt
+                            );
+                            errors.push(vec![(*loc, "Invalid return".into()), (available, msg)])
                         }
                     }
                 }
@@ -179,9 +180,14 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue) {
                             DisplayVar::Tmp => panic!("ICE invalid assign tmp local"),
                             DisplayVar::Orig(s) => s,
                         };
+                        let msg = format!(
+                            "The local {} a resource value due to this assignment. The \
+                             resource must be used before you assign to this local again",
+                            verb
+                        );
                         context.error(vec![
                             (*loc, format!("Invalid assignment to local '{}'", vstr)),
-                            (available, format!("The local {} a resource value due to this assignment. The resource must be used before you assign to this local again", verb))
+                            (available, msg),
                         ])
                     }
                 }
@@ -245,10 +251,15 @@ fn use_local(context: &mut Context, loc: &Loc, local: &Var) {
                 DisplayVar::Tmp => panic!("ICE invalid use tmp local {}", local.value()),
                 DisplayVar::Orig(s) => s,
             };
+            let msg = format!(
+                "The local {} not have a value due to this position. The local must be assigned \
+                 a value before being used",
+                verb
+            );
             context.error(vec![
-                    (*loc, format!("Invalid usage of local '{}'", vstr)),
-                    (unavailable, format!("The local {} not have a value due to this position. The local must be assigned a value before being used", verb))
-                ])
+                (*loc, format!("Invalid usage of local '{}'", vstr)),
+                (unavailable, msg),
+            ])
         }
     }
 }

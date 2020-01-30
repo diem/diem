@@ -423,9 +423,11 @@ pub fn make_function_type(
     let defined_loc = finfo.defined_loc;
     match &finfo.visibility {
         FunctionVisibility::Internal if !in_current_module => {
+            let internal_msg = "This function is internal to its module. Only 'public' functions \
+                                can be called outside of their module";
             context.error(vec![
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
-                (defined_loc, "This function is internal to its module. Only 'public' functions can be called outside of their module".into()),
+                (defined_loc, internal_msg.into()),
             ])
         }
         _ => (),
@@ -461,50 +463,71 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
         Some(k) => k,
     };
     match (b_kind.value, &k.value) {
-            (_, K::Unrestricted) => panic!("ICE tparams cannot have unrestricted constraints"),
-            // _ <: all
-            (_, K::Unknown) |
-            // unrestricted <: affine
-            (K::Unrestricted, K::Affine) |
-            // affine <: affine
-            (K::Affine, K::Affine) |
-            // linear <: linear
-            (K::Resource, K::Resource) => (),
+        (_, K::Unrestricted) => panic!("ICE tparams cannot have unrestricted constraints"),
 
-            // unrestricted </: linear
-            (K::Unrestricted, K::Resource) |
-            // affine </: linear
-            (K::Affine, K::Resource) |
-            // all </: linear
-            (K::Unknown, K::Resource) => {
-                let ty_str = b.value.subst_format(&context.subst);
-                context.error(vec![
-                    (loc, "Constraint not satisfied.".into()),
-                    (bloc, format!("The {} type '{}' does not satisfy the constraint '{}'", Kind_::VALUE_CONSTRAINT, ty_str, Kind_::RESOURCE_CONSTRAINT)),
-                    (b_kind.loc, "The type's constraint information was declared here".into()),
-                    (k.loc, format!("'{}' constraint declared here", Kind_::RESOURCE_CONSTRAINT))
-                ])
-            }
+        // _ <: all
+        // unrestricted <: affine
+        // affine <: affine
+        // linear <: linear
+        (_, K::Unknown)
+        | (K::Unrestricted, K::Affine)
+        | (K::Affine, K::Affine)
+        | (K::Resource, K::Resource) => (),
 
-            // all </: affine
-            (bk @ K::Unknown, K::Affine) |
-            // linear </: affine
-            (bk @ K::Resource, K::Affine) => {
-                let resource_msg = match bk {
-                    K::Unrestricted | K::Affine => panic!("ICE covered above"),
-                    K::Resource => "resource ",
-                    K::Unknown => "",
-                };
-                let ty_str = b.value.subst_format(&context.subst);
-                context.error(vec![
-                    (loc, "Constraint not satisfied.".into()),
-                    (bloc, format!("The {}type '{}' does not satisfy the constraint '{}'", resource_msg, ty_str, Kind_::VALUE_CONSTRAINT)),
-                    (b_kind.loc, "The type's constraint information was declared here".into()),
-                    (k.loc, format!("'{}' constraint declared here", Kind_::VALUE_CONSTRAINT))
-                ])
-            }
-
+        // unrestricted </: linear
+        // affine </: linear
+        // all </: linear
+        (K::Unrestricted, K::Resource) | (K::Affine, K::Resource) | (K::Unknown, K::Resource) => {
+            let ty_str = b.value.subst_format(&context.subst);
+            let cmsg = format!(
+                "The {} type '{}' does not satisfy the constraint '{}'",
+                Kind_::VALUE_CONSTRAINT,
+                ty_str,
+                Kind_::RESOURCE_CONSTRAINT
+            );
+            context.error(vec![
+                (loc, "Constraint not satisfied.".into()),
+                (bloc, cmsg),
+                (
+                    b_kind.loc,
+                    "The type's constraint information was declared here".into(),
+                ),
+                (
+                    k.loc,
+                    format!("'{}' constraint declared here", Kind_::RESOURCE_CONSTRAINT),
+                ),
+            ])
         }
+
+        // all </: affine
+        // linear </: affine
+        (bk @ K::Unknown, K::Affine) | (bk @ K::Resource, K::Affine) => {
+            let resource_msg = match bk {
+                K::Unrestricted | K::Affine => panic!("ICE covered above"),
+                K::Resource => "resource ",
+                K::Unknown => "",
+            };
+            let ty_str = b.value.subst_format(&context.subst);
+            let cmsg = format!(
+                "The {}type '{}' does not satisfy the constraint '{}'",
+                resource_msg,
+                ty_str,
+                Kind_::VALUE_CONSTRAINT
+            );
+            context.error(vec![
+                (loc, "Constraint not satisfied.".into()),
+                (bloc, cmsg),
+                (
+                    b_kind.loc,
+                    "The type's constraint information was declared here".into(),
+                ),
+                (
+                    k.loc,
+                    format!("'{}' constraint declared here", Kind_::VALUE_CONSTRAINT),
+                ),
+            ])
+        }
+    }
 }
 
 fn solve_copyable_constraint(context: &mut Context, loc: Loc, msg: String, s: SingleType) {
@@ -851,13 +874,17 @@ pub fn subtype_single(
         (sp!(loc, Ref(mut1, t1)), sp!(_, Ref(mut2, t2))) => {
             let mut_ = match (mut1, mut2) {
                 // imm <: imm
-                (false, false) |
                 // mut <: imm
-                (true, false) => false,
+                (false, false) | (true, false) => false,
                 // mut <: mut
                 (true, true) => true,
                 // imm <\: mut
-                (false, true) => return Err(TypingError::SubtypeError(Box::new(lhs.clone()), Box::new(rhs.clone()))),
+                (false, true) => {
+                    return Err(TypingError::SubtypeError(
+                        Box::new(lhs.clone()),
+                        Box::new(rhs.clone()),
+                    ))
+                }
             };
             let (subst, t) = join_base_type(subst, t1, t2)?;
             Ok((subst, sp(*loc, Ref(mut_, t))))

@@ -53,7 +53,8 @@ impl Context {
 
     fn restricted_self_error(&mut self, case: &str, name: &Name) {
         let msg = format!(
-            "Invalid {case} name '{name}'. '{self_ident}' is restricted and cannot be used to name a {case}",
+            "Invalid {case} name '{name}'. '{self_ident}' is restricted and cannot be used to name \
+            a {case}",
             case=case,
             name=name,
             self_ident=ModuleName::SELF_NAME,
@@ -119,7 +120,12 @@ pub fn program(prog: P::Program, sender: Option<Address>) -> (E::Program, Errors
                     Some(addr) => addr,
                     None => {
                         let loc = f.function.name.loc();
-                        let msg = format!("Invalid '{}'. No sender address was given as a command line argument. Add one using --{}", FunctionName::MAIN_NAME, crate::command_line::SENDER);
+                        let msg = format!(
+                            "Invalid '{}'. No sender address was given as a command line \
+                             argument. Add one using --{}",
+                            FunctionName::MAIN_NAME,
+                            crate::command_line::SENDER
+                        );
                         context.error(vec![(loc, msg)]);
                         Address::LIBRA_CORE
                     }
@@ -180,9 +186,13 @@ fn address_directive(
         (Some((_, addr)), _) => addr,
         (None, Some(addr)) => addr,
         (None, None) => {
-            context.error(vec![
-                    (loc, format!("Invalid module declaration. No sender address was given as a command line argument. Add one using --{}. Or set the address at the top of the file using 'address _:'", crate::command_line::SENDER)),
-                ]);
+            let msg = format!(
+                "Invalid module declaration. No sender address was given as a command line \
+                 argument. Add one using --{}. Or set the address at the top of the file using \
+                 'address _:'",
+                crate::command_line::SENDER
+            );
+            context.error(vec![(loc, msg)]);
             Address::LIBRA_CORE
         }
     };
@@ -248,9 +258,13 @@ fn main(
     context.set_and_shadow_aliases(alias_map.clone());
     let (fname, function) = function_def(context, pfunction);
     if fname.value() != FunctionName::MAIN_NAME {
-        context.error(vec![
-                    (fname.loc(), format!("Invalid top level function. Found a function named '{}', but all top level functions must be named '{}'", fname.value(),FunctionName::MAIN_NAME))
-                ]);
+        let msg = format!(
+            "Invalid top level function. Found a function named '{}', \
+             but all top level functions must be named '{}'",
+            fname.value(),
+            FunctionName::MAIN_NAME
+        );
+        context.error(vec![(fname.loc(), msg)]);
     }
     match &function.visibility {
         FunctionVisibility::Internal => (),
@@ -550,18 +564,17 @@ fn module_access(
     use E::ModuleAccess_ as EN;
     use P::ModuleAccess_ as PN;
     let tn_ = match ptn_ {
-        PN::Name(n) => {
-            match context.module_alias_get(&n) {
-                Some(_) => {
-                    context.error(vec![
-                        (n.loc, format!("Unexpected module alias '{}'", n)),
-                        (loc, "Modules are not types. Try accessing a struct inside the module instead".into())
-                    ]);
-                    return None;
-                }
-                None => EN::Name(n),
+        PN::Name(n) => match context.module_alias_get(&n) {
+            Some(_) => {
+                let msg = "Modules are not types. Try accessing a struct inside the module instead";
+                context.error(vec![
+                    (n.loc, format!("Unexpected module alias '{}'", n)),
+                    (loc, msg.into()),
+                ]);
+                return None;
             }
-        }
+            None => EN::Name(n),
+        },
         PN::ModuleAccess(mname, n) => match context.module_alias_get(&mname.0).cloned() {
             None => {
                 context.error(vec![(
@@ -846,9 +859,11 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::Assign> {
             EA::Unpack(en, tys_opt, efields)
         }
         _ => {
-            context.error(vec![
-                (loc, "Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing assignment"),
-            ]);
+            context.error(vec![(
+                loc,
+                "Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing \
+                 assignment",
+            )]);
             return None;
         }
     };

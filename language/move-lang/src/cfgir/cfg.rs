@@ -22,7 +22,9 @@ pub trait CFG {
 // BlockCFG
 //**************************************************************************************************
 
-const DEAD_CODE_ERR: &str = "Unreachable code. This statement (and any following statements) will not be executed. In some cases, this will result in unused resource values.";
+const DEAD_CODE_ERR: &str =
+    "Unreachable code. This statement (and any following statements) will \
+     not be executed. In some cases, this will result in unused resource values.";
 
 #[derive(Debug)]
 pub struct BlockCFG<'a> {
