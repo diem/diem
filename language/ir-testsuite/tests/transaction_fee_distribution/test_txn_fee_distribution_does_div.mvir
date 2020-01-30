@@ -44,7 +44,7 @@ main() {
   while (copy(index) < copy(number_of_validators)) {
      addr = LibraSystem.get_ith_validator_address(copy(index));
      new_balance = LibraAccount.balance(move(addr));
-     old_balance = Vector.get<u64>(&balances, copy(index));
+     old_balance = *Vector.borrow<u64>(&balances, copy(index));
      index = move(index) + 1;
      assert(move(new_balance) == (move(old_balance) + 10), 0);
   }

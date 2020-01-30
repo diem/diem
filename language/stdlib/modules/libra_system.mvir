@@ -504,12 +504,12 @@ module LibraSystem {
                     Vector.pop_back<address>(copy(removals_ref))
                 );
                 // remove corresponding ValidatorInfo from the validator set
-                _  = Vector.remove_unstable<Self.ValidatorInfo>(
+                _  = Vector.swap_remove<Self.ValidatorInfo>(
                     copy(validators_vec_ref),
                     copy(to_remove_index)
                 );
                 // remove corresponding DiscoveryInfo from the discovery set
-                _ = Vector.remove_unstable<Self.DiscoveryInfo>(
+                _ = Vector.swap_remove<Self.DiscoveryInfo>(
                     copy(discovery_vec_ref),
                     move(to_remove_index),
                 );

@@ -7,10 +7,10 @@ main() {
   vec = Vector.empty<u64>();
   Vector.push_back<u64>(&mut vec, 0);
   Vector.push_back<u64>(&mut vec, 1);
-  assert(Vector.get<u64>(&vec, 1) == 1, 77);
+  assert(*Vector.borrow<u64>(&vec, 1) == 1, 77);
 
-  Vector.set<u64>(&mut vec, 0, 17);
-  assert(Vector.get<u64>(&vec, 0) == 17, 78);
+  *Vector.borrow_mut<u64>(&mut vec, 0) = 17;
+  assert(*Vector.borrow<u64>(&vec, 0) == 17, 78);
 
   return;
 }

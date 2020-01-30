@@ -31,7 +31,6 @@ module Vector {
 
     // Reverses the order of the elements in the vector in place.
     public reverse<Element>(v: &mut T<Element>) {
-
         let len = length(v);
         if (len == 0) return ();
 
@@ -56,4 +55,35 @@ module Vector {
         length(v) == 0
     }
 
+    // Return true if `e` is in the vector `v`
+    public contains<Element>(v: &T<Element>, e: &Element): bool {
+        let i = 0;
+        let len = length(v);
+        while (i < len) {
+            if (borrow(v, i) == e) return true;
+            i = i + 1;
+        };
+        false
+    }
+
+    // Remove the `i`th element E of the vector, shifting all subsequent elements
+    // It is O(n) and preserves ordering
+    public remove<Element>(v: &mut T<Element>, i: u64): Element {
+        let len = length(v);
+        // i out of bounds; abort
+        if (i >= len) abort 10;
+
+        len = len - 1;
+        while (i < len) swap(v, i, { i = i + 1; i });
+        pop_back(v)
+    }
+
+    // Remove the `i`th element E of the vector by swapping it with the last element,
+    // and then popping it off
+    // It is O(1), but does not preserve ordering
+    public swap_remove<Element>(v: &mut T<Element>, i: u64): Element {
+        let last_idx = length(v) - 1;
+        swap(v, i, last_idx);
+        pop_back(v)
+    }
 }
