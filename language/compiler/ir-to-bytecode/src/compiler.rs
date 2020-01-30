@@ -9,7 +9,7 @@ use crate::{
         FunctionCall, FunctionCall_, FunctionName, FunctionSignature as AstFunctionSignature,
         FunctionVisibility, IfElse, ImportDefinition, LValue, LValue_, Loc, Loop, ModuleDefinition,
         ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script,
-        Statement, StructDefinition as MoveStruct_, StructDefinitionFields, Type, TypeVar,
+        Statement, StructDefinition as AstStructDefinition, StructDefinitionFields, Type, TypeVar,
         TypeVar_, UnaryOp, Var, Var_, While,
     },
 };
@@ -546,7 +546,7 @@ fn function_signature(
 fn compile_structs(
     context: &mut Context,
     self_name: &ModuleName,
-    structs: Vec<MoveStruct_>,
+    structs: Vec<AstStructDefinition>,
 ) -> Result<(Vec<StructDefinition>, Vec<FieldDefinition>)> {
     let mut struct_defs = vec![];
     let mut field_defs = vec![];
