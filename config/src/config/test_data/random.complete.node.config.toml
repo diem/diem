@@ -50,8 +50,6 @@ capacity = 1000000
 capacity_per_user = 100
 system_transaction_timeout_secs = 86400
 system_transaction_gc_interval_ms = 180000
-mempool_service_port = 6182
-address = "localhost"
 
 [state_sync]
 chunk_limit = 250
