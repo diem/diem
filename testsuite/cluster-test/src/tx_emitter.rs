@@ -290,13 +290,12 @@ impl SubmissionThread {
                 }
             }
             if self.params.wait_committed {
-                if wait_for_accounts_sequence(&mut self.client, &mut self.accounts)
-                    .await
-                    .is_err()
+                if let Err(uncommitted) =
+                    wait_for_accounts_sequence(&mut self.client, &mut self.accounts).await
                 {
                     info!(
-                        "[{}] Some transactions were not committed before expiration",
-                        self.instance
+                        "[{}] Transactions were not committed before expiration: {:?}",
+                        self.instance, uncommitted
                     );
                 }
             }
@@ -323,7 +322,7 @@ impl SubmissionThread {
 async fn wait_for_accounts_sequence(
     client: &mut AdmissionControlClientAsync,
     accounts: &mut [AccountData],
-) -> Result<(), ()> {
+) -> Result<(), Vec<(AccountAddress, u64)>> {
     let deadline = Instant::now() + TXN_MAX_WAIT;
     let addresses: Vec<_> = accounts.iter().map(|d| d.address).collect();
     loop {
@@ -333,11 +332,15 @@ async fn wait_for_accounts_sequence(
                 if is_sequence_equal(accounts, &sequence_numbers) {
                     break;
                 }
+                let mut uncommitted = vec![];
                 if Instant::now() > deadline {
                     for (account, sequence_number) in zip(accounts, &sequence_numbers) {
-                        account.sequence_number = *sequence_number;
+                        if account.sequence_number != *sequence_number {
+                            uncommitted.push((account.address, *sequence_number));
+                            account.sequence_number = *sequence_number;
+                        }
                     }
-                    return Err(());
+                    return Err(uncommitted);
                 }
             }
         }
