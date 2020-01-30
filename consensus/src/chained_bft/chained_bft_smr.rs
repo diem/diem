@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::event_processor::EventProcessorPrelude;
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
         epoch_manager::EpochManager,
-        event_processor::EventProcessor,
         network::{NetworkReceivers, NetworkTask},
         persistent_storage::PersistentStorage,
     },
@@ -88,44 +88,44 @@ impl<T: Payload> ChainedBftSMR<T> {
     fn start_event_processing(
         executor: Handle,
         mut epoch_manager: EpochManager<T>,
-        mut event_processor: EventProcessor<T>,
+        mut event_processor_prelude: EventProcessorPrelude<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
         network_task: NetworkTask<T>,
         mut network_receivers: NetworkReceivers<T>,
     ) {
         let fut = async move {
-            event_processor.start().await;
+            event_processor_prelude.start().await;
             loop {
                 let pre_select_instant = Instant::now();
                 let idle_duration;
                 select! {
                     proposal_msg = network_receivers.proposals.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        event_processor.process_proposal_msg(proposal_msg).await;
+                        event_processor_prelude.process_proposal_msg(proposal_msg).await;
                     }
                     block_retrieval = network_receivers.block_retrieval.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        event_processor.process_block_retrieval(block_retrieval).await;
+                        event_processor_prelude.process_block_retrieval(block_retrieval).await;
                     }
                     vote_msg = network_receivers.votes.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        event_processor.process_vote(vote_msg).await;
+                        event_processor_prelude.process_vote(vote_msg).await;
                     }
                     local_timeout_round = pacemaker_timeout_sender_rx.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        event_processor.process_local_timeout(local_timeout_round).await;
+                        event_processor_prelude.process_local_timeout(local_timeout_round).await;
                     }
                     sync_info_msg = network_receivers.sync_info_msgs.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        event_processor.process_sync_info_msg(sync_info_msg.0, sync_info_msg.1).await;
+                        event_processor_prelude.process_sync_info_msg(sync_info_msg.0, sync_info_msg.1).await;
                     }
                     ledger_info = network_receivers.epoch_change.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
                         if epoch_manager.epoch() <= ledger_info.ledger_info().epoch() {
-                            event_processor = epoch_manager.start_new_epoch(ledger_info).await;
+                            let mut event_processor_prelude = epoch_manager.start_new_epoch(ledger_info).await;
                             // clean up all the previous messages from the old epochs
                             network_receivers.clear_prev_epoch_msgs();
-                            event_processor.start().await;
+                            event_processor_prelude.start().await;
                         }
                     }
                     different_epoch_and_peer = network_receivers.different_epoch.select_next_some() => {
@@ -160,7 +160,11 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
             .build()
             .expect("Failed to create Tokio runtime!");
 
-        let initial_data = runtime.block_on(self.storage.start());
+        let remote_recovery_data = runtime.block_on(self.storage.recover_from_ledger());
+        let epoch_info = Arc::new(RwLock::new(EpochInfo {
+            epoch: remote_recovery_data.epoch(),
+            verifier: remote_recovery_data.validators(),
+        }));
         let input = self.input.take().expect("already started, input is None");
 
         let executor = runtime.handle().clone();
@@ -170,10 +174,6 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
         let (timeout_sender, timeout_receiver) =
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
-        let epoch_info = Arc::new(RwLock::new(EpochInfo {
-            epoch: initial_data.epoch(),
-            verifier: initial_data.validators(),
-        }));
 
         let mut epoch_mgr = EpochManager::new(
             self.author,
@@ -190,18 +190,19 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
         );
 
         // Step 2
-        let event_processor = epoch_mgr.start_epoch(initial_data);
+        let event_processor_prelude = epoch_mgr.start_epoch(remote_recovery_data);
 
         // TODO: this is test only, we should remove this
-        self.block_store = Some(event_processor.block_store());
+        self.block_store = event_processor_prelude.block_store();
 
+        // TODO: The epoch info here should be from epoch manager
         let (network_task, network_receiver) =
             NetworkTask::new(epoch_info, input.network_events, self_receiver);
 
         Self::start_event_processing(
             executor,
             epoch_mgr,
-            event_processor,
+            event_processor_prelude,
             timeout_receiver,
             network_task,
             network_receiver,

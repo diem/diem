@@ -7,7 +7,7 @@ use crate::{
             BlockReader, BlockRetriever, BlockStore, PendingVotes, VoteReceptionResult,
         },
         liveness::{
-            pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
+            pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
         },
@@ -45,8 +45,14 @@ use mirai_annotations::{
 };
 use network::proto::{ConsensusMsg, ConsensusMsg_oneof};
 
+use crate::chained_bft::liveness::multi_proposer_election::MultiProposer;
+use crate::chained_bft::liveness::rotating_proposer_election::{choose_leader, RotatingProposer};
 use crate::chained_bft::network::IncomingBlockRetrievalRequest;
+use crate::chained_bft::persistent_storage::RecoveryData;
+use crate::state_replication::StateComputer;
+use crate::util::time_service::ClockTimeService;
 use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
+use libra_config::config::{ConsensusConfig, ConsensusProposerType};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
@@ -62,6 +68,230 @@ mod event_processor_test;
 #[cfg(any(feature = "fuzzing", test))]
 #[path = "event_processor_fuzzing.rs"]
 pub mod event_processor_fuzzing;
+
+/// EventProcessor prelude is responsible for:
+/// 1. Make sure all the necessary data is present for EventProcessor to start
+/// 2. Forward events to EventProcessor when one is constructed
+pub struct EventProcessorPrelude<T> {
+    event_processor: Option<EventProcessor<T>>,
+    storage: Arc<dyn PersistentStorage<T>>,
+    network: NetworkSender,
+    state_computer: Arc<dyn StateComputer<Payload = T>>,
+    config: ConsensusConfig,
+    safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
+    author: Author,
+    txn_manager: Box<dyn TxnManager<Payload = T>>,
+    time_service: Arc<ClockTimeService>,
+    timeout_sender: channel::Sender<Round>,
+}
+
+impl<T: Payload> EventProcessorPrelude<T> {
+    pub fn new(
+        storage: Arc<dyn PersistentStorage<T>>,
+        network: NetworkSender,
+        state_computer: Arc<dyn StateComputer<Payload = T>>,
+        config: ConsensusConfig,
+        safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
+        author: Author,
+        txn_manager: Box<dyn TxnManager<Payload = T>>,
+        time_service: Arc<ClockTimeService>,
+        timeout_sender: channel::Sender<Round>,
+    ) -> Self {
+        EventProcessorPrelude {
+            event_processor: None,
+            storage,
+            network,
+            state_computer,
+            config,
+            safety_rules,
+            author,
+            txn_manager,
+            time_service,
+            timeout_sender,
+        }
+    }
+
+    fn create_pacemaker(
+        &self,
+        time_service: Arc<dyn TimeService>,
+        timeout_sender: channel::Sender<Round>,
+    ) -> Pacemaker {
+        // 1.5^6 ~= 11
+        // Timeout goes from initial_timeout to initial_timeout*11 in 6 steps
+        let time_interval = Box::new(ExponentialTimeInterval::new(
+            Duration::from_millis(self.config.pacemaker_initial_timeout_ms),
+            1.5,
+            6,
+        ));
+        Pacemaker::new(time_interval, time_service, timeout_sender)
+    }
+
+    /// Create a proposer election handler based on proposers
+    fn create_proposer_election(
+        &self,
+        epoch: u64,
+        validators: &ValidatorVerifier,
+    ) -> Box<dyn ProposerElection<T> + Send + Sync> {
+        let proposers = validators
+            .get_ordered_account_addresses_iter()
+            .collect::<Vec<_>>();
+        match self.config.proposer_type {
+            ConsensusProposerType::MultipleOrderedProposers => {
+                Box::new(MultiProposer::new(epoch, proposers, 2))
+            }
+            ConsensusProposerType::RotatingProposer => Box::new(RotatingProposer::new(
+                proposers,
+                self.config.contiguous_rounds,
+            )),
+            // We don't really have a fixed proposer!
+            ConsensusProposerType::FixedProposer => {
+                let proposer = choose_leader(proposers);
+                Box::new(RotatingProposer::new(
+                    vec![proposer],
+                    self.config.contiguous_rounds,
+                ))
+            }
+        }
+    }
+
+    fn event_processor_builder(&mut self, initial_data: RecoveryData<T>) -> EventProcessor<T> {
+        let validators = initial_data.validators();
+        let last_vote = initial_data.last_vote();
+
+        let proposer_election =
+            self.create_proposer_election(initial_data.epoch(), &initial_data.validators());
+
+        let block_store = Arc::new(BlockStore::new(
+            Arc::clone(&self.storage),
+            initial_data,
+            Arc::clone(&self.state_computer),
+            self.config.max_pruned_blocks_in_mem,
+        ));
+
+        self.safety_rules
+            .start_new_epoch(block_store.highest_quorum_cert().as_ref())
+            .expect("Unable to transition SafetyRules to the new epoch");
+
+        // txn manager is required both by proposal generator (to pull the proposers)
+        // and by event processor (to update their status).
+        let proposal_generator = ProposalGenerator::new(
+            self.author,
+            block_store.clone(),
+            self.txn_manager.clone(),
+            self.time_service.clone(),
+            self.config.max_block_size,
+        );
+
+        let pacemaker =
+            self.create_pacemaker(self.time_service.clone(), self.timeout_sender.clone());
+
+        EventProcessor::new(
+            block_store,
+            last_vote,
+            pacemaker,
+            proposer_election,
+            proposal_generator,
+            self.safety_rules,
+            self.txn_manager.clone(),
+            self.network.clone(),
+            self.storage.clone(),
+            self.time_service.clone(),
+            validators,
+        )
+    }
+
+    pub async fn start(&mut self) {
+        let initial_data = self.storage.start().await;
+        self.event_processor = match initial_data {
+            Ok(initial_data) => Some(self.event_processor_builder(initial_data)),
+            Err(_e) => None,
+        };
+        if self.event_processor.is_some() {
+            return self.event_processor.as_mut().unwrap().start().await;
+        }
+    }
+
+    pub async fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg<T>) {
+        // We have event processor already, pass event to event processor
+        if self.event_processor.is_some() {
+            return self
+                .event_processor
+                .as_mut()
+                .unwrap()
+                .process_proposal_msg(proposal_msg)
+                .await;
+        }
+    }
+
+    pub async fn process_block_retrieval(&self, request: IncomingBlockRetrievalRequest) {
+        if self.event_processor.is_some() {
+            return self
+                .event_processor
+                .as_ref()
+                .unwrap()
+                .process_block_retrieval(request)
+                .await;
+        }
+    }
+
+    pub async fn process_vote(&mut self, vote_msg: VoteMsg) {
+        if self.event_processor.is_some() {
+            return self
+                .event_processor
+                .as_mut()
+                .unwrap()
+                .process_vote(vote_msg)
+                .await;
+        }
+    }
+
+    pub async fn process_local_timeout(&mut self, round: Round) {
+        if self.event_processor.is_some() {
+            return self
+                .event_processor
+                .as_mut()
+                .unwrap()
+                .process_local_timeout(round)
+                .await;
+        }
+    }
+
+    pub async fn process_sync_info_msg(&mut self, sync_info: SyncInfo, peer: Author) {
+        if self.event_processor.is_some() {
+            return self
+                .event_processor
+                .as_mut()
+                .unwrap()
+                .process_sync_info_msg(sync_info, peer)
+                .await;
+        }
+        debug!("Prelude received a sync info msg: {}", sync_info);
+        let mut retriever = BlockRetriever::new(
+            self.network.clone(),
+            // Give a timeout of 1 hour to make sure there's enough time for trying to fetch from all peers
+            Instant::now() + Duration::new(3600, 0),
+            peer,
+        );
+        let (blocks, quorum_certs) =
+            BlockStore::fast_forward_sync(&sync_info.highest_commit_cert(), &mut retriever)
+                .await
+                .expect("Failed to fast forward sync with peers in prelude");
+        self.storage.save_tree(blocks, quorum_certs);
+        let initial_data = self
+            .storage
+            .start()
+            .await
+            .expect("Failed to construct recovery data in prelude");
+        self.event_processor = Some(self.event_processor_builder(initial_data));
+    }
+
+    pub fn block_store(&self) -> Option<Arc<BlockStore<T>>> {
+        if self.event_processor.is_some() {
+            return Some(self.event_processor.as_ref().unwrap().block_store());
+        }
+        None
+    }
+}
 
 /// Consensus SMR is working in an event based fashion: EventProcessor is responsible for
 /// processing the individual events (e.g., process_new_round, process_proposal, process_vote,
@@ -592,9 +822,9 @@ impl<T: Payload> EventProcessor<T> {
                 match waiting_error {
                     WaitingError::MaxWaitExceeded => {
                         error!(
-                                "Waiting until proposal block timestamp usecs {:?} would exceed the round duration {:?}, hence will not vote for this round",
-                                block_timestamp_us,
-                                current_round_deadline);
+                            "Waiting until proposal block timestamp usecs {:?} would exceed the round duration {:?}, hence will not vote for this round",
+                            block_timestamp_us,
+                            current_round_deadline);
                         counters::VOTE_FAILURE_WAIT_S.observe_duration(Duration::new(0, 0));
                         counters::VOTES_COUNT
                             .with_label_values(&["max_wait_exceeded"])
@@ -605,10 +835,10 @@ impl<T: Payload> EventProcessor<T> {
                         wait_duration,
                     } => {
                         error!(
-                                "Even after waiting for {:?}, proposal block timestamp usecs {:?} >= current timestamp usecs {:?}, will not vote for this round",
-                                wait_duration,
-                                block_timestamp_us,
-                                current_duration_since_epoch);
+                            "Even after waiting for {:?}, proposal block timestamp usecs {:?} >= current timestamp usecs {:?}, will not vote for this round",
+                            wait_duration,
+                            block_timestamp_us,
+                            current_duration_since_epoch);
                         counters::VOTE_FAILURE_WAIT_S.observe_duration(wait_duration);
                         counters::VOTES_COUNT
                             .with_label_values(&["wait_failed"])

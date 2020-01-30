@@ -37,12 +37,66 @@ pub trait PersistentStorage<T>: Send + Sync {
     /// Persist consensus' state
     fn save_state(&self, vote: &Vote) -> Result<()>;
 
+    /// Construct data that can be recovered from ledger
+    async fn recover_from_ledger(&self) -> RemoteRecoveryData<T>;
+
     /// Construct necessary data to start consensus.
-    async fn start(&self) -> RecoveryData<T>;
+    async fn start(&self) -> Result<RecoveryData<T>>;
 
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas
     /// to jump to this round
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()>;
+}
+
+pub struct RemoteRecoveryData<T> {
+    epoch: u64,
+    validators: Arc<ValidatorVerifier>,
+    validator_keys: ValidatorSet,
+    genesis_root: Option<(Block<T>, QuorumCert, QuorumCert)>,
+}
+
+impl<T: Payload> RemoteRecoveryData<T> {
+    pub fn new(storage_ledger: &LedgerInfo, validator_keys: ValidatorSet) -> Self {
+        let genesis_root = if storage_ledger.next_validator_set().is_some() {
+            let genesis_block = Block::make_genesis_block_from_ledger_info(storage_ledger);
+            let genesis_qc = QuorumCert::certificate_for_genesis_from_ledger_info(
+                storage_ledger,
+                genesis_block.id(),
+            );
+            Some((genesis_block, genesis_qc.clone(), genesis_qc))
+        } else {
+            None
+        };
+
+        let epoch = if genesis_root.is_some() {
+            genesis_root.as_ref().unwrap().0.epoch()
+        } else {
+            storage_ledger.commit_info().epoch()
+        };
+
+        RemoteRecoveryData {
+            epoch,
+            validators: Arc::new((&validator_keys).into()),
+            validator_keys,
+            genesis_root,
+        }
+    }
+
+    pub fn genesis_root(&self) -> &Option<(Block<T>, QuorumCert, QuorumCert)> {
+        &self.genesis_root
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.epoch
+    }
+
+    pub fn validators(&self) -> Arc<ValidatorVerifier> {
+        Arc::clone(&self.validators)
+    }
+
+    pub fn validator_keys(&self) -> Vec<ValidatorPublicKeys> {
+        self.validator_keys.to_vec()
+    }
 }
 
 /// The recovery data constructed from raw consensusdb data, it'll find the root value and
@@ -68,6 +122,7 @@ pub struct RecoveryData<T> {
 impl<T: Payload> RecoveryData<T> {
     pub fn new(
         last_vote: Option<Vote>,
+        genesis_root: Option<(Block<T>, QuorumCert, QuorumCert)>,
         mut blocks: Vec<Block<T>>,
         mut quorum_certs: Vec<QuorumCert>,
         storage_ledger: &LedgerInfo,
@@ -75,24 +130,28 @@ impl<T: Payload> RecoveryData<T> {
         highest_timeout_certificate: Option<TimeoutCertificate>,
         validator_keys: ValidatorSet,
     ) -> Result<Self> {
-        let root =
-            Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|| {
-                // for better readability
-                quorum_certs.sort_by_key(|qc| qc.certified_block().round());
-                format!(
-                    "Blocks in db: {}\nQuorum Certs in db: {}\n",
-                    blocks
-                        .iter()
-                        .map(|b| format!("\n\t{}", b))
-                        .collect::<Vec<String>>()
-                        .concat(),
-                    quorum_certs
-                        .iter()
-                        .map(|qc| format!("\n\t{}", qc))
-                        .collect::<Vec<String>>()
-                        .concat(),
-                )
-            })?;
+        let root = match genesis_root {
+            Some(root) => root,
+            None => Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(
+                || {
+                    // for better readability
+                    quorum_certs.sort_by_key(|qc| qc.certified_block().round());
+                    format!(
+                        "Blocks in db: {}\nQuorum Certs in db: {}\n",
+                        blocks
+                            .iter()
+                            .map(|b| format!("\n\t{}", b))
+                            .collect::<Vec<String>>()
+                            .concat(),
+                        quorum_certs
+                            .iter()
+                            .map(|qc| format!("\n\t{}", qc))
+                            .collect::<Vec<String>>()
+                            .concat(),
+                    )
+                },
+            )?,
+        };
 
         let blocks_to_prune = Some(Self::find_blocks_to_prune(
             root.0.id(),
@@ -170,7 +229,7 @@ impl<T: Payload> RecoveryData<T> {
     /// and the ledger info for the root block, return an error if it can not be found.
     ///
     /// We guarantee that the block corresponding to the storage's latest ledger info always exists.
-    /// In the case of an epoch boundary ledger info(i.e. it has validator set), we generate the virtual genesis block.
+    /// TODO: remove this: In the case of an epoch boundary ledger info(i.e. it has validator set), we generate the virtual genesis block.
     fn find_root(
         blocks: &mut Vec<Block<T>>,
         quorum_certs: &mut Vec<QuorumCert>,
@@ -182,6 +241,7 @@ impl<T: Payload> RecoveryData<T> {
             root_from_storage
         );
 
+        // TODO: remove genesis building logic here, this should be done in event processor wrapper
         // We start from the block that storage's latest ledger info, if storage has end-epoch
         // LedgerInfo, we generate the virtual genesis block
         let root_id = if storage_ledger.next_validator_set().is_some() {
@@ -278,7 +338,21 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         self.db.save_state(lcs::to_bytes(vote)?)
     }
 
-    async fn start(&self) -> RecoveryData<T> {
+    async fn recover_from_ledger(&self) -> RemoteRecoveryData<T> {
+        let startup_info = self
+            .read_client
+            .get_startup_info()
+            .await
+            .expect("unable to read ledger info from storage")
+            .expect("startup info is None");
+
+        RemoteRecoveryData::new(
+            startup_info.latest_ledger_info.ledger_info(),
+            startup_info.get_validator_set().clone(),
+        )
+    }
+
+    async fn start(&self) -> Result<RecoveryData<T>> {
         info!("Start consensus recovery.");
         let raw_data = self
             .db
@@ -319,6 +393,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         let root_executed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
         let mut initial_data = RecoveryData::new(
             last_vote,
+            None,
             blocks,
             quorum_certs,
             startup_info.latest_ledger_info.ledger_info(),
@@ -326,7 +401,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             highest_timeout_certificate,
             validator_set,
         )
-        .expect("Cannot construct recovery data");
+        .with_context(|| "Cannot construct recovery data")?;
 
         (self as &dyn PersistentStorage<T>)
             .prune_tree(initial_data.take_blocks_to_prune())
@@ -347,7 +422,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             initial_data.highest_timeout_certificate.as_ref().map_or("None".to_string(), |v| v.to_string()),
         );
 
-        initial_data
+        Ok(initial_data)
     }
 
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {

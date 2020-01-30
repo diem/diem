@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::persistent_storage::{PersistentStorage, RecoveryData};
+use crate::chained_bft::persistent_storage::{PersistentStorage, RecoveryData, RemoteRecoveryData};
 
 use anyhow::Result;
 use consensus_types::{
@@ -74,6 +74,7 @@ impl<T: Payload> MockStorage<T> {
         blocks.sort_by_key(Block::round);
         RecoveryData::new(
             self.shared_storage.last_vote.lock().unwrap().clone(),
+            None,
             blocks,
             quorum_certs,
             &self.storage_ledger.lock().unwrap(),
@@ -149,6 +150,13 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         Ok(())
     }
 
+    async fn recover_from_ledger(&self) -> RemoteRecoveryData<T> {
+        RemoteRecoveryData::new(
+            &self.storage_ledger.lock().unwrap(),
+            self.shared_storage.validator_set.clone(),
+        )
+    }
+
     async fn start(&self) -> RecoveryData<T> {
         self.try_start().unwrap()
     }
@@ -190,8 +198,13 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
         Ok(())
     }
 
+    async fn recover_from_ledger(&self) -> RemoteRecoveryData<T> {
+        RemoteRecoveryData::new(&LedgerInfo::genesis(), ValidatorSet::new(vec![]))
+    }
+
     async fn start(&self) -> RecoveryData<T> {
         RecoveryData::new(
+            None,
             None,
             vec![],
             vec![],
