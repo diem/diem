@@ -7,14 +7,17 @@ use libra_types::PeerId;
 use slog_scope::GlobalLoggerGuard;
 use std::path::Path;
 
-pub fn load_config_from_path(config: Option<&Path>) -> NodeConfig {
+pub fn load_config_from_path(config_path: Option<&Path>) -> NodeConfig {
     // Load the config
-    let node_config = if let Some(path) = config {
-        info!("Loading node config from: {}", path.display());
-        NodeConfig::load(path).expect("NodeConfig")
-    } else {
-        info!("Loading test configs");
-        NodeConfig::random()
+    let node_config = match config_path {
+        Some(path) => {
+            info!("Loading node config from: {}", path.display());
+            NodeConfig::load(path).expect("Failed to load node config.")
+        }
+        None => {
+            info!("Loading test configs");
+            NodeConfig::random()
+        }
     };
 
     // Node configuration contains important ephemeral port information and should
@@ -35,13 +38,13 @@ pub fn setup_metrics(peer_id: PeerId, node_config: &NodeConfig) {
 }
 
 pub fn setup_executable(
-    config: Option<&Path>,
+    config_path: Option<&Path>,
     no_logging: bool,
 ) -> (NodeConfig, Option<GlobalLoggerGuard>) {
     crash_handler::setup_panic_handler();
     let mut _logger = set_default_global_logger(no_logging, &LoggerConfig::default());
 
-    let config = load_config_from_path(config);
+    let config = load_config_from_path(config_path);
 
     // Reset the global logger using config (for chan_size currently).
     // We need to drop the global logger guard first before resetting it.
