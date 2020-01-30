@@ -16,6 +16,6 @@ while [ true ]; do
 done
 ls -l swarm.out
 CMD=$(cat swarm.out | grep cluster-test | xargs)
-eval "RUST_BACKTRACE=1 $CMD --swarm-duration 90"
+eval "RUST_BACKTRACE=1 $CMD --duration 90"
 kill %1
 rm -f swarm.out
