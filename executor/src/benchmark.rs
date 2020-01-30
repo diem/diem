@@ -313,6 +313,7 @@ mod tests {
             1_000_000, /* init_account_balance */
             5,         /* block_size */
             5,         /* num_transfer_blocks */
+            None,      /* db_dir */
         );
     }
 }
