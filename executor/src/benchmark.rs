@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{utils::create_storage_service_and_executor, ExecutedTrees, Executor};
 use libra_crypto::{
     ed25519::{self, Ed25519PrivateKey, Ed25519PublicKey},
