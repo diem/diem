@@ -66,7 +66,7 @@ then
       exit 1
 fi
 
-JUMPHOST=ssh.${WORKSPACE}.aws.hlw3truzy4ls.com
+JUMPHOST=${JUMPHOST:-ssh.${WORKSPACE}.aws.hlw3truzy4ls.com}
 
 ssh $JUMPHOST echo "ssh ok" >/dev/null || (echo "Failed to ssh to jump host $JUMPHOST. Try renew corp canal cert with cc-certs"; exit 1)
 
