@@ -14,6 +14,7 @@ use futures::{
     SinkExt,
 };
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
+use libra_mempool::CommitNotification;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use libra_types::crypto_proxies::ValidatorChangeProof;
 use libra_types::waypoint::Waypoint;
@@ -31,12 +32,14 @@ impl StateSynchronizer {
     /// Setup state synchronizer. spawns coordinator and downloader routines on executor
     pub fn bootstrap(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
+        mempool_channel: mpsc::Sender<CommitNotification>,
         executor: Arc<Executor<LibraVM>>,
         config: &NodeConfig,
     ) -> Self {
         let executor_proxy = ExecutorProxy::new(executor, config);
         Self::bootstrap_with_executor_proxy(
             network,
+            mempool_channel,
             config.base.role,
             config.base.waypoint,
             &config.state_sync,
@@ -46,6 +49,7 @@ impl StateSynchronizer {
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
+        mempool_channel: mpsc::Sender<CommitNotification>,
         role: RoleType,
         waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
@@ -65,6 +69,7 @@ impl StateSynchronizer {
             .expect("[state sync] Start failure: cannot sync with storage.");
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
+            mempool_channel,
             role,
             waypoint,
             state_sync_config.clone(),

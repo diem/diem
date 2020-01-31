@@ -137,7 +137,6 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         proposer_election,
         proposal_generator,
         Box::new(safety_rules),
-        Box::new(MockTransactionManager::new().0),
         network,
         storage,
         time_service,

@@ -96,33 +96,42 @@ where
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
 }
 
-/// Message sent from Consensus to Mempool
-pub enum MempoolRequest {
-    /// get block req
-    GetBlockRequest {
-        /// max block size
-        max_block_size: u64,
-        /// txns in the block
-        transactions: Vec<TransactionExclusion>,
-    },
-    /// commit txns req
-    CommitTransactionsRequest {
-        /// txns to commit
-        transactions: Vec<CommittedTransaction>,
-        /// timestamp of block
-        block_timestamp_usecs: u64,
-    },
+/// request to get block, sent by consensus to mempool
+pub struct GetBlockRequest {
+    /// max block size
+    pub max_block_size: u64,
+    /// transactions to exclude from this block
+    pub transactions: Vec<TransactionExclusion>,
+    /// callback to send response to sender
+    pub callback: oneshot::Sender<Result<GetBlockResponse>>,
 }
 
-/// Message sent from Mempool to Consensus
-pub enum MempoolResponse {
-    /// response to get block req
-    GetBlockResponse {
-        /// txns in block
-        transactions: Vec<SignedTransaction>,
-    },
-    /// response to commit txns req
-    CommitTransactionsResponse {},
+/// get block response from mempool to consensus
+pub struct GetBlockResponse {
+    /// transactions in the requested block
+    pub transactions: Vec<SignedTransaction>,
+}
+
+/// notification from state sync to mempool of commit event
+/// This notifies mempool to remove committed txns
+pub struct CommitNotification {
+    /// committed transactions
+    pub transactions: Vec<CommittedTransaction>,
+    /// timestamp of committed block
+    pub block_timestamp_usecs: u64,
+    /// callback to send back response from mempool to State Sync
+    pub callback: oneshot::Sender<Result<CommitResponse>>,
+}
+
+/// ACK response to commit notification
+pub struct CommitResponse {}
+
+/// successfully executed and committed txn
+pub struct CommittedTransaction {
+    /// sender
+    pub sender: PeerId,
+    /// sequence number
+    pub sequence_number: u64,
 }
 
 /// excluded txn
@@ -131,16 +140,6 @@ pub struct TransactionExclusion {
     pub sender: PeerId,
     /// sequence number
     pub sequence_number: u64,
-}
-
-/// committed txn
-pub struct CommittedTransaction {
-    /// sender
-    pub sender: PeerId,
-    /// sequence number
-    pub sequence_number: u64,
-    /// is rejected
-    pub is_rejected: bool,
 }
 
 fn notify_subscribers(
@@ -449,65 +448,66 @@ where
     crit!("SharedMempool outbound_sync_task terminated");
 }
 
-async fn process_consensus_request<V>(
-    smp: SharedMempool<V>,
-    msg: MempoolRequest,
-    callback: oneshot::Sender<Result<MempoolResponse>>,
-) where
+async fn process_state_sync_request<V>(smp: SharedMempool<V>, req: CommitNotification)
+where
     V: TransactionValidation,
 {
-    let resp = match msg {
-        MempoolRequest::GetBlockRequest {
-            max_block_size,
-            transactions,
-        } => {
-            let block_size = cmp::max(max_block_size, 1);
-            counters::MEMPOOL_SERVICE
-                .with_label_values(&["get_block", "requested"])
-                .inc_by(block_size as i64);
-
-            let exclude_transactions: HashSet<TxnPointer> = transactions
-                .iter()
-                .map(|txn| (txn.sender, txn.sequence_number))
-                .collect();
-
-            let mut txns = smp
-                .mempool
-                .lock()
-                .expect("[get_block] acquire mempool lock")
-                .get_block(block_size, exclude_transactions);
-
-            let transactions = txns.drain(..).map(SignedTransaction::into).collect();
-
-            MempoolResponse::GetBlockResponse { transactions }
-        }
-        MempoolRequest::CommitTransactionsRequest {
-            transactions,
-            block_timestamp_usecs,
-        } => {
-            let mut pool = smp.mempool.lock().unwrap();
-            for transaction in transactions.iter() {
-                pool.remove_transaction(
-                    &transaction.sender,
-                    transaction.sequence_number,
-                    transaction.is_rejected,
-                );
-            }
-
-            if block_timestamp_usecs > 0 {
-                pool.gc_by_expiration_time(Duration::from_micros(block_timestamp_usecs));
-            }
-
-            MempoolResponse::CommitTransactionsResponse {}
-        }
-    };
-
-    if let Err(e) = callback
-        .send(Ok(resp))
-        .map_err(|_| format_err!("[shared mempool] timeout on callback send to consensus"))
     {
+        let mut pool = smp
+            .mempool
+            .lock()
+            .expect("[shared mempool] failed to get mempool lock");
+
+        for transaction in req.transactions {
+            pool.remove_transaction(&transaction.sender, transaction.sequence_number, false);
+        }
+        if req.block_timestamp_usecs > 0 {
+            pool.gc_by_expiration_time(Duration::from_micros(req.block_timestamp_usecs));
+        }
+    }
+
+    let resp = CommitResponse {};
+    // send back to callback
+    if let Err(e) = req.callback.send(Ok(resp)).map_err(|_| {
+        format_err!("[shared mempool] timeout on callback sending response to Mempool request")
+    }) {
         error!(
-            "[shared mempool] failed to send back mempool response to consensus with error: {:?}",
+            "[shared mempool] failed to send back CommitResponse with error: {:?}",
+            e
+        );
+    }
+}
+
+async fn process_consensus_request<V>(smp: SharedMempool<V>, req: GetBlockRequest)
+where
+    V: TransactionValidation,
+{
+    let block_size = cmp::max(req.max_block_size, 1);
+    counters::MEMPOOL_SERVICE
+        .with_label_values(&["get_block", "requested"])
+        .inc_by(block_size as i64);
+
+    let exclude_transactions: HashSet<TxnPointer> = req
+        .transactions
+        .iter()
+        .map(|txn| (txn.sender, txn.sequence_number))
+        .collect();
+
+    let mut txns = smp
+        .mempool
+        .lock()
+        .expect("[get_block] acquire mempool lock")
+        .get_block(block_size, exclude_transactions);
+
+    let transactions = txns.drain(..).map(SignedTransaction::into).collect();
+
+    let resp = GetBlockResponse { transactions };
+    // send back to callback
+    if let Err(e) = req.callback.send(Ok(resp)).map_err(|_| {
+        format_err!("[shared mempool] timeout on callback sending response to Mempool request")
+    }) {
+        error!(
+            "[shared mempool] failed to send back mempool response with error: {:?}",
             e
         );
     }
@@ -522,10 +522,8 @@ async fn inbound_network_task<V>(
         SubmitTransactionRequest,
         oneshot::Sender<Result<SubmitTransactionResponse>>,
     )>,
-    mut consensus_events: mpsc::Receiver<(
-        MempoolRequest,
-        oneshot::Sender<Result<MempoolResponse>>,
-    )>,
+    mut consensus_requests: mpsc::Receiver<GetBlockRequest>,
+    mut state_sync_requests: mpsc::Receiver<CommitNotification>,
     node_config: NodeConfig,
 ) where
     V: TransactionValidation,
@@ -554,14 +552,11 @@ async fn inbound_network_task<V>(
                 ))
                 .await;
             },
-            (mut msg, callback) = consensus_events.select_next_some() => {
-                bounded_executor
-                .spawn(process_consensus_request(
-                    smp.clone(),
-                    msg,
-                    callback,
-                ))
-                .await;
+            msg = consensus_requests.select_next_some() => {
+                process_consensus_request(smp.clone(), msg).await;
+            }
+            msg = state_sync_requests.select_next_some() => {
+                process_state_sync_request(smp.clone(), msg).await;
             },
             (network_id, event) = events.select_next_some() => {
                 match event {
@@ -663,7 +658,8 @@ pub(crate) fn start_shared_mempool<V>(
         SubmitTransactionRequest,
         oneshot::Sender<Result<SubmitTransactionResponse>>,
     )>,
-    consensus_events: mpsc::Receiver<(MempoolRequest, oneshot::Sender<Result<MempoolResponse>>)>,
+    consensus_requests: mpsc::Receiver<GetBlockRequest>,
+    state_sync_requests: mpsc::Receiver<CommitNotification>,
     storage_read_client: Arc<dyn StorageRead>,
     validator: Arc<V>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
@@ -705,7 +701,8 @@ pub(crate) fn start_shared_mempool<V>(
         executor.clone(),
         all_network_events,
         client_events,
-        consensus_events,
+        consensus_requests,
+        state_sync_requests,
         config_clone,
     ));
 
@@ -725,7 +722,8 @@ pub fn bootstrap(
         SubmitTransactionRequest,
         oneshot::Sender<Result<SubmitTransactionResponse>>,
     )>,
-    consensus_events: Receiver<(MempoolRequest, oneshot::Sender<Result<MempoolResponse>>)>,
+    consensus_requests: Receiver<GetBlockRequest>,
+    state_sync_requests: Receiver<CommitNotification>,
 ) -> Runtime {
     let runtime = Builder::new()
         .thread_name("shared-mem-")
@@ -748,7 +746,8 @@ pub fn bootstrap(
         mempool,
         mempool_network_handles,
         client_events,
-        consensus_events,
+        consensus_requests,
+        state_sync_requests,
         storage_client,
         vm_validator,
         vec![],

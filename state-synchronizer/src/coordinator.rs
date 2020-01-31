@@ -18,6 +18,7 @@ use futures::{
 use libra_config::config::RoleType;
 use libra_config::config::StateSyncConfig;
 use libra_logger::prelude::*;
+use libra_mempool::{CommitNotification, CommittedTransaction};
 use libra_types::crypto_proxies::ValidatorChangeProof;
 use libra_types::transaction::Version;
 use libra_types::{
@@ -31,6 +32,7 @@ use network::{
 use std::{
     collections::HashMap,
     convert::TryInto,
+    thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::time::interval;
@@ -80,6 +82,8 @@ struct PendingRequestInfo {
 pub(crate) struct SyncCoordinator<T> {
     // used to process client requests
     client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
+    // used to send messages (e.g. notifications about newly committed txns) to mempool
+    mempool_channel: mpsc::Sender<CommitNotification>,
     // Current state of the storage, which includes both the latest committed transaction and the
     // latest transaction covered by the LedgerInfo (see `SynchronizerState` documentation).
     // The state is updated via syncing with the local storage.
@@ -109,6 +113,7 @@ pub(crate) struct SyncCoordinator<T> {
 impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
+        mempool_channel: mpsc::Sender<CommitNotification>,
         role: RoleType,
         waypoint: Option<Waypoint>,
         config: StateSyncConfig,
@@ -123,6 +128,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         Self {
             client_events,
+            mempool_channel,
             local_state: initial_state,
             retry_timeout: Duration::from_millis(retry_timeout_val),
             config,
@@ -316,12 +322,60 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// As a result it might:
     /// 1) help remote subscribers with long poll requests, 2) finish local sync request
     async fn process_commit(&mut self) -> Result<()> {
+        let old_version = self.local_state.highest_version_in_local_storage();
+
         // We choose to re-sync the state with the storage as it's the simplest approach:
         // in case the performance implications of re-syncing upon every commit are high,
         // it's possible to manage some of the highest known versions in memory.
         self.sync_state_with_local_storage().await?;
         let local_version = self.local_state.highest_version_in_local_storage();
         counters::COMMITTED_VERSION.set(local_version as i64);
+        if old_version < local_version {
+            let committed_txns = self
+                .executor_proxy
+                .get_chunk(old_version, local_version - old_version + 1, local_version)
+                .await?;
+
+            let mut transactions = vec![];
+            //             filter out for signed transactions
+            for txn in committed_txns.transactions.into_iter() {
+                if let Ok(user_txn) = txn.as_signed_user_txn() {
+                    transactions.push(CommittedTransaction {
+                        sender: user_txn.sender(),
+                        sequence_number: user_txn.sequence_number(),
+                    });
+                }
+            }
+            let block_timestamp_usecs = self
+                .local_state
+                .highest_local_li
+                .ledger_info()
+                .timestamp_usecs();
+
+            // send notif to shared mempool
+            let (callback, callback_rcv) = oneshot::channel();
+            let req = CommitNotification {
+                transactions,
+                block_timestamp_usecs,
+                callback,
+            };
+            let mut mempool_channel = self.mempool_channel.clone();
+            thread::spawn(move || {
+                if let Err(e) = mempool_channel.try_send(req) {
+                    error!(
+                        "[state sync] failed to send commit notif to shared mempool: {:?}",
+                        e
+                    );
+                }
+                async {
+                    if let Err(e) = callback_rcv.await {
+                        error!(
+                        "[state sync] did not receive ACK for commit notification sent to mempool: {:?}", e
+                    )
+                    }
+                }
+            });
+        }
 
         self.check_subscriptions().await;
         self.peer_manager.remove_requests(local_version);

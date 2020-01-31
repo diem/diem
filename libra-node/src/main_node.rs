@@ -243,8 +243,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         metric_server::start_server(public_metric_host, public_metrics_port, true)
     });
 
+    // for state sync to send requests to mempool
+    let (mempool_channel, state_sync_requests) = channel(1_024);
     let state_synchronizer = StateSynchronizer::bootstrap(
         state_sync_network_handles,
+        mempool_channel,
         Arc::clone(&executor),
         &node_config,
     );
@@ -252,12 +255,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
 
     let mut consensus = None;
-    let (_, rcv) = channel(1_024); // TODO replace this placeholder with connection with state sync for full nodes
-    let mut consensus_events = rcv;
+    let (mempool_channel, consensus_requests) = channel(1_024);
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {
-        let (mempool_channel, consensus_mp_receiver) = channel(1_024);
-        consensus_events = consensus_mp_receiver;
-
         // Note: We need to start network provider before consensus, because the consensus
         // initialization is blocked on state synchronizer to sync to the initial root ledger
         // info, which in turn cannot make progress before network initialization
@@ -307,7 +306,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         node_config,
         mempool_network_handles,
         client_events,
-        consensus_events,
+        consensus_requests,
+        state_sync_requests,
     );
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 

@@ -61,6 +61,7 @@ impl SharedMempoolNetwork {
             let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
             let network_handles = vec![(peer_id, network_sender, network_events)];
             let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
+            let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
 
             let runtime = Builder::new()
                 .thread_name("shared-mem-")
@@ -75,6 +76,7 @@ impl SharedMempoolNetwork {
                 network_handles,
                 ac_endpoint_receiver,
                 consensus_events,
+                state_sync_events,
                 Arc::new(MockStorageReadClient),
                 Arc::new(MockVMValidator),
                 vec![sender],

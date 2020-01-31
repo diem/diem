@@ -1,23 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{counters, state_replication::TxnManager};
-use anyhow::{anyhow, Result};
-use executor::StateComputeResult;
+use crate::state_replication::TxnManager;
+use anyhow::Result;
 use futures::channel::{mpsc, oneshot};
-use libra_mempool::{CommittedTransaction, MempoolRequest, MempoolResponse, TransactionExclusion};
-use libra_types::transaction::{SignedTransaction, TransactionStatus};
+use libra_mempool::{GetBlockRequest, TransactionExclusion};
+use libra_types::transaction::SignedTransaction;
 
 /// Proxy interface to mempool
 #[derive(Clone)]
 pub struct MempoolProxy {
-    mempool_channel: mpsc::Sender<(MempoolRequest, oneshot::Sender<Result<MempoolResponse>>)>,
+    mempool_channel: mpsc::Sender<GetBlockRequest>,
 }
 
 impl MempoolProxy {
-    pub fn new(
-        mempool_channel: mpsc::Sender<(MempoolRequest, oneshot::Sender<Result<MempoolResponse>>)>,
-    ) -> Self {
+    pub fn new(mempool_channel: mpsc::Sender<GetBlockRequest>) -> Self {
         Self { mempool_channel }
     }
 }
@@ -41,74 +38,17 @@ impl TxnManager for MempoolProxy {
             }
         }
 
-        let req = MempoolRequest::GetBlockRequest {
+        let (callback, callback_recv) = oneshot::channel();
+        let req = GetBlockRequest {
             max_block_size: max_size,
             transactions: exclude_txns,
+            callback,
         };
-        let (callback_send, callback_recv) = oneshot::channel();
-
         // send to shared mempool
-        self.mempool_channel
-            .clone()
-            .try_send((req, callback_send))?;
-
+        self.mempool_channel.clone().try_send(req)?;
         // wait for response
         let resp = callback_recv.await??;
-        if let MempoolResponse::GetBlockResponse { transactions } = resp {
-            Ok(transactions)
-        } else {
-            Err(anyhow!(
-                "Consensus did not get GetBlockResponse as expected"
-            ))
-        }
-    }
-
-    async fn commit_txns(
-        &mut self,
-        txns: &Self::Payload,
-        compute_results: &StateComputeResult,
-        // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
-        timestamp_usecs: u64,
-    ) -> Result<()> {
-        counters::COMMITTED_BLOCKS_COUNT.inc();
-        counters::NUM_TXNS_PER_BLOCK.observe(txns.len() as f64);
-        let mut txns_commit = vec![];
-        for (txn, status) in txns.iter().zip(compute_results.compute_status.iter()) {
-            let is_rejected = match status {
-                TransactionStatus::Keep(_) => {
-                    counters::COMMITTED_TXNS_COUNT
-                        .with_label_values(&["success"])
-                        .inc();
-                    false
-                }
-                TransactionStatus::Discard(_) => {
-                    counters::COMMITTED_TXNS_COUNT
-                        .with_label_values(&["failed"])
-                        .inc();
-                    true
-                }
-            };
-            txns_commit.push(CommittedTransaction {
-                sender: txn.sender(),
-                sequence_number: txn.sequence_number(),
-                is_rejected,
-            });
-        }
-
-        let req = MempoolRequest::CommitTransactionsRequest {
-            transactions: txns_commit,
-            block_timestamp_usecs: timestamp_usecs,
-        };
-
-        let (callback_send, callback_recv) = oneshot::channel();
-
-        // send to shared mempool
-        self.mempool_channel
-            .clone()
-            .try_send((req, callback_send))?;
-        // wait for ACK
-        callback_recv.await??;
-        Ok(())
+        Ok(resp.transactions)
     }
 
     fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>> {

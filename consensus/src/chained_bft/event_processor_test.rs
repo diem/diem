@@ -188,7 +188,6 @@ impl NodeSetup {
             proposer_election,
             proposal_generator,
             safety_rules_manager.client(),
-            Box::new(MockTransactionManager::new().0),
             network,
             storage.clone(),
             time_service,
