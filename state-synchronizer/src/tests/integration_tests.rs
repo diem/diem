@@ -14,6 +14,7 @@ use libra_config::config::RoleType;
 use libra_crypto::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue};
 use libra_logger::set_simple_logger;
+use libra_mempool::CommitNotification;
 use libra_types::{
     block_info::BlockInfo,
     crypto_proxies::{
@@ -124,6 +125,7 @@ struct SynchronizerEnv {
     public_keys: Vec<ValidatorPublicKeys>,
     peer_ids: Vec<PeerId>,
     peer_addresses: Vec<Multiaddr>,
+    mempool_requests: Vec<futures::channel::mpsc::Receiver<CommitNotification>>,
 }
 
 impl SynchronizerEnv {
@@ -220,6 +222,7 @@ impl SynchronizerEnv {
         let runtime = Runtime::new().unwrap();
         let (signers, network_signers, public_keys) = Self::initial_setup(num_peers);
         let peer_ids = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();
+        let (_mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
 
         Self {
             runtime,
@@ -231,6 +234,7 @@ impl SynchronizerEnv {
             public_keys,
             peer_ids,
             peer_addresses: vec![],
+            mempool_requests: vec![mempool_requests],
         }
     }
 
@@ -308,13 +312,16 @@ impl SynchronizerEnv {
             genesis_li,
             self.signers[new_peer_idx].clone(),
         )));
+        let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
         let synchronizer = StateSynchronizer::bootstrap_with_executor_proxy(
             vec![(sender, events)],
+            mempool_channel,
             role,
             waypoint,
             &config.state_sync,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
         );
+        self.mempool_requests.push(mempool_requests);
         let client = synchronizer.create_client();
         self.synchronizers.push(synchronizer);
         self.clients.push(client);

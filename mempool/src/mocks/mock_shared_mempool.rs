@@ -55,6 +55,7 @@ pub fn mock_shared_mempool() -> (
     let (sender, _subscriber) = unbounded();
     let (ac_sender, client_events) = mpsc::channel(1_024);
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
+    let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
     let network_handles = vec![(peer_id, network_sender, network_events)];
 
     start_shared_mempool(
@@ -64,6 +65,7 @@ pub fn mock_shared_mempool() -> (
         network_handles,
         client_events,
         consensus_events,
+        state_sync_events,
         Arc::new(MockStorageReadClient),
         Arc::new(MockVMValidator),
         vec![sender],

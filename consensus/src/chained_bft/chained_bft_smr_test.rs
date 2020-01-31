@@ -537,13 +537,6 @@ fn basic_state_sync() {
         playground
             .wait_for_messages(3, NetworkPlayground::proposals_only)
             .await;
-        // Verify that node 3 has notified its mempool about the committed txn of next block.
-        nodes[3]
-            .mempool_notif_receiver
-            .next()
-            .await
-            .expect("Fail to be notified by a mempool committed txns");
-        assert_eq!(nodes[3].mempool.get_committed_txns().len(), 100);
     });
 }
 

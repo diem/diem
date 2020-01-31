@@ -4,7 +4,7 @@
 use anyhow::Result;
 use consensus_types::block::Block;
 use consensus_types::executed_block::ExecutedBlock;
-use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
+use executor::{ExecutedTrees, ProcessedVMOutput};
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof};
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
@@ -20,16 +20,6 @@ pub trait TxnManager: Send + Sync {
         max_size: u64,
         exclude_txns: Vec<&Self::Payload>,
     ) -> Result<Self::Payload>;
-
-    /// Notifies TxnManager about the payload of the committed block including the state compute
-    /// result, which includes the specifics of what transactions succeeded and failed.
-    async fn commit_txns(
-        &mut self,
-        txns: &Self::Payload,
-        compute_result: &StateComputeResult,
-        // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
-        timestamp_usecs: u64,
-    ) -> Result<()>;
 
     /// Bypass the trait object non-clonable limit.
     fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>>;

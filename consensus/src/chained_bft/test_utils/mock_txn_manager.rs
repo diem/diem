@@ -3,8 +3,7 @@
 
 use crate::state_replication::TxnManager;
 use anyhow::Result;
-use executor::StateComputeResult;
-use futures::{channel::mpsc, SinkExt};
+use futures::channel::mpsc;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc, RwLock,
@@ -53,24 +52,6 @@ impl TxnManager for MockTransactionManager {
         let res = (next_value..upper_bound).collect();
         self.next_val.store(upper_bound, Ordering::SeqCst);
         Ok(res)
-    }
-
-    async fn commit_txns(
-        &mut self,
-        txns: &Self::Payload,
-        _compute_result: &StateComputeResult,
-        _timestamp_usecs: u64,
-    ) -> Result<()> {
-        let committed_tns = txns.clone();
-        for txn in committed_tns {
-            self.committed_txns.write().unwrap().push(txn);
-        }
-        let len = self.committed_txns.read().unwrap().len();
-        self.commit_sender
-            .send(len)
-            .await
-            .expect("Failed to notify about mempool commit");
-        Ok(())
     }
 
     fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>> {

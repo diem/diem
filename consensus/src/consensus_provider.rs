@@ -8,9 +8,9 @@ use crate::{
 };
 use anyhow::Result;
 use executor::Executor;
-use futures::channel::{mpsc, oneshot};
+use futures::channel::mpsc;
 use libra_config::config::NodeConfig;
-use libra_mempool::{MempoolRequest, MempoolResponse};
+use libra_mempool::GetBlockRequest;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
@@ -37,7 +37,7 @@ pub fn make_consensus_provider(
     network_receiver: ConsensusNetworkEvents,
     executor: Arc<Executor<LibraVM>>,
     state_sync_client: Arc<StateSyncClient>,
-    mempool_channel: mpsc::Sender<(MempoolRequest, oneshot::Sender<Result<MempoolResponse>>)>,
+    mempool_channel: mpsc::Sender<GetBlockRequest>,
 ) -> Box<dyn ConsensusProvider> {
     let storage = Arc::new(StorageWriteProxy::new(node_config));
     let txn_manager = Box::new(MempoolProxy::new(mempool_channel));

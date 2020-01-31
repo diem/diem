@@ -17,7 +17,6 @@ use crate::{
         },
     },
     counters,
-    state_replication::TxnManager,
     util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
@@ -38,8 +37,9 @@ use consensus_types::{
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_prost_ext::MessageExt;
-use libra_types::crypto_proxies::{
-    LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier,
+use libra_types::{
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier},
+    transaction::TransactionStatus,
 };
 use network::proto::{ConsensusMsg, ConsensusMsg_oneof};
 
@@ -146,7 +146,6 @@ pub struct EventProcessor<T> {
     proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
     proposal_generator: ProposalGenerator<T>,
     safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
-    txn_manager: Box<dyn TxnManager<Payload = T>>,
     network: NetworkSender,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     time_service: Arc<dyn TimeService>,
@@ -163,7 +162,6 @@ impl<T: Payload> EventProcessor<T> {
         proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<T>,
         safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
-        txn_manager: Box<dyn TxnManager<Payload = T>>,
         network: NetworkSender,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
         time_service: Arc<dyn TimeService>,
@@ -184,7 +182,6 @@ impl<T: Payload> EventProcessor<T> {
             proposer_election,
             proposal_generator,
             safety_rules,
-            txn_manager,
             network,
             storage,
             time_service,
@@ -831,10 +828,7 @@ impl<T: Payload> EventProcessor<T> {
         .await
     }
 
-    /// Upon (potentially) new commit:
-    /// 1. Commit the blocks via block store.
-    /// 2. After the state is finalized, update the txn manager with the status of the committed
-    /// transactions.
+    /// Upon (potentially) new commit, commit the blocks via block store.
     async fn process_commit(&mut self, finality_proof: LedgerInfoWithSignatures) {
         let blocks_to_commit = match self.block_store.commit(finality_proof.clone()).await {
             Ok(blocks) => blocks,
@@ -843,26 +837,51 @@ impl<T: Payload> EventProcessor<T> {
                 return;
             }
         };
-        // At this moment the new state is persisted and we can notify the clients.
-        // Multiple blocks might be committed at once: notify about all the transactions in the
-        // path from the old root to the new root.
-        for committed in blocks_to_commit {
-            if let Some(time_to_commit) = duration_since_epoch()
-                .checked_sub(Duration::from_micros(committed.timestamp_usecs()))
+
+        // update counters
+        for block in blocks_to_commit {
+            if let Some(time_to_commit) =
+                duration_since_epoch().checked_sub(Duration::from_micros(block.timestamp_usecs()))
             {
                 counters::CREATION_TO_COMMIT_S.observe_duration(time_to_commit);
             }
-            if let Some(payload) = committed.payload() {
-                let compute_result = committed.compute_result();
-                if let Err(e) = self
-                    .txn_manager
-                    .commit_txns(payload, &compute_result, committed.timestamp_usecs())
-                    .await
-                {
-                    error!("Failed to notify mempool: {:?}", e);
+            counters::COMMITTED_BLOCKS_COUNT.inc();
+            let block_txns = block.output().transaction_data();
+            counters::NUM_TXNS_PER_BLOCK.observe(block_txns.len() as f64);
+
+            for txn in block_txns.iter() {
+                match txn.txn_info_hash() {
+                    Some(_) => {
+                        counters::COMMITTED_TXNS_COUNT
+                            .with_label_values(&["success"])
+                            .inc();
+                    }
+                    None => {
+                        counters::COMMITTED_TXNS_COUNT
+                            .with_label_values(&["failed"])
+                            .inc();
+                    }
+                }
+            }
+            for status in block.compute_result().compute_status.iter() {
+                match status {
+                    TransactionStatus::Keep(_) => {
+                        counters::COMMITTED_TXNS_COUNT
+                            .with_label_values(&["success"])
+                            .inc();
+                    }
+                    TransactionStatus::Discard(_) => {
+                        counters::COMMITTED_TXNS_COUNT
+                            .with_label_values(&["failed"])
+                            .inc();
+                    }
                 }
             }
         }
+
+        // At this moment the new state is persisted and we can notify the clients.
+        // Multiple blocks might be committed at once: notify about all the transactions in the
+        // path from the old root to the new root.
         if finality_proof.ledger_info().next_validator_set().is_some() {
             self.network
                 .broadcast_epoch_change(ValidatorChangeProof::new(
