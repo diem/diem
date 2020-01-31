@@ -37,6 +37,9 @@ pub trait PersistentStorage<T>: Send + Sync {
     /// Persist consensus' state
     fn save_state(&self, vote: &Vote) -> Result<()>;
 
+    /// Construct data that can be recovered from ledger
+    async fn recover_from_ledger(&self) -> LedgerRecoveryData<T>;
+
     /// Construct necessary data to start consensus.
     async fn start(&self) -> RecoveryData<T>;
 
@@ -45,13 +48,57 @@ pub trait PersistentStorage<T>: Send + Sync {
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()>;
 }
 
+#[derive(Clone)]
+pub struct RootInfo<T>(pub Block<T>, pub QuorumCert, pub QuorumCert);
+
+/// LedgerRecoveryData is a subset of RecoveryData that we can get solely from ledger info
+/// In the case of an epoch boundary ledger info(i.e. it has validator set), we generate the virtual genesis block.
+pub struct LedgerRecoveryData<T> {
+    validators: Arc<ValidatorVerifier>,
+    validator_keys: ValidatorSet,
+    genesis_root: Option<RootInfo<T>>,
+}
+
+impl<T: Payload> LedgerRecoveryData<T> {
+    pub fn new(storage_ledger: &LedgerInfo, validator_keys: ValidatorSet) -> Self {
+        let genesis_root = if storage_ledger.next_validator_set().is_some() {
+            let genesis_block = Block::make_genesis_block_from_ledger_info(storage_ledger);
+            let genesis_qc = QuorumCert::certificate_for_genesis_from_ledger_info(
+                storage_ledger,
+                genesis_block.id(),
+            );
+            Some(RootInfo(genesis_block, genesis_qc.clone(), genesis_qc))
+        } else {
+            None
+        };
+
+        LedgerRecoveryData {
+            validators: Arc::new((&validator_keys).into()),
+            validator_keys,
+            genesis_root,
+        }
+    }
+
+    pub fn genesis_root(&self) -> Option<RootInfo<T>> {
+        self.genesis_root.clone()
+    }
+
+    pub fn validators(&self) -> Arc<ValidatorVerifier> {
+        Arc::clone(&self.validators)
+    }
+
+    pub fn validator_keys(&self) -> ValidatorSet {
+        self.validator_keys.clone()
+    }
+}
+
 /// The recovery data constructed from raw consensusdb data, it'll find the root value and
 /// blocks that need cleanup or return error if the input data is inconsistent.
 pub struct RecoveryData<T> {
     epoch: u64,
     // The last vote message sent by this validator.
     last_vote: Option<Vote>,
-    root: (Block<T>, QuorumCert, QuorumCert),
+    root: RootInfo<T>,
     root_executed_trees: ExecutedTrees,
     // 1. the blocks guarantee the topological ordering - parent <- child.
     // 2. all blocks are children of the root.
@@ -68,15 +115,24 @@ pub struct RecoveryData<T> {
 impl<T: Payload> RecoveryData<T> {
     pub fn new(
         last_vote: Option<Vote>,
+        ledger_recovery_data: LedgerRecoveryData<T>,
         mut blocks: Vec<Block<T>>,
         mut quorum_certs: Vec<QuorumCert>,
         storage_ledger: &LedgerInfo,
         root_executed_trees: ExecutedTrees,
         highest_timeout_certificate: Option<TimeoutCertificate>,
-        validator_keys: ValidatorSet,
     ) -> Result<Self> {
-        let root =
-            Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|| {
+        let genesis_root = ledger_recovery_data.genesis_root();
+        let validators = ledger_recovery_data.validators();
+        let validator_keys = ledger_recovery_data.validator_keys();
+        let root = match genesis_root {
+            Some(root) => root,
+            None => Self::find_root(
+                &mut blocks,
+                &mut quorum_certs,
+                storage_ledger.consensus_block_id(),
+            )
+            .with_context(|| {
                 // for better readability
                 quorum_certs.sort_by_key(|qc| qc.certified_block().round());
                 format!(
@@ -92,7 +148,8 @@ impl<T: Payload> RecoveryData<T> {
                         .collect::<Vec<String>>()
                         .concat(),
                 )
-            })?;
+            })?,
+        };
 
         let blocks_to_prune = Some(Self::find_blocks_to_prune(
             root.0.id(),
@@ -115,7 +172,7 @@ impl<T: Payload> RecoveryData<T> {
                 Some(tc) if tc.epoch() == epoch => Some(tc),
                 _ => None,
             },
-            validators: Arc::new((&validator_keys).into()),
+            validators,
             validator_keys,
         })
     }
@@ -132,14 +189,7 @@ impl<T: Payload> RecoveryData<T> {
         self.last_vote.clone()
     }
 
-    pub fn take(
-        self,
-    ) -> (
-        (Block<T>, QuorumCert, QuorumCert),
-        ExecutedTrees,
-        Vec<Block<T>>,
-        Vec<QuorumCert>,
-    ) {
+    pub fn take(self) -> (RootInfo<T>, ExecutedTrees, Vec<Block<T>>, Vec<QuorumCert>) {
         (
             self.root,
             self.root_executed_trees,
@@ -170,31 +220,15 @@ impl<T: Payload> RecoveryData<T> {
     /// and the ledger info for the root block, return an error if it can not be found.
     ///
     /// We guarantee that the block corresponding to the storage's latest ledger info always exists.
-    /// In the case of an epoch boundary ledger info(i.e. it has validator set), we generate the virtual genesis block.
     fn find_root(
         blocks: &mut Vec<Block<T>>,
         quorum_certs: &mut Vec<QuorumCert>,
-        storage_ledger: &LedgerInfo,
-    ) -> Result<(Block<T>, QuorumCert, QuorumCert)> {
-        let root_from_storage = storage_ledger.consensus_block_id();
+        root_id: HashValue,
+    ) -> Result<RootInfo<T>> {
         info!(
             "The last committed block id as recorded in storage: {}",
-            root_from_storage
+            root_id
         );
-
-        // We start from the block that storage's latest ledger info, if storage has end-epoch
-        // LedgerInfo, we generate the virtual genesis block
-        let root_id = if storage_ledger.next_validator_set().is_some() {
-            let genesis = Block::make_genesis_block_from_ledger_info(storage_ledger);
-            let genesis_qc =
-                QuorumCert::certificate_for_genesis_from_ledger_info(storage_ledger, genesis.id());
-            let genesis_id = genesis.id();
-            blocks.push(genesis);
-            quorum_certs.push(genesis_qc);
-            genesis_id
-        } else {
-            storage_ledger.consensus_block_id()
-        };
 
         // sort by (epoch, round) to guarantee the topological order of parent <- child
         blocks.sort_by_key(|b| (b.epoch(), b.round()));
@@ -217,7 +251,7 @@ impl<T: Payload> RecoveryData<T> {
 
         info!("Consensus root block is {}", root_block);
 
-        Ok((root_block, root_quorum_cert, root_ledger_info))
+        Ok(RootInfo(root_block, root_quorum_cert, root_ledger_info))
     }
 
     fn find_blocks_to_prune(
@@ -278,6 +312,20 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         self.db.save_state(lcs::to_bytes(vote)?)
     }
 
+    async fn recover_from_ledger(&self) -> LedgerRecoveryData<T> {
+        let startup_info = self
+            .read_client
+            .get_startup_info()
+            .await
+            .expect("unable to read ledger info from storage")
+            .expect("startup info is None");
+
+        LedgerRecoveryData::new(
+            startup_info.latest_ledger_info.ledger_info(),
+            startup_info.get_validator_set().clone(),
+        )
+    }
+
     async fn start(&self) -> RecoveryData<T> {
         info!("Start consensus recovery.");
         let raw_data = self
@@ -316,15 +364,17 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
         let validator_set = startup_info.get_validator_set().clone();
+        let ledger_recovery_data =
+            LedgerRecoveryData::new(startup_info.latest_ledger_info.ledger_info(), validator_set);
         let root_executed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
         let mut initial_data = RecoveryData::new(
             last_vote,
+            ledger_recovery_data,
             blocks,
             quorum_certs,
             startup_info.latest_ledger_info.ledger_info(),
             root_executed_trees,
             highest_timeout_certificate,
-            validator_set,
         )
         .expect("Cannot construct recovery data");
 

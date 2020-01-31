@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::{block_tree::BlockTree, BlockReader},
-        persistent_storage::{PersistentStorage, RecoveryData},
+        persistent_storage::{PersistentStorage, RecoveryData, RootInfo},
     },
     counters,
     state_replication::StateComputer,
@@ -85,7 +85,7 @@ impl<T: Payload> BlockStore<T> {
     }
 
     fn build_block_tree(
-        root: (Block<T>, QuorumCert, QuorumCert),
+        root: RootInfo<T>,
         root_executed_trees: ExecutedTrees,
         blocks: Vec<Block<T>>,
         quorum_certs: Vec<QuorumCert>,
@@ -93,7 +93,7 @@ impl<T: Payload> BlockStore<T> {
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         max_pruned_blocks_in_mem: usize,
     ) -> BlockTree<T> {
-        let (root_block, root_qc, root_li) = (root.0, root.1, root.2);
+        let RootInfo(root_block, root_qc, root_li) = root;
         assert_eq!(
             root_qc.certified_block().version(),
             root_executed_trees.version().unwrap_or(0),
@@ -195,7 +195,7 @@ impl<T: Payload> BlockStore<T> {
 
     pub async fn rebuild(
         &self,
-        root: (Block<T>, QuorumCert, QuorumCert),
+        root: RootInfo<T>,
         root_executed_trees: ExecutedTrees,
         blocks: Vec<Block<T>>,
         quorum_certs: Vec<QuorumCert>,
