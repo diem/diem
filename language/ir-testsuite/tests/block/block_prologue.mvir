@@ -10,6 +10,9 @@ main() {
     return;
 }
 
+// check: NewBlockEvent
+// check: 1000000
+
 //! new-transaction
 import 0x0.LibraSystem;
 import 0x0.LibraTimestamp;

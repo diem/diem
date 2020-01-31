@@ -17,6 +17,12 @@ module LibraSystem {
         new_validator_set: Vector.T<Self.ValidatorInfo>,
     }
 
+    struct NewBlockEvent {
+        height: u64,
+        // On-chain time during the block at the given height
+        time_microseconds: u64,
+    }
+
     resource ValidatorSet {
         // The current validator set. Updated only at epoch boundaries via reconfiguration.
         validators: Vector.T<Self.ValidatorInfo>,
@@ -57,6 +63,9 @@ module LibraSystem {
 
       // Proposer of the current block.
       proposer: address,
+
+      // Handle where events with the time of new blocks are emitted
+      new_block_events: LibraAccount.EventHandle<Self.NewBlockEvent>,
     }
 
     resource TransactionFees {
@@ -101,6 +110,7 @@ module LibraSystem {
         height: 0,
         id: h"",
         proposer: 0xA550C18,
+        new_block_events: LibraAccount.new_event_handle<Self.NewBlockEvent>(),
       });
       LibraTimestamp.initialize_timer();
 
@@ -181,6 +191,7 @@ module LibraSystem {
         proposer: address
     ) acquires BlockMetadata, ValidatorSet {
         let block_metadata_ref: &mut Self.BlockMetadata;
+        let height: u64;
 
         block_metadata_ref = borrow_global_mut<BlockMetadata>(0xA550C18);
 
@@ -188,11 +199,20 @@ module LibraSystem {
         if(copy(proposer) != 0x0) {
             assert(Self.is_validator(copy(proposer)), 5002);
         }
-        LibraTimestamp.update_global_time(copy(proposer), move(timestamp));
+        LibraTimestamp.update_global_time(copy(proposer), copy(timestamp));
+        height = *(&copy(block_metadata_ref).height) + 1;
 
         *(&mut copy(block_metadata_ref).id) = move(new_block_hash);
         *(&mut copy(block_metadata_ref).proposer) = move(proposer);
-        *(&mut move(block_metadata_ref).height) = *(&copy(block_metadata_ref).height) + 1;
+        *(&mut copy(block_metadata_ref).height) = copy(height);
+
+        LibraAccount.emit_event<Self.NewBlockEvent>(
+            &mut move(block_metadata_ref).new_block_events,
+            NewBlockEvent {
+                height: move(height),
+                time_microseconds: move(timestamp),
+            }
+        );
         return;
     }
 
