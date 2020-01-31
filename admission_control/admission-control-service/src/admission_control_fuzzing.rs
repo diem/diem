@@ -38,8 +38,8 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 /// service
 pub fn fuzzer(data: &[u8]) {
     // set up AC backed by SMP
-    let (_runtime, ac_sender) = mock_shared_mempool();
-    let ac_service = AdmissionControlService::new(ac_sender, Arc::new(MockStorageReadClient));
+    let smp = mock_shared_mempool(None);
+    let ac_service = AdmissionControlService::new(smp.ac_client, Arc::new(MockStorageReadClient));
 
     // parse SubmitTransactionRequest
     let req = match SubmitTransactionRequest::decode(data) {

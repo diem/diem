@@ -4,15 +4,17 @@
 use crate::SynchronizerState;
 use anyhow::{bail, Result};
 use executor::ExecutedTrees;
-use libra_crypto::hash::CryptoHash;
-use libra_crypto::HashValue;
-use libra_types::block_info::BlockInfo;
-use libra_types::crypto_proxies::ValidatorSet;
-use libra_types::crypto_proxies::{ValidatorChangeProof, ValidatorSigner, ValidatorVerifier};
+use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
-    account_address::AccountAddress, crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo, test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::Transaction,
+    account_address::AccountAddress,
+    block_info::BlockInfo,
+    crypto_proxies::{
+        LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorSet, ValidatorSigner,
+        ValidatorVerifier,
+    },
+    ledger_info::LedgerInfo,
+    test_helpers::transaction_test_helpers::get_test_signed_txn,
+    transaction::{SignedTransaction, Transaction},
 };
 use std::collections::{BTreeMap, HashMap};
 use transaction_builder::encode_transfer_script;
@@ -146,11 +148,19 @@ impl MockStorage {
 
     // Generate new dummy txns and updates the LI
     // with the version corresponding to the new transactions, signed by this storage signer.
-    pub fn commit_new_txns(&mut self, num_txns: u64) {
+    pub fn commit_new_txns(&mut self, num_txns: u64) -> (Vec<Transaction>, Vec<SignedTransaction>) {
+        let mut committed_txns = vec![];
+        let mut signed_txns = vec![];
         for _ in 0..num_txns {
-            self.add_txns(&mut vec![Self::gen_mock_user_txn()]);
+            let txn = Self::gen_mock_user_txn();
+            self.add_txns(&mut vec![txn.clone()]);
+            committed_txns.push(txn.clone());
+            if let Transaction::UserTransaction(signed_txn) = txn {
+                signed_txns.push(signed_txn);
+            }
         }
         self.add_li(None);
+        (committed_txns, signed_txns)
     }
 
     fn gen_mock_user_txn() -> Transaction {

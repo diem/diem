@@ -17,15 +17,14 @@ use network::validator_network::{
     network_builder::{NetworkBuilder, TransportType},
 };
 use state_synchronizer::StateSynchronizer;
-use std::collections::HashMap;
-use std::net::ToSocketAddrs;
-use std::{sync::Arc, thread, time::Instant};
+use std::{collections::HashMap, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
 use vm_runtime::LibraVM;
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
+const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
 
 pub struct LibraHandle {
     _ac: Runtime,
@@ -225,8 +224,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         metric_server::start_server(public_metric_host, public_metrics_port, true)
     });
 
+    // for state sync to send requests to mempool
+    let (state_sync_to_mempool_sender, state_sync_requests) =
+        channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
     let state_synchronizer = StateSynchronizer::bootstrap(
         state_sync_network_handles,
+        state_sync_to_mempool_sender,
         Arc::clone(&executor),
         &node_config,
     );
@@ -234,12 +237,9 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
 
     let mut consensus = None;
-    let (_, rcv) = channel(1_024); // TODO replace this placeholder with connection with state sync for full nodes
-    let mut consensus_events = rcv;
-    if let Some((peer_id, runtime, mut network_builder)) = validator_network_provider {
-        let (mempool_channel, consensus_mp_receiver) = channel(1_024);
-        consensus_events = consensus_mp_receiver;
+    let (consensus_to_mempool_sender, consensus_requests) = channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
 
+    if let Some((peer_id, runtime, mut network_builder)) = validator_network_provider {
         // Note: We need to start network provider before consensus, because the consensus
         // initialization is blocked on state synchronizer to sync to the initial root ledger
         // info, which in turn cannot make progress before network initialization
@@ -272,7 +272,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             consensus_network_events,
             executor,
             state_synchronizer.create_client(),
-            mempool_channel,
+            consensus_to_mempool_sender,
         );
         consensus_provider
             .start()
@@ -286,7 +286,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         node_config,
         mempool_network_handles,
         client_events,
-        consensus_events,
+        consensus_requests,
+        state_sync_requests,
     );
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 

@@ -13,8 +13,7 @@ pub mod utils;
 
 use anyhow::{bail, ensure, format_err, Result};
 use futures::executor::block_on;
-use libra_config::config::NodeConfig;
-use libra_config::config::VMConfig;
+use libra_config::config::{NodeConfig, VMConfig};
 use libra_crypto::{
     hash::{
         CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher,
@@ -23,9 +22,9 @@ use libra_crypto::{
     HashValue,
 };
 use libra_logger::prelude::*;
-use libra_types::account_state::AccountState;
 use libra_types::{
     account_address::AccountAddress,
+    account_state::AccountState,
     account_state_blob::AccountStateBlob,
     block_info::{BlockInfo, Round},
     contract_event::ContractEvent,
@@ -437,13 +436,16 @@ where
     /// ```
     /// and only `C` and `E` have signatures, we will send `A`, `B` and `C` in the first batch,
     /// then `D` and `E` later in the another batch.
-    /// Commits a block and all its ancestors in a batch manner. Returns `Ok(())` if successful.
+    /// Commits a block and all its ancestors in a batch manner.
+    ///
+    /// Returns `Ok(Result<Vec<Transaction>>)` if successful, where Vec<Transaction>
+    /// is a vector of transactions that were kept in the submitted blocks
     pub fn commit_blocks(
         &self,
         blocks: Vec<(Vec<Transaction>, Arc<ProcessedVMOutput>)>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         synced_trees: &ExecutedTrees,
-    ) -> Result<()> {
+    ) -> Result<Vec<Transaction>> {
         debug!(
             "Received request to commit block {:x}.",
             ledger_info_with_sigs.ledger_info().consensus_block_id()
@@ -454,6 +456,7 @@ where
         // transactions in A, B and C whose status == TransactionStatus::Keep.
         // This must be done before calculate potential skipping of transactions in idempotent commit.
         let mut txns_to_keep = vec![];
+        let mut blocks_txns = vec![];
         for (txn, txn_data) in blocks
             .iter()
             .map(|block| itertools::zip_eq(&block.0, block.1.transaction_data()))
@@ -470,6 +473,7 @@ where
                     ),
                     txn_data.num_account_created(),
                 ));
+                blocks_txns.push(txn.clone());
             }
         }
 
@@ -548,7 +552,7 @@ where
             }
         }
         // Now that the blocks are persisted successfully, we can reply to consensus
-        Ok(())
+        Ok(blocks_txns)
     }
 
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions

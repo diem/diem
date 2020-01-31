@@ -1,24 +1,26 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{counters, state_replication::TxnManager};
-use anyhow::{anyhow, Result};
+use crate::state_replication::TxnManager;
+use anyhow::{format_err, Result};
 use executor::StateComputeResult;
 use futures::channel::{mpsc, oneshot};
-use libra_mempool::{CommittedTransaction, MempoolRequest, MempoolResponse, TransactionExclusion};
-use libra_types::transaction::{SignedTransaction, TransactionStatus};
+use libra_mempool::{ConsensusRequest, ConsensusResponse, TransactionExclusion};
+use libra_types::transaction::SignedTransaction;
+use std::time::Duration;
+use tokio::time::timeout;
 
 /// Proxy interface to mempool
 #[derive(Clone)]
 pub struct MempoolProxy {
-    mempool_channel: mpsc::Sender<(MempoolRequest, oneshot::Sender<Result<MempoolResponse>>)>,
+    consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
 }
 
 impl MempoolProxy {
-    pub fn new(
-        mempool_channel: mpsc::Sender<(MempoolRequest, oneshot::Sender<Result<MempoolResponse>>)>,
-    ) -> Self {
-        Self { mempool_channel }
+    pub fn new(consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>) -> Self {
+        Self {
+            consensus_to_mempool_sender,
+        }
     }
 }
 
@@ -40,75 +42,34 @@ impl TxnManager for MempoolProxy {
                 });
             }
         }
-
-        let req = MempoolRequest::GetBlockRequest {
-            max_block_size: max_size,
-            transactions: exclude_txns,
-        };
-        let (callback_send, callback_recv) = oneshot::channel();
-
+        let (callback, callback_rcv) = oneshot::channel();
+        let req = ConsensusRequest::GetBlockRequest(max_size, exclude_txns, callback);
         // send to shared mempool
-        self.mempool_channel
-            .clone()
-            .try_send((req, callback_send))?;
-
+        self.consensus_to_mempool_sender.clone().try_send(req)?;
         // wait for response
-        let resp = callback_recv.await??;
-        if let MempoolResponse::GetBlockResponse { transactions } = resp {
-            Ok(transactions)
-        } else {
-            Err(anyhow!(
-                "Consensus did not get GetBlockResponse as expected"
-            ))
+        match timeout(Duration::from_secs(1), callback_rcv).await {
+            Err(_) => Err(format_err!(
+                "[consensus] did not receive GetBlockResponse on time"
+            )),
+            Ok(resp) => match resp?? {
+                ConsensusResponse::GetBlockResponse(txns) => Ok(txns),
+                _ => Err(format_err!(
+                    "[consensus] did not receive expected GetBlockResponse"
+                )),
+            },
         }
     }
 
+    // Consensus notifies mempool of committed transactions that were rejected
     async fn commit_txns(
         &mut self,
-        txns: &Self::Payload,
-        compute_results: &StateComputeResult,
+        _txns: &Self::Payload,
+        _compute_results: &StateComputeResult,
         // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
-        timestamp_usecs: u64,
+        _timestamp_usecs: u64,
     ) -> Result<()> {
-        counters::COMMITTED_BLOCKS_COUNT.inc();
-        counters::NUM_TXNS_PER_BLOCK.observe(txns.len() as f64);
-        let mut txns_commit = vec![];
-        for (txn, status) in txns.iter().zip(compute_results.compute_status.iter()) {
-            let is_rejected = match status {
-                TransactionStatus::Keep(_) => {
-                    counters::COMMITTED_TXNS_COUNT
-                        .with_label_values(&["success"])
-                        .inc();
-                    false
-                }
-                TransactionStatus::Discard(_) => {
-                    counters::COMMITTED_TXNS_COUNT
-                        .with_label_values(&["failed"])
-                        .inc();
-                    true
-                }
-            };
-            txns_commit.push(CommittedTransaction {
-                sender: txn.sender(),
-                sequence_number: txn.sequence_number(),
-                is_rejected,
-            });
-        }
-
-        let req = MempoolRequest::CommitTransactionsRequest {
-            transactions: txns_commit,
-            block_timestamp_usecs: timestamp_usecs,
-        };
-
-        let (callback_send, callback_recv) = oneshot::channel();
-
-        // send to shared mempool
-        self.mempool_channel
-            .clone()
-            .try_send((req, callback_send))?;
-        // wait for ACK
-        callback_recv.await??;
-        Ok(())
+        // TODO notify mempool of rejected txns here
+        unimplemented!();
     }
 
     fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>> {

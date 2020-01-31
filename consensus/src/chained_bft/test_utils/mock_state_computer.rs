@@ -17,6 +17,7 @@ use std::sync::Arc;
 use termion::color::*;
 
 pub struct MockStateComputer {
+    state_sync_client: mpsc::UnboundedSender<Vec<usize>>,
     commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
     consensus_db: Arc<MockStorage<TestPayload>>,
     reconfig: Option<ValidatorSet>,
@@ -24,11 +25,13 @@ pub struct MockStateComputer {
 
 impl MockStateComputer {
     pub fn new(
+        state_sync_client: mpsc::UnboundedSender<Vec<usize>>,
         commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
         consensus_db: Arc<MockStorage<TestPayload>>,
         reconfig: Option<ValidatorSet>,
     ) -> Self {
         MockStateComputer {
+            state_sync_client,
             commit_callback,
             consensus_db,
             reconfig,
@@ -54,12 +57,24 @@ impl StateComputer for MockStateComputer {
 
     async fn commit(
         &self,
-        _blocks: Vec<&ExecutedBlock<Self::Payload>>,
+        blocks: Vec<&ExecutedBlock<Self::Payload>>,
         commit: LedgerInfoWithSignatures,
         _synced_trees: &ExecutedTrees,
     ) -> Result<()> {
         self.consensus_db
             .commit_to_storage(commit.ledger_info().clone());
+
+        // mock sending commit notif to state sync
+        let mut txns = vec![];
+        for block in blocks {
+            let payload = block.payload();
+            if let Some(inner) = payload {
+                txns.append(&mut inner.clone());
+            }
+        }
+        self.state_sync_client
+            .unbounded_send(txns)
+            .expect("Fail to notify state sync about commit");
 
         self.commit_callback
             .unbounded_send(commit)
