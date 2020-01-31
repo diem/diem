@@ -609,6 +609,31 @@ where
 
         // Since we have verified the proofs, we just need to verify that each TransactionInfo
         // object matches what we have computed locally.
+        for (txn_info_in_proof, (i, txn_data)) in itertools::zip_eq(
+            txn_list_with_proof
+                .proof
+                .transaction_infos()
+                .iter()
+                .skip(num_txns_to_skip as usize),
+            output.transaction_data().iter().enumerate(),
+        ) {
+            ensure!(
+                txn_info_in_proof.state_root_hash() == txn_data.state_root_hash(),
+                "State root hash does not match for {}-th transaction in chunk.",
+                i,
+            );
+            ensure!(
+                txn_info_in_proof.event_root_hash() == txn_data.event_root_hash(),
+                "Event root hash does not match for {}-th transaction in chunk.",
+                i,
+            );
+            ensure!(
+                txn_info_in_proof.gas_used() == txn_data.gas_used(),
+                "Gas used does not match for {}-th transaction in chunk.",
+                i,
+            );
+        }
+
         let mut txns_to_commit = vec![];
         for (txn, txn_data) in itertools::zip_eq(transactions, output.transaction_data()) {
             txns_to_commit.push(TransactionToCommit::new(
