@@ -604,9 +604,7 @@ impl ClusterTestRunner {
                             bail!("Experiment deadline reached");
                         }
                         result = run_future => {
-                            result
-                                .expect("Failed to run experiment");
-                                return Ok(());
+                            return result.map_err(|e|format_err!("Failed to run experiment: {}", e));
                         }
                         delay = delay_for(HEALTH_POLL_INTERVAL).fuse() => {
                             let events = logs.recv_all();
@@ -622,39 +620,6 @@ impl ClusterTestRunner {
                 }
             })?;
         }
-        //        let mut experiment_handle = self
-        //            .runtime
-        //            .spawn(async move { experiment.run(&mut context).await });
-        //
-        //        // We expect experiments completes and cluster go into healthy state within timeout
-        //        let experiment_deadline = Instant::now() + deadline;
-        //        let mut task_context = task::Context::from_waker(noop_waker_ref());
-        //        loop {
-        //            if Instant::now() > experiment_deadline {
-        //                bail!("Experiment did not complete in time");
-        //            }
-        //            let deadline = Instant::now() + HEALTH_POLL_INTERVAL;
-        //            // Receive all events that arrived to aws log tail within next 1 second
-        //            // This assumes so far that event propagation time is << 1s, this need to be refined
-        //            // in future to account for actual event propagation delay
-        //            let events = self.logs.recv_all_until_deadline(deadline);
-        //            if let Err(s) = self.health_check_runner.run(
-        //                &events,
-        //                &affected_validators,
-        //                PrintFailures::UnexpectedOnly,
-        //            ) {
-        //                bail!("Validators which were not under experiment failed : {}", s);
-        //            }
-        //            match experiment_handle.poll_unpin(&mut task_context) {
-        //                Poll::Ready(result) => {
-        //                    result
-        //                        .expect("Failed to poll join handle")
-        //                        .expect("Failed to run experiment");
-        //                    break;
-        //                }
-        //                Poll::Pending => {}
-        //            }
-        //        }
 
         info!(
             "{}Experiment finished, waiting until all affected validators recover{}",
