@@ -9,7 +9,6 @@ use std::{
 };
 
 use chrono::{Datelike, Timelike, Utc};
-use itertools::Itertools;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use reqwest::Url;
@@ -25,6 +24,7 @@ use cluster_test::github::GitHub;
 use cluster_test::health::PrintFailures;
 use cluster_test::instance::Instance;
 use cluster_test::prometheus::Prometheus;
+use cluster_test::report::SuiteReport;
 use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
 use cluster_test::util::unix_timestamp_now;
 use cluster_test::{
@@ -42,8 +42,9 @@ use cluster_test::{
 use futures::future::join_all;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
-use futures::task::{self, noop_waker_ref, Poll};
+use futures::select;
 use tokio::runtime::Runtime;
+use tokio::time::{delay_for, delay_until, Instant as TokioInstant};
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -193,21 +194,19 @@ pub fn main() {
     } else if args.run_ci_suite {
         perf_msg = Some(exit_on_error(runner.run_ci_suite()));
     } else if let Some(experiment_name) = args.run {
-        if let Some(result) = runner
+        runner
             .cleanup_and_run(get_experiment(
                 &experiment_name,
                 &args.last,
                 &runner.cluster,
             ))
-            .unwrap()
-        {
-            info!(
-                "{}Experiment Result: {}{}",
-                style::Bold,
-                result,
-                style::Reset
-            );
-        };
+            .unwrap();
+        info!(
+            "{}Experiment Result: {}{}",
+            style::Bold,
+            runner.report,
+            style::Reset
+        );
     } else if args.changelog.is_none() && args.deploy.is_none() {
         println!("No action specified");
         process::exit(1);
@@ -275,6 +274,7 @@ struct ClusterTestRunner {
     tx_emitter: TxEmitter,
     prometheus: Prometheus,
     github: GitHub,
+    report: SuiteReport,
 }
 
 fn parse_host_port(s: &str) -> Result<(String, u32)> {
@@ -438,6 +438,7 @@ impl ClusterTestRunner {
             &workspace,
         );
         let github = GitHub::new();
+        let report = SuiteReport::new();
         let runtime = Runtime::new().expect("Failed to create tokio runtime");
         Self {
             logs,
@@ -451,18 +452,14 @@ impl ClusterTestRunner {
             tx_emitter,
             prometheus,
             github,
+            report,
         }
     }
 
     pub fn run_ci_suite(&mut self) -> Result<String> {
         let suite = ExperimentSuite::new_pre_release(&self.cluster);
-        let results = self.run_suite(suite)?;
-        let output = results
-            .iter()
-            .filter(|x| x.is_some())
-            .map(|x| x.as_ref().unwrap())
-            .join("\n");
-        let perf_msg = format!("Performance report:\n```\n{}\n```", output);
+        self.run_suite(suite)?;
+        let perf_msg = format!("Performance report:\n```\n{}\n```", self.report);
         Ok(perf_msg)
     }
 
@@ -530,43 +527,40 @@ impl ClusterTestRunner {
         Ok(())
     }
 
-    fn run_suite(&mut self, suite: ExperimentSuite) -> Result<Vec<Option<String>>> {
+    fn run_suite(&mut self, suite: ExperimentSuite) -> Result<()> {
         info!("Starting suite");
-        let mut results = vec![];
         let suite_started = Instant::now();
         for experiment in suite.experiments {
             let experiment_name = format!("{}", experiment);
-            results.push(self.run_single_experiment(experiment).map_err(move |e| {
+            self.run_single_experiment(experiment).map_err(move |e| {
                 format_err!("Experiment `{}` failed: `{}`", experiment_name, e)
-            })?);
+            })?;
             thread::sleep(self.experiment_interval);
         }
         info!(
             "Suite completed in {:?}",
             Instant::now().duration_since(suite_started)
         );
-        Ok(results)
+        let json_report =
+            serde_json::to_string_pretty(&self.report).expect("Failed to serialize report to json");
+        println!("====json-report-begin===");
+        println!("{}", json_report);
+        println!("====json-report-end===");
+        Ok(())
     }
 
     pub fn perf_run(&mut self) -> String {
         let suite = ExperimentSuite::new_perf_suite(&self.cluster);
-        let results = self.run_suite(suite).unwrap();
-        results
-            .iter()
-            .filter(|x| x.is_some())
-            .map(|x| x.as_ref().unwrap())
-            .join("\n")
+        self.run_suite(suite).unwrap();
+        self.report.to_string()
     }
 
-    pub fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> Result<Option<String>> {
+    pub fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> Result<()> {
         self.cleanup();
         self.run_single_experiment(experiment)
     }
 
-    pub fn run_single_experiment(
-        &mut self,
-        mut experiment: Box<dyn Experiment>,
-    ) -> Result<Option<String>> {
+    pub fn run_single_experiment(&mut self, mut experiment: Box<dyn Experiment>) -> Result<()> {
         let events = self.logs.recv_all();
         if let Err(s) =
             self.health_check_runner
@@ -588,45 +582,79 @@ impl ClusterTestRunner {
         );
         let affected_validators = experiment.affected_validators();
         let deadline = experiment.deadline();
-        let mut context = Context::new(
-            self.tx_emitter.clone(),
-            self.prometheus.clone(),
-            self.cluster.clone(),
-        );
-        let mut experiment_handle = self
-            .runtime
-            .spawn(async move { experiment.run(&mut context).await });
-
-        // We expect experiments completes and cluster go into healthy state within timeout
         let experiment_deadline = Instant::now() + deadline;
-        let retval: Option<String>;
-        let mut task_context = task::Context::from_waker(noop_waker_ref());
-        loop {
-            if Instant::now() > experiment_deadline {
-                bail!("Experiment did not complete in time");
-            }
-            let deadline = Instant::now() + HEALTH_POLL_INTERVAL;
-            // Receive all events that arrived to aws log tail within next 1 second
-            // This assumes so far that event propagation time is << 1s, this need to be refined
-            // in future to account for actual event propagation delay
-            let events = self.logs.recv_all_until_deadline(deadline);
-            if let Err(s) = self.health_check_runner.run(
-                &events,
-                &affected_validators,
-                PrintFailures::UnexpectedOnly,
-            ) {
-                bail!("Validators which were not under experiment failed : {}", s);
-            }
-            match experiment_handle.poll_unpin(&mut task_context) {
-                Poll::Ready(result) => {
-                    retval = result
-                        .expect("Failed to poll join handle")
-                        .expect("Failed to run experiment");
-                    break;
+        let context = Context::new(
+            &mut self.tx_emitter,
+            &self.prometheus,
+            &self.cluster,
+            &mut self.report,
+        );
+        {
+            let logs = &mut self.logs;
+            let health_check_runner = &mut self.health_check_runner;
+            let affected_validators = &affected_validators;
+            self.runtime.block_on(async move {
+                let mut context = context;
+                let mut deadline_future =
+                    delay_until(TokioInstant::from_std(experiment_deadline)).fuse();
+                let mut run_future = experiment.run(&mut context).fuse();
+                loop {
+                    select! {
+                        delay = deadline_future => {
+                            bail!("Experiment deadline reached");
+                        }
+                        result = run_future => {
+                            result
+                                .expect("Failed to run experiment");
+                                return Ok(());
+                        }
+                        delay = delay_for(HEALTH_POLL_INTERVAL).fuse() => {
+                            let events = logs.recv_all();
+                            if let Err(s) = health_check_runner.run(
+                                &events,
+                                &affected_validators,
+                                PrintFailures::UnexpectedOnly,
+                            ) {
+                                bail!("Validators which were not under experiment failed : {}", s);
+                            }
+                        }
+                    }
                 }
-                Poll::Pending => {}
-            }
+            })?;
         }
+        //        let mut experiment_handle = self
+        //            .runtime
+        //            .spawn(async move { experiment.run(&mut context).await });
+        //
+        //        // We expect experiments completes and cluster go into healthy state within timeout
+        //        let experiment_deadline = Instant::now() + deadline;
+        //        let mut task_context = task::Context::from_waker(noop_waker_ref());
+        //        loop {
+        //            if Instant::now() > experiment_deadline {
+        //                bail!("Experiment did not complete in time");
+        //            }
+        //            let deadline = Instant::now() + HEALTH_POLL_INTERVAL;
+        //            // Receive all events that arrived to aws log tail within next 1 second
+        //            // This assumes so far that event propagation time is << 1s, this need to be refined
+        //            // in future to account for actual event propagation delay
+        //            let events = self.logs.recv_all_until_deadline(deadline);
+        //            if let Err(s) = self.health_check_runner.run(
+        //                &events,
+        //                &affected_validators,
+        //                PrintFailures::UnexpectedOnly,
+        //            ) {
+        //                bail!("Validators which were not under experiment failed : {}", s);
+        //            }
+        //            match experiment_handle.poll_unpin(&mut task_context) {
+        //                Poll::Ready(result) => {
+        //                    result
+        //                        .expect("Failed to poll join handle")
+        //                        .expect("Failed to run experiment");
+        //                    break;
+        //                }
+        //                Poll::Pending => {}
+        //            }
+        //        }
 
         info!(
             "{}Experiment finished, waiting until all affected validators recover{}",
@@ -663,7 +691,7 @@ impl ClusterTestRunner {
         }
 
         info!("Experiment completed");
-        Ok(retval)
+        Ok(())
     }
 
     pub fn stop_experiment(&mut self, max_stopped: usize) {

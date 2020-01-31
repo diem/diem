@@ -57,7 +57,7 @@ impl Experiment for RebootRandomValidators {
         instance::instancelist_to_set(&self.instances)
     }
 
-    fn run(&mut self, _context: &mut Context) -> BoxFuture<Result<Option<String>>> {
+    fn run(&mut self, _context: &mut Context) -> BoxFuture<Result<()>> {
         async move {
             let futures = self.instances.iter().map(|instance| {
                 async move {
@@ -72,7 +72,7 @@ impl Experiment for RebootRandomValidators {
             if results.iter().any(Result::is_err) {
                 bail!("Failed to reboot one of nodes");
             }
-            Ok(None)
+            Ok(())
         }
         .boxed()
     }

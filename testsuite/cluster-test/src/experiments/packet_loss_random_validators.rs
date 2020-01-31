@@ -65,7 +65,7 @@ impl ExperimentParam for PacketLossRandomValidatorsParams {
 }
 
 impl Experiment for PacketLossRandomValidators {
-    fn run(&mut self, _context: &mut Context) -> BoxFuture<Result<Option<String>>> {
+    fn run(&mut self, _context: &mut Context) -> BoxFuture<Result<()>> {
         async move {
             let mut instances = vec![];
             for instance in self.instances.iter() {
@@ -78,7 +78,7 @@ impl Experiment for PacketLossRandomValidators {
                 let remove_network_effects = RemoveNetworkEffects::new(instance.clone());
                 remove_network_effects.apply().await?;
             }
-            Ok(None)
+            Ok(())
         }
         .boxed()
     }

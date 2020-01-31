@@ -66,11 +66,11 @@ impl ExperimentParam for MultiRegionSimulationParams {
 }
 
 impl MultiRegionSimulation {
-    async fn single_run(
-        &self,
+    async fn single_run<'a>(
+        &'a self,
         count: usize,
         cross_region_delay: Duration,
-        context: &mut Context,
+        context: &'a mut Context<'_>,
     ) -> Result<Metrics> {
         let (cluster1, cluster2) = context.cluster.split_n_validators_random(count);
         let (region1, region2) = (
@@ -197,7 +197,7 @@ fn print_results(metrics: Vec<Metrics>) {
 }
 
 impl Experiment for MultiRegionSimulation {
-    fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, Result<Option<String>>> {
+    fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, Result<()>> {
         async move {
             let mut emitter = TxEmitter::new(&context.cluster);
             let mut results = vec![];
@@ -235,7 +235,7 @@ impl Experiment for MultiRegionSimulation {
                 }
             }
             print_results(results);
-            Ok(None)
+            Ok(())
         }
         .boxed()
     }
