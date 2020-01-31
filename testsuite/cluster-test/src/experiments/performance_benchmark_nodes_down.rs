@@ -70,10 +70,7 @@ impl Experiment for PerformanceBenchmarkNodesDown {
         instance::instancelist_to_set(&self.down_instances)
     }
 
-    fn run<'a>(
-        &'a mut self,
-        context: &'a mut Context,
-    ) -> BoxFuture<'a, anyhow::Result<Option<String>>> {
+    fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, anyhow::Result<()>> {
         async move {
             let stop_effects: Vec<_> = self
                 .down_instances
@@ -98,10 +95,15 @@ impl Experiment for PerformanceBenchmarkNodesDown {
             );
             let futures = stop_effects.iter().map(|e| e.deactivate());
             join_all(futures).await;
-            Ok(Some(format!(
+            context.report.report_metric(&self, "avg_tps", avg_tps);
+            context
+                .report
+                .report_metric(&self, "avg_latency", avg_latency);
+            context.report.report_text(format!(
                 "{} : {:.0} TPS, {:.1} ms latency",
                 self, avg_tps, avg_latency
-            )))
+            ));
+            Ok(())
         }
         .boxed()
     }

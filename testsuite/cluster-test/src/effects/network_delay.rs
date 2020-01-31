@@ -9,7 +9,7 @@ use crate::effects::Effect;
 use crate::instance::Instance;
 use anyhow::Result;
 use futures::future::{BoxFuture, FutureExt};
-use slog_scope::info;
+use slog_scope::debug;
 use std::fmt;
 use std::time::Duration;
 
@@ -31,7 +31,7 @@ impl NetworkDelay {
 
 impl Effect for NetworkDelay {
     fn activate(&self) -> BoxFuture<Result<()>> {
-        info!("Injecting NetworkDelays for {}", self.instance);
+        debug!("Injecting NetworkDelays for {}", self.instance);
         let mut command = "".to_string();
         command += "sudo tc qdisc delete dev eth0 root; ";
         // Create a HTB https://linux.die.net/man/8/tc-htb

@@ -10,6 +10,7 @@ pub mod github;
 pub mod health;
 pub mod instance;
 pub mod prometheus;
+pub mod report;
 pub mod slack;
 pub mod stats;
 pub mod suite;
