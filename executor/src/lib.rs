@@ -576,6 +576,8 @@ where
             .skip(num_txns_to_skip as usize)
             .collect();
 
+        debug!("Executing Transactions: {:?}", transactions);
+
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
@@ -588,6 +590,8 @@ where
             let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
             V::execute_block(transactions.to_vec(), &self.vm_config, &state_view)?
         };
+
+        debug!("Unprocessed outputs: {:?}", vm_outputs);
 
         // Since other validators have committed these transactions, their status should all be
         // TransactionStatus::Keep.
@@ -609,6 +613,31 @@ where
 
         // Since we have verified the proofs, we just need to verify that each TransactionInfo
         // object matches what we have computed locally.
+        for (txn_info_in_proof, (i, txn_data)) in itertools::zip_eq(
+            txn_list_with_proof
+                .proof
+                .transaction_infos()
+                .iter()
+                .skip(num_txns_to_skip as usize),
+            output.transaction_data().iter().enumerate(),
+        ) {
+            ensure!(
+                txn_info_in_proof.state_root_hash() == txn_data.state_root_hash(),
+                "State root hash does not match for {}-th transaction in chunk.",
+                i,
+            );
+            ensure!(
+                txn_info_in_proof.event_root_hash() == txn_data.event_root_hash(),
+                "Event root hash does not match for {}-th transaction in chunk.",
+                i,
+            );
+            ensure!(
+                txn_info_in_proof.gas_used() == txn_data.gas_used(),
+                "Gas used does not match for {}-th transaction in chunk.",
+                i,
+            );
+        }
+
         let mut txns_to_commit = vec![];
         for (txn, txn_data) in itertools::zip_eq(transactions, output.transaction_data()) {
             txns_to_commit.push(TransactionToCommit::new(
@@ -660,7 +689,8 @@ where
                     .ledger_info()
                     .transaction_accumulator_hash()
                     == new_output.accu_root(),
-                "Root hash in target ledger info does not match local computation."
+                "Root hash in target ledger info does not match local computation. New outputs are: {:?}",
+                new_output
             );
             return Ok(Some(verified_target_li));
         }
