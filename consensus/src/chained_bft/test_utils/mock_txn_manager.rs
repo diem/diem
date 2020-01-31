@@ -4,10 +4,9 @@
 use crate::state_replication::TxnManager;
 use anyhow::Result;
 use executor::StateComputeResult;
-use futures::{channel::mpsc, SinkExt};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
-    Arc, RwLock,
+    Arc,
 };
 
 pub type MockTransaction = usize;
@@ -16,25 +15,13 @@ pub type MockTransaction = usize;
 #[derive(Clone)]
 pub struct MockTransactionManager {
     next_val: Arc<AtomicUsize>,
-    committed_txns: Arc<RwLock<Vec<MockTransaction>>>,
-    commit_sender: mpsc::Sender<usize>,
 }
 
 impl MockTransactionManager {
-    pub fn new() -> (Self, mpsc::Receiver<usize>) {
-        let (commit_sender, commit_receiver) = mpsc::channel(1024);
-        (
-            Self {
-                next_val: Arc::new(AtomicUsize::new(0)),
-                committed_txns: Arc::new(RwLock::new(vec![])),
-                commit_sender,
-            },
-            commit_receiver,
-        )
-    }
-
-    pub fn get_committed_txns(&self) -> Vec<usize> {
-        self.committed_txns.read().unwrap().clone()
+    pub fn new() -> Self {
+        Self {
+            next_val: Arc::new(AtomicUsize::new(0)),
+        }
     }
 }
 
@@ -57,20 +44,12 @@ impl TxnManager for MockTransactionManager {
 
     async fn commit_txns(
         &mut self,
-        txns: &Self::Payload,
-        _compute_result: &StateComputeResult,
+        _txns: &Self::Payload,
+        _compute_results: &StateComputeResult,
+        // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
         _timestamp_usecs: u64,
     ) -> Result<()> {
-        let committed_tns = txns.clone();
-        for txn in committed_tns {
-            self.committed_txns.write().unwrap().push(txn);
-        }
-        let len = self.committed_txns.read().unwrap().len();
-        self.commit_sender
-            .send(len)
-            .await
-            .expect("Failed to notify about mempool commit");
-        Ok(())
+        unimplemented!()
     }
 
     fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>> {

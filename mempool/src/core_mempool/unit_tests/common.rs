@@ -117,6 +117,18 @@ pub(crate) fn add_signed_txn(pool: &mut CoreMempool, transaction: SignedTransact
     }
 }
 
+pub(crate) fn batch_add_signed_txn(
+    pool: &mut CoreMempool,
+    transactions: Vec<SignedTransaction>,
+) -> Result<()> {
+    for txn in transactions.into_iter() {
+        if let Err(e) = add_signed_txn(pool, txn) {
+            return Err(e);
+        }
+    }
+    Ok(())
+}
+
 // helper struct that keeps state between `.get_block` calls. Imitates work of Consensus
 pub struct ConsensusMock(HashSet<TxnPointer>);
 

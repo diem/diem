@@ -1,19 +1,24 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::tests::mock_storage::MockStorage;
 use crate::{
-    executor_proxy::ExecutorProxyTrait, PeerId, StateSyncClient, StateSynchronizer,
-    SynchronizerState,
+    executor_proxy::ExecutorProxyTrait, tests::mock_storage::MockStorage, PeerId, StateSyncClient,
+    StateSynchronizer, SynchronizerState,
 };
 use anyhow::{bail, Result};
 use config_builder;
 use executor::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
-use libra_crypto::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
-use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue};
+use libra_crypto::{
+    ed25519::*,
+    test_utils::TEST_SEED,
+    x25519,
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+    HashValue,
+};
 use libra_logger::set_simple_logger;
+use libra_mempool::mocks::{mock_shared_mempool, MockSharedMempool};
 use libra_types::{
     block_info::BlockInfo,
     crypto_proxies::{
@@ -34,12 +39,11 @@ use network::{
 };
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
-use std::sync::RwLock;
 use std::{
     collections::{BTreeMap, HashMap},
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc,
+        Arc, RwLock,
     },
 };
 use tokio::runtime::Runtime;
@@ -124,6 +128,7 @@ struct SynchronizerEnv {
     public_keys: Vec<ValidatorPublicKeys>,
     peer_ids: Vec<PeerId>,
     peer_addresses: Vec<Multiaddr>,
+    mempools: Vec<MockSharedMempool>,
 }
 
 impl SynchronizerEnv {
@@ -231,6 +236,7 @@ impl SynchronizerEnv {
             public_keys,
             peer_ids,
             peer_addresses: vec![],
+            mempools: vec![],
         }
     }
 
@@ -308,13 +314,17 @@ impl SynchronizerEnv {
             genesis_li,
             self.signers[new_peer_idx].clone(),
         )));
+        let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
         let synchronizer = StateSynchronizer::bootstrap_with_executor_proxy(
             vec![(sender, events)],
+            mempool_channel,
             role,
             waypoint,
             &config.state_sync,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
         );
+        self.mempools
+            .push(mock_shared_mempool(Some(mempool_requests)));
         let client = synchronizer.create_client();
         self.synchronizers.push(synchronizer);
         self.clients.push(client);
@@ -335,8 +345,21 @@ impl SynchronizerEnv {
         let mut storage = self.storage_proxies[peer_id].write().unwrap();
         let num_txns = version - storage.version();
         assert!(num_txns > 0);
-        storage.commit_new_txns(num_txns);
-        block_on(self.clients[peer_id].commit()).unwrap();
+        let (committed_txns, signed_txns) = storage.commit_new_txns(num_txns);
+        drop(storage);
+        // add txns to mempool
+        assert!(self.mempools[peer_id].add_txns(signed_txns.clone()).is_ok());
+
+        // we need to run StateSyncClient::commit on a tokio runtime to support tokio::timeout
+        // in commit()
+        assert!(Runtime::new()
+            .unwrap()
+            .block_on(self.clients[peer_id].commit(committed_txns))
+            .is_ok());
+        let mempool_txns = self.mempools[peer_id].read_timeline(0, signed_txns.len());
+        for txn in signed_txns.iter() {
+            assert!(!mempool_txns.contains(txn));
+        }
     }
 
     fn latest_li(&self, peer_id: usize) -> LedgerInfoWithSignatures {

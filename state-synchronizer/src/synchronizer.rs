@@ -6,7 +6,7 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     SynchronizerState,
 };
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use executor::Executor;
 use futures::{
     channel::{mpsc, oneshot},
@@ -14,12 +14,18 @@ use futures::{
     SinkExt,
 };
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
-use libra_types::crypto_proxies::LedgerInfoWithSignatures;
-use libra_types::crypto_proxies::ValidatorChangeProof;
-use libra_types::waypoint::Waypoint;
+use libra_mempool::{CommitNotification, CommitResponse};
+use libra_types::{
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    transaction::Transaction,
+    waypoint::Waypoint,
+};
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
-use std::sync::Arc;
-use tokio::runtime::{Builder, Runtime};
+use std::{sync::Arc, time::Duration};
+use tokio::{
+    runtime::{Builder, Runtime},
+    time::timeout,
+};
 use vm_runtime::LibraVM;
 
 pub struct StateSynchronizer {
@@ -31,12 +37,14 @@ impl StateSynchronizer {
     /// Setup state synchronizer. spawns coordinator and downloader routines on executor
     pub fn bootstrap(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
+        state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         executor: Arc<Executor<LibraVM>>,
         config: &NodeConfig,
     ) -> Self {
         let executor_proxy = ExecutorProxy::new(executor, config);
         Self::bootstrap_with_executor_proxy(
             network,
+            state_sync_to_mempool_sender,
             config.base.role,
             config.base.waypoint,
             &config.state_sync,
@@ -46,6 +54,7 @@ impl StateSynchronizer {
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
+        state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         role: RoleType,
         waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
@@ -65,6 +74,7 @@ impl StateSynchronizer {
             .expect("[state sync] Start failure: cannot sync with storage.");
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
+            state_sync_to_mempool_sender,
             role,
             waypoint,
             state_sync_config.clone(),
@@ -119,11 +129,34 @@ impl StateSyncClient {
     }
 
     /// Notifies state synchronizer about new version
-    pub fn commit(&self) -> impl Future<Output = Result<()>> {
+    pub fn commit(
+        &self,
+        // *successfully* committed transactions
+        committed_txns: Vec<Transaction>,
+    ) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         async move {
-            sender.send(CoordinatorMessage::Commit).await?;
-            Ok(())
+            let (callback, callback_rcv) = oneshot::channel();
+            sender
+                .send(CoordinatorMessage::Commit(committed_txns, callback))
+                .await?;
+
+            match timeout(Duration::from_secs(1), callback_rcv).await {
+                Err(_) => {
+                    Err(format_err!("[state sync client] failed to receive commit ACK from state synchronizer on time"))
+                }
+                Ok(resp) => {
+                    match resp?? {
+                        CommitResponse { msg } => {
+                            if msg != "" {
+                                Err(format_err!("[state sync client] commit failed: {:?}", msg))
+                            } else {
+                                Ok(())
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
