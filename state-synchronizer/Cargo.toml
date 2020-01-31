@@ -24,6 +24,7 @@ libra-config = { path = "../config", version = "0.1.0" }
 executor = { path = "../executor", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-mempool = { path = "../mempool", version = "0.1.0"}
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
@@ -42,4 +43,4 @@ channel = { path = "../common/channel", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = ["libra-types/fuzzing"]
+fuzzing = ["libra-mempool/fuzzing", "libra-types/fuzzing"]

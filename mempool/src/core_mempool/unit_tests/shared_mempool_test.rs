@@ -2,13 +2,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{unit_tests::common::TestTransaction, CoreMempool, TimelineState},
-    shared_mempool::{start_shared_mempool, SharedMempoolNotification, SyncEvent},
+    core_mempool::{
+        unit_tests::common::{batch_add_signed_txn, TestTransaction},
+        CoreMempool, TimelineState,
+    },
+    mocks::mock_shared_mempool,
+    shared_mempool::{
+        start_shared_mempool, ConsensusRequest, SharedMempoolNotification, SyncEvent,
+    },
+    CommitNotification, CommittedTransaction,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::{
-    channel::mpsc::{self, unbounded, UnboundedReceiver, UnboundedSender},
+    channel::{
+        mpsc::{self, unbounded, UnboundedReceiver, UnboundedSender},
+        oneshot,
+    },
     executor::block_on,
+    sink::SinkExt,
     StreamExt,
 };
 use libra_config::config::{NetworkConfig, NodeConfig};
@@ -29,6 +40,7 @@ use std::{
     convert::TryFrom,
     num::NonZeroUsize,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use tokio::runtime::{Builder, Runtime};
@@ -48,7 +60,7 @@ struct SharedMempoolNetwork {
 }
 
 impl SharedMempoolNetwork {
-    fn bootstrap_validator_network_smp(validator_nodes_count: u32) -> (Self, Vec<PeerId>) {
+    fn bootstrap_validator_network(validator_nodes_count: u32) -> (Self, Vec<PeerId>) {
         let mut smp = Self::default();
         let mut peers = vec![];
 
@@ -73,6 +85,7 @@ impl SharedMempoolNetwork {
             let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
             let network_handles = vec![(peer_id, network_sender, network_events)];
             let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
+            let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
 
             let runtime = Builder::new()
                 .thread_name("shared-mem-")
@@ -87,6 +100,7 @@ impl SharedMempoolNetwork {
                 network_handles,
                 ac_endpoint_receiver,
                 consensus_events,
+                state_sync_events,
                 Arc::new(MockStorageReadClient),
                 Arc::new(MockVMValidator),
                 vec![sender],
@@ -186,7 +200,7 @@ impl SharedMempoolNetwork {
 
 #[test]
 fn test_basic_flow() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(
         &peer_a,
@@ -212,7 +226,7 @@ fn test_basic_flow() {
 
 #[test]
 fn test_metric_cache_ignore_shared_txns() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
 
     let txns = vec![
@@ -244,7 +258,7 @@ fn test_metric_cache_ignore_shared_txns() {
 
 #[test]
 fn test_interruption_in_sync() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(3);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(3);
     let (peer_a, peer_b, peer_c) = (
         peers.get(0).unwrap(),
         peers.get(1).unwrap(),
@@ -307,7 +321,7 @@ fn test_interruption_in_sync() {
 
 #[test]
 fn test_ready_transactions() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(
         &peer_a,
@@ -331,7 +345,7 @@ fn test_ready_transactions() {
 
 #[test]
 fn test_broadcast_self_transactions() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 1)]);
 
@@ -358,7 +372,7 @@ fn test_broadcast_self_transactions() {
 
 #[test]
 fn test_broadcast_dependencies() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     // Peer A has transactions with sequence numbers 0 and 2
     smp.add_txns(
@@ -390,7 +404,7 @@ fn test_broadcast_dependencies() {
 
 #[test]
 fn test_broadcast_updated_transaction() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network_smp(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
 
     // Peer A has a transaction with sequence number 0 and gas price 1
@@ -418,4 +432,107 @@ fn test_broadcast_updated_transaction() {
     let txn = smp.deliver_message(&peer_a).0;
     assert_eq!(txn.sequence_number(), 0);
     assert_eq!(txn.gas_unit_price(), 5);
+}
+
+#[test]
+fn test_consensus_events_rejected_txns() {
+    let smp = mock_shared_mempool(None);
+
+    // add txns 1, 2, 3, 4
+    // txn 1: committed successfully
+    // txn 2: not committed but older than gc block timestamp
+    // txn 3: not committed and newer than block timestamp
+    let committed_txn = TestTransaction::new(0, 0, 1)
+        .make_signed_transaction_with_expiration_time(Duration::from_secs(0));
+    let kept_txn = TestTransaction::new(1, 0, 1).make_signed_transaction(); // not committed or cleaned out by block timestamp gc
+    let txns = vec![
+        committed_txn.clone(),
+        TestTransaction::new(0, 1, 1)
+            .make_signed_transaction_with_expiration_time(Duration::from_secs(0)),
+        kept_txn.clone(),
+    ];
+    // add txns to mempool
+    {
+        let mut pool = smp
+            .mempool
+            .lock()
+            .expect("[mempool test] failed to acquire lock");
+        assert!(batch_add_signed_txn(&mut pool, txns).is_ok());
+    }
+
+    // send commit notif
+    let committed_txns = vec![CommittedTransaction {
+        sender: committed_txn.sender(),
+        sequence_number: committed_txn.sequence_number(),
+    }];
+    let (callback, callback_rcv) = oneshot::channel();
+    let req = ConsensusRequest::RejectNotification(committed_txns, callback);
+    let mut consensus_sender = smp.consensus_sender.clone();
+    block_on(async {
+        assert!(consensus_sender.send(req).await.is_ok());
+        assert!(callback_rcv.await.is_ok());
+    });
+
+    // check mempool
+    let mut pool = smp
+        .mempool
+        .lock()
+        .expect("[mempool test] failed to acquire mempool lock");
+    let (timeline, _) = pool.read_timeline(0, 10);
+    assert_eq!(timeline.len(), 1);
+    assert!(timeline.contains(&kept_txn));
+}
+
+#[test]
+fn test_state_sync_events_committed_txns() {
+    let (mut state_sync_sender, state_sync_events) = mpsc::channel(1_024);
+    let smp = mock_shared_mempool(Some(state_sync_events));
+
+    // add txns 1, 2, 3, 4
+    // txn 1: committed successfully
+    // txn 2: not committed but older than gc block timestamp
+    // txn 3: not committed and newer than block timestamp
+    let committed_txn = TestTransaction::new(0, 0, 1)
+        .make_signed_transaction_with_expiration_time(Duration::from_secs(0));
+    let kept_txn = TestTransaction::new(1, 0, 1).make_signed_transaction(); // not committed or cleaned out by block timestamp gc
+    let txns = vec![
+        committed_txn.clone(),
+        TestTransaction::new(0, 1, 1)
+            .make_signed_transaction_with_expiration_time(Duration::from_secs(0)),
+        kept_txn.clone(),
+    ];
+    // add txns to mempool
+    {
+        let mut pool = smp
+            .mempool
+            .lock()
+            .expect("[mempool test] failed to acquire lock");
+        assert!(batch_add_signed_txn(&mut pool, txns).is_ok());
+    }
+
+    // send commit notif
+    let committed_txns = vec![CommittedTransaction {
+        sender: committed_txn.sender(),
+        sequence_number: committed_txn.sequence_number(),
+    }];
+
+    let (callback, callback_rcv) = oneshot::channel();
+    let req = CommitNotification {
+        transactions: committed_txns,
+        block_timestamp_usecs: 1,
+        callback,
+    };
+    block_on(async {
+        assert!(state_sync_sender.send(req).await.is_ok());
+        assert!(callback_rcv.await.is_ok());
+    });
+
+    // check mempool
+    let mut pool = smp
+        .mempool
+        .lock()
+        .expect("[mempool test] failed to acquire mempool lock");
+    let (timeline, _) = pool.read_timeline(0, 10);
+    assert_eq!(timeline.len(), 1);
+    assert!(timeline.contains(&kept_txn));
 }
