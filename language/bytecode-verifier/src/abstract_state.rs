@@ -377,7 +377,7 @@ impl AbstractState {
     }
 
     fn iter_locals(&self) -> impl Iterator<Item = LocalIndex> {
-        (0..(self.num_locals as LocalIndex))
+        0..self.num_locals as LocalIndex
     }
 
     /// Returns `Some` of the self joined with other,
