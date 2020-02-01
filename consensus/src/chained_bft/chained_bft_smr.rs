@@ -4,9 +4,9 @@
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        epoch_manager::EpochManager,
+        epoch_manager::{EpochCheck, EpochManager, EpochMsg},
         event_processor::EventProcessor,
-        network::{NetworkReceivers, NetworkTask},
+        network::{ConsensusDataRequest, FromNetworkMsg, NetworkTask},
         persistent_storage::PersistentStorage,
     },
     consensus_provider::ConsensusProvider,
@@ -17,13 +17,15 @@ use crate::{
 use anyhow::Result;
 use channel;
 use consensus_types::common::{Author, Payload, Round};
-use futures::{select, stream::StreamExt};
+use futures::{channel::mpsc, select, stream::select, stream::StreamExt, Stream, TryStreamExt};
 use libra_config::config::{ConsensusConfig, NodeConfig};
 use libra_logger::prelude::*;
+use libra_types::account_address::AccountAddress;
 use libra_types::crypto_proxies::EpochInfo;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use network::proto::ConsensusMsg;
+use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event};
 use safety_rules::SafetyRulesManager;
-use std::{sync::Arc, sync::RwLock, time::Instant};
+use std::{sync::Arc, time::Instant};
 use tokio::runtime::{self, Handle, Runtime};
 
 /// All these structures need to be moved into EpochManager. Rather than make each one an option
@@ -91,58 +93,95 @@ impl<T: Payload> ChainedBftSMR<T> {
         mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
         network_task: NetworkTask<T>,
-        mut network_receivers: NetworkReceivers<T>,
+        all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
+        data_request_sender: mpsc::UnboundedSender<ConsensusDataRequest>,
+        mut data_receiver: mpsc::UnboundedReceiver<(AccountAddress, FromNetworkMsg<T>)>,
     ) {
         let fut = async move {
             event_processor.start().await;
+
+            // Ask for new data on start-up.
+            let _ = data_request_sender.unbounded_send(ConsensusDataRequest::NewData);
+
             loop {
                 let pre_select_instant = Instant::now();
                 let idle_duration;
+
                 select! {
-                    proposal_msg = network_receivers.proposals.select_next_some() => {
+                    (peer_id, consensus_msg) = data_receiver.select_next_some() => {
+
                         idle_duration = pre_select_instant.elapsed();
-                        event_processor.process_proposal_msg(proposal_msg).await;
-                    }
-                    block_retrieval = network_receivers.block_retrieval.select_next_some() => {
-                        idle_duration = pre_select_instant.elapsed();
-                        event_processor.process_block_retrieval(block_retrieval).await;
-                    }
-                    vote_msg = network_receivers.votes.select_next_some() => {
-                        idle_duration = pre_select_instant.elapsed();
-                        event_processor.process_vote(vote_msg).await;
-                    }
+
+                        let current_epoch_msg = match epoch_manager.check_epoch(&peer_id, consensus_msg).await {
+                            Ok(EpochCheck::Current(msg)) => {
+                                // Since the epoch did not change,
+                                // and further processing of this EpochMsg by the event-processor
+                                // cannot influence this,
+                                // we can optimistically request
+                                // another message from network.
+                                let _ = data_request_sender.unbounded_send(ConsensusDataRequest::NewData);
+                                msg
+                            },
+                            Ok(EpochCheck::NotCurrent) => {
+                                // No further processing required of an EpochMsg,
+                                // so we just request more data and go back to the select above.
+                                let _ = data_request_sender.unbounded_send(ConsensusDataRequest::NewData);
+                                continue;
+                            },
+                            Ok(EpochCheck::NewStart(processor)) => {
+                                // The epoch changed:
+
+                                // 1. Update the processor of epoch messages.
+                                event_processor = processor;
+
+                                // 2. Ask network to clear its buffer of epoch-specific messages.
+                                let _ = data_request_sender.unbounded_send(ConsensusDataRequest::ClearEpochData);
+
+                                // 3. Ask for more data.
+                                let _ = data_request_sender.unbounded_send(ConsensusDataRequest::NewData);
+
+                                // 4. Start the processor for the new epoch.
+                                event_processor.start().await;
+                                continue;
+                            },
+                            Err(e) => {
+                                warn!("Failed to process network message {:?}", e);
+
+                                // Even though the last message resulted in an error,
+                                // we still want to get more data to process,
+                                // request data and go to the select.
+                                let _ = data_request_sender.unbounded_send(ConsensusDataRequest::NewData);
+                                continue
+                            },
+                        };
+
+                        match current_epoch_msg {
+                            EpochMsg::Proposal(proposal) => {
+                                event_processor.process_proposal_msg(proposal).await;
+                            },
+                            EpochMsg::RequestBlock(request) => {
+                                event_processor.process_block_retrieval(request).await;
+                            },
+                            EpochMsg::Vote(vote_msg) => {
+                                event_processor.process_vote(vote_msg).await;
+                            },
+                            EpochMsg::Sync(sync_info) => {
+                                event_processor.process_sync_info_msg(sync_info, peer_id).await;
+                            },
+                        }
+                    },
                     local_timeout_round = pacemaker_timeout_sender_rx.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
                         event_processor.process_local_timeout(local_timeout_round).await;
                     }
-                    sync_info_msg = network_receivers.sync_info_msgs.select_next_some() => {
-                        idle_duration = pre_select_instant.elapsed();
-                        event_processor.process_sync_info_msg(sync_info_msg.0, sync_info_msg.1).await;
-                    }
-                    ledger_info = network_receivers.epoch_change.select_next_some() => {
-                        idle_duration = pre_select_instant.elapsed();
-                        if epoch_manager.epoch() <= ledger_info.ledger_info().epoch() {
-                            event_processor = epoch_manager.start_new_epoch(ledger_info).await;
-                            // clean up all the previous messages from the old epochs
-                            network_receivers.clear_prev_epoch_msgs();
-                            event_processor.start().await;
-                        }
-                    }
-                    different_epoch_and_peer = network_receivers.different_epoch.select_next_some() => {
-                        idle_duration = pre_select_instant.elapsed();
-                        epoch_manager.process_different_epoch(different_epoch_and_peer.0, different_epoch_and_peer.1).await
-                    }
-                    epoch_retrieval_and_peer = network_receivers.epoch_retrieval.select_next_some() => {
-                        idle_duration = pre_select_instant.elapsed();
-                        epoch_manager.process_epoch_retrieval(epoch_retrieval_and_peer.0, epoch_retrieval_and_peer.1).await
-                    }
                 }
+
                 counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
                     .observe_duration(pre_select_instant.elapsed() - idle_duration);
                 counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
             }
         };
-        executor.spawn(network_task.start());
+        executor.spawn(network_task.start(all_events));
         executor.spawn(fut);
     }
 }
@@ -155,6 +194,18 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
     fn start(&mut self) -> Result<()> {
         let mut runtime = runtime::Builder::new()
             .thread_name("consensus-")
+            // Question: How many, if more than one at all, threads, does this runtime need?
+            //
+            // I find it somewhat hard to reason about opportunities for parallelism here.
+            // The EpochManager and EventProcessor own a buch of other things, like the StorageWriteProxy,
+            // but all calls into those "other things" are essentially sync, right?
+            // So at the end of the day, we have only two tasks, NetworkTask and then the other "consensus" task.
+            // So maybe two threads is enough, maybe even only one?
+            //
+            // The only opportunities for parallelism between those to tasks seem to be about
+            // having NetworkTask buffer/drop incoming messages while the "consensus" task is processing a message.
+            //
+            // Are there any other opportunities, or need, for parallelism?
             .threaded_scheduler()
             .enable_all()
             .build()
@@ -170,14 +221,14 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
         let (timeout_sender, timeout_receiver) =
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
-        let epoch_info = Arc::new(RwLock::new(EpochInfo {
+        let epoch_info = EpochInfo {
             epoch: initial_data.epoch(),
             verifier: initial_data.validators(),
-        }));
+        };
 
         let mut epoch_mgr = EpochManager::new(
             self.author,
-            Arc::clone(&epoch_info),
+            epoch_info,
             input.config,
             time_service,
             self_sender,
@@ -195,8 +246,13 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
         // TODO: this is test only, we should remove this
         self.block_store = Some(event_processor.block_store());
 
-        let (network_task, network_receiver) =
-            NetworkTask::new(epoch_info, input.network_events, self_receiver);
+        let (network_data_request_sender, network_data_request_receiver) = mpsc::unbounded();
+        let (network_data_sender, network_data_receiver) = mpsc::unbounded();
+
+        let network_task = NetworkTask::new(network_data_request_receiver, network_data_sender);
+
+        let network_events = input.network_events.map_err(Into::<anyhow::Error>::into);
+        let all_events = Box::new(select(network_events, self_receiver));
 
         Self::start_event_processing(
             executor,
@@ -204,7 +260,9 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
             event_processor,
             timeout_receiver,
             network_task,
-            network_receiver,
+            all_events,
+            network_data_request_sender,
+            network_data_receiver,
         );
 
         debug!("Chained BFT SMR started.");

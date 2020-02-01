@@ -12,16 +12,20 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::{choose_leader, RotatingProposer},
         },
-        network::NetworkSender,
+        network::{FromNetworkMsg, IncomingBlockRetrievalRequest, NetworkSender},
         persistent_storage::{PersistentStorage, RecoveryData},
     },
     counters,
     state_replication::{StateComputer, TxnManager},
     util::time_service::{ClockTimeService, TimeService},
 };
+use anyhow::ensure;
 use consensus_types::{
     common::{Author, Payload, Round},
     epoch_retrieval::EpochRetrievalRequest,
+    proposal_msg::ProposalMsg,
+    sync_info::SyncInfo,
+    vote_msg::VoteMsg,
 };
 use futures::executor::block_on;
 use libra_config::config::{ConsensusConfig, ConsensusProposerType};
@@ -29,24 +33,20 @@ use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorVerifier},
+    validator_change::VerifierType,
 };
 use network::{
     proto::{ConsensusMsg, ConsensusMsg_oneof},
     validator_network::{ConsensusNetworkSender, Event},
 };
 use safety_rules::SafetyRulesManager;
-use std::{
-    cmp::Ordering,
-    convert::TryInto,
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+use std::{cmp::Ordering, convert::TryInto, sync::Arc, time::Duration};
 
 // Manager the components that shared across epoch and spawn per-epoch EventProcessor with
 // epoch-specific input.
 pub struct EpochManager<T> {
     author: Author,
-    epoch_info: Arc<RwLock<EpochInfo>>,
+    epoch_info: EpochInfo,
     config: ConsensusConfig,
     time_service: Arc<ClockTimeService>,
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
@@ -58,10 +58,30 @@ pub struct EpochManager<T> {
     safety_rules_manager: SafetyRulesManager<T>,
 }
 
+/// Message for the current epoch.
+pub enum EpochMsg<T> {
+    Proposal(ProposalMsg<T>),
+    RequestBlock(IncomingBlockRetrievalRequest),
+    Vote(VoteMsg),
+    Sync(SyncInfo),
+}
+
+/// The result of the epoch manager handling a network msg.
+pub enum EpochCheck<T> {
+    // A message for the current epoch,
+    // passed-on for further processing.
+    Current(EpochMsg<T>),
+    // The epoch-manager handled a network msg not related
+    // to the current epoch.
+    NotCurrent,
+    // A new epoch has started.
+    NewStart(EventProcessor<T>),
+}
+
 impl<T: Payload> EpochManager<T> {
     pub fn new(
         author: Author,
-        epoch_info: Arc<RwLock<EpochInfo>>,
+        epoch_info: EpochInfo,
         config: ConsensusConfig,
         time_service: Arc<ClockTimeService>,
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
@@ -88,7 +108,101 @@ impl<T: Payload> EpochManager<T> {
     }
 
     pub fn epoch(&self) -> u64 {
-        self.epoch_info.read().unwrap().epoch
+        self.epoch_info.epoch
+    }
+
+    pub async fn check_epoch(
+        &mut self,
+        peer_id: &AccountAddress,
+        msg: FromNetworkMsg<T>,
+    ) -> anyhow::Result<EpochCheck<T>> {
+        match msg {
+            FromNetworkMsg::Proposal(proposal) => {
+                if proposal.epoch() != self.epoch_info.epoch {
+                    return Ok(EpochCheck::NotCurrent);
+                }
+                let proposal = proposal
+                    .validate_signatures(&self.epoch_info.verifier)?
+                    .verify_well_formed()?;
+                ensure!(
+                    proposal.proposal().author() == Some(peer_id.clone()),
+                    "proposal received must be from the sending peer"
+                );
+                debug!("Received proposal {}", proposal);
+                Ok(EpochCheck::Current(EpochMsg::Proposal(proposal)))
+            }
+            FromNetworkMsg::RequestBlock(req_with_callback) => Ok(EpochCheck::Current(
+                EpochMsg::RequestBlock(req_with_callback),
+            )),
+            FromNetworkMsg::Vote(vote_msg) => {
+                let msg_epoch = vote_msg.epoch();
+
+                if msg_epoch != self.epoch_info.epoch {
+                    self.process_different_epoch(msg_epoch, peer_id.clone())
+                        .await;
+                    return Ok(EpochCheck::NotCurrent);
+                }
+
+                debug!("Received {}", vote_msg);
+                vote_msg.verify(&self.epoch_info.verifier).map_err(|e| {
+                    security_log(SecurityEvent::InvalidConsensusVote)
+                        .error(&e)
+                        .data(&vote_msg)
+                        .log();
+                    e
+                })?;
+                Ok(EpochCheck::Current(EpochMsg::Vote(vote_msg)))
+            }
+            FromNetworkMsg::Sync(sync_info) => {
+                let sync_epoch = sync_info.epoch();
+                match sync_epoch.cmp(&self.epoch()) {
+                    Ordering::Equal => {
+                        // SyncInfo verification is postponed to the moment it's actually used.
+                        Ok(EpochCheck::Current(EpochMsg::Sync(sync_info)))
+                    }
+                    Ordering::Less | Ordering::Greater => {
+                        self.process_different_epoch(sync_epoch, peer_id.clone())
+                            .await;
+                        Ok(EpochCheck::NotCurrent)
+                    }
+                }
+            }
+            FromNetworkMsg::EpochChange(proof) => {
+                let msg_epoch = proof.epoch()?;
+                match msg_epoch.cmp(&self.epoch()) {
+                    Ordering::Equal => {
+                        let verifier = VerifierType::TrustedVerifier(self.epoch_info.clone());
+                        let target_ledger_info = proof.verify(&verifier)?;
+                        debug!(
+                            "Received epoch change to {}",
+                            target_ledger_info.ledger_info().epoch() + 1
+                        );
+                        if self.epoch() <= target_ledger_info.ledger_info().epoch() {
+                            let event_processor = self.start_new_epoch(target_ledger_info).await;
+                            Ok(EpochCheck::NewStart(event_processor))
+                        } else {
+                            Ok(EpochCheck::NotCurrent)
+                        }
+                    }
+                    Ordering::Less | Ordering::Greater => {
+                        self.process_different_epoch(msg_epoch, peer_id.clone())
+                            .await;
+                        Ok(EpochCheck::NotCurrent)
+                    }
+                }
+            }
+            FromNetworkMsg::RequestEpoch(request) => {
+                match request.end_epoch.cmp(&self.epoch()) {
+                    Ordering::Less | Ordering::Equal => {
+                        self.process_epoch_retrieval(request, peer_id.clone()).await;
+                    }
+                    Ordering::Greater => {
+                        warn!("Received EpochRetrievalRequest beyond what we have locally");
+                    }
+                }
+                Ok(EpochCheck::NotCurrent)
+            }
+        }
     }
 
     fn create_pacemaker(
@@ -211,7 +325,7 @@ impl<T: Payload> EpochManager<T> {
             error!("State sync to new epoch {} failed with {:?}, we'll try to start from current libradb", ledger_info, e);
         }
         let initial_data = self.storage.start().await;
-        *self.epoch_info.write().unwrap() = EpochInfo {
+        self.epoch_info = EpochInfo {
             epoch: initial_data.epoch(),
             verifier: initial_data.validators(),
         };

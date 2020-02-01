@@ -4,7 +4,7 @@
 use crate::counters;
 use anyhow::ensure;
 use bytes::Bytes;
-use channel::{self, libra_channel, message_queues::QueueStyle};
+use channel;
 use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse};
 use consensus_types::epoch_retrieval::EpochRetrievalRequest;
 use consensus_types::{
@@ -13,25 +13,26 @@ use consensus_types::{
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
 };
-use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
+use futures::{
+    channel::{mpsc, oneshot},
+    select, SinkExt, Stream, StreamExt,
+};
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
-use libra_types::crypto_proxies::{EpochInfo, ValidatorChangeProof};
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
+use libra_types::crypto_proxies::ValidatorChangeProof;
+use libra_types::crypto_proxies::ValidatorVerifier;
 use libra_types::proto::types::ValidatorChangeProof as ValidatorChangeProofProto;
-use libra_types::validator_change::VerifierType;
 use network::{
     proto::{
         ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RequestEpoch,
         SyncInfo as SyncInfoProto, VoteMsg as VoteMsgProto,
     },
-    validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
+    validator_network::{ConsensusNetworkSender, Event, RpcError},
 };
-use std::cmp::Ordering;
-use std::sync::RwLock;
+use smallvec::SmallVec;
 use std::{
+    collections::{HashMap, VecDeque},
     convert::{TryFrom, TryInto},
-    num::NonZeroUsize,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -42,29 +43,6 @@ use std::{
 pub struct IncomingBlockRetrievalRequest {
     pub req: BlockRetrievalRequest,
     pub response_sender: oneshot::Sender<Result<Bytes, RpcError>>,
-}
-
-/// Just a convenience struct to keep all the network proxy receiving queues in one place.
-/// Will be returned by the networking trait upon startup.
-pub struct NetworkReceivers<T> {
-    pub proposals: libra_channel::Receiver<AccountAddress, ProposalMsg<T>>,
-    pub votes: libra_channel::Receiver<AccountAddress, VoteMsg>,
-    pub block_retrieval: libra_channel::Receiver<AccountAddress, IncomingBlockRetrievalRequest>,
-    pub sync_info_msgs: libra_channel::Receiver<AccountAddress, (SyncInfo, AccountAddress)>,
-    pub epoch_change: libra_channel::Receiver<AccountAddress, LedgerInfoWithSignatures>,
-    pub different_epoch: libra_channel::Receiver<AccountAddress, (u64, AccountAddress)>,
-    pub epoch_retrieval:
-        libra_channel::Receiver<AccountAddress, (EpochRetrievalRequest, AccountAddress)>,
-}
-
-impl<T> NetworkReceivers<T> {
-    pub fn clear_prev_epoch_msgs(&mut self) {
-        // clear all the channels that are relevant for the previous epoch event processor
-        self.proposals.clear();
-        self.votes.clear();
-        self.block_retrieval.clear();
-        self.sync_info_msgs.clear();
-    }
 }
 
 /// Implements the actual networking support for all consensus messaging.
@@ -274,142 +252,356 @@ impl NetworkSender {
     }
 }
 
+#[derive(Clone, Eq, Hash, PartialEq)]
+enum MessageType {
+    Proposal,
+    RequestBlock,
+    RequestEpoch,
+    EpochChange,
+    Sync,
+    Vote,
+}
+
+pub enum FromNetworkMsg<T> {
+    Proposal(ProposalUncheckedSignatures<T>),
+    RequestBlock(IncomingBlockRetrievalRequest),
+    RequestEpoch(EpochRetrievalRequest),
+    EpochChange(ValidatorChangeProof),
+    Sync(SyncInfo),
+    Vote(VoteMsg),
+}
+
+pub enum ConsensusDataRequest {
+    NewData,
+    ClearEpochData,
+}
+
 pub struct NetworkTask<T> {
-    epoch_info: Arc<RwLock<EpochInfo>>,
-    proposal_tx: libra_channel::Sender<AccountAddress, ProposalMsg<T>>,
-    vote_tx: libra_channel::Sender<AccountAddress, VoteMsg>,
-    block_request_tx: libra_channel::Sender<AccountAddress, IncomingBlockRetrievalRequest>,
-    sync_info_tx: libra_channel::Sender<AccountAddress, (SyncInfo, AccountAddress)>,
-    epoch_change_tx: libra_channel::Sender<AccountAddress, LedgerInfoWithSignatures>,
-    different_epoch_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
-    epoch_retrieval_tx:
-        libra_channel::Sender<AccountAddress, (EpochRetrievalRequest, AccountAddress)>,
-    all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
+    incoming: HashMap<AccountAddress, HashMap<MessageType, SmallVec<[FromNetworkMsg<T>; 2]>>>,
+    round_robin_queue: VecDeque<(AccountAddress, MessageType)>,
+    network_data_request_receiver: mpsc::UnboundedReceiver<ConsensusDataRequest>,
+    network_data_sender: mpsc::UnboundedSender<(AccountAddress, FromNetworkMsg<T>)>,
 }
 
 impl<T: Payload> NetworkTask<T> {
     /// Establishes the initial connections with the peers and returns the receivers.
     pub fn new(
-        epoch_info: Arc<RwLock<EpochInfo>>,
-        network_events: ConsensusNetworkEvents,
-        self_receiver: channel::Receiver<anyhow::Result<Event<ConsensusMsg>>>,
-    ) -> (NetworkTask<T>, NetworkReceivers<T>) {
-        let (proposal_tx, proposal_rx) = libra_channel::new(
-            QueueStyle::LIFO,
-            NonZeroUsize::new(1).unwrap(),
-            Some(&counters::PROPOSAL_CHANNEL_MSGS),
-        );
-        let (vote_tx, vote_rx) = libra_channel::new(
-            QueueStyle::LIFO,
-            NonZeroUsize::new(1).unwrap(),
-            Some(&counters::VOTES_CHANNEL_MSGS),
-        );
-        let (block_request_tx, block_request_rx) = libra_channel::new(
-            QueueStyle::LIFO,
-            NonZeroUsize::new(1).unwrap(),
-            Some(&counters::BLOCK_RETRIEVAL_CHANNEL_MSGS),
-        );
-        let (sync_info_tx, sync_info_rx) = libra_channel::new(
-            QueueStyle::LIFO,
-            NonZeroUsize::new(1).unwrap(),
-            Some(&counters::SYNC_INFO_CHANNEL_MSGS),
-        );
-        let (epoch_change_tx, epoch_change_rx) = libra_channel::new(
-            QueueStyle::LIFO,
-            NonZeroUsize::new(1).unwrap(),
-            Some(&counters::EPOCH_CHANGE_CHANNEL_MSGS),
-        );
-        let (different_epoch_tx, different_epoch_rx) =
-            libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
-        let (epoch_retrieval_tx, epoch_retrieval_rx) =
-            libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
-        let network_events = network_events.map_err(Into::<anyhow::Error>::into);
-        let all_events = Box::new(select(network_events, self_receiver));
-        (
-            NetworkTask {
-                epoch_info,
-                proposal_tx,
-                vote_tx,
-                block_request_tx,
-                sync_info_tx,
-                epoch_change_tx,
-                different_epoch_tx,
-                epoch_retrieval_tx,
-                all_events,
-            },
-            NetworkReceivers {
-                proposals: proposal_rx,
-                votes: vote_rx,
-                block_retrieval: block_request_rx,
-                sync_info_msgs: sync_info_rx,
-                epoch_change: epoch_change_rx,
-                different_epoch: different_epoch_rx,
-                epoch_retrieval: epoch_retrieval_rx,
-            },
-        )
+        network_data_request_receiver: mpsc::UnboundedReceiver<ConsensusDataRequest>,
+        network_data_sender: mpsc::UnboundedSender<(AccountAddress, FromNetworkMsg<T>)>,
+    ) -> NetworkTask<T> {
+        NetworkTask {
+            incoming: Default::default(),
+            round_robin_queue: Default::default(),
+            network_data_request_receiver,
+            network_data_sender,
+        }
     }
 
-    fn epoch(&self) -> u64 {
-        self.epoch_info.read().unwrap().epoch
-    }
+    pub async fn start(
+        mut self,
+        all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
+    ) {
+        // If consensus asked for data, and we had none to give,
+        // this flag is set,
+        // so that when new data comes in over the network,
+        // it is immediately sent over to consensus without first requiring another data request.
+        let mut consensus_needs_data = false;
 
-    pub async fn start(mut self) {
-        use ConsensusMsg_oneof::*;
-        while let Some(Ok(message)) = self.all_events.next().await {
-            match message {
-                Event::Message((peer_id, msg)) => {
-                    let msg = match msg.message {
-                        Some(msg) => msg,
-                        None => {
-                            warn!("Unexpected msg from {}: {:?}", peer_id, msg);
-                            continue;
-                        }
-                    };
+        let mut all_events = all_events.fuse();
+        loop {
+            select! {
+                message = all_events.next() => {
+                    match message {
+                        Some(Ok(msg)) => self.handle_msg(msg).await,
+                        _ => continue,
+                    }
 
-                    let r = match msg.clone() {
-                        Proposal(proposal) => {
-                            self.process_proposal(peer_id, proposal).await.map_err(|e| {
-                                security_log(SecurityEvent::InvalidConsensusProposal)
-                                    .error(&e)
-                                    .data(&msg)
-                                    .log();
-                                e
-                            })
+                    if consensus_needs_data {
+                        // If consensus is waiting for data,
+                        // we can immediately send the new stuff that just came in.
+                        if let Some(data) = self.deque_msg() {
+                            let res = self.network_data_sender.unbounded_send(data);
+                            consensus_needs_data = res.is_err();
                         }
-                        VoteMsg(vote_msg) => self.process_vote(peer_id, vote_msg).await,
-                        SyncInfo(sync_info) => self.process_sync_info(sync_info, peer_id).await,
-                        EpochChange(proof) => self.process_epoch_change(peer_id, proof).await,
-                        RequestEpoch(request) => self.process_epoch_request(peer_id, request).await,
-                        _ => {
-                            warn!("Unexpected msg from {}: {:?}", peer_id, msg);
-                            continue;
-                        }
-                    };
-                    if let Err(e) = r {
-                        warn!("Failed to process msg {}", e)
                     }
-                }
-                Event::RpcRequest((peer_id, msg, callback)) => {
-                    let r = match msg.message {
-                        Some(RequestBlock(request)) => {
-                            self.process_request_block(peer_id, request, callback).await
+                },
+                data_request = self.network_data_request_receiver.select_next_some() => {
+                    match data_request {
+                        ConsensusDataRequest::NewData => {
+                            // Consensus wants more data to process.
+                            if let Some(data) = self.deque_msg() {
+                                let res = self.network_data_sender.unbounded_send(data);
+                                consensus_needs_data = res.is_err();
+                            } else {
+                                consensus_needs_data = true;
+                            }
+                        },
+                        ConsensusDataRequest::ClearEpochData => {
+                            // Clear all buffered epoch-specific messages.
+                            self.clear_data();
                         }
-                        _ => {
-                            warn!("Unexpected RPC from {}: {:?}", peer_id, msg);
-                            continue;
-                        }
-                    };
-                    if let Err(e) = r {
-                        warn!("Failed to process RPC {:?}", e)
                     }
-                }
-                Event::NewPeer(peer_id) => {
-                    debug!("Peer {} connected", peer_id);
-                }
-                Event::LostPeer(peer_id) => {
-                    debug!("Peer {} disconnected", peer_id);
                 }
             }
+        }
+    }
+
+    async fn handle_msg(&mut self, event: Event<ConsensusMsg>) {
+        use ConsensusMsg_oneof::*;
+
+        match event {
+            Event::Message((peer_id, msg)) => {
+                let msg = match msg.message {
+                    Some(msg) => msg,
+                    None => {
+                        warn!("Unexpected msg from {}: {:?}", peer_id, msg);
+                        return;
+                    }
+                };
+
+                let r = match msg {
+                    Proposal(proposal) => self.process_proposal(peer_id, proposal).await,
+                    VoteMsg(vote_msg) => self.process_vote(peer_id, vote_msg).await,
+                    SyncInfo(sync_info) => self.process_sync_info(sync_info, peer_id).await,
+                    EpochChange(proof) => self.process_epoch_change(peer_id, proof).await,
+                    RequestEpoch(request) => self.process_epoch_request(peer_id, request).await,
+                    _ => {
+                        warn!("Unexpected msg from {}: {:?}", peer_id, msg);
+                        Ok(())
+                    }
+                };
+                if let Err(e) = r {
+                    warn!("Failed to process msg {}", e)
+                }
+            }
+            Event::RpcRequest((peer_id, msg, callback)) => {
+                let r = match msg.message {
+                    Some(RequestBlock(request)) => {
+                        self.process_request_block(peer_id, request, callback).await
+                    }
+                    _ => {
+                        warn!("Unexpected RPC from {}: {:?}", peer_id, msg);
+                        Ok(())
+                    }
+                };
+                if let Err(e) = r {
+                    warn!("Failed to process RPC {:?}", e)
+                }
+            }
+            Event::NewPeer(peer_id) => {
+                debug!("Peer {} connected", peer_id);
+            }
+            Event::LostPeer(peer_id) => {
+                debug!("Peer {} dis-connected", peer_id);
+
+                // Remove all the queues related to this peer.
+                self.incoming.remove(&peer_id);
+                self.round_robin_queue = self
+                    .round_robin_queue
+                    .clone()
+                    .into_iter()
+                    .filter_map(|(id, msg_type)| {
+                        if peer_id == id {
+                            return None;
+                        }
+                        Some((id, msg_type))
+                    })
+                    .collect();
+            }
+        }
+    }
+
+    fn clear_data(&mut self) {
+        // Clear messages after epoch change.
+        for per_peer_queue in self.incoming.values_mut() {
+            for (msg_type, queue) in per_peer_queue.iter_mut() {
+                match msg_type {
+                    MessageType::Proposal
+                    | MessageType::Vote
+                    | MessageType::RequestBlock
+                    | MessageType::Sync => {
+                        queue.clear();
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    fn deque_msg(&mut self) -> Option<(AccountAddress, FromNetworkMsg<T>)> {
+        // Note: if we want/need to increase paralellism
+        // between this task and the other consensus task,
+        // we could use a batching strategy,
+        // that would take into account the message-type
+        // and whether the message could be relevant if the epoch changes.
+
+        let mut count = 0;
+        loop {
+            count += 1;
+            // If we've cycled through the entire round-robin,
+            // we don't have any data to send.
+            if count > self.round_robin_queue.len() {
+                return None;
+            }
+
+            let (peer_id, msg_type) = match self.round_robin_queue.pop_front() {
+                Some(v) => v,
+                _ => {
+                    // If the round-robin is empty,
+                    // we also don't have any data.
+                    return None;
+                }
+            };
+
+            let per_peer_queue = match self.incoming.get_mut(&peer_id) {
+                Some(queue) => queue,
+                None => {
+                    self.round_robin_queue.push_back((peer_id, msg_type));
+                    continue;
+                }
+            };
+
+            let msg = match per_peer_queue.get_mut(&msg_type) {
+                Some(queue) => queue.pop(),
+                None => {
+                    self.round_robin_queue.push_back((peer_id, msg_type));
+                    continue;
+                }
+            };
+
+            let msg = match msg {
+                Some(msg) => msg,
+                None => {
+                    self.round_robin_queue.push_back((peer_id, msg_type));
+                    continue;
+                }
+            };
+
+            self.round_robin_queue
+                .push_back((peer_id, msg_type.clone()));
+
+            match msg_type {
+                MessageType::Proposal => {
+                    &counters::PROPOSAL_CHANNEL_MSGS
+                        .with_label_values(&["dequeued"])
+                        .inc();
+                }
+                MessageType::Vote => {
+                    &counters::VOTES_CHANNEL_MSGS
+                        .with_label_values(&["dequeued"])
+                        .inc();
+                }
+                MessageType::RequestBlock => {
+                    &counters::BLOCK_RETRIEVAL_CHANNEL_MSGS
+                        .with_label_values(&["dequeued"])
+                        .inc();
+                }
+                MessageType::Sync => {
+                    &counters::SYNC_INFO_CHANNEL_MSGS
+                        .with_label_values(&["dequeued"])
+                        .inc();
+                }
+                MessageType::EpochChange => {
+                    &counters::EPOCH_CHANGE_CHANNEL_MSGS
+                        .with_label_values(&["dequeued"])
+                        .inc();
+                }
+                _ => {}
+            }
+
+            return Some((peer_id, msg));
+        }
+    }
+
+    fn queue_msg(
+        &mut self,
+        peer_id: AccountAddress,
+        msg: FromNetworkMsg<T>,
+        msg_type: MessageType,
+    ) {
+        let incoming = self
+            .incoming
+            .entry(peer_id.clone())
+            .or_insert_with(|| Default::default());
+        let msg_queue = incoming
+            .entry(msg_type.clone())
+            .or_insert_with(|| Default::default());
+
+        let dropped = {
+            if msg_queue.len() == 2 {
+                msg_queue.remove(0);
+                true
+            } else {
+                false
+            }
+        };
+
+        msg_queue.push(msg);
+
+        // Add the relevant key to the round-robin,
+        // if it is not present already.
+        let msg_type = {
+            let key = (peer_id, msg_type);
+
+            if !self.round_robin_queue.contains(&key) {
+                self.round_robin_queue.push_back(key.clone());
+            }
+
+            key.1
+        };
+
+        match msg_type {
+            MessageType::Proposal => {
+                if dropped {
+                    &counters::PROPOSAL_CHANNEL_MSGS
+                        .with_label_values(&["dropped"])
+                        .inc();
+                }
+                &counters::PROPOSAL_CHANNEL_MSGS
+                    .with_label_values(&["enqueued"])
+                    .inc();
+            }
+            MessageType::Vote => {
+                if dropped {
+                    &counters::VOTES_CHANNEL_MSGS
+                        .with_label_values(&["dropped"])
+                        .inc();
+                }
+                &counters::VOTES_CHANNEL_MSGS
+                    .with_label_values(&["enqueued"])
+                    .inc();
+            }
+            MessageType::RequestBlock => {
+                if dropped {
+                    &counters::BLOCK_RETRIEVAL_CHANNEL_MSGS
+                        .with_label_values(&["dropped"])
+                        .inc();
+                }
+                &counters::BLOCK_RETRIEVAL_CHANNEL_MSGS
+                    .with_label_values(&["enqueued"])
+                    .inc();
+            }
+            MessageType::Sync => {
+                if dropped {
+                    &counters::SYNC_INFO_CHANNEL_MSGS
+                        .with_label_values(&["dropped"])
+                        .inc();
+                }
+                &counters::SYNC_INFO_CHANNEL_MSGS
+                    .with_label_values(&["enqueued"])
+                    .inc();
+            }
+            MessageType::EpochChange => {
+                if dropped {
+                    &counters::EPOCH_CHANGE_CHANNEL_MSGS
+                        .with_label_values(&["dropped"])
+                        .inc();
+                }
+                &counters::EPOCH_CHANGE_CHANNEL_MSGS
+                    .with_label_values(&["enqueued"])
+                    .inc();
+            }
+            _ => {}
         }
     }
 
@@ -419,21 +611,12 @@ impl<T: Payload> NetworkTask<T> {
         proposal: Proposal,
     ) -> anyhow::Result<()> {
         let proposal = ProposalUncheckedSignatures::<T>::try_from(proposal)?;
-        if proposal.epoch() != self.epoch() {
-            return self
-                .different_epoch_tx
-                .push(peer_id, (proposal.epoch(), peer_id));
-        }
-
-        let proposal = proposal
-            .validate_signatures(&self.epoch_info.read().unwrap().verifier)?
-            .verify_well_formed()?;
-        ensure!(
-            proposal.proposal().author() == Some(peer_id),
-            "proposal received must be from the sending peer"
+        self.queue_msg(
+            peer_id,
+            FromNetworkMsg::Proposal(proposal),
+            MessageType::Proposal,
         );
-        debug!("Received proposal {}", proposal);
-        self.proposal_tx.push(peer_id, proposal)
+        Ok(())
     }
 
     async fn process_vote(
@@ -442,29 +625,12 @@ impl<T: Payload> NetworkTask<T> {
         vote_msg: VoteMsgProto,
     ) -> anyhow::Result<()> {
         let vote_msg = VoteMsg::try_from(vote_msg)?;
-
         ensure!(
             vote_msg.vote().author() == peer_id,
             "vote received must be from the sending peer"
         );
-
-        if vote_msg.epoch() != self.epoch() {
-            return self
-                .different_epoch_tx
-                .push(peer_id, (vote_msg.epoch(), peer_id));
-        }
-
-        debug!("Received {}", vote_msg);
-        vote_msg
-            .verify(&self.epoch_info.read().unwrap().verifier)
-            .map_err(|e| {
-                security_log(SecurityEvent::InvalidConsensusVote)
-                    .error(&e)
-                    .data(&vote_msg)
-                    .log();
-                e
-            })?;
-        self.vote_tx.push(peer_id, vote_msg)
+        self.queue_msg(peer_id, FromNetworkMsg::Vote(vote_msg), MessageType::Vote);
+        Ok(())
     }
 
     async fn process_sync_info(
@@ -473,15 +639,8 @@ impl<T: Payload> NetworkTask<T> {
         peer_id: AccountAddress,
     ) -> anyhow::Result<()> {
         let sync_info = SyncInfo::try_from(sync_info)?;
-        match sync_info.epoch().cmp(&self.epoch()) {
-            Ordering::Equal => {
-                // SyncInfo verification is postponed to the moment it's actually used.
-                self.sync_info_tx.push(peer_id, (sync_info, peer_id))
-            }
-            Ordering::Less | Ordering::Greater => self
-                .different_epoch_tx
-                .push(peer_id, (sync_info.epoch(), peer_id)),
-        }
+        self.queue_msg(peer_id, FromNetworkMsg::Sync(sync_info), MessageType::Sync);
+        Ok(())
     }
 
     async fn process_request_block(
@@ -492,11 +651,17 @@ impl<T: Payload> NetworkTask<T> {
     ) -> anyhow::Result<()> {
         let req = BlockRetrievalRequest::try_from(request_msg)?;
         debug!("Received block retrieval request {}", req);
+
         let req_with_callback = IncomingBlockRetrievalRequest {
             req,
             response_sender: callback,
         };
-        self.block_request_tx.push(peer_id, req_with_callback)
+        self.queue_msg(
+            peer_id,
+            FromNetworkMsg::RequestBlock(req_with_callback),
+            MessageType::RequestBlock,
+        );
+        Ok(())
     }
 
     async fn process_epoch_change(
@@ -505,22 +670,12 @@ impl<T: Payload> NetworkTask<T> {
         proof: ValidatorChangeProofProto,
     ) -> anyhow::Result<()> {
         let proof = ValidatorChangeProof::try_from(proof)?;
-        let msg_epoch = proof.epoch()?;
-        match msg_epoch.cmp(&self.epoch()) {
-            Ordering::Equal => {
-                let verifier =
-                    VerifierType::TrustedVerifier(self.epoch_info.read().unwrap().clone());
-                let target_ledger_info = proof.verify(&verifier)?;
-                debug!(
-                    "Received epoch change to {}",
-                    target_ledger_info.ledger_info().epoch() + 1
-                );
-                self.epoch_change_tx.push(peer_id, target_ledger_info)
-            }
-            Ordering::Less | Ordering::Greater => {
-                self.different_epoch_tx.push(peer_id, (msg_epoch, peer_id))
-            }
-        }
+        self.queue_msg(
+            peer_id,
+            FromNetworkMsg::EpochChange(proof),
+            MessageType::EpochChange,
+        );
+        Ok(())
     }
 
     async fn process_epoch_request(
@@ -529,18 +684,11 @@ impl<T: Payload> NetworkTask<T> {
         request: RequestEpoch,
     ) -> anyhow::Result<()> {
         let request = EpochRetrievalRequest::try_from(request)?;
-        debug!(
-            "Received epoch retrieval from peer {}, start epoch {}, end epoch {}",
-            peer_id, request.start_epoch, request.end_epoch
+        self.queue_msg(
+            peer_id,
+            FromNetworkMsg::RequestEpoch(request),
+            MessageType::RequestEpoch,
         );
-        match request.end_epoch.cmp(&self.epoch()) {
-            Ordering::Less | Ordering::Equal => {
-                self.epoch_retrieval_tx.push(peer_id, (request, peer_id))
-            }
-            Ordering::Greater => {
-                warn!("Received EpochRetrievalRequest beyond what we have locally");
-                Ok(())
-            }
-        }
+        Ok(())
     }
 }
