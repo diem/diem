@@ -329,20 +329,7 @@ mod last_usage {
                 // Even if not switched to a move:
                 // remove it from dropped_live to prevent accidental dropping in previous usages
                 let var_is_dead = context.dropped_live.remove(var);
-                if var_is_dead && *from_user {
-                    match display_var(var.value()) {
-                        DisplayVar::Tmp => (),
-                        DisplayVar::Orig(v_str) => {
-                            let msg = format!(
-                                "Invalid 'copy'. The local '{}' is not live following this \
-                                 expression. Remove the 'copy' annotation or re-annotate as 'move'",
-                                v_str
-                            );
-                            context.error(vec![(parent_e.exp.loc, msg)])
-                        }
-                    }
-                }
-                if var_is_dead {
+                if var_is_dead && !*from_user {
                     parent_e.exp.value = E::Move {
                         var: var.clone(),
                         from_user: *from_user,

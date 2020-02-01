@@ -1,0 +1,44 @@
+error: 
+
+    ┌── tests/move_check/borrows/mutate_field_invalid.move:10:17 ───
+    │
+ 11 │         *s = S { f: 0, g: 0 };
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 10 │         let f = &s.f;
+    │                 ---- Field 'f' is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/mutate_field_invalid.move:14:17 ───
+    │
+ 15 │         *s = S { f: 0, g: 0 };
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 14 │         let f = &mut s.f;
+    │                 -------- Field 'f' is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/mutate_field_invalid.move:18:17 ───
+    │
+ 19 │         *s = S { f: 0, g: 0 };
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 18 │         let f = id(&s.f);
+    │                 -------- Field 'f' is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/mutate_field_invalid.move:22:17 ───
+    │
+ 23 │         *s = S { f: 0, g: 0 };
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 22 │         let f = id_mut(&mut s.f);
+    │                 ---------------- Field 'f' is still being mutably borrowed by this reference
+    │
+

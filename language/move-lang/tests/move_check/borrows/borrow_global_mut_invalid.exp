@@ -1,0 +1,77 @@
+error: 
+
+   ┌── tests/move_check/borrows/borrow_global_mut_invalid.move:5:18 ───
+   │
+ 6 │         let r2 = borrow_global_mut<R>(addr);
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
+   ·
+ 5 │         let r1 = borrow_global_mut<R>(addr);
+   │                  -------------------------- It is still being mutably borrowed by this reference
+   │
+
+error: 
+
+    ┌── tests/move_check/borrows/borrow_global_mut_invalid.move:11:17 ───
+    │
+ 12 │         let r2 = borrow_global_mut<R>(addr);
+    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
+    ·
+ 11 │         let f = &mut borrow_global_mut<R>(addr).f;
+    │                 --------------------------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/borrow_global_mut_invalid.move:17:18 ───
+    │
+ 18 │         let f = &mut borrow_global_mut<R>(addr).f;
+    │                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
+    ·
+ 17 │         let r1 = borrow_global_mut<R>(addr);
+    │                  -------------------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/borrow_global_mut_invalid.move:23:18 ───
+    │
+ 24 │         let r2 = borrow_global<R>(addr);
+    │                  ^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
+    ·
+ 23 │         let r1 = borrow_global_mut<R>(addr);
+    │                  -------------------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/borrow_global_mut_invalid.move:29:17 ───
+    │
+ 30 │         let r2 = borrow_global_mut<R>(addr);
+    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
+    ·
+ 29 │         let f = &borrow_global<R>(addr).f;
+    │                 ------------------------- It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/borrow_global_mut_invalid.move:35:18 ───
+    │
+ 36 │         let f = &borrow_global_mut<R>(addr).f;
+    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
+    ·
+ 35 │         let r1 = borrow_global_mut<R>(addr);
+    │                  -------------------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/borrow_global_mut_invalid.move:42:32 ───
+    │
+ 43 │         let f = &borrow_global_mut<R>(addr).f;
+    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
+    ·
+ 42 │         let r1; if (cond) r1 = borrow_global_mut<R>(addr) else r1 = &mut r;
+    │                                -------------------------- It is still being mutably borrowed by this reference
+    │
+

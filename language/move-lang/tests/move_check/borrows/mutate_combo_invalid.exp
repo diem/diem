@@ -1,0 +1,58 @@
+error: 
+
+    ┌── tests/move_check/borrows/mutate_combo_invalid.move:13:23 ───
+    │
+ 14 │         *s = S { f: 0, g: 0 };
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 13 │         if (cond) f = &s.f else f = &s.g;
+    │                       ---- Field 'f' is still being borrowed by this reference
+    ·
+ 13 │         if (cond) f = &s.f else f = &s.g;
+    │                                     ---- Field 'g' is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/mutate_combo_invalid.move:22:23 ───
+    │
+ 23 │         *s = S { f: 0, g: 0 };
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 22 │         if (cond) f = &mut s.f else f = &mut other.f;
+    │                       -------- Field 'f' is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/mutate_combo_invalid.move:31:23 ───
+    │
+ 32 │         *s = S { f: 0, g: 0 };
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 31 │         if (cond) f = s else f = other;
+    │                       - It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/mutate_combo_invalid.move:40:23 ───
+    │
+ 41 │         *s = S { f: 0, g: 0 };
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 40 │         if (cond) f = id_mut(s) else f = other;
+    │                       --------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/mutate_combo_invalid.move:48:17 ───
+    │
+ 49 │         if (cond) *s = S { f: 0, g: 0 };
+    │                   ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 48 │         let f = &s.f;
+    │                 ---- Field 'f' is still being borrowed by this reference
+    │
+

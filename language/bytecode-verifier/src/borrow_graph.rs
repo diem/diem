@@ -142,6 +142,10 @@ where
                 let n_edge_set_ref = self.0.get_mut(n).unwrap();
                 n_edge_set_ref.remove(removed_edge);
                 nonce_edge_set.iter().for_each(|nonce_edge| {
+                    // Avoid adding self edges in the case of cycles
+                    if n == &nonce_edge.to {
+                        return;
+                    }
                     if removed_edge.edge_type == EdgeType::Strong {
                         let mut new_label = vec![];
                         new_label.append(&mut removed_edge.label.clone());
@@ -269,5 +273,9 @@ where
             .values()
             .flatten()
             .all(|edge| self.0.contains_key(&edge.to))
+            && self
+                .0
+                .iter()
+                .all(|(n, edges)| edges.iter().all(|edge| n != &edge.to))
     }
 }

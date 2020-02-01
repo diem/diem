@@ -1,0 +1,22 @@
+error: 
+
+    ┌── tests/move_check/borrows/borrow_local_field_invalid.move:12:17 ───
+    │
+ 14 │         *s = S { f: 0, g: 0 };
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 12 │         let f = &v.f;
+    │                 ---- Field 'f' is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/borrow_local_field_invalid.move:18:17 ───
+    │
+ 19 │         let s = &v;
+    │                 ^^ Invalid borrow of local 'v'
+    ·
+ 18 │         let f = &mut v.f;
+    │                 -------- It is still being mutably borrowed by this reference
+    │
+

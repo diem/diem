@@ -1,0 +1,44 @@
+error: 
+
+    ┌── tests/move_check/borrows/assign_local_field_invalid.move:12:17 ───
+    │
+ 13 │         s = S { f: 0, g: 0 };
+    │         ^ Invalid assignment of local 's'
+    ·
+ 12 │         let f = &s.f;
+    │                 ---- It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/assign_local_field_invalid.move:18:17 ───
+    │
+ 19 │         s = S { f: 0, g: 0 };
+    │         ^ Invalid assignment of local 's'
+    ·
+ 18 │         let f = &mut s.f;
+    │                 -------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/assign_local_field_invalid.move:24:17 ───
+    │
+ 25 │         s = S { f: 0, g: 0 };
+    │         ^ Invalid assignment of local 's'
+    ·
+ 24 │         let f = id(&s.f);
+    │                 -------- It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/assign_local_field_invalid.move:30:17 ───
+    │
+ 31 │         s = S { f: 0, g: 0 };
+    │         ^ Invalid assignment of local 's'
+    ·
+ 30 │         let f = id_mut(&mut s.f);
+    │                 ---------------- It is still being mutably borrowed by this reference
+    │
+

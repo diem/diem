@@ -1,0 +1,22 @@
+error: 
+
+    ┌── tests/move_check/borrows/borrow_field_field_invalid.move:13:17 ───
+    │
+ 14 │         let f1 = &inner.f1;
+    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
+    ·
+ 13 │         let c = &mut inner.f1;
+    │                 ------------- Field 'f1' is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/borrow_field_field_invalid.move:20:17 ───
+    │
+ 21 │         let f1 = &inner.f1;
+    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
+    ·
+ 20 │         let c = id_mut(&mut inner.f1);
+    │                 --------------------- Field 'f1' is still being mutably borrowed by this reference
+    │
+
