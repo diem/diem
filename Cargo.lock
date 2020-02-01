@@ -2269,6 +2269,7 @@ dependencies = [
 name = "libra-secure-storage"
 version = "0.1.0"
 dependencies = [
+ "base64 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
