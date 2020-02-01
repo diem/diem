@@ -1,0 +1,99 @@
+error: 
+
+    ┌── tests/move_check/borrows/call_acquires_invalid.move:15:18 ───
+    │
+ 16 │         let R { f } = acq(addr);
+    │                       ^^^^^^^^^ Invalid acquiring of resource 'R'
+    ·
+ 15 │         let r1 = borrow_global_mut<R>(addr);
+    │                  -------------------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/call_acquires_invalid.move:21:21 ───
+    │
+ 22 │         let R { f } = acq(addr);
+    │                       ^^^^^^^^^ Invalid acquiring of resource 'R'
+    ·
+ 21 │         let f_ref = &mut borrow_global_mut<R>(addr).f;
+    │                     --------------------------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/call_acquires_invalid.move:27:18 ───
+    │
+ 28 │         let R { f } = acq(addr);
+    │                       ^^^^^^^^^ Invalid acquiring of resource 'R'
+    ·
+ 27 │         let r1 = id_mut(borrow_global_mut<R>(addr));
+    │                  ---------------------------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/call_acquires_invalid.move:33:21 ───
+    │
+ 34 │         let R { f } = acq(addr);
+    │                       ^^^^^^^^^ Invalid acquiring of resource 'R'
+    ·
+ 33 │         let f_ref = id_mut(&mut borrow_global_mut<R>(addr).f);
+    │                     ----------------------------------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/call_acquires_invalid.move:39:18 ───
+    │
+ 40 │         let R { f } = acq(addr);
+    │                       ^^^^^^^^^ Invalid acquiring of resource 'R'
+    ·
+ 39 │         let r1 = borrow_global<R>(addr);
+    │                  ---------------------- It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/call_acquires_invalid.move:45:21 ───
+    │
+ 46 │         let R { f } = acq(addr);
+    │                       ^^^^^^^^^ Invalid acquiring of resource 'R'
+    ·
+ 45 │         let f_ref = &borrow_global<R>(addr).f;
+    │                     ------------------------- It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/call_acquires_invalid.move:51:18 ───
+    │
+ 52 │         let R { f } = acq(addr);
+    │                       ^^^^^^^^^ Invalid acquiring of resource 'R'
+    ·
+ 51 │         let r1 = id(borrow_global<R>(addr));
+    │                  -------------------------- It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/call_acquires_invalid.move:57:21 ───
+    │
+ 58 │         let R { f } = acq(addr);
+    │                       ^^^^^^^^^ Invalid acquiring of resource 'R'
+    ·
+ 57 │         let f_ref = id(&borrow_global<R>(addr).f);
+    │                     ----------------------------- It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/call_acquires_invalid.move:65:32 ───
+    │
+ 66 │         let R { f } = acq(addr);
+    │                       ^^^^^^^^^ Invalid acquiring of resource 'R'
+    ·
+ 65 │         let r1; if (cond) r1 = borrow_global_mut<R>(addr) else r1 = &mut r;
+    │                                -------------------------- It is still being mutably borrowed by this reference
+    │
+

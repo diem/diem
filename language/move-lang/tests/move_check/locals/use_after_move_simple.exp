@@ -33,14 +33,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/use_after_move_simple.move:21:19 ───
-    │
- 21 │         let _s3 = copy s;
-    │                   ^^^^^^ Invalid 'copy'. The local 's' is not live following this expression. Remove the 'copy' annotation or re-annotate as 'move'
-    │
-
-error: 
-
     ┌── tests/move_check/locals/use_after_move_simple.move:20:19 ───
     │
  21 │         let _s3 = copy s;

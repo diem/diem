@@ -8,6 +8,7 @@
 use crate::{
     cfgir::{absint::*, ast::*},
     errors::*,
+    hlir::translate::{display_var, DisplayVar},
     naming::ast::TypeName_,
     parser::ast::{Field, StructName, Var},
     shared::*,
@@ -294,7 +295,11 @@ impl BorrowState {
         verb: &'static str,
     ) -> Errors {
         Self::borrow_error(borrows, loc, full_borrows, &BTreeMap::new(), move || {
-            format!("Invalid {} of local '{}'", verb, local)
+            let local_str = match display_var(local.value()) {
+                DisplayVar::Tmp => panic!("ICE invalid use of tmp local {}", local.value()),
+                DisplayVar::Orig(s) => s,
+            };
+            format!("Invalid {} of local '{}'", verb, local_str)
         })
     }
 
@@ -423,8 +428,14 @@ impl BorrowState {
             }
             Value::NonRef => {
                 let borrowed_by = self.local_borrowed_by(local);
+                let borrows = &self.borrows;
+                // check that it is 'readable'
+                let mut_borrows = borrowed_by
+                    .into_iter()
+                    .filter(|(id, _loc)| borrows.is_mutable(*id))
+                    .collect();
                 let errors =
-                    Self::check_use_borrowed_by(&self.borrows, loc, local, &borrowed_by, "copy");
+                    Self::check_use_borrowed_by(&self.borrows, loc, local, &mut_borrows, "copy");
                 (errors, Value::NonRef)
             }
         }
@@ -437,16 +448,18 @@ impl BorrowState {
             loc
         );
         let new_id = self.declare_new_ref(mut_);
+        // fails if there are full/epsilon borrows on the local
         let borrowed_by = self.local_borrowed_by(local);
-        let borrows = &self.borrows;
-        let errors = if mut_ {
-            Self::check_use_borrowed_by(borrows, loc, local, &borrowed_by, "mutable borrow")
-        } else {
+        let errors = if !mut_ {
+            let borrows = &self.borrows;
+            // check that it is 'readable'
             let mut_borrows = borrowed_by
                 .into_iter()
                 .filter(|(id, _loc)| borrows.is_mutable(*id))
                 .collect();
             Self::check_use_borrowed_by(borrows, loc, local, &mut_borrows, "borrow")
+        } else {
+            Errors::new()
         };
         self.add_local_borrow(loc, local, new_id);
         (errors, Value::Ref(new_id))

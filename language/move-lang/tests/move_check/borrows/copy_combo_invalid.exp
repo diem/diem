@@ -1,0 +1,44 @@
+error: 
+
+    ┌── tests/move_check/borrows/copy_combo_invalid.move:13:23 ───
+    │
+ 14 │         copy s;
+    │         ^^^^^^ Invalid copy of local 's'
+    ·
+ 13 │         if (cond) f = &mut s.f else f = &mut other.f;
+    │                       -------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/copy_combo_invalid.move:22:23 ───
+    │
+ 23 │         copy s;
+    │         ^^^^^^ Invalid copy of local 's'
+    ·
+ 22 │         if (cond) f = &mut s else f = other;
+    │                       ------ It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/copy_combo_invalid.move:31:23 ───
+    │
+ 32 │         copy s;
+    │         ^^^^^^ Invalid copy of local 's'
+    ·
+ 31 │         if (cond) f = id_mut(&mut s) else f = other;
+    │                       -------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/copy_combo_invalid.move:39:17 ───
+    │
+ 40 │         if (cond) { copy s; };
+    │                     ^^^^^^ Invalid copy of local 's'
+    ·
+ 39 │         let f = &mut s.f;
+    │                 -------- It is still being mutably borrowed by this reference
+    │
+

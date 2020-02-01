@@ -1,0 +1,33 @@
+error: 
+
+    ┌── tests/move_check/borrows/copy_full_invalid.move:18:17 ───
+    │
+ 19 │         x;
+    │         ^ Invalid copy of local 'x'
+    ·
+ 18 │         let f = &mut x;
+    │                 ------ It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/copy_full_invalid.move:24:17 ───
+    │
+ 25 │         x;
+    │         ^ Invalid move of local 'x'
+    ·
+ 24 │         let f = id(&x);
+    │                 ------ It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/copy_full_invalid.move:29:17 ───
+    │
+ 30 │         x;
+    │         ^ Invalid copy of local 'x'
+    ·
+ 29 │         let f = id_mut(&mut x);
+    │                 -------------- It is still being mutably borrowed by this reference
+    │
+
