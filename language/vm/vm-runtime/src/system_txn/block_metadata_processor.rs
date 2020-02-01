@@ -6,6 +6,7 @@ use crate::{
     counters::*, data_cache::BlockDataCache, runtime::VMRuntime,
     system_module_names::LIBRA_SYSTEM_MODULE,
 };
+use libra_logger::prelude::*;
 use libra_types::transaction::TransactionStatus;
 use libra_types::{
     account_config::core_code_address,
@@ -38,6 +39,7 @@ pub(crate) fn process_block_metadata(
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = core_code_address();
     txn_data.max_gas_amount = GasUnits::new(std::u64::MAX);
+    debug!("VM Processing Block Prologue: {:?}", block_metadata);
 
     let mut interpreter_context =
         TransactionExecutionContext::new(txn_data.max_gas_amount(), data_cache);
