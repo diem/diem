@@ -9,6 +9,7 @@ mod on_disk;
 mod permissions;
 mod storage;
 mod value;
+mod vault;
 
 pub use crate::{
     error::Error,
@@ -17,6 +18,7 @@ pub use crate::{
     permissions::{Id, Permission, Permissions},
     storage::Storage,
     value::Value,
+    vault::VaultStorage,
 };
 
 #[cfg(test)]

@@ -4,3 +4,4 @@
 mod in_memory;
 mod on_disk;
 mod suite;
+mod vault;

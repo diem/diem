@@ -1,0 +1,16 @@
+[package]
+name = "libra-vault-client"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+repository = "https://github.com/libra/libra"
+description = "Libra's Restful Vault Client"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.99", features = ["derive"], default-features = false }
+serde_json = "1.0.40"
+thiserror = "1.0"
+ureq = { version = "0.11.3", features = ["json"] }
