@@ -387,11 +387,12 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         visitor.visit_enum(self)
     }
 
+    // LCS does not utilize identifiers, so throw them away
     fn deserialize_identifier<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(Error::NotSupported("deserialize_identifier"))
+        self.deserialize_bytes(_visitor)
     }
 
     // LCS is not a self-describing format so we can't implement `deserialize_ignored_any`
