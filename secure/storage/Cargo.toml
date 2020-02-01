@@ -14,7 +14,9 @@ base64 = "0.9.3"
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
+libra-vault-client = { path = "vault", version = "0.1.0" }
 serde = { version = "1.0.99", features = ["rc"], default-features = false }
+serde_json = "1.0.40"
 thiserror = "1.0"
 toml = { version = "0.5.3", default-features = false }
 
