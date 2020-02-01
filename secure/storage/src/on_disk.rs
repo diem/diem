@@ -58,6 +58,10 @@ impl OnDiskStorage {
 }
 
 impl Storage for OnDiskStorage {
+    fn available(&self) -> bool {
+        true
+    }
+
     fn create(&mut self, key: &str, value: Value, _permissions: &Permissions) -> Result<(), Error> {
         let mut data = self.read()?;
         if data.contains_key(key) {
