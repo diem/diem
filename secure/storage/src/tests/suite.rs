@@ -13,7 +13,12 @@ use rand::{rngs::StdRng, SeedableRng};
 const KEY_KEY: &str = "key";
 const U64_KEY: &str = "u64";
 
-pub fn run_test_suite(mut storage: Box<dyn Storage>) {
+pub fn run_test_suite(mut storage: Box<dyn Storage>, name: &str) {
+    assert!(
+        storage.available(),
+        eprintln!("Backend storage, {}, is not available", name)
+    );
+
     let no_perms = Permissions {
         readers: Permission::Anyone,
         writers: Permission::Anyone,

@@ -8,6 +8,8 @@ use crate::{Error, Permissions, Value};
 /// into a unique and private token for another service. Hence get and set internally will pass the
 /// current service private token to the backend to gain its permissions.
 pub trait Storage: Send + Sync {
+    /// Returns true if the backend service is online and available.
+    fn available(&self) -> bool;
     /// Creates a new value if it does not exist fails only if there is some other issue.
     fn create_if_not_exists(
         &mut self,

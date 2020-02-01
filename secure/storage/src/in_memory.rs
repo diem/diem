@@ -23,6 +23,10 @@ impl InMemoryStorage {
 }
 
 impl Storage for InMemoryStorage {
+    fn available(&self) -> bool {
+        true
+    }
+
     fn create(&mut self, key: &str, value: Value, _permissions: &Permissions) -> Result<(), Error> {
         if self.data.contains_key(key) {
             return Err(Error::KeyAlreadyExists(key.to_string()));

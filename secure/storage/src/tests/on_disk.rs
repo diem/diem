@@ -8,5 +8,5 @@ use libra_temppath::TempPath;
 fn on_disk() {
     let temp_path = TempPath::new();
     let storage = Box::new(OnDiskStorage::new(temp_path.path().to_path_buf()));
-    suite::run_test_suite(storage);
+    suite::run_test_suite(storage, "OnDiskStorage");
 }
