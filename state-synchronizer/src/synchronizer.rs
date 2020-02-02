@@ -14,10 +14,12 @@ use futures::{
     SinkExt,
 };
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
-use libra_mempool::CommitNotification;
-use libra_types::crypto_proxies::LedgerInfoWithSignatures;
-use libra_types::crypto_proxies::ValidatorChangeProof;
-use libra_types::waypoint::Waypoint;
+use libra_logger::prelude::*;
+use libra_mempool::{CommitNotification, CommittedTransaction};
+use libra_types::{
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    waypoint::Waypoint,
+};
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
@@ -124,10 +126,21 @@ impl StateSyncClient {
     }
 
     /// Notifies state synchronizer about new version
-    pub fn commit(&self) -> impl Future<Output = Result<()>> {
+    pub fn commit(
+        &self,
+        committed_txns: Vec<CommittedTransaction>,
+    ) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         async move {
-            sender.send(CoordinatorMessage::Commit).await?;
+            let (callback, callback_rcv) = oneshot::channel();
+            sender
+                .send(CoordinatorMessage::Commit(committed_txns, callback))
+                .await?;
+
+            debug!("[state sync client] waiting for commit ACK from state sync");
+            // wait for callback
+            callback_rcv.await??;
+            debug!("[state sync client] got commit ACK from state sync");
             Ok(())
         }
     }

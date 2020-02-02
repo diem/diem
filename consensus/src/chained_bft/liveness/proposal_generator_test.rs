@@ -29,7 +29,7 @@ fn test_proposal_generation_empty_tree() {
     let mut proposal_generator = ProposalGenerator::new(
         signer.author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new().0),
+        Box::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
         1,
     );
@@ -55,7 +55,7 @@ fn test_proposal_generation_parent() {
     let mut proposal_generator = ProposalGenerator::new(
         inserter.signer().author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new().0),
+        Box::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
         1,
     );
@@ -96,7 +96,7 @@ fn test_old_proposal_generation() {
     let mut proposal_generator = ProposalGenerator::new(
         inserter.signer().author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new().0),
+        Box::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
         1,
     );
@@ -115,7 +115,7 @@ fn test_empty_proposal_after_reconfiguration() {
     let mut proposal_generator = ProposalGenerator::new(
         inserter.signer().author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new().0),
+        Box::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
         1,
     );

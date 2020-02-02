@@ -118,7 +118,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let proposal_generator = ProposalGenerator::new(
         signer.author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new().0),
+        Box::new(MockTransactionManager::new()),
         time_service.clone(),
         1,
     );

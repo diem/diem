@@ -100,6 +100,7 @@ impl StateComputer for ExecutionProxy {
         committed_trees: &ExecutedTrees,
     ) -> Result<()> {
         let version = finality_proof.ledger_info().version();
+        debug!("[consensus] committed block version {:?}", version);
         counters::LAST_COMMITTED_VERSION.set(version as i64);
 
         let pre_commit_instant = Instant::now();
@@ -114,10 +115,11 @@ impl StateComputer for ExecutionProxy {
             })
             .collect();
 
-        self.executor
-            .commit_blocks(committable_blocks, finality_proof, committed_trees)?;
+        let committed_txns =
+            self.executor
+                .commit_blocks(committable_blocks, finality_proof, committed_trees)?;
         counters::BLOCK_COMMIT_DURATION_S.observe_duration(pre_commit_instant.elapsed());
-        if let Err(e) = self.synchronizer.commit().await {
+        if let Err(e) = self.synchronizer.commit(committed_txns).await {
             error!("failed to notify state synchronizer: {:?}", e);
         }
         Ok(())

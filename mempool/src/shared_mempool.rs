@@ -30,6 +30,7 @@ use libra_mempool_shared_proto::proto::mempool_status::{
     MempoolAddTransactionStatusCode,
 };
 use libra_types::{
+    account_address::AccountAddress,
     proto::types::{SignedTransaction as SignedTransactionProto, VmStatus as VmStatusProto},
     transaction::SignedTransaction,
     vm_error::{StatusCode::RESOURCE_DOES_NOT_EXIST, VMStatus},
@@ -46,7 +47,7 @@ use std::{
     ops::Deref,
     pin::Pin,
     sync::{Arc, Mutex},
-    time::Duration,
+    time::{Duration, Instant},
 };
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::{
@@ -129,7 +130,7 @@ pub struct CommitResponse {}
 /// successfully executed and committed txn
 pub struct CommittedTransaction {
     /// sender
-    pub sender: PeerId,
+    pub sender: AccountAddress,
     /// sequence number
     pub sequence_number: u64,
 }
@@ -137,7 +138,7 @@ pub struct CommittedTransaction {
 /// excluded txn
 pub struct TransactionExclusion {
     /// sender
-    pub sender: PeerId,
+    pub sender: AccountAddress,
     /// sequence number
     pub sequence_number: u64,
 }
@@ -457,7 +458,9 @@ where
             .mempool
             .lock()
             .expect("[shared mempool] failed to get mempool lock");
-
+        if !req.transactions.is_empty() {
+            debug!("[shared mempool] state sync req removing {:?} txns", req.transactions.len());
+        }
         for transaction in req.transactions {
             pool.remove_transaction(&transaction.sender, transaction.sequence_number, false);
         }
@@ -499,8 +502,9 @@ where
         .expect("[get_block] acquire mempool lock")
         .get_block(block_size, exclude_transactions);
 
-    let transactions = txns.drain(..).map(SignedTransaction::into).collect();
+    let transactions: Vec<SignedTransaction> = txns.drain(..).map(SignedTransaction::into).collect();
 
+    debug!("[shared mempool] consensus pulling block size {:?}", transactions.len());
     let resp = GetBlockResponse { transactions };
     // send back to callback
     if let Err(e) = req.callback.send(Ok(resp)).map_err(|_| {
@@ -544,6 +548,7 @@ async fn inbound_network_task<V>(
     loop {
         ::futures::select! {
             (mut msg, callback) = client_events.select_next_some() => {
+                let now = Instant::now();
                 bounded_executor
                 .spawn(process_client_transaction_submission(
                     smp.clone(),
@@ -551,12 +556,29 @@ async fn inbound_network_task<V>(
                     callback,
                 ))
                 .await;
+                let duration = now.elapsed();
+                if duration > Duration::from_millis(10) {
+                    debug!("[shared mempool] client event took too long: {:?}", duration);
+                }
             },
             msg = consensus_requests.select_next_some() => {
+                debug!("[shared mempool] received consensus request");
+                let now = Instant::now();
                 process_consensus_request(smp.clone(), msg).await;
+                let duration = now.elapsed();
+                if duration > Duration::from_millis(10) {
+                    debug!("[shared mempool] consensus event took too long: {:?}", duration);
+                }
             }
             msg = state_sync_requests.select_next_some() => {
+                debug!("[shared mempool] received state sync req");
+                let now = Instant::now();
+//                tokio::spawn(process_state_sync_request(smp.clone(), msg));
                 process_state_sync_request(smp.clone(), msg).await;
+                let duration = now.elapsed();
+                if duration > Duration::from_millis(10) {
+                    debug!("[shared mempool] state sync event took too long: {:?}", duration);
+                }
             },
             (network_id, event) = events.select_next_some() => {
                 match event {
@@ -598,6 +620,7 @@ async fn inbound_network_task<V>(
                                     true => TimelineState::NonQualified,
                                     false => TimelineState::NotReady,
                                 };
+                                let now = Instant::now();
                                 bounded_executor
                                     .spawn(process_transaction_broadcast(
                                         smp_clone,
@@ -606,6 +629,10 @@ async fn inbound_network_task<V>(
                                         peer_id
                                     ))
                                     .await;
+                                let duration = now.elapsed();
+                                if duration > Duration::from_millis(10) {
+                                    debug!("[shared mempool] processing txn broadcast took too long: {:?}", duration);
+                                }
                             }
                             _ => {
                                 security_log(SecurityEvent::InvalidNetworkEventMP)

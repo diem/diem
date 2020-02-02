@@ -47,6 +47,7 @@ use network::proto::{ConsensusMsg, ConsensusMsg_oneof};
 
 use crate::chained_bft::network::IncomingBlockRetrievalRequest;
 use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
+use consensus_types::executed_block::ExecutedBlock;
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
@@ -814,8 +815,19 @@ impl<T: Payload> EventProcessor<T> {
                 return;
             }
         };
+        Self::update_counters_for_committed_blocks(blocks_to_commit);
 
-        // update counters
+        if finality_proof.ledger_info().next_validator_set().is_some() {
+            self.network
+                .broadcast_epoch_change(ValidatorChangeProof::new(
+                    vec![finality_proof],
+                    /* more = */ false,
+                ))
+                .await
+        }
+    }
+
+    fn update_counters_for_committed_blocks(blocks_to_commit: Vec<Arc<ExecutedBlock<T>>>) {
         for block in blocks_to_commit {
             if let Some(time_to_commit) =
                 duration_since_epoch().checked_sub(Duration::from_micros(block.timestamp_usecs()))
@@ -834,6 +846,7 @@ impl<T: Payload> EventProcessor<T> {
                             .inc();
                     }
                     None => {
+                        println!("[event processor] FAIL in block");
                         counters::COMMITTED_TXNS_COUNT
                             .with_label_values(&["failed"])
                             .inc();
@@ -848,24 +861,13 @@ impl<T: Payload> EventProcessor<T> {
                             .inc();
                     }
                     TransactionStatus::Discard(_) => {
+                        println!("[event processor] FAIL in compute status");
                         counters::COMMITTED_TXNS_COUNT
                             .with_label_values(&["failed"])
                             .inc();
                     }
                 }
             }
-        }
-
-        // At this moment the new state is persisted and we can notify the clients.
-        // Multiple blocks might be committed at once: notify about all the transactions in the
-        // path from the old root to the new root.
-        if finality_proof.ledger_info().next_validator_set().is_some() {
-            self.network
-                .broadcast_epoch_change(ValidatorChangeProof::new(
-                    vec![finality_proof],
-                    /* more = */ false,
-                ))
-                .await
         }
     }
 

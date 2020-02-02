@@ -18,11 +18,11 @@ use futures::{
 use libra_config::config::RoleType;
 use libra_config::config::StateSyncConfig;
 use libra_logger::prelude::*;
-use libra_mempool::{CommitNotification, CommittedTransaction};
-use libra_types::crypto_proxies::ValidatorChangeProof;
-use libra_types::transaction::Version;
+use libra_mempool::{CommitNotification, CommittedTransaction, CommitResponse};
 use libra_types::{
-    crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    transaction::{Transaction, TransactionListWithProof},
+    transaction::Version,
     waypoint::Waypoint,
 };
 use network::{
@@ -32,10 +32,12 @@ use network::{
 use std::{
     collections::HashMap,
     convert::TryInto,
-    thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tokio::time::interval;
+use tokio::{
+    self,
+    time::{interval, timeout_at, Instant},
+};
 
 pub(crate) struct SyncRequest {
     // The Result value returned to the caller is Error in case the StateSynchronizer failed to
@@ -55,7 +57,7 @@ pub(crate) enum CoordinatorMessage {
     // used to initiate new sync
     Request(SyncRequest),
     // used to notify about new txn commit
-    Commit,
+    Commit(Vec<CommittedTransaction>, oneshot::Sender<Result<CommitResponse>>),
     GetState(oneshot::Sender<SynchronizerState>),
     // used to generate epoch proof
     GetEpochProof(EpochRetrievalRequest),
@@ -164,8 +166,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                 error!("[state sync] request sync fail: {}", e);
                             }
                         }
-                        CoordinatorMessage::Commit => {
-                            if let Err(e) = self.process_commit().await {
+                        CoordinatorMessage::Commit(txns, callback) => {
+                            if let Err(e) = self.process_commit(txns, Some(callback)).await {
                                 error!("[state sync] process commit fail: {}", e);
                             }
                         }
@@ -212,6 +214,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                                 Ok(response) => {
                                                     if let Err(err) = self.process_chunk_response(&peer_id, response).await {
                                                         error!("[state sync] failed to process chunk response from {}: {}", peer_id, err);
+                                                        debug!("[state sync] failed to process chunk response from {}: {}", peer_id, err);
                                                         counters::APPLY_CHUNK_FAILURE.with_label_values(&[&*peer_id.to_string()]).inc();
                                                     } else {
                                                         self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
@@ -220,6 +223,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                                 }
                                                 Err(e) => {
                                                     error!("[state sync] failed to parse response_msg: {}", e);
+                                                    debug!("[state sync] failed to parse response_msg: {}", e);
                                                     counters::APPLY_CHUNK_FAILURE.with_label_values(&[&*peer_id.to_string()]).inc();
                                                 }
                                             }
@@ -321,61 +325,50 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// The function is called after new txns have been applied to the local storage.
     /// As a result it might:
     /// 1) help remote subscribers with long poll requests, 2) finish local sync request
-    async fn process_commit(&mut self) -> Result<()> {
-        let old_version = self.local_state.highest_version_in_local_storage();
-
+    async fn process_commit(&mut self, transactions: Vec<CommittedTransaction>, callback_consensus: Option<oneshot::Sender<Result<CommitResponse>>>) -> Result<()> {
         // We choose to re-sync the state with the storage as it's the simplest approach:
         // in case the performance implications of re-syncing upon every commit are high,
         // it's possible to manage some of the highest known versions in memory.
         self.sync_state_with_local_storage().await?;
         let local_version = self.local_state.highest_version_in_local_storage();
         counters::COMMITTED_VERSION.set(local_version as i64);
-        if old_version < local_version {
-            let committed_txns = self
-                .executor_proxy
-                .get_chunk(old_version, local_version - old_version + 1, local_version)
-                .await?;
+        let block_timestamp_usecs = self
+            .local_state
+            .highest_local_li
+            .ledger_info()
+            .timestamp_usecs();
 
-            let mut transactions = vec![];
-            //             filter out for signed transactions
-            for txn in committed_txns.transactions.into_iter() {
-                if let Ok(user_txn) = txn.as_signed_user_txn() {
-                    transactions.push(CommittedTransaction {
-                        sender: user_txn.sender(),
-                        sequence_number: user_txn.sequence_number(),
-                    });
+        // send notif to shared mempool
+        let (callback, callback_rcv) = oneshot::channel();
+        let req = CommitNotification {
+            transactions,
+            block_timestamp_usecs,
+            callback,
+        };
+        let mut mempool_channel = self.mempool_channel.clone();
+        tokio::spawn(async move {
+            if let Err(e) = mempool_channel.try_send(req) {
+                error!(
+                    "[state sync] failed to send commit notif to shared mempool: {:?}",
+                    e
+                );
+            }
+            debug!("[state sync] waiting for callback rcv");
+            if let Err(e) = timeout_at(Instant::now() + Duration::from_secs(1), callback_rcv).await
+            {
+                error!(
+                        "[state sync] did not receive ACK for commit notification sent to mempool: {:?}", e
+                        )
+            }
+            debug!("[state sync] got callback");
+
+            if let Some(cb) = callback_consensus {
+                // send back ACK to consensus
+                if let Err(_e) = cb.send(Ok(CommitResponse{})) {
+                    debug!("[state sync] failed to send commit ACK back to consensus");
                 }
             }
-            let block_timestamp_usecs = self
-                .local_state
-                .highest_local_li
-                .ledger_info()
-                .timestamp_usecs();
-
-            // send notif to shared mempool
-            let (callback, callback_rcv) = oneshot::channel();
-            let req = CommitNotification {
-                transactions,
-                block_timestamp_usecs,
-                callback,
-            };
-            let mut mempool_channel = self.mempool_channel.clone();
-            thread::spawn(move || {
-                if let Err(e) = mempool_channel.try_send(req) {
-                    error!(
-                        "[state sync] failed to send commit notif to shared mempool: {:?}",
-                        e
-                    );
-                }
-                async {
-                    if let Err(e) = callback_rcv.await {
-                        error!(
-                        "[state sync] did not receive ACK for commit notification sent to mempool: {:?}", e
-                    )
-                    }
-                }
-            });
-        }
+        });
 
         self.check_subscriptions().await;
         self.peer_manager.remove_requests(local_version);
@@ -695,7 +688,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let new_version = known_version + chunk_size;
         match response.response_li {
             ResponseLedgerInfo::VerifiableLedgerInfo(li) => {
-                self.process_response_with_verifiable_li(txn_list_with_proof, li)
+                self.process_response_with_verifiable_li(txn_list_with_proof.clone(), li)
                     .await
             }
             ResponseLedgerInfo::LedgerInfoForWaypoint {
@@ -703,7 +696,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 end_of_epoch_li,
             } => {
                 self.process_response_with_waypoint_li(
-                    txn_list_with_proof,
+                    txn_list_with_proof.clone(),
                     waypoint_li,
                     end_of_epoch_li,
                 )
@@ -730,7 +723,18 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 counters::SYNC_PROGRESS_DURATION.observe_duration(duration);
             }
         }
-        self.process_commit().await
+        // TODO this is temporary - actually pass in txns
+//        let (callback, callback_rcv)
+        let mut user_txns = vec![];
+        for txn in txn_list_with_proof.transactions.iter() {
+            if let Transaction::UserTransaction(signed_txn) = txn {
+                user_txns.push(CommittedTransaction {
+                    sender: signed_txn.sender(),
+                    sequence_number: signed_txn.sequence_number(),
+                })
+            }
+        }
+        self.process_commit(user_txns, None).await
     }
 
     /// Processing chunk responses that carry a LedgerInfo that should be verified using the

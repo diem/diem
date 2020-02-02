@@ -25,6 +25,7 @@ lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-se
 libra-config = { path = "../config", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-prost-ext = { path = "../common/prost-ext", version = "0.1.0" }
 libra-state-view = { path = "../storage/state-view", version = "0.1.0" }

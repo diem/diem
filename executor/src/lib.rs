@@ -23,6 +23,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_logger::prelude::*;
+use libra_mempool::CommittedTransaction;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -442,7 +443,7 @@ where
         blocks: Vec<(Vec<Transaction>, Arc<ProcessedVMOutput>)>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         synced_trees: &ExecutedTrees,
-    ) -> Result<()> {
+    ) -> Result<Vec<CommittedTransaction>> {
         debug!(
             "Received request to commit block {:x}.",
             ledger_info_with_sigs.ledger_info().consensus_block_id()
@@ -453,11 +454,18 @@ where
         // transactions in A, B and C whose status == TransactionStatus::Keep.
         // This must be done before calculate potential skipping of transactions in idempotent commit.
         let mut txns_to_keep = vec![];
+        let mut user_txns = vec![];
         for (txn, txn_data) in blocks
             .iter()
             .map(|block| itertools::zip_eq(&block.0, block.1.transaction_data()))
             .flatten()
         {
+            if let Transaction::UserTransaction(signed_txn) = txn {
+                user_txns.push(CommittedTransaction {
+                    sender: signed_txn.sender(),
+                    sequence_number: signed_txn.sequence_number(),
+                });
+            }
             if let TransactionStatus::Keep(_) = txn_data.status() {
                 txns_to_keep.push((
                     TransactionToCommit::new(
@@ -469,6 +477,8 @@ where
                     ),
                     txn_data.num_account_created(),
                 ));
+            } else {
+                debug!("[consensus] txn discarded by executor");
             }
         }
 
@@ -547,7 +557,7 @@ where
             }
         }
         // Now that the blocks are persisted successfully, we can reply to consensus
-        Ok(())
+        Ok(user_txns)
     }
 
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
