@@ -1289,6 +1289,7 @@ dependencies = [
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
+ "libra-mempool 0.1.0",
  "libra-metrics 0.1.0",
  "libra-prost-ext 0.1.0",
  "libra-state-view 0.1.0",

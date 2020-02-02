@@ -3,10 +3,9 @@
 
 use crate::state_replication::TxnManager;
 use anyhow::Result;
-use futures::channel::mpsc;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
-    Arc, RwLock,
+    Arc,
 };
 
 pub type MockTransaction = usize;
@@ -15,25 +14,13 @@ pub type MockTransaction = usize;
 #[derive(Clone)]
 pub struct MockTransactionManager {
     next_val: Arc<AtomicUsize>,
-    committed_txns: Arc<RwLock<Vec<MockTransaction>>>,
-    commit_sender: mpsc::Sender<usize>,
 }
 
 impl MockTransactionManager {
-    pub fn new() -> (Self, mpsc::Receiver<usize>) {
-        let (commit_sender, commit_receiver) = mpsc::channel(1024);
-        (
-            Self {
-                next_val: Arc::new(AtomicUsize::new(0)),
-                committed_txns: Arc::new(RwLock::new(vec![])),
-                commit_sender,
-            },
-            commit_receiver,
-        )
-    }
-
-    pub fn get_committed_txns(&self) -> Vec<usize> {
-        self.committed_txns.read().unwrap().clone()
+    pub fn new() -> Self {
+        Self {
+            next_val: Arc::new(AtomicUsize::new(0)),
+        }
     }
 }
 

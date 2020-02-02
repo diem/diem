@@ -17,7 +17,8 @@ use consensus_types::{
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     vote_msg::VoteMsg,
 };
-use futures::{channel::mpsc, executor::block_on, prelude::*};
+use futures::stream::StreamExt;
+use futures::{channel::mpsc, executor::block_on};
 use libra_config::{
     config::{
         ConsensusProposerType::{self, FixedProposer, MultipleOrderedProposers, RotatingProposer},
@@ -42,9 +43,8 @@ struct SMRNode {
     smr_id: usize,
     smr: ChainedBftSMR<TestPayload>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
-    mempool: MockTransactionManager,
-    mempool_notif_receiver: mpsc::Receiver<usize>,
     storage: Arc<MockStorage<TestPayload>>,
+    state_sync: mpsc::UnboundedReceiver<Vec<usize>>,
 }
 
 impl SMRNode {
@@ -67,20 +67,21 @@ impl SMRNode {
         let network_events = ConsensusNetworkEvents::new(consensus_rx, conn_status_rx);
 
         playground.add_node(author, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
+        let (state_sync_client, state_sync) = mpsc::unbounded();
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
-        let (mempool, commit_receiver) = MockTransactionManager::new();
 
         let mut smr = ChainedBftSMR::new(
             network_sender,
             network_events,
             &mut config.clone(),
             Arc::new(MockStateComputer::new(
+                state_sync_client,
                 commit_cb_sender,
                 Arc::clone(&storage),
                 executor_with_reconfig,
             )),
             storage.clone(),
-            Box::new(mempool.clone()),
+            Box::new(MockTransactionManager::new()),
         );
 
         smr.start().expect("Failed to start SMR!");
@@ -89,9 +90,8 @@ impl SMRNode {
             smr_id,
             smr,
             commit_cb_receiver,
-            mempool,
-            mempool_notif_receiver: commit_receiver,
             storage,
+            state_sync,
         }
     }
 
@@ -537,6 +537,14 @@ fn basic_state_sync() {
         playground
             .wait_for_messages(3, NetworkPlayground::proposals_only)
             .await;
+
+        // TODO check ACK from state sync
+        let committed_txns = nodes[3]
+            .state_sync
+            .next()
+            .await
+            .expect("MockStateSync failed to receive commit notif from consensus");
+        assert_eq!(committed_txns.len(), 100);
     });
 }
 

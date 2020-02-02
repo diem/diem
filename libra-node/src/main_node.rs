@@ -249,8 +249,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         // was observed in GitHub Issue #749. A long term fix might be make
         // consensus initialization async instead of blocking on state synchronizer.
         let (consensus_network_sender, consensus_network_events) =
-            validator_network::consensus::add_to_network(&mut network_builder);
-        let _listen_addr = network_builder.build();
+            validator_network::consensus::add_to_network(&mut network_provider);
+        let _listen_addr = network_provider.build();
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);
 

@@ -339,11 +339,13 @@ impl SynchronizerEnv {
 
     // commit new txns up to the given version
     fn commit(&self, peer_id: usize, version: u64) {
+        println!("[test commit state sync]");
         let mut storage = self.storage_proxies[peer_id].write().unwrap();
         let num_txns = version - storage.version();
         assert!(num_txns > 0);
-        storage.commit_new_txns(num_txns);
-        block_on(self.clients[peer_id].commit()).unwrap();
+        let user_txns = storage.commit_new_txns(num_txns);
+        drop(storage);
+        block_on(self.clients[peer_id].commit(user_txns)).unwrap();
     }
 
     fn latest_li(&self, peer_id: usize) -> LedgerInfoWithSignatures {

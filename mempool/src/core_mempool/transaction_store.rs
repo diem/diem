@@ -255,11 +255,14 @@ impl TransactionStore {
         self.process_ready_transactions(account, account_sequence_number);
     }
 
-    pub(crate) fn reject_transaction(&mut self, account: &AccountAddress, _sequence_number: u64) {
+    pub(crate) fn reject_transaction(&mut self, account: &AccountAddress, sequence_number: u64) {
         if let Some(txns) = self.transactions.remove(&account) {
+            debug!("[Mempool transaction store] actually removing rejected txn: {}:{}", account, sequence_number);
             for transaction in txns.values() {
                 self.index_remove(&transaction);
             }
+        } else {
+            debug!("[Mempool transaction store] rejected txn not in local mempool");
         }
     }
 

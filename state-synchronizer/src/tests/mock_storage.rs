@@ -6,6 +6,7 @@ use anyhow::{bail, Result};
 use executor::ExecutedTrees;
 use libra_crypto::hash::CryptoHash;
 use libra_crypto::HashValue;
+use libra_mempool::CommittedTransaction;
 use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::crypto_proxies::{ValidatorChangeProof, ValidatorSigner, ValidatorVerifier};
@@ -146,11 +147,20 @@ impl MockStorage {
 
     // Generate new dummy txns and updates the LI
     // with the version corresponding to the new transactions, signed by this storage signer.
-    pub fn commit_new_txns(&mut self, num_txns: u64) {
+    pub fn commit_new_txns(&mut self, num_txns: u64) -> Vec<CommittedTransaction> {
+        let mut committed_txns = vec![];
         for _ in 0..num_txns {
-            self.add_txns(&mut vec![Self::gen_mock_user_txn()]);
+            let txn = Self::gen_mock_user_txn();
+            self.add_txns(&mut vec![txn.clone()]);
+            if let Transaction::UserTransaction(signed_txn) = txn {
+                committed_txns.push(CommittedTransaction {
+                    sender: signed_txn.sender(),
+                    sequence_number: signed_txn.sequence_number(),
+                });
+            }
         }
         self.add_li(None);
+        committed_txns
     }
 
     fn gen_mock_user_txn() -> Transaction {
