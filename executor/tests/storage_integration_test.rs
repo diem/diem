@@ -221,7 +221,7 @@ fn test_execution_with_storage() {
     let (_privkey3, pubkey3) = compat::generate_keypair(&mut rng);
     let account3 = AccountAddress::from_public_key(&pubkey3);
     let (_privkey4, pubkey4) = compat::generate_keypair(&mut rng);
-    let account4 = AccountAddress::from_public_key(&pubkey4);  // non-existent account
+    let account4 = AccountAddress::from_public_key(&pubkey4); // non-existent account
     let genesis_account = association_address();
 
     // Create account1 with 2M coins.
@@ -398,9 +398,7 @@ fn test_execution_with_storage() {
             ascending: false,
             limit: 10,
         },
-        RequestItem::GetAccountState {
-            address: account4,
-        },
+        RequestItem::GetAccountState { address: account4 },
         RequestItem::GetAccountTransactionBySequenceNumber {
             account: account4,
             sequence_number: 0,
@@ -411,7 +409,7 @@ fn test_execution_with_storage() {
             start_event_seq_num: 0,
             ascending: true,
             limit: 100,
-        }
+        },
     ];
 
     let (
@@ -587,7 +585,6 @@ fn test_execution_with_storage() {
         .into_get_events_by_access_path_response()
         .unwrap();
     assert!(account4_sent_events.is_empty());
-
 
     // Execution the 2nd block.
     let output2 = executor

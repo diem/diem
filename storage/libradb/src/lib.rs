@@ -243,7 +243,7 @@ impl LibraDB {
         let account_resource = if let Some(account_blob) = &account_state_with_proof.blob {
             AccountResource::make_from(&(&account_blob.try_into()?))?
         } else {
-            return Ok((Vec::new(), account_state_with_proof))
+            return Ok((Vec::new(), account_state_with_proof));
         };
 
         let event_key = account_resource

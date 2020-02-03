@@ -123,28 +123,25 @@ prop_compose! {
     }
 }
 
-pub fn arb_blocks_to_commit() -> impl Strategy<
-    Value = Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>
-> {
+pub fn arb_blocks_to_commit(
+) -> impl Strategy<Value = Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>> {
     arb_blocks_to_commit_impl(
-        5 /* num_accounts */,
-        2 /* max_txn_per_block */,
-        10 /* max_blocks */,
+        5,  /* num_accounts */
+        2,  /* max_txn_per_block */
+        10, /* max_blocks */
     )
 }
 
-pub fn arb_mock_genesis() -> impl Strategy<
-    Value = (TransactionToCommit, LedgerInfoWithSignatures)
-> {
+pub fn arb_mock_genesis() -> impl Strategy<Value = (TransactionToCommit, LedgerInfoWithSignatures)>
+{
     arb_blocks_to_commit_impl(
-        1 /* num_accounts */,
-        1 /* max_txn_per_block */,
-        1 /* max_blocks */,
-    ).prop_map(
-        |blocks| {
-            let (block, ledger_info_with_sigs) = &blocks[0];
-
-            (block[0].clone(), ledger_info_with_sigs.clone())
-        }
+        1, /* num_accounts */
+        1, /* max_txn_per_block */
+        1, /* max_blocks */
     )
+    .prop_map(|blocks| {
+        let (block, ledger_info_with_sigs) = &blocks[0];
+
+        (block[0].clone(), ledger_info_with_sigs.clone())
+    })
 }
