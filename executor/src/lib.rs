@@ -312,7 +312,12 @@ where
         storage_write_client: Arc<dyn StorageWrite>,
         config: &NodeConfig,
     ) -> Self {
-        let rt = Runtime::new().unwrap();
+        let rt = tokio::runtime::Builder::new()
+            .threaded_scheduler()
+            .enable_all()
+            .thread_name("tokio-executor")
+            .build()
+            .unwrap();
 
         let mut executor = Executor {
             rt,
