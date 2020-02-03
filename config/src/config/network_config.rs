@@ -353,6 +353,25 @@ mod test {
         assert_eq!(config.peer_id, actual_peer_id);
     }
 
+    #[test]
+    fn test_generate_ip_addresses_on_load() {
+        // Generate a random node
+        let (mut config, path) = generate_config();
+        let mut rng = StdRng::from_seed([32u8; 32]);
+        config.random(&mut rng);
+        let root_dir = RootPath::new_path(path.path());
+
+        // Now reset IP addresses and save
+        config.listen_address = Multiaddr::empty();
+        config.advertised_address = Multiaddr::empty();
+        config.save(&root_dir).unwrap();
+
+        // Now load and verify default IP addresses are generated
+        config.load(&root_dir, RoleType::FullNode).unwrap();
+        assert_ne!(config.listen_address.to_string(), "");
+        assert_ne!(config.advertised_address.to_string(), "");
+    }
+
     fn generate_config() -> (NetworkConfig, TempPath) {
         let temp_dir = TempPath::new();
         temp_dir.create_as_dir().expect("error creating tempdir");

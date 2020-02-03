@@ -83,3 +83,20 @@ pub fn load_faucet_key_or_create_default(
         )
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn verify_test_create_and_load_key() {
+        // Create key pair and file
+        let (key_pair, key_file_path, _handle) = load_faucet_key_or_create_default(None);
+
+        // Load previously created key from file
+        let (loaded_key_pair, _, _) = load_faucet_key_or_create_default(Some(key_file_path));
+
+        // Compare loaded key with created key
+        assert_eq!(key_pair, loaded_key_pair);
+    }
+}
