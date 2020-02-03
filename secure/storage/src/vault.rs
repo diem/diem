@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, Permissions, Storage, Value};
+use crate::{Error, Policy, Storage, Value};
 use libra_vault_client::Client;
 
 /// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Libra. This
@@ -51,7 +51,7 @@ impl Storage for VaultStorage {
         self.client.unsealed().unwrap_or(false)
     }
 
-    fn create(&mut self, key: &str, value: Value, _permissions: &Permissions) -> Result<(), Error> {
+    fn create(&mut self, key: &str, value: Value, _policy: &Policy) -> Result<(), Error> {
         // Vault internally does not distinguish creation versus update except by permissions. So we
         // simulate that by first getting the key. If it doesn't exist, we're okay and return back a
         // fake, but ignored value.

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, permissions::Permissions, storage::Storage, value::Value};
+use crate::{error::Error, policy::Policy, storage::Storage, value::Value};
 use libra_temppath::TempPath;
 use std::collections::HashMap;
 use std::{
@@ -62,7 +62,7 @@ impl Storage for OnDiskStorage {
         true
     }
 
-    fn create(&mut self, key: &str, value: Value, _permissions: &Permissions) -> Result<(), Error> {
+    fn create(&mut self, key: &str, value: Value, _policy: &Policy) -> Result<(), Error> {
         let mut data = self.read()?;
         if data.contains_key(key) {
             return Err(Error::KeyAlreadyExists(key.to_string()));
