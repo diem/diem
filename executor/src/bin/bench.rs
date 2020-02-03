@@ -25,6 +25,11 @@ struct Opt {
 fn main() {
     let opt = Opt::from_args();
 
+    rayon::ThreadPoolBuilder::new()
+        .thread_name(|index| format!("rayon-global-{}", index))
+        .build_global()
+        .expect("Failed to build rayon global thread pool.");
+
     executor::benchmark::run_benchmark(
         opt.num_accounts,
         opt.init_account_balance,

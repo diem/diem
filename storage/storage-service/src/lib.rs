@@ -36,7 +36,12 @@ use tokio::runtime::Runtime;
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> Runtime {
-    let rt = tokio::runtime::Runtime::new().unwrap();
+    let rt = tokio::runtime::Builder::new()
+        .threaded_scheduler()
+        .enable_all()
+        .thread_name("tokio-storage")
+        .build()
+        .unwrap();
 
     let storage_service = StorageService::new(&config.storage.dir());
 
