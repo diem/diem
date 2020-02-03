@@ -38,7 +38,13 @@ pub enum CryptoMaterialError {
     PointNotOnCurveError,
 }
 
-/// Key material with a notion of byte validation.
+/// The serialized length of the data that enables macro derived serialization and deserialization.
+pub trait Length {
+    /// The serialized length of the data
+    const LENGTH: usize;
+}
+
+/// Key or more generally crypto material with a notion of byte validation.
 ///
 /// A type family for material that knows how to serialize and
 /// deserialize, as well as validate byte-encoded material. The
@@ -52,7 +58,6 @@ pub trait ValidKey:
     // The for<'a> exactly matches the assumption "deserializable from any lifetime".
     for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError> + Debug + Serialize + DeserializeOwned
 {
-
     /// Convert the valid key to bytes.
     fn to_bytes(&self) -> Vec<u8>;
 }

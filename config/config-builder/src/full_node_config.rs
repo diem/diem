@@ -21,7 +21,7 @@ pub struct FullNodeConfig {
     full_nodes: usize,
     genesis: Option<Transaction>,
     listen: Multiaddr,
-    permissioned: bool,
+    enable_remote_authentication: bool,
     template: NodeConfig,
     validator_config: ValidatorConfig,
 }
@@ -43,7 +43,7 @@ impl Default for FullNodeConfig {
             full_nodes: 1,
             genesis: None,
             listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
-            permissioned: true,
+            enable_remote_authentication: true,
             template,
             validator_config: ValidatorConfig::new(),
         }
@@ -95,13 +95,13 @@ impl FullNodeConfig {
         self
     }
 
-    pub fn permissioned(&mut self) -> &mut Self {
-        self.permissioned = true;
+    pub fn enable_remote_authentication(&mut self) -> &mut Self {
+        self.enable_remote_authentication = true;
         self
     }
 
     pub fn public(&mut self) -> &mut Self {
-        self.permissioned = false;
+        self.enable_remote_authentication = false;
         self
     }
 
@@ -197,11 +197,16 @@ impl FullNodeConfig {
                 .ok_or(Error::MissingFullNodeNetwork)?;
             network.listen_address = utils::get_available_port_in_multiaddr(true);
             network.advertised_address = network.listen_address.clone();
-            network.is_permissioned = self.permissioned;
+            network.enable_remote_authentication = self.enable_remote_authentication;
 
-            network_peers
-                .peers
-                .insert(network.peer_id, network.network_keypairs.as_peer_info());
+            network_peers.peers.insert(
+                network.peer_id,
+                network
+                    .network_keypairs
+                    .as_ref()
+                    .ok_or(Error::MissingNetworkKeyPairs)?
+                    .as_peer_info(),
+            );
 
             configs.push(config);
         }

@@ -7,6 +7,7 @@ use crate::{
         BinOp, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc,
         StructName, UnaryOp, Value, Var,
     },
+    shared::ast_debug::*,
     shared::unique_map::UniqueMap,
     shared::*,
 };
@@ -243,6 +244,16 @@ impl Command_ {
         }
     }
 
+    pub fn is_unit(&self) -> bool {
+        use Command_ as C;
+        match self {
+            C::Assign(ls, e) => ls.is_empty() && e.is_unit(),
+            C::IgnoreAndPop { exp: e, .. } => e.is_unit(),
+
+            C::Mutate(_, _) | C::Return(_) | C::Abort(_) | C::JumpIf { .. } | C::Jump(_) => false,
+        }
+    }
+
     pub fn successors(&self) -> BTreeSet<Label> {
         use Command_::*;
 
@@ -263,6 +274,21 @@ impl Command_ {
             }
         }
         successors
+    }
+}
+
+impl Exp {
+    pub fn is_unit(&self) -> bool {
+        self.exp.value.is_unit()
+    }
+}
+
+impl UnannotatedExp_ {
+    pub fn is_unit(&self) -> bool {
+        match self {
+            UnannotatedExp_::Unit => true,
+            _ => false,
+        }
     }
 }
 
@@ -349,6 +375,454 @@ impl Type_ {
             Type_::Multiple(ss) => {
                 assert!(idx < ss.len());
                 ss.get(idx).unwrap()
+            }
+        }
+    }
+}
+
+//**************************************************************************************************
+// Debug
+//**************************************************************************************************
+
+impl AstDebug for Program {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let Program { modules, main } = self;
+        for (m, mdef) in modules {
+            w.write(&format!("module {}", m));
+            w.block(|w| mdef.ast_debug(w));
+            w.new_line();
+        }
+
+        if let Some((addr, n, fdef)) = main {
+            w.writeln(&format!("address {}:", addr));
+            (n.clone(), fdef).ast_debug(w);
+        }
+    }
+}
+
+impl AstDebug for ModuleDefinition {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let ModuleDefinition {
+            is_source_module,
+            structs,
+            functions,
+        } = self;
+        match is_source_module {
+            None => w.writeln("library module"),
+            Some(ord) => w.writeln(&format!("source moduel #{}", ord)),
+        }
+        for sdef in structs {
+            sdef.ast_debug(w);
+            w.new_line();
+        }
+        for fdef in functions {
+            fdef.ast_debug(w);
+            w.new_line();
+        }
+    }
+}
+
+impl AstDebug for (StructName, &StructDefinition) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (
+            name,
+            StructDefinition {
+                resource_opt,
+                type_parameters,
+                fields,
+            },
+        ) = self;
+        if let StructFields::Native(_) = fields {
+            w.write("native ");
+        }
+        if resource_opt.is_some() {
+            w.write("resource ");
+        }
+        w.write(&format!("struct {}", name));
+        type_parameters.ast_debug(w);
+        if let StructFields::Defined(fields) = fields {
+            w.block(|w| {
+                w.list(fields, ",", |w, (f, bt)| {
+                    w.write(&format!("{}: ", f));
+                    bt.ast_debug(w);
+                    true
+                })
+            })
+        }
+    }
+}
+
+impl AstDebug for (FunctionName, &Function) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (
+            name,
+            Function {
+                visibility,
+                signature,
+                acquires,
+                body,
+            },
+        ) = self;
+        visibility.ast_debug(w);
+        if let FunctionBody_::Native = &body.value {
+            w.write("native ");
+        }
+        w.write(&format!("{}", name));
+        signature.ast_debug(w);
+        if !acquires.is_empty() {
+            w.write(" acquires ");
+            w.comma(acquires, |w, s| w.write(&format!("{}", s)));
+            w.write(" ");
+        }
+        match &body.value {
+            FunctionBody_::Defined {
+                locals,
+                start,
+                blocks,
+            } => w.block(|w| {
+                w.write("locals:");
+                w.indent(4, |w| {
+                    w.list(locals, ",", |w, (v, st)| {
+                        w.write(&format!("{}: ", v));
+                        st.ast_debug(w);
+                        true
+                    })
+                });
+                w.new_line();
+                w.writeln(&format!("start={}", start.0));
+                w.new_line();
+                blocks.ast_debug(w);
+            }),
+            FunctionBody_::Native => w.writeln(";"),
+        }
+    }
+}
+
+impl AstDebug for FunctionSignature {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let FunctionSignature {
+            type_parameters,
+            parameters,
+            return_type,
+        } = self;
+        type_parameters.ast_debug(w);
+        w.write("(");
+        w.comma(parameters, |w, (v, st)| {
+            w.write(&format!("{}: ", v));
+            st.ast_debug(w)
+        });
+        w.write("): ");
+        return_type.ast_debug(w)
+    }
+}
+
+impl AstDebug for BaseType_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            BaseType_::Param(tp) => tp.ast_debug(w),
+            BaseType_::Apply(k, m, ss) => {
+                w.annotate(
+                    |w| {
+                        m.ast_debug(w);
+                        if !ss.is_empty() {
+                            w.write("<");
+                            ss.ast_debug(w);
+                            w.write(">");
+                        }
+                    },
+                    k,
+                );
+            }
+        }
+    }
+}
+
+impl AstDebug for SingleType_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            SingleType_::Base(b) => b.ast_debug(w),
+            SingleType_::Ref(mut_, s) => {
+                w.write("&");
+                if *mut_ {
+                    w.write("mut ");
+                }
+                s.ast_debug(w)
+            }
+        }
+    }
+}
+
+impl AstDebug for Type_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            Type_::Unit => w.write("()"),
+            Type_::Single(s) => s.ast_debug(w),
+            Type_::Multiple(ss) => {
+                w.write("(");
+                ss.ast_debug(w);
+                w.write(")")
+            }
+        }
+    }
+}
+
+impl AstDebug for Vec<SingleType> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.comma(self, |w, s| s.ast_debug(w))
+    }
+}
+
+impl AstDebug for Vec<BaseType> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.comma(self, |w, s| s.ast_debug(w))
+    }
+}
+
+impl AstDebug for Blocks {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.list(self, "", |w, lbl_block| {
+            lbl_block.ast_debug(w);
+            w.new_line();
+            true
+        })
+    }
+}
+
+impl AstDebug for (&Label, &BasicBlock) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.write(&format!("label {}:", (self.0).0));
+        w.indent(4, |w| w.semicolon(self.1, |w, cmd| cmd.ast_debug(w)))
+    }
+}
+
+impl AstDebug for Command_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use Command_ as C;
+        match self {
+            C::Assign(lvalues, rhs) => {
+                lvalues.ast_debug(w);
+                w.write(" = ");
+                rhs.ast_debug(w);
+            }
+            C::Mutate(lhs, rhs) => {
+                w.write("*");
+                lhs.ast_debug(w);
+                w.write(" = ");
+                rhs.ast_debug(w);
+            }
+            C::Abort(e) => {
+                w.write("abort ");
+                e.ast_debug(w);
+            }
+            C::Return(e) => {
+                w.write("return ");
+                e.ast_debug(w);
+            }
+            C::IgnoreAndPop { pop_num, exp } => {
+                w.write("pop ");
+                w.comma(0..*pop_num, |w, _| w.write("_"));
+                w.write(" = ");
+                exp.ast_debug(w);
+            }
+            C::Jump(lbl) => w.write(&format!("jump {}", lbl.0)),
+            C::JumpIf {
+                cond,
+                if_true,
+                if_false,
+            } => {
+                w.write("jump_if(");
+                cond.ast_debug(w);
+                w.write(&format!(") {} else {}", if_true.0, if_false.0));
+            }
+        }
+    }
+}
+
+impl AstDebug for Exp {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let Exp { ty, exp } = self;
+        w.annotate(|w| exp.ast_debug(w), ty)
+    }
+}
+
+impl AstDebug for UnannotatedExp_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use UnannotatedExp_ as E;
+        match self {
+            E::Unit => w.write("()"),
+            E::Value(v) => v.ast_debug(w),
+            E::Move {
+                from_user: false,
+                var: v,
+            } => w.write(&format!("move {}", v)),
+            E::Move {
+                from_user: true,
+                var: v,
+            } => w.write(&format!("move@{}", v)),
+            E::Copy {
+                from_user: false,
+                var: v,
+            } => w.write(&format!("copy {}", v)),
+            E::Copy {
+                from_user: true,
+                var: v,
+            } => w.write(&format!("copy@{}", v)),
+            E::ModuleCall(mcall) => {
+                mcall.ast_debug(w);
+            }
+            E::Builtin(bf, rhs) => {
+                bf.ast_debug(w);
+                w.write("(");
+                rhs.ast_debug(w);
+                w.write(")");
+            }
+            E::Freeze(e) => {
+                w.write("freeze(");
+                e.ast_debug(w);
+                w.write(")");
+            }
+            E::Pack(s, tys, fields) => {
+                w.write(&format!("{}", s));
+                w.write("<");
+                tys.ast_debug(w);
+                w.write(">");
+                w.write("{");
+                w.comma(fields, |w, (f, bt, e)| {
+                    w.write(&format!("{}:", f));
+                    bt.ast_debug(w);
+                    w.write(": ");
+                    e.ast_debug(w);
+                });
+                w.write("}");
+            }
+
+            E::ExpList(es) => {
+                w.write("(");
+                w.comma(es, |w, e| e.ast_debug(w));
+                w.write(")");
+            }
+
+            E::Dereference(e) => {
+                w.write("*");
+                e.ast_debug(w)
+            }
+            E::UnaryExp(op, e) => {
+                op.ast_debug(w);
+                w.write(" ");
+                e.ast_debug(w);
+            }
+            E::BinopExp(l, op, r) => {
+                l.ast_debug(w);
+                w.write(" ");
+                op.ast_debug(w);
+                w.write(" ");
+                r.ast_debug(w)
+            }
+            E::Borrow(mut_, e, f) => {
+                w.write("&");
+                if *mut_ {
+                    w.write("mut ");
+                }
+                e.ast_debug(w);
+                w.write(&format!(".{}", f));
+            }
+            E::BorrowLocal(mut_, v) => {
+                w.write("&");
+                if *mut_ {
+                    w.write("mut ");
+                }
+                w.write(&format!("{}", v));
+            }
+            E::UnresolvedError => w.write("_|_"),
+        }
+    }
+}
+
+impl AstDebug for ModuleCall {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let ModuleCall {
+            module,
+            name,
+            type_arguments,
+            acquires,
+            arguments,
+        } = self;
+        w.write(&format!("{}::{}", module, name));
+        if !acquires.is_empty() {
+            w.write("[acquires: [");
+            w.comma(acquires, |w, s| w.write(&format!("{}", s)));
+            w.write("]], ");
+        }
+        w.write("<");
+        type_arguments.ast_debug(w);
+        w.write(">");
+        w.write("(");
+        arguments.ast_debug(w);
+        w.write(")");
+    }
+}
+
+impl AstDebug for BuiltinFunction_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use crate::naming::ast::BuiltinFunction_ as NF;
+        use BuiltinFunction_ as F;
+        let (n, bt) = match self {
+            F::MoveToSender(bt) => (NF::MOVE_TO_SENDER, bt),
+            F::MoveFrom(bt) => (NF::MOVE_FROM, bt),
+            F::BorrowGlobal(true, bt) => (NF::BORROW_GLOBAL_MUT, bt),
+            F::BorrowGlobal(false, bt) => (NF::BORROW_GLOBAL, bt),
+            F::Exists(bt) => (NF::EXISTS, bt),
+        };
+        w.write(n);
+        w.write("<");
+        bt.ast_debug(w);
+        w.write(">");
+    }
+}
+
+impl AstDebug for ExpListItem {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            ExpListItem::Single(e, st) => w.annotate(|w| e.ast_debug(w), st),
+            ExpListItem::Splat(_, e, ss) => {
+                w.write("~");
+                w.annotate(|w| e.ast_debug(w), ss)
+            }
+        }
+    }
+}
+
+impl AstDebug for Vec<LValue> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let parens = self.len() != 1;
+        if parens {
+            w.write("(");
+        }
+        w.comma(self, |w, a| a.ast_debug(w));
+        if parens {
+            w.write(")");
+        }
+    }
+}
+
+impl AstDebug for LValue_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use LValue_ as L;
+        match self {
+            L::Ignore => w.write("_"),
+            L::Var(v, st) => w.annotate(|w| w.write(&format!("{}", v)), st),
+
+            L::Unpack(s, tys, fields) => {
+                w.write(&format!("{}", s));
+                w.write("<");
+                tys.ast_debug(w);
+                w.write(">");
+                w.write("{");
+                w.comma(fields, |w, (f, l)| {
+                    w.write(&format!("{}: ", f));
+                    l.ast_debug(w)
+                });
+                w.write("}");
             }
         }
     }

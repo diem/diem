@@ -3,7 +3,7 @@
 members = [
     "admission_control/admission-control-service",
     "admission_control/admission-control-proto",
-    "client",
+    "client/cli",
     "client/libra_wallet",
     "common/bounded-executor",
     "common/channel",
@@ -36,7 +36,8 @@ members = [
     "language/bytecode-verifier",
     "language/bytecode-verifier/invalid-mutations",
     "language/bytecode-verifier/bytecode_verifier_tests",
-    "language/functional_tests",
+    "language/functional-tests",
+    "language/ir-testsuite",
     "language/transaction-builder",
     "language/compiler",
     "language/compiler/ir-to-bytecode",
@@ -66,6 +67,8 @@ members = [
     "network/socket-bench-server",
     "mempool",
     "mempool/mempool-shared-proto",
+    "secure/net",
+    "secure/storage",
     "state-synchronizer",
     "storage/accumulator",
     "storage/backup-restore",
@@ -90,7 +93,7 @@ members = [
 # features or test features. These are the crates we want built with no extra
 # test-only code included.
 default-members = [
-    "client",
+    "client/cli",
     "language/compiler",
     "language/tools/vm-genesis",
     "libra-node",

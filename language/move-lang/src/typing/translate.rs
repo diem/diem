@@ -689,23 +689,23 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             let msg = || format!("Invalid argument to '{}'", &bop);
             let el = exp(context, *nl);
             let er = exp(context, *nr);
-            let ty = match &bop.value {
+            let (ty, operand_ty) = match &bop.value {
                 Sub | Add | Mul | Mod | Div => {
                     let ty = expect_builtin_ty(context, BT::numeric(), el.exp.loc, msg, &el.ty);
-                    subtype(context, er.exp.loc, msg, &er.ty, &ty);
-                    ty
+                    let operand_ty = subtype(context, er.exp.loc, msg, &er.ty, &ty);
+                    (ty, operand_ty)
                 }
 
                 BitOr | BitAnd | Xor => {
                     let ty = expect_builtin_ty(context, BT::bits(), el.exp.loc, msg, &el.ty);
-                    subtype(context, er.exp.loc, msg, &er.ty, &ty);
-                    ty
+                    let operand_ty = subtype(context, er.exp.loc, msg, &er.ty, &ty);
+                    (ty, operand_ty)
                 }
 
                 Lt | Gt | Le | Ge => {
                     let ty = expect_builtin_ty(context, BT::ordered(), el.exp.loc, msg, &el.ty);
-                    join(context, er.exp.loc, msg, &er.ty, &ty);
-                    Type_::bool(eloc)
+                    let operand_ty = join(context, er.exp.loc, msg, &er.ty, &ty);
+                    (Type_::bool(eloc), operand_ty)
                 }
 
                 Eq | Neq => {
@@ -724,10 +724,10 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                     context.add_copyable_constraint(
                         eloc,
                         format!("Cannot use '{}' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'", &bop),
-                        st
+                        st.clone(),
                     );
 
-                    Type_::bool(eloc)
+                    (Type_::bool(eloc), Type_::single(st))
                 }
 
                 And | Or => {
@@ -735,10 +735,10 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                     subtype(context, lloc, msg, &el.ty, &Type_::bool(lloc));
                     let rloc = er.exp.loc;
                     subtype(context, rloc, msg, &er.ty, &Type_::bool(lloc));
-                    Type_::bool(eloc)
+                    (Type_::bool(eloc), Type_::bool(eloc))
                 }
             };
-            (ty, TE::BinopExp(el, bop, er))
+            (ty, TE::BinopExp(el, bop, Box::new(operand_ty), er))
         }
 
         NE::ExpList(nes) => {
@@ -861,7 +861,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 &el.ty,
                 &rhs,
             );
-            (rhs, el.exp.value)
+            (rhs.clone(), TE::Annotate(el, Box::new(rhs)))
         }
         NE::UnresolvedError => {
             assert!(context.has_errors());

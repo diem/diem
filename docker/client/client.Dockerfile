@@ -16,14 +16,14 @@ FROM toolchain AS builder
 
 COPY . /libra
 
-RUN cargo build --release -p libra-node -p client -p config-builder && cd target/release && rm -r build deps incremental
-RUN strip target/release/client
+RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
+RUN strip target/release/cli
 
 ### Production Image ###
 FROM debian:buster AS prod
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
-COPY --from=builder /libra/target/release/client /opt/libra/bin/libra_client
+COPY --from=builder /libra/target/release/cli /opt/libra/bin/libra_client
 
 ENTRYPOINT ["/opt/libra/bin/libra_client"]
 CMD ["--host", "ac.testnet.libra.org", "--port", "8000"]

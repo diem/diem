@@ -5,8 +5,12 @@
 
 //! Move prover modules
 
-pub mod bytecode_function_generator;
+#[macro_use]
+pub mod code_writer;
+pub mod boogie_helpers;
+pub mod boogie_wrapper;
+pub mod bytecode_translator;
 pub mod cli;
 pub mod driver;
+pub mod env;
 pub mod spec_translator;
-pub mod translator;

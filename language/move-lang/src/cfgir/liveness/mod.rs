@@ -60,15 +60,21 @@ impl TransferFunctions for Liveness {
 
 impl AbstractInterpreter for Liveness {}
 
-pub fn refine_and_verify(
+pub fn refine_inference_and_verify(
     errors: &mut Errors,
     _signature: &FunctionSignature,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &mut BlockCFG,
     infinite_loop_starts: &BTreeSet<Label>,
 ) {
-    let (_, per_command_states) = analyze(cfg, &infinite_loop_starts);
-    last_usage(errors, locals, per_command_states, cfg.blocks_mut());
+    let (final_invariants, per_command_states) = analyze(cfg, &infinite_loop_starts);
+    last_usage(
+        errors,
+        locals,
+        final_invariants,
+        per_command_states,
+        cfg.blocks_mut(),
+    );
     let (final_invariants, per_command_states) = analyze(cfg, &infinite_loop_starts);
     let forward_intersections = build_forward_intersections(cfg, final_invariants);
     release_dead_refs(
@@ -174,12 +180,14 @@ fn exp_list_item(state: &mut LivenessState, item: &ExpListItem) {
 fn last_usage(
     errors: &mut Errors,
     locals: &UniqueMap<Var, SingleType>,
+    final_invariants: FinalInvariants,
     block_command_states: PerCommandStates,
     blocks: &mut Blocks,
 ) {
     for (lbl, block) in blocks {
+        let final_invariant = final_invariants.get(lbl).unwrap();
         let command_states = block_command_states.get(lbl).unwrap();
-        last_usage::block(errors, locals, command_states, block)
+        last_usage::block(errors, locals, final_invariant, command_states, block)
     }
 }
 
@@ -227,6 +235,7 @@ mod last_usage {
     pub fn block(
         errors: &mut Errors,
         locals: &UniqueMap<Var, SingleType>,
+        final_invariant: &LivenessState,
         command_states: &VecDeque<LivenessState>,
         block: &mut BasicBlock,
     ) {
@@ -236,18 +245,20 @@ mod last_usage {
             last_cmd.value.is_terminal(),
             "ICE malformed block. missing jump"
         );
-        for idx in 0..(len - 1) {
+        for idx in 0..len {
             let cmd = block.get_mut(idx).unwrap();
-            let cur_data = command_states.get(idx).unwrap();
-            let next_data = command_states.get(idx + 1).unwrap();
+            let cur_data = &command_states.get(idx).unwrap().0;
+            let next_data = match command_states.get(idx + 1) {
+                Some(s) => &s.0,
+                None => &final_invariant.0,
+            };
 
             let dropped_live = cur_data
-                .0
-                .difference(&next_data.0)
+                .difference(next_data)
                 .cloned()
                 .collect::<BTreeSet<_>>();
             command(
-                &mut Context::new(errors, locals, &next_data.0, dropped_live),
+                &mut Context::new(errors, locals, next_data, dropped_live),
                 cmd,
             )
         }

@@ -28,11 +28,14 @@ impl Drop for TempPath {
 }
 
 impl TempPath {
-    /// Create new uninitialized temporary path, i.e. a file or directory isn't created
-    /// automatically
+    /// Create new, uninitialized temporary path in the system temp directory.
     pub fn new() -> Self {
-        // Create a random path in the system temp directory
-        let mut temppath = std::env::temp_dir();
+        Self::new_with_temp_dir(std::env::temp_dir())
+    }
+
+    /// Create new, uninitialized temporary path in the specified directory.
+    pub fn new_with_temp_dir(temp_dir: PathBuf) -> Self {
+        let mut temppath = temp_dir;
         let mut rng = rand::thread_rng();
         let mut bytes = [0_u8; 16];
         rng.fill_bytes(&mut bytes);

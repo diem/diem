@@ -16,7 +16,7 @@ FROM toolchain AS builder
 
 COPY . /libra
 
-RUN cargo build --release -p libra-node -p client -p config-builder && cd target/release && rm -r build deps incremental
+RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
 
 ### Production Image ###
 FROM debian:buster AS prod
@@ -31,7 +31,7 @@ RUN pip3 install -r /libra/docker/mint/requirements.txt
 
 RUN mkdir -p /opt/libra/bin  /libra/client/data/wallet/
 
-COPY --from=builder /libra/target/release/client /opt/libra/bin
+COPY --from=builder /libra/target/release/cli /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 COPY docker/mint/server.py /opt/libra/bin
 COPY docker/mint/docker-run.sh /opt/libra/bin

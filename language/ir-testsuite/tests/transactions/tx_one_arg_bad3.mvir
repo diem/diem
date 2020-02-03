@@ -1,0 +1,10 @@
+// address arg to a main(u64) is an error
+
+//! args: 0x1
+
+main(x: u64) {
+    return;
+}
+
+// check: Keep
+// check: TYPE_MISMATCH

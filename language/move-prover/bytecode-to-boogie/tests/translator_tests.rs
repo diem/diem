@@ -49,6 +49,8 @@ fn test_access_path() {
             &std_mvir("bytearray_util"),
             &std_mvir("hash"),
             &std_mvir("libra_coin"),
+            &std_mvir("libra_time"),
+            &std_mvir("libra_transaction_timeout"),
             &std_mvir("libra_account"),
             "test_mvir/test-access-path.mvir",
         ],
@@ -71,6 +73,8 @@ fn test_lib() {
             &std_mvir("gas_schedule"),
             &std_mvir("validator_config"),
             &std_mvir("libra_coin"),
+            &std_mvir("libra_time"),
+            &std_mvir("libra_transaction_timeout"),
             &std_mvir("libra_account"),
             // TODO(wrwg): this currently fails with boogie compilation errors
             //   call to undeclared procedure: Vector_contains (etc)

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use cli::client_proxy::ClientProxy;
-use libra_config::config::{NodeConfig, RoleType};
+use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, HashValue, SigningKey};
 use libra_logger::prelude::*;
 use libra_swarm::swarm::LibraNode;
@@ -34,9 +34,18 @@ struct TestEnvironment {
 impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
         ::libra_logger::init_for_e2e_testing();
-        let validator_swarm =
-            LibraSwarm::configure_swarm(num_validators, RoleType::Validator, None, None, None)
-                .unwrap();
+        let mut template = NodeConfig::default();
+        template.state_sync.chunk_limit = 2;
+        template.vm_config.publishing_options = VMPublishingOption::Open;
+
+        let validator_swarm = LibraSwarm::configure_swarm(
+            num_validators,
+            RoleType::Validator,
+            None,
+            Some(template),
+            None,
+        )
+        .unwrap();
 
         let mnemonic_file = libra_temppath::TempPath::new();
         mnemonic_file
@@ -429,7 +438,6 @@ fn test_startup_sync_state() {
 
 #[test]
 fn test_basic_state_synchronization() {
-    //
     // - Start a swarm of 5 nodes (3 nodes forming a QC).
     // - Kill one node and continue submitting transactions to the others.
     // - Restart the node
@@ -450,6 +458,8 @@ fn test_basic_state_synchronization() {
         Decimal::from_f64(10.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
+
+    // Test single chunk sync, chunk_size = 2
     let node_to_restart = 0;
     env.validator_swarm.kill_node(node_to_restart);
     // All these are executed while one node is down
@@ -461,7 +471,43 @@ fn test_basic_state_synchronization() {
         Decimal::from_f64(10.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
-    for _ in 0..5 {
+    client_proxy
+        .transfer_coins(&["tb", "0", "1", "1"], true)
+        .unwrap();
+
+    // Reconnect and synchronize the state
+    assert!(env
+        .validator_swarm
+        .add_node(node_to_restart, RoleType::Validator, false)
+        .is_ok());
+
+    // Wait for all the nodes to catch up
+    assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
+
+    // Connect to the newly recovered node and verify its state
+    let mut client_proxy2 = env.get_validator_ac_client(node_to_restart, None);
+    client_proxy2.set_accounts(client_proxy.copy_all_accounts());
+    assert_eq!(
+        Decimal::from_f64(89.0),
+        Decimal::from_str(&client_proxy2.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(11.0),
+        Decimal::from_str(&client_proxy2.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+
+    // Test multiple chunk sync
+    env.validator_swarm.kill_node(node_to_restart);
+    // All these are executed while one node is down
+    assert_eq!(
+        Decimal::from_f64(89.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(11.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+    for _ in 0..10 {
         client_proxy
             .transfer_coins(&["tb", "0", "1", "1"], true)
             .unwrap();
@@ -480,11 +526,11 @@ fn test_basic_state_synchronization() {
     let mut client_proxy2 = env.get_validator_ac_client(node_to_restart, None);
     client_proxy2.set_accounts(client_proxy.copy_all_accounts());
     assert_eq!(
-        Decimal::from_f64(85.0),
+        Decimal::from_f64(79.0),
         Decimal::from_str(&client_proxy2.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
-        Decimal::from_f64(15.0),
+        Decimal::from_f64(21.0),
         Decimal::from_str(&client_proxy2.get_balance(&["b", "1"]).unwrap()).ok()
     );
 }
@@ -827,4 +873,29 @@ fn test_client_waypoints() {
     assert!(client_with_bad_waypoint
         .test_validator_connection()
         .is_err());
+}
+
+#[test]
+fn test_malformed_script() {
+    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy
+        .mint_coins(&["mintb", "0", "100"], true)
+        .unwrap();
+
+    let script_path = workspace_builder::workspace_root()
+        .join("language/stdlib/transaction_scripts/peer_to_peer_transfer_with_metadata.mvir");
+    let unwrapped_script_path = script_path.to_str().unwrap();
+    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+    let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
+
+    // P2P script is expecting three arguments. Passing only one in the test.
+    client_proxy
+        .execute_script(&["execute", "0", &script_compiled_path[..], "10"])
+        .unwrap();
+
+    // Previous transaction should not choke the system.
+    client_proxy
+        .mint_coins(&["mintb", "0", "10"], true)
+        .unwrap();
 }

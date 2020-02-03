@@ -43,7 +43,7 @@ fn main() {
         num_nodes,
         RoleType::Validator,
         args.config_dir.clone(),
-        None, /* template_path */
+        None, /* template config */
         None, /* upstream_config_dir */
     )
     .expect("Failed to configure validator swarm");
@@ -54,7 +54,7 @@ fn main() {
                 num_full_nodes,
                 RoleType::FullNode,
                 None, /* config dir */
-                None, /* template_path */
+                None, /* template config */
                 Some(String::from(
                     validator_swarm
                         .dir
@@ -82,10 +82,8 @@ fn main() {
     let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
     println!(
-        "\tcargo run --bin client -- -a localhost -p {} -m {:?}",
-        validator_config
-            .admission_control
-            .admission_control_service_port,
+        "\tcargo run --bin cli -- -a localhost -p {} -m {:?}",
+        validator_config.admission_control.address.port(),
         faucet_key_file_path,
     );
     let node_address_list = validator_swarm
@@ -96,7 +94,8 @@ fn main() {
             let port = NodeConfig::load(config)
                 .unwrap()
                 .admission_control
-                .admission_control_service_port;
+                .address
+                .port();
             format!("localhost:{}", port)
         })
         .collect::<Vec<String>>()
@@ -110,10 +109,8 @@ fn main() {
         let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
-            "\tcargo run --bin client -- -a localhost -p {} -m {:?}",
-            full_node_config
-                .admission_control
-                .admission_control_service_port,
+            "\tcargo run --bin cli -- -a localhost -p {} -m {:?}",
+            full_node_config.admission_control.address.port(),
             faucet_key_file_path,
         );
     }

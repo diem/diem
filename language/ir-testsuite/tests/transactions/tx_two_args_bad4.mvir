@@ -1,0 +1,10 @@
+// (address, u64) args to main(u64, address) is an error
+
+//! args: 0x1, 42
+
+main(val: u64, addr: address) {
+    return;
+}
+
+// check: Keep
+// check: TYPE_MISMATCH

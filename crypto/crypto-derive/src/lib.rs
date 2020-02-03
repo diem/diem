@@ -140,6 +140,55 @@ pub fn silent_debug(source: TokenStream) -> TokenStream {
     gen.into()
 }
 
+/// Deserialize from a human readable format where applicable
+#[proc_macro_derive(DeserializeKey)]
+pub fn deserialize_key(source: TokenStream) -> TokenStream {
+    let ast: DeriveInput = syn::parse(source).expect("Incorrect macro input");
+    let name = &ast.ident;
+    let gen = quote! {
+        impl<'de> ::serde::Deserialize<'de> for #name {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+            where
+                D: ::serde::Deserializer<'de>,
+            {
+                if deserializer.is_human_readable() {
+                    let encoded_key: &str = ::serde::Deserialize::deserialize(deserializer)?;
+                    ValidKeyStringExt::from_encoded_string(encoded_key)
+                        .map_err(<D::Error as ::serde::de::Error>::custom)
+                } else {
+                    let b = <&[u8]>::deserialize(deserializer)?;
+                    #name::try_from(b).map_err(<D::Error as ::serde::de::Error>::custom)
+                }
+            }
+        }
+    };
+    gen.into()
+}
+
+/// Serialize into a human readable format where applicable
+#[proc_macro_derive(SerializeKey)]
+pub fn serialize_key(source: TokenStream) -> TokenStream {
+    let ast: DeriveInput = syn::parse(source).expect("Incorrect macro input");
+    let name = &ast.ident;
+    let gen = quote! {
+        impl ::serde::Serialize for #name {
+            fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+            where
+                S: ::serde::Serializer,
+            {
+                if serializer.is_human_readable() {
+                    self.to_encoded_string()
+                        .map_err(<S::Error as ::serde::ser::Error>::custom)
+                        .and_then(|str| serializer.serialize_str(&str[..]))
+                } else {
+                    serializer.serialize_bytes(&ValidKey::to_bytes(self))
+                }
+            }
+        }
+    };
+    gen.into()
+}
+
 #[proc_macro_derive(Deref)]
 pub fn derive_deref(input: TokenStream) -> TokenStream {
     let item = syn::parse(input).expect("Incorrect macro input");

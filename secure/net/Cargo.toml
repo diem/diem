@@ -1,0 +1,16 @@
+[package]
+name = "libra-secure-net"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+repository = "https://github.com/libra/libra"
+description = "Libra's Simple Network Substrate"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+
+[dev-dependencies]
+libra-config = { path = "../../config", version = "0.1.0" }

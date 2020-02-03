@@ -30,4 +30,14 @@ module M {
         _ = move x;
     }
 
+    t4(cond: bool) {
+        let x = cond;
+        let x_ref = &x;
+        while (*x_ref) {
+
+        };
+        _ = x;
+        _ = move x;
+    }
+
 }

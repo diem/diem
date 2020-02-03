@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 set -e
 
+echo "$(TZ='America/Los_Angeles' date) [${REMOTE_USER}] $*" >> ~/ct.log
+
 DOCKER_IMAGE=""
 WAIT_TO="45m"
 export CONTAINER="cluster-test-$RANDOM"
@@ -12,7 +14,7 @@ MASTER_IMAGE="853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:ma
 while (( "$#" )); do
   case "$1" in
     -c|--container)
-      CONTAINER=$2
+      export CONTAINER=$2
       shift 2
       ;;
     -P|--prune)

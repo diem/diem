@@ -318,6 +318,14 @@ pub static BLOCK_EXECUTION_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
     )
 });
 
+pub static UNWRAPPED_PROPOSAL_SIZE_BYTES: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        "libra_consensus_unwrapped_proposal_size_bytes",
+        "Histogram of proposal size after LCS but before wrapping with GRPC and libra net."
+    )
+    .unwrap()
+});
+
 /// Histogram of duration of a commit procedure (the time it takes for the execution / storage to
 /// commit a block once we decide to do so).
 pub static BLOCK_COMMIT_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {

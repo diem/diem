@@ -4,7 +4,7 @@
 use crate::{
     account::{Account, AccountData},
     common_transactions::create_account_txn,
-    executor::test_all_genesis,
+    executor::test_all_genesis_default,
 };
 use libra_types::{
     transaction::TransactionStatus,
@@ -14,7 +14,7 @@ use libra_types::{
 #[test]
 fn create_account() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish a sender with 1_000_000 coins
         let sender = AccountData::new(1_000_000, 10);
         executor.add_account_data(&sender);
@@ -49,7 +49,7 @@ fn create_account() {
 #[test]
 fn create_account_zero_balance() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish a sender with 1_000_000 coins
         let sender = AccountData::new(1_000_000, 10);
         executor.add_account_data(&sender);

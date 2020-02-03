@@ -1,0 +1,25 @@
+[package]
+name = "ir-testsuite"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra functional tests"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+edition = "2018"
+
+[dev-dependencies]
+anyhow = "1.0"
+bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
+datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
+functional-tests = { path = "../functional-tests", version = "0.1.0" }
+ir-to-bytecode-syntax = { path = "../compiler/ir-to-bytecode/syntax", version = "0.1.0" }
+ir-to-bytecode = { path = "../compiler/ir-to-bytecode", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+stdlib = { path = "../stdlib", version = "0.1.0" }
+vm = { path = "../vm", version = "0.1.0" }
+
+
+[[test]]
+name = "testsuite"
+harness = false

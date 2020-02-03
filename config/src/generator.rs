@@ -44,13 +44,17 @@ pub fn validator_swarm(
 
         let test = node.test.as_ref().unwrap();
         let consensus_pubkey = test.consensus_keypair.as_ref().unwrap().public().clone();
+        let network_keypairs = network
+            .network_keypairs
+            .as_ref()
+            .expect("Network keypairs are not defined");
 
         validator_keys.push(ValidatorPublicKeys::new(
             network.peer_id,
             consensus_pubkey,
             1, // @TODO: Add support for dynamic weights
-            network.network_keypairs.signing_keys.public().clone(),
-            network.network_keypairs.identity_keys.public().clone(),
+            network_keypairs.signing_keys.public().clone(),
+            network_keypairs.identity_keys.public().clone(),
         ));
 
         nodes.push(node);

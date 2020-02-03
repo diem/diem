@@ -1,0 +1,47 @@
+module M {
+    resource Foo<T> { x: T }
+
+    foo() acquires Foo {
+        let x: &mut Self.Foo<u64>;
+        let y: Self.Foo<u64>;
+
+        x = borrow_global_mut<Foo<u64>>(get_txn_sender());
+        _ = move(x);
+
+        _ = exists<Foo<u64>>(get_txn_sender());
+
+        y = move_from<Foo<u64>>(get_txn_sender());
+        move_to_sender<Foo<u64>>(move(y));
+        return;
+    }
+
+    foo2<T>() acquires Foo {
+        let x: &mut Self.Foo<T>;
+        let y: Self.Foo<T>;
+
+        x = borrow_global_mut<Foo<T>>(get_txn_sender());
+        _ = move(x);
+
+        _ = exists<Foo<T>>(get_txn_sender());
+
+        y = move_from<Foo<T>>(get_txn_sender());
+        move_to_sender<Foo<T>>(move(y));
+        return;
+    }
+
+
+    foo3<T>() acquires Foo {
+        let x: &mut Self.Foo<Self.Foo<T>>;
+        let y: Self.Foo<Self.Foo<T>>;
+
+        x = borrow_global_mut<Foo<Self.Foo<T>>>(get_txn_sender());
+        _ = move(x);
+
+        _ = exists<Foo<Self.Foo<T>>>(get_txn_sender());
+
+        y = move_from<Foo<Self.Foo<T>>>(get_txn_sender());
+        move_to_sender<Foo<Self.Foo<T>>>(move(y));
+        return;
+    }
+
+}

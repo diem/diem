@@ -62,14 +62,18 @@ impl StateComputer for ExecutionProxy {
         committed_trees: &ExecutedTrees,
     ) -> Result<ProcessedVMOutput> {
         let pre_execution_instant = Instant::now();
+        debug!(
+            "Executing block {:x}. Parent: {:x}.",
+            block.id(),
+            block.parent_id(),
+        );
+
         // TODO: figure out error handling for the prologue txn
         self.executor
             .execute_block(
                 Self::transactions_from_block(block),
                 parent_executed_trees,
                 committed_trees,
-                block.parent_id(),
-                block.id(),
             )
             .and_then(|output| {
                 let execution_duration = pre_execution_instant.elapsed();

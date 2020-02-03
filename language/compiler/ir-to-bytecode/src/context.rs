@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::parser::ast::{
-    Field, FunctionName, Loc, ModuleName, QualifiedModuleIdent, QualifiedStructIdent, StructName,
-    TypeVar,
+    Field_, FunctionName, Loc, ModuleName, QualifiedModuleIdent, QualifiedStructIdent, StructName,
+    TypeVar_,
 };
 
 use anyhow::{bail, format_err, Result};
@@ -25,7 +25,7 @@ use vm::{
     },
 };
 
-type TypeFormalMap = HashMap<TypeVar, TableIndex>;
+type TypeFormalMap = HashMap<TypeVar_, TableIndex>;
 
 macro_rules! get_or_add_item_macro {
     ($m:ident, $k_get:expr, $k_insert:expr) => {{
@@ -170,7 +170,7 @@ pub struct Context<'a> {
     struct_defs: HashMap<StructName, TableIndex>,
 
     // queryable pools
-    fields: HashMap<(StructHandleIndex, Field), (TableIndex, SignatureToken, usize)>,
+    fields: HashMap<(StructHandleIndex, Field_), (TableIndex, SignatureToken, usize)>,
     function_handles: HashMap<(ModuleName, FunctionName), (FunctionHandle, FunctionHandleIndex)>,
     function_signatures:
         HashMap<(ModuleName, FunctionName), (FunctionSignature, FunctionSignatureIndex)>,
@@ -281,7 +281,7 @@ impl<'a> Context<'a> {
     }
 
     /// Bind the type formals into a "pool" for the current context.
-    pub fn bind_type_formals(&mut self, m: HashMap<TypeVar, usize>) -> Result<()> {
+    pub fn bind_type_formals(&mut self, m: HashMap<TypeVar_, usize>) -> Result<()> {
         self.type_formals = m
             .into_iter()
             .map(|(k, idx)| {
@@ -332,7 +332,7 @@ impl<'a> Context<'a> {
     }
 
     /// Get the type formal index, fails if it is not bound.
-    pub fn type_formal_index(&mut self, t: &TypeVar) -> Result<TableIndex> {
+    pub fn type_formal_index(&mut self, t: &TypeVar_) -> Result<TableIndex> {
         match self.type_formals.get(&t) {
             None => bail!("Unbound type parameter {}", t),
             Some(idx) => Ok(*idx),
@@ -366,7 +366,7 @@ impl<'a> Context<'a> {
     pub fn field(
         &self,
         s: StructHandleIndex,
-        f: Field,
+        f: Field_,
     ) -> Result<(FieldDefinitionIndex, SignatureToken, usize)> {
         match self.fields.get(&(s, f.clone())) {
             None => bail!("Unbound field {}", f),
@@ -521,7 +521,7 @@ impl<'a> Context<'a> {
     pub fn declare_field(
         &mut self,
         s: StructHandleIndex,
-        f: Field,
+        f: Field_,
         token: SignatureToken,
         decl_order: usize,
     ) -> Result<FieldDefinitionIndex> {

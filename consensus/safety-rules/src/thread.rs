@@ -11,9 +11,8 @@ use crate::{
     persistent_storage::PersistentStorage,
     remote_service::{self, RemoteService},
 };
-use consensus_types::common::Payload;
+use consensus_types::common::{Author, Payload};
 use libra_config::utils;
-use libra_types::crypto_proxies::ValidatorSigner;
 use std::{
     marker::PhantomData,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -29,14 +28,13 @@ pub struct ThreadService<T> {
 }
 
 impl<T: Payload> ThreadService<T> {
-    pub fn new(storage: Box<dyn PersistentStorage>, validator_signer: ValidatorSigner) -> Self {
+    pub fn new(author: Author, storage: PersistentStorage) -> Self {
         let listen_port = utils::get_available_port();
         let listen_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), listen_port);
         let server_addr = listen_addr;
 
-        let child = thread::spawn(move || {
-            remote_service::execute::<T>(storage, validator_signer, listen_addr)
-        });
+        let child =
+            thread::spawn(move || remote_service::execute::<T>(author, storage, listen_addr));
 
         Self {
             _child: child,

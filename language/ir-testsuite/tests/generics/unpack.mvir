@@ -1,0 +1,23 @@
+module M {
+    resource Foo<T> { x: T }
+
+    foo() {
+        let x: u64;
+        Foo<u64> { x: x } = Foo<u64> { x: 42 };
+        return;
+    }
+}
+
+//! new-transaction
+
+module N {
+    resource Foo<T1: unrestricted, T2> { x: T1, y: T2 }
+
+    foo() {
+        let x: u64;
+        let y: bool;
+
+        Foo<u64, bool> { x: x, y: y }  = Foo<u64, bool> { x: 42, y: true };
+        return;
+    }
+}

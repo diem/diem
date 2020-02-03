@@ -30,7 +30,9 @@ function {:constructor} ByteArrayType() : TypeValue;
 function {:constructor} StrType() : TypeValue;
 function {:constructor} VectorType(t: TypeValue) : TypeValue;
 function {:constructor} StructType(name: TypeName, ts: TypeValueArray) : TypeValue;
+function {:constructor} ErrorType() : TypeValue;
 const DefaultTypeValue: TypeValue;
+axiom DefaultTypeValue == ErrorType();
 function {:builtin "MapConst"} MapConstTypeValue(tv: TypeValue): [int]TypeValue;
 
 type {:datatype} TypeValueArray;
@@ -52,8 +54,12 @@ type ByteArray;
 type String;
 type {:datatype} Value;
 
+const MAX_U8: int;
+axiom MAX_U8 == 255;
 const MAX_U64: int;
 axiom MAX_U64 == 9223372036854775807;
+const MAX_U128: int;
+axiom MAX_U128 == 340282366920938463463374607431768211456;
 
 function {:constructor} Boolean(b: bool): Value;
 function {:constructor} Integer(i: int): Value;
@@ -61,13 +67,30 @@ function {:constructor} Address(a: Address): Value;
 function {:constructor} ByteArray(b: ByteArray): Value;
 function {:constructor} Str(a: String): Value;
 function {:constructor} Vector(v: ValueArray): Value; // used to both represent move Struct and Vector
+function {:constructor} Error(): Value;
 const DefaultValue: Value;
+axiom DefaultValue == Error();
 function {:builtin "MapConst"} MapConstValue(v: Value): [int]Value;
 
-function {:inline} IsValidInteger(v: Value): bool {
-  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= 9223372036854775807
+function {:inline} IsValidU8(v: Value): bool {
+  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U8
 }
 
+function {:inline 1} max_u64(): Value {
+  Integer(9223372036854775807)
+}
+
+function {:inline} IsValidInteger(v: Value): bool {
+  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= i#Integer(max_u64())
+}
+
+function {:inline} IsValidU64(v: Value): bool {
+  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U64
+}
+
+function {:inline} IsValidU128(v: Value): bool {
+  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U128
+}
 
 // Value Array
 // -----------
@@ -79,12 +102,13 @@ const EmptyValueArray: ValueArray;
 
 axiom l#ValueArray(EmptyValueArray) == 0;
 axiom v#ValueArray(EmptyValueArray) == MapConstValue(DefaultValue);
+
 function {:inline 1} AddValueArray(a: ValueArray, v: Value): ValueArray {
     ValueArray(v#ValueArray(a)[l#ValueArray(a) := v], l#ValueArray(a) + 1)
 }
 
 function {:inline 1} RemoveValueArray(a: ValueArray): ValueArray {
-    ValueArray(v#ValueArray(a)[l#ValueArray(a) := DefaultValue], l#ValueArray(a) - 1)
+    ValueArray(v#ValueArray(a)[l#ValueArray(a) - 1 := DefaultValue], l#ValueArray(a) - 1)
 }
 function {:inline 1} ConcatValueArray(a1: ValueArray, a2: ValueArray): ValueArray {
     ValueArray(
@@ -287,9 +311,9 @@ const EmptyMemory: Memory;
 axiom domain#Memory(EmptyMemory) == ConstMemoryDomain(false);
 axiom contents#Memory(EmptyMemory) == ConstMemoryContent(DefaultValue);
 
-var m : Memory;
-var local_counter : int;
-var abort_flag: bool;
+var __m : Memory;
+var __local_counter : int;
+var __abort_flag: bool;
 
 function {:inline 1} GetLocal(m: Memory, idx: int): Value {
    contents#Memory(m)[Local(idx)]
@@ -300,8 +324,8 @@ function {:inline 1} UpdateLocal(m: Memory, idx: int, v: Value): Memory {
 }
 
 procedure {:inline 1} InitMemory() {
-  m := EmptyMemory;
-  local_counter := 0;
+  __m := EmptyMemory;
+  __local_counter := 0;
 }
 
 // ============================================================================================
@@ -366,7 +390,7 @@ function {:inline 1} TxnSenderAddress(txn: Transaction): Address {
 procedure {:inline 1} Exists(address: Value, t: TypeValue) returns (dst: Value)
 {
     assume is#Address(address);
-    dst := ExistsResource(m, t, a#Address(address));
+    dst := ExistsResource(__m, t, a#Address(address));
 }
 
 procedure {:inline 1} MoveToSender(ta: TypeValue, v: Value)
@@ -374,13 +398,13 @@ procedure {:inline 1} MoveToSender(ta: TypeValue, v: Value)
     var a: Address;
     var l: Location;
 
-    a := sender#Transaction(txn);
+    a := sender#Transaction(__txn);
     l := Global(ta, a);
-    if (ExistsResourceRaw(m, ta, a)) {
-        abort_flag := true;
+    if (ExistsResourceRaw(__m, ta, a)) {
+        __abort_flag := true;
         return;
     }
-    m := Memory(domain#Memory(m)[l := true], contents#Memory(m)[l := v]);
+    __m := Memory(domain#Memory(__m)[l := true], contents#Memory(__m)[l := v]);
 }
 
 procedure {:inline 1} MoveFrom(address: Value, ta: TypeValue) returns (dst: Value)
@@ -390,12 +414,12 @@ procedure {:inline 1} MoveFrom(address: Value, ta: TypeValue) returns (dst: Valu
     assume is#Address(address);
     a := a#Address(address);
     l := Global(ta, a);
-    if (!ExistsResourceRaw(m, ta, a)) {
-        abort_flag := true;
+    if (!ExistsResourceRaw(__m, ta, a)) {
+        __abort_flag := true;
         return;
     }
-    dst := contents#Memory(m)[l];
-    m := Memory(domain#Memory(m)[l := false], contents#Memory(m)[l := DefaultValue]);
+    dst := contents#Memory(__m)[l];
+    __m := Memory(domain#Memory(__m)[l := false], contents#Memory(__m)[l := DefaultValue]);
 }
 
 procedure {:inline 1} BorrowGlobal(address: Value, ta: TypeValue) returns (dst: Reference)
@@ -406,8 +430,8 @@ procedure {:inline 1} BorrowGlobal(address: Value, ta: TypeValue) returns (dst: 
     assume is#Address(address);
     a := a#Address(address);
     l := Global(ta, a);
-    if (!ExistsResourceRaw(m, ta, a)) {
-        abort_flag := true;
+    if (!ExistsResourceRaw(__m, ta, a)) {
+        __abort_flag := true;
         return;
     }
     dst := Reference(l, EmptyPath);
@@ -435,14 +459,14 @@ procedure {:inline 1} WriteRef(to: Reference, new_v: Value)
     var v: Value;
 
     l := l#Reference(to);
-    v := contents#Memory(m)[l];
+    v := contents#Memory(__m)[l];
     v := UpdateValue(p#Reference(to), v, new_v);
-    m := Memory(domain#Memory(m), contents#Memory(m)[l := v]);
+    __m := Memory(domain#Memory(__m), contents#Memory(__m)[l := v]);
 }
 
 procedure {:inline 1} ReadRef(from: Reference) returns (v: Value)
 {
-    v := ReadValue(p#Reference(from), contents#Memory(m)[l#Reference(from)]);
+    v := ReadValue(p#Reference(from), contents#Memory(__m)[l#Reference(from)]);
 }
 
 procedure {:inline 1} CopyOrMoveRef(local: Reference) returns (dst: Reference)
@@ -460,13 +484,61 @@ procedure {:inline 1} FreezeRef(src: Reference) returns (dst: Reference)
     dst := src;
 }
 
-// Pack and Unpack are auto-generated for each type T
-
-procedure {:inline 1} Add(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} CastU8(src: Value) returns (dst: Value)
 {
-    assume is#Integer(src1) && is#Integer(src2);
+    assume is#Integer(src);
+    if (i#Integer(src) > MAX_U8) {
+        __abort_flag := true;
+        return;
+    }
+    dst := src;
+}
+
+procedure {:inline 1} CastU64(src: Value) returns (dst: Value)
+{
+    assume is#Integer(src);
+    if (i#Integer(src) > MAX_U64) {
+        __abort_flag := true;
+        return;
+    }
+    dst := src;
+}
+
+procedure {:inline 1} CastU128(src: Value) returns (dst: Value)
+{
+    assume is#Integer(src);
+    if (i#Integer(src) > MAX_U128) {
+        __abort_flag := true;
+        return;
+    }
+    dst := src;
+}
+
+procedure {:inline 1} AddU8(src1: Value, src2: Value) returns (dst: Value)
+{
+    assume IsValidU8(src1) && IsValidU8(src2);
+    if (i#Integer(src1) + i#Integer(src2) > MAX_U8) {
+        __abort_flag := true;
+        return;
+    }
+    dst := Integer(i#Integer(src1) + i#Integer(src2));
+}
+
+procedure {:inline 1} AddU64(src1: Value, src2: Value) returns (dst: Value)
+{
+    assume IsValidU64(src1) && IsValidU64(src2);
     if (i#Integer(src1) + i#Integer(src2) > MAX_U64) {
-        abort_flag := true;
+        __abort_flag := true;
+        return;
+    }
+    dst := Integer(i#Integer(src1) + i#Integer(src2));
+}
+
+procedure {:inline 1} AddU128(src1: Value, src2: Value) returns (dst: Value)
+{
+    assume IsValidU128(src1) && IsValidU128(src2);
+    if (i#Integer(src1) + i#Integer(src2) > MAX_U128) {
+        __abort_flag := true;
         return;
     }
     dst := Integer(i#Integer(src1) + i#Integer(src2));
@@ -476,17 +548,37 @@ procedure {:inline 1} Sub(src1: Value, src2: Value) returns (dst: Value)
 {
     assume is#Integer(src1) && is#Integer(src2);
     if (i#Integer(src1) < i#Integer(src2)) {
-        abort_flag := true;
+        __abort_flag := true;
         return;
     }
     dst := Integer(i#Integer(src1) - i#Integer(src2));
 }
 
-procedure {:inline 1} Mul(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} MulU8(src1: Value, src2: Value) returns (dst: Value)
 {
-    assume is#Integer(src1) && is#Integer(src2);
+    assume IsValidU8(src1) && IsValidU8(src2);
+    if (i#Integer(src1) * i#Integer(src2) > MAX_U8) {
+        __abort_flag := true;
+        return;
+    }
+    dst := Integer(i#Integer(src1) * i#Integer(src2));
+}
+
+procedure {:inline 1} MulU64(src1: Value, src2: Value) returns (dst: Value)
+{
+    assume IsValidU64(src1) && IsValidU64(src2);
     if (i#Integer(src1) * i#Integer(src2) > MAX_U64) {
-        abort_flag := true;
+        __abort_flag := true;
+        return;
+    }
+    dst := Integer(i#Integer(src1) * i#Integer(src2));
+}
+
+procedure {:inline 1} MulU128(src1: Value, src2: Value) returns (dst: Value)
+{
+    assume IsValidU128(src1) && IsValidU128(src2);
+    if (i#Integer(src1) * i#Integer(src2) > MAX_U128) {
+        __abort_flag := true;
         return;
     }
     dst := Integer(i#Integer(src1) * i#Integer(src2));
@@ -496,7 +588,7 @@ procedure {:inline 1} Div(src1: Value, src2: Value) returns (dst: Value)
 {
     assume is#Integer(src1) && is#Integer(src2);
     if (i#Integer(src2) == 0) {
-        abort_flag := true;
+        __abort_flag := true;
         return;
     }
     dst := Integer(i#Integer(src1) div i#Integer(src2));
@@ -506,7 +598,7 @@ procedure {:inline 1} Mod(src1: Value, src2: Value) returns (dst: Value)
 {
     assume is#Integer(src1) && is#Integer(src2);
     if (i#Integer(src2) == 0) {
-        abort_flag := true;
+        __abort_flag := true;
         return;
     }
     dst := Integer(i#Integer(src1) mod i#Integer(src2));
@@ -554,6 +646,8 @@ procedure {:inline 1} Not(src: Value) returns (dst: Value)
     dst := Boolean(!b#Boolean(src));
 }
 
+// Pack and Unpack are auto-generated for each type T
+
 procedure {:inline 1} LdConst(val: int) returns (ret: Value)
 {
     ret := Integer(val);
@@ -588,7 +682,7 @@ procedure {:inline 1} LdFalse() returns (ret: Value)
 // --------------------------------
 
 type {:datatype} Transaction;
-var txn: Transaction;
+var __txn: Transaction;
 function {:constructor} Transaction(
   gas_unit_price: int, max_gas_units: int, public_key: ByteArray,
   sender: Address, sequence_number: int, gas_remaining: int) : Transaction;
@@ -597,37 +691,37 @@ function {:constructor} Transaction(
 const some_key: ByteArray;
 
 procedure {:inline 1} InitTransaction(sender: Address) {
-  txn := Transaction(1, 1000, some_key, sender, 0, 1000);
+  __txn := Transaction(1, 1000, some_key, sender, 0, 1000);
 }
 
 procedure {:inline 1} GetGasRemaining() returns (ret_gas_remaining: Value)
 {
-  ret_gas_remaining := Integer(gas_remaining#Transaction(txn));
+  ret_gas_remaining := Integer(gas_remaining#Transaction(__txn));
 }
 
 procedure {:inline 1} GetTxnSequenceNumber() returns (ret_sequence_number: Value)
 {
-  ret_sequence_number := Integer(sequence_number#Transaction(txn));
+  ret_sequence_number := Integer(sequence_number#Transaction(__txn));
 }
 
 procedure {:inline 1} GetTxnPublicKey() returns (ret_public_key: Value)
 {
-  ret_public_key := ByteArray(public_key#Transaction(txn));
+  ret_public_key := ByteArray(public_key#Transaction(__txn));
 }
 
 procedure {:inline 1} GetTxnSenderAddress() returns (ret_sender: Value)
 {
-  ret_sender := Address(sender#Transaction(txn));
+  ret_sender := Address(sender#Transaction(__txn));
 }
 
 procedure {:inline 1} GetTxnMaxGasUnits() returns (ret_max_gas_units: Value)
 {
-  ret_max_gas_units := Integer(max_gas_units#Transaction(txn));
+  ret_max_gas_units := Integer(max_gas_units#Transaction(__txn));
 }
 
 procedure {:inline 1} GetTxnGasUnitPrice() returns (ret_gas_unit_price: Value)
 {
-  ret_gas_unit_price := Integer(gas_unit_price#Transaction(txn));
+  ret_gas_unit_price := Integer(gas_unit_price#Transaction(__txn));
 }
 
 // ==================================================================================
@@ -643,26 +737,29 @@ procedure {:inline 1} Vector_empty(ta: TypeValue) returns (v: Value) {
 
 procedure {:inline 1} Vector_is_empty(ta: TypeValue, r: Reference) returns (b: Value) {
     var v: Value;
-    v := Dereference(m, r);
+    v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     b := Boolean(vlen(v) == 0);
 }
 
 procedure {:inline 1} Vector_push_back(ta: TypeValue, r: Reference, val: Value) {
     var v: Value;
-    v := Dereference(m, r);
+    v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     call WriteRef(r, push_back_vector(v, val));
 }
 
 procedure {:inline 1} Vector_pop_back(ta: TypeValue, r: Reference) returns (e: Value){
     var v: Value;
     var len: int;
-    v := Dereference(m, r);
+    v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     len := vlen(v);
     if (len == 0) {
-        abort_flag := true;
+        __abort_flag := true;
         return;
     }
     e := vmap(v)[len-1];
@@ -671,23 +768,26 @@ procedure {:inline 1} Vector_pop_back(ta: TypeValue, r: Reference) returns (e: V
 
 procedure {:inline 1} Vector_append(ta: TypeValue, r: Reference, other: Value) {
     var v: Value;
-    v := Dereference(m, r);
+    v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     assume is#Vector(other);
     call WriteRef(r, append_vector(v, other));
 }
 
 procedure {:inline 1} Vector_reverse(ta: TypeValue, r: Reference) {
     var v: Value;
-    v := Dereference(m, r);
+    v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     call WriteRef(r, reverse_vector(v));
 }
 
 procedure {:inline 1} Vector_length(ta: TypeValue, r: Reference) returns (l: Value) {
     var v: Value;
-    v := Dereference(m, r);
+    v := Dereference(__m, r);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     l := Integer(vlen(v));
 }
 
@@ -703,10 +803,11 @@ procedure {:inline 1} Vector_borrow_mut(ta: TypeValue, src: Reference, index: Va
 
     assume is#Integer(index);
     i_ind := i#Integer(index);
-    v := Dereference(m, src);
+    v := Dereference(__m, src);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, src);
     if (i_ind < 0 || i_ind >= vlen(v)) {
-        abort_flag := true;
+        __abort_flag := true;
         return;
     }
 
@@ -718,7 +819,7 @@ procedure {:inline 1} Vector_borrow_mut(ta: TypeValue, src: Reference, index: Va
 
 procedure {:inline 1} Vector_destroy_empty(ta: TypeValue, v: Value) {
     if (vlen(v) != 0) {
-      abort_flag := true;
+      __abort_flag := true;
     }
 }
 
@@ -731,9 +832,11 @@ procedure {:inline 1} Vector_swap(ta: TypeValue, src: Reference, i: Value, j: Va
     assume is#Integer(j);
     i_ind := i#Integer(i);
     j_ind := i#Integer(j);
-    v := Dereference(m, src);
+    v := Dereference(__m, src);
+    assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, src);
     if (i_ind >= vlen(v) || j_ind >= vlen(v) || i_ind < 0 || j_ind < 0) {
-        abort_flag := true;
+        __abort_flag := true;
         return;
     }
     v := swap_vector(v, i_ind, j_ind);
@@ -741,17 +844,18 @@ procedure {:inline 1} Vector_swap(ta: TypeValue, src: Reference, i: Value, j: Va
 }
 
 procedure {:inline 1} Vector_get(ta: TypeValue, src: Reference, i: Value) returns (e: Value)
-requires vlen(Dereference(m, src)) > i#Integer(i);
+requires vlen(Dereference(__m, src)) > i#Integer(i);
 {
     var i_ind: int;
     var v: Value;
 
     assume is#Integer(i);
     i_ind := i#Integer(i);
-    v := Dereference(m, src);
+    v := Dereference(__m, src);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, src);
     if (i_ind < 0 || i_ind >= vlen(v)) {
-        abort_flag := true;
+        __abort_flag := true;
         return;
     }
     e := vmap(v)[i_ind];
@@ -763,10 +867,11 @@ procedure {:inline 1} Vector_set(ta: TypeValue, src: Reference, i: Value, e: Val
 
     assume is#Integer(i);
     i_ind := i#Integer(i);
-    v := Dereference(m, src);
+    v := Dereference(__m, src);
     assume is#Vector(v);
+    assume IsValidReferenceParameter(__m, __local_counter, src);
     if (i_ind < 0 || i_ind >= vlen(v)) {
-        abort_flag := true;
+        __abort_flag := true;
         return;
     }
     v := update_vector(v, i_ind, e);

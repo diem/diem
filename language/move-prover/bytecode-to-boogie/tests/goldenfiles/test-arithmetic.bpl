@@ -6,262 +6,252 @@
 
 // ** functions of module TestArithmetic
 
-procedure {:inline 1} TestArithmetic_add_two_number (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
-requires ExistsTxnSenderAccount(m, txn);
+procedure {:inline 1} TestArithmetic_add_two_number (x: Value, y: Value) returns (__ret0: Value, __ret1: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // IntegerType()
+    var res: Value; // IntegerType()
+    var z: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 10;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
-
-    old_size := local_counter;
-    local_counter := local_counter + 10;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    // process and type check arguments
+    assume IsValidU64(x);
+    __m := UpdateLocal(__m, __frame + 0, x);
+    assume IsValidU64(y);
+    __m := UpdateLocal(__m, __frame + 1, y);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := AddU64(GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := LdConst(3);
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __tmp := LdConst(3);
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 7));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 7));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
-    m := UpdateLocal(m, old_size + 8, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 9, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    ret0 := GetLocal(m, old_size + 8);
-    ret1 := GetLocal(m, old_size + 9);
+    __ret0 := GetLocal(__m, __frame + 8);
+    __ret1 := GetLocal(__m, __frame + 9);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
-    ret1 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
+    __ret1 := DefaultValue;
 }
 
-procedure TestArithmetic_add_two_number_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+procedure TestArithmetic_add_two_number_verify (x: Value, y: Value) returns (__ret0: Value, __ret1: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0, ret1 := TestArithmetic_add_two_number(arg0, arg1);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0, __ret1 := TestArithmetic_add_two_number(x, y);
 }
 
-procedure {:inline 1} TestArithmetic_multiple_ops (arg0: Value, arg1: Value, arg2: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
+procedure {:inline 1} TestArithmetic_multiple_ops (x: Value, y: Value, z: Value) returns (__ret0: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // IntegerType()
+    var res: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 10;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
-    assume IsValidInteger(arg2);
-
-    old_size := local_counter;
-    local_counter := local_counter + 10;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
-    m := UpdateLocal(m, old_size + 2, arg2);
+    // process and type check arguments
+    assume IsValidU64(x);
+    __m := UpdateLocal(__m, __frame + 0, x);
+    assume IsValidU64(y);
+    __m := UpdateLocal(__m, __frame + 1, y);
+    assume IsValidU64(z);
+    __m := UpdateLocal(__m, __frame + 2, z);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := AddU64(GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call tmp := Mul(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 8, tmp);
+    call __tmp := MulU64(GetLocal(__m, __frame + 6), GetLocal(__m, __frame + 7));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
-    m := UpdateLocal(m, old_size + 9, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
+    __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    ret0 := GetLocal(m, old_size + 9);
+    __ret0 := GetLocal(__m, __frame + 9);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
 }
 
-procedure TestArithmetic_multiple_ops_verify (arg0: Value, arg1: Value, arg2: Value) returns (ret0: Value)
+procedure TestArithmetic_multiple_ops_verify (x: Value, y: Value, z: Value) returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestArithmetic_multiple_ops(arg0, arg1, arg2);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0 := TestArithmetic_multiple_ops(x, y, z);
 }
 
-procedure {:inline 1} TestArithmetic_bool_ops (arg0: Value, arg1: Value) returns ()
-requires ExistsTxnSenderAccount(m, txn);
+procedure {:inline 1} TestArithmetic_bool_ops (a: Value, b: Value) returns ()
+requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // BooleanType()
-    var t3: Value; // BooleanType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // BooleanType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // BooleanType()
-    var t10: Value; // BooleanType()
-    var t11: Value; // IntegerType()
-    var t12: Value; // IntegerType()
-    var t13: Value; // BooleanType()
-    var t14: Value; // IntegerType()
-    var t15: Value; // IntegerType()
-    var t16: Value; // BooleanType()
-    var t17: Value; // BooleanType()
-    var t18: Value; // BooleanType()
-    var t19: Value; // BooleanType()
-    var t20: Value; // BooleanType()
-    var t21: Value; // BooleanType()
-    var t22: Value; // IntegerType()
+    var c: Value; // BooleanType()
+    var d: Value; // BooleanType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // BooleanType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // BooleanType()
+    var __t10: Value; // BooleanType()
+    var __t11: Value; // IntegerType()
+    var __t12: Value; // IntegerType()
+    var __t13: Value; // BooleanType()
+    var __t14: Value; // IntegerType()
+    var __t15: Value; // IntegerType()
+    var __t16: Value; // BooleanType()
+    var __t17: Value; // BooleanType()
+    var __t18: Value; // BooleanType()
+    var __t19: Value; // BooleanType()
+    var __t20: Value; // BooleanType()
+    var __t21: Value; // BooleanType()
+    var __t22: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 23;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
-
-    old_size := local_counter;
-    local_counter := local_counter + 23;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    // process and type check arguments
+    assume IsValidU64(a);
+    __m := UpdateLocal(__m, __frame + 0, a);
+    assume IsValidU64(b);
+    __m := UpdateLocal(__m, __frame + 1, b);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := Gt(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := Gt(GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5));
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 8, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    call tmp := Ge(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8));
-    m := UpdateLocal(m, old_size + 9, tmp);
+    call __tmp := Ge(GetLocal(__m, __frame + 7), GetLocal(__m, __frame + 8));
+    __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    call tmp := And(GetLocal(m, old_size + 6), GetLocal(m, old_size + 9));
-    m := UpdateLocal(m, old_size + 10, tmp);
+    call __tmp := And(GetLocal(__m, __frame + 6), GetLocal(__m, __frame + 9));
+    __m := UpdateLocal(__m, __frame + 10, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 10));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 10));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 11, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 11, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 12, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 12, __tmp);
 
-    call tmp := Lt(GetLocal(m, old_size + 11), GetLocal(m, old_size + 12));
-    m := UpdateLocal(m, old_size + 13, tmp);
+    call __tmp := Lt(GetLocal(__m, __frame + 11), GetLocal(__m, __frame + 12));
+    __m := UpdateLocal(__m, __frame + 13, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 14, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 14, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 15, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 15, __tmp);
 
-    call tmp := Le(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15));
-    m := UpdateLocal(m, old_size + 16, tmp);
+    call __tmp := Le(GetLocal(__m, __frame + 14), GetLocal(__m, __frame + 15));
+    __m := UpdateLocal(__m, __frame + 16, __tmp);
 
-    call tmp := Or(GetLocal(m, old_size + 13), GetLocal(m, old_size + 16));
-    m := UpdateLocal(m, old_size + 17, tmp);
+    call __tmp := Or(GetLocal(__m, __frame + 13), GetLocal(__m, __frame + 16));
+    __m := UpdateLocal(__m, __frame + 17, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 17));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 17));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 18, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 18, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
-    m := UpdateLocal(m, old_size + 19, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
+    __m := UpdateLocal(__m, __frame + 19, __tmp);
 
-    tmp := Boolean(!IsEqual(GetLocal(m, old_size + 18), GetLocal(m, old_size + 19)));
-    m := UpdateLocal(m, old_size + 20, tmp);
+    __tmp := Boolean(!IsEqual(GetLocal(__m, __frame + 18), GetLocal(__m, __frame + 19)));
+    __m := UpdateLocal(__m, __frame + 20, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 20));
-    m := UpdateLocal(m, old_size + 21, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 20));
+    __m := UpdateLocal(__m, __frame + 21, __tmp);
 
-    tmp := GetLocal(m, old_size + 21);
-    if (!b#Boolean(tmp)) { goto Label_23; }
+    __tmp := GetLocal(__m, __frame + 21);
+    if (!b#Boolean(__tmp)) { goto Label_23; }
 
-    call tmp := LdConst(42);
-    m := UpdateLocal(m, old_size + 22, tmp);
+    call __tmp := LdConst(42);
+    __m := UpdateLocal(__m, __frame + 22, __tmp);
 
     goto Label_Abort;
 
@@ -269,308 +259,302 @@ Label_23:
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
 }
 
-procedure TestArithmetic_bool_ops_verify (arg0: Value, arg1: Value) returns ()
+procedure TestArithmetic_bool_ops_verify (a: Value, b: Value) returns ()
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call TestArithmetic_bool_ops(arg0, arg1);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call TestArithmetic_bool_ops(a, b);
 }
 
-procedure {:inline 1} TestArithmetic_arithmetic_ops (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
-requires ExistsTxnSenderAccount(m, txn);
+procedure {:inline 1} TestArithmetic_arithmetic_ops (a: Value, b: Value) returns (__ret0: Value, __ret1: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // IntegerType()
-    var t10: Value; // IntegerType()
-    var t11: Value; // IntegerType()
-    var t12: Value; // IntegerType()
-    var t13: Value; // IntegerType()
-    var t14: Value; // IntegerType()
-    var t15: Value; // IntegerType()
-    var t16: Value; // BooleanType()
-    var t17: Value; // BooleanType()
-    var t18: Value; // IntegerType()
-    var t19: Value; // IntegerType()
-    var t20: Value; // IntegerType()
+    var c: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // IntegerType()
+    var __t10: Value; // IntegerType()
+    var __t11: Value; // IntegerType()
+    var __t12: Value; // IntegerType()
+    var __t13: Value; // IntegerType()
+    var __t14: Value; // IntegerType()
+    var __t15: Value; // IntegerType()
+    var __t16: Value; // BooleanType()
+    var __t17: Value; // BooleanType()
+    var __t18: Value; // IntegerType()
+    var __t19: Value; // IntegerType()
+    var __t20: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 21;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume IsValidInteger(arg1);
-
-    old_size := local_counter;
-    local_counter := local_counter + 21;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    // process and type check arguments
+    assume IsValidU64(a);
+    __m := UpdateLocal(__m, __frame + 0, a);
+    assume IsValidU64(b);
+    __m := UpdateLocal(__m, __frame + 1, b);
 
     // bytecode translation starts here
-    call tmp := LdConst(6);
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := LdConst(6);
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := LdConst(4);
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := LdConst(4);
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := AddU64(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := LdConst(1);
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := LdConst(1);
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    call tmp := Sub(GetLocal(m, old_size + 5), GetLocal(m, old_size + 6));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __tmp := Sub(GetLocal(__m, __frame + 5), GetLocal(__m, __frame + 6));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call tmp := LdConst(2);
-    m := UpdateLocal(m, old_size + 8, tmp);
+    call __tmp := LdConst(2);
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    call tmp := Mul(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 9, tmp);
+    call __tmp := MulU64(GetLocal(__m, __frame + 7), GetLocal(__m, __frame + 8));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    call tmp := LdConst(3);
-    m := UpdateLocal(m, old_size + 10, tmp);
+    call __tmp := LdConst(3);
+    __m := UpdateLocal(__m, __frame + 10, __tmp);
 
-    call tmp := Div(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 11, tmp);
+    call __tmp := Div(GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 10));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 11, __tmp);
 
-    call tmp := LdConst(4);
-    m := UpdateLocal(m, old_size + 12, tmp);
+    call __tmp := LdConst(4);
+    __m := UpdateLocal(__m, __frame + 12, __tmp);
 
-    call tmp := Mod(GetLocal(m, old_size + 11), GetLocal(m, old_size + 12));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 13, tmp);
+    call __tmp := Mod(GetLocal(__m, __frame + 11), GetLocal(__m, __frame + 12));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 13, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 13));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 13));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 14, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 14, __tmp);
 
-    call tmp := LdConst(2);
-    m := UpdateLocal(m, old_size + 15, tmp);
+    call __tmp := LdConst(2);
+    __m := UpdateLocal(__m, __frame + 15, __tmp);
 
-    tmp := Boolean(IsEqual(GetLocal(m, old_size + 14), GetLocal(m, old_size + 15)));
-    m := UpdateLocal(m, old_size + 16, tmp);
+    __tmp := Boolean(IsEqual(GetLocal(__m, __frame + 14), GetLocal(__m, __frame + 15)));
+    __m := UpdateLocal(__m, __frame + 16, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 16));
-    m := UpdateLocal(m, old_size + 17, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 16));
+    __m := UpdateLocal(__m, __frame + 17, __tmp);
 
-    tmp := GetLocal(m, old_size + 17);
-    if (!b#Boolean(tmp)) { goto Label_19; }
+    __tmp := GetLocal(__m, __frame + 17);
+    if (!b#Boolean(__tmp)) { goto Label_19; }
 
-    call tmp := LdConst(42);
-    m := UpdateLocal(m, old_size + 18, tmp);
+    call __tmp := LdConst(42);
+    __m := UpdateLocal(__m, __frame + 18, __tmp);
 
     goto Label_Abort;
 
 Label_19:
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 19, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 19, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 20, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 20, __tmp);
 
-    ret0 := GetLocal(m, old_size + 19);
-    ret1 := GetLocal(m, old_size + 20);
+    __ret0 := GetLocal(__m, __frame + 19);
+    __ret1 := GetLocal(__m, __frame + 20);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
-    ret1 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
+    __ret1 := DefaultValue;
 }
 
-procedure TestArithmetic_arithmetic_ops_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+procedure TestArithmetic_arithmetic_ops_verify (a: Value, b: Value) returns (__ret0: Value, __ret1: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0, ret1 := TestArithmetic_arithmetic_ops(arg0, arg1);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0, __ret1 := TestArithmetic_arithmetic_ops(a, b);
 }
 
 procedure {:inline 1} TestArithmetic_overflow () returns ()
-requires ExistsTxnSenderAccount(m, txn);
+requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
+    var x: Value; // IntegerType()
+    var y: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 6;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-
-    old_size := local_counter;
-    local_counter := local_counter + 6;
+    // process and type check arguments
 
     // bytecode translation starts here
-    call tmp := LdConst(9223372036854775807);
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := LdConst(9223372036854775807);
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 0, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := LdConst(1);
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := LdConst(1);
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := AddU64(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 1, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
+    __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
 }
 
 procedure TestArithmetic_overflow_verify () returns ()
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call TestArithmetic_overflow();
 }
 
 procedure {:inline 1} TestArithmetic_underflow () returns ()
-requires ExistsTxnSenderAccount(m, txn);
+requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
+    var x: Value; // IntegerType()
+    var y: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 6;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-
-    old_size := local_counter;
-    local_counter := local_counter + 6;
+    // process and type check arguments
 
     // bytecode translation starts here
-    call tmp := LdConst(0);
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := LdConst(0);
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 0, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := LdConst(1);
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := LdConst(1);
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call tmp := Sub(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := Sub(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 1, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
+    __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
 }
 
 procedure TestArithmetic_underflow_verify () returns ()
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call TestArithmetic_underflow();
 }
 
 procedure {:inline 1} TestArithmetic_div_by_zero () returns ()
-requires ExistsTxnSenderAccount(m, txn);
+requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
+    var x: Value; // IntegerType()
+    var y: Value; // IntegerType()
+    var __t2: Value; // IntegerType()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 6;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-
-    old_size := local_counter;
-    local_counter := local_counter + 6;
+    // process and type check arguments
 
     // bytecode translation starts here
-    call tmp := LdConst(0);
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := LdConst(0);
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 0, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    call tmp := LdConst(1);
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := LdConst(1);
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call tmp := Div(GetLocal(m, old_size + 3), GetLocal(m, old_size + 4));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := Div(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 1, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
+    __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
 }
 
 procedure TestArithmetic_div_by_zero_verify () returns ()
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call TestArithmetic_div_by_zero();
 }

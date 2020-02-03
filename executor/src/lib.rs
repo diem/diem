@@ -4,10 +4,12 @@
 #![forbid(unsafe_code)]
 #![allow(dead_code)]
 
+pub mod benchmark;
 #[cfg(test)]
 mod executor_test;
 #[cfg(test)]
 mod mock_vm;
+pub mod utils;
 
 use anyhow::{bail, ensure, format_err, Result};
 use futures::executor::block_on;
@@ -16,8 +18,7 @@ use libra_config::config::VMConfig;
 use libra_crypto::{
     hash::{
         CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher,
-        ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID,
-        SPARSE_MERKLE_PLACEHOLDER_HASH,
+        ACCUMULATOR_PLACEHOLDER_HASH, PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
@@ -311,7 +312,12 @@ where
         storage_write_client: Arc<dyn StorageWrite>,
         config: &NodeConfig,
     ) -> Self {
-        let rt = Runtime::new().unwrap();
+        let rt = tokio::runtime::Builder::new()
+            .threaded_scheduler()
+            .enable_all()
+            .thread_name("tokio-executor")
+            .build()
+            .unwrap();
 
         let mut executor = Executor {
             rt,
@@ -351,13 +357,7 @@ where
         // We create `PRE_GENESIS_BLOCK_ID` as the parent of the genesis block.
         let pre_genesis_trees = ExecutedTrees::new_empty();
         let output = self
-            .execute_block(
-                genesis_txns.clone(),
-                &pre_genesis_trees,
-                &pre_genesis_trees,
-                *PRE_GENESIS_BLOCK_ID,
-                *GENESIS_BLOCK_ID,
-            )
+            .execute_block(genesis_txns.clone(), &pre_genesis_trees, &pre_genesis_trees)
             .expect("Failed to execute genesis block.");
 
         let root_hash = output.accu_root();
@@ -390,14 +390,7 @@ where
         transactions: Vec<Transaction>,
         parent_trees: &ExecutedTrees,
         committed_trees: &ExecutedTrees,
-        parent_id: HashValue,
-        id: HashValue,
     ) -> Result<ProcessedVMOutput> {
-        debug!(
-            "Received request to execute block. Parent id: {:x}. Id: {:x}.",
-            parent_id, id
-        );
-
         let _timer = OP_COUNTERS.timer("block_execute_time_s");
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
@@ -799,15 +792,15 @@ where
                     txn_info_hashes.push(real_txn_info_hash);
                     txn_info_hash = Some(real_txn_info_hash);
                 }
-                TransactionStatus::Discard(_) => {
-                    ensure!(
-                        vm_output.write_set().is_empty(),
-                        "Discarded transaction has non-empty write set.",
-                    );
-                    ensure!(
-                        vm_output.events().is_empty(),
-                        "Discarded transaction has non-empty events.",
-                    );
+                TransactionStatus::Discard(status) => {
+                    if !vm_output.write_set().is_empty() || !vm_output.events().is_empty() {
+                        crit!(
+                            "Discarded transaction has non-empty write set or events. \
+                             Transaction: {:?}. Status: {}.",
+                            txn,
+                            status,
+                        );
+                    }
                 }
             }
 

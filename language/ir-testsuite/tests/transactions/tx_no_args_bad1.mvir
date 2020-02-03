@@ -1,0 +1,10 @@
+// one arg to main() is an error
+
+//! args: 10
+
+main() {
+    return;
+}
+
+// check: Keep
+// check: TYPE_MISMATCH

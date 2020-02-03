@@ -8,18 +8,17 @@ axiom LibraCoin_T_value == 0;
 function LibraCoin_T_type_value(): TypeValue {
     StructType(LibraCoin_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-
-procedure {:inline 1} Pack_LibraCoin_T(v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_LibraCoin_T(value: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
-
+    assume IsValidU64(value);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, value));
 }
 
-procedure {:inline 1} Unpack_LibraCoin_T(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_LibraCoin_T(_struct: Value) returns (value: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, LibraCoin_T_value);
+    assume is#Vector(_struct);
+    value := SelectField(_struct, LibraCoin_T_value);
+    assume IsValidU64(value);
 }
 
 const unique LibraCoin_MintCapability: TypeName;
@@ -28,18 +27,17 @@ axiom LibraCoin_MintCapability__dummy == 0;
 function LibraCoin_MintCapability_type_value(): TypeValue {
     StructType(LibraCoin_MintCapability, ExtendTypeValueArray(EmptyTypeValueArray, BooleanType()))
 }
-
-procedure {:inline 1} Pack_LibraCoin_MintCapability(v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_LibraCoin_MintCapability(_dummy: Value) returns (_struct: Value)
 {
-    assume is#Boolean(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
-
+    assume is#Boolean(_dummy);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, _dummy));
 }
 
-procedure {:inline 1} Unpack_LibraCoin_MintCapability(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_LibraCoin_MintCapability(_struct: Value) returns (_dummy: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, LibraCoin_MintCapability__dummy);
+    assume is#Vector(_struct);
+    _dummy := SelectField(_struct, LibraCoin_MintCapability__dummy);
+    assume is#Boolean(_dummy);
 }
 
 const unique LibraCoin_MarketCap: TypeName;
@@ -48,854 +46,815 @@ axiom LibraCoin_MarketCap_total_value == 0;
 function LibraCoin_MarketCap_type_value(): TypeValue {
     StructType(LibraCoin_MarketCap, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-
-procedure {:inline 1} Pack_LibraCoin_MarketCap(v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_LibraCoin_MarketCap(total_value: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
-
+    assume IsValidU64(total_value);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, total_value));
 }
 
-procedure {:inline 1} Unpack_LibraCoin_MarketCap(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_LibraCoin_MarketCap(_struct: Value) returns (total_value: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, LibraCoin_MarketCap_total_value);
+    assume is#Vector(_struct);
+    total_value := SelectField(_struct, LibraCoin_MarketCap_total_value);
+    assume IsValidU64(total_value);
 }
 
 
 
 // ** functions of module LibraCoin
 
-procedure {:inline 1} LibraCoin_mint_with_default_capability (arg0: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures !abort_flag ==> b#Boolean(Boolean((SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)) == (Integer(i#Integer(old(SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value))) + i#Integer(arg0)))));
-ensures !abort_flag ==> b#Boolean(Boolean((SelectField(ret0, LibraCoin_T_value)) == (arg0)));
-ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))) || b#Boolean(Boolean(i#Integer(arg0) > i#Integer(Integer(1000000000000000)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(arg0) + i#Integer(SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))) || b#Boolean(Boolean(i#Integer(arg0) > i#Integer(Integer(1000000000000000)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(arg0) + i#Integer(SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)))) > i#Integer(Integer(9223372036854775807))))) ==> abort_flag;
+procedure {:inline 1} LibraCoin_mint_with_default_capability (amount: Value) returns (__ret0: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(SelectField(Dereference(__m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value), Integer(i#Integer(old(SelectField(Dereference(__m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value))) + i#Integer(amount)))));
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), amount)));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(__txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))) || b#Boolean(Boolean(i#Integer(amount) > i#Integer(Integer(1000000000000000)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(amount) + i#Integer(SelectField(Dereference(__m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(__txn)))))))) || b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))) || b#Boolean(Boolean(i#Integer(amount) > i#Integer(Integer(1000000000000000)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(amount) + i#Integer(SelectField(Dereference(__m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)))) > i#Integer(Integer(9223372036854775807))))) ==> __abort_flag;
+
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // AddressType()
-    var t3: Reference; // ReferenceType(LibraCoin_MintCapability_type_value())
-    var t4: Value; // LibraCoin_T_type_value()
+    var __t1: Value; // IntegerType()
+    var __t2: Value; // AddressType()
+    var __t3: Reference; // ReferenceType(LibraCoin_MintCapability_type_value())
+    var __t4: Value; // LibraCoin_T_type_value()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 5;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-
-    old_size := local_counter;
-    local_counter := local_counter + 5;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    // process and type check arguments
+    assume IsValidU64(amount);
+    __m := UpdateLocal(__m, __frame + 0, amount);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 1, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    call tmp := GetTxnSenderAddress();
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := GetTxnSenderAddress();
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call t3 := BorrowGlobal(GetLocal(m, old_size + 2), LibraCoin_MintCapability_type_value());
-    if (abort_flag) { goto Label_Abort; }
+    call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), LibraCoin_MintCapability_type_value());
+    if (__abort_flag) { goto Label_Abort; }
 
-    call t4 := LibraCoin_mint(GetLocal(m, old_size + 1), t3);
-    if (abort_flag) { goto Label_Abort; }
-    assume is#Vector(t4);
+    call __t4 := LibraCoin_mint(GetLocal(__m, __frame + 1), __t3);
+    if (__abort_flag) { goto Label_Abort; }
+    assume is#Vector(__t4);
 
-    m := UpdateLocal(m, old_size + 4, t4);
+    __m := UpdateLocal(__m, __frame + 4, __t4);
 
-    ret0 := GetLocal(m, old_size + 4);
+    __ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
 }
 
-procedure LibraCoin_mint_with_default_capability_verify (arg0: Value) returns (ret0: Value)
+procedure LibraCoin_mint_with_default_capability_verify (amount: Value) returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := LibraCoin_mint_with_default_capability(arg0);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0 := LibraCoin_mint_with_default_capability(amount);
 }
 
-procedure {:inline 1} LibraCoin_mint (arg0: Value, arg1: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures !abort_flag ==> b#Boolean(Boolean((SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)) == (Integer(i#Integer(old(SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value))) + i#Integer(arg0)))));
-ensures !abort_flag ==> b#Boolean(Boolean((SelectField(ret0, LibraCoin_T_value)) == (arg0)));
-ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))) || b#Boolean(Boolean(i#Integer(arg0) > i#Integer(Integer(1000000000000000)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(arg0) + i#Integer(SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))) || b#Boolean(Boolean(i#Integer(arg0) > i#Integer(Integer(1000000000000000)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(arg0) + i#Integer(SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)))) > i#Integer(Integer(9223372036854775807))))) ==> abort_flag;
+procedure {:inline 1} LibraCoin_mint (value: Value, capability: Reference) returns (__ret0: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(SelectField(Dereference(__m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value), Integer(i#Integer(old(SelectField(Dereference(__m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value))) + i#Integer(value)))));
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), value)));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))) || b#Boolean(Boolean(i#Integer(value) > i#Integer(Integer(1000000000000000)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(value) + i#Integer(SelectField(Dereference(__m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))) || b#Boolean(Boolean(i#Integer(value) > i#Integer(Integer(1000000000000000)))) || b#Boolean(Boolean(i#Integer(Integer(i#Integer(value) + i#Integer(SelectField(Dereference(__m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value)))) > i#Integer(Integer(9223372036854775807))))) ==> __abort_flag;
+
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Reference; // ReferenceType(LibraCoin_MintCapability_type_value())
-    var t2: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
-    var t3: Value; // IntegerType()
-    var t4: Reference; // ReferenceType(LibraCoin_MintCapability_type_value())
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // BooleanType()
-    var t10: Value; // BooleanType()
-    var t11: Value; // IntegerType()
-    var t12: Value; // AddressType()
-    var t13: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
-    var t14: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
-    var t15: Reference; // ReferenceType(IntegerType())
-    var t16: Value; // IntegerType()
-    var t17: Value; // IntegerType()
-    var t18: Value; // IntegerType()
-    var t19: Value; // IntegerType()
-    var t20: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
-    var t21: Reference; // ReferenceType(IntegerType())
-    var t22: Value; // IntegerType()
-    var t23: Value; // LibraCoin_T_type_value()
+    var market_cap_ref: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
+    var market_cap_total_value: Value; // IntegerType()
+    var __t4: Reference; // ReferenceType(LibraCoin_MintCapability_type_value())
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // BooleanType()
+    var __t10: Value; // BooleanType()
+    var __t11: Value; // IntegerType()
+    var __t12: Value; // AddressType()
+    var __t13: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
+    var __t14: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
+    var __t15: Reference; // ReferenceType(IntegerType())
+    var __t16: Value; // IntegerType()
+    var __t17: Value; // IntegerType()
+    var __t18: Value; // IntegerType()
+    var __t19: Value; // IntegerType()
+    var __t20: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
+    var __t21: Reference; // ReferenceType(IntegerType())
+    var __t22: Value; // IntegerType()
+    var __t23: Value; // LibraCoin_T_type_value()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 24;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume IsValidInteger(arg0);
-    assume is#Vector(Dereference(m, arg1));
-    assume IsValidReferenceParameter(m, local_counter, arg1);
-
-    old_size := local_counter;
-    local_counter := local_counter + 24;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    t1 := arg1;
+    // process and type check arguments
+    assume IsValidU64(value);
+    __m := UpdateLocal(__m, __frame + 0, value);
+    assume is#Vector(Dereference(__m, capability));
+    assume IsValidReferenceParameter(__m, __frame, capability);
 
     // bytecode translation starts here
-    call t4 := CopyOrMoveRef(t1);
+    call __t4 := CopyOrMoveRef(capability);
 
-    // unimplemented instruction
+    // unimplemented instruction: NoOp
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := LdConst(1000000000);
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := LdConst(1000000000);
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    call tmp := LdConst(1000000);
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __tmp := LdConst(1000000);
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call tmp := Mul(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 8, tmp);
+    call __tmp := MulU64(GetLocal(__m, __frame + 6), GetLocal(__m, __frame + 7));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    call tmp := Le(GetLocal(m, old_size + 5), GetLocal(m, old_size + 8));
-    m := UpdateLocal(m, old_size + 9, tmp);
+    call __tmp := Le(GetLocal(__m, __frame + 5), GetLocal(__m, __frame + 8));
+    __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 9));
-    m := UpdateLocal(m, old_size + 10, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 9));
+    __m := UpdateLocal(__m, __frame + 10, __tmp);
 
-    tmp := GetLocal(m, old_size + 10);
-    if (!b#Boolean(tmp)) { goto Label_11; }
+    __tmp := GetLocal(__m, __frame + 10);
+    if (!b#Boolean(__tmp)) { goto Label_11; }
 
-    call tmp := LdConst(11);
-    m := UpdateLocal(m, old_size + 11, tmp);
+    call __tmp := LdConst(11);
+    __m := UpdateLocal(__m, __frame + 11, __tmp);
 
     goto Label_Abort;
 
 Label_11:
-    call tmp := LdAddr(173345816);
-    m := UpdateLocal(m, old_size + 12, tmp);
+    call __tmp := LdAddr(173345816);
+    __m := UpdateLocal(__m, __frame + 12, __tmp);
 
-    call t13 := BorrowGlobal(GetLocal(m, old_size + 12), LibraCoin_MarketCap_type_value());
-    if (abort_flag) { goto Label_Abort; }
+    call __t13 := BorrowGlobal(GetLocal(__m, __frame + 12), LibraCoin_MarketCap_type_value());
+    if (__abort_flag) { goto Label_Abort; }
 
-    call t2 := CopyOrMoveRef(t13);
+    call market_cap_ref := CopyOrMoveRef(__t13);
 
-    call t14 := CopyOrMoveRef(t2);
+    call __t14 := CopyOrMoveRef(market_cap_ref);
 
-    call t15 := BorrowField(t14, LibraCoin_MarketCap_total_value);
+    call __t15 := BorrowField(__t14, LibraCoin_MarketCap_total_value);
 
-    call tmp := ReadRef(t15);
-    assume IsValidInteger(tmp);
+    call __tmp := ReadRef(__t15);
+    assume IsValidU64(__tmp);
+    __m := UpdateLocal(__m, __frame + 16, __tmp);
 
-    m := UpdateLocal(m, old_size + 16, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 16));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 16));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
+    __m := UpdateLocal(__m, __frame + 17, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
-    m := UpdateLocal(m, old_size + 17, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 18, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 18, tmp);
+    call __tmp := AddU64(GetLocal(__m, __frame + 17), GetLocal(__m, __frame + 18));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 19, __tmp);
 
-    call tmp := Add(GetLocal(m, old_size + 17), GetLocal(m, old_size + 18));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 19, tmp);
+    call __t20 := CopyOrMoveRef(market_cap_ref);
 
-    call t20 := CopyOrMoveRef(t2);
+    call __t21 := BorrowField(__t20, LibraCoin_MarketCap_total_value);
 
-    call t21 := BorrowField(t20, LibraCoin_MarketCap_total_value);
+    call WriteRef(__t21, GetLocal(__m, __frame + 19));
 
-    call WriteRef(t21, GetLocal(m, old_size + 19));
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 22, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 22, tmp);
+    call __tmp := Pack_LibraCoin_T(GetLocal(__m, __frame + 22));
+    __m := UpdateLocal(__m, __frame + 23, __tmp);
 
-    assume IsValidInteger(GetLocal(m, old_size + 22));
-
-    call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 22));
-    m := UpdateLocal(m, old_size + 23, tmp);
-
-    ret0 := GetLocal(m, old_size + 23);
+    __ret0 := GetLocal(__m, __frame + 23);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
 }
 
-procedure LibraCoin_mint_verify (arg0: Value, arg1: Reference) returns (ret0: Value)
+procedure LibraCoin_mint_verify (value: Value, capability: Reference) returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := LibraCoin_mint(arg0, arg1);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0 := LibraCoin_mint(value, capability);
 }
 
 procedure {:inline 1} LibraCoin_initialize () returns ()
-requires ExistsTxnSenderAccount(m, txn);
-ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(txn)))));
-ensures !abort_flag ==> b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(TxnSenderAddress(txn)))));
-ensures !abort_flag ==> b#Boolean(Boolean((SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(TxnSenderAddress(txn))))), LibraCoin_MarketCap_total_value)) == (Integer(0))));
-ensures old(!(b#Boolean(Boolean((Address(TxnSenderAddress(txn))) != (Address(173345816)))) || b#Boolean(ExistsResource(m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(txn))))) || b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(TxnSenderAddress(txn))))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean((Address(TxnSenderAddress(txn))) != (Address(173345816)))) || b#Boolean(ExistsResource(m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(txn))))) || b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(TxnSenderAddress(txn)))))) ==> abort_flag;
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures !__abort_flag ==> b#Boolean(ExistsResource(__m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(__txn)))));
+ensures !__abort_flag ==> b#Boolean(ExistsResource(__m, LibraCoin_MarketCap_type_value(), a#Address(Address(TxnSenderAddress(__txn)))));
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(SelectField(Dereference(__m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(TxnSenderAddress(__txn))))), LibraCoin_MarketCap_total_value), Integer(0))));
+ensures old(!(b#Boolean(Boolean(!IsEqual(Address(TxnSenderAddress(__txn)), Address(173345816)))) || b#Boolean(ExistsResource(__m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(__txn))))) || b#Boolean(ExistsResource(__m, LibraCoin_MarketCap_type_value(), a#Address(Address(TxnSenderAddress(__txn))))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(!IsEqual(Address(TxnSenderAddress(__txn)), Address(173345816)))) || b#Boolean(ExistsResource(__m, LibraCoin_MintCapability_type_value(), a#Address(Address(TxnSenderAddress(__txn))))) || b#Boolean(ExistsResource(__m, LibraCoin_MarketCap_type_value(), a#Address(Address(TxnSenderAddress(__txn)))))) ==> __abort_flag;
+
 {
     // declare local variables
-    var t0: Value; // AddressType()
-    var t1: Value; // AddressType()
-    var t2: Value; // BooleanType()
-    var t3: Value; // BooleanType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // BooleanType()
-    var t6: Value; // LibraCoin_MintCapability_type_value()
-    var t7: Value; // IntegerType()
-    var t8: Value; // LibraCoin_MarketCap_type_value()
+    var __t0: Value; // AddressType()
+    var __t1: Value; // AddressType()
+    var __t2: Value; // BooleanType()
+    var __t3: Value; // BooleanType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // BooleanType()
+    var __t6: Value; // LibraCoin_MintCapability_type_value()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // LibraCoin_MarketCap_type_value()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 9;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-
-    old_size := local_counter;
-    local_counter := local_counter + 9;
+    // process and type check arguments
 
     // bytecode translation starts here
-    call tmp := GetTxnSenderAddress();
-    m := UpdateLocal(m, old_size + 0, tmp);
+    call __tmp := GetTxnSenderAddress();
+    __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    call tmp := LdAddr(173345816);
-    m := UpdateLocal(m, old_size + 1, tmp);
+    call __tmp := LdAddr(173345816);
+    __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    tmp := Boolean(IsEqual(GetLocal(m, old_size + 0), GetLocal(m, old_size + 1)));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    __tmp := Boolean(IsEqual(GetLocal(__m, __frame + 0), GetLocal(__m, __frame + 1)));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    tmp := GetLocal(m, old_size + 3);
-    if (!b#Boolean(tmp)) { goto Label_7; }
+    __tmp := GetLocal(__m, __frame + 3);
+    if (!b#Boolean(__tmp)) { goto Label_7; }
 
-    call tmp := LdConst(1);
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := LdConst(1);
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     goto Label_Abort;
 
 Label_7:
-    call tmp := LdTrue();
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := LdTrue();
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    assume is#Boolean(GetLocal(m, old_size + 5));
+    call __tmp := Pack_LibraCoin_MintCapability(GetLocal(__m, __frame + 5));
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    call tmp := Pack_LibraCoin_MintCapability(GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call MoveToSender(LibraCoin_MintCapability_type_value(), GetLocal(__m, __frame + 6));
+    if (__abort_flag) { goto Label_Abort; }
 
-    call MoveToSender(LibraCoin_MintCapability_type_value(), GetLocal(m, old_size + 6));
-    if (abort_flag) { goto Label_Abort; }
+    call __tmp := LdConst(0);
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call tmp := LdConst(0);
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __tmp := Pack_LibraCoin_MarketCap(GetLocal(__m, __frame + 7));
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    assume IsValidInteger(GetLocal(m, old_size + 7));
-
-    call tmp := Pack_LibraCoin_MarketCap(GetLocal(m, old_size + 7));
-    m := UpdateLocal(m, old_size + 8, tmp);
-
-    call MoveToSender(LibraCoin_MarketCap_type_value(), GetLocal(m, old_size + 8));
-    if (abort_flag) { goto Label_Abort; }
+    call MoveToSender(LibraCoin_MarketCap_type_value(), GetLocal(__m, __frame + 8));
+    if (__abort_flag) { goto Label_Abort; }
 
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
 }
 
 procedure LibraCoin_initialize_verify () returns ()
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call LibraCoin_initialize();
 }
 
-procedure {:inline 1} LibraCoin_market_cap () returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures !abort_flag ==> b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value))));
-ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))))))) ==> abort_flag;
+procedure {:inline 1} LibraCoin_market_cap () returns (__ret0: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, GetResourceReference(LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))), LibraCoin_MarketCap_total_value))));
+ensures old(!(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816))))))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCap_type_value(), a#Address(Address(173345816)))))))) ==> __abort_flag;
+
 {
     // declare local variables
-    var t0: Value; // AddressType()
-    var t1: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
-    var t2: Reference; // ReferenceType(IntegerType())
-    var t3: Value; // IntegerType()
+    var __t0: Value; // AddressType()
+    var __t1: Reference; // ReferenceType(LibraCoin_MarketCap_type_value())
+    var __t2: Reference; // ReferenceType(IntegerType())
+    var __t3: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 4;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-
-    old_size := local_counter;
-    local_counter := local_counter + 4;
+    // process and type check arguments
 
     // bytecode translation starts here
-    call tmp := LdAddr(173345816);
-    m := UpdateLocal(m, old_size + 0, tmp);
+    call __tmp := LdAddr(173345816);
+    __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    call t1 := BorrowGlobal(GetLocal(m, old_size + 0), LibraCoin_MarketCap_type_value());
-    if (abort_flag) { goto Label_Abort; }
+    call __t1 := BorrowGlobal(GetLocal(__m, __frame + 0), LibraCoin_MarketCap_type_value());
+    if (__abort_flag) { goto Label_Abort; }
 
-    call t2 := BorrowField(t1, LibraCoin_MarketCap_total_value);
+    call __t2 := BorrowField(__t1, LibraCoin_MarketCap_total_value);
 
-    call tmp := ReadRef(t2);
-    assume IsValidInteger(tmp);
+    call __tmp := ReadRef(__t2);
+    assume IsValidU64(__tmp);
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    m := UpdateLocal(m, old_size + 3, tmp);
-
-    ret0 := GetLocal(m, old_size + 3);
+    __ret0 := GetLocal(__m, __frame + 3);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
 }
 
-procedure LibraCoin_market_cap_verify () returns (ret0: Value)
+procedure LibraCoin_market_cap_verify () returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := LibraCoin_market_cap();
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0 := LibraCoin_market_cap();
 }
 
-procedure {:inline 1} LibraCoin_zero () returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures b#Boolean(Boolean((SelectField(ret0, LibraCoin_T_value)) == (Integer(0))));
+procedure {:inline 1} LibraCoin_zero () returns (__ret0: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), Integer(0))));
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Value; // LibraCoin_T_type_value()
+    var __t0: Value; // IntegerType()
+    var __t1: Value; // LibraCoin_T_type_value()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 2;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-
-    old_size := local_counter;
-    local_counter := local_counter + 2;
+    // process and type check arguments
 
     // bytecode translation starts here
-    call tmp := LdConst(0);
-    m := UpdateLocal(m, old_size + 0, tmp);
+    call __tmp := LdConst(0);
+    __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    assume IsValidInteger(GetLocal(m, old_size + 0));
+    call __tmp := Pack_LibraCoin_T(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 1, tmp);
-
-    ret0 := GetLocal(m, old_size + 1);
+    __ret0 := GetLocal(__m, __frame + 1);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
 }
 
-procedure LibraCoin_zero_verify () returns (ret0: Value)
+procedure LibraCoin_zero_verify () returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := LibraCoin_zero();
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0 := LibraCoin_zero();
 }
 
-procedure {:inline 1} LibraCoin_value (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, arg0), LibraCoin_T_value))));
+procedure {:inline 1} LibraCoin_value (coin_ref: Reference) returns (__ret0: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, coin_ref), LibraCoin_T_value))));
 {
     // declare local variables
-    var t0: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t1: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t2: Reference; // ReferenceType(IntegerType())
-    var t3: Value; // IntegerType()
+    var __t1: Reference; // ReferenceType(LibraCoin_T_type_value())
+    var __t2: Reference; // ReferenceType(IntegerType())
+    var __t3: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 4;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume is#Vector(Dereference(m, arg0));
-    assume IsValidReferenceParameter(m, local_counter, arg0);
-
-    old_size := local_counter;
-    local_counter := local_counter + 4;
-    t0 := arg0;
+    // process and type check arguments
+    assume is#Vector(Dereference(__m, coin_ref));
+    assume IsValidReferenceParameter(__m, __frame, coin_ref);
 
     // bytecode translation starts here
-    call t1 := CopyOrMoveRef(t0);
+    call __t1 := CopyOrMoveRef(coin_ref);
 
-    call t2 := BorrowField(t1, LibraCoin_T_value);
+    call __t2 := BorrowField(__t1, LibraCoin_T_value);
 
-    call tmp := ReadRef(t2);
-    assume IsValidInteger(tmp);
+    call __tmp := ReadRef(__t2);
+    assume IsValidU64(__tmp);
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    m := UpdateLocal(m, old_size + 3, tmp);
-
-    ret0 := GetLocal(m, old_size + 3);
+    __ret0 := GetLocal(__m, __frame + 3);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
 }
 
-procedure LibraCoin_value_verify (arg0: Reference) returns (ret0: Value)
+procedure LibraCoin_value_verify (coin_ref: Reference) returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := LibraCoin_value(arg0);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0 := LibraCoin_value(coin_ref);
 }
 
-procedure {:inline 1} LibraCoin_split (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures !abort_flag ==> b#Boolean(Boolean(b#Boolean(Boolean((SelectField(ret1, LibraCoin_T_value)) == (arg1))) && b#Boolean(Boolean((SelectField(ret0, LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(arg0, LibraCoin_T_value))) - i#Integer(arg1)))))));
-ensures old(!(b#Boolean(Boolean(i#Integer(SelectField(arg0, LibraCoin_T_value)) < i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(SelectField(arg0, LibraCoin_T_value)) < i#Integer(arg1)))) ==> abort_flag;
+procedure {:inline 1} LibraCoin_split (coin: Value, amount: Value) returns (__ret0: Value, __ret1: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures !__abort_flag ==> b#Boolean(Boolean(b#Boolean(Boolean(IsEqual(SelectField(__ret1, LibraCoin_T_value), amount))) && b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), Integer(i#Integer(old(SelectField(coin, LibraCoin_T_value))) - i#Integer(amount)))))));
+ensures old(!(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < i#Integer(amount))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < i#Integer(amount)))) ==> __abort_flag;
+
 {
     // declare local variables
-    var t0: Value; // LibraCoin_T_type_value()
-    var t1: Value; // IntegerType()
-    var t2: Value; // LibraCoin_T_type_value()
-    var t3: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t4: Value; // IntegerType()
-    var t5: Value; // LibraCoin_T_type_value()
-    var t6: Value; // LibraCoin_T_type_value()
-    var t7: Value; // LibraCoin_T_type_value()
+    var other: Value; // LibraCoin_T_type_value()
+    var __t3: Reference; // ReferenceType(LibraCoin_T_type_value())
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // LibraCoin_T_type_value()
+    var __t6: Value; // LibraCoin_T_type_value()
+    var __t7: Value; // LibraCoin_T_type_value()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 8;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume is#Vector(arg0);
-    assume IsValidInteger(arg1);
-
-    old_size := local_counter;
-    local_counter := local_counter + 8;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    // process and type check arguments
+    assume is#Vector(coin);
+    __m := UpdateLocal(__m, __frame + 0, coin);
+    assume IsValidU64(amount);
+    __m := UpdateLocal(__m, __frame + 1, amount);
 
     // bytecode translation starts here
-    call t3 := BorrowLoc(old_size+0);
+    call __t3 := BorrowLoc(__frame + 0);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call t5 := LibraCoin_withdraw(t3, GetLocal(m, old_size + 4));
-    if (abort_flag) { goto Label_Abort; }
-    assume is#Vector(t5);
+    call __t5 := LibraCoin_withdraw(__t3, GetLocal(__m, __frame + 4));
+    if (__abort_flag) { goto Label_Abort; }
+    assume is#Vector(__t5);
 
-    m := UpdateLocal(m, old_size + 5, t5);
+    __m := UpdateLocal(__m, __frame + 5, __t5);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    ret0 := GetLocal(m, old_size + 6);
-    ret1 := GetLocal(m, old_size + 7);
+    __ret0 := GetLocal(__m, __frame + 6);
+    __ret1 := GetLocal(__m, __frame + 7);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
-    ret1 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
+    __ret1 := DefaultValue;
 }
 
-procedure LibraCoin_split_verify (arg0: Value, arg1: Value) returns (ret0: Value, ret1: Value)
+procedure LibraCoin_split_verify (coin: Value, amount: Value) returns (__ret0: Value, __ret1: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0, ret1 := LibraCoin_split(arg0, arg1);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0, __ret1 := LibraCoin_split(coin, amount);
 }
 
-procedure {:inline 1} LibraCoin_withdraw (arg0: Reference, arg1: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures !abort_flag ==> b#Boolean(Boolean((SelectField(Dereference(m, arg0), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(Dereference(m, arg0), LibraCoin_T_value))) - i#Integer(arg1)))));
-ensures !abort_flag ==> b#Boolean(Boolean((SelectField(ret0, LibraCoin_T_value)) == (arg1)));
-ensures old(!(b#Boolean(Boolean(i#Integer(SelectField(Dereference(m, arg0), LibraCoin_T_value)) < i#Integer(arg1))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(m, arg0), LibraCoin_T_value)) < i#Integer(arg1)))) ==> abort_flag;
+procedure {:inline 1} LibraCoin_withdraw (coin_ref: Reference, amount: Value) returns (__ret0: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(SelectField(Dereference(__m, coin_ref), LibraCoin_T_value), Integer(i#Integer(old(SelectField(Dereference(__m, coin_ref), LibraCoin_T_value))) - i#Integer(amount)))));
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), amount)));
+ensures old(!(b#Boolean(Boolean(i#Integer(SelectField(Dereference(__m, coin_ref), LibraCoin_T_value)) < i#Integer(amount))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(__m, coin_ref), LibraCoin_T_value)) < i#Integer(amount)))) ==> __abort_flag;
+
 {
     // declare local variables
-    var t0: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t4: Reference; // ReferenceType(IntegerType())
-    var t5: Value; // IntegerType()
-    var t6: Value; // IntegerType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // BooleanType()
-    var t9: Value; // BooleanType()
-    var t10: Value; // IntegerType()
-    var t11: Value; // IntegerType()
-    var t12: Value; // IntegerType()
-    var t13: Value; // IntegerType()
-    var t14: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t15: Reference; // ReferenceType(IntegerType())
-    var t16: Value; // IntegerType()
-    var t17: Value; // LibraCoin_T_type_value()
+    var value: Value; // IntegerType()
+    var __t3: Reference; // ReferenceType(LibraCoin_T_type_value())
+    var __t4: Reference; // ReferenceType(IntegerType())
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // IntegerType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // BooleanType()
+    var __t9: Value; // BooleanType()
+    var __t10: Value; // IntegerType()
+    var __t11: Value; // IntegerType()
+    var __t12: Value; // IntegerType()
+    var __t13: Value; // IntegerType()
+    var __t14: Reference; // ReferenceType(LibraCoin_T_type_value())
+    var __t15: Reference; // ReferenceType(IntegerType())
+    var __t16: Value; // IntegerType()
+    var __t17: Value; // LibraCoin_T_type_value()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 18;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume is#Vector(Dereference(m, arg0));
-    assume IsValidReferenceParameter(m, local_counter, arg0);
-    assume IsValidInteger(arg1);
-
-    old_size := local_counter;
-    local_counter := local_counter + 18;
-    t0 := arg0;
-    m := UpdateLocal(m, old_size + 1, arg1);
+    // process and type check arguments
+    assume is#Vector(Dereference(__m, coin_ref));
+    assume IsValidReferenceParameter(__m, __frame, coin_ref);
+    assume IsValidU64(amount);
+    __m := UpdateLocal(__m, __frame + 1, amount);
 
     // bytecode translation starts here
-    call t3 := CopyOrMoveRef(t0);
+    call __t3 := CopyOrMoveRef(coin_ref);
 
-    call t4 := BorrowField(t3, LibraCoin_T_value);
+    call __t4 := BorrowField(__t3, LibraCoin_T_value);
 
-    call tmp := ReadRef(t4);
-    assume IsValidInteger(tmp);
+    call __tmp := ReadRef(__t4);
+    assume IsValidU64(__tmp);
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    m := UpdateLocal(m, old_size + 5, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 5));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __tmp := Ge(GetLocal(__m, __frame + 6), GetLocal(__m, __frame + 7));
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    call tmp := Ge(GetLocal(m, old_size + 6), GetLocal(m, old_size + 7));
-    m := UpdateLocal(m, old_size + 8, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 8));
+    __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 8));
-    m := UpdateLocal(m, old_size + 9, tmp);
+    __tmp := GetLocal(__m, __frame + 9);
+    if (!b#Boolean(__tmp)) { goto Label_11; }
 
-    tmp := GetLocal(m, old_size + 9);
-    if (!b#Boolean(tmp)) { goto Label_11; }
-
-    call tmp := LdConst(10);
-    m := UpdateLocal(m, old_size + 10, tmp);
+    call __tmp := LdConst(10);
+    __m := UpdateLocal(__m, __frame + 10, __tmp);
 
     goto Label_Abort;
 
 Label_11:
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 11, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 11, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 12, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 12, __tmp);
 
-    call tmp := Sub(GetLocal(m, old_size + 11), GetLocal(m, old_size + 12));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 13, tmp);
+    call __tmp := Sub(GetLocal(__m, __frame + 11), GetLocal(__m, __frame + 12));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 13, __tmp);
 
-    call t14 := CopyOrMoveRef(t0);
+    call __t14 := CopyOrMoveRef(coin_ref);
 
-    call t15 := BorrowField(t14, LibraCoin_T_value);
+    call __t15 := BorrowField(__t14, LibraCoin_T_value);
 
-    call WriteRef(t15, GetLocal(m, old_size + 13));
+    call WriteRef(__t15, GetLocal(__m, __frame + 13));
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 16, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 16, __tmp);
 
-    assume IsValidInteger(GetLocal(m, old_size + 16));
+    call __tmp := Pack_LibraCoin_T(GetLocal(__m, __frame + 16));
+    __m := UpdateLocal(__m, __frame + 17, __tmp);
 
-    call tmp := Pack_LibraCoin_T(GetLocal(m, old_size + 16));
-    m := UpdateLocal(m, old_size + 17, tmp);
-
-    ret0 := GetLocal(m, old_size + 17);
+    __ret0 := GetLocal(__m, __frame + 17);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
 }
 
-procedure LibraCoin_withdraw_verify (arg0: Reference, arg1: Value) returns (ret0: Value)
+procedure LibraCoin_withdraw_verify (coin_ref: Reference, amount: Value) returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := LibraCoin_withdraw(arg0, arg1);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0 := LibraCoin_withdraw(coin_ref, amount);
 }
 
-procedure {:inline 1} LibraCoin_join (arg0: Value, arg1: Value) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures !abort_flag ==> b#Boolean(Boolean((SelectField(ret0, LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(arg0, LibraCoin_T_value))) + i#Integer(old(SelectField(arg1, LibraCoin_T_value)))))));
-ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(arg0, LibraCoin_T_value)) + i#Integer(SelectField(arg1, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(arg0, LibraCoin_T_value)) + i#Integer(SelectField(arg1, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807))))) ==> abort_flag;
+procedure {:inline 1} LibraCoin_join (coin1: Value, coin2: Value) returns (__ret0: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), Integer(i#Integer(old(SelectField(coin1, LibraCoin_T_value))) + i#Integer(old(SelectField(coin2, LibraCoin_T_value)))))));
+ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(coin1, LibraCoin_T_value)) + i#Integer(SelectField(coin2, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(coin1, LibraCoin_T_value)) + i#Integer(SelectField(coin2, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807))))) ==> __abort_flag;
+
 {
     // declare local variables
-    var t0: Value; // LibraCoin_T_type_value()
-    var t1: Value; // LibraCoin_T_type_value()
-    var t2: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t3: Value; // LibraCoin_T_type_value()
-    var t4: Value; // LibraCoin_T_type_value()
+    var __t2: Reference; // ReferenceType(LibraCoin_T_type_value())
+    var __t3: Value; // LibraCoin_T_type_value()
+    var __t4: Value; // LibraCoin_T_type_value()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 5;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume is#Vector(arg0);
-    assume is#Vector(arg1);
-
-    old_size := local_counter;
-    local_counter := local_counter + 5;
-    m := UpdateLocal(m, old_size + 0, arg0);
-    m := UpdateLocal(m, old_size + 1, arg1);
+    // process and type check arguments
+    assume is#Vector(coin1);
+    __m := UpdateLocal(__m, __frame + 0, coin1);
+    assume is#Vector(coin2);
+    __m := UpdateLocal(__m, __frame + 1, coin2);
 
     // bytecode translation starts here
-    call t2 := BorrowLoc(old_size+0);
+    call __t2 := BorrowLoc(__frame + 0);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call LibraCoin_deposit(t2, GetLocal(m, old_size + 3));
-    if (abort_flag) { goto Label_Abort; }
+    call LibraCoin_deposit(__t2, GetLocal(__m, __frame + 3));
+    if (__abort_flag) { goto Label_Abort; }
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    ret0 := GetLocal(m, old_size + 4);
+    __ret0 := GetLocal(__m, __frame + 4);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
 }
 
-procedure LibraCoin_join_verify (arg0: Value, arg1: Value) returns (ret0: Value)
+procedure LibraCoin_join_verify (coin1: Value, coin2: Value) returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := LibraCoin_join(arg0, arg1);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0 := LibraCoin_join(coin1, coin2);
 }
 
-procedure {:inline 1} LibraCoin_deposit (arg0: Reference, arg1: Value) returns ()
-requires ExistsTxnSenderAccount(m, txn);
-ensures !abort_flag ==> b#Boolean(Boolean((SelectField(Dereference(m, arg0), LibraCoin_T_value)) == (Integer(i#Integer(old(SelectField(Dereference(m, arg0), LibraCoin_T_value))) + i#Integer(old(SelectField(arg1, LibraCoin_T_value)))))));
-ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereference(m, arg0), LibraCoin_T_value)) + i#Integer(SelectField(arg1, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereference(m, arg0), LibraCoin_T_value)) + i#Integer(SelectField(arg1, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807))))) ==> abort_flag;
+procedure {:inline 1} LibraCoin_deposit (coin_ref: Reference, check: Value) returns ()
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures !__abort_flag ==> b#Boolean(Boolean(IsEqual(SelectField(Dereference(__m, coin_ref), LibraCoin_T_value), Integer(i#Integer(old(SelectField(Dereference(__m, coin_ref), LibraCoin_T_value))) + i#Integer(old(SelectField(check, LibraCoin_T_value)))))));
+ensures old(!(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereference(__m, coin_ref), LibraCoin_T_value)) + i#Integer(SelectField(check, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807)))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereference(__m, coin_ref), LibraCoin_T_value)) + i#Integer(SelectField(check, LibraCoin_T_value)))) > i#Integer(Integer(9223372036854775807))))) ==> __abort_flag;
+
 {
     // declare local variables
-    var t0: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t1: Value; // LibraCoin_T_type_value()
-    var t2: Value; // IntegerType()
-    var t3: Value; // IntegerType()
-    var t4: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t5: Reference; // ReferenceType(IntegerType())
-    var t6: Value; // IntegerType()
-    var t7: Value; // LibraCoin_T_type_value()
-    var t8: Value; // IntegerType()
-    var t9: Value; // IntegerType()
-    var t10: Value; // IntegerType()
-    var t11: Value; // IntegerType()
-    var t12: Reference; // ReferenceType(LibraCoin_T_type_value())
-    var t13: Reference; // ReferenceType(IntegerType())
+    var value: Value; // IntegerType()
+    var check_value: Value; // IntegerType()
+    var __t4: Reference; // ReferenceType(LibraCoin_T_type_value())
+    var __t5: Reference; // ReferenceType(IntegerType())
+    var __t6: Value; // IntegerType()
+    var __t7: Value; // LibraCoin_T_type_value()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // IntegerType()
+    var __t10: Value; // IntegerType()
+    var __t11: Value; // IntegerType()
+    var __t12: Reference; // ReferenceType(LibraCoin_T_type_value())
+    var __t13: Reference; // ReferenceType(IntegerType())
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 14;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume is#Vector(Dereference(m, arg0));
-    assume IsValidReferenceParameter(m, local_counter, arg0);
-    assume is#Vector(arg1);
-
-    old_size := local_counter;
-    local_counter := local_counter + 14;
-    t0 := arg0;
-    m := UpdateLocal(m, old_size + 1, arg1);
+    // process and type check arguments
+    assume is#Vector(Dereference(__m, coin_ref));
+    assume IsValidReferenceParameter(__m, __frame, coin_ref);
+    assume is#Vector(check);
+    __m := UpdateLocal(__m, __frame + 1, check);
 
     // bytecode translation starts here
-    call t4 := CopyOrMoveRef(t0);
+    call __t4 := CopyOrMoveRef(coin_ref);
 
-    call t5 := BorrowField(t4, LibraCoin_T_value);
+    call __t5 := BorrowField(__t4, LibraCoin_T_value);
 
-    call tmp := ReadRef(t5);
-    assume IsValidInteger(tmp);
+    call __tmp := ReadRef(__t5);
+    assume IsValidU64(__tmp);
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __t8 := Unpack_LibraCoin_T(GetLocal(__m, __frame + 7));
+    __m := UpdateLocal(__m, __frame + 8, __t8);
 
-    call t8 := Unpack_LibraCoin_T(GetLocal(m, old_size + 7));
-    assume IsValidInteger(t8);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    m := UpdateLocal(m, old_size + 8, t8);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 8));
-    m := UpdateLocal(m, old_size + 3, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
+    __m := UpdateLocal(__m, __frame + 10, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 9, tmp);
+    call __tmp := AddU64(GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 10));
+    if (__abort_flag) { goto Label_Abort; }
+    __m := UpdateLocal(__m, __frame + 11, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
-    m := UpdateLocal(m, old_size + 10, tmp);
+    call __t12 := CopyOrMoveRef(coin_ref);
 
-    call tmp := Add(GetLocal(m, old_size + 9), GetLocal(m, old_size + 10));
-    if (abort_flag) { goto Label_Abort; }
-    m := UpdateLocal(m, old_size + 11, tmp);
+    call __t13 := BorrowField(__t12, LibraCoin_T_value);
 
-    call t12 := CopyOrMoveRef(t0);
-
-    call t13 := BorrowField(t12, LibraCoin_T_value);
-
-    call WriteRef(t13, GetLocal(m, old_size + 11));
+    call WriteRef(__t13, GetLocal(__m, __frame + 11));
 
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
 }
 
-procedure LibraCoin_deposit_verify (arg0: Reference, arg1: Value) returns ()
+procedure LibraCoin_deposit_verify (coin_ref: Reference, check: Value) returns ()
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call LibraCoin_deposit(arg0, arg1);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call LibraCoin_deposit(coin_ref, check);
 }
 
-procedure {:inline 1} LibraCoin_destroy_zero (arg0: Value) returns ()
-requires ExistsTxnSenderAccount(m, txn);
-ensures old(!(b#Boolean(Boolean((SelectField(arg0, LibraCoin_T_value)) != (Integer(0)))))) ==> !abort_flag;
-ensures old(b#Boolean(Boolean((SelectField(arg0, LibraCoin_T_value)) != (Integer(0))))) ==> abort_flag;
+procedure {:inline 1} LibraCoin_destroy_zero (coin: Value) returns ()
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures old(!(b#Boolean(Boolean(!IsEqual(SelectField(coin, LibraCoin_T_value), Integer(0)))))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(!IsEqual(SelectField(coin, LibraCoin_T_value), Integer(0))))) ==> __abort_flag;
+
 {
     // declare local variables
-    var t0: Value; // LibraCoin_T_type_value()
-    var t1: Value; // IntegerType()
-    var t2: Value; // LibraCoin_T_type_value()
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // BooleanType()
-    var t7: Value; // BooleanType()
-    var t8: Value; // IntegerType()
+    var value: Value; // IntegerType()
+    var __t2: Value; // LibraCoin_T_type_value()
+    var __t3: Value; // IntegerType()
+    var __t4: Value; // IntegerType()
+    var __t5: Value; // IntegerType()
+    var __t6: Value; // BooleanType()
+    var __t7: Value; // BooleanType()
+    var __t8: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 9;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume is#Vector(arg0);
-
-    old_size := local_counter;
-    local_counter := local_counter + 9;
-    m := UpdateLocal(m, old_size + 0, arg0);
+    // process and type check arguments
+    assume is#Vector(coin);
+    __m := UpdateLocal(__m, __frame + 0, coin);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call t3 := Unpack_LibraCoin_T(GetLocal(m, old_size + 2));
-    assume IsValidInteger(t3);
+    call __t3 := Unpack_LibraCoin_T(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 3, __t3);
 
-    m := UpdateLocal(m, old_size + 3, t3);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
+    __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 3));
-    m := UpdateLocal(m, old_size + 1, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 1));
-    m := UpdateLocal(m, old_size + 4, tmp);
+    call __tmp := LdConst(0);
+    __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call tmp := LdConst(0);
-    m := UpdateLocal(m, old_size + 5, tmp);
+    __tmp := Boolean(IsEqual(GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5)));
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    tmp := Boolean(IsEqual(GetLocal(m, old_size + 4), GetLocal(m, old_size + 5)));
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 6));
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 6));
-    m := UpdateLocal(m, old_size + 7, tmp);
+    __tmp := GetLocal(__m, __frame + 7);
+    if (!b#Boolean(__tmp)) { goto Label_10; }
 
-    tmp := GetLocal(m, old_size + 7);
-    if (!b#Boolean(tmp)) { goto Label_10; }
-
-    call tmp := LdConst(11);
-    m := UpdateLocal(m, old_size + 8, tmp);
+    call __tmp := LdConst(11);
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     goto Label_Abort;
 
@@ -903,12 +862,12 @@ Label_10:
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
 }
 
-procedure LibraCoin_destroy_zero_verify (arg0: Value) returns ()
+procedure LibraCoin_destroy_zero_verify (coin: Value) returns ()
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call LibraCoin_destroy_zero(arg0);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call LibraCoin_destroy_zero(coin);
 }

@@ -16,7 +16,7 @@ FROM toolchain AS config_builder
 
 COPY . /libra
 
-RUN cargo build --release -p libra-node -p client -p config-builder && cd target/release && rm -r build deps incremental
+RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
 
 ### Production Image ###
 FROM libra_e2e:latest as validator_with_config

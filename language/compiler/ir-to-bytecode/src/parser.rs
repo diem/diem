@@ -111,7 +111,7 @@ pub fn parse_module(modules_str: &str) -> Result<ast::ModuleDefinition> {
 
 /// Given the raw input of a file, creates a single `Cmd` struct
 /// Fails with `Err(_)` if the text cannot be parsed
-pub fn parse_cmd(cmd_str: &str, _sender_address: AccountAddress) -> Result<ast::Cmd> {
+pub fn parse_cmd(cmd_str: &str, _sender_address: AccountAddress) -> Result<ast::Cmd_> {
     let stripped_string = &strip_comments_and_verify(cmd_str)?;
     syntax::parse_cmd_string(stripped_string).or_else(|e| handle_error(e, stripped_string))
 }

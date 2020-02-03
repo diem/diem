@@ -34,10 +34,7 @@ impl ExperimentParam for PerformanceBenchmarkThreeRegionSimulationParams {
 }
 
 impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
-    fn run<'a>(
-        &'a mut self,
-        context: &'a mut Context,
-    ) -> BoxFuture<'a, anyhow::Result<Option<String>>> {
+    fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, anyhow::Result<()>> {
         async move {
             let (us, euro) = self.cluster.split_n_validators_random(80);
             let (us_west, us_east) = us.split_n_validators_random(40);
@@ -54,22 +51,25 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 ),
             );
             join_all(network_effects.iter().map(|e| e.activate())).await;
-            let window = Duration::from_secs(180);
+            let window = Duration::from_secs(240);
             context
                 .tx_emitter
-                .emit_txn_for(
-                    window + Duration::from_secs(60),
-                    self.cluster.validator_instances().clone(),
-                )
+                .emit_txn_for(window, self.cluster.validator_instances().clone())
                 .await?;
-            let end = unix_timestamp_now();
-            let start = end - window;
+            let buffer = Duration::from_secs(30);
+            let end = unix_timestamp_now() - buffer;
+            let start = end - window + 2 * buffer;
             let (avg_tps, avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
             join_all(network_effects.iter().map(|e| e.deactivate())).await;
-            Ok(Some(format!(
+            context.report.report_metric(&self, "avg_tps", avg_tps);
+            context
+                .report
+                .report_metric(&self, "avg_latency", avg_latency);
+            context.report.report_text(format!(
                 "{} : {:.0} TPS, {:.1} ms latency",
                 self, avg_tps, avg_latency
-            )))
+            ));
+            Ok(())
         }
         .boxed()
     }

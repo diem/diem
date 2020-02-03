@@ -3,24 +3,36 @@
 # SPDX-License-Identifier: Apache-2.0
 set -e
 
-aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
-ssh ssh.cluster-test-ci.aws.hlw3truzy4ls.com echo "ssh ok" >/dev/null || (echo "Failed to ssh to cluster test instance. Try renew corp canal cert with cc-certs"; exit 1)
-
+TAG=""
 PR=""
 WORKSPACE="cluster-test-ci"
+ENV="env"
+REPORT=""
 
 while (( "$#" )); do
   case "$1" in
+    -R|--report)
+      REPORT=$2
+      shift 2
+      ;;
     -p|--pr)
       PR=$2
       shift 2
       ;;
     -M|--master)
-      PR=MASTER
+      TAG=master
       shift 1
+      ;;
+    -T|--tag)
+      TAG=$2
+      shift 2
       ;;
     -W|--workspace)
       WORKSPACE=$2
+      shift 2
+      ;;
+    -E|--env)
+      ENV="$ENV $2"
       shift 2
       ;;
     -c|--container|-i|--image|--deploy)
@@ -33,31 +45,52 @@ while (( "$#" )); do
   esac
 done
 
-if [ -z "$PR" ]
+if [ -z "$PR" ] && [ -z "$TAG" ]
 then
-      echo "No PR specified"
+      echo "No PR or tag specified"
       echo "Usage:"
-      echo "cti [--pr <PR>|--master] [--workspace <WORKSPACE>] <cluster test arguments>"
+      echo "cti [--pr <PR>|--master|--tag <TAG>] [--workspace <WORKSPACE>] [-E <env>] <cluster test arguments>"
+      echo
+      echo "--pr <PR>: Build image from pull request #<PR>"
+      echo "-M|--master: Use latest image available in CI"
+      echo "-T|--tag <TAG>: Use image with tag TAG"
+      echo "-W|--workspace <WORKSPACE>: Use custom workplace <WORKSPACE>"
+      echo "-E|--env <ENV>: Set environment variable, ex. -E RUST_LOG=debug. Can be repeated, e.g. -E A=B -E C=D"
+      echo "-R|--report file.json: Generate json report into file.json"
+      echo
+      echo "To see cluster test runner arguments run cti --master"
+      echo
       echo "Examples:"
       echo "cti --pr <PR> --run bench # Run benchmark"
       echo "cti --master --emit-tx # Submit transactions until Ctrl+C pressed"
       exit 1
 fi
 
-if [ "$PR" = "MASTER" ]; then
-    TAG=master
-else
+JUMPHOST=${JUMPHOST:-ssh.${WORKSPACE}.aws.hlw3truzy4ls.com}
+
+ssh $JUMPHOST echo "ssh ok" >/dev/null || (echo "Failed to ssh to jump host $JUMPHOST. Try renew corp canal cert with cc-certs"; exit 1)
+
+if [ -z "$TAG" ]; then
+    aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
     ./docker/build-aws.sh --build-all --version pull/$PR
     TAG=dev_${USER}_pull_${PR}
+    echo "**TIP Use cti -T $TAG <...> to restart this run with same tag without rebuilding it"
 fi
 
-echo "Build succeed, will use tag $TAG"
+OUTPUT_TEE=$(mktemp)
+
 echo "**********"
-echo "Dashboard: https://fburl.com/os3pb0ot"
+echo "Copy of this output: $OUTPUT_TEE"
+echo "Dashboard: http://prometheus.${WORKSPACE}.aws.hlw3truzy4ls.com:9091/"
 echo "Logs:"
 echo " * ssh ssh.${WORKSPACE}.aws.hlw3truzy4ls.com"
 echo " * ssh-peer"
 echo " * tail -f /data/libra/libra.log"
 echo "**********"
 
-ssh -t ssh.cluster-test-ci.aws.hlw3truzy4ls.com ssh -i /libra_rsa ec2-user@ct.priv.cluster-test-ci.aws.hlw3truzy4ls.com ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" --deploy $TAG $*
+
+ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com $ENV REMOTE_USER=$USER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" --deploy $TAG $* | tee $OUTPUT_TEE
+
+if [ ! -z "$REPORT" ]; then
+    cat $OUTPUT_TEE | awk '/====json-report-begin===/{f=1;next} /====json-report-end===/{f=0} f' > $REPORT
+fi

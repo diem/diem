@@ -42,4 +42,13 @@ module M {
         _ = move x;
     }
 
+    t4(cond: bool) {
+        let x = cond;
+        let x_ref = &x;
+        if (*x_ref) {
+        } else {
+        };
+        _ = x;
+        _ = move x;
+    }
 }

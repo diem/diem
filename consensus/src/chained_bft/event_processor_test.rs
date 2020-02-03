@@ -56,7 +56,7 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use prost::Message as _;
-use safety_rules::{ConsensusState, InMemoryStorage, SafetyRulesManager};
+use safety_rules::{ConsensusState, PersistentStorage as SafetyStorage, SafetyRulesManager};
 use std::sync::RwLock;
 use std::{collections::HashMap, convert::TryFrom, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
@@ -98,8 +98,10 @@ impl NodeSetup {
             let (initial_data, storage) =
                 MockStorage::<TestPayload>::start_for_testing((&validators).into());
 
-            let safety_rules_manager =
-                SafetyRulesManager::new_local(Box::new(InMemoryStorage::default()), signer.clone());
+            let safety_rules_manager = SafetyRulesManager::new_local(
+                signer.author(),
+                SafetyStorage::in_memory(signer.private_key().clone()),
+            );
 
             nodes.push(Self::new(
                 playground,

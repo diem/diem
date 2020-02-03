@@ -8,70 +8,65 @@ axiom TestSpecs_T_value == 0;
 function TestSpecs_T_type_value(): TypeValue {
     StructType(TestSpecs_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-
-procedure {:inline 1} Pack_TestSpecs_T(v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestSpecs_T(value: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
-
+    assume IsValidU64(value);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, value));
 }
 
-procedure {:inline 1} Unpack_TestSpecs_T(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_TestSpecs_T(_struct: Value) returns (value: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, TestSpecs_T_value);
+    assume is#Vector(_struct);
+    value := SelectField(_struct, TestSpecs_T_value);
+    assume IsValidU64(value);
 }
 
 
 
 // ** functions of module TestSpecs
 
-procedure {:inline 1} TestSpecs_value (arg0: Reference) returns (ret0: Value)
-requires ExistsTxnSenderAccount(m, txn);
-ensures b#Boolean(Boolean((ret0) == (SelectField(Dereference(m, arg0), TestSpecs_T_value))));
+procedure {:inline 1} TestSpecs_value (ref: Reference) returns (__ret0: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, ref), TestSpecs_T_value))));
 {
     // declare local variables
-    var t0: Reference; // ReferenceType(TestSpecs_T_type_value())
-    var t1: Reference; // ReferenceType(TestSpecs_T_type_value())
-    var t2: Reference; // ReferenceType(IntegerType())
-    var t3: Value; // IntegerType()
+    var __t1: Reference; // ReferenceType(TestSpecs_T_type_value())
+    var __t2: Reference; // ReferenceType(IntegerType())
+    var __t3: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 4;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume is#Vector(Dereference(m, arg0));
-    assume IsValidReferenceParameter(m, local_counter, arg0);
-
-    old_size := local_counter;
-    local_counter := local_counter + 4;
-    t0 := arg0;
+    // process and type check arguments
+    assume is#Vector(Dereference(__m, ref));
+    assume IsValidReferenceParameter(__m, __frame, ref);
 
     // bytecode translation starts here
-    call t1 := CopyOrMoveRef(t0);
+    call __t1 := CopyOrMoveRef(ref);
 
-    call t2 := BorrowField(t1, TestSpecs_T_value);
+    call __t2 := BorrowField(__t1, TestSpecs_T_value);
 
-    call tmp := ReadRef(t2);
-    assume IsValidInteger(tmp);
+    call __tmp := ReadRef(__t2);
+    assume IsValidU64(__tmp);
+    __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    m := UpdateLocal(m, old_size + 3, tmp);
-
-    ret0 := GetLocal(m, old_size + 3);
+    __ret0 := GetLocal(__m, __frame + 3);
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
-    ret0 := DefaultValue;
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
 }
 
-procedure TestSpecs_value_verify (arg0: Reference) returns (ret0: Value)
+procedure TestSpecs_value_verify (ref: Reference) returns (__ret0: Value)
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call ret0 := TestSpecs_value(arg0);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call __ret0 := TestSpecs_value(ref);
 }

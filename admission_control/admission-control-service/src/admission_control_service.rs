@@ -5,6 +5,7 @@
 //! from external clients (such as wallets) and performs necessary processing before sending them to
 //! next step.
 
+use crate::counters;
 use admission_control_proto::proto::admission_control::{
     admission_control_server::{AdmissionControl, AdmissionControlServer},
     SubmitTransactionRequest, SubmitTransactionResponse,
@@ -17,7 +18,7 @@ use futures::{
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
-use std::{convert::TryFrom, net::ToSocketAddrs, sync::Arc};
+use std::{convert::TryFrom, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
 
@@ -64,22 +65,14 @@ impl AdmissionControlService {
             .expect("[admission control] failed to create runtime");
 
         // Create storage read client
-        let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-            "localhost",
-            config.storage.port,
-        ));
+        let storage_client: Arc<dyn StorageRead> =
+            Arc::new(StorageReadServiceClient::new(&config.storage.address));
         let admission_control_service = AdmissionControlService::new(ac_sender, storage_client);
 
-        let port = config.admission_control.admission_control_service_port;
-        let addr = format!("{}:{}", config.admission_control.address, port)
-            .to_socket_addrs()
-            .unwrap()
-            .next()
-            .unwrap();
         runtime.spawn(
             tonic::transport::Server::builder()
                 .add_service(AdmissionControlServer::new(admission_control_service))
-                .serve(addr),
+                .serve(config.admission_control.address),
         );
         runtime
     }
@@ -119,6 +112,9 @@ impl AdmissionControl for AdmissionControlService {
         request: tonic::Request<SubmitTransactionRequest>,
     ) -> Result<tonic::Response<SubmitTransactionResponse>, tonic::Status> {
         debug!("[GRPC] AdmissionControl::submit_transaction");
+        counters::REQUESTS
+            .with_label_values(&["submit_transaction"])
+            .inc();
         let req = request.into_inner();
 
         let (req_sender, res_receiver) = oneshot::channel();
@@ -160,6 +156,9 @@ impl AdmissionControl for AdmissionControlService {
         request: tonic::Request<UpdateToLatestLedgerRequest>,
     ) -> Result<tonic::Response<UpdateToLatestLedgerResponse>, tonic::Status> {
         debug!("[GRPC] AdmissionControl::update_to_latest_ledger");
+        counters::REQUESTS
+            .with_label_values(&["update_to_latest_ledger"])
+            .inc();
         let req = request.into_inner();
         let resp = self
             .update_to_latest_ledger_inner(req)

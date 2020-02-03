@@ -126,7 +126,7 @@ pub fn build_memory_noise_transport(
         .boxed()
 }
 
-pub fn build_permissionless_memory_noise_transport(
+pub fn build_unauthenticated_memory_noise_transport(
     own_identity: Identity,
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
 ) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
@@ -140,10 +140,10 @@ pub fn build_permissionless_memory_noise_transport(
                 // Generate PeerId from X25519StaticPublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
                 // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
-                // not mean anything in the permissionless setting, we use the network public key
-                // to generate a peer_id for the peer. The only reason this works is that both are
-                // 32 bytes in size. If/when this condition no longer holds, we will receive an
-                // error.
+                // not mean anything in a setting without remote authentication, we use the network
+                // public key to generate a peer_id for the peer. The only reason this works is
+                // that both are 32 bytes in size. If/when this condition no longer holds, we will
+                // receive an error.
                 let peer_id = PeerId::try_from(remote_static_key).unwrap();
                 Ok((peer_id, socket))
             }
@@ -231,8 +231,9 @@ pub fn build_tcp_noise_transport(
         .boxed()
 }
 
-// Transport based on TCP + Noise, but permissionless -- i.e., any node is allowed to connect.
-pub fn build_permissionless_tcp_noise_transport(
+// Transport based on TCP + Noise, but without remote authentication (i.e., any
+// node is allowed to connect).
+pub fn build_unauthenticated_tcp_noise_transport(
     own_identity: Identity,
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
 ) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
@@ -245,10 +246,10 @@ pub fn build_permissionless_tcp_noise_transport(
                 // Generate PeerId from X25519StaticPublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
                 // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
-                // not mean anything in the permissionless setting, we use the network public key
-                // to generate a peer_id for the peer. The only reason this works is that both are
-                // 32 bytes in size. If/when this condition no longer holds, we will receive an
-                // error.
+                // not mean anything in a setting without remote authentication, we use the network
+                // public key to generate a peer_id for the peer. The only reason this works is that
+                // both are 32 bytes in size. If/when this condition no longer holds, we will receive
+                // an error.
                 let peer_id = PeerId::try_from(remote_static_key).unwrap();
                 Ok((peer_id, socket))
             }

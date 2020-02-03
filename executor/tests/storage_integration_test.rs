@@ -3,11 +3,9 @@
 
 use anyhow::{ensure, format_err, Result};
 use config_builder;
-use executor::{ExecutedTrees, Executor};
-use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
-use libra_crypto::{
-    ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue, PrivateKey,
-};
+use executor::utils::create_storage_service_and_executor;
+use libra_config::config::{VMConfig, VMPublishingOption};
+use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
 use libra_types::crypto_proxies::EpochInfo;
 use libra_types::validator_change::VerifierType;
 use libra_types::{
@@ -25,14 +23,12 @@ use libra_types::{
 };
 use rand::SeedableRng;
 use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
-use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
-use storage_service::start_storage_service;
+use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::Runtime;
 use transaction_builder::{
     encode_block_prologue_script, encode_create_account_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_script,
 };
-use vm_runtime::LibraVM;
 
 fn gen_block_id(index: u8) -> HashValue {
     HashValue::new([index; HashValue::LENGTH])
@@ -54,35 +50,6 @@ fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
     BlockMetadata::new(gen_block_id(index), index as u64, BTreeMap::new(), proposer)
 }
 
-fn create_storage_service_and_executor(
-    config: &NodeConfig,
-) -> (Runtime, Executor<LibraVM>, ExecutedTrees) {
-    let mut rt = start_storage_service(config);
-
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
-    let storage_write_client = Arc::new(StorageWriteServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
-
-    let executor = Executor::new(storage_read_client, storage_write_client, config);
-
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
-
-    let startup_info = rt
-        .block_on(storage_read_client.get_startup_info())
-        .expect("unable to read ledger info from storage")
-        .expect("startup info is None");
-    let committed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
-    (rt, executor, committed_trees)
-}
-
 fn get_test_signed_transaction(
     sender: AccountAddress,
     sequence_number: u64,
@@ -93,7 +60,7 @@ fn get_test_signed_transaction(
     Transaction::UserTransaction(get_test_signed_txn(
         sender,
         sequence_number,
-        private_key,
+        &private_key,
         public_key,
         program,
     ))
@@ -147,15 +114,8 @@ fn test_reconfiguration() {
     // Create a dummy block prologue transaction that will emit a ValidatorSetChanged event
     let txn3 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
     let txn_block = vec![txn1, txn2, txn3];
-    let block1_id = gen_block_id(1);
     let vm_output = executor
-        .execute_block(
-            txn_block,
-            &committed_trees,
-            &committed_trees,
-            *GENESIS_BLOCK_ID,
-            block1_id,
-        )
+        .execute_block(txn_block, &committed_trees, &committed_trees)
         .unwrap();
 
     // Make sure the execution result sees the reconfiguration
@@ -176,15 +136,8 @@ fn test_reconfiguration() {
     );
     let txn5 = encode_block_prologue_script(gen_block_metadata(2, validator_account));
     let txn_block = vec![txn4, txn5];
-    let block2_id = gen_block_id(2);
     let output = executor
-        .execute_block(
-            txn_block,
-            &committed_trees,
-            &committed_trees,
-            block1_id,
-            block2_id,
-        )
+        .execute_block(txn_block, &committed_trees, &committed_trees)
         .unwrap();
 
     assert!(
@@ -203,10 +156,7 @@ fn test_execution_with_storage() {
     let (_storage_server_handle, executor, mut committed_trees) =
         create_storage_service_and_executor(&config);
 
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ));
+    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
     let seed = [1u8; 32];
     // TEST_SEED is also used to generate a random validator set in get_test_config. Each account
@@ -297,13 +247,7 @@ fn test_execution_with_storage() {
     }
 
     let output1 = executor
-        .execute_block(
-            block1.clone(),
-            &committed_trees,
-            &committed_trees,
-            *GENESIS_BLOCK_ID,
-            block1_id,
-        )
+        .execute_block(block1.clone(), &committed_trees, &committed_trees)
         .unwrap();
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(6, output1.accu_root(), block1_id);
     let committed_trees_copy = committed_trees.clone();
@@ -553,13 +497,7 @@ fn test_execution_with_storage() {
 
     // Execution the 2nd block.
     let output2 = executor
-        .execute_block(
-            block2.clone(),
-            &committed_trees,
-            &committed_trees,
-            block1_id,
-            block2_id,
-        )
+        .execute_block(block2.clone(), &committed_trees, &committed_trees)
         .unwrap();
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(20, output2.accu_root(), block2_id);
     executor

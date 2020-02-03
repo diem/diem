@@ -28,6 +28,7 @@ pub use recovery_time::{RecoveryTime, RecoveryTimeParams};
 
 use crate::cluster::Cluster;
 use crate::prometheus::Prometheus;
+use crate::report::SuiteReport;
 use crate::tx_emitter::TxEmitter;
 use futures::future::BoxFuture;
 use std::collections::HashMap;
@@ -37,10 +38,7 @@ pub trait Experiment: Display + Send {
     fn affected_validators(&self) -> HashSet<String> {
         HashSet::new()
     }
-    fn run<'a>(
-        &'a mut self,
-        context: &'a mut Context,
-    ) -> BoxFuture<'a, anyhow::Result<Option<String>>>;
+    fn run<'a>(&'a mut self, context: &'a mut Context<'a>) -> BoxFuture<'a, anyhow::Result<()>>;
     fn deadline(&self) -> Duration;
 }
 
@@ -49,18 +47,25 @@ pub trait ExperimentParam {
     fn build(self, cluster: &Cluster) -> Self::E;
 }
 
-pub struct Context {
-    tx_emitter: TxEmitter,
-    prometheus: Prometheus,
-    cluster: Cluster,
+pub struct Context<'a> {
+    tx_emitter: &'a mut TxEmitter,
+    prometheus: &'a Prometheus,
+    cluster: &'a Cluster,
+    report: &'a mut SuiteReport,
 }
 
-impl Context {
-    pub fn new(tx_emitter: TxEmitter, prometheus: Prometheus, cluster: Cluster) -> Self {
+impl<'a> Context<'a> {
+    pub fn new(
+        tx_emitter: &'a mut TxEmitter,
+        prometheus: &'a Prometheus,
+        cluster: &'a Cluster,
+        report: &'a mut SuiteReport,
+    ) -> Self {
         Context {
             tx_emitter,
             prometheus,
             cluster,
+            report,
         }
     }
 }

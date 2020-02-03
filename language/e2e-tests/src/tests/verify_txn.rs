@@ -6,7 +6,7 @@ use crate::{
     assert_prologue_disparity, assert_prologue_parity, assert_status_eq,
     common_transactions::*,
     compile::{compile_module_with_address, compile_script},
-    executor::{test_all_genesis, FakeExecutor},
+    executor::{test_all_genesis_default, FakeExecutor},
     transaction_status_eq,
 };
 use bytecode_verifier::VerifiedModule;
@@ -27,7 +27,7 @@ use vm::gas_schedule::{self, GasAlgebra};
 
 #[test]
 fn verify_signature() {
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         let sender = AccountData::new(900_000, 10);
         executor.add_account_data(&sender);
         // Generate a new key pair to try and sign things with.
@@ -36,7 +36,7 @@ fn verify_signature() {
         let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
             *sender.address(),
             0,
-            private_key,
+            &private_key,
             sender.account().pubkey.clone(),
             Some(program),
         );
@@ -51,7 +51,7 @@ fn verify_signature() {
 
 #[test]
 fn verify_reserved_sender() {
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         let sender = AccountData::new(900_000, 10);
         executor.add_account_data(&sender);
         // Generate a new key pair to try and sign things with.
@@ -60,7 +60,7 @@ fn verify_reserved_sender() {
         let signed_txn = transaction_test_helpers::get_test_signed_txn(
             core_code_address(),
             0,
-            private_key,
+            &private_key,
             public_key,
             Some(program),
         );
@@ -75,13 +75,13 @@ fn verify_reserved_sender() {
 
 #[test]
 fn verify_rejected_write_set() {
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         let sender = AccountData::new(900_000, 10);
         executor.add_account_data(&sender);
         let signed_txn = transaction_test_helpers::get_write_set_txn(
             *sender.address(),
             0,
-            sender.account().privkey.clone(),
+            &sender.account().privkey,
             sender.account().pubkey.clone(),
             None,
         )
@@ -117,7 +117,7 @@ fn verify_whitelist() {
 #[test]
 fn verify_simple_payment() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
         let sender = AccountData::new(900_000, 10);
         let receiver = AccountData::new(100_000, 10);
@@ -323,7 +323,7 @@ fn verify_simple_payment() {
         );
         assert_eq!(
             executor.execute_transaction(txn).status(),
-            &TransactionStatus::Discard(
+            &TransactionStatus::Keep(
                 VMStatus::new(StatusCode::TYPE_MISMATCH)
                     .with_message("Actual Type Mismatch".to_string())
             )
@@ -339,7 +339,7 @@ fn verify_simple_payment() {
         );
         assert_eq!(
             executor.execute_transaction(txn).status(),
-            &TransactionStatus::Discard(
+            &TransactionStatus::Keep(
                 VMStatus::new(StatusCode::TYPE_MISMATCH)
                     .with_message("Actual Type Mismatch".to_string())
             )
@@ -350,7 +350,7 @@ fn verify_simple_payment() {
 #[test]
 pub fn test_whitelist() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create an empty transaction
         let sender = AccountData::new(1_000_000, 10);
         executor.add_account_data(&sender);
@@ -475,7 +475,7 @@ pub fn test_open_publishing_invalid_address() {
 
     // execute and fail for the same reason
     let output = executor.execute_transaction(txn);
-    if let TransactionStatus::Discard(status) = output.status() {
+    if let TransactionStatus::Keep(status) = output.status() {
         assert!(status.major_status == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER)
     } else {
         panic!("Unexpected execution status: {:?}", output)
@@ -582,7 +582,7 @@ fn test_dependency_fails_verification() {
     // As of now, we don't verify dependencies in verify_transaction.
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     match executor.execute_transaction(txn).status() {
-        TransactionStatus::Discard(status) => {
+        TransactionStatus::Keep(status) => {
             assert!(status.is(StatusType::Verification));
             assert!(status.major_status == StatusCode::INVALID_RESOURCE_FIELD);
         }

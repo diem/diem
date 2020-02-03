@@ -256,8 +256,6 @@ impl NodeConfig {
     pub fn randomize_ports(&mut self) {
         self.admission_control.randomize_ports();
         self.debug_interface.randomize_ports();
-        self.execution.randomize_ports();
-        self.mempool.randomize_ports();
         self.storage.randomize_ports();
     }
 

@@ -8,140 +8,137 @@ axiom TestReference_T_value == 0;
 function TestReference_T_type_value(): TypeValue {
     StructType(TestReference_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-
-procedure {:inline 1} Pack_TestReference_T(v0: Value) returns (v: Value)
+procedure {:inline 1} Pack_TestReference_T(value: Value) returns (_struct: Value)
 {
-    assume IsValidInteger(v0);
-    v := Vector(ExtendValueArray(EmptyValueArray, v0));
-
+    assume IsValidU64(value);
+    _struct := Vector(ExtendValueArray(EmptyValueArray, value));
 }
 
-procedure {:inline 1} Unpack_TestReference_T(v: Value) returns (v0: Value)
+procedure {:inline 1} Unpack_TestReference_T(_struct: Value) returns (value: Value)
 {
-    assume is#Vector(v);
-    v0 := SelectField(v, TestReference_T_value);
+    assume is#Vector(_struct);
+    value := SelectField(_struct, TestReference_T_value);
+    assume IsValidU64(value);
 }
 
 
 
 // ** functions of module TestReference
 
-procedure {:inline 1} TestReference_mut_b (arg0: Reference) returns ()
-requires ExistsTxnSenderAccount(m, txn);
+procedure {:inline 1} TestReference_mut_b (b: Reference) returns ()
+requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var t0: Reference; // ReferenceType(IntegerType())
-    var t1: Value; // IntegerType()
-    var t2: Reference; // ReferenceType(IntegerType())
+    var __t1: Value; // IntegerType()
+    var __t2: Reference; // ReferenceType(IntegerType())
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 3;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-    assume IsValidInteger(Dereference(m, arg0));
-    assume IsValidReferenceParameter(m, local_counter, arg0);
-
-    old_size := local_counter;
-    local_counter := local_counter + 3;
-    t0 := arg0;
+    // process and type check arguments
+    assume IsValidU64(Dereference(__m, b));
+    assume IsValidReferenceParameter(__m, __frame, b);
 
     // bytecode translation starts here
-    call tmp := LdConst(10);
-    m := UpdateLocal(m, old_size + 1, tmp);
+    call __tmp := LdConst(10);
+    __m := UpdateLocal(__m, __frame + 1, __tmp);
 
-    call t2 := CopyOrMoveRef(t0);
+    call __t2 := CopyOrMoveRef(b);
 
-    call WriteRef(t2, GetLocal(m, old_size + 1));
+    call WriteRef(__t2, GetLocal(__m, __frame + 1));
 
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
 }
 
-procedure TestReference_mut_b_verify (arg0: Reference) returns ()
+procedure TestReference_mut_b_verify (b: Reference) returns ()
 {
-    assume ExistsTxnSenderAccount(m, txn);
-    call TestReference_mut_b(arg0);
+    assume ExistsTxnSenderAccount(__m, __txn);
+    call TestReference_mut_b(b);
 }
 
 procedure {:inline 1} TestReference_mut_ref () returns ()
-requires ExistsTxnSenderAccount(m, txn);
+requires ExistsTxnSenderAccount(__m, __txn);
+ensures old(!(b#Boolean(Boolean(false)))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
+
 {
     // declare local variables
-    var t0: Value; // IntegerType()
-    var t1: Reference; // ReferenceType(IntegerType())
-    var t2: Value; // IntegerType()
-    var t3: Reference; // ReferenceType(IntegerType())
-    var t4: Reference; // ReferenceType(IntegerType())
-    var t5: Reference; // ReferenceType(IntegerType())
-    var t6: Value; // IntegerType()
-    var t7: Value; // IntegerType()
-    var t8: Value; // IntegerType()
-    var t9: Value; // BooleanType()
-    var t10: Value; // BooleanType()
-    var t11: Value; // IntegerType()
+    var b: Value; // IntegerType()
+    var b_ref: Reference; // ReferenceType(IntegerType())
+    var __t2: Value; // IntegerType()
+    var __t3: Reference; // ReferenceType(IntegerType())
+    var __t4: Reference; // ReferenceType(IntegerType())
+    var __t5: Reference; // ReferenceType(IntegerType())
+    var __t6: Value; // IntegerType()
+    var __t7: Value; // IntegerType()
+    var __t8: Value; // IntegerType()
+    var __t9: Value; // BooleanType()
+    var __t10: Value; // BooleanType()
+    var __t11: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
 
-    var tmp: Value;
-    var old_size: int;
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+    __local_counter := __local_counter + 12;
 
-    var saved_m: Memory;
-    assume !abort_flag;
-    saved_m := m;
-
-    // assume arguments are of correct types
-
-    old_size := local_counter;
-    local_counter := local_counter + 12;
+    // process and type check arguments
 
     // bytecode translation starts here
-    call tmp := LdConst(20);
-    m := UpdateLocal(m, old_size + 2, tmp);
+    call __tmp := LdConst(20);
+    __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 2));
-    m := UpdateLocal(m, old_size + 0, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    call t3 := BorrowLoc(old_size+0);
+    call __t3 := BorrowLoc(__frame + 0);
 
-    call t1 := CopyOrMoveRef(t3);
+    call b_ref := CopyOrMoveRef(__t3);
 
-    call t4 := CopyOrMoveRef(t1);
+    call __t4 := CopyOrMoveRef(b_ref);
 
-    call TestReference_mut_b(t4);
-    if (abort_flag) { goto Label_Abort; }
+    call TestReference_mut_b(__t4);
+    if (__abort_flag) { goto Label_Abort; }
 
-    call t5 := CopyOrMoveRef(t1);
+    call __t5 := CopyOrMoveRef(b_ref);
 
-    call tmp := ReadRef(t5);
-    assume IsValidInteger(tmp);
+    call __tmp := ReadRef(__t5);
+    assume IsValidU64(__tmp);
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
 
-    m := UpdateLocal(m, old_size + 6, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
+    __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 6));
-    m := UpdateLocal(m, old_size + 0, tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
+    __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call tmp := CopyOrMoveValue(GetLocal(m, old_size + 0));
-    m := UpdateLocal(m, old_size + 7, tmp);
+    call __tmp := LdConst(10);
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    call tmp := LdConst(10);
-    m := UpdateLocal(m, old_size + 8, tmp);
+    __tmp := Boolean(IsEqual(GetLocal(__m, __frame + 7), GetLocal(__m, __frame + 8)));
+    __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    tmp := Boolean(IsEqual(GetLocal(m, old_size + 7), GetLocal(m, old_size + 8)));
-    m := UpdateLocal(m, old_size + 9, tmp);
+    call __tmp := Not(GetLocal(__m, __frame + 9));
+    __m := UpdateLocal(__m, __frame + 10, __tmp);
 
-    call tmp := Not(GetLocal(m, old_size + 9));
-    m := UpdateLocal(m, old_size + 10, tmp);
+    __tmp := GetLocal(__m, __frame + 10);
+    if (!b#Boolean(__tmp)) { goto Label_16; }
 
-    tmp := GetLocal(m, old_size + 10);
-    if (!b#Boolean(tmp)) { goto Label_16; }
-
-    call tmp := LdConst(42);
-    m := UpdateLocal(m, old_size + 11, tmp);
+    call __tmp := LdConst(42);
+    __m := UpdateLocal(__m, __frame + 11, __tmp);
 
     goto Label_Abort;
 
@@ -149,12 +146,12 @@ Label_16:
     return;
 
 Label_Abort:
-    abort_flag := true;
-    m := saved_m;
+    __abort_flag := true;
+    __m := __saved_m;
 }
 
 procedure TestReference_mut_ref_verify () returns ()
 {
-    assume ExistsTxnSenderAccount(m, txn);
+    assume ExistsTxnSenderAccount(__m, __txn);
     call TestReference_mut_ref();
 }

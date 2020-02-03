@@ -85,6 +85,4 @@ module TestAbortIf {
 
        // try 0 abort_ifs, 2 succeeds_ifs, various combinations.
        // ensures holds whenever it doesn't abort?
-
-
 }

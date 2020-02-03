@@ -54,10 +54,7 @@ pub(crate) struct ExecutorProxy {
 
 impl ExecutorProxy {
     pub(crate) fn new(executor: Arc<Executor<LibraVM>>, config: &NodeConfig) -> Self {
-        let storage_read_client = Arc::new(StorageReadServiceClient::new(
-            &config.storage.address,
-            config.storage.port,
-        ));
+        let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
         Self {
             storage_read_client,
             executor,

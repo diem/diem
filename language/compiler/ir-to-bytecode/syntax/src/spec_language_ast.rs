@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::ast::{BinOp, CopyableVal, Field, QualifiedStructIdent, Type};
+use crate::ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Spanned, Type};
 use libra_types::account_address::AccountAddress;
 
 /// AST for the Move Prover specification language. Just postconditions for now
@@ -20,7 +20,7 @@ pub enum StorageLocation {
     /// An access path rooted at `base` with nonempty offsets in `fields`
     AccessPath {
         base: Box<StorageLocation>,
-        fields: Vec<Field>,
+        fields: Vec<Field_>,
     },
     /// Sender address for the current transaction
     TxnSenderAddress,
@@ -35,7 +35,7 @@ pub enum StorageLocation {
 #[derive(PartialEq, Debug, Clone)]
 pub enum SpecExp {
     /// A Move constant
-    Constant(CopyableVal),
+    Constant(CopyableVal_),
     /// A spec language storage location
     StorageLocation(StorageLocation),
     /// Lifting the Move exists operator to a storage location
@@ -71,3 +71,6 @@ pub enum Condition {
     /// If the given expression is true, the procedure *must* terminate in a succeeding state
     SucceedsIf(SpecExp),
 }
+
+/// Specification directive with span.
+pub type Condition_ = Spanned<Condition>;

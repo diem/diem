@@ -138,13 +138,14 @@ impl NetworkSender {
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
     pub async fn broadcast_proposal<T: Payload>(&mut self, proposal: ProposalMsg<T>) {
-        let proposal = match proposal.try_into() {
+        let proposal: Proposal = match proposal.try_into() {
             Ok(bytes) => bytes,
             Err(e) => {
                 warn!("Fail to serialize VoteMsg: {:?}", e);
                 return;
             }
         };
+        counters::UNWRAPPED_PROPOSAL_SIZE_BYTES.observe(proposal.bytes.len() as f64);
         let msg = ConsensusMsg {
             message: Some(ConsensusMsg_oneof::Proposal(proposal)),
         };

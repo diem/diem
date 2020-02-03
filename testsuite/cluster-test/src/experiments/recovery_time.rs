@@ -52,7 +52,7 @@ impl Experiment for RecoveryTime {
         result
     }
 
-    fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, Result<Option<String>>> {
+    fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, Result<()>> {
         async move {
             let stop_effect = StopContainer::new(self.instance.clone());
             let delete_action = DeleteLibraData::new(self.instance.clone());
@@ -90,12 +90,15 @@ impl Experiment for RecoveryTime {
                 time::delay_for(Duration::from_secs(1)).await;
             }
             let time_to_recover = start_instant.elapsed();
-            let result = format!(
-                "Recovery rate : {:.1} txn/sec",
-                self.params.num_accounts_to_mint as f64 / time_to_recover.as_secs() as f64
-            );
+            let recovery_rate =
+                self.params.num_accounts_to_mint as f64 / time_to_recover.as_secs() as f64;
+            let result = format!("Recovery rate : {:.1} txn/sec", recovery_rate,);
             info!("{}", result);
-            Ok(Some(result))
+            context.report.report_text(result);
+            context
+                .report
+                .report_metric(self, "recovery_rate", recovery_rate);
+            Ok(())
         }
         .boxed()
     }

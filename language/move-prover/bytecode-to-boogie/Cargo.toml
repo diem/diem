@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 # libra dependencies
-functional_tests = { path = "../../functional_tests", version = "0.1.0" }
+functional-tests = { path = "../../functional-tests", version = "0.1.0" }
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 libra-temppath = { path = "../../../common/temppath", version = "0.1.0" }
@@ -25,6 +25,7 @@ clap = "2.33.0"
 log = "0.4.8"
 simplelog = "0.7.4"
 codespan = "0.2.1"
+codespan-reporting = "0.2.1"
 regex = "1.3.1"
 
 [dev-dependencies]

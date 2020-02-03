@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    network::{NetworkClient, NetworkServer},
     persistent_storage::PersistentStorage,
     serializer::{SafetyRulesInput, SerializerClient, SerializerService, TSerializerClient},
     Error, SafetyRules,
 };
-use consensus_types::common::Payload;
-use libra_types::crypto_proxies::ValidatorSigner;
-use std::{marker::PhantomData, net::SocketAddr, sync::Arc};
+use consensus_types::common::{Author, Payload};
+use libra_secure_net::{NetworkClient, NetworkServer};
+use std::{marker::PhantomData, net::SocketAddr};
 
 pub trait RemoteService<T: Payload> {
     fn client(&self) -> SerializerClient<T> {
@@ -21,12 +20,8 @@ pub trait RemoteService<T: Payload> {
     fn server_address(&self) -> SocketAddr;
 }
 
-pub fn execute<T: Payload>(
-    storage: Box<dyn PersistentStorage>,
-    validator_signer: ValidatorSigner,
-    listen_addr: SocketAddr,
-) {
-    let safety_rules = SafetyRules::<T>::new(storage, Arc::new(validator_signer));
+pub fn execute<T: Payload>(author: Author, storage: PersistentStorage, listen_addr: SocketAddr) {
+    let safety_rules = SafetyRules::<T>::new(author, storage);
     let mut serializer_service = SerializerService::new(safety_rules);
     let mut network_server = NetworkServer::new(listen_addr);
 

@@ -1,11 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use bytecode_to_boogie::boogie_wrapper::BoogieOutput;
 use bytecode_to_boogie::cli::Options;
 use bytecode_to_boogie::driver::Driver;
 use goldenfile;
 use itertools::Itertools;
 use libra_temppath::TempPath;
+use log::info;
 use prettydiff::{basic::DiffOp, diff_lines};
 use regex::Regex;
 use std::fs::read_to_string;
@@ -21,7 +23,7 @@ pub fn test(flags: &[&str], sources: &[&str]) {
     options.setup_logging_for_test();
 
     // Run the translator.
-    let mut driver = Driver::new(&options);
+    let mut driver = Driver::new(options);
     let (prelude, generated) = driver.run_for_test();
 
     if env::var("VERIFY_BPL_GOLDEN").is_ok() {
@@ -51,19 +53,15 @@ pub fn test(flags: &[&str], sources: &[&str]) {
         .unwrap()
         .to_string();
 
-    // In order to debug errors in the output, one may uncomment below to find the output
-    // file at a stable, persistent location.
-    //    let mut boogie_file_path = std::path::PathBuf::new();
-    //    boogie_file_path.push("/tmp/output.bpl").to_string();
-
-    fs::write(&boogie_file_path, boogie_str).expect("cannot write boogie file");
+    fs::write(&boogie_file_path, &boogie_str).expect("cannot write boogie file");
 
     if env::var("BOOGIE_EXE").is_ok() {
         // Call boogie and verify results.
-        let (_, diag) = driver
+        let out = driver
+            .new_boogie_wrapper()
             .call_boogie(&boogie_file_path)
             .expect("boogie execution ok");
-        verify_diag(sources, diag);
+        verify_boogie_output(sources, &boogie_str, out);
     }
 }
 
@@ -90,7 +88,7 @@ pub const NO_VERIFY: &[&str] = &["-B=-noVerify"];
 pub const VERIFY: &[&str] = &[];
 
 /// Extracts expected diags from sources and compares it with actual diags.
-fn verify_diag(sources: &[&str], mut actual_diag: Vec<String>) {
+fn verify_boogie_output(sources: &[&str], boogie_str: &str, mut out: BoogieOutput) {
     // Collect expected diagnosis from source. A comment of the form
     // `//! <text>` represents an expected diag.
     let expect_diag_re = Regex::new(r"(?m)//!\s*(.*)$").unwrap();
@@ -104,30 +102,40 @@ fn verify_diag(sources: &[&str], mut actual_diag: Vec<String>) {
     // Now try to remove expected diags from the actual ones.
     let mut i = 0;
     while i < expected_diag.len() {
-        if actual_diag.is_empty() {
+        if out.errors.is_empty() {
             break;
         }
         let expected = &expected_diag[i];
-        if let Some(pos) = actual_diag
+        if let Some(pos) = out
+            .errors
             .iter()
+            .map(|err| &err.message)
             .position(|actual| actual.contains(expected))
         {
-            actual_diag.remove(pos);
+            out.errors.remove(pos);
             expected_diag.remove(i);
         } else {
             i += 1;
         }
     }
-    if !expected_diag.is_empty() || !actual_diag.is_empty() {
+    if !expected_diag.is_empty() || !out.errors.is_empty() {
         let mut msg = vec![];
         if !expected_diag.is_empty() {
             msg.push("expected boogie diagnosis:".to_string());
             msg.extend_from_slice(&expected_diag);
         };
-        if !actual_diag.is_empty() {
+        if !out.errors.is_empty() {
             msg.push("unexpected boogie diagnosis:".to_string());
-            msg.extend_from_slice(&actual_diag);
+            msg.extend(out.errors.iter().map(|d| d.message.clone()));
         }
+        let mut path = Path::new(sources[sources.len() - 1]);
+        path = Path::new(path.file_name().unwrap());
+        let basename = path.file_stem().unwrap().to_str().unwrap();
+        info!("Test failure for {}!!!", basename);
+        info!("Writing boogie output to `failed_{}.bpl`", basename);
+        fs::write(&format!("failed_{}.bpl", basename), &boogie_str).unwrap_or(());
+        info!("Writing boogie log to `failed_{}.bpl.log`", basename);
+        fs::write(&format!("failed_{}.bpl.log", basename), &out.all_output).unwrap_or(());
         panic!(msg.join("\n"));
     }
 }

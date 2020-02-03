@@ -1,12 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     parser::ast::{
         BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ResourceLoc, StructName,
         UnaryOp, Value, Var,
     },
+    shared::ast_debug::*,
+    shared::unique_map::UniqueMap,
     shared::*,
 };
 use std::{collections::BTreeMap, collections::VecDeque, fmt};
@@ -65,6 +66,7 @@ pub struct FunctionSignature {
 }
 
 #[derive(PartialEq, Debug)]
+
 pub enum FunctionBody_ {
     Defined(Sequence),
     Native,
@@ -216,6 +218,457 @@ impl fmt::Display for SingleType_ {
                 Ok(())
             }
             Ref(mut_, ty) => write!(f, "&{}{}", if *mut_ { "mut " } else { "" }, ty),
+        }
+    }
+}
+
+//**************************************************************************************************
+// Debug
+//**************************************************************************************************
+
+impl AstDebug for Program {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let Program { modules, main } = self;
+        for (m, mdef) in modules {
+            w.write(&format!("module {}", m));
+            w.block(|w| mdef.ast_debug(w));
+            w.new_line();
+        }
+
+        if let Some((unused_aliases, addr, n, fdef)) = main {
+            w.writeln(&format!("address {}:", addr));
+            if !unused_aliases.is_empty() {
+                w.writeln("unused_aliases: ");
+                w.indent(2, |w| {
+                    w.list(unused_aliases, ",", |w, m| {
+                        w.write(&format!("{}", m));
+                        true
+                    })
+                });
+            }
+            (n.clone(), fdef).ast_debug(w);
+        }
+    }
+}
+
+impl AstDebug for ModuleDefinition {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let ModuleDefinition {
+            uses,
+            unused_aliases,
+            is_source_module,
+            structs,
+            functions,
+        } = self;
+        w.writeln(if *is_source_module {
+            "source module"
+        } else {
+            "library module"
+        });
+        if !uses.is_empty() {
+            w.writeln("uses: ");
+            w.indent(2, |w| {
+                w.list(uses, ",", |w, (m, _)| {
+                    w.write(&format!("{}", m));
+                    true
+                })
+            });
+        }
+        if !unused_aliases.is_empty() {
+            w.writeln("unused_aliases: ");
+            w.indent(2, |w| {
+                w.list(unused_aliases, ",", |w, m| {
+                    w.write(&format!("{}", m));
+                    true
+                })
+            });
+        }
+        for sdef in structs {
+            sdef.ast_debug(w);
+            w.new_line();
+        }
+        for fdef in functions {
+            fdef.ast_debug(w);
+            w.new_line();
+        }
+    }
+}
+
+impl AstDebug for (StructName, &StructDefinition) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (
+            name,
+            StructDefinition {
+                resource_opt,
+                type_parameters,
+                fields,
+            },
+        ) = self;
+        if let StructFields::Native(_) = fields {
+            w.write("native ");
+        }
+        if resource_opt.is_some() {
+            w.write("resource ");
+        }
+        w.write(&format!("struct {}", name));
+        type_parameters.ast_debug(w);
+        if let StructFields::Defined(fields) = fields {
+            w.block(|w| {
+                w.list(fields, ",", |w, (f, idx_st)| {
+                    let (idx, st) = idx_st;
+                    w.write(&format!("{}#{}: ", idx, f));
+                    st.ast_debug(w);
+                    true
+                });
+            })
+        }
+    }
+}
+
+impl AstDebug for (FunctionName, &Function) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (
+            name,
+            Function {
+                visibility,
+                signature,
+                acquires,
+                body,
+            },
+        ) = self;
+        visibility.ast_debug(w);
+        if let FunctionBody_::Native = &body.value {
+            w.write("native ");
+        }
+        w.write(&format!("{}", name));
+        signature.ast_debug(w);
+        if !acquires.is_empty() {
+            w.write(" acquires ");
+            w.comma(acquires, |w, m| m.ast_debug(w));
+            w.write(" ");
+        }
+        match &body.value {
+            FunctionBody_::Defined(body) => w.block(|w| body.ast_debug(w)),
+            FunctionBody_::Native => w.writeln(";"),
+        }
+    }
+}
+
+impl AstDebug for FunctionSignature {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let FunctionSignature {
+            type_parameters,
+            parameters,
+            return_type,
+        } = self;
+        type_parameters.ast_debug(w);
+        w.write("(");
+        w.comma(parameters, |w, (v, st)| {
+            w.write(&format!("{}: ", v));
+            st.ast_debug(w);
+        });
+        w.write("): ");
+        return_type.ast_debug(w)
+    }
+}
+
+impl AstDebug for Type_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            Type_::Unit => w.write("()"),
+            Type_::Single(s) => s.ast_debug(w),
+            Type_::Multiple(ss) => {
+                w.write("(");
+                ss.ast_debug(w);
+                w.write(")")
+            }
+        }
+    }
+}
+
+impl AstDebug for SingleType_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            SingleType_::Apply(m, ss) => {
+                m.ast_debug(w);
+                if !ss.is_empty() {
+                    w.write("<");
+                    ss.ast_debug(w);
+                    w.write(">");
+                }
+            }
+            SingleType_::Ref(mut_, s) => {
+                w.write("&");
+                if *mut_ {
+                    w.write("mut ");
+                }
+                s.ast_debug(w)
+            }
+            SingleType_::UnresolvedError => w.write("_|_"),
+        }
+    }
+}
+
+impl AstDebug for Vec<SingleType> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.comma(self, |w, s| s.ast_debug(w))
+    }
+}
+
+impl AstDebug for ModuleAccess_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.write(&match self {
+            ModuleAccess_::Name(n) => format!("{}", n),
+            ModuleAccess_::ModuleAccess(m, n) => format!("{}::{}", m, n),
+        })
+    }
+}
+
+impl AstDebug for VecDeque<SequenceItem> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.semicolon(self, |w, item| item.ast_debug(w))
+    }
+}
+
+impl AstDebug for SequenceItem_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use SequenceItem_ as I;
+        match self {
+            I::Seq(e) => e.ast_debug(w),
+            I::Declare(sp!(_, bs), ty_opt) => {
+                w.write("let ");
+                bs.ast_debug(w);
+                if let Some(ty) = ty_opt {
+                    ty.ast_debug(w)
+                }
+            }
+            I::Bind(sp!(_, bs), e) => {
+                w.write("let ");
+                bs.ast_debug(w);
+                w.write(" = ");
+                e.ast_debug(w);
+            }
+        }
+    }
+}
+
+impl AstDebug for Exp_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use Exp_ as E;
+        match self {
+            E::Unit => w.write("()"),
+            E::Value(v) => v.ast_debug(w),
+            E::Move(v) => w.write(&format!("move {}", v)),
+            E::Copy(v) => w.write(&format!("copy {}", v)),
+            E::Name(n) => w.write(&format!("{}", n)),
+            E::GlobalCall(n, tys_opt, sp!(_, rhs)) => {
+                w.write(&format!("::{}", n));
+                if let Some(ss) = tys_opt {
+                    w.write("<");
+                    ss.ast_debug(w);
+                    w.write(">");
+                }
+                w.write("(");
+                w.comma(rhs, |w, e| e.ast_debug(w));
+                w.write(")");
+            }
+            E::Call(ma, tys_opt, sp!(_, rhs)) => {
+                ma.ast_debug(w);
+                if let Some(ss) = tys_opt {
+                    w.write("<");
+                    ss.ast_debug(w);
+                    w.write(">");
+                }
+                w.write("(");
+                w.comma(rhs, |w, e| e.ast_debug(w));
+                w.write(")");
+            }
+            E::Pack(ma, tys_opt, fields) => {
+                ma.ast_debug(w);
+                if let Some(ss) = tys_opt {
+                    w.write("<");
+                    ss.ast_debug(w);
+                    w.write(">");
+                }
+                w.write("{");
+                w.comma(fields, |w, (f, idx_e)| {
+                    let (idx, e) = idx_e;
+                    w.write(&format!("{}#{}: ", idx, f));
+                    e.ast_debug(w);
+                });
+                w.write("}");
+            }
+            E::IfElse(b, t, f) => {
+                w.write("if (");
+                b.ast_debug(w);
+                w.write(") ");
+                t.ast_debug(w);
+                w.write(" else ");
+                f.ast_debug(w);
+            }
+            E::While(b, e) => {
+                w.write("while (");
+                b.ast_debug(w);
+                w.write(")");
+                e.ast_debug(w);
+            }
+            E::Loop(e) => {
+                w.write("loop ");
+                e.ast_debug(w);
+            }
+            E::Block(seq) => w.block(|w| seq.ast_debug(w)),
+            E::ExpList(es) => {
+                w.write("(");
+                w.comma(es, |w, e| e.ast_debug(w));
+                w.write(")");
+            }
+
+            E::Assign(sp!(_, lvalues), rhs) => {
+                lvalues.ast_debug(w);
+                w.write(" = ");
+                rhs.ast_debug(w);
+            }
+            E::FieldMutate(ed, rhs) => {
+                ed.ast_debug(w);
+                w.write(" = ");
+                rhs.ast_debug(w);
+            }
+            E::Mutate(lhs, rhs) => {
+                w.write("*");
+                lhs.ast_debug(w);
+                w.write(" = ");
+                rhs.ast_debug(w);
+            }
+
+            E::Return(e) => {
+                w.write("return ");
+                e.ast_debug(w);
+            }
+            E::Abort(e) => {
+                w.write("abort ");
+                e.ast_debug(w);
+            }
+            E::Break => w.write("break"),
+            E::Continue => w.write("continue"),
+            E::Dereference(e) => {
+                w.write("*");
+                e.ast_debug(w)
+            }
+            E::UnaryExp(op, e) => {
+                op.ast_debug(w);
+                w.write(" ");
+                e.ast_debug(w);
+            }
+            E::BinopExp(l, op, r) => {
+                l.ast_debug(w);
+                w.write(" ");
+                op.ast_debug(w);
+                w.write(" ");
+                r.ast_debug(w)
+            }
+            E::Borrow(mut_, e) => {
+                w.write("&");
+                if *mut_ {
+                    w.write("mut ");
+                }
+                e.ast_debug(w);
+            }
+            E::ExpDotted(ed) => ed.ast_debug(w),
+            E::Annotate(e, ty) => {
+                w.write("(");
+                e.ast_debug(w);
+                w.write(": ");
+                ty.ast_debug(w);
+                w.write(")");
+            }
+            E::UnresolvedError => w.write("_|_"),
+        }
+    }
+}
+
+impl AstDebug for ExpDotted_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use ExpDotted_ as D;
+        match self {
+            D::Exp(e) => e.ast_debug(w),
+            D::Dot(e, n) => {
+                e.ast_debug(w);
+                w.write(&format!(".{}", n))
+            }
+        }
+    }
+}
+
+impl AstDebug for Vec<Bind> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let parens = self.len() != 1;
+        if parens {
+            w.write("(");
+        }
+        w.comma(self, |w, b| b.ast_debug(w));
+        if parens {
+            w.write(")");
+        }
+    }
+}
+
+impl AstDebug for Bind_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use Bind_ as B;
+        match self {
+            B::Var(v) => w.write(&format!("{}", v)),
+            B::Unpack(ma, tys_opt, fields) => {
+                ma.ast_debug(w);
+                if let Some(ss) = tys_opt {
+                    w.write("<");
+                    ss.ast_debug(w);
+                    w.write(">");
+                }
+                w.write("{");
+                w.comma(fields, |w, (f, idx_b)| {
+                    let (idx, b) = idx_b;
+                    w.write(&format!("{}#{}: ", idx, f));
+                    b.ast_debug(w);
+                });
+                w.write("}");
+            }
+        }
+    }
+}
+
+impl AstDebug for Vec<Assign> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let parens = self.len() != 1;
+        if parens {
+            w.write("(");
+        }
+        w.comma(self, |w, a| a.ast_debug(w));
+        if parens {
+            w.write(")");
+        }
+    }
+}
+
+impl AstDebug for Assign_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use Assign_ as A;
+        match self {
+            A::Var(v) => w.write(&format!("{}", v)),
+            A::Unpack(ma, tys_opt, fields) => {
+                ma.ast_debug(w);
+                if let Some(ss) = tys_opt {
+                    w.write("<");
+                    ss.ast_debug(w);
+                    w.write(">");
+                }
+                w.write("{");
+                w.comma(fields, |w, (f, idx_a)| {
+                    let (idx, a) = idx_a;
+                    w.write(&format!("{}#{}: ", idx, f));
+                    a.ast_debug(w);
+                });
+                w.write("}");
+            }
         }
     }
 }

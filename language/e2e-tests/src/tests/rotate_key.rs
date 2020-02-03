@@ -4,7 +4,7 @@
 use crate::{
     account::{Account, AccountData},
     common_transactions::{create_account_txn, rotate_key_txn},
-    executor::test_all_genesis,
+    executor::test_all_genesis_default,
 };
 use libra_crypto::ed25519::compat;
 use libra_types::{
@@ -15,7 +15,7 @@ use libra_types::{
 
 #[test]
 fn rotate_key() {
-    test_all_genesis(|mut executor| {
+    test_all_genesis_default(|mut executor| {
         // create and publish sender
         let mut sender = AccountData::new(1_000_000, 10);
         executor.add_account_data(&sender);

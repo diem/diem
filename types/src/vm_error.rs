@@ -387,6 +387,7 @@ pub enum StatusCode {
     UNUSED_TYPE_SIGNATURE = 1079,
     /// Reported when a struct has zero fields
     ZERO_SIZED_STRUCT = 1080,
+    LINKER_ERROR = 1081,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
@@ -397,7 +398,7 @@ pub enum StatusCode {
     EMPTY_VALUE_STACK = 2003,
     EMPTY_CALL_STACK = 2004,
     PC_OVERFLOW = 2005,
-    LINKER_ERROR = 2006,
+    VERIFICATION_ERROR = 2006,
     LOCAL_REFERENCE_ERROR = 2007,
     STORAGE_ERROR = 2008,
     INTERNAL_TYPE_ERROR = 2009,

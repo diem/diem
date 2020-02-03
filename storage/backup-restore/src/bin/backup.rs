@@ -25,7 +25,8 @@ struct Opt {
 async fn main() {
     let opt = Opt::from_args();
 
-    let client = StorageReadServiceClient::new("localhost", opt.node_port);
+    let address = format!("127.0.0.1:{}", opt.node_port).parse().unwrap();
+    let client = StorageReadServiceClient::new(&address);
 
     let (version, state_root_hash) = client
         .get_latest_state_root()

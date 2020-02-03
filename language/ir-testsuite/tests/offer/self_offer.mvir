@@ -1,0 +1,23 @@
+// Self offers are silly, but ok.
+
+import 0x0.Offer;
+
+// Create a self offer containing a u64
+main() {
+    Offer.create<u64>(
+        7,
+        {{default}}
+    );
+
+    assert(Offer.address_of<u64>(get_txn_sender()) == {{default}} , 100);
+    return;
+}
+
+//! new-transaction
+import 0x0.Offer;
+
+// Claim the self offer
+main() {
+    assert(Offer.redeem<u64>({{default}}) == 7, 101);
+    return;
+}

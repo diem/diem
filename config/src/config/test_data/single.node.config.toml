@@ -8,13 +8,10 @@ dir = "metrics"
 enabled = false
 
 [execution]
-address = "localhost"
-port = 6183
 genesis_file_location = ""
 
 [admission_control]
-address = "0.0.0.0"
-admission_control_service_port = 8000
+address = "0.0.0.0:8000"
 need_to_check_mempool_before_validation = false
 max_concurrent_inbound_syncs = 100
 
@@ -24,14 +21,12 @@ nanos = 0
 
 [debug_interface]
 admission_control_node_debug_port = 6191
-storage_node_debug_port = 6194
 metrics_server_port = 9101
 public_metrics_server_port = 9102
 address = "0.0.0.0"
 
 [storage]
-address = "localhost"
-port = 6184
+address = "127.0.0.1:6184"
 dir = "libradb/db"
 grpc_max_receive_len = 100000000
 [test.account_keypair]
@@ -47,9 +42,8 @@ listen_address = "/ip4/0.0.0.0/tcp/65206"
 advertised_address = "/ip4/0.0.0.0/tcp/65206"
 discovery_interval_ms = 1000
 connectivity_check_interval_ms = 5000
-enable_encryption_and_authentication = true
-is_permissioned = true
-network_keypairs_file = ""
+enable_noise = true
+enable_remote_authentication = true
 network_peers_file = ""
 seed_peers_file = ""
 
@@ -71,8 +65,6 @@ capacity = 1000000
 capacity_per_user = 100
 system_transaction_timeout_secs = 86400
 system_transaction_gc_interval_ms = 180000
-mempool_service_port = 6182
-address = "localhost"
 
 [state_sync]
 chunk_limit = 250

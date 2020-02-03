@@ -8,8 +8,9 @@ use crate::{
 };
 use anyhow::Result;
 use executor::Executor;
+use futures::channel::{mpsc, oneshot};
 use libra_config::config::NodeConfig;
-use libra_mempool::proto::mempool_client::MempoolClientWrapper;
+use libra_mempool::{MempoolRequest, MempoolResponse};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
@@ -36,11 +37,10 @@ pub fn make_consensus_provider(
     network_receiver: ConsensusNetworkEvents,
     executor: Arc<Executor<LibraVM>>,
     state_sync_client: Arc<StateSyncClient>,
+    mempool_channel: mpsc::Sender<(MempoolRequest, oneshot::Sender<Result<MempoolResponse>>)>,
 ) -> Box<dyn ConsensusProvider> {
     let storage = Arc::new(StorageWriteProxy::new(node_config));
-    let mempool_client =
-        MempoolClientWrapper::new("localhost", node_config.mempool.mempool_service_port);
-    let txn_manager = Box::new(MempoolProxy::new(mempool_client));
+    let txn_manager = Box::new(MempoolProxy::new(mempool_channel));
     let state_computer = Arc::new(ExecutionProxy::new(executor, state_sync_client));
 
     Box::new(ChainedBftSMR::new(
@@ -55,8 +55,5 @@ pub fn make_consensus_provider(
 
 /// Create a storage read client based on the config
 pub fn create_storage_read_client(config: &NodeConfig) -> Arc<dyn StorageRead> {
-    Arc::new(StorageReadServiceClient::new(
-        &config.storage.address,
-        config.storage.port,
-    ))
+    Arc::new(StorageReadServiceClient::new(&config.storage.address))
 }

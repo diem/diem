@@ -31,15 +31,11 @@ impl TestValidator {
         let storage = start_storage_service(&config);
 
         // setup execution
-        let storage_read_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-            &config.storage.address,
-            config.storage.port,
-        ));
+        let storage_read_client: Arc<dyn StorageRead> =
+            Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
-        let storage_write_client = Arc::new(StorageWriteServiceClient::new(
-            &config.storage.address,
-            config.storage.port,
-        ));
+        let storage_write_client =
+            Arc::new(StorageWriteServiceClient::new(&config.storage.address));
 
         // Create executor to initialize genesis state. Otherwise gprc will report error when
         // fetching data from storage.
@@ -47,10 +43,8 @@ impl TestValidator {
 
         // Create another client for the vm_validator since the one used for the executor will be
         // run on another runtime which will be dropped before this function returns.
-        let read_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-            &config.storage.address,
-            config.storage.port,
-        ));
+        let read_client: Arc<dyn StorageRead> =
+            Arc::new(StorageReadServiceClient::new(&config.storage.address));
         let vm_validator = VMValidator::new(config, read_client, rt.handle().clone());
 
         (
@@ -97,7 +91,7 @@ fn test_validate_transaction() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
     );
@@ -121,7 +115,7 @@ fn test_validate_invalid_signature() {
     let transaction = transaction_test_helpers::get_test_unchecked_txn(
         address,
         1,
-        other_private_key,
+        &other_private_key,
         key.public_key(),
         Some(program),
     );
@@ -140,7 +134,7 @@ fn test_validate_known_script_too_large_args() {
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(Script::new(vec![42; MAX_TRANSACTION_SIZE_IN_BYTES], vec![])), /* generate a
                                                                              * program with args
@@ -166,7 +160,7 @@ fn test_validate_max_gas_units_above_max() {
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         None,
         0,
@@ -189,7 +183,7 @@ fn test_validate_max_gas_units_below_min() {
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         None,
         0,
@@ -212,7 +206,7 @@ fn test_validate_max_gas_price_above_bounds() {
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         None,
         0,
@@ -239,10 +233,11 @@ fn test_validate_max_gas_price_below_bounds() {
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
-        0,
+        // Initial Time was set to 0 with a TTL 86400 secs.
+        40000,
         0, /* max gas price */
         None,
     );
@@ -261,13 +256,8 @@ fn test_validate_unknown_script() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let transaction = transaction_test_helpers::get_test_signed_txn(
-        address,
-        1,
-        key.clone(),
-        key.public_key(),
-        None,
-    );
+    let transaction =
+        transaction_test_helpers::get_test_signed_txn(address, 1, &key, key.public_key(), None);
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
@@ -286,7 +276,7 @@ fn test_validate_module_publishing() {
     let transaction = transaction_test_helpers::get_test_signed_module_publishing_transaction(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Module::new(vec![]),
     );
@@ -310,7 +300,7 @@ fn test_validate_invalid_auth_key() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        other_private_key,
+        &other_private_key,
         other_public_key,
         Some(program),
     );
@@ -318,34 +308,6 @@ fn test_validate_invalid_auth_key() {
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_AUTH_KEY);
-}
-
-#[test]
-fn test_validate_balance_below_gas_fee() {
-    let (config, key) = config_builder::test_config();
-    let (vm_validator, mut rt) = TestValidator::new(&config);
-
-    let address = account_config::association_address();
-    let program = encode_transfer_script(&address, 100);
-    let transaction = transaction_test_helpers::get_test_signed_transaction(
-        address,
-        1,
-        key.clone(),
-        key.public_key(),
-        Some(program),
-        0,
-        // Note that this will be dependent upon the max gas price and gas amounts that are set. So
-        // changing those may cause this test to fail.
-        10_000, /* max gas price */
-        Some(1_000_000),
-    );
-    let ret = rt
-        .block_on(vm_validator.validate_transaction(transaction))
-        .unwrap();
-    assert_eq!(
-        ret.unwrap().major_status,
-        StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
-    );
 }
 
 #[test]
@@ -359,7 +321,7 @@ fn test_validate_account_doesnt_exist() {
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
         0,
@@ -385,7 +347,7 @@ fn test_validate_sequence_number_too_new() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
     );
@@ -406,7 +368,7 @@ fn test_validate_invalid_arguments() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        key.clone(),
+        &key,
         key.public_key(),
         Some(program),
     );
@@ -423,14 +385,9 @@ fn test_validate_non_genesis_write_set() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let transaction = transaction_test_helpers::get_write_set_txn(
-        address,
-        1,
-        key.clone(),
-        key.public_key(),
-        None,
-    )
-    .into_inner();
+    let transaction =
+        transaction_test_helpers::get_write_set_txn(address, 1, &key, key.public_key(), None)
+            .into_inner();
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();

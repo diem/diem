@@ -79,13 +79,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:33:17 ───
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:33:18 ───
     │
  34 │         return ()
     │         ^^^^^^^^^ Invalid return
     ·
  33 │         let x = &R{};
-    │                 ---- The resource is created but not used. The resource must be consumed before the function returns
+    │                  --- The resource is created but not used. The resource must be consumed before the function returns
     │
 
 error: 

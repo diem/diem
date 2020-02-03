@@ -12,6 +12,7 @@ use libra_types::{
     transaction::TransactionStatus,
     vm_error::{StatusCode, VMStatus},
 };
+use vm_genesis::ASSOCIATION_INIT_BALANCE;
 
 #[test]
 fn mint_to_existing() {
@@ -39,7 +40,7 @@ fn mint_to_existing() {
 
     // check that numbers in stored DB are correct
     let gas = output.gas_used();
-    let sender_balance = 1_000_000_000 - gas;
+    let sender_balance = ASSOCIATION_INIT_BALANCE - gas;
     let receiver_balance = 1_000_000 + mint_amount;
 
     let updated_sender = executor
@@ -79,7 +80,7 @@ fn mint_to_new_account() {
 
     // check that numbers in stored DB are correct
     let gas = output.gas_used();
-    let sender_balance = 1_000_000_000 - gas;
+    let sender_balance = ASSOCIATION_INIT_BALANCE - gas;
     let receiver_balance = mint_amount;
 
     let updated_sender = executor

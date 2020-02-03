@@ -589,13 +589,8 @@ impl From<VMStatus> for TransactionStatus {
             StatusType::Validation => true,
             // If the VM encountered an invalid internal state, we should discard the transaction.
             StatusType::InvariantViolation => true,
-            // A transaction that publishes code that cannot be verified is currently not charged.
-            // Therefore the transaction can be excluded.
-            //
-            // The original plan was to charge for verification, but the code didn't implement it
-            // properly. The decision of whether to charge or not will be made based on data (if
-            // verification checks are too expensive then yes, otherwise no).
-            StatusType::Verification => true,
+            // A transaction that publishes code that cannot be verified will be charged.
+            StatusType::Verification => false,
             // Even if we are unable to decode the transaction, there should be a charge made to
             // that user's account for the gas fees related to decoding, running the prologue etc.
             StatusType::Deserialization => false,

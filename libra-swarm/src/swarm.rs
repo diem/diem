@@ -4,7 +4,7 @@
 use anyhow::{Context, Result};
 use config_builder::{FullNodeConfig, SwarmConfig, ValidatorConfig};
 use debug_interface::NodeDebugClient;
-use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
+use libra_config::config::{NodeConfig, RoleType};
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
 use libra_types::account_address::AccountAddress;
@@ -93,7 +93,7 @@ impl LibraNode {
             validator_peer_id,
             role,
             debug_client,
-            ac_port: config.admission_control.admission_control_service_port,
+            ac_port: config.admission_control.address.port(),
             log: log_path,
         })
     }
@@ -235,18 +235,24 @@ impl LibraSwarm {
         role: RoleType,
         disable_logging: bool,
         config_dir: Option<String>,
-        template_path: Option<String>,
+        template: Option<NodeConfig>,
         upstream_config_dir: Option<String>,
     ) -> Self {
         let num_launch_attempts = 5;
         for i in 0..num_launch_attempts {
             info!("Launch swarm attempt: {} of {}", i, num_launch_attempts);
 
+            let node_config = if let Some(template) = template.clone() {
+                template
+            } else {
+                NodeConfig::default()
+            };
+
             if let Ok(mut swarm) = Self::configure_swarm(
                 num_nodes,
                 role,
                 config_dir.clone(),
-                template_path.clone(),
+                Some(node_config),
                 upstream_config_dir.clone(),
             ) {
                 match swarm.launch_attempt(role, disable_logging) {
@@ -290,25 +296,23 @@ impl LibraSwarm {
         num_nodes: usize,
         role: RoleType,
         config_dir: Option<String>,
-        template_path: Option<String>,
+        template: Option<NodeConfig>,
         upstream_config_dir: Option<String>,
     ) -> Result<LibraSwarm> {
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
         info!("logs at {:?}", swarm_config_dir);
-        let mut template = if let Some(template_path) = template_path {
-            NodeConfig::load(workspace_builder::workspace_root().join(template_path))
-                .unwrap_or_default()
-        } else {
-            let mut template = NodeConfig::default();
-            template.vm_config.publishing_options = VMPublishingOption::Open;
+
+        let mut node_config = if let Some(template) = template {
             template
+        } else {
+            NodeConfig::default()
         };
-        template.base.role = role;
+        node_config.base.role = role;
 
         let config_path = &swarm_config_dir.as_ref().to_path_buf();
         let config = if role.is_validator() {
             let mut validator_builder = ValidatorConfig::new();
-            validator_builder.template(template).nodes(num_nodes);
+            validator_builder.template(node_config).nodes(num_nodes);
             SwarmConfig::build(&validator_builder, config_path)?
         } else {
             let upstream_config_dir = upstream_config_dir.expect("No upstream node for full nodes");
@@ -319,7 +323,7 @@ impl LibraSwarm {
             full_node_builder
                 .full_nodes(num_nodes)
                 .genesis(genesis.expect("Missing genesis from validator").clone())
-                .template(template);
+                .template(node_config);
             full_node_builder.extend_validator(&mut validator_config)?;
             validator_config.save(&upstream_config_file)?;
             full_node_builder.bootstrap(

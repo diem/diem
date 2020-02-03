@@ -5,6 +5,7 @@ module LibraAccount {
     import 0x0.U64Util;
     import 0x0.AddressUtil;
     import 0x0.BytearrayUtil;
+    import 0x0.LibraTransactionTimeout;
 
     // Every Libra account has a LibraAccount.T resource
     resource T {
@@ -434,6 +435,7 @@ module LibraAccount {
         txn_public_key: bytearray,
         txn_gas_price: u64,
         txn_max_gas_units: u64,
+        txn_expiration_time: u64,
     ) acquires T {
         let transaction_sender: address;
         let sender_account: &mut Self.T;
@@ -467,6 +469,7 @@ module LibraAccount {
         sequence_number_value = *(&mut move(sender_account).sequence_number);
         assert(copy(txn_sequence_number) >= copy(sequence_number_value), 3);
         assert(move(txn_sequence_number) == move(sequence_number_value), 4);
+        assert(LibraTransactionTimeout.is_valid_transaction_timestamp(move(txn_expiration_time)), 7);
         return;
     }
 

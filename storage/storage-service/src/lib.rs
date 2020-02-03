@@ -21,7 +21,7 @@ use libra_types::proto::types::{
     UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, ValidatorChangeProof,
 };
 use libradb::LibraDB;
-use std::{convert::TryFrom, net::ToSocketAddrs, path::Path, sync::Arc};
+use std::{convert::TryFrom, path::Path, sync::Arc};
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
     BackupAccountStateRequest, BackupAccountStateResponse, GetAccountStateRangeProofRequest,
@@ -36,19 +36,19 @@ use tokio::runtime::Runtime;
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> Runtime {
-    let rt = tokio::runtime::Runtime::new().unwrap();
+    let rt = tokio::runtime::Builder::new()
+        .threaded_scheduler()
+        .enable_all()
+        .thread_name("tokio-storage")
+        .build()
+        .unwrap();
 
     let storage_service = StorageService::new(&config.storage.dir());
 
-    let addr = format!("{}:{}", config.storage.address, config.storage.port)
-        .to_socket_addrs()
-        .unwrap()
-        .next()
-        .unwrap();
     rt.spawn(
         tonic::transport::Server::builder()
             .add_service(StorageServer::new(storage_service))
-            .serve(addr),
+            .serve(config.storage.address),
     );
     rt
 }
