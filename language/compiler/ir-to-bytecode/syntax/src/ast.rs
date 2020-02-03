@@ -1061,7 +1061,7 @@ impl Exp_ {
 }
 
 /// Parses a field.
-pub fn parse_field<L>(s: impl Into<Box<str>>) -> Result<Field_, ParseError<L, anyhow::Error>> {
+pub fn parse_field_<L>(s: impl Into<Box<str>>) -> Result<Field_, ParseError<L, anyhow::Error>> {
     Ok(Field_::new(parse_identifier(s.into())?))
 }
 
