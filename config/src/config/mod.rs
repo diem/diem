@@ -10,6 +10,7 @@ use std::{
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
+    str::FromStr,
 };
 use thiserror::Error;
 use toml;
@@ -118,7 +119,7 @@ impl RoleType {
     }
 }
 
-impl std::str::FromStr for RoleType {
+impl FromStr for RoleType {
     type Err = ParseRoleError;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
@@ -467,5 +468,26 @@ mod test {
             NodeConfig::load(PathBuf::from(path)).unwrap_or_else(|_| panic!("Error in {}", path))
         })
         .collect::<Vec<_>>();
+    }
+
+    #[test]
+    fn verify_role_type_conversion() {
+        // Verify relationship between RoleType and as_string() is reflexive
+        let validator = RoleType::Validator;
+        let full_node = RoleType::FullNode;
+        let converted_validator = RoleType::from_str(validator.as_str()).unwrap();
+        let converted_full_node = RoleType::from_str(full_node.as_str()).unwrap();
+        assert_eq!(converted_validator, validator);
+        assert_eq!(converted_full_node, full_node);
+    }
+
+    #[test]
+    // TODO(joshlind): once the 'matches' crate becomes stable, clean this test up!
+    fn verify_parse_role_error_on_invalid_role() {
+        let invalid_role_type = "this is not a valid role type";
+        match RoleType::from_str(invalid_role_type) {
+            Err(ParseRoleError(_)) => { /* the expected error was thrown! */ }
+            _ => panic!("A ParseRoleError should have been thrown on the invalid role type!"),
+        }
     }
 }
