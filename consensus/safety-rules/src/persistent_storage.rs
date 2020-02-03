@@ -4,7 +4,7 @@
 use anyhow::Result;
 use consensus_types::common::Round;
 use libra_crypto::ed25519::Ed25519PrivateKey;
-use libra_secure_storage::{InMemoryStorage, Permissions, Storage, Value};
+use libra_secure_storage::{InMemoryStorage, Policy, Storage, Value};
 
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
 /// persistent data to local disk, cloud, secrets managers, or even memory (for tests)
@@ -32,7 +32,7 @@ impl PersistentStorage {
         mut internal_store: Box<dyn Storage>,
         private_key: Ed25519PrivateKey,
     ) -> Self {
-        let perms = Permissions::anyone();
+        let perms = Policy::public();
         internal_store
             .create_if_not_exists(CONSENSUS_KEY, Value::Ed25519PrivateKey(private_key), &perms)
             .expect("Unable to initialize backend storage");

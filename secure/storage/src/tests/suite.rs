@@ -1,12 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    error::Error,
-    permissions::{Permission, Permissions},
-    storage::Storage,
-    value::Value,
-};
+use crate::{Error, Policy, Storage, Value};
 use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use rand::{rngs::StdRng, SeedableRng};
 
@@ -19,10 +14,7 @@ pub fn run_test_suite(mut storage: Box<dyn Storage>, name: &str) {
         eprintln!("Backend storage, {}, is not available", name)
     );
 
-    let no_perms = Permissions {
-        readers: Permission::Anyone,
-        writers: Permission::Anyone,
-    };
+    let public = Policy::public();
     let u64_value_0 = 5;
     let u64_value_1 = 2322;
 
@@ -51,13 +43,13 @@ pub fn run_test_suite(mut storage: Box<dyn Storage>, name: &str) {
     );
 
     storage
-        .create_if_not_exists(U64_KEY, Value::U64(u64_value_1), &no_perms)
+        .create_if_not_exists(U64_KEY, Value::U64(u64_value_1), &public)
         .unwrap();
     storage
         .create(
             KEY_KEY,
             Value::Ed25519PrivateKey(key_value_1.clone()),
-            &no_perms,
+            &public,
         )
         .unwrap();
 
@@ -80,10 +72,10 @@ pub fn run_test_suite(mut storage: Box<dyn Storage>, name: &str) {
 
     // Should not affect the above computation
     storage
-        .create_if_not_exists(U64_KEY, Value::U64(u64_value_1), &no_perms)
+        .create_if_not_exists(U64_KEY, Value::U64(u64_value_1), &public)
         .unwrap();
     storage
-        .create_if_not_exists(KEY_KEY, Value::Ed25519PrivateKey(key_value_1), &no_perms)
+        .create_if_not_exists(KEY_KEY, Value::Ed25519PrivateKey(key_value_1), &public)
         .unwrap();
 
     assert_eq!(

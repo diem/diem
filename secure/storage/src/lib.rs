@@ -6,7 +6,7 @@
 mod error;
 mod in_memory;
 mod on_disk;
-mod permissions;
+mod policy;
 mod storage;
 mod value;
 mod vault;
@@ -15,7 +15,7 @@ pub use crate::{
     error::Error,
     in_memory::InMemoryStorage,
     on_disk::OnDiskStorage,
-    permissions::{Id, Permission, Permissions},
+    policy::{Capability, Identity, Permission, Policy},
     storage::Storage,
     value::Value,
     vault::VaultStorage,
