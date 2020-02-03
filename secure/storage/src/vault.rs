@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, Policy, Storage, Value};
-use libra_vault_client::Client;
+use crate::{Capability, Error, Identity, Policy, Storage, Value};
+use libra_vault_client::{self as vault, Client};
 
 /// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Libra. This
 /// version currently matches the behavior of OnDiskStorage and InMemoryStorage. In the future,
@@ -44,6 +44,29 @@ impl VaultStorage {
         self.client.write_secret(key, key, &value.to_base64()?)?;
         Ok(())
     }
+
+    /// Create a new policy in Vault, see the explanation for Policy for how the data is
+    /// structured. Vault does not distingush a create and update. An update must first read the
+    /// existing policy, amend the contents,  and then be applied via this API.
+    fn set_policy(
+        &self,
+        policy_name: &str,
+        key: &str,
+        capabilities: &[Capability],
+    ) -> Result<(), Error> {
+        let path = format!("secret/data/{}", key);
+        let mut vault_policy = self.client.read_policy(&policy_name).unwrap_or_default();
+        let vault_capabilities: Vec<vault::Capability> = capabilities
+            .iter()
+            .map(|c| match c {
+                Capability::Write => vault::Capability::Update,
+                Capability::Read => vault::Capability::Read,
+            })
+            .collect();
+        vault_policy.add_policy(&path, vault_capabilities);
+        self.client.set_policy(policy_name, &vault_policy)?;
+        Ok(())
+    }
 }
 
 impl Storage for VaultStorage {
@@ -51,7 +74,7 @@ impl Storage for VaultStorage {
         self.client.unsealed().unwrap_or(false)
     }
 
-    fn create(&mut self, key: &str, value: Value, _policy: &Policy) -> Result<(), Error> {
+    fn create(&mut self, key: &str, value: Value, policy: &Policy) -> Result<(), Error> {
         // Vault internally does not distinguish creation versus update except by permissions. So we
         // simulate that by first getting the key. If it doesn't exist, we're okay and return back a
         // fake, but ignored value.
@@ -64,6 +87,13 @@ impl Storage for VaultStorage {
         })?;
 
         self.set_secret(&key, value)?;
+        for permission in &policy.permissions {
+            match &permission.id {
+                Identity::User(id) => self.set_policy(id, key, &permission.capabilities)?,
+                Identity::Anyone => self.set_policy("default", key, &permission.capabilities)?,
+                Identity::NoOne => (),
+            };
+        }
         Ok(())
     }
 
