@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::btree_map::BTreeMap;
 use std::convert::TryFrom;
 use std::fmt;
-use std::ops::{Deref, DerefMut};
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct AccountState(BTreeMap<Vec<u8>, Vec<u8>>);
@@ -21,19 +20,21 @@ impl AccountState {
             .transpose()
             .map_err(Into::into)
     }
-}
 
-impl Deref for AccountState {
-    type Target = BTreeMap<Vec<u8>, Vec<u8>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
+        self.0.get(key)
     }
-}
 
-impl DerefMut for AccountState {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    pub fn insert(&mut self, key: Vec<u8>, value: Vec<u8>) -> Option<Vec<u8>> {
+        self.0.insert(key, value)
+    }
+
+    pub fn remove(&mut self, key: &[u8]) -> Option<Vec<u8>> {
+        self.0.remove(key)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 
@@ -43,6 +44,7 @@ impl fmt::Debug for AccountState {
             .get_account_resource()
             .map(|account_resource_opt| format!("{:#?}", account_resource_opt))
             .unwrap_or_else(|e| format!("parse error: {:#?}", e));
+        // TODO: add support for other types of resources
 
         write!(f, "AccountResource {{ {} }}", account_resource_str)
     }

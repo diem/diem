@@ -215,7 +215,7 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
         0,
     );
 
-    let mut account_state: AccountState = Default::default();
+    let mut account_state = AccountState::default();
     account_state.insert(
         libra_types::account_config::ACCOUNT_RESOURCE_PATH.to_vec(),
         lcs::to_bytes(&account_resource).unwrap(),
