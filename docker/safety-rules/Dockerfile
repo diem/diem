@@ -17,14 +17,16 @@ FROM toolchain AS builder
 COPY . /libra
 
 RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
+RUN strip /libra/target/release/config-builder
 
 ### Production Image ###
 FROM debian:buster AS prod
 
 RUN addgroup --system --gid 6180 libra && adduser --system --ingroup libra --no-create-home --uid 6180 libra
 
-RUN mkdir -p /opt/libra/bin
+RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY --from=builder /libra/target/release/safety-rules /opt/libra/bin
+COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 
 ENV RUST_BACKTRACE 1
 CMD /opt/libra/bin/safety-rules

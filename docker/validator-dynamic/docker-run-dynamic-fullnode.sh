@@ -5,7 +5,8 @@ set -ex
 
 declare -a params
 if [ -n "${CFG_BASE_CONFIG}" ]; then # Path to base config
-	    params+="-t ${CFG_BASE_CONFIG} "
+	    echo "${CFG_BASE_CONFIG}" > /opt/libra/etc/base.config.toml
+	    params+="-t /opt/libra/etc/base.config.toml "
 fi
 if [ -n "${CFG_LISTEN_ADDR}" ]; then # Advertised listen address for network config
 	    params+="-a /ip4/${CFG_LISTEN_ADDR}/tcp/6180 "
