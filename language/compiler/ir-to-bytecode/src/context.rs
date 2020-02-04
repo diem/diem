@@ -1,11 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::parser::ast::{
-    Field_, FunctionName, Loc, ModuleName, QualifiedModuleIdent, QualifiedStructIdent, StructName,
-    TypeVar_,
-};
-
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::ModuleSourceMap;
 use libra_types::{
@@ -13,6 +8,7 @@ use libra_types::{
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
 };
+use move_ir_types::ast::*;
 use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,

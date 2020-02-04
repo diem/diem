@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use ir_to_bytecode::{compiler::compile_program, parser::ast};
+use ir_to_bytecode::compiler::compile_program;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
 use libra_types::block_metadata::BlockMetadata;
@@ -12,6 +12,7 @@ use libra_types::{
     byte_array::ByteArray,
     transaction::{Script, Transaction, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
+use move_ir_types::ast;
 use once_cell::sync::Lazy;
 use std::{collections::HashSet, iter::FromIterator};
 use stdlib::{

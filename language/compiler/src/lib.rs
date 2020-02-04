@@ -13,12 +13,13 @@ use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_program},
-    parser::{ast::Loc, parse_program},
+    parser::parse_program,
 };
 use libra_types::{
     account_address::AccountAddress,
     transaction::{Script, TransactionArgument},
 };
+use move_ir_types::ast::Loc;
 use std::mem;
 use stdlib::stdlib_modules;
 use vm::file_format::{CompiledModule, CompiledProgram, CompiledScript};

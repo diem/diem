@@ -4,19 +4,12 @@
 use crate::{
     context::{Context, MaterializedPools},
     errors::*,
-    parser::ast::{
-        self, BinOp, Block_, Builtin, Cmd, Cmd_, CopyableVal_, Exp, Exp_, Function, FunctionBody,
-        FunctionCall, FunctionCall_, FunctionName, FunctionSignature as AstFunctionSignature,
-        FunctionVisibility, IfElse, ImportDefinition, LValue, LValue_, Loc, Loop, ModuleDefinition,
-        ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script,
-        Statement, StructDefinition as AstStructDefinition, StructDefinitionFields, Type, TypeVar,
-        TypeVar_, UnaryOp, Var, Var_, While,
-    },
 };
 
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
+use move_ir_types::ast::{self, *};
 use std::{
     clone::Clone,
     collections::{
@@ -525,7 +518,7 @@ fn compile_type(context: &mut Context, ty: &Type) -> Result<SignatureToken> {
 
 fn function_signature(
     context: &mut Context,
-    f: &AstFunctionSignature,
+    f: &ast::FunctionSignature,
 ) -> Result<FunctionSignature> {
     let (map, _) = type_formals(&f.type_formals)?;
     context.bind_type_formals(map)?;
@@ -546,7 +539,7 @@ fn function_signature(
 fn compile_structs(
     context: &mut Context,
     self_name: &ModuleName,
-    structs: Vec<AstStructDefinition>,
+    structs: Vec<ast::StructDefinition>,
 ) -> Result<(Vec<StructDefinition>, Vec<FieldDefinition>)> {
     let mut struct_defs = vec![];
     let mut field_defs = vec![];
