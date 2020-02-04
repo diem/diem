@@ -135,21 +135,19 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapa
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#mint_with_default_capability#0#amount: [Position]Value;
-    var debug#LibraCoin#mint_with_default_capability#1#__ret: [Position]Value;
+    var debug#LibraCoin#mint_with_default_capability#0#amount#806: Value;
+    var debug#LibraCoin#mint_with_default_capability#1#__ret#1401: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraCoin#mint_with_default_capability#0#amount := EmptyPositionMap;
-    debug#LibraCoin#mint_with_default_capability#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 0, amount);
-    debug#LibraCoin#mint_with_default_capability#0#amount := debug#LibraCoin#mint_with_default_capability#0#amount[Position(806) := amount];
+    assume (debug#LibraCoin#mint_with_default_capability#0#amount#806) == (amount);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -168,14 +166,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapa
     __m := UpdateLocal(__m, __frame + 4, __t4);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#LibraCoin#mint_with_default_capability#1#__ret := debug#LibraCoin#mint_with_default_capability#1#__ret[Position(1401) := __ret0];
+    assume (debug#LibraCoin#mint_with_default_capability#1#__ret#1401) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#mint_with_default_capability#1#__ret := debug#LibraCoin#mint_with_default_capability#1#__ret[Position(1486) := __ret0];
 }
 
 procedure LibraCoin_mint_with_default_capability_verify (amount: Value) returns (__ret0: Value)
@@ -218,30 +215,25 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#mint#0#value: [Position]Value;
-    var debug#LibraCoin#mint#1#capability: [Position]Value;
-    var debug#LibraCoin#mint#2#market_cap_ref: [Position]Value;
-    var debug#LibraCoin#mint#3#market_cap_total_value: [Position]Value;
-    var debug#LibraCoin#mint#4#__ret: [Position]Value;
+    var debug#LibraCoin#mint#0#value#1723: Value;
+    var debug#LibraCoin#mint#1#capability#1723: Value;
+    var debug#LibraCoin#mint#2#market_cap_ref#2898: Value;
+    var debug#LibraCoin#mint#3#market_cap_total_value#2964: Value;
+    var debug#LibraCoin#mint#4#__ret#3129: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 24;
-    debug#LibraCoin#mint#0#value := EmptyPositionMap;
-    debug#LibraCoin#mint#1#capability := EmptyPositionMap;
-    debug#LibraCoin#mint#2#market_cap_ref := EmptyPositionMap;
-    debug#LibraCoin#mint#3#market_cap_total_value := EmptyPositionMap;
-    debug#LibraCoin#mint#4#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(value);
     __m := UpdateLocal(__m, __frame + 0, value);
-    debug#LibraCoin#mint#0#value := debug#LibraCoin#mint#0#value[Position(1723) := value];
+    assume (debug#LibraCoin#mint#0#value#1723) == (value);
     assume is#Vector(Dereference(__m, capability));
     assume IsValidReferenceParameter(__m, __frame, capability);
-    debug#LibraCoin#mint#1#capability := debug#LibraCoin#mint#1#capability[Position(1723) := Dereference(__m, capability)];
+    assume (debug#LibraCoin#mint#1#capability#1723) == (Dereference(__m, capability));
 
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(capability);
@@ -294,7 +286,7 @@ Label_11:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 16));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraCoin#mint#3#market_cap_total_value := debug#LibraCoin#mint#3#market_cap_total_value[Position(2964) := __tmp];
+    assume (debug#LibraCoin#mint#3#market_cap_total_value#2964) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 17, __tmp);
@@ -319,14 +311,13 @@ Label_11:
     __m := UpdateLocal(__m, __frame + 23, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 23);
-    debug#LibraCoin#mint#4#__ret := debug#LibraCoin#mint#4#__ret[Position(3129) := __ret0];
+    assume (debug#LibraCoin#mint#4#__ret#3129) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#mint#4#__ret := debug#LibraCoin#mint#4#__ret[Position(3163) := __ret0];
 }
 
 procedure LibraCoin_mint_verify (value: Value, capability: Reference) returns (__ret0: Value)
@@ -434,14 +425,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#market_cap#0#__ret: [Position]Value;
+    var debug#LibraCoin#market_cap#0#__ret#4289: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraCoin#market_cap#0#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -459,14 +449,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraCoin#market_cap#0#__ret := debug#LibraCoin#market_cap#0#__ret[Position(4289) := __ret0];
+    assume (debug#LibraCoin#market_cap#0#__ret#4289) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#market_cap#0#__ret := debug#LibraCoin#market_cap#0#__ret[Position(4353) := __ret0];
 }
 
 procedure LibraCoin_market_cap_verify () returns (__ret0: Value)
@@ -485,14 +474,13 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), Intege
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#zero#0#__ret: [Position]Value;
+    var debug#LibraCoin#zero#0#__ret#4477: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 2;
-    debug#LibraCoin#zero#0#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -504,14 +492,13 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), Intege
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 1);
-    debug#LibraCoin#zero#0#__ret := debug#LibraCoin#zero#0#__ret[Position(4477) := __ret0];
+    assume (debug#LibraCoin#zero#0#__ret#4477) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#zero#0#__ret := debug#LibraCoin#zero#0#__ret[Position(4501) := __ret0];
 }
 
 procedure LibraCoin_zero_verify () returns (__ret0: Value)
@@ -531,21 +518,19 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, coin_ref)
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#value#0#coin_ref: [Position]Value;
-    var debug#LibraCoin#value#1#__ret: [Position]Value;
+    var debug#LibraCoin#value#0#coin_ref#4555: Value;
+    var debug#LibraCoin#value#1#__ret#4644: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraCoin#value#0#coin_ref := EmptyPositionMap;
-    debug#LibraCoin#value#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
     assume IsValidReferenceParameter(__m, __frame, coin_ref);
-    debug#LibraCoin#value#0#coin_ref := debug#LibraCoin#value#0#coin_ref[Position(4555) := Dereference(__m, coin_ref)];
+    assume (debug#LibraCoin#value#0#coin_ref#4555) == (Dereference(__m, coin_ref));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(coin_ref);
@@ -557,14 +542,13 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, coin_ref)
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraCoin#value#1#__ret := debug#LibraCoin#value#1#__ret[Position(4644) := __ret0];
+    assume (debug#LibraCoin#value#1#__ret#4644) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#value#1#__ret := debug#LibraCoin#value#1#__ret[Position(4679) := __ret0];
 }
 
 procedure LibraCoin_value_verify (coin_ref: Reference) returns (__ret0: Value)
@@ -590,30 +574,26 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#split#0#coin: [Position]Value;
-    var debug#LibraCoin#split#1#amount: [Position]Value;
-    var debug#LibraCoin#split#2#other: [Position]Value;
-    var debug#LibraCoin#split#3#__ret: [Position]Value;
-    var debug#LibraCoin#split#4#__ret: [Position]Value;
+    var debug#LibraCoin#split#0#coin#4818: Value;
+    var debug#LibraCoin#split#1#amount#4818: Value;
+    var debug#LibraCoin#split#2#other#5037: Value;
+    var debug#LibraCoin#split#0#coin#5045: Value;
+    var debug#LibraCoin#split#3#__ret#5093: Value;
+    var debug#LibraCoin#split#4#__ret#5093: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#LibraCoin#split#0#coin := EmptyPositionMap;
-    debug#LibraCoin#split#1#amount := EmptyPositionMap;
-    debug#LibraCoin#split#2#other := EmptyPositionMap;
-    debug#LibraCoin#split#3#__ret := EmptyPositionMap;
-    debug#LibraCoin#split#4#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(coin);
     __m := UpdateLocal(__m, __frame + 0, coin);
-    debug#LibraCoin#split#0#coin := debug#LibraCoin#split#0#coin[Position(4818) := coin];
+    assume (debug#LibraCoin#split#0#coin#4818) == (coin);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraCoin#split#1#amount := debug#LibraCoin#split#1#amount[Position(4818) := amount];
+    assume (debug#LibraCoin#split#1#amount#4818) == (amount);
 
     // bytecode translation starts here
     call __t3 := BorrowLoc(__frame + 0);
@@ -626,11 +606,11 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
     assume is#Vector(__t5);
 
     __m := UpdateLocal(__m, __frame + 5, __t5);
-    debug#LibraCoin#split#0#coin := debug#LibraCoin#split#0#coin[Position(5045) := GetLocal(__m, __frame + 0)];
+    assume (debug#LibraCoin#split#0#coin#5045) == (GetLocal(__m, __frame + 0));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraCoin#split#2#other := debug#LibraCoin#split#2#other[Position(5037) := __tmp];
+    assume (debug#LibraCoin#split#2#other#5037) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -639,18 +619,16 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    debug#LibraCoin#split#3#__ret := debug#LibraCoin#split#3#__ret[Position(5093) := __ret0];
+    assume (debug#LibraCoin#split#3#__ret#5093) == (__ret0);
     __ret1 := GetLocal(__m, __frame + 7);
-    debug#LibraCoin#split#4#__ret := debug#LibraCoin#split#4#__ret[Position(5093) := __ret1];
+    assume (debug#LibraCoin#split#4#__ret#5093) == (__ret1);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#split#3#__ret := debug#LibraCoin#split#3#__ret[Position(5129) := __ret0];
     __ret1 := DefaultValue;
-    debug#LibraCoin#split#4#__ret := debug#LibraCoin#split#4#__ret[Position(5129) := __ret1];
 }
 
 procedure LibraCoin_split_verify (coin: Value, amount: Value) returns (__ret0: Value, __ret1: Value)
@@ -687,28 +665,24 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(__m, coin_ref), 
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#withdraw#0#coin_ref: [Position]Value;
-    var debug#LibraCoin#withdraw#1#amount: [Position]Value;
-    var debug#LibraCoin#withdraw#2#value: [Position]Value;
-    var debug#LibraCoin#withdraw#3#__ret: [Position]Value;
+    var debug#LibraCoin#withdraw#0#coin_ref#5391: Value;
+    var debug#LibraCoin#withdraw#1#amount#5391: Value;
+    var debug#LibraCoin#withdraw#2#value#5692: Value;
+    var debug#LibraCoin#withdraw#3#__ret#5881: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 18;
-    debug#LibraCoin#withdraw#0#coin_ref := EmptyPositionMap;
-    debug#LibraCoin#withdraw#1#amount := EmptyPositionMap;
-    debug#LibraCoin#withdraw#2#value := EmptyPositionMap;
-    debug#LibraCoin#withdraw#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
     assume IsValidReferenceParameter(__m, __frame, coin_ref);
-    debug#LibraCoin#withdraw#0#coin_ref := debug#LibraCoin#withdraw#0#coin_ref[Position(5391) := Dereference(__m, coin_ref)];
+    assume (debug#LibraCoin#withdraw#0#coin_ref#5391) == (Dereference(__m, coin_ref));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraCoin#withdraw#1#amount := debug#LibraCoin#withdraw#1#amount[Position(5391) := amount];
+    assume (debug#LibraCoin#withdraw#1#amount#5391) == (amount);
 
     // bytecode translation starts here
     call __t3 := CopyOrMoveRef(coin_ref);
@@ -721,7 +695,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(__m, coin_ref), 
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraCoin#withdraw#2#value := debug#LibraCoin#withdraw#2#value[Position(5692) := __tmp];
+    assume (debug#LibraCoin#withdraw#2#value#5692) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -767,14 +741,13 @@ Label_11:
     __m := UpdateLocal(__m, __frame + 17, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 17);
-    debug#LibraCoin#withdraw#3#__ret := debug#LibraCoin#withdraw#3#__ret[Position(5881) := __ret0];
+    assume (debug#LibraCoin#withdraw#3#__ret#5881) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#withdraw#3#__ret := debug#LibraCoin#withdraw#3#__ret[Position(5916) := __ret0];
 }
 
 procedure LibraCoin_withdraw_verify (coin_ref: Reference, amount: Value) returns (__ret0: Value)
@@ -797,26 +770,24 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(coin1, Lib
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#join#0#coin1: [Position]Value;
-    var debug#LibraCoin#join#1#coin2: [Position]Value;
-    var debug#LibraCoin#join#2#__ret: [Position]Value;
+    var debug#LibraCoin#join#0#coin1#6020: Value;
+    var debug#LibraCoin#join#1#coin2#6020: Value;
+    var debug#LibraCoin#join#0#coin1#6215: Value;
+    var debug#LibraCoin#join#2#__ret#6262: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraCoin#join#0#coin1 := EmptyPositionMap;
-    debug#LibraCoin#join#1#coin2 := EmptyPositionMap;
-    debug#LibraCoin#join#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(coin1);
     __m := UpdateLocal(__m, __frame + 0, coin1);
-    debug#LibraCoin#join#0#coin1 := debug#LibraCoin#join#0#coin1[Position(6020) := coin1];
+    assume (debug#LibraCoin#join#0#coin1#6020) == (coin1);
     assume is#Vector(coin2);
     __m := UpdateLocal(__m, __frame + 1, coin2);
-    debug#LibraCoin#join#1#coin2 := debug#LibraCoin#join#1#coin2[Position(6020) := coin2];
+    assume (debug#LibraCoin#join#1#coin2#6020) == (coin2);
 
     // bytecode translation starts here
     call __t2 := BorrowLoc(__frame + 0);
@@ -826,20 +797,19 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(coin1, Lib
 
     call LibraCoin_deposit(__t2, GetLocal(__m, __frame + 3));
     if (__abort_flag) { goto Label_Abort; }
-    debug#LibraCoin#join#0#coin1 := debug#LibraCoin#join#0#coin1[Position(6215) := GetLocal(__m, __frame + 0)];
+    assume (debug#LibraCoin#join#0#coin1#6215) == (GetLocal(__m, __frame + 0));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#LibraCoin#join#2#__ret := debug#LibraCoin#join#2#__ret[Position(6262) := __ret0];
+    assume (debug#LibraCoin#join#2#__ret#6262) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#join#2#__ret := debug#LibraCoin#join#2#__ret[Position(6286) := __ret0];
 }
 
 procedure LibraCoin_join_verify (coin1: Value, coin2: Value) returns (__ret0: Value)
@@ -871,28 +841,24 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#deposit#0#coin_ref: [Position]Value;
-    var debug#LibraCoin#deposit#1#check: [Position]Value;
-    var debug#LibraCoin#deposit#2#value: [Position]Value;
-    var debug#LibraCoin#deposit#3#check_value: [Position]Value;
+    var debug#LibraCoin#deposit#0#coin_ref#6465: Value;
+    var debug#LibraCoin#deposit#1#check#6465: Value;
+    var debug#LibraCoin#deposit#2#value#6729: Value;
+    var debug#LibraCoin#deposit#3#check_value#6779: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 14;
-    debug#LibraCoin#deposit#0#coin_ref := EmptyPositionMap;
-    debug#LibraCoin#deposit#1#check := EmptyPositionMap;
-    debug#LibraCoin#deposit#2#value := EmptyPositionMap;
-    debug#LibraCoin#deposit#3#check_value := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
     assume IsValidReferenceParameter(__m, __frame, coin_ref);
-    debug#LibraCoin#deposit#0#coin_ref := debug#LibraCoin#deposit#0#coin_ref[Position(6465) := Dereference(__m, coin_ref)];
+    assume (debug#LibraCoin#deposit#0#coin_ref#6465) == (Dereference(__m, coin_ref));
     assume is#Vector(check);
     __m := UpdateLocal(__m, __frame + 1, check);
-    debug#LibraCoin#deposit#1#check := debug#LibraCoin#deposit#1#check[Position(6465) := check];
+    assume (debug#LibraCoin#deposit#1#check#6465) == (check);
 
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(coin_ref);
@@ -905,7 +871,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraCoin#deposit#2#value := debug#LibraCoin#deposit#2#value[Position(6729) := __tmp];
+    assume (debug#LibraCoin#deposit#2#value#6729) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -915,7 +881,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraCoin#deposit#3#check_value := debug#LibraCoin#deposit#3#check_value[Position(6779) := __tmp];
+    assume (debug#LibraCoin#deposit#3#check_value#6779) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -964,21 +930,19 @@ ensures old(b#Boolean(Boolean(!IsEqual(SelectField(coin, LibraCoin_T_value), Int
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#destroy_zero#0#coin: [Position]Value;
-    var debug#LibraCoin#destroy_zero#1#value: [Position]Value;
+    var debug#LibraCoin#destroy_zero#0#coin#7117: Value;
+    var debug#LibraCoin#destroy_zero#1#value#7227: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 9;
-    debug#LibraCoin#destroy_zero#0#coin := EmptyPositionMap;
-    debug#LibraCoin#destroy_zero#1#value := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(coin);
     __m := UpdateLocal(__m, __frame + 0, coin);
-    debug#LibraCoin#destroy_zero#0#coin := debug#LibraCoin#destroy_zero#0#coin[Position(7117) := coin];
+    assume (debug#LibraCoin#destroy_zero#0#coin#7117) == (coin);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -989,7 +953,7 @@ ensures old(b#Boolean(Boolean(!IsEqual(SelectField(coin, LibraCoin_T_value), Int
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraCoin#destroy_zero#1#value := debug#LibraCoin#destroy_zero#1#value[Position(7227) := __tmp];
+    assume (debug#LibraCoin#destroy_zero#1#value#7227) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -1291,31 +1255,28 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(IsEqual(SelectField(SelectField(__re
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#make#0#fresh_address: [Position]Value;
-    var debug#LibraAccount#make#1#zero_balance: [Position]Value;
-    var debug#LibraAccount#make#2#generator: [Position]Value;
-    var debug#LibraAccount#make#3#sent_handle: [Position]Value;
-    var debug#LibraAccount#make#4#received_handle: [Position]Value;
-    var debug#LibraAccount#make#5#auth_key: [Position]Value;
-    var debug#LibraAccount#make#6#__ret: [Position]Value;
+    var debug#LibraAccount#make#0#fresh_address#3283: Value;
+    var debug#LibraAccount#make#5#auth_key#3812: Value;
+    var debug#LibraAccount#make#2#generator#3823: Value;
+    var debug#LibraAccount#make#2#generator#3882: Value;
+    var debug#LibraAccount#make#3#sent_handle#3937: Value;
+    var debug#LibraAccount#make#2#generator#3951: Value;
+    var debug#LibraAccount#make#4#received_handle#4047: Value;
+    var debug#LibraAccount#make#2#generator#4065: Value;
+    var debug#LibraAccount#make#1#zero_balance#4165: Value;
+    var debug#LibraAccount#make#2#generator#4180: Value;
+    var debug#LibraAccount#make#6#__ret#4207: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 26;
-    debug#LibraAccount#make#0#fresh_address := EmptyPositionMap;
-    debug#LibraAccount#make#1#zero_balance := EmptyPositionMap;
-    debug#LibraAccount#make#2#generator := EmptyPositionMap;
-    debug#LibraAccount#make#3#sent_handle := EmptyPositionMap;
-    debug#LibraAccount#make#4#received_handle := EmptyPositionMap;
-    debug#LibraAccount#make#5#auth_key := EmptyPositionMap;
-    debug#LibraAccount#make#6#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(fresh_address);
     __m := UpdateLocal(__m, __frame + 0, fresh_address);
-    debug#LibraAccount#make#0#fresh_address := debug#LibraAccount#make#0#fresh_address[Position(3283) := fresh_address];
+    assume (debug#LibraAccount#make#0#fresh_address#3283) == (fresh_address);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1329,7 +1290,7 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(IsEqual(SelectField(SelectField(__re
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 7));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
-    debug#LibraAccount#make#5#auth_key := debug#LibraAccount#make#5#auth_key[Position(3812) := __tmp];
+    assume (debug#LibraAccount#make#5#auth_key#3812) == (__tmp);
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
@@ -1339,7 +1300,7 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(IsEqual(SelectField(SelectField(__re
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraAccount#make#2#generator := debug#LibraAccount#make#2#generator[Position(3882) := __tmp];
+    assume (debug#LibraAccount#make#2#generator#3882) == (__tmp);
 
     call __t10 := BorrowLoc(__frame + 2);
 
@@ -1351,11 +1312,11 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(IsEqual(SelectField(SelectField(__re
     assume is#Vector(__t12);
 
     __m := UpdateLocal(__m, __frame + 12, __t12);
-    debug#LibraAccount#make#2#generator := debug#LibraAccount#make#2#generator[Position(3951) := GetLocal(__m, __frame + 2)];
+    assume (debug#LibraAccount#make#2#generator#3951) == (GetLocal(__m, __frame + 2));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 12));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraAccount#make#3#sent_handle := debug#LibraAccount#make#3#sent_handle[Position(3937) := __tmp];
+    assume (debug#LibraAccount#make#3#sent_handle#3937) == (__tmp);
 
     call __t13 := BorrowLoc(__frame + 2);
 
@@ -1367,11 +1328,11 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(IsEqual(SelectField(SelectField(__re
     assume is#Vector(__t15);
 
     __m := UpdateLocal(__m, __frame + 15, __t15);
-    debug#LibraAccount#make#2#generator := debug#LibraAccount#make#2#generator[Position(4065) := GetLocal(__m, __frame + 2)];
+    assume (debug#LibraAccount#make#2#generator#4065) == (GetLocal(__m, __frame + 2));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 15));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
-    debug#LibraAccount#make#4#received_handle := debug#LibraAccount#make#4#received_handle[Position(4047) := __tmp];
+    assume (debug#LibraAccount#make#4#received_handle#4047) == (__tmp);
 
     call __t16 := LibraCoin_zero();
     if (__abort_flag) { goto Label_Abort; }
@@ -1381,7 +1342,7 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(IsEqual(SelectField(SelectField(__re
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 16));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#make#1#zero_balance := debug#LibraAccount#make#1#zero_balance[Position(4165) := __tmp];
+    assume (debug#LibraAccount#make#1#zero_balance#4165) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 17, __tmp);
@@ -1411,14 +1372,13 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(IsEqual(SelectField(SelectField(__re
     __m := UpdateLocal(__m, __frame + 25, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 25);
-    debug#LibraAccount#make#6#__ret := debug#LibraAccount#make#6#__ret[Position(4207) := __ret0];
+    assume (debug#LibraAccount#make#6#__ret#4207) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#make#6#__ret := debug#LibraAccount#make#6#__ret[Position(4602) := __ret0];
 }
 
 procedure LibraAccount_make_verify (fresh_address: Value) returns (__ret0: Value)
@@ -1441,24 +1401,22 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#deposit#0#payee: [Position]Value;
-    var debug#LibraAccount#deposit#1#to_deposit: [Position]Value;
+    var debug#LibraAccount#deposit#0#payee#4674: Value;
+    var debug#LibraAccount#deposit#1#to_deposit#4674: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraAccount#deposit#0#payee := EmptyPositionMap;
-    debug#LibraAccount#deposit#1#to_deposit := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#deposit#0#payee := debug#LibraAccount#deposit#0#payee[Position(4674) := payee];
+    assume (debug#LibraAccount#deposit#0#payee#4674) == (payee);
     assume is#Vector(to_deposit);
     __m := UpdateLocal(__m, __frame + 1, to_deposit);
-    debug#LibraAccount#deposit#1#to_deposit := debug#LibraAccount#deposit#1#to_deposit[Position(4674) := to_deposit];
+    assume (debug#LibraAccount#deposit#1#to_deposit#4674) == (to_deposit);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1500,29 +1458,26 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#deposit_with_metadata#0#payee: [Position]Value;
-    var debug#LibraAccount#deposit_with_metadata#1#to_deposit: [Position]Value;
-    var debug#LibraAccount#deposit_with_metadata#2#metadata: [Position]Value;
+    var debug#LibraAccount#deposit_with_metadata#0#payee#5450: Value;
+    var debug#LibraAccount#deposit_with_metadata#1#to_deposit#5450: Value;
+    var debug#LibraAccount#deposit_with_metadata#2#metadata#5450: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#LibraAccount#deposit_with_metadata#0#payee := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_metadata#1#to_deposit := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_metadata#2#metadata := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#deposit_with_metadata#0#payee := debug#LibraAccount#deposit_with_metadata#0#payee[Position(5450) := payee];
+    assume (debug#LibraAccount#deposit_with_metadata#0#payee#5450) == (payee);
     assume is#Vector(to_deposit);
     __m := UpdateLocal(__m, __frame + 1, to_deposit);
-    debug#LibraAccount#deposit_with_metadata#1#to_deposit := debug#LibraAccount#deposit_with_metadata#1#to_deposit[Position(5450) := to_deposit];
+    assume (debug#LibraAccount#deposit_with_metadata#1#to_deposit#5450) == (to_deposit);
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 2, metadata);
-    debug#LibraAccount#deposit_with_metadata#2#metadata := debug#LibraAccount#deposit_with_metadata#2#metadata[Position(5450) := metadata];
+    assume (debug#LibraAccount#deposit_with_metadata#2#metadata#5450) == (metadata);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1593,40 +1548,33 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#0#payee: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#1#sender: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#2#to_deposit: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#3#metadata: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#4#deposit_value: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#5#payee_account_ref: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#6#sender_account_ref: [Position]Value;
+    var debug#LibraAccount#deposit_with_sender_and_metadata#0#payee#6415: Value;
+    var debug#LibraAccount#deposit_with_sender_and_metadata#1#sender#6415: Value;
+    var debug#LibraAccount#deposit_with_sender_and_metadata#2#to_deposit#6415: Value;
+    var debug#LibraAccount#deposit_with_sender_and_metadata#3#metadata#6415: Value;
+    var debug#LibraAccount#deposit_with_sender_and_metadata#4#deposit_value#7270: Value;
+    var debug#LibraAccount#deposit_with_sender_and_metadata#6#sender_account_ref#7406: Value;
+    var debug#LibraAccount#deposit_with_sender_and_metadata#5#payee_account_ref#7818: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 33;
-    debug#LibraAccount#deposit_with_sender_and_metadata#0#payee := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#1#sender := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#2#to_deposit := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#3#metadata := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#4#deposit_value := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#5#payee_account_ref := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#6#sender_account_ref := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#deposit_with_sender_and_metadata#0#payee := debug#LibraAccount#deposit_with_sender_and_metadata#0#payee[Position(6415) := payee];
+    assume (debug#LibraAccount#deposit_with_sender_and_metadata#0#payee#6415) == (payee);
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
-    debug#LibraAccount#deposit_with_sender_and_metadata#1#sender := debug#LibraAccount#deposit_with_sender_and_metadata#1#sender[Position(6415) := sender];
+    assume (debug#LibraAccount#deposit_with_sender_and_metadata#1#sender#6415) == (sender);
     assume is#Vector(to_deposit);
     __m := UpdateLocal(__m, __frame + 2, to_deposit);
-    debug#LibraAccount#deposit_with_sender_and_metadata#2#to_deposit := debug#LibraAccount#deposit_with_sender_and_metadata#2#to_deposit[Position(6415) := to_deposit];
+    assume (debug#LibraAccount#deposit_with_sender_and_metadata#2#to_deposit#6415) == (to_deposit);
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 3, metadata);
-    debug#LibraAccount#deposit_with_sender_and_metadata#3#metadata := debug#LibraAccount#deposit_with_sender_and_metadata#3#metadata[Position(6415) := metadata];
+    assume (debug#LibraAccount#deposit_with_sender_and_metadata#3#metadata#6415) == (metadata);
 
     // bytecode translation starts here
     call __t7 := BorrowLoc(__frame + 2);
@@ -1639,7 +1587,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
-    debug#LibraAccount#deposit_with_sender_and_metadata#4#deposit_value := debug#LibraAccount#deposit_with_sender_and_metadata#4#deposit_value[Position(7270) := __tmp];
+    assume (debug#LibraAccount#deposit_with_sender_and_metadata#4#deposit_value#7270) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -1760,24 +1708,22 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapa
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#mint_to_address#0#payee: [Position]Value;
-    var debug#LibraAccount#mint_to_address#1#amount: [Position]Value;
+    var debug#LibraAccount#mint_to_address#0#payee#8679: Value;
+    var debug#LibraAccount#mint_to_address#1#amount#8679: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 9;
-    debug#LibraAccount#mint_to_address#0#payee := EmptyPositionMap;
-    debug#LibraAccount#mint_to_address#1#amount := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#mint_to_address#0#payee := debug#LibraAccount#mint_to_address#0#payee[Position(8679) := payee];
+    assume (debug#LibraAccount#mint_to_address#0#payee#8679) == (payee);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraAccount#mint_to_address#1#amount := debug#LibraAccount#mint_to_address#1#amount[Position(8679) := amount];
+    assume (debug#LibraAccount#mint_to_address#1#amount#8679) == (amount);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1845,28 +1791,24 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(__m,
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#withdraw_from_account#0#account: [Position]Value;
-    var debug#LibraAccount#withdraw_from_account#1#amount: [Position]Value;
-    var debug#LibraAccount#withdraw_from_account#2#to_withdraw: [Position]Value;
-    var debug#LibraAccount#withdraw_from_account#3#__ret: [Position]Value;
+    var debug#LibraAccount#withdraw_from_account#0#account#10231: Value;
+    var debug#LibraAccount#withdraw_from_account#1#amount#10231: Value;
+    var debug#LibraAccount#withdraw_from_account#2#to_withdraw#10516: Value;
+    var debug#LibraAccount#withdraw_from_account#3#__ret#10600: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#LibraAccount#withdraw_from_account#0#account := EmptyPositionMap;
-    debug#LibraAccount#withdraw_from_account#1#amount := EmptyPositionMap;
-    debug#LibraAccount#withdraw_from_account#2#to_withdraw := EmptyPositionMap;
-    debug#LibraAccount#withdraw_from_account#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
     assume IsValidReferenceParameter(__m, __frame, account);
-    debug#LibraAccount#withdraw_from_account#0#account := debug#LibraAccount#withdraw_from_account#0#account[Position(10231) := Dereference(__m, account)];
+    assume (debug#LibraAccount#withdraw_from_account#0#account#10231) == (Dereference(__m, account));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraAccount#withdraw_from_account#1#amount := debug#LibraAccount#withdraw_from_account#1#amount[Position(10231) := amount];
+    assume (debug#LibraAccount#withdraw_from_account#1#amount#10231) == (amount);
 
     // bytecode translation starts here
     call __t3 := CopyOrMoveRef(account);
@@ -1884,20 +1826,19 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(__m,
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraAccount#withdraw_from_account#2#to_withdraw := debug#LibraAccount#withdraw_from_account#2#to_withdraw[Position(10516) := __tmp];
+    assume (debug#LibraAccount#withdraw_from_account#2#to_withdraw#10516) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    debug#LibraAccount#withdraw_from_account#3#__ret := debug#LibraAccount#withdraw_from_account#3#__ret[Position(10600) := __ret0];
+    assume (debug#LibraAccount#withdraw_from_account#3#__ret#10600) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#withdraw_from_account#3#__ret := debug#LibraAccount#withdraw_from_account#3#__ret[Position(10630) := __ret0];
 }
 
 procedure LibraAccount_withdraw_from_account_verify (account: Reference, amount: Value) returns (__ret0: Value)
@@ -1928,23 +1869,20 @@ ensures old(b#Boolean(SelectField(Dereference(__m, GetResourceReference(LibraAcc
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#withdraw_from_sender#0#amount: [Position]Value;
-    var debug#LibraAccount#withdraw_from_sender#1#sender_account: [Position]Value;
-    var debug#LibraAccount#withdraw_from_sender#2#__ret: [Position]Value;
+    var debug#LibraAccount#withdraw_from_sender#0#amount#10712: Value;
+    var debug#LibraAccount#withdraw_from_sender#1#sender_account#11129: Value;
+    var debug#LibraAccount#withdraw_from_sender#2#__ret#11484: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 11;
-    debug#LibraAccount#withdraw_from_sender#0#amount := EmptyPositionMap;
-    debug#LibraAccount#withdraw_from_sender#1#sender_account := EmptyPositionMap;
-    debug#LibraAccount#withdraw_from_sender#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 0, amount);
-    debug#LibraAccount#withdraw_from_sender#0#amount := debug#LibraAccount#withdraw_from_sender#0#amount[Position(10712) := amount];
+    assume (debug#LibraAccount#withdraw_from_sender#0#amount#10712) == (amount);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -1984,14 +1922,13 @@ Label_9:
     __m := UpdateLocal(__m, __frame + 10, __t10);
 
     __ret0 := GetLocal(__m, __frame + 10);
-    debug#LibraAccount#withdraw_from_sender#2#__ret := debug#LibraAccount#withdraw_from_sender#2#__ret[Position(11484) := __ret0];
+    assume (debug#LibraAccount#withdraw_from_sender#2#__ret#11484) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#withdraw_from_sender#2#__ret := debug#LibraAccount#withdraw_from_sender#2#__ret[Position(11569) := __ret0];
 }
 
 procedure LibraAccount_withdraw_from_sender_verify (amount: Value) returns (__ret0: Value)
@@ -2020,28 +1957,24 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#withdraw_with_capability#0#cap: [Position]Value;
-    var debug#LibraAccount#withdraw_with_capability#1#amount: [Position]Value;
-    var debug#LibraAccount#withdraw_with_capability#2#account: [Position]Value;
-    var debug#LibraAccount#withdraw_with_capability#3#__ret: [Position]Value;
+    var debug#LibraAccount#withdraw_with_capability#0#cap#11652: Value;
+    var debug#LibraAccount#withdraw_with_capability#1#amount#11652: Value;
+    var debug#LibraAccount#withdraw_with_capability#2#account#12125: Value;
+    var debug#LibraAccount#withdraw_with_capability#3#__ret#12194: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#LibraAccount#withdraw_with_capability#0#cap := EmptyPositionMap;
-    debug#LibraAccount#withdraw_with_capability#1#amount := EmptyPositionMap;
-    debug#LibraAccount#withdraw_with_capability#2#account := EmptyPositionMap;
-    debug#LibraAccount#withdraw_with_capability#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
     assume IsValidReferenceParameter(__m, __frame, cap);
-    debug#LibraAccount#withdraw_with_capability#0#cap := debug#LibraAccount#withdraw_with_capability#0#cap[Position(11652) := Dereference(__m, cap)];
+    assume (debug#LibraAccount#withdraw_with_capability#0#cap#11652) == (Dereference(__m, cap));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraAccount#withdraw_with_capability#1#amount := debug#LibraAccount#withdraw_with_capability#1#amount[Position(11652) := amount];
+    assume (debug#LibraAccount#withdraw_with_capability#1#amount#11652) == (amount);
 
     // bytecode translation starts here
     call __t3 := CopyOrMoveRef(cap);
@@ -2069,14 +2002,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     __m := UpdateLocal(__m, __frame + 9, __t9);
 
     __ret0 := GetLocal(__m, __frame + 9);
-    debug#LibraAccount#withdraw_with_capability#3#__ret := debug#LibraAccount#withdraw_with_capability#3#__ret[Position(12194) := __ret0];
+    assume (debug#LibraAccount#withdraw_with_capability#3#__ret#12194) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#withdraw_with_capability#3#__ret := debug#LibraAccount#withdraw_with_capability#3#__ret[Position(12262) := __ret0];
 }
 
 procedure LibraAccount_withdraw_with_capability_verify (cap: Reference, amount: Value) returns (__ret0: Value)
@@ -2112,20 +2044,16 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#extract_sender_withdrawal_capability#0#sender: [Position]Value;
-    var debug#LibraAccount#extract_sender_withdrawal_capability#1#sender_account: [Position]Value;
-    var debug#LibraAccount#extract_sender_withdrawal_capability#2#delegated_ref: [Position]Value;
-    var debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret: [Position]Value;
+    var debug#LibraAccount#extract_sender_withdrawal_capability#0#sender#12840: Value;
+    var debug#LibraAccount#extract_sender_withdrawal_capability#1#sender_account#12875: Value;
+    var debug#LibraAccount#extract_sender_withdrawal_capability#2#delegated_ref#12936: Value;
+    var debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret#13266: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 15;
-    debug#LibraAccount#extract_sender_withdrawal_capability#0#sender := EmptyPositionMap;
-    debug#LibraAccount#extract_sender_withdrawal_capability#1#sender_account := EmptyPositionMap;
-    debug#LibraAccount#extract_sender_withdrawal_capability#2#delegated_ref := EmptyPositionMap;
-    debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -2135,7 +2063,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#LibraAccount#extract_sender_withdrawal_capability#0#sender := debug#LibraAccount#extract_sender_withdrawal_capability#0#sender[Position(12840) := __tmp];
+    assume (debug#LibraAccount#extract_sender_withdrawal_capability#0#sender#12840) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -2180,14 +2108,13 @@ Label_13:
     __m := UpdateLocal(__m, __frame + 14, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 14);
-    debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret := debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret[Position(13266) := __ret0];
+    assume (debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret#13266) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret := debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret[Position(13343) := __ret0];
 }
 
 procedure LibraAccount_extract_sender_withdrawal_capability_verify () returns (__ret0: Value)
@@ -2216,23 +2143,20 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#restore_withdrawal_capability#0#cap: [Position]Value;
-    var debug#LibraAccount#restore_withdrawal_capability#1#account_address: [Position]Value;
-    var debug#LibraAccount#restore_withdrawal_capability#2#account: [Position]Value;
+    var debug#LibraAccount#restore_withdrawal_capability#0#cap#13429: Value;
+    var debug#LibraAccount#restore_withdrawal_capability#1#account_address#13808: Value;
+    var debug#LibraAccount#restore_withdrawal_capability#2#account#13847: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#LibraAccount#restore_withdrawal_capability#0#cap := EmptyPositionMap;
-    debug#LibraAccount#restore_withdrawal_capability#1#account_address := EmptyPositionMap;
-    debug#LibraAccount#restore_withdrawal_capability#2#account := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(cap);
     __m := UpdateLocal(__m, __frame + 0, cap);
-    debug#LibraAccount#restore_withdrawal_capability#0#cap := debug#LibraAccount#restore_withdrawal_capability#0#cap[Position(13429) := cap];
+    assume (debug#LibraAccount#restore_withdrawal_capability#0#cap#13429) == (cap);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2243,7 +2167,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#restore_withdrawal_capability#1#account_address := debug#LibraAccount#restore_withdrawal_capability#1#account_address[Position(13808) := __tmp];
+    assume (debug#LibraAccount#restore_withdrawal_capability#1#account_address#13808) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -2296,34 +2220,30 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(Boolean(!(b#Boolean(old(
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#pay_from_capability#0#payee: [Position]Value;
-    var debug#LibraAccount#pay_from_capability#1#cap: [Position]Value;
-    var debug#LibraAccount#pay_from_capability#2#amount: [Position]Value;
-    var debug#LibraAccount#pay_from_capability#3#metadata: [Position]Value;
+    var debug#LibraAccount#pay_from_capability#0#payee#14433: Value;
+    var debug#LibraAccount#pay_from_capability#1#cap#14433: Value;
+    var debug#LibraAccount#pay_from_capability#2#amount#14433: Value;
+    var debug#LibraAccount#pay_from_capability#3#metadata#14433: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 16;
-    debug#LibraAccount#pay_from_capability#0#payee := EmptyPositionMap;
-    debug#LibraAccount#pay_from_capability#1#cap := EmptyPositionMap;
-    debug#LibraAccount#pay_from_capability#2#amount := EmptyPositionMap;
-    debug#LibraAccount#pay_from_capability#3#metadata := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#pay_from_capability#0#payee := debug#LibraAccount#pay_from_capability#0#payee[Position(14433) := payee];
+    assume (debug#LibraAccount#pay_from_capability#0#payee#14433) == (payee);
     assume is#Vector(Dereference(__m, cap));
     assume IsValidReferenceParameter(__m, __frame, cap);
-    debug#LibraAccount#pay_from_capability#1#cap := debug#LibraAccount#pay_from_capability#1#cap[Position(14433) := Dereference(__m, cap)];
+    assume (debug#LibraAccount#pay_from_capability#1#cap#14433) == (Dereference(__m, cap));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 2, amount);
-    debug#LibraAccount#pay_from_capability#2#amount := debug#LibraAccount#pay_from_capability#2#amount[Position(14433) := amount];
+    assume (debug#LibraAccount#pay_from_capability#2#amount#14433) == (amount);
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 3, metadata);
-    debug#LibraAccount#pay_from_capability#3#metadata := debug#LibraAccount#pay_from_capability#3#metadata[Position(14433) := metadata];
+    assume (debug#LibraAccount#pay_from_capability#3#metadata#14433) == (metadata);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2412,29 +2332,26 @@ ensures old(b#Boolean(SelectField(Dereference(__m, GetResourceReference(LibraAcc
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#pay_from_sender_with_metadata#0#payee: [Position]Value;
-    var debug#LibraAccount#pay_from_sender_with_metadata#1#amount: [Position]Value;
-    var debug#LibraAccount#pay_from_sender_with_metadata#2#metadata: [Position]Value;
+    var debug#LibraAccount#pay_from_sender_with_metadata#0#payee#16060: Value;
+    var debug#LibraAccount#pay_from_sender_with_metadata#1#amount#16060: Value;
+    var debug#LibraAccount#pay_from_sender_with_metadata#2#metadata#16060: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 16;
-    debug#LibraAccount#pay_from_sender_with_metadata#0#payee := EmptyPositionMap;
-    debug#LibraAccount#pay_from_sender_with_metadata#1#amount := EmptyPositionMap;
-    debug#LibraAccount#pay_from_sender_with_metadata#2#metadata := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#pay_from_sender_with_metadata#0#payee := debug#LibraAccount#pay_from_sender_with_metadata#0#payee[Position(16060) := payee];
+    assume (debug#LibraAccount#pay_from_sender_with_metadata#0#payee#16060) == (payee);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraAccount#pay_from_sender_with_metadata#1#amount := debug#LibraAccount#pay_from_sender_with_metadata#1#amount[Position(16060) := amount];
+    assume (debug#LibraAccount#pay_from_sender_with_metadata#1#amount#16060) == (amount);
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 2, metadata);
-    debug#LibraAccount#pay_from_sender_with_metadata#2#metadata := debug#LibraAccount#pay_from_sender_with_metadata#2#metadata[Position(16060) := metadata];
+    assume (debug#LibraAccount#pay_from_sender_with_metadata#2#metadata#16060) == (metadata);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2530,24 +2447,22 @@ ensures old(b#Boolean(SelectField(Dereference(__m, GetResourceReference(LibraAcc
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#pay_from_sender#0#payee: [Position]Value;
-    var debug#LibraAccount#pay_from_sender#1#amount: [Position]Value;
+    var debug#LibraAccount#pay_from_sender#0#payee#17668: Value;
+    var debug#LibraAccount#pay_from_sender#1#amount#17668: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#LibraAccount#pay_from_sender#0#payee := EmptyPositionMap;
-    debug#LibraAccount#pay_from_sender#1#amount := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#pay_from_sender#0#payee := debug#LibraAccount#pay_from_sender#0#payee[Position(17668) := payee];
+    assume (debug#LibraAccount#pay_from_sender#0#payee#17668) == (payee);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraAccount#pay_from_sender#1#amount := debug#LibraAccount#pay_from_sender#1#amount[Position(17668) := amount];
+    assume (debug#LibraAccount#pay_from_sender#1#amount#17668) == (amount);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2606,24 +2521,22 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(Dereference(__m, account), LibraAc
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#rotate_authentication_key_for_account#0#account: [Position]Value;
-    var debug#LibraAccount#rotate_authentication_key_for_account#1#new_authentication_key: [Position]Value;
+    var debug#LibraAccount#rotate_authentication_key_for_account#0#account#18853: Value;
+    var debug#LibraAccount#rotate_authentication_key_for_account#1#new_authentication_key#18853: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraAccount#rotate_authentication_key_for_account#0#account := EmptyPositionMap;
-    debug#LibraAccount#rotate_authentication_key_for_account#1#new_authentication_key := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
     assume IsValidReferenceParameter(__m, __frame, account);
-    debug#LibraAccount#rotate_authentication_key_for_account#0#account := debug#LibraAccount#rotate_authentication_key_for_account#0#account[Position(18853) := Dereference(__m, account)];
+    assume (debug#LibraAccount#rotate_authentication_key_for_account#0#account#18853) == (Dereference(__m, account));
     assume is#ByteArray(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 1, new_authentication_key);
-    debug#LibraAccount#rotate_authentication_key_for_account#1#new_authentication_key := debug#LibraAccount#rotate_authentication_key_for_account#1#new_authentication_key[Position(18853) := new_authentication_key];
+    assume (debug#LibraAccount#rotate_authentication_key_for_account#1#new_authentication_key#18853) == (new_authentication_key);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
@@ -2668,21 +2581,19 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#rotate_authentication_key#0#new_authentication_key: [Position]Value;
-    var debug#LibraAccount#rotate_authentication_key#1#sender_account: [Position]Value;
+    var debug#LibraAccount#rotate_authentication_key#0#new_authentication_key#19253: Value;
+    var debug#LibraAccount#rotate_authentication_key#1#sender_account#19616: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#LibraAccount#rotate_authentication_key#0#new_authentication_key := EmptyPositionMap;
-    debug#LibraAccount#rotate_authentication_key#1#sender_account := EmptyPositionMap;
 
     // process and type check arguments
     assume is#ByteArray(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 0, new_authentication_key);
-    debug#LibraAccount#rotate_authentication_key#0#new_authentication_key := debug#LibraAccount#rotate_authentication_key#0#new_authentication_key[Position(19253) := new_authentication_key];
+    assume (debug#LibraAccount#rotate_authentication_key#0#new_authentication_key#19253) == (new_authentication_key);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -2746,24 +2657,22 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#rotate_authentication_key_with_capability#0#cap: [Position]Value;
-    var debug#LibraAccount#rotate_authentication_key_with_capability#1#new_authentication_key: [Position]Value;
+    var debug#LibraAccount#rotate_authentication_key_with_capability#0#cap#20225: Value;
+    var debug#LibraAccount#rotate_authentication_key_with_capability#1#new_authentication_key#20225: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#LibraAccount#rotate_authentication_key_with_capability#0#cap := EmptyPositionMap;
-    debug#LibraAccount#rotate_authentication_key_with_capability#1#new_authentication_key := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
     assume IsValidReferenceParameter(__m, __frame, cap);
-    debug#LibraAccount#rotate_authentication_key_with_capability#0#cap := debug#LibraAccount#rotate_authentication_key_with_capability#0#cap[Position(20225) := Dereference(__m, cap)];
+    assume (debug#LibraAccount#rotate_authentication_key_with_capability#0#cap#20225) == (Dereference(__m, cap));
     assume is#ByteArray(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 1, new_authentication_key);
-    debug#LibraAccount#rotate_authentication_key_with_capability#1#new_authentication_key := debug#LibraAccount#rotate_authentication_key_with_capability#1#new_authentication_key[Position(20225) := new_authentication_key];
+    assume (debug#LibraAccount#rotate_authentication_key_with_capability#1#new_authentication_key#20225) == (new_authentication_key);
 
     // bytecode translation starts here
     call __t2 := CopyOrMoveRef(cap);
@@ -2820,18 +2729,15 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#extract_sender_key_rotation_capability#0#sender: [Position]Value;
-    var debug#LibraAccount#extract_sender_key_rotation_capability#1#delegated_ref: [Position]Value;
-    var debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret: [Position]Value;
+    var debug#LibraAccount#extract_sender_key_rotation_capability#0#sender#21202: Value;
+    var debug#LibraAccount#extract_sender_key_rotation_capability#1#delegated_ref#21237: Value;
+    var debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret#21585: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 13;
-    debug#LibraAccount#extract_sender_key_rotation_capability#0#sender := EmptyPositionMap;
-    debug#LibraAccount#extract_sender_key_rotation_capability#1#delegated_ref := EmptyPositionMap;
-    debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -2841,7 +2747,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#LibraAccount#extract_sender_key_rotation_capability#0#sender := debug#LibraAccount#extract_sender_key_rotation_capability#0#sender[Position(21202) := __tmp];
+    assume (debug#LibraAccount#extract_sender_key_rotation_capability#0#sender#21202) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
@@ -2882,14 +2788,13 @@ Label_11:
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 12);
-    debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret := debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret[Position(21585) := __ret0];
+    assume (debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret#21585) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret := debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret[Position(21663) := __ret0];
 }
 
 procedure LibraAccount_extract_sender_key_rotation_capability_verify () returns (__ret0: Value)
@@ -2918,23 +2823,20 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#restore_key_rotation_capability#0#cap: [Position]Value;
-    var debug#LibraAccount#restore_key_rotation_capability#1#account_address: [Position]Value;
-    var debug#LibraAccount#restore_key_rotation_capability#2#account: [Position]Value;
+    var debug#LibraAccount#restore_key_rotation_capability#0#cap#21751: Value;
+    var debug#LibraAccount#restore_key_rotation_capability#1#account_address#22136: Value;
+    var debug#LibraAccount#restore_key_rotation_capability#2#account#22175: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#LibraAccount#restore_key_rotation_capability#0#cap := EmptyPositionMap;
-    debug#LibraAccount#restore_key_rotation_capability#1#account_address := EmptyPositionMap;
-    debug#LibraAccount#restore_key_rotation_capability#2#account := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(cap);
     __m := UpdateLocal(__m, __frame + 0, cap);
-    debug#LibraAccount#restore_key_rotation_capability#0#cap := debug#LibraAccount#restore_key_rotation_capability#0#cap[Position(21751) := cap];
+    assume (debug#LibraAccount#restore_key_rotation_capability#0#cap#21751) == (cap);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2945,7 +2847,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#restore_key_rotation_capability#1#account_address := debug#LibraAccount#restore_key_rotation_capability#1#account_address[Position(22136) := __tmp];
+    assume (debug#LibraAccount#restore_key_rotation_capability#1#account_address#22136) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -3008,21 +2910,24 @@ ensures old(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#create_account#0#fresh_address: [Position]Value;
-    var debug#LibraAccount#create_account#1#generator: [Position]Value;
+    var debug#LibraAccount#create_account#0#fresh_address#22651: Value;
+    var debug#LibraAccount#create_account#1#generator#23014: Value;
+    var debug#LibraAccount#create_account#1#generator#23069: Value;
+    var debug#LibraAccount#create_account#1#generator#23173: Value;
+    var debug#LibraAccount#create_account#1#generator#23249: Value;
+    var debug#LibraAccount#create_account#1#generator#23414: Value;
+    var debug#LibraAccount#create_account#1#generator#23535: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 19;
-    debug#LibraAccount#create_account#0#fresh_address := EmptyPositionMap;
-    debug#LibraAccount#create_account#1#generator := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(fresh_address);
     __m := UpdateLocal(__m, __frame + 0, fresh_address);
-    debug#LibraAccount#create_account#0#fresh_address := debug#LibraAccount#create_account#0#fresh_address[Position(22651) := fresh_address];
+    assume (debug#LibraAccount#create_account#0#fresh_address#22651) == (fresh_address);
 
     // bytecode translation starts here
     call __tmp := LdConst(0);
@@ -3033,7 +2938,7 @@ ensures old(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#create_account#1#generator := debug#LibraAccount#create_account#1#generator[Position(23014) := __tmp];
+    assume (debug#LibraAccount#create_account#1#generator#23014) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -3069,7 +2974,7 @@ ensures old(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address
     assume is#Vector(__t12);
 
     __m := UpdateLocal(__m, __frame + 12, __t12);
-    debug#LibraAccount#create_account#1#generator := debug#LibraAccount#create_account#1#generator[Position(23414) := GetLocal(__m, __frame + 1)];
+    assume (debug#LibraAccount#create_account#1#generator#23414) == (GetLocal(__m, __frame + 1));
 
     call __t13 := BorrowLoc(__frame + 1);
 
@@ -3081,7 +2986,7 @@ ensures old(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address
     assume is#Vector(__t15);
 
     __m := UpdateLocal(__m, __frame + 15, __t15);
-    debug#LibraAccount#create_account#1#generator := debug#LibraAccount#create_account#1#generator[Position(23535) := GetLocal(__m, __frame + 1)];
+    assume (debug#LibraAccount#create_account#1#generator#23535) == (GetLocal(__m, __frame + 1));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 16, __tmp);
@@ -3128,24 +3033,22 @@ ensures old(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#create_new_account#0#fresh_address: [Position]Value;
-    var debug#LibraAccount#create_new_account#1#initial_balance: [Position]Value;
+    var debug#LibraAccount#create_new_account#0#fresh_address#23890: Value;
+    var debug#LibraAccount#create_new_account#1#initial_balance#23890: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#LibraAccount#create_new_account#0#fresh_address := EmptyPositionMap;
-    debug#LibraAccount#create_new_account#1#initial_balance := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(fresh_address);
     __m := UpdateLocal(__m, __frame + 0, fresh_address);
-    debug#LibraAccount#create_new_account#0#fresh_address := debug#LibraAccount#create_new_account#0#fresh_address[Position(23890) := fresh_address];
+    assume (debug#LibraAccount#create_new_account#0#fresh_address#23890) == (fresh_address);
     assume IsValidU64(initial_balance);
     __m := UpdateLocal(__m, __frame + 1, initial_balance);
-    debug#LibraAccount#create_new_account#1#initial_balance := debug#LibraAccount#create_new_account#1#initial_balance[Position(23890) := initial_balance];
+    assume (debug#LibraAccount#create_new_account#1#initial_balance#23890) == (initial_balance);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3202,23 +3105,20 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(SelectField(Dereference(__
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#balance_for_account#0#account: [Position]Value;
-    var debug#LibraAccount#balance_for_account#1#balance_value: [Position]Value;
-    var debug#LibraAccount#balance_for_account#2#__ret: [Position]Value;
+    var debug#LibraAccount#balance_for_account#0#account#25151: Value;
+    var debug#LibraAccount#balance_for_account#1#balance_value#25285: Value;
+    var debug#LibraAccount#balance_for_account#2#__ret#25350: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 6;
-    debug#LibraAccount#balance_for_account#0#account := EmptyPositionMap;
-    debug#LibraAccount#balance_for_account#1#balance_value := EmptyPositionMap;
-    debug#LibraAccount#balance_for_account#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
     assume IsValidReferenceParameter(__m, __frame, account);
-    debug#LibraAccount#balance_for_account#0#account := debug#LibraAccount#balance_for_account#0#account[Position(25151) := Dereference(__m, account)];
+    assume (debug#LibraAccount#balance_for_account#0#account#25151) == (Dereference(__m, account));
 
     // bytecode translation starts here
     call __t2 := CopyOrMoveRef(account);
@@ -3233,20 +3133,19 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(SelectField(Dereference(__
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#balance_for_account#1#balance_value := debug#LibraAccount#balance_for_account#1#balance_value[Position(25285) := __tmp];
+    assume (debug#LibraAccount#balance_for_account#1#balance_value#25285) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 5);
-    debug#LibraAccount#balance_for_account#2#__ret := debug#LibraAccount#balance_for_account#2#__ret[Position(25350) := __ret0];
+    assume (debug#LibraAccount#balance_for_account#2#__ret#25350) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#balance_for_account#2#__ret := debug#LibraAccount#balance_for_account#2#__ret[Position(25382) := __ret0];
 }
 
 procedure LibraAccount_balance_for_account_verify (account: Reference) returns (__ret0: Value)
@@ -3269,21 +3168,19 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#balance#0#addr: [Position]Value;
-    var debug#LibraAccount#balance#1#__ret: [Position]Value;
+    var debug#LibraAccount#balance#0#addr#25470: Value;
+    var debug#LibraAccount#balance#1#__ret#25643: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraAccount#balance#0#addr := EmptyPositionMap;
-    debug#LibraAccount#balance#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    debug#LibraAccount#balance#0#addr := debug#LibraAccount#balance#0#addr[Position(25470) := addr];
+    assume (debug#LibraAccount#balance#0#addr#25470) == (addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3299,14 +3196,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraAccount#balance#1#__ret := debug#LibraAccount#balance#1#__ret[Position(25643) := __ret0];
+    assume (debug#LibraAccount#balance#1#__ret#25643) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#balance#1#__ret := debug#LibraAccount#balance#1#__ret[Position(25710) := __ret0];
 }
 
 procedure LibraAccount_balance_verify (addr: Value) returns (__ret0: Value)
@@ -3326,21 +3222,19 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, account),
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#sequence_number_for_account#0#account: [Position]Value;
-    var debug#LibraAccount#sequence_number_for_account#1#__ret: [Position]Value;
+    var debug#LibraAccount#sequence_number_for_account#0#account#25787: Value;
+    var debug#LibraAccount#sequence_number_for_account#1#__ret#25899: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraAccount#sequence_number_for_account#0#account := EmptyPositionMap;
-    debug#LibraAccount#sequence_number_for_account#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
     assume IsValidReferenceParameter(__m, __frame, account);
-    debug#LibraAccount#sequence_number_for_account#0#account := debug#LibraAccount#sequence_number_for_account#0#account[Position(25787) := Dereference(__m, account)];
+    assume (debug#LibraAccount#sequence_number_for_account#0#account#25787) == (Dereference(__m, account));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(account);
@@ -3352,14 +3246,13 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, account),
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraAccount#sequence_number_for_account#1#__ret := debug#LibraAccount#sequence_number_for_account#1#__ret[Position(25899) := __ret0];
+    assume (debug#LibraAccount#sequence_number_for_account#1#__ret#25899) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#sequence_number_for_account#1#__ret := debug#LibraAccount#sequence_number_for_account#1#__ret[Position(25945) := __ret0];
 }
 
 procedure LibraAccount_sequence_number_for_account_verify (account: Reference) returns (__ret0: Value)
@@ -3382,21 +3275,19 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#sequence_number#0#addr: [Position]Value;
-    var debug#LibraAccount#sequence_number#1#__ret: [Position]Value;
+    var debug#LibraAccount#sequence_number#0#addr#26004: Value;
+    var debug#LibraAccount#sequence_number#1#__ret#26187: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraAccount#sequence_number#0#addr := EmptyPositionMap;
-    debug#LibraAccount#sequence_number#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    debug#LibraAccount#sequence_number#0#addr := debug#LibraAccount#sequence_number#0#addr[Position(26004) := addr];
+    assume (debug#LibraAccount#sequence_number#0#addr#26004) == (addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3412,14 +3303,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraAccount#sequence_number#1#__ret := debug#LibraAccount#sequence_number#1#__ret[Position(26187) := __ret0];
+    assume (debug#LibraAccount#sequence_number#1#__ret#26187) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#sequence_number#1#__ret := debug#LibraAccount#sequence_number#1#__ret[Position(26262) := __ret0];
 }
 
 procedure LibraAccount_sequence_number_verify (addr: Value) returns (__ret0: Value)
@@ -3443,21 +3333,19 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#delegated_key_rotation_capability#0#addr: [Position]Value;
-    var debug#LibraAccount#delegated_key_rotation_capability#1#__ret: [Position]Value;
+    var debug#LibraAccount#delegated_key_rotation_capability#0#addr#26354: Value;
+    var debug#LibraAccount#delegated_key_rotation_capability#1#__ret#26574: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraAccount#delegated_key_rotation_capability#0#addr := EmptyPositionMap;
-    debug#LibraAccount#delegated_key_rotation_capability#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    debug#LibraAccount#delegated_key_rotation_capability#0#addr := debug#LibraAccount#delegated_key_rotation_capability#0#addr[Position(26354) := addr];
+    assume (debug#LibraAccount#delegated_key_rotation_capability#0#addr#26354) == (addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3473,14 +3361,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#LibraAccount#delegated_key_rotation_capability#1#__ret := debug#LibraAccount#delegated_key_rotation_capability#1#__ret[Position(26574) := __ret0];
+    assume (debug#LibraAccount#delegated_key_rotation_capability#1#__ret#26574) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#delegated_key_rotation_capability#1#__ret := debug#LibraAccount#delegated_key_rotation_capability#1#__ret[Position(26653) := __ret0];
 }
 
 procedure LibraAccount_delegated_key_rotation_capability_verify (addr: Value) returns (__ret0: Value)
@@ -3504,21 +3391,19 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#delegated_withdrawal_capability#0#addr: [Position]Value;
-    var debug#LibraAccount#delegated_withdrawal_capability#1#__ret: [Position]Value;
+    var debug#LibraAccount#delegated_withdrawal_capability#0#addr#26744: Value;
+    var debug#LibraAccount#delegated_withdrawal_capability#1#__ret#26960: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraAccount#delegated_withdrawal_capability#0#addr := EmptyPositionMap;
-    debug#LibraAccount#delegated_withdrawal_capability#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    debug#LibraAccount#delegated_withdrawal_capability#0#addr := debug#LibraAccount#delegated_withdrawal_capability#0#addr[Position(26744) := addr];
+    assume (debug#LibraAccount#delegated_withdrawal_capability#0#addr#26744) == (addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3534,14 +3419,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#LibraAccount#delegated_withdrawal_capability#1#__ret := debug#LibraAccount#delegated_withdrawal_capability#1#__ret[Position(26960) := __ret0];
+    assume (debug#LibraAccount#delegated_withdrawal_capability#1#__ret#26960) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#delegated_withdrawal_capability#1#__ret := debug#LibraAccount#delegated_withdrawal_capability#1#__ret[Position(27037) := __ret0];
 }
 
 procedure LibraAccount_delegated_withdrawal_capability_verify (addr: Value) returns (__ret0: Value)
@@ -3560,21 +3444,19 @@ ensures b#Boolean(Boolean((__ret0) == (SelectFieldFromRef(cap, LibraAccount_With
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#withdrawal_capability_address#0#cap: [Position]Value;
-    var debug#LibraAccount#withdrawal_capability_address#1#__ret: [Position]Value;
+    var debug#LibraAccount#withdrawal_capability_address#0#cap#27134: Value;
+    var debug#LibraAccount#withdrawal_capability_address#1#__ret#27273: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#LibraAccount#withdrawal_capability_address#0#cap := EmptyPositionMap;
-    debug#LibraAccount#withdrawal_capability_address#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
     assume IsValidReferenceParameter(__m, __frame, cap);
-    debug#LibraAccount#withdrawal_capability_address#0#cap := debug#LibraAccount#withdrawal_capability_address#0#cap[Position(27134) := Dereference(__m, cap)];
+    assume (debug#LibraAccount#withdrawal_capability_address#0#cap#27134) == (Dereference(__m, cap));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(cap);
@@ -3582,14 +3464,13 @@ ensures b#Boolean(Boolean((__ret0) == (SelectFieldFromRef(cap, LibraAccount_With
     call __t2 := BorrowField(__t1, LibraAccount_WithdrawalCapability_account_address);
 
     __ret0 := __t2;
-    debug#LibraAccount#withdrawal_capability_address#1#__ret := debug#LibraAccount#withdrawal_capability_address#1#__ret[Position(27273) := Dereference(__m, __ret0)];
+    assume (debug#LibraAccount#withdrawal_capability_address#1#__ret#27273) == (Dereference(__m, __ret0));
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultReference;
-    debug#LibraAccount#withdrawal_capability_address#1#__ret := debug#LibraAccount#withdrawal_capability_address#1#__ret[Position(27312) := Dereference(__m, __ret0)];
 }
 
 procedure LibraAccount_withdrawal_capability_address_verify (cap: Reference) returns (__ret0: Reference)
@@ -3608,21 +3489,19 @@ ensures b#Boolean(Boolean((__ret0) == (SelectFieldFromRef(cap, LibraAccount_KeyR
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#key_rotation_capability_address#0#cap: [Position]Value;
-    var debug#LibraAccount#key_rotation_capability_address#1#__ret: [Position]Value;
+    var debug#LibraAccount#key_rotation_capability_address#0#cap#27410: Value;
+    var debug#LibraAccount#key_rotation_capability_address#1#__ret#27551: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#LibraAccount#key_rotation_capability_address#0#cap := EmptyPositionMap;
-    debug#LibraAccount#key_rotation_capability_address#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
     assume IsValidReferenceParameter(__m, __frame, cap);
-    debug#LibraAccount#key_rotation_capability_address#0#cap := debug#LibraAccount#key_rotation_capability_address#0#cap[Position(27410) := Dereference(__m, cap)];
+    assume (debug#LibraAccount#key_rotation_capability_address#0#cap#27410) == (Dereference(__m, cap));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(cap);
@@ -3630,14 +3509,13 @@ ensures b#Boolean(Boolean((__ret0) == (SelectFieldFromRef(cap, LibraAccount_KeyR
     call __t2 := BorrowField(__t1, LibraAccount_KeyRotationCapability_account_address);
 
     __ret0 := __t2;
-    debug#LibraAccount#key_rotation_capability_address#1#__ret := debug#LibraAccount#key_rotation_capability_address#1#__ret[Position(27551) := Dereference(__m, __ret0)];
+    assume (debug#LibraAccount#key_rotation_capability_address#1#__ret#27551) == (Dereference(__m, __ret0));
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultReference;
-    debug#LibraAccount#key_rotation_capability_address#1#__ret := debug#LibraAccount#key_rotation_capability_address#1#__ret[Position(27590) := Dereference(__m, __ret0)];
 }
 
 procedure LibraAccount_key_rotation_capability_address_verify (cap: Reference) returns (__ret0: Reference)
@@ -3656,21 +3534,19 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, ExistsResource(__m, LibraAccount_T_typ
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#exists#0#check_addr: [Position]Value;
-    var debug#LibraAccount#exists#1#__ret: [Position]Value;
+    var debug#LibraAccount#exists#0#check_addr#27648: Value;
+    var debug#LibraAccount#exists#1#__ret#27760: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#LibraAccount#exists#0#check_addr := EmptyPositionMap;
-    debug#LibraAccount#exists#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(check_addr);
     __m := UpdateLocal(__m, __frame + 0, check_addr);
-    debug#LibraAccount#exists#0#check_addr := debug#LibraAccount#exists#0#check_addr[Position(27648) := check_addr];
+    assume (debug#LibraAccount#exists#0#check_addr#27648) == (check_addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3680,14 +3556,13 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, ExistsResource(__m, LibraAccount_T_typ
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    debug#LibraAccount#exists#1#__ret := debug#LibraAccount#exists#1#__ret[Position(27760) := __ret0];
+    assume (debug#LibraAccount#exists#1#__ret#27760) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#exists#1#__ret := debug#LibraAccount#exists#1#__ret[Position(27800) := __ret0];
 }
 
 procedure LibraAccount_exists_verify (check_addr: Value) returns (__ret0: Value)
@@ -3749,46 +3624,36 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#prologue#0#txn_sequence_number: [Position]Value;
-    var debug#LibraAccount#prologue#1#txn_public_key: [Position]Value;
-    var debug#LibraAccount#prologue#2#txn_gas_price: [Position]Value;
-    var debug#LibraAccount#prologue#3#txn_max_gas_units: [Position]Value;
-    var debug#LibraAccount#prologue#4#transaction_sender: [Position]Value;
-    var debug#LibraAccount#prologue#5#sender_account: [Position]Value;
-    var debug#LibraAccount#prologue#6#imm_sender_account: [Position]Value;
-    var debug#LibraAccount#prologue#7#max_transaction_fee: [Position]Value;
-    var debug#LibraAccount#prologue#8#balance_amount: [Position]Value;
-    var debug#LibraAccount#prologue#9#sequence_number_value: [Position]Value;
+    var debug#LibraAccount#prologue#0#txn_sequence_number#28109: Value;
+    var debug#LibraAccount#prologue#1#txn_public_key#28109: Value;
+    var debug#LibraAccount#prologue#2#txn_gas_price#28109: Value;
+    var debug#LibraAccount#prologue#3#txn_max_gas_units#28109: Value;
+    var debug#LibraAccount#prologue#4#transaction_sender#28510: Value;
+    var debug#LibraAccount#prologue#5#sender_account#28780: Value;
+    var debug#LibraAccount#prologue#7#max_transaction_fee#29158: Value;
+    var debug#LibraAccount#prologue#6#imm_sender_account#29235: Value;
+    var debug#LibraAccount#prologue#8#balance_amount#29294: Value;
+    var debug#LibraAccount#prologue#9#sequence_number_value#29539: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 50;
-    debug#LibraAccount#prologue#0#txn_sequence_number := EmptyPositionMap;
-    debug#LibraAccount#prologue#1#txn_public_key := EmptyPositionMap;
-    debug#LibraAccount#prologue#2#txn_gas_price := EmptyPositionMap;
-    debug#LibraAccount#prologue#3#txn_max_gas_units := EmptyPositionMap;
-    debug#LibraAccount#prologue#4#transaction_sender := EmptyPositionMap;
-    debug#LibraAccount#prologue#5#sender_account := EmptyPositionMap;
-    debug#LibraAccount#prologue#6#imm_sender_account := EmptyPositionMap;
-    debug#LibraAccount#prologue#7#max_transaction_fee := EmptyPositionMap;
-    debug#LibraAccount#prologue#8#balance_amount := EmptyPositionMap;
-    debug#LibraAccount#prologue#9#sequence_number_value := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(txn_sequence_number);
     __m := UpdateLocal(__m, __frame + 0, txn_sequence_number);
-    debug#LibraAccount#prologue#0#txn_sequence_number := debug#LibraAccount#prologue#0#txn_sequence_number[Position(28109) := txn_sequence_number];
+    assume (debug#LibraAccount#prologue#0#txn_sequence_number#28109) == (txn_sequence_number);
     assume is#ByteArray(txn_public_key);
     __m := UpdateLocal(__m, __frame + 1, txn_public_key);
-    debug#LibraAccount#prologue#1#txn_public_key := debug#LibraAccount#prologue#1#txn_public_key[Position(28109) := txn_public_key];
+    assume (debug#LibraAccount#prologue#1#txn_public_key#28109) == (txn_public_key);
     assume IsValidU64(txn_gas_price);
     __m := UpdateLocal(__m, __frame + 2, txn_gas_price);
-    debug#LibraAccount#prologue#2#txn_gas_price := debug#LibraAccount#prologue#2#txn_gas_price[Position(28109) := txn_gas_price];
+    assume (debug#LibraAccount#prologue#2#txn_gas_price#28109) == (txn_gas_price);
     assume IsValidU64(txn_max_gas_units);
     __m := UpdateLocal(__m, __frame + 3, txn_max_gas_units);
-    debug#LibraAccount#prologue#3#txn_max_gas_units := debug#LibraAccount#prologue#3#txn_max_gas_units[Position(28109) := txn_max_gas_units];
+    assume (debug#LibraAccount#prologue#3#txn_max_gas_units#28109) == (txn_max_gas_units);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -3796,7 +3661,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 10));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
-    debug#LibraAccount#prologue#4#transaction_sender := debug#LibraAccount#prologue#4#transaction_sender[Position(28510) := __tmp];
+    assume (debug#LibraAccount#prologue#4#transaction_sender#28510) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 11, __tmp);
@@ -3868,7 +3733,7 @@ Label_21:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 27));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
-    debug#LibraAccount#prologue#7#max_transaction_fee := debug#LibraAccount#prologue#7#max_transaction_fee[Position(29158) := __tmp];
+    assume (debug#LibraAccount#prologue#7#max_transaction_fee#29158) == (__tmp);
 
     call __t28 := CopyOrMoveRef(sender_account);
 
@@ -3886,7 +3751,7 @@ Label_21:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 31));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
-    debug#LibraAccount#prologue#8#balance_amount := debug#LibraAccount#prologue#8#balance_amount[Position(29294) := __tmp];
+    assume (debug#LibraAccount#prologue#8#balance_amount#29294) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 32, __tmp);
@@ -3919,7 +3784,7 @@ Label_38:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 39));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
-    debug#LibraAccount#prologue#9#sequence_number_value := debug#LibraAccount#prologue#9#sequence_number_value[Position(29539) := __tmp];
+    assume (debug#LibraAccount#prologue#9#sequence_number_value#29539) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 40, __tmp);
@@ -4016,44 +3881,35 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#epilogue#0#txn_sequence_number: [Position]Value;
-    var debug#LibraAccount#epilogue#1#txn_gas_price: [Position]Value;
-    var debug#LibraAccount#epilogue#2#txn_max_gas_units: [Position]Value;
-    var debug#LibraAccount#epilogue#3#gas_units_remaining: [Position]Value;
-    var debug#LibraAccount#epilogue#4#sender_account: [Position]Value;
-    var debug#LibraAccount#epilogue#5#transaction_fee_account: [Position]Value;
-    var debug#LibraAccount#epilogue#6#imm_sender_account: [Position]Value;
-    var debug#LibraAccount#epilogue#7#transaction_fee_amount: [Position]Value;
-    var debug#LibraAccount#epilogue#8#transaction_fee: [Position]Value;
+    var debug#LibraAccount#epilogue#0#txn_sequence_number#29902: Value;
+    var debug#LibraAccount#epilogue#1#txn_gas_price#29902: Value;
+    var debug#LibraAccount#epilogue#2#txn_max_gas_units#29902: Value;
+    var debug#LibraAccount#epilogue#3#gas_units_remaining#29902: Value;
+    var debug#LibraAccount#epilogue#4#sender_account#30331: Value;
+    var debug#LibraAccount#epilogue#7#transaction_fee_amount#30423: Value;
+    var debug#LibraAccount#epilogue#6#imm_sender_account#30545: Value;
+    var debug#LibraAccount#epilogue#8#transaction_fee#30741: Value;
+    var debug#LibraAccount#epilogue#5#transaction_fee_account#31092: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 37;
-    debug#LibraAccount#epilogue#0#txn_sequence_number := EmptyPositionMap;
-    debug#LibraAccount#epilogue#1#txn_gas_price := EmptyPositionMap;
-    debug#LibraAccount#epilogue#2#txn_max_gas_units := EmptyPositionMap;
-    debug#LibraAccount#epilogue#3#gas_units_remaining := EmptyPositionMap;
-    debug#LibraAccount#epilogue#4#sender_account := EmptyPositionMap;
-    debug#LibraAccount#epilogue#5#transaction_fee_account := EmptyPositionMap;
-    debug#LibraAccount#epilogue#6#imm_sender_account := EmptyPositionMap;
-    debug#LibraAccount#epilogue#7#transaction_fee_amount := EmptyPositionMap;
-    debug#LibraAccount#epilogue#8#transaction_fee := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(txn_sequence_number);
     __m := UpdateLocal(__m, __frame + 0, txn_sequence_number);
-    debug#LibraAccount#epilogue#0#txn_sequence_number := debug#LibraAccount#epilogue#0#txn_sequence_number[Position(29902) := txn_sequence_number];
+    assume (debug#LibraAccount#epilogue#0#txn_sequence_number#29902) == (txn_sequence_number);
     assume IsValidU64(txn_gas_price);
     __m := UpdateLocal(__m, __frame + 1, txn_gas_price);
-    debug#LibraAccount#epilogue#1#txn_gas_price := debug#LibraAccount#epilogue#1#txn_gas_price[Position(29902) := txn_gas_price];
+    assume (debug#LibraAccount#epilogue#1#txn_gas_price#29902) == (txn_gas_price);
     assume IsValidU64(txn_max_gas_units);
     __m := UpdateLocal(__m, __frame + 2, txn_max_gas_units);
-    debug#LibraAccount#epilogue#2#txn_max_gas_units := debug#LibraAccount#epilogue#2#txn_max_gas_units[Position(29902) := txn_max_gas_units];
+    assume (debug#LibraAccount#epilogue#2#txn_max_gas_units#29902) == (txn_max_gas_units);
     assume IsValidU64(gas_units_remaining);
     __m := UpdateLocal(__m, __frame + 3, gas_units_remaining);
-    debug#LibraAccount#epilogue#3#gas_units_remaining := debug#LibraAccount#epilogue#3#gas_units_remaining[Position(29902) := gas_units_remaining];
+    assume (debug#LibraAccount#epilogue#3#gas_units_remaining#29902) == (gas_units_remaining);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -4083,7 +3939,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 15));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
-    debug#LibraAccount#epilogue#7#transaction_fee_amount := debug#LibraAccount#epilogue#7#transaction_fee_amount[Position(30423) := __tmp];
+    assume (debug#LibraAccount#epilogue#7#transaction_fee_amount#30423) == (__tmp);
 
     call __t16 := CopyOrMoveRef(sender_account);
 
@@ -4130,7 +3986,7 @@ Label_20:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 26));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
-    debug#LibraAccount#epilogue#8#transaction_fee := debug#LibraAccount#epilogue#8#transaction_fee[Position(30741) := __tmp];
+    assume (debug#LibraAccount#epilogue#8#transaction_fee#30741) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 27, __tmp);
@@ -4209,34 +4065,27 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#fresh_guid#0#counter: [Position]Value;
-    var debug#LibraAccount#fresh_guid#1#sender: [Position]Value;
-    var debug#LibraAccount#fresh_guid#2#count: [Position]Value;
-    var debug#LibraAccount#fresh_guid#3#count_bytes: [Position]Value;
-    var debug#LibraAccount#fresh_guid#4#preimage: [Position]Value;
-    var debug#LibraAccount#fresh_guid#5#sender_bytes: [Position]Value;
-    var debug#LibraAccount#fresh_guid#6#__ret: [Position]Value;
+    var debug#LibraAccount#fresh_guid#0#counter#31860: Value;
+    var debug#LibraAccount#fresh_guid#1#sender#31860: Value;
+    var debug#LibraAccount#fresh_guid#2#count#32140: Value;
+    var debug#LibraAccount#fresh_guid#5#sender_bytes#32184: Value;
+    var debug#LibraAccount#fresh_guid#3#count_bytes#32252: Value;
+    var debug#LibraAccount#fresh_guid#4#preimage#32449: Value;
+    var debug#LibraAccount#fresh_guid#6#__ret#32540: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 22;
-    debug#LibraAccount#fresh_guid#0#counter := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#1#sender := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#2#count := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#3#count_bytes := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#4#preimage := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#5#sender_bytes := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#6#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, counter));
     assume IsValidReferenceParameter(__m, __frame, counter);
-    debug#LibraAccount#fresh_guid#0#counter := debug#LibraAccount#fresh_guid#0#counter[Position(31860) := Dereference(__m, counter)];
+    assume (debug#LibraAccount#fresh_guid#0#counter#31860) == (Dereference(__m, counter));
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
-    debug#LibraAccount#fresh_guid#1#sender := debug#LibraAccount#fresh_guid#1#sender[Position(31860) := sender];
+    assume (debug#LibraAccount#fresh_guid#1#sender#31860) == (sender);
 
     // bytecode translation starts here
     call __t6 := CopyOrMoveRef(counter);
@@ -4256,7 +4105,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
-    debug#LibraAccount#fresh_guid#5#sender_bytes := debug#LibraAccount#fresh_guid#5#sender_bytes[Position(32184) := __tmp];
+    assume (debug#LibraAccount#fresh_guid#5#sender_bytes#32184) == (__tmp);
 
     call __t10 := CopyOrMoveRef(count);
 
@@ -4272,7 +4121,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 12));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraAccount#fresh_guid#3#count_bytes := debug#LibraAccount#fresh_guid#3#count_bytes[Position(32252) := __tmp];
+    assume (debug#LibraAccount#fresh_guid#3#count_bytes#32252) == (__tmp);
 
     call __t13 := CopyOrMoveRef(count);
 
@@ -4305,20 +4154,19 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 20));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
-    debug#LibraAccount#fresh_guid#4#preimage := debug#LibraAccount#fresh_guid#4#preimage[Position(32449) := __tmp];
+    assume (debug#LibraAccount#fresh_guid#4#preimage#32449) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 21, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 21);
-    debug#LibraAccount#fresh_guid#6#__ret := debug#LibraAccount#fresh_guid#6#__ret[Position(32540) := __ret0];
+    assume (debug#LibraAccount#fresh_guid#6#__ret#32540) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#fresh_guid#6#__ret := debug#LibraAccount#fresh_guid#6#__ret[Position(32567) := __ret0];
 }
 
 procedure LibraAccount_fresh_guid_verify (counter: Reference, sender: Value) returns (__ret0: Value)
@@ -4342,26 +4190,23 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#new_event_handle_impl#0#counter: [Position]Value;
-    var debug#LibraAccount#new_event_handle_impl#1#sender: [Position]Value;
-    var debug#LibraAccount#new_event_handle_impl#2#__ret: [Position]Value;
+    var debug#LibraAccount#new_event_handle_impl#0#counter#32671: Value;
+    var debug#LibraAccount#new_event_handle_impl#1#sender#32671: Value;
+    var debug#LibraAccount#new_event_handle_impl#2#__ret#32853: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#LibraAccount#new_event_handle_impl#0#counter := EmptyPositionMap;
-    debug#LibraAccount#new_event_handle_impl#1#sender := EmptyPositionMap;
-    debug#LibraAccount#new_event_handle_impl#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, counter));
     assume IsValidReferenceParameter(__m, __frame, counter);
-    debug#LibraAccount#new_event_handle_impl#0#counter := debug#LibraAccount#new_event_handle_impl#0#counter[Position(32671) := Dereference(__m, counter)];
+    assume (debug#LibraAccount#new_event_handle_impl#0#counter#32671) == (Dereference(__m, counter));
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
-    debug#LibraAccount#new_event_handle_impl#1#sender := debug#LibraAccount#new_event_handle_impl#1#sender[Position(32671) := sender];
+    assume (debug#LibraAccount#new_event_handle_impl#1#sender#32671) == (sender);
 
     // bytecode translation starts here
     call __tmp := LdConst(0);
@@ -4382,14 +4227,13 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    debug#LibraAccount#new_event_handle_impl#2#__ret := debug#LibraAccount#new_event_handle_impl#2#__ret[Position(32853) := __ret0];
+    assume (debug#LibraAccount#new_event_handle_impl#2#__ret#32853) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#new_event_handle_impl#2#__ret := debug#LibraAccount#new_event_handle_impl#2#__ret[Position(32945) := __ret0];
 }
 
 procedure LibraAccount_new_event_handle_impl_verify (tv0: TypeValue, counter: Reference, sender: Value) returns (__ret0: Value)
@@ -4416,18 +4260,14 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectFiel
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#new_event_handle#0#sender_account_ref: [Position]Value;
-    var debug#LibraAccount#new_event_handle#1#sender_bytes: [Position]Value;
-    var debug#LibraAccount#new_event_handle#2#__ret: [Position]Value;
+    var debug#LibraAccount#new_event_handle#0#sender_account_ref#33314: Value;
+    var debug#LibraAccount#new_event_handle#2#__ret#33383: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#LibraAccount#new_event_handle#0#sender_account_ref := EmptyPositionMap;
-    debug#LibraAccount#new_event_handle#1#sender_bytes := EmptyPositionMap;
-    debug#LibraAccount#new_event_handle#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -4454,14 +4294,13 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectFiel
     __m := UpdateLocal(__m, __frame + 7, __t7);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    debug#LibraAccount#new_event_handle#2#__ret := debug#LibraAccount#new_event_handle#2#__ret[Position(33383) := __ret0];
+    assume (debug#LibraAccount#new_event_handle#2#__ret#33383) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#new_event_handle#2#__ret := debug#LibraAccount#new_event_handle#2#__ret[Position(33492) := __ret0];
 }
 
 procedure LibraAccount_new_event_handle_verify (tv0: TypeValue) returns (__ret0: Value)
@@ -4496,27 +4335,23 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#emit_event#0#handle_ref: [Position]Value;
-    var debug#LibraAccount#emit_event#1#msg: [Position]Value;
-    var debug#LibraAccount#emit_event#2#count: [Position]Value;
-    var debug#LibraAccount#emit_event#3#guid: [Position]Value;
+    var debug#LibraAccount#emit_event#0#handle_ref#33671: Value;
+    var debug#LibraAccount#emit_event#1#msg#33671: Value;
+    var debug#LibraAccount#emit_event#3#guid#33878: Value;
+    var debug#LibraAccount#emit_event#2#count#33918: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 18;
-    debug#LibraAccount#emit_event#0#handle_ref := EmptyPositionMap;
-    debug#LibraAccount#emit_event#1#msg := EmptyPositionMap;
-    debug#LibraAccount#emit_event#2#count := EmptyPositionMap;
-    debug#LibraAccount#emit_event#3#guid := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, handle_ref));
     assume IsValidReferenceParameter(__m, __frame, handle_ref);
-    debug#LibraAccount#emit_event#0#handle_ref := debug#LibraAccount#emit_event#0#handle_ref[Position(33671) := Dereference(__m, handle_ref)];
+    assume (debug#LibraAccount#emit_event#0#handle_ref#33671) == (Dereference(__m, handle_ref));
     __m := UpdateLocal(__m, __frame + 1, msg);
-    debug#LibraAccount#emit_event#1#msg := debug#LibraAccount#emit_event#1#msg[Position(33671) := msg];
+    assume (debug#LibraAccount#emit_event#1#msg#33671) == (msg);
 
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(handle_ref);
@@ -4529,7 +4364,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraAccount#emit_event#3#guid := debug#LibraAccount#emit_event#3#guid[Position(33878) := __tmp];
+    assume (debug#LibraAccount#emit_event#3#guid#33878) == (__tmp);
 
     call __t7 := CopyOrMoveRef(handle_ref);
 
@@ -4597,23 +4432,20 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#destroy_handle#0#handle: [Position]Value;
-    var debug#LibraAccount#destroy_handle#1#guid: [Position]Value;
-    var debug#LibraAccount#destroy_handle#2#count: [Position]Value;
+    var debug#LibraAccount#destroy_handle#0#handle#34391: Value;
+    var debug#LibraAccount#destroy_handle#2#count#34567: Value;
+    var debug#LibraAccount#destroy_handle#1#guid#34574: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 6;
-    debug#LibraAccount#destroy_handle#0#handle := EmptyPositionMap;
-    debug#LibraAccount#destroy_handle#1#guid := EmptyPositionMap;
-    debug#LibraAccount#destroy_handle#2#count := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(handle);
     __m := UpdateLocal(__m, __frame + 0, handle);
-    debug#LibraAccount#destroy_handle#0#handle := debug#LibraAccount#destroy_handle#0#handle[Position(34391) := handle];
+    assume (debug#LibraAccount#destroy_handle#0#handle#34391) == (handle);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -4625,11 +4457,11 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#destroy_handle#1#guid := debug#LibraAccount#destroy_handle#1#guid[Position(34574) := __tmp];
+    assume (debug#LibraAccount#destroy_handle#1#guid#34574) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraAccount#destroy_handle#2#count := debug#LibraAccount#destroy_handle#2#count[Position(34567) := __tmp];
+    assume (debug#LibraAccount#destroy_handle#2#count#34567) == (__tmp);
 
     return;
 

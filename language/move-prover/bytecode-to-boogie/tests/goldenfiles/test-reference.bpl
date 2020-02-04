@@ -34,19 +34,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestReference#mut_b#0#b: [Position]Value;
+    var debug#TestReference#mut_b#0#b#71: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#TestReference#mut_b#0#b := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(Dereference(__m, b));
     assume IsValidReferenceParameter(__m, __frame, b);
-    debug#TestReference#mut_b#0#b := debug#TestReference#mut_b#0#b[Position(71) := Dereference(__m, b)];
+    assume (debug#TestReference#mut_b#0#b#71) == (Dereference(__m, b));
 
     // bytecode translation starts here
     call __tmp := LdConst(10);
@@ -91,16 +90,16 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestReference#mut_ref#0#b: [Position]Value;
-    var debug#TestReference#mut_ref#1#b_ref: [Position]Value;
+    var debug#TestReference#mut_ref#0#b#249: Value;
+    var debug#TestReference#mut_ref#1#b_ref#265: Value;
+    var debug#TestReference#mut_ref#0#b#346: Value;
+    var debug#TestReference#mut_ref#0#b#379: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 12;
-    debug#TestReference#mut_ref#0#b := EmptyPositionMap;
-    debug#TestReference#mut_ref#1#b_ref := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -110,7 +109,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#TestReference#mut_ref#0#b := debug#TestReference#mut_ref#0#b[Position(249) := __tmp];
+    assume (debug#TestReference#mut_ref#0#b#249) == (__tmp);
 
     call __t3 := BorrowLoc(__frame + 0);
 
@@ -120,7 +119,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
     call TestReference_mut_b(__t4);
     if (__abort_flag) { goto Label_Abort; }
-    debug#TestReference#mut_ref#0#b := debug#TestReference#mut_ref#0#b[Position(346) := GetLocal(__m, __frame + 0)];
+    assume (debug#TestReference#mut_ref#0#b#346) == (GetLocal(__m, __frame + 0));
 
     call __t5 := CopyOrMoveRef(b_ref);
 
@@ -130,7 +129,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#TestReference#mut_ref#0#b := debug#TestReference#mut_ref#0#b[Position(379) := __tmp];
+    assume (debug#TestReference#mut_ref#0#b#379) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 7, __tmp);

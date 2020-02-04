@@ -14,17 +14,17 @@ use codespan_reporting::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::{Diagnostic, Label, Severity};
 use ir_to_bytecode_syntax::ast::Loc;
 use itertools::Itertools;
+use libra_types::identifier::IdentStr;
 use log::warn;
 use log::{debug, error, info};
 use num::BigInt;
 use pretty::RcDoc;
 use regex::{Captures, Regex};
-use std::collections::{BTreeMap, BTreeSet, Bound};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::iter::FromIterator;
 use std::option::Option::None;
 use std::process::Command;
-use vm::file_format::StructDefinitionIndex;
+use vm::file_format::{FunctionDefinitionIndex, StructDefinitionIndex};
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a
 /// Wadler-style pretty printer. Our simple usage doesn't require any lifetime management.
@@ -175,11 +175,7 @@ impl<'env> BoogieWrapper<'env> {
         // Now add trace diagnostics.
         if error.kind == BoogieErrorKind::Verification && !error.execution_trace.is_empty() {
             // Get debug variables from model.
-            let debug_vars = error
-                .model
-                .as_ref()
-                .map(|m| m.find_debug_vars())
-                .unwrap_or_else(|| vec![]);
+            let mut vars_shown = BTreeSet::new();
             let trace = error
                 .execution_trace
                 .iter()
@@ -209,7 +205,7 @@ impl<'env> BoogieWrapper<'env> {
                                 &module_env,
                                 loc,
                                 error.model.as_ref(),
-                                &debug_vars,
+                                &mut vars_shown,
                                 msg,
                             ),
                         )
@@ -257,7 +253,7 @@ impl<'env> BoogieWrapper<'env> {
         String::from_utf8_lossy(&lines).to_string()
     }
 
-    /// Gets the target byte index and source location (if available) from a target line/column
+    /// Gets the code byte index and source location (if available) from a target line/column
     /// position.
     fn get_locations(&self, pos: Position) -> (ByteIndex, Option<(ModuleIndex, Loc)>) {
         let index = self.writer.get_output_byte_index(pos.0, pos.1).unwrap();
@@ -270,13 +266,13 @@ impl<'env> BoogieWrapper<'env> {
         module_env: &ModuleEnv<'env>,
         mut loc: Loc,
         model_opt: Option<&'env Model>,
-        debug_vars: &'env [DebugVar],
+        vars_shown: &mut BTreeSet<(ByteIndex, DebugVar)>,
         boogie_msg: &str,
     ) -> PrettyDoc {
         let mut has_vars = false;
         if let Some(func_env) = module_env.get_enclosing_function(loc) {
             let func_name = func_env.get_name().to_string();
-            let mut func_display = func_name.clone();
+            let mut func_display = func_name;
             if boogie_msg.ends_with("$Entry") {
                 func_display = format!("{} (entry)", func_display);
                 // Narrow location to the beginning of the function.
@@ -290,28 +286,13 @@ impl<'env> BoogieWrapper<'env> {
             }
             // DEBUG
             // func_display = format!("{} ({})", func_display, loc);
-            // debug!("{}", func_display);
             let model_info = if let Some(model) = model_opt {
-                let displayed_vars = debug_vars
+                let displayed_vars = model
+                    .relevant_vars(&func_env, loc, vars_shown)
                     .iter()
-                    .filter(|v| {
-                        v.module_name == func_env.module_env.get_id().name().as_str()
-                            && v.func_name == func_name
-                    })
-                    .map(|v| (v, self.get_type_of_local_or_return(&func_env, v.var_idx)))
-                    .filter_map(|(v, ty)| {
-                        model
-                            .resolve_debug_var(v)
-                            .range((Bound::Unbounded, Bound::Included(&loc.start())))
-                            .next_back()
-                            .filter(|(idx, _)| {
-                                // Because of an apparent bug in [Position]Value, we
-                                // may got back locations which are actually not from this function.
-                                // Filter those out.
-                                // TODO: need to hunt down the bug and remove this hack.
-                                func_env.get_loc().contains(Loc::new(**idx, **idx))
-                            })
-                            .map(|(_, x)| v.pretty(self.env, &func_env, model, &ty, x))
+                    .map(|(var, val)| {
+                        let ty = self.get_type_of_local_or_return(&func_env, var.var_idx);
+                        var.pretty(self.env, &func_env, model, &ty, val)
                     })
                     .collect_vec();
                 has_vars = !displayed_vars.is_empty();
@@ -338,7 +319,7 @@ impl<'env> BoogieWrapper<'env> {
     fn get_type_of_local_or_return(&self, func_env: &FunctionEnv<'_>, idx: usize) -> GlobalType {
         let n = func_env.get_local_count();
         if idx < n {
-            func_env.get_local_type(idx as u8)
+            func_env.get_local_type(idx)
         } else {
             func_env.get_return_types()[idx - n].clone()
         }
@@ -374,7 +355,7 @@ impl<'env> BoogieWrapper<'env> {
         loop {
             let model = model_region.captures(&out[at..]).and_then(|cap| {
                 at += cap.get(0).unwrap().end();
-                match Model::parse(cap.name("mod").unwrap().as_str()) {
+                match Model::parse(self.env, cap.name("mod").unwrap().as_str()) {
                     Ok(model) => Some(model),
                     Err(parse_error) => {
                         warn!("failed to parse boogie model: {}", parse_error.0);
@@ -466,11 +447,12 @@ fn make_position(line_str: &str, col_str: &str) -> Position {
 #[derive(Debug)]
 pub struct Model {
     vars: BTreeMap<ModelValue, ModelValue>,
+    debug_vars: BTreeMap<ModuleIndex, BTreeMap<ByteIndex, Vec<(DebugVar, ModelValue)>>>,
 }
 
 impl Model {
     /// Parses the given string into a model. The string is expected to end with MODULE_END_MARKER.
-    fn parse(input: &str) -> Result<Model, ModelParseError> {
+    fn parse(env: &GlobalEnv, input: &str) -> Result<Model, ModelParseError> {
         let mut model_parser = ModelParser { input, at: 0 };
         model_parser
             .parse_map()
@@ -479,80 +461,93 @@ impl Model {
                 Ok(m)
             })
             .and_then(|m| match m {
-                ModelValue::Map(vars) => Ok(Model { vars }),
+                ModelValue::Map(vars) => Ok(vars),
                 _ => Err(ModelParseError("expected ModelValue::Map".to_string())),
             })
-    }
-
-    /// Finds all debug variables in the model.
-    fn find_debug_vars(&self) -> Vec<DebugVar> {
-        let mut vars = self
-            .vars
-            .iter()
-            .filter_map(|(k, v)| {
-                // Only literals can represent debug variables
-                if let ModelValue::Literal(s) = k {
-                    if let Some(dvar) = DebugVar::parse(s, v) {
-                        return Some(dvar);
+            .and_then(|vars| {
+                // Compute the debug variables and arrange them in a map convient for
+                // lookup at a given code location.
+                let mut debug_vars: BTreeMap<
+                    ModuleIndex,
+                    BTreeMap<ByteIndex, Vec<(DebugVar, ModelValue)>>,
+                > = BTreeMap::new();
+                for (var, code_index, v) in vars.iter().filter_map(|(k, v)| {
+                    if let ModelValue::Literal(s) = k {
+                        if let Some((var, code_index)) = DebugVar::parse(env, s) {
+                            return Some((var, code_index, v));
+                        }
+                    }
+                    None
+                }) {
+                    let elem = (var.clone(), v.clone());
+                    if let Some(module_map) = debug_vars.get_mut(&var.module_idx) {
+                        if let Some(vec) = module_map.get_mut(&code_index) {
+                            vec.push(elem);
+                        } else {
+                            module_map.insert(code_index, vec![elem]);
+                        }
+                    } else {
+                        let mut module_map = BTreeMap::new();
+                        module_map.insert(code_index, vec![elem]);
+                        debug_vars.insert(var.module_idx, module_map);
                     }
                 }
-                None
-            })
-            .collect_vec();
-
-        // Remove variables with outdated version.
-        vars.sort();
-        let mut i = 0;
-        if !vars.is_empty() {
-            while i < vars.len() - 1 {
-                let drop = {
-                    let v = &vars[i];
-                    let next_v = &vars[i + 1];
-                    v.module_name == next_v.module_name
-                        && v.func_name == next_v.func_name
-                        && v.instance_id == next_v.instance_id
-                        && v.var_idx == next_v.var_idx
-                };
-                if drop {
-                    // next_v the same as v except next_v.version_id > v.version_id.
-                    // Drop this variable.
-                    vars.remove(i);
-                } else {
-                    i += 1;
+                let model = Model { vars, debug_vars };
+                // DEBUG
+                /*
+                for module_map in model.debug_vars.values() {
+                    for (code_index, vars) in module_map {
+                        info!("{} ->", code_index);
+                        for (var, val) in vars {
+                            info!("  {} = {:?}", var.var_name, val);
+                        }
+                    }
                 }
-            }
-        }
-        vars
+                */
+                // END DEBUG
+                Ok(model)
+            })
     }
 
-    /// Resolve the debug var into its values, returning a map from ByteIndex to ModelValue,
-    /// where ByteIndex is the source location.
+    /// Computes the relevant debug variables to show at the given location `loc`.
     ///
-    /// The values for the debug vars are found in a map as such:
-    //
-    // Store_[Position]Value -> {
-    //  |T@[Position]Value!val!0| (Position 440) (Vector (ValueArray |T@[Int]Value!val!0| 0)) -> |T@[Position]Value!val!1|
-    //  |T@[Position]Value!val!1| (Position 496) (Vector (ValueArray |T@[Int]Value!val!1| 1)) -> |T@[Position]Value!val!3|
-    //  else -> |T@[Position]Value!val!1|
-    /// }
-    ///
-    /// In order to compute the map being described, we need to invert the mapping. For instance,
-    /// if we look for the value of `|T@[Position]Value!val!3|`, we use the last line which maps
-    /// byte index 496 to a vector, then continue to build the map for `|T@[Position]Value!val!1|`
-    /// which maps byte index 440, and so force.
-    fn resolve_debug_var(&self, var: &DebugVar) -> BTreeMap<ByteIndex, ModelValue> {
-        let values = var.value.extract_map_values(self, "Store_[Position]Value");
-        let result: BTreeMap<ByteIndex, ModelValue> =
-            BTreeMap::from_iter(values.iter().filter_map(|(k, v)| {
-                k.extract_primitive("Position").and_then(|index_str| {
-                    index_str
-                        .parse::<usize>()
-                        .and_then(|index| Ok((ByteIndex(index as RawIndex), v.clone())))
-                        .ok()
-                })
-            }));
-        debug!("{}.{} -> {:?}", var.func_name, var.var_name, result); // DEBUG
-        result
+    /// As locations reported via boogie execution traces aren't actually pointing to the
+    /// place where a variable is updated (rather they often point to branch points), we apply
+    /// the following heuristic: all variables are returned which have been updated from
+    /// function start until `loc.end()` and which have *not* yet been shown before. We
+    /// track this via the `vars_shown` set which consists of pairs of code byte index and the
+    /// variable as it has been updated at this point. This heuristic works reliable for the
+    /// cases seen so far, but may need further refinement.
+    fn relevant_vars(
+        &self,
+        func_env: &FunctionEnv<'_>,
+        loc: Loc,
+        vars_shown: &mut BTreeSet<(ByteIndex, DebugVar)>,
+    ) -> Vec<(DebugVar, ModelValue)> {
+        self.debug_vars
+            .get(&func_env.module_env.get_module_idx())
+            .map(|vars| {
+                let mut res = vec![];
+                for (code_index, vars_at) in vars.range(func_env.get_loc().start()..loc.end()) {
+                    for (var, val) in vars_at {
+                        if vars_shown.insert((*code_index, var.clone())) {
+                            res.push((var.clone(), val.clone()))
+                        }
+                    }
+                }
+                res
+            })
+            .unwrap_or_else(|| vec![])
+        // DEBUG
+        /*
+        let vars = ...
+        info!(
+            "{} -> {:?}",
+            loc,
+            vars.iter().map(|(v, _)| &v.var_name).collect_vec()
+        );
+        vars
+        */
     }
 }
 
@@ -585,24 +580,43 @@ impl ModelValue {
         args[0].extract_value_array(model)
     }
 
-    /// Extracts a value array from `(ValueArray map_key size)`. This follows indirections in
-    /// the model to extract the actual values.
+    /// Extracts a value array from `(ValueArray map_key size)`. This follows indirections in the
+    /// model. We find the value array map at `Select_[$int]Value`.
     fn extract_value_array(&self, model: &Model) -> Option<Vec<ModelValue>> {
         let args = self.extract_list("ValueArray")?;
         if args.len() != 2 {
             return None;
         }
-        let map_key = &args[0];
         let size = (&args[1]).extract_number()?;
-        let entries = &map_key.extract_map_values(model, "Store_[$int]Value");
+        let map_key = &args[0];
+        let value_array_map = model
+            .vars
+            .get(&ModelValue::literal("Select_[$int]Value"))?
+            .extract_map()?;
+
         Some(
             (0..size)
                 .map(|i| {
-                    let key = &ModelValue::literal(&i.to_string());
-                    entries.get(key).cloned().unwrap_or_else(ModelValue::error)
+                    let key = ModelValue::List(vec![
+                        map_key.clone(),
+                        ModelValue::literal(&i.to_string()),
+                    ]);
+                    value_array_map
+                        .get(&key)
+                        // DEBUG .or_else(|| value_array_map.get(&ModelValue::literal("else")))
+                        .cloned()
+                        .unwrap_or_else(ModelValue::error)
                 })
                 .collect_vec(),
         )
+    }
+
+    fn extract_map(&self) -> Option<&BTreeMap<ModelValue, ModelValue>> {
+        if let ModelValue::Map(map) = self {
+            Some(map)
+        } else {
+            None
+        }
     }
 
     /// Extract the arguments of a list of the form `(<ctor> element...)`.
@@ -638,58 +652,6 @@ impl ModelValue {
         } else {
             None
         }
-    }
-
-    /// Extract map values based on the storage variable in the model, which looks like:
-    ///
-    // Store_[Position]Value -> {
-    //  |T@[Position]Value!val!0| (Position 440) (Vector (ValueArray |T@[Int]Value!val!0| 0)) -> |T@[Position]Value!val!1|
-    //  |T@[Position]Value!val!1| (Position 496) (Vector (ValueArray |T@[Int]Value!val!1| 1)) -> |T@[Position]Value!val!3|
-    //  else -> |T@[Position]Value!val!1|
-    /// }
-    ///
-    /// In order to compute the map being described, we need to invert the mapping. For instance,
-    /// if we look for the value of `|T@[Position]Value!val!3|`, we use the last line which maps
-    /// 496 to a vector, then continue to build the map for `|T@[Position]Value!val!1|`
-    /// which maps 440, and so force.
-    fn extract_map_values(
-        &self,
-        model: &Model,
-        store_name: &str,
-    ) -> BTreeMap<ModelValue, ModelValue> {
-        let mut result = BTreeMap::new();
-        if let Some(entries) = model
-            .vars
-            .get(&ModelValue::literal(store_name))
-            .and_then(|v| {
-                if let ModelValue::Map(entries) = v {
-                    Some(entries)
-                } else {
-                    None
-                }
-            })
-        {
-            fn extract_recursively(
-                es: &BTreeMap<ModelValue, ModelValue>,
-                mk: &ModelValue,
-                r: &mut BTreeMap<ModelValue, ModelValue>,
-                visited: &mut BTreeSet<ModelValue>,
-            ) {
-                let else_lit = &ModelValue::literal("else");
-                if let Some((ModelValue::List(elems), _)) =
-                    es.iter().find(|(k, v)| *k != else_lit && *v == mk)
-                {
-                    // Need to first recursively process the older map to preserve update order.
-                    let mk1 = &elems[0];
-                    if visited.insert(mk1.clone()) {
-                        extract_recursively(es, mk1, r, visited);
-                        r.insert(elems[1].clone(), elems[2].clone());
-                    }
-                }
-            }
-            extract_recursively(entries, self, &mut result, &mut BTreeSet::new());
-        }
-        result
     }
 
     /// Pretty prints the given model value which has given type. If printing fails, falls
@@ -817,50 +779,53 @@ impl ModelValue {
 /// Represents a debug variable.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 struct DebugVar {
-    module_name: String,
-    func_name: String,
+    module_idx: ModuleIndex,
+    func_idx: FunctionDefinitionIndex,
     var_idx: usize,
     var_name: String,
     instance_id: usize,
-    version_id: usize,
-    value: ModelValue,
 }
 
 impl DebugVar {
     /// Parses a model variable name into the components of a debug variable.
     ///
     /// Variables have the form
-    /// `inline$<ignored>$<instance>$debug#<module>#<func>#<idx>#<name>@<version>`.
+    /// `inline$<ignored>$<instance>$debug#<module>#<func>#<idx>#<name>#<pos>@<version>`.
     /// `instance` above appears to be for distinguishing inlined variables from the same
-    /// function. `version` appears to be the number Boogie appends for variable history
-    /// (i.e. x@1, x@2, ...).
-    fn parse(s: &str, value: &ModelValue) -> Option<DebugVar> {
+    /// function. `version` appears to be the number Boogie appends for update history
+    /// (i.e. x@1, x@2, ...). As all our debug variables are never updated, we are only
+    /// interested in version @0.
+    fn parse(env: &GlobalEnv, s: &str) -> Option<(DebugVar, ByteIndex)> {
         fn get_cap_usize(cap: &Captures, name: &str) -> usize {
             cap.name(name).unwrap().as_str().parse::<usize>().unwrap()
         }
         let re = Regex::new(r"inline\$[^$]+\$(?P<instance>[0-9]+)\$debug#").unwrap();
         re.captures(s).and_then(|ref cap| {
             let instance_id = get_cap_usize(cap, "instance");
-            let re =
-                Regex::new(r"(?P<mod>[^#]+)#(?P<func>[^#]+)#(?P<idx>[0-9]+)#(?P<var>[^@]+)@(?P<version>[0-9]+)")
-                    .unwrap();
+            let re = Regex::new(
+                r"(?P<mod>[^#]+)#(?P<func>[^#]+)#(?P<idx>[0-9]+)#(?P<var>[^#]+)#(?P<pos>[^@]+)@0",
+            )
+            .unwrap();
 
-            re.captures(&s[cap.get(0).unwrap().end()..]).map(|ref cap| {
-                let module = cap.name("mod").unwrap().as_str();
-                let func = cap.name("func").unwrap().as_str();
-                let idx = get_cap_usize(cap, "idx");
-                let var = cap.name("var").unwrap().as_str();
-                let version_id = get_cap_usize(cap, "version");
-                DebugVar {
-                    module_name: module.to_string(),
-                    func_name: func.to_string(),
-                    var_idx: idx,
-                    var_name: var.to_string(),
-                    instance_id,
-                    version_id,
-                    value: value.clone(),
-                }
-            })
+            re.captures(&s[cap.get(0).unwrap().end()..])
+                .and_then(|ref cap| {
+                    let module_env = env.find_module_by_name(cap.name("mod").unwrap().as_str())?;
+                    let func_env = module_env
+                        .find_function(&IdentStr::new(cap.name("func").unwrap().as_str()).ok()?)?;
+                    let idx = get_cap_usize(cap, "idx");
+                    let var = cap.name("var").unwrap().as_str();
+                    let pos = get_cap_usize(cap, "pos");
+                    (Some((
+                        DebugVar {
+                            module_idx: module_env.get_module_idx(),
+                            func_idx: func_env.get_def_idx(),
+                            var_idx: idx,
+                            var_name: var.to_string(),
+                            instance_id,
+                        },
+                        ByteIndex(pos as RawIndex),
+                    )))
+                })
         })
     }
 

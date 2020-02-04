@@ -61,28 +61,27 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestGenerics#move2#0#x1: [Position]Value;
-    var debug#TestGenerics#move2#1#x2: [Position]Value;
-    var debug#TestGenerics#move2#2#v: [Position]Value;
-    var debug#TestGenerics#move2#3#r: [Position]Value;
+    var debug#TestGenerics#move2#0#x1#162: Value;
+    var debug#TestGenerics#move2#1#x2#162: Value;
+    var debug#TestGenerics#move2#2#v#256: Value;
+    var debug#TestGenerics#move2#2#v#260: Value;
+    var debug#TestGenerics#move2#2#v#289: Value;
+    var debug#TestGenerics#move2#2#v#338: Value;
+    var debug#TestGenerics#move2#3#r#387: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 12;
-    debug#TestGenerics#move2#0#x1 := EmptyPositionMap;
-    debug#TestGenerics#move2#1#x2 := EmptyPositionMap;
-    debug#TestGenerics#move2#2#v := EmptyPositionMap;
-    debug#TestGenerics#move2#3#r := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x1);
     __m := UpdateLocal(__m, __frame + 0, x1);
-    debug#TestGenerics#move2#0#x1 := debug#TestGenerics#move2#0#x1[Position(162) := x1];
+    assume (debug#TestGenerics#move2#0#x1#162) == (x1);
     assume IsValidU64(x2);
     __m := UpdateLocal(__m, __frame + 1, x2);
-    debug#TestGenerics#move2#1#x2 := debug#TestGenerics#move2#1#x2[Position(162) := x2];
+    assume (debug#TestGenerics#move2#1#x2#162) == (x2);
 
     // bytecode translation starts here
     call __t4 := Vector_empty(IntegerType());
@@ -93,7 +92,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#TestGenerics#move2#2#v := debug#TestGenerics#move2#2#v[Position(256) := __tmp];
+    assume (debug#TestGenerics#move2#2#v#256) == (__tmp);
 
     call __t5 := BorrowLoc(__frame + 2);
 
@@ -102,7 +101,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call Vector_push_back(IntegerType(), __t5, GetLocal(__m, __frame + 6));
     if (__abort_flag) { goto Label_Abort; }
-    debug#TestGenerics#move2#2#v := debug#TestGenerics#move2#2#v[Position(289) := GetLocal(__m, __frame + 2)];
+    assume (debug#TestGenerics#move2#2#v#289) == (GetLocal(__m, __frame + 2));
 
     call __t7 := BorrowLoc(__frame + 2);
 
@@ -111,7 +110,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call Vector_push_back(IntegerType(), __t7, GetLocal(__m, __frame + 8));
     if (__abort_flag) { goto Label_Abort; }
-    debug#TestGenerics#move2#2#v := debug#TestGenerics#move2#2#v[Position(338) := GetLocal(__m, __frame + 2)];
+    assume (debug#TestGenerics#move2#2#v#338) == (GetLocal(__m, __frame + 2));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -121,7 +120,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 10));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#TestGenerics#move2#3#r := debug#TestGenerics#move2#3#r[Position(387) := __tmp];
+    assume (debug#TestGenerics#move2#3#r#387) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 11, __tmp);
@@ -155,22 +154,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestGenerics#create#0#x: [Position]Value;
-    var debug#TestGenerics#create#1#v: [Position]Value;
-    var debug#TestGenerics#create#2#__ret: [Position]Value;
+    var debug#TestGenerics#create#0#x#471: Value;
+    var debug#TestGenerics#create#1#v#557: Value;
+    var debug#TestGenerics#create#1#v#561: Value;
+    var debug#TestGenerics#create#1#v#588: Value;
+    var debug#TestGenerics#create#2#__ret#634: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#TestGenerics#create#0#x := EmptyPositionMap;
-    debug#TestGenerics#create#1#v := EmptyPositionMap;
-    debug#TestGenerics#create#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestGenerics#create#0#x := debug#TestGenerics#create#0#x[Position(471) := x];
+    assume (debug#TestGenerics#create#0#x#471) == (x);
 
     // bytecode translation starts here
     call __t2 := Vector_empty(tv0);
@@ -181,7 +179,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#TestGenerics#create#1#v := debug#TestGenerics#create#1#v[Position(557) := __tmp];
+    assume (debug#TestGenerics#create#1#v#557) == (__tmp);
 
     call __t3 := BorrowLoc(__frame + 1);
 
@@ -190,7 +188,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call Vector_push_back(tv0, __t3, GetLocal(__m, __frame + 4));
     if (__abort_flag) { goto Label_Abort; }
-    debug#TestGenerics#create#1#v := debug#TestGenerics#create#1#v[Position(588) := GetLocal(__m, __frame + 1)];
+    assume (debug#TestGenerics#create#1#v#588) == (GetLocal(__m, __frame + 1));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -199,14 +197,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    debug#TestGenerics#create#2#__ret := debug#TestGenerics#create#2#__ret[Position(634) := __ret0];
+    assume (debug#TestGenerics#create#2#__ret#634) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestGenerics#create#2#__ret := debug#TestGenerics#create#2#__ret[Position(665) := __ret0];
 }
 
 procedure TestGenerics_create_verify (tv0: TypeValue, x: Value) returns (__ret0: Value)
@@ -233,30 +230,24 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestGenerics#overcomplicated_equals#0#x: [Position]Value;
-    var debug#TestGenerics#overcomplicated_equals#1#y: [Position]Value;
-    var debug#TestGenerics#overcomplicated_equals#2#r: [Position]Value;
-    var debug#TestGenerics#overcomplicated_equals#3#x1: [Position]Value;
-    var debug#TestGenerics#overcomplicated_equals#4#y1: [Position]Value;
-    var debug#TestGenerics#overcomplicated_equals#5#__ret: [Position]Value;
+    var debug#TestGenerics#overcomplicated_equals#0#x#672: Value;
+    var debug#TestGenerics#overcomplicated_equals#1#y#672: Value;
+    var debug#TestGenerics#overcomplicated_equals#3#x1#822: Value;
+    var debug#TestGenerics#overcomplicated_equals#4#y1#860: Value;
+    var debug#TestGenerics#overcomplicated_equals#2#r#898: Value;
+    var debug#TestGenerics#overcomplicated_equals#5#__ret#932: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 13;
-    debug#TestGenerics#overcomplicated_equals#0#x := EmptyPositionMap;
-    debug#TestGenerics#overcomplicated_equals#1#y := EmptyPositionMap;
-    debug#TestGenerics#overcomplicated_equals#2#r := EmptyPositionMap;
-    debug#TestGenerics#overcomplicated_equals#3#x1 := EmptyPositionMap;
-    debug#TestGenerics#overcomplicated_equals#4#y1 := EmptyPositionMap;
-    debug#TestGenerics#overcomplicated_equals#5#__ret := EmptyPositionMap;
 
     // process and type check arguments
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestGenerics#overcomplicated_equals#0#x := debug#TestGenerics#overcomplicated_equals#0#x[Position(672) := x];
+    assume (debug#TestGenerics#overcomplicated_equals#0#x#672) == (x);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestGenerics#overcomplicated_equals#1#y := debug#TestGenerics#overcomplicated_equals#1#y[Position(672) := y];
+    assume (debug#TestGenerics#overcomplicated_equals#1#y#672) == (y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -270,7 +261,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#TestGenerics#overcomplicated_equals#3#x1 := debug#TestGenerics#overcomplicated_equals#3#x1[Position(822) := __tmp];
+    assume (debug#TestGenerics#overcomplicated_equals#3#x1#822) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -283,7 +274,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
-    debug#TestGenerics#overcomplicated_equals#4#y1 := debug#TestGenerics#overcomplicated_equals#4#y1[Position(860) := __tmp];
+    assume (debug#TestGenerics#overcomplicated_equals#4#y1#860) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -296,20 +287,19 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 11));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#TestGenerics#overcomplicated_equals#2#r := debug#TestGenerics#overcomplicated_equals#2#r[Position(898) := __tmp];
+    assume (debug#TestGenerics#overcomplicated_equals#2#r#898) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 12);
-    debug#TestGenerics#overcomplicated_equals#5#__ret := debug#TestGenerics#overcomplicated_equals#5#__ret[Position(932) := __ret0];
+    assume (debug#TestGenerics#overcomplicated_equals#5#__ret#932) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestGenerics#overcomplicated_equals#5#__ret := debug#TestGenerics#overcomplicated_equals#5#__ret[Position(952) := __ret0];
 }
 
 procedure TestGenerics_overcomplicated_equals_verify (tv0: TypeValue, x: Value, y: Value) returns (__ret0: Value)
@@ -330,16 +320,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestGenerics#test#0#r: [Position]Value;
-    var debug#TestGenerics#test#1#__ret: [Position]Value;
+    var debug#TestGenerics#test#0#r#1006: Value;
+    var debug#TestGenerics#test#1#__ret#1056: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#TestGenerics#test#0#r := EmptyPositionMap;
-    debug#TestGenerics#test#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -358,20 +346,19 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#TestGenerics#test#0#r := debug#TestGenerics#test#0#r[Position(1006) := __tmp];
+    assume (debug#TestGenerics#test#0#r#1006) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#TestGenerics#test#1#__ret := debug#TestGenerics#test#1#__ret[Position(1056) := __ret0];
+    assume (debug#TestGenerics#test#1#__ret#1056) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestGenerics#test#1#__ret := debug#TestGenerics#test#1#__ret[Position(1076) := __ret0];
 }
 
 procedure TestGenerics_test_verify () returns (__ret0: Value)

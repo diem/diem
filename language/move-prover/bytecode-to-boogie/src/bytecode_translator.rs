@@ -26,7 +26,7 @@ use crate::env::{
     FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, Parameter, StructEnv, TypeParameter,
 };
 use crate::spec_translator::SpecTranslator;
-use codespan::ByteOffset;
+use codespan::{ByteIndex, ByteOffset};
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -280,20 +280,22 @@ impl<'env> ModuleTranslator<'env> {
     fn translate_bytecode(
         &self,
         func_env: &FunctionEnv<'_>,
+        debug_vars: &BTreeSet<(ByteIndex, usize)>,
         offset: u16,
         bytecode: &StacklessBytecode,
-        mutual_local_borrows: &BTreeSet<u8>,
+        mutual_local_borrows: &BTreeSet<usize>,
     ) {
         // Set location of this code in the CodeWriter.
         let loc = func_env.get_bytecode_loc(offset);
         self.writer
             .set_location(self.module_env.get_module_idx(), loc);
+        // emitln!(self.writer, "// {}", loc); // DEBUG
 
         // Helper functions to update a local including debug information.
         let update_local =
-            |idx: usize, value: &str| self.update_local(func_env, loc, idx as u8, value);
+            |idx: usize, value: &str| self.update_local(func_env, debug_vars, loc, idx, value);
         let update_debug_var = |idx: usize, value: &str| {
-            self.generate_model_debug_update(func_env, loc, idx as u8, value)
+            self.generate_model_debug_update(func_env, debug_vars, loc, idx, value)
         };
 
         // Helper function to update debug info for mutual borrows.
@@ -301,6 +303,7 @@ impl<'env> ModuleTranslator<'env> {
             for idx in mutual_local_borrows {
                 let update = self.generate_model_debug_update(
                     func_env,
+                    debug_vars,
                     loc,
                     *idx,
                     &format!("GetLocal(__m, __frame + {})", idx),
@@ -332,7 +335,7 @@ impl<'env> ModuleTranslator<'env> {
                         self.writer,
                         "call __t{} := CopyOrMoveRef({});",
                         dest,
-                        func_env.get_local_name(*src)
+                        func_env.get_local_name(*src as usize)
                     )
                 } else {
                     emitln!(
@@ -349,7 +352,7 @@ impl<'env> ModuleTranslator<'env> {
                         self.writer,
                         "call __t{} := CopyOrMoveRef({});",
                         dest,
-                        func_env.get_local_name(*src)
+                        func_env.get_local_name(*src as usize)
                     )
                 } else {
                     emitln!(
@@ -365,7 +368,7 @@ impl<'env> ModuleTranslator<'env> {
                     emitln!(
                         self.writer,
                         "call {} := CopyOrMoveRef(__t{});",
-                        func_env.get_local_name(*dest),
+                        func_env.get_local_name(*dest as usize),
                         src
                     )
                 } else {
@@ -624,10 +627,7 @@ impl<'env> ModuleTranslator<'env> {
                     } else {
                         emitln!(self.writer, "__ret{} := GetLocal(__m, __frame + {});", i, r);
                     }
-                    let update = self.generate_model_ret_debug_update(func_env, loc, i, &format!("__ret{}", i));
-                    if !update.is_empty() {
-                        emitln!(self.writer, &update);
-                    }
+                    emitln!(self.writer, &update_debug_var(func_env.get_local_count() + i, &format!("__ret{}", i)));
                 }
                 emitln!(self.writer, "return;");
             }
@@ -963,11 +963,44 @@ impl<'env> ModuleTranslator<'env> {
     /// This generates boogie code for everything after the function signature
     /// The function body is only generated for the "inline" version of the function.
     fn generate_inline_function_body(&self, func_env: &FunctionEnv<'_>) {
+        let code = &self.stackless_bytecode[func_env.get_def_idx().0 as usize];
+
+        // Identify all the branching targets so we can insert labels in front of them. Also
+        // calculate mutual borrows.
+        let mut branching_targets = BTreeSet::new();
+        let mut mutual_local_borrows = BTreeSet::new();
+        for bytecode in code.code.iter() {
+            match bytecode {
+                Branch(target) | BrTrue(target, _) | BrFalse(target, _) => {
+                    branching_targets.insert(*target as usize);
+                }
+                BorrowLoc(dst, src) => {
+                    if self.get_local_type(func_env, *dst).is_mutual_reference() {
+                        mutual_local_borrows.insert(*src as usize);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Compute the debug variables.
+        let mut debug_vars = BTreeSet::new();
+        let func_start = func_env.get_loc().start();
+        for idx in 0..func_env.get_parameters().len() {
+            debug_vars.insert((func_start, idx));
+        }
+        for (offset, bytecode) in code.code.iter().enumerate() {
+            for (pos, idx) in
+                &self.compute_debug_vars(func_env, bytecode, offset as u16, &mutual_local_borrows)
+            {
+                debug_vars.insert((*pos, *idx));
+            }
+        }
+
         // Be sure to set back location to the whole function definition as a default, otherwise
         // we may get unassigned code locations associated with condition locations.
         self.writer
             .set_location(self.module_env.get_module_idx(), func_env.get_loc());
-        let code = &self.stackless_bytecode[func_env.get_def_idx().0 as usize];
 
         emitln!(self.writer, "{");
         self.writer.indent();
@@ -976,7 +1009,7 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "// declare local variables");
         let num_args = func_env.get_parameters().len();
         for i in num_args..code.local_types.len() {
-            let local_name = func_env.get_local_name(i as u8);
+            let local_name = func_env.get_local_name(i);
             let local_type = &self.module_env.globalize_signature(&code.local_types[i]);
             emitln!(
                 self.writer,
@@ -989,7 +1022,7 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "var __tmp: Value;");
         emitln!(self.writer, "var __frame: int;");
         emitln!(self.writer, "var __saved_m: Memory;");
-        self.generate_model_debug_declarations(func_env);
+        self.generate_model_debug_declarations(func_env, &debug_vars);
 
         emitln!(self.writer, "\n// initialize function execution");
         emitln!(self.writer, "assume !__abort_flag;");
@@ -1000,26 +1033,27 @@ impl<'env> ModuleTranslator<'env> {
             "__local_counter := __local_counter + {};",
             code.local_types.len()
         );
-        self.generate_model_debug_initialization(func_env);
+        self.generate_model_debug_initialization(func_env, &debug_vars);
 
         emitln!(self.writer, "\n// process and type check arguments");
         for i in 0..num_args {
-            let local_name = func_env.get_local_name(i as u8);
+            let local_name = func_env.get_local_name(i);
             let local_type = &self.module_env.globalize_signature(&code.local_types[i]);
             let type_check = boogie_type_check(self.module_env.env, &local_name, local_type);
             emit!(self.writer, &type_check);
             if !local_type.is_reference() {
                 emitln!(
                     self.writer,
-                    &self.update_local(func_env, func_env.get_loc(), i as u8, &local_name)
+                    &self.update_local(func_env, &debug_vars, func_env.get_loc(), i, &local_name)
                 );
             } else {
                 emitln!(
                     self.writer,
                     &self.generate_model_debug_update(
                         func_env,
+                        &debug_vars,
                         func_env.get_loc(),
-                        i as u8,
+                        i,
                         &local_name
                     )
                 );
@@ -1027,24 +1061,6 @@ impl<'env> ModuleTranslator<'env> {
         }
 
         emitln!(self.writer, "\n// bytecode translation starts here");
-
-        // Identify all the branching targets so we can insert labels in front of them, as well
-        // as mutual borrows of locals.
-        let mut branching_targets = BTreeSet::new();
-        let mut mutual_local_borrows = BTreeSet::new();
-        for bytecode in code.code.iter() {
-            match bytecode {
-                Branch(target) | BrTrue(target, _) | BrFalse(target, _) => {
-                    branching_targets.insert(*target as usize);
-                }
-                BorrowLoc(dst, src) => {
-                    if self.get_local_type(func_env, *dst).is_mutual_reference() {
-                        mutual_local_borrows.insert(*src);
-                    }
-                }
-                _ => {}
-            }
-        }
 
         // Generate bytecode
         for (offset, bytecode) in code.code.iter().enumerate() {
@@ -1054,7 +1070,13 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, "Label_{}:", offset);
                 self.writer.indent();
             }
-            self.translate_bytecode(func_env, offset as u16, bytecode, &mutual_local_borrows);
+            self.translate_bytecode(
+                func_env,
+                &debug_vars,
+                offset as u16,
+                bytecode,
+                &mutual_local_borrows,
+            );
         }
 
         // Generate abort exit.
@@ -1076,7 +1098,8 @@ impl<'env> ModuleTranslator<'env> {
             } else {
                 emitln!(self.writer, "{} := DefaultValue;", &ret_str);
             }
-            let update = self.generate_model_ret_debug_update(func_env, end_loc, i, &ret_str);
+            let update =
+                self.generate_model_debug_update(func_env, &debug_vars, end_loc, i, &ret_str);
             if !update.is_empty() {
                 emitln!(self.writer, &update);
             }
@@ -1094,69 +1117,81 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Generates variable declarations for model debugging of given function.
     /// This creates an `[Position]Value` array for each named local and for returns.
-    fn generate_model_debug_declarations(&self, func_env: &FunctionEnv<'_>) {
+    fn generate_model_debug_declarations(
+        &self,
+        func_env: &FunctionEnv<'_>,
+        debug_vars: &BTreeSet<(ByteIndex, usize)>,
+    ) {
         if self.module_env.env.options.omit_model_debug {
             return;
         }
-        for (idx, name, _) in &self.get_named_locals(func_env) {
+        for (pos, idx) in debug_vars {
             emitln!(
                 self.writer,
-                "var {}: [Position]Value;",
-                self.debug_var_name(func_env, *idx, name)
-            )
-        }
-        for idx in 0..func_env.get_return_types().len() {
-            emitln!(
-                self.writer,
-                "var {}: [Position]Value;",
-                self.debug_ret_var_name(func_env, idx)
+                "var {}: Value;",
+                self.debug_var_name(func_env, *pos, *idx)
             )
         }
     }
 
     /// Returns the name of a debug variable.
-    fn debug_var_name(&self, func_env: &FunctionEnv<'_>, idx: u8, name: &str) -> String {
+    fn debug_var_name(&self, func_env: &FunctionEnv<'_>, pos: ByteIndex, idx: usize) -> String {
+        let name = if idx as usize >= func_env.get_local_count() {
+            "__ret".to_string()
+        } else {
+            func_env.get_local_name(idx)
+        };
         format!(
-            "debug#{}#{}#{}#{}",
+            "debug#{}#{}#{}#{}#{}",
             func_env.module_env.get_id().name(),
             func_env.get_name(),
             idx,
-            name
-        )
-    }
-
-    /// Returns the name of a debug return variable.
-    fn debug_ret_var_name(&self, func_env: &FunctionEnv<'_>, idx: usize) -> String {
-        format!(
-            "debug#{}#{}#{}#__ret",
-            func_env.module_env.get_id().name(),
-            func_env.get_name(),
-            // We use `local_count + idx` to assign a unique index to return variables.
-            // This allows to deal with them mostly the same way as other variables in
-            // model analysis.
-            func_env.get_local_count() + idx,
+            name,
+            pos
         )
     }
 
     /// Generates variable initialization for model debugging of given function.
-    fn generate_model_debug_initialization(&self, func_env: &FunctionEnv<'_>) {
-        if self.module_env.env.options.omit_model_debug {
-            return;
-        }
-        for (idx, name, _) in &self.get_named_locals(func_env) {
-            let debug_name = self.debug_var_name(func_env, *idx, name);
-            emitln!(self.writer, "{} := EmptyPositionMap;", debug_name);
-        }
-        for idx in 0..func_env.get_return_count() {
-            let debug_name = self.debug_ret_var_name(func_env, idx);
-            emitln!(self.writer, "{} := EmptyPositionMap;", debug_name);
-        }
+    fn generate_model_debug_initialization(
+        &self,
+        _func_env: &FunctionEnv<'_>,
+        _debug_vars: &BTreeSet<(ByteIndex, usize)>,
+    ) {
+        // Nothing to do here right now. We are relying on that the model doesn't contain
+        // assignments for debug variables for which no assumptions have been made yet. That is, in:
+        //
+        //     var debug_var: Value;
+        //     ... // no use of debug_var
+        //     assume debug_var == v
+        //
+        // ... we expect no mentioning of debug_var in the model until the `assume` is executed.
+        // This seems to work (currently!), though it would be sound for the prover to assign
+        // a value to debug_var even if the assume statement was never reached.
+        //
+        // Notice that an alternative representation like the below which seems to be more robust
+        // logically does not work:
+        //
+        //     var debug_var: Value;
+        //     debug_var := DefaultValue; // initialization
+        //     ... // no use of debug_var
+        //     debug_var := v
+        //
+        // With this usage debug_var will never appear in the model, even if the assignment is
+        // reached. Reason seems to be that boogie eliminates unused variables (but not redundant
+        // assumptions).
     }
 
     /// Updates a local, injecting debug information if available.
-    fn update_local(&self, func_env: &FunctionEnv<'_>, loc: Loc, idx: u8, value: &str) -> String {
+    fn update_local(
+        &self,
+        func_env: &FunctionEnv<'_>,
+        debug_vars: &BTreeSet<(ByteIndex, usize)>,
+        loc: Loc,
+        idx: usize,
+        value: &str,
+    ) -> String {
         let update = format!("__m := UpdateLocal(__m, __frame + {}, {});", idx, value);
-        let debug_update = self.generate_model_debug_update(func_env, loc, idx, value);
+        let debug_update = self.generate_model_debug_update(func_env, debug_vars, loc, idx, value);
         if !debug_update.is_empty() {
             format!("{}\n{}", update, debug_update)
         } else {
@@ -1168,78 +1203,103 @@ impl<'env> ModuleTranslator<'env> {
     fn generate_model_debug_update(
         &self,
         func_env: &FunctionEnv<'_>,
-        loc: Loc,
-        idx: u8,
-        value: &str,
-    ) -> String {
-        if self.module_env.env.options.omit_model_debug {
-            return "".to_string();
-        }
-        let name = func_env.get_local_name(idx);
-        if name.starts_with("__") {
-            // Do not generate anything for anonymous local.
-            return "".to_string();
-        }
-        let sig = self.module_env.globalize_signature(
-            &self.stackless_bytecode[func_env.get_def_idx().0 as usize].local_types[idx as usize],
-        );
-        let actual_value = if sig.is_reference() {
-            format!("Dereference(__m, {})", value)
-        } else {
-            value.to_string()
-        };
-        let debug_var = self.debug_var_name(func_env, idx, &name);
-        format!(
-            "{} := {}[Position({}) := {}];",
-            debug_var,
-            debug_var,
-            loc.start(),
-            actual_value
-        )
-    }
-
-    /// Generates update for the return debug variable.
-    fn generate_model_ret_debug_update(
-        &self,
-        func_env: &FunctionEnv<'_>,
+        debug_vars: &BTreeSet<(ByteIndex, usize)>,
         loc: Loc,
         idx: usize,
         value: &str,
     ) -> String {
-        if self.module_env.env.options.omit_model_debug {
+        if self.module_env.env.options.omit_model_debug || !debug_vars.contains(&(loc.start(), idx))
+        {
             return "".to_string();
         }
-        let sig = &func_env.get_return_types()[idx];
+        let sig = if idx < func_env.get_local_count() {
+            func_env.get_local_type(idx)
+        } else {
+            func_env.get_return_types()[idx - func_env.get_local_count()].clone()
+        };
         let actual_value = if sig.is_reference() {
             format!("Dereference(__m, {})", value)
         } else {
             value.to_string()
         };
-        let debug_var = self.debug_ret_var_name(func_env, idx);
-        format!(
-            "{} := {}[Position({}) := {}];",
-            debug_var,
-            debug_var,
-            loc.start(),
-            actual_value
-        )
+        let debug_var = self.debug_var_name(func_env, loc.start(), idx);
+        // format!("{} := {};", debug_var, actual_value)
+        format!("assume ({}) == ({});", debug_var, actual_value)
     }
 
-    /// Get list of all named locals of the function.
-    fn get_named_locals(&self, func_env: &FunctionEnv<'_>) -> Vec<(u8, String, GlobalType)> {
-        self.stackless_bytecode[func_env.get_def_idx().0 as usize]
-            .local_types
-            .iter()
-            .enumerate()
-            .filter_map(|(idx, sig)| {
-                let name = func_env.get_local_name(idx as u8);
-                if name.starts_with("__") {
-                    // anonymous local, skip
-                    None
-                } else {
-                    Some((idx as u8, name, self.module_env.globalize_signature(sig)))
-                }
-            })
-            .collect_vec()
+    /// Compute the debug variables (ByteIndex position and local idx) which we want to update at
+    /// the given bytecode.
+    fn compute_debug_vars(
+        &self,
+        func_env: &FunctionEnv,
+        code: &StacklessBytecode,
+        offset: u16,
+        mutual_borrows: &BTreeSet<usize>,
+    ) -> Vec<(ByteIndex, usize)> {
+        let pos = func_env.get_bytecode_loc(offset).start();
+        let mkt = |idx: &usize| {
+            if *idx < func_env.get_local_count() {
+                vec![(pos, *idx)]
+            } else {
+                vec![]
+            }
+        };
+        let mkr = |idx: &usize| vec![(pos, (func_env.get_local_count() + *idx))];
+        let mkl = |idx: &u8| {
+            if (*idx as usize) < func_env.get_local_count() {
+                vec![(pos, *idx as usize)]
+            } else {
+                vec![]
+            }
+        };
+        let borrows = || mutual_borrows.iter().map(|idx| (pos, *idx)).collect_vec();
+        match code {
+            MoveLoc(t, ..)
+            | CopyLoc(t, ..)
+            | ReadRef(t, ..)
+            | Pack(t, ..)
+            | Exists(t, ..)
+            | BorrowGlobal(t, ..)
+            | MoveFrom(t, ..)
+            | LdTrue(t)
+            | LdFalse(t)
+            | LdU8(t, ..)
+            | LdU64(t, ..)
+            | LdU128(t, ..)
+            | CastU8(t, ..)
+            | CastU64(t, ..)
+            | CastU128(t, ..)
+            | LdAddr(t, ..)
+            | Not(t, ..)
+            | Add(t, ..)
+            | Sub(t, ..)
+            | Mul(t, ..)
+            | Div(t, ..)
+            | Mod(t, ..)
+            | Lt(t, ..)
+            | Gt(t, ..)
+            | Le(t, ..)
+            | Ge(t, ..)
+            | Or(t, ..)
+            | And(t, ..)
+            | Eq(t, ..)
+            | Neq(t, ..)
+            | BitOr(t, ..)
+            | GetGasRemaining(t)
+            | GetTxnSequenceNumber(t)
+            | GetTxnPublicKey(t)
+            | GetTxnSenderAddress(t)
+            | GetTxnMaxGasUnits(t)
+            | GetTxnGasUnitPrice(t) => mkt(t),
+            StLoc(l, ..) => mkl(l),
+            WriteRef(..) => borrows(),
+            Call(ts, ..) | Unpack(ts, ..) => {
+                let mut rets = ts.iter().map(|t| mkt(t)).flatten().collect_vec();
+                rets.extend_from_slice(&borrows());
+                rets
+            }
+            Ret(ts) => (0..ts.len()).map(|i| mkr(&i)).flatten().collect_vec(),
+            _ => vec![],
+        }
     }
 }

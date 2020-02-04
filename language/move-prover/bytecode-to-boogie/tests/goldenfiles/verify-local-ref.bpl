@@ -15,19 +15,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestSpecs#mut_b#0#b: [Position]Value;
+    var debug#TestSpecs#mut_b#0#b#24: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#TestSpecs#mut_b#0#b := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(Dereference(__m, b));
     assume IsValidReferenceParameter(__m, __frame, b);
-    debug#TestSpecs#mut_b#0#b := debug#TestSpecs#mut_b#0#b[Position(24) := Dereference(__m, b)];
+    assume (debug#TestSpecs#mut_b#0#b#24) == (Dereference(__m, b));
 
     // bytecode translation starts here
     call __tmp := LdConst(10);
@@ -70,16 +69,16 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestSpecs#mut_ref#0#b: [Position]Value;
-    var debug#TestSpecs#mut_ref#1#b_ref: [Position]Value;
+    var debug#TestSpecs#mut_ref#0#b#252: Value;
+    var debug#TestSpecs#mut_ref#1#b_ref#268: Value;
+    var debug#TestSpecs#mut_ref#0#b#349: Value;
+    var debug#TestSpecs#mut_ref#0#b#382: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 12;
-    debug#TestSpecs#mut_ref#0#b := EmptyPositionMap;
-    debug#TestSpecs#mut_ref#1#b_ref := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -89,7 +88,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#TestSpecs#mut_ref#0#b := debug#TestSpecs#mut_ref#0#b[Position(252) := __tmp];
+    assume (debug#TestSpecs#mut_ref#0#b#252) == (__tmp);
 
     call __t3 := BorrowLoc(__frame + 0);
 
@@ -99,7 +98,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
 
     call TestSpecs_mut_b(__t4);
     if (__abort_flag) { goto Label_Abort; }
-    debug#TestSpecs#mut_ref#0#b := debug#TestSpecs#mut_ref#0#b[Position(349) := GetLocal(__m, __frame + 0)];
+    assume (debug#TestSpecs#mut_ref#0#b#349) == (GetLocal(__m, __frame + 0));
 
     call __t5 := CopyOrMoveRef(b_ref);
 
@@ -109,7 +108,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#TestSpecs#mut_ref#0#b := debug#TestSpecs#mut_ref#0#b[Position(382) := __tmp];
+    assume (debug#TestSpecs#mut_ref#0#b#382) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -165,16 +164,16 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestSpecs#mut_ref_failure#0#b: [Position]Value;
-    var debug#TestSpecs#mut_ref_failure#1#b_ref: [Position]Value;
+    var debug#TestSpecs#mut_ref_failure#0#b#621: Value;
+    var debug#TestSpecs#mut_ref_failure#1#b_ref#637: Value;
+    var debug#TestSpecs#mut_ref_failure#0#b#661: Value;
+    var debug#TestSpecs#mut_ref_failure#0#b#694: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 12;
-    debug#TestSpecs#mut_ref_failure#0#b := EmptyPositionMap;
-    debug#TestSpecs#mut_ref_failure#1#b_ref := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -184,7 +183,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#TestSpecs#mut_ref_failure#0#b := debug#TestSpecs#mut_ref_failure#0#b[Position(621) := __tmp];
+    assume (debug#TestSpecs#mut_ref_failure#0#b#621) == (__tmp);
 
     call __t3 := BorrowLoc(__frame + 0);
 
@@ -194,7 +193,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
 
     call TestSpecs_mut_b(__t4);
     if (__abort_flag) { goto Label_Abort; }
-    debug#TestSpecs#mut_ref_failure#0#b := debug#TestSpecs#mut_ref_failure#0#b[Position(661) := GetLocal(__m, __frame + 0)];
+    assume (debug#TestSpecs#mut_ref_failure#0#b#661) == (GetLocal(__m, __frame + 0));
 
     call __t5 := CopyOrMoveRef(b_ref);
 
@@ -204,7 +203,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#TestSpecs#mut_ref_failure#0#b := debug#TestSpecs#mut_ref_failure#0#b[Position(694) := __tmp];
+    assume (debug#TestSpecs#mut_ref_failure#0#b#694) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 7, __tmp);

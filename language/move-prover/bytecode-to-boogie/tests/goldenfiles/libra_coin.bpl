@@ -79,21 +79,19 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapa
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#mint_with_default_capability#0#amount: [Position]Value;
-    var debug#LibraCoin#mint_with_default_capability#1#__ret: [Position]Value;
+    var debug#LibraCoin#mint_with_default_capability#0#amount#806: Value;
+    var debug#LibraCoin#mint_with_default_capability#1#__ret#1401: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraCoin#mint_with_default_capability#0#amount := EmptyPositionMap;
-    debug#LibraCoin#mint_with_default_capability#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 0, amount);
-    debug#LibraCoin#mint_with_default_capability#0#amount := debug#LibraCoin#mint_with_default_capability#0#amount[Position(806) := amount];
+    assume (debug#LibraCoin#mint_with_default_capability#0#amount#806) == (amount);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -112,14 +110,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapa
     __m := UpdateLocal(__m, __frame + 4, __t4);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#LibraCoin#mint_with_default_capability#1#__ret := debug#LibraCoin#mint_with_default_capability#1#__ret[Position(1401) := __ret0];
+    assume (debug#LibraCoin#mint_with_default_capability#1#__ret#1401) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#mint_with_default_capability#1#__ret := debug#LibraCoin#mint_with_default_capability#1#__ret[Position(1486) := __ret0];
 }
 
 procedure LibraCoin_mint_with_default_capability_verify (amount: Value) returns (__ret0: Value)
@@ -162,30 +159,25 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#mint#0#value: [Position]Value;
-    var debug#LibraCoin#mint#1#capability: [Position]Value;
-    var debug#LibraCoin#mint#2#market_cap_ref: [Position]Value;
-    var debug#LibraCoin#mint#3#market_cap_total_value: [Position]Value;
-    var debug#LibraCoin#mint#4#__ret: [Position]Value;
+    var debug#LibraCoin#mint#0#value#1723: Value;
+    var debug#LibraCoin#mint#1#capability#1723: Value;
+    var debug#LibraCoin#mint#2#market_cap_ref#2898: Value;
+    var debug#LibraCoin#mint#3#market_cap_total_value#2964: Value;
+    var debug#LibraCoin#mint#4#__ret#3129: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 24;
-    debug#LibraCoin#mint#0#value := EmptyPositionMap;
-    debug#LibraCoin#mint#1#capability := EmptyPositionMap;
-    debug#LibraCoin#mint#2#market_cap_ref := EmptyPositionMap;
-    debug#LibraCoin#mint#3#market_cap_total_value := EmptyPositionMap;
-    debug#LibraCoin#mint#4#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(value);
     __m := UpdateLocal(__m, __frame + 0, value);
-    debug#LibraCoin#mint#0#value := debug#LibraCoin#mint#0#value[Position(1723) := value];
+    assume (debug#LibraCoin#mint#0#value#1723) == (value);
     assume is#Vector(Dereference(__m, capability));
     assume IsValidReferenceParameter(__m, __frame, capability);
-    debug#LibraCoin#mint#1#capability := debug#LibraCoin#mint#1#capability[Position(1723) := Dereference(__m, capability)];
+    assume (debug#LibraCoin#mint#1#capability#1723) == (Dereference(__m, capability));
 
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(capability);
@@ -238,7 +230,7 @@ Label_11:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 16));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraCoin#mint#3#market_cap_total_value := debug#LibraCoin#mint#3#market_cap_total_value[Position(2964) := __tmp];
+    assume (debug#LibraCoin#mint#3#market_cap_total_value#2964) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 17, __tmp);
@@ -263,14 +255,13 @@ Label_11:
     __m := UpdateLocal(__m, __frame + 23, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 23);
-    debug#LibraCoin#mint#4#__ret := debug#LibraCoin#mint#4#__ret[Position(3129) := __ret0];
+    assume (debug#LibraCoin#mint#4#__ret#3129) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#mint#4#__ret := debug#LibraCoin#mint#4#__ret[Position(3163) := __ret0];
 }
 
 procedure LibraCoin_mint_verify (value: Value, capability: Reference) returns (__ret0: Value)
@@ -378,14 +369,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#market_cap#0#__ret: [Position]Value;
+    var debug#LibraCoin#market_cap#0#__ret#4289: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraCoin#market_cap#0#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -403,14 +393,13 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraCoin#market_cap#0#__ret := debug#LibraCoin#market_cap#0#__ret[Position(4289) := __ret0];
+    assume (debug#LibraCoin#market_cap#0#__ret#4289) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#market_cap#0#__ret := debug#LibraCoin#market_cap#0#__ret[Position(4353) := __ret0];
 }
 
 procedure LibraCoin_market_cap_verify () returns (__ret0: Value)
@@ -429,14 +418,13 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), Intege
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#zero#0#__ret: [Position]Value;
+    var debug#LibraCoin#zero#0#__ret#4477: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 2;
-    debug#LibraCoin#zero#0#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -448,14 +436,13 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), Intege
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 1);
-    debug#LibraCoin#zero#0#__ret := debug#LibraCoin#zero#0#__ret[Position(4477) := __ret0];
+    assume (debug#LibraCoin#zero#0#__ret#4477) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#zero#0#__ret := debug#LibraCoin#zero#0#__ret[Position(4501) := __ret0];
 }
 
 procedure LibraCoin_zero_verify () returns (__ret0: Value)
@@ -475,21 +462,19 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, coin_ref)
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#value#0#coin_ref: [Position]Value;
-    var debug#LibraCoin#value#1#__ret: [Position]Value;
+    var debug#LibraCoin#value#0#coin_ref#4555: Value;
+    var debug#LibraCoin#value#1#__ret#4644: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraCoin#value#0#coin_ref := EmptyPositionMap;
-    debug#LibraCoin#value#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
     assume IsValidReferenceParameter(__m, __frame, coin_ref);
-    debug#LibraCoin#value#0#coin_ref := debug#LibraCoin#value#0#coin_ref[Position(4555) := Dereference(__m, coin_ref)];
+    assume (debug#LibraCoin#value#0#coin_ref#4555) == (Dereference(__m, coin_ref));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(coin_ref);
@@ -501,14 +486,13 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, coin_ref)
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraCoin#value#1#__ret := debug#LibraCoin#value#1#__ret[Position(4644) := __ret0];
+    assume (debug#LibraCoin#value#1#__ret#4644) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#value#1#__ret := debug#LibraCoin#value#1#__ret[Position(4679) := __ret0];
 }
 
 procedure LibraCoin_value_verify (coin_ref: Reference) returns (__ret0: Value)
@@ -534,30 +518,26 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#split#0#coin: [Position]Value;
-    var debug#LibraCoin#split#1#amount: [Position]Value;
-    var debug#LibraCoin#split#2#other: [Position]Value;
-    var debug#LibraCoin#split#3#__ret: [Position]Value;
-    var debug#LibraCoin#split#4#__ret: [Position]Value;
+    var debug#LibraCoin#split#0#coin#4818: Value;
+    var debug#LibraCoin#split#1#amount#4818: Value;
+    var debug#LibraCoin#split#2#other#5037: Value;
+    var debug#LibraCoin#split#0#coin#5045: Value;
+    var debug#LibraCoin#split#3#__ret#5093: Value;
+    var debug#LibraCoin#split#4#__ret#5093: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#LibraCoin#split#0#coin := EmptyPositionMap;
-    debug#LibraCoin#split#1#amount := EmptyPositionMap;
-    debug#LibraCoin#split#2#other := EmptyPositionMap;
-    debug#LibraCoin#split#3#__ret := EmptyPositionMap;
-    debug#LibraCoin#split#4#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(coin);
     __m := UpdateLocal(__m, __frame + 0, coin);
-    debug#LibraCoin#split#0#coin := debug#LibraCoin#split#0#coin[Position(4818) := coin];
+    assume (debug#LibraCoin#split#0#coin#4818) == (coin);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraCoin#split#1#amount := debug#LibraCoin#split#1#amount[Position(4818) := amount];
+    assume (debug#LibraCoin#split#1#amount#4818) == (amount);
 
     // bytecode translation starts here
     call __t3 := BorrowLoc(__frame + 0);
@@ -570,11 +550,11 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
     assume is#Vector(__t5);
 
     __m := UpdateLocal(__m, __frame + 5, __t5);
-    debug#LibraCoin#split#0#coin := debug#LibraCoin#split#0#coin[Position(5045) := GetLocal(__m, __frame + 0)];
+    assume (debug#LibraCoin#split#0#coin#5045) == (GetLocal(__m, __frame + 0));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraCoin#split#2#other := debug#LibraCoin#split#2#other[Position(5037) := __tmp];
+    assume (debug#LibraCoin#split#2#other#5037) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -583,18 +563,16 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    debug#LibraCoin#split#3#__ret := debug#LibraCoin#split#3#__ret[Position(5093) := __ret0];
+    assume (debug#LibraCoin#split#3#__ret#5093) == (__ret0);
     __ret1 := GetLocal(__m, __frame + 7);
-    debug#LibraCoin#split#4#__ret := debug#LibraCoin#split#4#__ret[Position(5093) := __ret1];
+    assume (debug#LibraCoin#split#4#__ret#5093) == (__ret1);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#split#3#__ret := debug#LibraCoin#split#3#__ret[Position(5129) := __ret0];
     __ret1 := DefaultValue;
-    debug#LibraCoin#split#4#__ret := debug#LibraCoin#split#4#__ret[Position(5129) := __ret1];
 }
 
 procedure LibraCoin_split_verify (coin: Value, amount: Value) returns (__ret0: Value, __ret1: Value)
@@ -631,28 +609,24 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(__m, coin_ref), 
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#withdraw#0#coin_ref: [Position]Value;
-    var debug#LibraCoin#withdraw#1#amount: [Position]Value;
-    var debug#LibraCoin#withdraw#2#value: [Position]Value;
-    var debug#LibraCoin#withdraw#3#__ret: [Position]Value;
+    var debug#LibraCoin#withdraw#0#coin_ref#5391: Value;
+    var debug#LibraCoin#withdraw#1#amount#5391: Value;
+    var debug#LibraCoin#withdraw#2#value#5692: Value;
+    var debug#LibraCoin#withdraw#3#__ret#5881: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 18;
-    debug#LibraCoin#withdraw#0#coin_ref := EmptyPositionMap;
-    debug#LibraCoin#withdraw#1#amount := EmptyPositionMap;
-    debug#LibraCoin#withdraw#2#value := EmptyPositionMap;
-    debug#LibraCoin#withdraw#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
     assume IsValidReferenceParameter(__m, __frame, coin_ref);
-    debug#LibraCoin#withdraw#0#coin_ref := debug#LibraCoin#withdraw#0#coin_ref[Position(5391) := Dereference(__m, coin_ref)];
+    assume (debug#LibraCoin#withdraw#0#coin_ref#5391) == (Dereference(__m, coin_ref));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraCoin#withdraw#1#amount := debug#LibraCoin#withdraw#1#amount[Position(5391) := amount];
+    assume (debug#LibraCoin#withdraw#1#amount#5391) == (amount);
 
     // bytecode translation starts here
     call __t3 := CopyOrMoveRef(coin_ref);
@@ -665,7 +639,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(__m, coin_ref), 
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraCoin#withdraw#2#value := debug#LibraCoin#withdraw#2#value[Position(5692) := __tmp];
+    assume (debug#LibraCoin#withdraw#2#value#5692) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -711,14 +685,13 @@ Label_11:
     __m := UpdateLocal(__m, __frame + 17, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 17);
-    debug#LibraCoin#withdraw#3#__ret := debug#LibraCoin#withdraw#3#__ret[Position(5881) := __ret0];
+    assume (debug#LibraCoin#withdraw#3#__ret#5881) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#withdraw#3#__ret := debug#LibraCoin#withdraw#3#__ret[Position(5916) := __ret0];
 }
 
 procedure LibraCoin_withdraw_verify (coin_ref: Reference, amount: Value) returns (__ret0: Value)
@@ -741,26 +714,24 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(coin1, Lib
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#join#0#coin1: [Position]Value;
-    var debug#LibraCoin#join#1#coin2: [Position]Value;
-    var debug#LibraCoin#join#2#__ret: [Position]Value;
+    var debug#LibraCoin#join#0#coin1#6020: Value;
+    var debug#LibraCoin#join#1#coin2#6020: Value;
+    var debug#LibraCoin#join#0#coin1#6215: Value;
+    var debug#LibraCoin#join#2#__ret#6262: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraCoin#join#0#coin1 := EmptyPositionMap;
-    debug#LibraCoin#join#1#coin2 := EmptyPositionMap;
-    debug#LibraCoin#join#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(coin1);
     __m := UpdateLocal(__m, __frame + 0, coin1);
-    debug#LibraCoin#join#0#coin1 := debug#LibraCoin#join#0#coin1[Position(6020) := coin1];
+    assume (debug#LibraCoin#join#0#coin1#6020) == (coin1);
     assume is#Vector(coin2);
     __m := UpdateLocal(__m, __frame + 1, coin2);
-    debug#LibraCoin#join#1#coin2 := debug#LibraCoin#join#1#coin2[Position(6020) := coin2];
+    assume (debug#LibraCoin#join#1#coin2#6020) == (coin2);
 
     // bytecode translation starts here
     call __t2 := BorrowLoc(__frame + 0);
@@ -770,20 +741,19 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(coin1, Lib
 
     call LibraCoin_deposit(__t2, GetLocal(__m, __frame + 3));
     if (__abort_flag) { goto Label_Abort; }
-    debug#LibraCoin#join#0#coin1 := debug#LibraCoin#join#0#coin1[Position(6215) := GetLocal(__m, __frame + 0)];
+    assume (debug#LibraCoin#join#0#coin1#6215) == (GetLocal(__m, __frame + 0));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#LibraCoin#join#2#__ret := debug#LibraCoin#join#2#__ret[Position(6262) := __ret0];
+    assume (debug#LibraCoin#join#2#__ret#6262) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#join#2#__ret := debug#LibraCoin#join#2#__ret[Position(6286) := __ret0];
 }
 
 procedure LibraCoin_join_verify (coin1: Value, coin2: Value) returns (__ret0: Value)
@@ -815,28 +785,24 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#deposit#0#coin_ref: [Position]Value;
-    var debug#LibraCoin#deposit#1#check: [Position]Value;
-    var debug#LibraCoin#deposit#2#value: [Position]Value;
-    var debug#LibraCoin#deposit#3#check_value: [Position]Value;
+    var debug#LibraCoin#deposit#0#coin_ref#6465: Value;
+    var debug#LibraCoin#deposit#1#check#6465: Value;
+    var debug#LibraCoin#deposit#2#value#6729: Value;
+    var debug#LibraCoin#deposit#3#check_value#6779: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 14;
-    debug#LibraCoin#deposit#0#coin_ref := EmptyPositionMap;
-    debug#LibraCoin#deposit#1#check := EmptyPositionMap;
-    debug#LibraCoin#deposit#2#value := EmptyPositionMap;
-    debug#LibraCoin#deposit#3#check_value := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
     assume IsValidReferenceParameter(__m, __frame, coin_ref);
-    debug#LibraCoin#deposit#0#coin_ref := debug#LibraCoin#deposit#0#coin_ref[Position(6465) := Dereference(__m, coin_ref)];
+    assume (debug#LibraCoin#deposit#0#coin_ref#6465) == (Dereference(__m, coin_ref));
     assume is#Vector(check);
     __m := UpdateLocal(__m, __frame + 1, check);
-    debug#LibraCoin#deposit#1#check := debug#LibraCoin#deposit#1#check[Position(6465) := check];
+    assume (debug#LibraCoin#deposit#1#check#6465) == (check);
 
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(coin_ref);
@@ -849,7 +815,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraCoin#deposit#2#value := debug#LibraCoin#deposit#2#value[Position(6729) := __tmp];
+    assume (debug#LibraCoin#deposit#2#value#6729) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -859,7 +825,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraCoin#deposit#3#check_value := debug#LibraCoin#deposit#3#check_value[Position(6779) := __tmp];
+    assume (debug#LibraCoin#deposit#3#check_value#6779) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -908,21 +874,19 @@ ensures old(b#Boolean(Boolean(!IsEqual(SelectField(coin, LibraCoin_T_value), Int
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#destroy_zero#0#coin: [Position]Value;
-    var debug#LibraCoin#destroy_zero#1#value: [Position]Value;
+    var debug#LibraCoin#destroy_zero#0#coin#7117: Value;
+    var debug#LibraCoin#destroy_zero#1#value#7227: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 9;
-    debug#LibraCoin#destroy_zero#0#coin := EmptyPositionMap;
-    debug#LibraCoin#destroy_zero#1#value := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(coin);
     __m := UpdateLocal(__m, __frame + 0, coin);
-    debug#LibraCoin#destroy_zero#0#coin := debug#LibraCoin#destroy_zero#0#coin[Position(7117) := coin];
+    assume (debug#LibraCoin#destroy_zero#0#coin#7117) == (coin);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -933,7 +897,7 @@ ensures old(b#Boolean(Boolean(!IsEqual(SelectField(coin, LibraCoin_T_value), Int
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraCoin#destroy_zero#1#value := debug#LibraCoin#destroy_zero#1#value[Position(7227) := __tmp];
+    assume (debug#LibraCoin#destroy_zero#1#value#7227) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 4, __tmp);

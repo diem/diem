@@ -18,21 +18,19 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#CastBad#aborting_u8_cast_bad#0#x: [Position]Value;
-    var debug#CastBad#aborting_u8_cast_bad#1#__ret: [Position]Value;
+    var debug#CastBad#aborting_u8_cast_bad#0#x#71: Value;
+    var debug#CastBad#aborting_u8_cast_bad#1#__ret#182: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#CastBad#aborting_u8_cast_bad#0#x := EmptyPositionMap;
-    debug#CastBad#aborting_u8_cast_bad#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#CastBad#aborting_u8_cast_bad#0#x := debug#CastBad#aborting_u8_cast_bad#0#x[Position(71) := x];
+    assume (debug#CastBad#aborting_u8_cast_bad#0#x#71) == (x);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -43,14 +41,13 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    debug#CastBad#aborting_u8_cast_bad#1#__ret := debug#CastBad#aborting_u8_cast_bad#1#__ret[Position(182) := __ret0];
+    assume (debug#CastBad#aborting_u8_cast_bad#1#__ret#182) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#CastBad#aborting_u8_cast_bad#1#__ret := debug#CastBad#aborting_u8_cast_bad#1#__ret[Position(209) := __ret0];
 }
 
 procedure CastBad_aborting_u8_cast_bad_verify (x: Value) returns (__ret0: Value)
@@ -71,21 +68,19 @@ ensures old(b#Boolean(Boolean(i#Integer(x) > i#Integer(Integer(255))))) ==> __ab
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#CastBad#aborting_u8_cast_ok#0#x: [Position]Value;
-    var debug#CastBad#aborting_u8_cast_ok#1#__ret: [Position]Value;
+    var debug#CastBad#aborting_u8_cast_ok#0#x#261: Value;
+    var debug#CastBad#aborting_u8_cast_ok#1#__ret#350: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#CastBad#aborting_u8_cast_ok#0#x := EmptyPositionMap;
-    debug#CastBad#aborting_u8_cast_ok#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#CastBad#aborting_u8_cast_ok#0#x := debug#CastBad#aborting_u8_cast_ok#0#x[Position(261) := x];
+    assume (debug#CastBad#aborting_u8_cast_ok#0#x#261) == (x);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -96,14 +91,13 @@ ensures old(b#Boolean(Boolean(i#Integer(x) > i#Integer(Integer(255))))) ==> __ab
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    debug#CastBad#aborting_u8_cast_ok#1#__ret := debug#CastBad#aborting_u8_cast_ok#1#__ret[Position(350) := __ret0];
+    assume (debug#CastBad#aborting_u8_cast_ok#1#__ret#350) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#CastBad#aborting_u8_cast_ok#1#__ret := debug#CastBad#aborting_u8_cast_ok#1#__ret[Position(377) := __ret0];
 }
 
 procedure CastBad_aborting_u8_cast_ok_verify (x: Value) returns (__ret0: Value)
@@ -124,21 +118,19 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#CastBad#aborting_u64_cast_bad#0#x: [Position]Value;
-    var debug#CastBad#aborting_u64_cast_bad#1#__ret: [Position]Value;
+    var debug#CastBad#aborting_u64_cast_bad#0#x#433: Value;
+    var debug#CastBad#aborting_u64_cast_bad#1#__ret#547: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#CastBad#aborting_u64_cast_bad#0#x := EmptyPositionMap;
-    debug#CastBad#aborting_u64_cast_bad#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU128(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#CastBad#aborting_u64_cast_bad#0#x := debug#CastBad#aborting_u64_cast_bad#0#x[Position(433) := x];
+    assume (debug#CastBad#aborting_u64_cast_bad#0#x#433) == (x);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -149,14 +141,13 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    debug#CastBad#aborting_u64_cast_bad#1#__ret := debug#CastBad#aborting_u64_cast_bad#1#__ret[Position(547) := __ret0];
+    assume (debug#CastBad#aborting_u64_cast_bad#1#__ret#547) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#CastBad#aborting_u64_cast_bad#1#__ret := debug#CastBad#aborting_u64_cast_bad#1#__ret[Position(575) := __ret0];
 }
 
 procedure CastBad_aborting_u64_cast_bad_verify (x: Value) returns (__ret0: Value)
@@ -177,21 +168,19 @@ ensures old(b#Boolean(Boolean(i#Integer(x) > i#Integer(Integer(92233720368547758
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#CastBad#aborting_u64_cast_ok#0#x: [Position]Value;
-    var debug#CastBad#aborting_u64_cast_ok#1#__ret: [Position]Value;
+    var debug#CastBad#aborting_u64_cast_ok#0#x#627: Value;
+    var debug#CastBad#aborting_u64_cast_ok#1#__ret#755: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#CastBad#aborting_u64_cast_ok#0#x := EmptyPositionMap;
-    debug#CastBad#aborting_u64_cast_ok#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU128(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#CastBad#aborting_u64_cast_ok#0#x := debug#CastBad#aborting_u64_cast_ok#0#x[Position(627) := x];
+    assume (debug#CastBad#aborting_u64_cast_ok#0#x#627) == (x);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -202,14 +191,13 @@ ensures old(b#Boolean(Boolean(i#Integer(x) > i#Integer(Integer(92233720368547758
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    debug#CastBad#aborting_u64_cast_ok#1#__ret := debug#CastBad#aborting_u64_cast_ok#1#__ret[Position(755) := __ret0];
+    assume (debug#CastBad#aborting_u64_cast_ok#1#__ret#755) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#CastBad#aborting_u64_cast_ok#1#__ret := debug#CastBad#aborting_u64_cast_ok#1#__ret[Position(783) := __ret0];
 }
 
 procedure CastBad_aborting_u64_cast_ok_verify (x: Value) returns (__ret0: Value)

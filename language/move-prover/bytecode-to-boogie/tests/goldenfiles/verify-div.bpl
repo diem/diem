@@ -19,28 +19,24 @@ ensures old(b#Boolean(Boolean(i#Integer(y) > i#Integer(Integer(0))))) ==> !__abo
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestSpecs#div#0#x: [Position]Value;
-    var debug#TestSpecs#div#1#y: [Position]Value;
-    var debug#TestSpecs#div#2#r: [Position]Value;
-    var debug#TestSpecs#div#3#__ret: [Position]Value;
+    var debug#TestSpecs#div#0#x#24: Value;
+    var debug#TestSpecs#div#1#y#24: Value;
+    var debug#TestSpecs#div#2#r#247: Value;
+    var debug#TestSpecs#div#3#__ret#276: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#TestSpecs#div#0#x := EmptyPositionMap;
-    debug#TestSpecs#div#1#y := EmptyPositionMap;
-    debug#TestSpecs#div#2#r := EmptyPositionMap;
-    debug#TestSpecs#div#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestSpecs#div#0#x := debug#TestSpecs#div#0#x[Position(24) := x];
+    assume (debug#TestSpecs#div#0#x#24) == (x);
     assume IsValidU64(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestSpecs#div#1#y := debug#TestSpecs#div#1#y[Position(24) := y];
+    assume (debug#TestSpecs#div#1#y#24) == (y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -55,20 +51,19 @@ ensures old(b#Boolean(Boolean(i#Integer(y) > i#Integer(Integer(0))))) ==> !__abo
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#TestSpecs#div#2#r := debug#TestSpecs#div#2#r[Position(247) := __tmp];
+    assume (debug#TestSpecs#div#2#r#247) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    debug#TestSpecs#div#3#__ret := debug#TestSpecs#div#3#__ret[Position(276) := __ret0];
+    assume (debug#TestSpecs#div#3#__ret#276) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestSpecs#div#3#__ret := debug#TestSpecs#div#3#__ret[Position(296) := __ret0];
 }
 
 procedure TestSpecs_div_verify (x: Value, y: Value) returns (__ret0: Value)
@@ -90,28 +85,24 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestSpecs#div_by_zero_detected#0#x: [Position]Value;
-    var debug#TestSpecs#div_by_zero_detected#1#y: [Position]Value;
-    var debug#TestSpecs#div_by_zero_detected#2#r: [Position]Value;
-    var debug#TestSpecs#div_by_zero_detected#3#__ret: [Position]Value;
+    var debug#TestSpecs#div_by_zero_detected#0#x#303: Value;
+    var debug#TestSpecs#div_by_zero_detected#1#y#303: Value;
+    var debug#TestSpecs#div_by_zero_detected#2#r#567: Value;
+    var debug#TestSpecs#div_by_zero_detected#3#__ret#627: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#TestSpecs#div_by_zero_detected#0#x := EmptyPositionMap;
-    debug#TestSpecs#div_by_zero_detected#1#y := EmptyPositionMap;
-    debug#TestSpecs#div_by_zero_detected#2#r := EmptyPositionMap;
-    debug#TestSpecs#div_by_zero_detected#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestSpecs#div_by_zero_detected#0#x := debug#TestSpecs#div_by_zero_detected#0#x[Position(303) := x];
+    assume (debug#TestSpecs#div_by_zero_detected#0#x#303) == (x);
     assume IsValidU64(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestSpecs#div_by_zero_detected#1#y := debug#TestSpecs#div_by_zero_detected#1#y[Position(303) := y];
+    assume (debug#TestSpecs#div_by_zero_detected#1#y#303) == (y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -126,20 +117,19 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#TestSpecs#div_by_zero_detected#2#r := debug#TestSpecs#div_by_zero_detected#2#r[Position(567) := __tmp];
+    assume (debug#TestSpecs#div_by_zero_detected#2#r#567) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    debug#TestSpecs#div_by_zero_detected#3#__ret := debug#TestSpecs#div_by_zero_detected#3#__ret[Position(627) := __ret0];
+    assume (debug#TestSpecs#div_by_zero_detected#3#__ret#627) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestSpecs#div_by_zero_detected#3#__ret := debug#TestSpecs#div_by_zero_detected#3#__ret[Position(647) := __ret0];
 }
 
 procedure TestSpecs_div_by_zero_detected_verify (x: Value, y: Value) returns (__ret0: Value)

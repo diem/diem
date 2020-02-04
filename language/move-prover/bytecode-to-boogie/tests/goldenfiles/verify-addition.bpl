@@ -19,26 +19,23 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestAddition#overflow_u8_add_bad#0#x: [Position]Value;
-    var debug#TestAddition#overflow_u8_add_bad#1#y: [Position]Value;
-    var debug#TestAddition#overflow_u8_add_bad#2#__ret: [Position]Value;
+    var debug#TestAddition#overflow_u8_add_bad#0#x#72: Value;
+    var debug#TestAddition#overflow_u8_add_bad#1#y#72: Value;
+    var debug#TestAddition#overflow_u8_add_bad#2#__ret#188: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#TestAddition#overflow_u8_add_bad#0#x := EmptyPositionMap;
-    debug#TestAddition#overflow_u8_add_bad#1#y := EmptyPositionMap;
-    debug#TestAddition#overflow_u8_add_bad#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU8(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestAddition#overflow_u8_add_bad#0#x := debug#TestAddition#overflow_u8_add_bad#0#x[Position(72) := x];
+    assume (debug#TestAddition#overflow_u8_add_bad#0#x#72) == (x);
     assume IsValidU8(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestAddition#overflow_u8_add_bad#1#y := debug#TestAddition#overflow_u8_add_bad#1#y[Position(72) := y];
+    assume (debug#TestAddition#overflow_u8_add_bad#1#y#72) == (y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -52,14 +49,13 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#TestAddition#overflow_u8_add_bad#2#__ret := debug#TestAddition#overflow_u8_add_bad#2#__ret[Position(188) := __ret0];
+    assume (debug#TestAddition#overflow_u8_add_bad#2#__ret#188) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestAddition#overflow_u8_add_bad#2#__ret := debug#TestAddition#overflow_u8_add_bad#2#__ret[Position(218) := __ret0];
 }
 
 procedure TestAddition_overflow_u8_add_bad_verify (x: Value, y: Value) returns (__ret0: Value)
@@ -81,26 +77,23 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) + i#Integer(y))) > 
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestAddition#overflow_u8_add_ok#0#x: [Position]Value;
-    var debug#TestAddition#overflow_u8_add_ok#1#y: [Position]Value;
-    var debug#TestAddition#overflow_u8_add_ok#2#__ret: [Position]Value;
+    var debug#TestAddition#overflow_u8_add_ok#0#x#270: Value;
+    var debug#TestAddition#overflow_u8_add_ok#1#y#270: Value;
+    var debug#TestAddition#overflow_u8_add_ok#2#__ret#370: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#TestAddition#overflow_u8_add_ok#0#x := EmptyPositionMap;
-    debug#TestAddition#overflow_u8_add_ok#1#y := EmptyPositionMap;
-    debug#TestAddition#overflow_u8_add_ok#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU8(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestAddition#overflow_u8_add_ok#0#x := debug#TestAddition#overflow_u8_add_ok#0#x[Position(270) := x];
+    assume (debug#TestAddition#overflow_u8_add_ok#0#x#270) == (x);
     assume IsValidU8(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestAddition#overflow_u8_add_ok#1#y := debug#TestAddition#overflow_u8_add_ok#1#y[Position(270) := y];
+    assume (debug#TestAddition#overflow_u8_add_ok#1#y#270) == (y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -114,14 +107,13 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) + i#Integer(y))) > 
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#TestAddition#overflow_u8_add_ok#2#__ret := debug#TestAddition#overflow_u8_add_ok#2#__ret[Position(370) := __ret0];
+    assume (debug#TestAddition#overflow_u8_add_ok#2#__ret#370) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestAddition#overflow_u8_add_ok#2#__ret := debug#TestAddition#overflow_u8_add_ok#2#__ret[Position(400) := __ret0];
 }
 
 procedure TestAddition_overflow_u8_add_ok_verify (x: Value, y: Value) returns (__ret0: Value)
@@ -143,26 +135,23 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestAddition#overflow_u64_add_bad#0#x: [Position]Value;
-    var debug#TestAddition#overflow_u64_add_bad#1#y: [Position]Value;
-    var debug#TestAddition#overflow_u64_add_bad#2#__ret: [Position]Value;
+    var debug#TestAddition#overflow_u64_add_bad#0#x#452: Value;
+    var debug#TestAddition#overflow_u64_add_bad#1#y#452: Value;
+    var debug#TestAddition#overflow_u64_add_bad#2#__ret#572: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#TestAddition#overflow_u64_add_bad#0#x := EmptyPositionMap;
-    debug#TestAddition#overflow_u64_add_bad#1#y := EmptyPositionMap;
-    debug#TestAddition#overflow_u64_add_bad#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestAddition#overflow_u64_add_bad#0#x := debug#TestAddition#overflow_u64_add_bad#0#x[Position(452) := x];
+    assume (debug#TestAddition#overflow_u64_add_bad#0#x#452) == (x);
     assume IsValidU64(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestAddition#overflow_u64_add_bad#1#y := debug#TestAddition#overflow_u64_add_bad#1#y[Position(452) := y];
+    assume (debug#TestAddition#overflow_u64_add_bad#1#y#452) == (y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -176,14 +165,13 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#TestAddition#overflow_u64_add_bad#2#__ret := debug#TestAddition#overflow_u64_add_bad#2#__ret[Position(572) := __ret0];
+    assume (debug#TestAddition#overflow_u64_add_bad#2#__ret#572) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestAddition#overflow_u64_add_bad#2#__ret := debug#TestAddition#overflow_u64_add_bad#2#__ret[Position(602) := __ret0];
 }
 
 procedure TestAddition_overflow_u64_add_bad_verify (x: Value, y: Value) returns (__ret0: Value)
@@ -205,26 +193,23 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) + i#Integer(y))) > 
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestAddition#overflow_u64_add_ok#0#x: [Position]Value;
-    var debug#TestAddition#overflow_u64_add_ok#1#y: [Position]Value;
-    var debug#TestAddition#overflow_u64_add_ok#2#__ret: [Position]Value;
+    var debug#TestAddition#overflow_u64_add_ok#0#x#654: Value;
+    var debug#TestAddition#overflow_u64_add_ok#1#y#654: Value;
+    var debug#TestAddition#overflow_u64_add_ok#2#__ret#773: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#TestAddition#overflow_u64_add_ok#0#x := EmptyPositionMap;
-    debug#TestAddition#overflow_u64_add_ok#1#y := EmptyPositionMap;
-    debug#TestAddition#overflow_u64_add_ok#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestAddition#overflow_u64_add_ok#0#x := debug#TestAddition#overflow_u64_add_ok#0#x[Position(654) := x];
+    assume (debug#TestAddition#overflow_u64_add_ok#0#x#654) == (x);
     assume IsValidU64(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestAddition#overflow_u64_add_ok#1#y := debug#TestAddition#overflow_u64_add_ok#1#y[Position(654) := y];
+    assume (debug#TestAddition#overflow_u64_add_ok#1#y#654) == (y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -238,14 +223,13 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) + i#Integer(y))) > 
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#TestAddition#overflow_u64_add_ok#2#__ret := debug#TestAddition#overflow_u64_add_ok#2#__ret[Position(773) := __ret0];
+    assume (debug#TestAddition#overflow_u64_add_ok#2#__ret#773) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestAddition#overflow_u64_add_ok#2#__ret := debug#TestAddition#overflow_u64_add_ok#2#__ret[Position(803) := __ret0];
 }
 
 procedure TestAddition_overflow_u64_add_ok_verify (x: Value, y: Value) returns (__ret0: Value)
@@ -267,26 +251,23 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestAddition#overflow_u128_add_bad#0#x: [Position]Value;
-    var debug#TestAddition#overflow_u128_add_bad#1#y: [Position]Value;
-    var debug#TestAddition#overflow_u128_add_bad#2#__ret: [Position]Value;
+    var debug#TestAddition#overflow_u128_add_bad#0#x#855: Value;
+    var debug#TestAddition#overflow_u128_add_bad#1#y#855: Value;
+    var debug#TestAddition#overflow_u128_add_bad#2#__ret#979: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#TestAddition#overflow_u128_add_bad#0#x := EmptyPositionMap;
-    debug#TestAddition#overflow_u128_add_bad#1#y := EmptyPositionMap;
-    debug#TestAddition#overflow_u128_add_bad#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU128(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestAddition#overflow_u128_add_bad#0#x := debug#TestAddition#overflow_u128_add_bad#0#x[Position(855) := x];
+    assume (debug#TestAddition#overflow_u128_add_bad#0#x#855) == (x);
     assume IsValidU128(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestAddition#overflow_u128_add_bad#1#y := debug#TestAddition#overflow_u128_add_bad#1#y[Position(855) := y];
+    assume (debug#TestAddition#overflow_u128_add_bad#1#y#855) == (y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -300,14 +281,13 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#TestAddition#overflow_u128_add_bad#2#__ret := debug#TestAddition#overflow_u128_add_bad#2#__ret[Position(979) := __ret0];
+    assume (debug#TestAddition#overflow_u128_add_bad#2#__ret#979) == (__ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestAddition#overflow_u128_add_bad#2#__ret := debug#TestAddition#overflow_u128_add_bad#2#__ret[Position(1009) := __ret0];
 }
 
 procedure TestAddition_overflow_u128_add_bad_verify (x: Value, y: Value) returns (__ret0: Value)

@@ -10,6 +10,10 @@ function {:constructor} Position(index: int) : Position;
 const EmptyPositionMap: [Position]Value;
 axiom EmptyPositionMap == (lambda p: Position :: DefaultValue);
 
+function {:inline} NarrowPositionMap(m: [Position]Value, start: int, end: int) : bool {
+  (forall i: int :: i < start ==> m[Position(i)] == DefaultValue) &&
+  (forall i: int :: i >= end ==> m[Position(i)] == DefaultValue)
+}
 
 
 // Path type

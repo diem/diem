@@ -96,35 +96,30 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#Test3#test3#0#flag: [Position]Value;
-    var debug#Test3#test3#1#x: [Position]Value;
-    var debug#Test3#test3#2#x_ref: [Position]Value;
-    var debug#Test3#test3#3#f_or_g_ref: [Position]Value;
-    var debug#Test3#test3#4#f_or_g_ref2: [Position]Value;
-    var debug#Test3#test3#5#f_ref: [Position]Value;
-    var debug#Test3#test3#6#g_ref: [Position]Value;
-    var debug#Test3#test3#7#f: [Position]Value;
-    var debug#Test3#test3#8#g: [Position]Value;
+    var debug#Test3#test3#0#flag#53: Value;
+    var debug#Test3#test3#1#x#267: Value;
+    var debug#Test3#test3#2#x_ref#290: Value;
+    var debug#Test3#test3#3#f_or_g_ref#330: Value;
+    var debug#Test3#test3#3#f_or_g_ref#377: Value;
+    var debug#Test3#test3#1#x#417: Value;
+    var debug#Test3#test3#4#f_or_g_ref2#466: Value;
+    var debug#Test3#test3#4#f_or_g_ref2#514: Value;
+    var debug#Test3#test3#1#x#555: Value;
+    var debug#Test3#test3#5#f_ref#583: Value;
+    var debug#Test3#test3#6#g_ref#609: Value;
+    var debug#Test3#test3#7#f#635: Value;
+    var debug#Test3#test3#8#g#655: Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 57;
-    debug#Test3#test3#0#flag := EmptyPositionMap;
-    debug#Test3#test3#1#x := EmptyPositionMap;
-    debug#Test3#test3#2#x_ref := EmptyPositionMap;
-    debug#Test3#test3#3#f_or_g_ref := EmptyPositionMap;
-    debug#Test3#test3#4#f_or_g_ref2 := EmptyPositionMap;
-    debug#Test3#test3#5#f_ref := EmptyPositionMap;
-    debug#Test3#test3#6#g_ref := EmptyPositionMap;
-    debug#Test3#test3#7#f := EmptyPositionMap;
-    debug#Test3#test3#8#g := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Boolean(flag);
     __m := UpdateLocal(__m, __frame + 0, flag);
-    debug#Test3#test3#0#flag := debug#Test3#test3#0#flag[Position(53) := flag];
+    assume (debug#Test3#test3#0#flag#53) == (flag);
 
     // bytecode translation starts here
     call __tmp := LdConst(0);
@@ -138,7 +133,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 11));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#Test3#test3#1#x := debug#Test3#test3#1#x[Position(267) := __tmp];
+    assume (debug#Test3#test3#1#x#267) == (__tmp);
 
     call __t12 := BorrowLoc(__frame + 1);
 
@@ -172,7 +167,7 @@ Label_15:
     call __t19 := CopyOrMoveRef(f_or_g_ref);
 
     call WriteRef(__t19, GetLocal(__m, __frame + 18));
-    debug#Test3#test3#1#x := debug#Test3#test3#1#x[Position(417) := GetLocal(__m, __frame + 1)];
+    assume (debug#Test3#test3#1#x#417) == (GetLocal(__m, __frame + 1));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 20, __tmp);
@@ -205,7 +200,7 @@ Label_28:
     call __t27 := CopyOrMoveRef(f_or_g_ref2);
 
     call WriteRef(__t27, GetLocal(__m, __frame + 26));
-    debug#Test3#test3#1#x := debug#Test3#test3#1#x[Position(555) := GetLocal(__m, __frame + 1)];
+    assume (debug#Test3#test3#1#x#555) == (GetLocal(__m, __frame + 1));
 
     call __t28 := CopyOrMoveRef(x_ref);
 
@@ -227,7 +222,7 @@ Label_28:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 33));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
-    debug#Test3#test3#7#f := debug#Test3#test3#7#f[Position(635) := __tmp];
+    assume (debug#Test3#test3#7#f#635) == (__tmp);
 
     call __t34 := CopyOrMoveRef(g_ref);
 
@@ -237,7 +232,7 @@ Label_28:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 35));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
-    debug#Test3#test3#8#g := debug#Test3#test3#8#g[Position(655) := __tmp];
+    assume (debug#Test3#test3#8#g#655) == (__tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 36, __tmp);
