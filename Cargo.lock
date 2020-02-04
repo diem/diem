@@ -391,8 +391,8 @@ dependencies = [
  "bytecode-verifier 0.1.0",
  "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "ir-to-bytecode-syntax 0.1.0",
  "libra-types 0.1.0",
+ "move-ir-types 0.1.0",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -411,11 +411,11 @@ dependencies = [
  "functional-tests 0.1.0",
  "goldenfile 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ir-to-bytecode 0.1.0",
- "ir-to-bytecode-syntax 0.1.0",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "move-ir-types 0.1.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prettydiff 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1182,6 +1182,7 @@ dependencies = [
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ir-to-bytecode-syntax 0.1.0",
  "libra-types 0.1.0",
+ "move-ir-types 0.1.0",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1846,8 +1847,8 @@ dependencies = [
  "datatest-stable 0.1.0",
  "functional-tests 0.1.0",
  "ir-to-bytecode 0.1.0",
- "ir-to-bytecode-syntax 0.1.0",
  "libra-types 0.1.0",
+ "move-ir-types 0.1.0",
  "stdlib 0.1.0",
  "vm 0.1.0",
 ]
@@ -1863,6 +1864,7 @@ dependencies = [
  "ir-to-bytecode-syntax 0.1.0",
  "libra-types 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "move-ir-types 0.1.0",
  "thiserror 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
@@ -1875,6 +1877,7 @@ dependencies = [
  "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
+ "move-ir-types 0.1.0",
  "once_cell 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2664,6 +2667,17 @@ dependencies = [
 name = "mirai-annotations"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "move-ir-types"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-types 0.1.0",
+ "once_cell 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "move-lang"
@@ -5462,8 +5476,8 @@ version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
  "ir-to-bytecode 0.1.0",
- "ir-to-bytecode-syntax 0.1.0",
  "libra-types 0.1.0",
+ "move-ir-types 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]

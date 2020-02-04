@@ -6,9 +6,9 @@
 use itertools::Itertools;
 use num::{BigInt, Num};
 
-use ir_to_bytecode_syntax::ast::{BinOp, CopyableVal_, Field_, Loc, QualifiedStructIdent, Type};
-use ir_to_bytecode_syntax::spec_language_ast::{Condition, SpecExp, StorageLocation};
 use libra_types::account_address::AccountAddress;
+use move_ir_types::ast::{BinOp, CopyableVal_, Field_, Loc, QualifiedStructIdent, Type};
+use move_ir_types::spec_language_ast::{Condition, SpecExp, StorageLocation};
 
 use crate::boogie_helpers::{boogie_field_name, boogie_type_value};
 use crate::code_writer::CodeWriter;

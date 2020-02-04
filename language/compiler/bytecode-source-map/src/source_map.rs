@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Result};
-use ir_to_bytecode_syntax::ast::{ModuleName, QualifiedModuleIdent};
 use libra_types::account_address::AccountAddress;
 use libra_types::identifier::Identifier;
+use move_ir_types::ast::{ModuleName, QualifiedModuleIdent};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::ops::Bound;

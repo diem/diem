@@ -13,9 +13,9 @@ anyhow = "1.0"
 bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 functional-tests = { path = "../functional-tests", version = "0.1.0" }
-ir-to-bytecode-syntax = { path = "../compiler/ir-to-bytecode/syntax", version = "0.1.0" }
 ir-to-bytecode = { path = "../compiler/ir-to-bytecode", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
+move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }
 vm = { path = "../vm", version = "0.1.0" }
 

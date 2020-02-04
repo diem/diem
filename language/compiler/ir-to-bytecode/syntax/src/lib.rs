@@ -196,7 +196,5 @@
 //!   | idecl_1 ... idecl_i public main(x_1: g_1, ..., x_j: g_j) { s }
 //! ```
 
-pub mod ast;
 mod lexer;
-pub mod spec_language_ast;
 pub mod syntax;

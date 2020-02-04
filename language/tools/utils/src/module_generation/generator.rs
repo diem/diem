@@ -6,8 +6,8 @@ use crate::module_generation::{
 };
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::compiler::compile_module;
-use ir_to_bytecode_syntax::ast::*;
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
+use move_ir_types::ast::*;
 use rand::{rngs::StdRng, Rng};
 use std::collections::{BTreeSet, VecDeque};
 use vm::file_format::CompiledModule;

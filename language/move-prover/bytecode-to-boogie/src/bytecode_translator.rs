@@ -8,9 +8,9 @@ use std::collections::BTreeSet;
 use itertools::Itertools;
 use log::info;
 
-use ir_to_bytecode_syntax::ast::Loc;
 use libra_types::account_address::AccountAddress;
 use libra_types::language_storage::ModuleId;
+use move_ir_types::ast::Loc;
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
     stackless_bytecode_generator::{StacklessFunction, StacklessModuleGenerator},

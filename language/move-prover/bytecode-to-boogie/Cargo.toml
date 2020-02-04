@@ -14,7 +14,7 @@ libra-temppath = { path = "../../../common/temppath", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
 bytecode-source-map = { path = "../../compiler/bytecode-source-map", version = "0.1.0" }
 ir-to-bytecode = { path = "../../compiler/ir-to-bytecode", version = "0.1.0" }
-ir-to-bytecode-syntax = { path = "../../compiler/ir-to-bytecode/syntax", version = "0.1.0" }
+move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
 stackless-bytecode-generator = { path = "../stackless-bytecode-generator", version = "0.1.0"}
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 

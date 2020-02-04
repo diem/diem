@@ -11,9 +11,9 @@ use num::{BigInt, Num};
 
 use bytecode_source_map::source_map::ModuleSourceMap;
 use bytecode_verifier::VerifiedModule;
-use ir_to_bytecode_syntax::ast::Loc;
-use ir_to_bytecode_syntax::spec_language_ast::Condition_;
 use libra_types::{identifier::IdentStr, identifier::Identifier, language_storage::ModuleId};
+use move_ir_types::ast::Loc;
+use move_ir_types::spec_language_ast::Condition_;
 use vm::access::ModuleAccess;
 use vm::file_format::{
     AddressPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, Kind,
