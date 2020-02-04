@@ -19,6 +19,7 @@ resource "aws_elasticsearch_domain" "logging" {
 
 data "aws_iam_policy_document" "logging" {
   count     = var.enable_logstash ? 1 : 0
+  depends_on = [aws_instance.validator]
   statement {
     actions = [
       "es:*",
