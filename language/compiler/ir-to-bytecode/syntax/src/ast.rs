@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::spec_language_ast::Condition_;
-use crate::syntax::ParseError;
+use anyhow::Result;
 use codespan::{ByteIndex, Span};
 use libra_types::{
     account_address::AccountAddress,
@@ -609,7 +609,7 @@ impl ModuleName {
     }
 
     /// Creates a new `ModuleName` from a raw string. Intended for use by the parser.
-    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
+    pub fn parse(s: impl Into<Box<str>>) -> Result<Self> {
         Ok(ModuleName::new(parse_identifier(s.into())?))
     }
 
@@ -665,12 +665,12 @@ impl ModuleDefinition {
     /// Creates a new `ModuleDefinition` from its string name, dependencies, structs+resources,
     /// and procedures
     /// Does not verify the correctness of any internal properties of its elements
-    pub fn new<L>(
+    pub fn new(
         name: impl Into<Box<str>>,
         imports: Vec<ImportDefinition>,
         structs: Vec<StructDefinition>,
         functions: Vec<(FunctionName, Function)>,
-    ) -> Result<Self, ParseError<L, anyhow::Error>> {
+    ) -> Result<Self> {
         Ok(ModuleDefinition {
             name: ModuleName::parse(name.into())?,
             imports,
@@ -753,7 +753,7 @@ impl StructName {
     }
 
     /// Creates a new `StructName` from a raw string. Intended for use by the parser.
-    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
+    pub fn parse(s: impl Into<Box<str>>) -> Result<Self> {
         Ok(StructName::new(parse_identifier(s.into())?))
     }
 
@@ -774,12 +774,12 @@ impl StructDefinition_ {
     /// types
     /// Does not verify the correctness of any internal properties, e.g. doesn't check that the
     /// fields do not have reference types
-    pub fn move_declared<L>(
+    pub fn move_declared(
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
         type_formals: Vec<(TypeVar, Kind)>,
         fields: Fields<Type>,
-    ) -> Result<Self, ParseError<L, anyhow::Error>> {
+    ) -> Result<Self> {
         Ok(StructDefinition_ {
             is_nominal_resource,
             name: StructName::parse(name)?,
@@ -791,11 +791,11 @@ impl StructDefinition_ {
     /// Creates a new StructDefinition from the resource kind (true if resource), the string
     /// representation of the name, and the user specified fields, a map from their names to their
     /// types
-    pub fn native<L>(
+    pub fn native(
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
         type_formals: Vec<(TypeVar, Kind)>,
-    ) -> Result<Self, ParseError<L, anyhow::Error>> {
+    ) -> Result<Self> {
         Ok(StructDefinition_ {
             is_nominal_resource,
             name: StructName::parse(name)?,
@@ -812,7 +812,7 @@ impl FunctionName {
     }
 
     /// Creates a new `FunctionName` from a raw string. Intended for use by the parser.
-    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
+    pub fn parse(s: impl Into<Box<str>>) -> Result<Self> {
         Ok(FunctionName::new(parse_identifier(s.into())?))
     }
 
@@ -872,7 +872,7 @@ impl Var_ {
     }
 
     /// Creates a new `Var` from a raw string. Intended for use by the parser.
-    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
+    pub fn parse(s: impl Into<Box<str>>) -> Result<Self> {
         Ok(Var_::new(parse_identifier(s.into())?))
     }
 
@@ -889,7 +889,7 @@ impl TypeVar_ {
     }
 
     /// Creates a new `TypeVar` from a raw string. Intended for use by the parser.
-    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
+    pub fn parse(s: impl Into<Box<str>>) -> Result<Self> {
         Ok(TypeVar_::new(parse_identifier(s.into())?))
     }
 
@@ -1061,12 +1061,12 @@ impl Exp_ {
 }
 
 /// Parses a field.
-pub fn parse_field_<L>(s: impl Into<Box<str>>) -> Result<Field_, ParseError<L, anyhow::Error>> {
+pub fn parse_field_(s: impl Into<Box<str>>) -> Result<Field_> {
     Ok(Field_::new(parse_identifier(s.into())?))
 }
 
-fn parse_identifier<L>(s: Box<str>) -> Result<Identifier, ParseError<L, anyhow::Error>> {
-    Identifier::new(s).map_err(|error| ParseError::User { error })
+fn parse_identifier(s: Box<str>) -> Result<Identifier> {
+    Identifier::new(s)
 }
 
 //**************************************************************************************************
