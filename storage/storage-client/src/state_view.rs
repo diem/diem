@@ -10,7 +10,7 @@ use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, proof::SparseMerkleProof,
     transaction::Version,
 };
-use scratchpad::{AccountState, SparseMerkleTree};
+use scratchpad::{AccountStatus, SparseMerkleTree};
 use std::{
     cell::RefCell,
     collections::{hash_map::Entry, BTreeMap, HashMap},
@@ -127,11 +127,11 @@ impl<'a> StateView for VerifiedStateView<'a> {
             Entry::Vacant(vacant) => {
                 let address_hash = address.hash();
                 let account_blob_option = match self.speculative_state.get(address_hash) {
-                    AccountState::ExistsInScratchPad(blob) => Some(blob),
-                    AccountState::DoesNotExist => None,
+                    AccountStatus::ExistsInScratchPad(blob) => Some(blob),
+                    AccountStatus::DoesNotExist => None,
                     // No matter it is in db or unknown, we have to query from db since even the
                     // former case, we don't have the blob data but only its hash.
-                    AccountState::ExistsInDB | AccountState::Unknown => {
+                    AccountStatus::ExistsInDB | AccountStatus::Unknown => {
                         let (blob, proof) = match self.latest_persistent_version {
                             Some(version) => {
                                 let reader = self.reader.clone();
