@@ -81,7 +81,7 @@ variable "fullnode_distribution" {
 # which validator they should be connected to
 locals {
   validator_index = range(0, length(var.fullnode_distribution))
-  fullnode_pair = zipmap(local.validator_index, var.fullnode_distribution)
+  fullnode_pair   = zipmap(local.validator_index, var.fullnode_distribution)
   expanded_fullnodes = {
     for key, val in local.fullnode_pair : key => [
       for i in range(val) : format("%d", key)
@@ -165,14 +165,14 @@ variable "log_to_file" {
 }
 
 variable "log_path" {
-  type        = string
-  default     = "/opt/libra/data/libra.log"
+  type    = string
+  default = "/opt/libra/data/libra.log"
 }
 
 variable "enable_logstash" {
-  type    = bool
+  type        = bool
   description = "Enable logstash instance on validator to send logs to elasticservice, this will enable log_to_file"
-  default = false
+  default     = false
 }
 
 variable "logstash_image" {
@@ -186,6 +186,18 @@ variable "logstash_version" {
 }
 
 variable "elastic_storage_size" {
-  default = 500
+  default     = 500
   description = "The volume size for Elasticsearch"
+}
+
+variable "safety_rules_image_repo" {
+  type        = string
+  description = "Docker image repository to use for safety-rules"
+  default     = "docker.libra.org/safety-rules"
+}
+
+variable "safety_rules_image_tag" {
+  type        = string
+  description = "Docker image tag to use for safety-rules"
+  default     = "latest"
 }

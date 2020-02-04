@@ -1,0 +1,6 @@
+[validator_network]
+
+[consensus.safety_rules.service]
+type = "process"
+server_address = "127.0.0.1:6185"
+consensus_type = "SignedTransactions"
