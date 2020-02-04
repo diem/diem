@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Context;
+use anyhow::{Context, Error};
 use codespan::{ByteIndex, Span};
 use std::fmt;
 use std::str::FromStr;
@@ -26,6 +26,12 @@ use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 pub enum ParseError<L, E> {
     InvalidToken { location: L },
     User { error: E },
+}
+
+impl<L> From<Error> for ParseError<L, Error> {
+    fn from(error: Error) -> Self {
+        ParseError::User { error }
+    }
 }
 
 impl<L, E> fmt::Display for ParseError<L, E>
@@ -172,7 +178,7 @@ fn parse_account_address<'input>(
 fn parse_var_<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<Var_, ParseError<usize, anyhow::Error>> {
-    Var_::parse(parse_name(tokens)?)
+    Ok(Var_::parse(parse_name(tokens)?)?)
 }
 
 fn parse_var<'input>(tokens: &mut Lexer<'input>) -> Result<Var, ParseError<usize, anyhow::Error>> {
@@ -628,7 +634,7 @@ fn parse_term_<'input>(
 fn parse_struct_name<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<StructName, ParseError<usize, anyhow::Error>> {
-    StructName::parse(parse_name(tokens)?)
+    Ok(StructName::parse(parse_name(tokens)?)?)
 }
 
 // QualifiedStructIdent : QualifiedStructIdent = {
@@ -653,7 +659,7 @@ fn parse_qualified_struct_ident<'input>(
 fn parse_module_name<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<ModuleName, ParseError<usize, anyhow::Error>> {
-    ModuleName::parse(parse_name(tokens)?)
+    Ok(ModuleName::parse(parse_name(tokens)?)?)
 }
 
 fn consume_end_of_generics<'input>(
@@ -1957,7 +1963,7 @@ fn parse_module<'input>(
     }
     tokens.advance()?; // consume the RBrace
 
-    ModuleDefinition::new(name, imports, structs, functions)
+    Ok(ModuleDefinition::new(name, imports, structs, functions)?)
 }
 
 // pub ScriptOrModule: ScriptOrModule = {
