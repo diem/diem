@@ -253,10 +253,12 @@ impl TxEmitter {
         duration: Duration,
         instances: Vec<Instance>,
     ) -> Result<TxStats> {
+        use std::env;
+        let accounts_per_client: usize = env::var("ACCOUNTS_PER_CLIENT").unwrap_or("".to_string()).val.parse().unwrap_or(10);
         let job = self
             .start_job(EmitJobRequest {
                 instances,
-                accounts_per_client: 10,
+                accounts_per_client,
                 thread_params: EmitThreadParams::default(),
             })
             .await?;
