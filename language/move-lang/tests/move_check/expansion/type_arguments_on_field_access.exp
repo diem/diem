@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/expansion/type_arguments_on_field_access.move:6:17 ───
    │
  6 │         x.f<u64>;
-   │                 ^ Unexpected token: ';'
+   │                 ^ Unexpected ';'
    ·
  6 │         x.f<u64>;
-   │                 - Expected: 'move', 'copy', 'break', 'continue', '[Name]', '[Address]', 'true', 'false', '[U64]', '(', '{', '::'
+   │                 - Expected an expression term
    │
 
