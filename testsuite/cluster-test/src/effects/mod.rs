@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 mod delete_libra_data;
+mod generate_cpu_flamegraph;
 mod network_delay;
 mod packet_loss;
 mod reboot;
@@ -13,6 +14,7 @@ mod stop_container;
 use anyhow::Result;
 pub use delete_libra_data::DeleteLibraData;
 use futures::future::BoxFuture;
+pub use generate_cpu_flamegraph::GenerateCpuFlamegraph;
 pub use network_delay::three_region_simulation_effects;
 pub use network_delay::NetworkDelay;
 pub use packet_loss::PacketLoss;
