@@ -1,16 +1,37 @@
 // ================================================================================
 // Domains
 
-// Source Position type
-// --------------------
+// Debug tracking
+// --------------
 
-type {:datatype} Position;
-function {:constructor} Position(index: int) : Position;
+// Debug tracking is used to inject information used for model analysis. The generated code emits statements
+// like this:
+//
+//     assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_position, value);
+//
+// While those tracking assumptions are trivially true for the provers logic, the solver (at least Z3)
+// will construct a function mapping which appears in the model, e.g.:
+//
+//     $DebugTrackLocal -> {
+//         1 1 0 440 (Vector (ValueArray |T@[Int]Value!val!0| 0)) -> true
+//         1 1 2 533 (Integer 1) -> true
+//         ...
+//         else -> true
+//     }
+//
+// This information can then be read out from the model.
 
-const EmptyPositionMap: [Position]Value;
-axiom EmptyPositionMap == (lambda p: Position :: DefaultValue);
 
+// Tracks debug information for a parameter, local or a return parameter. Return parameter indices start at
+// the overall number of locals (including parameters).
+function $DebugTrackLocal(module_idx: int, func_idx: int, var_idx: int, code_index: int, value: Value) : bool {
+  true
+}
 
+// Tracks at which location a function was aborted.
+function $DebugTrackAbort(module_idx: int, func_idx: int, code_index: int) : bool {
+  true
+}
 
 // Path type
 // ---------

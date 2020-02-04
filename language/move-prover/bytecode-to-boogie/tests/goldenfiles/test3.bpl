@@ -96,35 +96,17 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#Test3#test3#0#flag: [Position]Value;
-    var debug#Test3#test3#1#x: [Position]Value;
-    var debug#Test3#test3#2#x_ref: [Position]Value;
-    var debug#Test3#test3#3#f_or_g_ref: [Position]Value;
-    var debug#Test3#test3#4#f_or_g_ref2: [Position]Value;
-    var debug#Test3#test3#5#f_ref: [Position]Value;
-    var debug#Test3#test3#6#g_ref: [Position]Value;
-    var debug#Test3#test3#7#f: [Position]Value;
-    var debug#Test3#test3#8#g: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 57;
-    debug#Test3#test3#0#flag := EmptyPositionMap;
-    debug#Test3#test3#1#x := EmptyPositionMap;
-    debug#Test3#test3#2#x_ref := EmptyPositionMap;
-    debug#Test3#test3#3#f_or_g_ref := EmptyPositionMap;
-    debug#Test3#test3#4#f_or_g_ref2 := EmptyPositionMap;
-    debug#Test3#test3#5#f_ref := EmptyPositionMap;
-    debug#Test3#test3#6#g_ref := EmptyPositionMap;
-    debug#Test3#test3#7#f := EmptyPositionMap;
-    debug#Test3#test3#8#g := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Boolean(flag);
     __m := UpdateLocal(__m, __frame + 0, flag);
-    debug#Test3#test3#0#flag := debug#Test3#test3#0#flag[Position(53) := flag];
+    assume $DebugTrackLocal(0, 0, 0, 53, flag);
 
     // bytecode translation starts here
     call __tmp := LdConst(0);
@@ -138,11 +120,13 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 11));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#Test3#test3#1#x := debug#Test3#test3#1#x[Position(267) := __tmp];
+    assume $DebugTrackLocal(0, 0, 1, 267, __tmp);
 
     call __t12 := BorrowLoc(__frame + 1);
 
     call x_ref := CopyOrMoveRef(__t12);
+    assume is#Vector(Dereference(__m, x_ref));
+    assume $DebugTrackLocal(0, 0, 2, 290, Dereference(__m, x_ref));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 13, __tmp);
@@ -155,6 +139,8 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     call __t15 := BorrowField(__t14, Test3_T_f);
 
     call f_or_g_ref := CopyOrMoveRef(__t15);
+    assume IsValidU64(Dereference(__m, f_or_g_ref));
+    assume $DebugTrackLocal(0, 0, 3, 330, Dereference(__m, f_or_g_ref));
 
     goto Label_15;
 
@@ -164,6 +150,8 @@ Label_12:
     call __t17 := BorrowField(__t16, Test3_T_g);
 
     call f_or_g_ref := CopyOrMoveRef(__t17);
+    assume IsValidU64(Dereference(__m, f_or_g_ref));
+    assume $DebugTrackLocal(0, 0, 3, 377, Dereference(__m, f_or_g_ref));
 
 Label_15:
     call __tmp := LdConst(10);
@@ -172,7 +160,7 @@ Label_15:
     call __t19 := CopyOrMoveRef(f_or_g_ref);
 
     call WriteRef(__t19, GetLocal(__m, __frame + 18));
-    debug#Test3#test3#1#x := debug#Test3#test3#1#x[Position(417) := GetLocal(__m, __frame + 1)];
+    assume $DebugTrackLocal(0, 0, 1, 417, GetLocal(__m, __frame + 1));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 20, __tmp);
@@ -188,6 +176,8 @@ Label_15:
     call __t23 := BorrowField(__t22, Test3_T_f);
 
     call f_or_g_ref2 := CopyOrMoveRef(__t23);
+    assume IsValidU64(Dereference(__m, f_or_g_ref2));
+    assume $DebugTrackLocal(0, 0, 4, 466, Dereference(__m, f_or_g_ref2));
 
     goto Label_28;
 
@@ -197,6 +187,8 @@ Label_25:
     call __t25 := BorrowField(__t24, Test3_T_g);
 
     call f_or_g_ref2 := CopyOrMoveRef(__t25);
+    assume IsValidU64(Dereference(__m, f_or_g_ref2));
+    assume $DebugTrackLocal(0, 0, 4, 514, Dereference(__m, f_or_g_ref2));
 
 Label_28:
     call __tmp := LdConst(20);
@@ -205,19 +197,23 @@ Label_28:
     call __t27 := CopyOrMoveRef(f_or_g_ref2);
 
     call WriteRef(__t27, GetLocal(__m, __frame + 26));
-    debug#Test3#test3#1#x := debug#Test3#test3#1#x[Position(555) := GetLocal(__m, __frame + 1)];
+    assume $DebugTrackLocal(0, 0, 1, 555, GetLocal(__m, __frame + 1));
 
     call __t28 := CopyOrMoveRef(x_ref);
 
     call __t29 := BorrowField(__t28, Test3_T_f);
 
     call f_ref := CopyOrMoveRef(__t29);
+    assume IsValidU64(Dereference(__m, f_ref));
+    assume $DebugTrackLocal(0, 0, 5, 583, Dereference(__m, f_ref));
 
     call __t30 := CopyOrMoveRef(x_ref);
 
     call __t31 := BorrowField(__t30, Test3_T_g);
 
     call g_ref := CopyOrMoveRef(__t31);
+    assume IsValidU64(Dereference(__m, g_ref));
+    assume $DebugTrackLocal(0, 0, 6, 609, Dereference(__m, g_ref));
 
     call __t32 := CopyOrMoveRef(f_ref);
 
@@ -227,7 +223,7 @@ Label_28:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 33));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
-    debug#Test3#test3#7#f := debug#Test3#test3#7#f[Position(635) := __tmp];
+    assume $DebugTrackLocal(0, 0, 7, 635, __tmp);
 
     call __t34 := CopyOrMoveRef(g_ref);
 
@@ -237,7 +233,7 @@ Label_28:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 35));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
-    debug#Test3#test3#8#g := debug#Test3#test3#8#g[Position(655) := __tmp];
+    assume $DebugTrackLocal(0, 0, 8, 655, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 36, __tmp);

@@ -36,21 +36,18 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, ref), Tes
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestSpecs#value#0#ref: [Position]Value;
-    var debug#TestSpecs#value#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#TestSpecs#value#0#ref := EmptyPositionMap;
-    debug#TestSpecs#value#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, ref));
     assume IsValidReferenceParameter(__m, __frame, ref);
-    debug#TestSpecs#value#0#ref := debug#TestSpecs#value#0#ref[Position(66) := Dereference(__m, ref)];
+    assume is#Vector(Dereference(__m, ref));
+    assume $DebugTrackLocal(0, 0, 0, 66, Dereference(__m, ref));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(ref);
@@ -62,14 +59,13 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, ref), Tes
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#TestSpecs#value#1#__ret := debug#TestSpecs#value#1#__ret[Position(141) := __ret0];
+    assume $DebugTrackLocal(0, 0, 1, 141, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestSpecs#value#1#__ret := debug#TestSpecs#value#1#__ret[Position(171) := __ret0];
 }
 
 procedure TestSpecs_value_verify (ref: Reference) returns (__ret0: Value)
