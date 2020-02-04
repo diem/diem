@@ -9,8 +9,8 @@ pub mod transaction_scripts;
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use bytecode_verifier::{verify_module_dependencies, VerifiedModule};
 use ir_to_bytecode::compiler::compile_module;
-use ir_to_bytecode::parser::ast::Loc;
 use libra_types::{account_address::AccountAddress, account_config};
+use move_ir_types::ast::Loc;
 use once_cell::sync::Lazy;
 
 static ANNOTATED_STDLIB: Lazy<(Vec<VerifiedModule>, SourceMap<Loc>)> =

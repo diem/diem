@@ -3,11 +3,9 @@
 
 use anyhow::Context;
 use bytecode_source_map::source_map::ModuleSourceMap;
-use ir_to_bytecode::{
-    compiler::compile_module,
-    parser::{ast::Loc, parse_module},
-};
+use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
 use libra_types::account_address::AccountAddress;
+use move_ir_types::ast::Loc;
 use std::{fs, path::Path};
 use vm::{access::ModuleAccess, file_format::CompiledModule};
 

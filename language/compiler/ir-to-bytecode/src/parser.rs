@@ -6,14 +6,11 @@ use codespan::{ByteIndex, CodeMap, Span};
 use codespan_reporting::{emit, termcolor::Buffer, Diagnostic, Label, Severity};
 use ir_to_bytecode_syntax::syntax::{self, ParseError};
 use libra_types::account_address::AccountAddress;
+use move_ir_types::ast;
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-
-// Re-export this to make it convenient for other crates.
-// FIXME: other crates should depend on move_ir_types directly.
-pub use move_ir_types::ast;
 
 /// Determine if a character is an allowed eye-visible (printable) character.
 ///
