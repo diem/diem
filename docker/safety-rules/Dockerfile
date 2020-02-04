@@ -30,7 +30,7 @@ COPY --from=builder /libra/target/release/safety-rules /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 
 ENV RUST_BACKTRACE 1
-CMD /opt/libra/bin/safety-rules
+CMD /docker-run-dynamic.sh
 
 ARG BUILD_DATE
 ARG GIT_REV

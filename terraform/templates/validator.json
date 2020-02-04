@@ -32,11 +32,12 @@
             {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
         ],
         "environment": [
+            {"name": "CFG_BASE_CONFIG", "value": ${cfg_base_config}},
         %{ if cfg_fullnode_seed != "" }
-	    {"name": "CFG_FULLNODE_SEED", "value": "${cfg_fullnode_seed}"},
-	    {"name": "CFG_NUM_FULLNODES", "value": "${cfg_num_fullnodes}"},
-	%{ endif }
-	    {"name": "CFG_LISTEN_ADDR", "value": "${cfg_listen_addr}"},
+            {"name": "CFG_FULLNODE_SEED", "value": "${cfg_fullnode_seed}"},
+            {"name": "CFG_NUM_FULLNODES", "value": "${cfg_num_fullnodes}"},
+        %{ endif }
+            {"name": "CFG_LISTEN_ADDR", "value": "${cfg_listen_addr}"},
             {"name": "CFG_NODE_INDEX", "value": "${cfg_node_index}"},
             {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},
             {"name": "CFG_SEED", "value": "${cfg_seed}"},
@@ -68,5 +69,23 @@
             }
 %{ endif }
         }
+    },
+    {
+        "name": "safety-rules",
+        "image": "${safety_rules_image}${safety_rules_image_version}",
+        "command": ["/docker-run-dynamic.sh"],
+        "cpu": 512,
+        "memory": 256,
+        "essential": true,
+        "mountPoints": [
+            {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
+        ],
+        "environment": [
+            {"name": "CFG_NODE_INDEX", "value": "${cfg_node_index}"},
+            {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},
+            {"name": "CFG_SEED", "value": "${cfg_seed}"},
+            {"name": "CFG_SAFETY_RULES_LISTEN_ADDR", "value": "127.0.0.1:6185"},
+            {"name": "RUST_LOG", "value": "${log_level}"}
+        ]
     }
 ]
