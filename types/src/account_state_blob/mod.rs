@@ -3,7 +3,7 @@
 
 use crate::{
     account_address::AccountAddress, account_config::AccountResource, account_state::AccountState,
-    ledger_info::LedgerInfo, proof::AccountStateProof, transaction::Version,
+    event::EventKey, ledger_info::LedgerInfo, proof::AccountStateProof, transaction::Version,
 };
 use anyhow::{anyhow, ensure, format_err, Error, Result};
 use libra_crypto::{
@@ -183,6 +183,33 @@ impl AccountStateWithProof {
 
         self.proof
             .verify(ledger_info, version, address.hash(), self.blob.as_ref())
+    }
+
+    /// Returns the `EventKey` (if existent) and number of total events for
+    /// an event stream specified by a query path.
+    ///
+    /// If the resource referred by the path that is supposed to hold the `EventHandle`
+    /// doesn't exist, returns (None, 0). While if the path is invalid, raises error.
+    ///
+    /// For example:
+    ///   1. if asked for DiscoverySetChange event from an ordinary user account,
+    /// this returns (None, 0)
+    ///   2. but if asked for a random path that we don't understand, it's an error.
+    pub fn get_event_key_and_count_by_query_path(
+        &self,
+        path: &[u8],
+    ) -> Result<(Option<EventKey>, u64)> {
+        if let Some(account_blob) = &self.blob {
+            if let Some(event_handle) =
+                AccountState::try_from(account_blob)?.get_event_handle_by_query_path(path)?
+            {
+                Ok((Some(*event_handle.key()), event_handle.count()))
+            } else {
+                Ok((None, 0))
+            }
+        } else {
+            Ok((None, 0))
+        }
     }
 }
 

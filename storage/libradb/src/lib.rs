@@ -51,7 +51,6 @@ use libra_metrics::OpMetrics;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::AccountResource,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::EventWithProof,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
@@ -68,7 +67,6 @@ use libra_types::{
 use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
-use std::convert::TryFrom;
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::StartupInfo;
 use storage_proto::TreeState;
@@ -241,20 +239,20 @@ impl LibraDB {
         let account_state_with_proof =
             self.get_account_state_with_proof(query_path.address, ledger_version, ledger_version)?;
 
-        let account_resource = if let Some(account_blob) = &account_state_with_proof.blob {
-            AccountResource::try_from(account_blob)?
-        } else {
-            return Ok((Vec::new(), account_state_with_proof));
+        let event_key = {
+            let (event_key_opt, _count) =
+                account_state_with_proof.get_event_key_and_count_by_query_path(&query_path.path)?;
+            if let Some(event_key) = event_key_opt {
+                event_key
+            } else {
+                return Ok((Vec::new(), account_state_with_proof));
+            }
         };
-
-        let event_key = account_resource
-            .get_event_handle_by_query_path(&query_path.path)?
-            .key();
         let cursor = if get_latest {
             // Caller wants the latest, figure out the latest seq_num.
             // In the case of no events on that path, use 0 and expect empty result below.
             self.event_store
-                .get_latest_sequence_number(ledger_version, event_key)?
+                .get_latest_sequence_number(ledger_version, &event_key)?
                 .unwrap_or(0)
         } else {
             start_seq_num

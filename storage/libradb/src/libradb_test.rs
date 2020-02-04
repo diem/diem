@@ -146,13 +146,9 @@ fn get_events_by_query_path(
             ledger_info.version(),
         )?;
 
-        let expected_event_key_opt = proof_of_latest_event.blob.clone().map(|blob| {
-            let account_resource = AccountResource::try_from(&blob).unwrap();
-            let event_handle = account_resource
-                .get_event_handle_by_query_path(&query_path.path)
-                .unwrap();
-            *event_handle.key()
-        });
+        let (expected_event_key_opt, _count) = proof_of_latest_event
+            .get_event_key_and_count_by_query_path(&query_path.path)
+            .unwrap();
 
         let num_events = events_with_proof.len() as u64;
         proof_of_latest_event.verify(ledger_info, ledger_info.version(), query_path.address)?;

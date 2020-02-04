@@ -367,16 +367,8 @@ fn verify_get_events_by_access_path_resp(
 ) -> Result<()> {
     proof_of_latest_event.verify(ledger_info, ledger_info.version(), req_access_path.address)?;
 
-    let (seq_num_upper_bound, expected_event_key_opt) = {
-        if let Some(blob) = &proof_of_latest_event.blob {
-            let account_resource = AccountResource::try_from(blob)?;
-            let event_handle =
-                account_resource.get_event_handle_by_query_path(&req_access_path.path)?;
-            (event_handle.count(), Some(*event_handle.key()))
-        } else {
-            (0, None)
-        }
-    };
+    let (expected_event_key_opt, seq_num_upper_bound) =
+        proof_of_latest_event.get_event_key_and_count_by_query_path(&req_access_path.path)?;
 
     let cursor =
         if !req_ascending && req_start_seq_num == u64::max_value() && seq_num_upper_bound > 0 {
