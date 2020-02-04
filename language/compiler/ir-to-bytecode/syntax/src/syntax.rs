@@ -6,18 +6,10 @@ use codespan::{ByteIndex, Span};
 use std::fmt;
 use std::str::FromStr;
 
-use crate::ast::{
-    parse_field_, BinOp, Block, Block_, Builtin, Cmd_, CopyableVal, CopyableVal_, Exp, Exp_, Field,
-    Function, FunctionBody, FunctionCall, FunctionCall_, FunctionName, FunctionVisibility,
-    Function_, IfElse, ImportDefinition, Kind, LValue, LValue_, Loop, ModuleDefinition,
-    ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script,
-    ScriptOrModule, Spanned, Statement, StructDefinition, StructDefinition_, StructName, Type,
-    TypeVar, TypeVar_, UnaryOp, Var, Var_, While,
-};
 use crate::lexer::*;
-use crate::spec_language_ast::*;
 use hex;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use move_ir_types::{ast::*, spec_language_ast::*};
 
 // FIXME: The following simplified version of ParseError copied from
 // lalrpop-util should be replaced.

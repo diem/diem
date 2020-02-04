@@ -11,8 +11,8 @@ use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::parse_script_or_module,
 };
-use ir_to_bytecode_syntax::ast;
 use libra_types::account_address::AccountAddress;
+use move_ir_types::ast;
 use std::path::Path;
 
 struct IRCompiler {

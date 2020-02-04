@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, Bound};
 
 use codespan::{ByteIndex, ColumnIndex, FileName, LineIndex};
 
-use ir_to_bytecode_syntax::ast::Loc;
+use move_ir_types::ast::Loc;
 
 use crate::env::ModuleIndex;
 use std::cell::RefCell;

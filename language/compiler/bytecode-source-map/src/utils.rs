@@ -10,7 +10,7 @@ use codespan_reporting::{
     termcolor::{ColorChoice, StandardStream},
     Diagnostic, Label,
 };
-use ir_to_bytecode_syntax::ast::Loc;
+use move_ir_types::ast::Loc;
 use serde::de::DeserializeOwned;
 use std::fs::File;
 use std::path::Path;

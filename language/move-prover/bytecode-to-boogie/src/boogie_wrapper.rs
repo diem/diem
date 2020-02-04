@@ -12,10 +12,10 @@ use codespan::{
 };
 use codespan_reporting::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::{Diagnostic, Label, Severity};
-use ir_to_bytecode_syntax::ast::Loc;
 use itertools::Itertools;
 use log::warn;
 use log::{debug, error, info};
+use move_ir_types::ast::Loc;
 use num::BigInt;
 use pretty::RcDoc;
 use regex::{Captures, Regex};

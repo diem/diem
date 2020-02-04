@@ -12,7 +12,8 @@ use std::{
 };
 
 // Re-export this to make it convenient for other crates.
-pub use ir_to_bytecode_syntax::ast;
+// FIXME: other crates should depend on move_ir_types directly.
+pub use move_ir_types::ast;
 
 /// Determine if a character is an allowed eye-visible (printable) character.
 ///
