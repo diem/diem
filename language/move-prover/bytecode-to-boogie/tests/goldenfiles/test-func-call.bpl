@@ -16,21 +16,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestFuncCall#f#0#x: [Position]Value;
-    var debug#TestFuncCall#f#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#TestFuncCall#f#0#x := EmptyPositionMap;
-    debug#TestFuncCall#f#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestFuncCall#f#0#x := debug#TestFuncCall#f#0#x[Position(25) := x];
+    assume $DebugTrackLocal(0, 0, 0, 25, x);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -40,18 +36,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 1), GetLocal(__m, __frame + 2));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 0, 59);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#TestFuncCall#f#1#__ret := debug#TestFuncCall#f#1#__ret[Position(52) := __ret0];
+    assume $DebugTrackLocal(0, 0, 1, 52, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestFuncCall#f#1#__ret := debug#TestFuncCall#f#1#__ret[Position(71) := __ret0];
 }
 
 procedure TestFuncCall_f_verify (x: Value) returns (__ret0: Value)
@@ -70,21 +68,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestFuncCall#g#0#x: [Position]Value;
-    var debug#TestFuncCall#g#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#TestFuncCall#g#0#x := EmptyPositionMap;
-    debug#TestFuncCall#g#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestFuncCall#g#0#x := debug#TestFuncCall#g#0#x[Position(75) := x];
+    assume $DebugTrackLocal(0, 1, 0, 75, x);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -94,18 +88,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 1), GetLocal(__m, __frame + 2));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 1, 109);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#TestFuncCall#g#1#__ret := debug#TestFuncCall#g#1#__ret[Position(102) := __ret0];
+    assume $DebugTrackLocal(0, 1, 1, 102, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestFuncCall#g#1#__ret := debug#TestFuncCall#g#1#__ret[Position(121) := __ret0];
 }
 
 procedure TestFuncCall_g_verify (x: Value) returns (__ret0: Value)
@@ -147,25 +143,17 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestFuncCall#h#0#b: [Position]Value;
-    var debug#TestFuncCall#h#1#x: [Position]Value;
-    var debug#TestFuncCall#h#2#y: [Position]Value;
-    var debug#TestFuncCall#h#3#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 24;
-    debug#TestFuncCall#h#0#b := EmptyPositionMap;
-    debug#TestFuncCall#h#1#x := EmptyPositionMap;
-    debug#TestFuncCall#h#2#y := EmptyPositionMap;
-    debug#TestFuncCall#h#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Boolean(b);
     __m := UpdateLocal(__m, __frame + 0, b);
-    debug#TestFuncCall#h#0#b := debug#TestFuncCall#h#0#b[Position(125) := b];
+    assume $DebugTrackLocal(0, 2, 0, 125, b);
 
     // bytecode translation starts here
     call __tmp := LdConst(3);
@@ -173,7 +161,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#TestFuncCall#h#1#x := debug#TestFuncCall#h#1#x[Position(199) := __tmp];
+    assume $DebugTrackLocal(0, 2, 1, 199, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -185,14 +173,17 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __t6 := TestFuncCall_f(GetLocal(__m, __frame + 5));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 2, 230);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t6);
 
     __m := UpdateLocal(__m, __frame + 6, __t6);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#TestFuncCall#h#2#y := debug#TestFuncCall#h#2#y[Position(226) := __tmp];
+    assume $DebugTrackLocal(0, 2, 2, 226, __tmp);
 
     goto Label_11;
 
@@ -201,14 +192,17 @@ Label_8:
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     call __t8 := TestFuncCall_g(GetLocal(__m, __frame + 7));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 2, 268);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t8);
 
     __m := UpdateLocal(__m, __frame + 8, __t8);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#TestFuncCall#h#2#y := debug#TestFuncCall#h#2#y[Position(264) := __tmp];
+    assume $DebugTrackLocal(0, 2, 2, 264, __tmp);
 
 Label_11:
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -263,14 +257,13 @@ Label_27:
     __m := UpdateLocal(__m, __frame + 23, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 23);
-    debug#TestFuncCall#h#3#__ret := debug#TestFuncCall#h#3#__ret[Position(366) := __ret0];
+    assume $DebugTrackLocal(0, 2, 3, 366, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestFuncCall#h#3#__ret := debug#TestFuncCall#h#3#__ret[Position(383) := __ret0];
 }
 
 procedure TestFuncCall_h_verify (b: Value) returns (__ret0: Value)

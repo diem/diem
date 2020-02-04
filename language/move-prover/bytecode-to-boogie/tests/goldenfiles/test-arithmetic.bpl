@@ -21,32 +21,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestArithmetic#add_two_number#0#x: [Position]Value;
-    var debug#TestArithmetic#add_two_number#1#y: [Position]Value;
-    var debug#TestArithmetic#add_two_number#2#res: [Position]Value;
-    var debug#TestArithmetic#add_two_number#3#z: [Position]Value;
-    var debug#TestArithmetic#add_two_number#4#__ret: [Position]Value;
-    var debug#TestArithmetic#add_two_number#5#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#TestArithmetic#add_two_number#0#x := EmptyPositionMap;
-    debug#TestArithmetic#add_two_number#1#y := EmptyPositionMap;
-    debug#TestArithmetic#add_two_number#2#res := EmptyPositionMap;
-    debug#TestArithmetic#add_two_number#3#z := EmptyPositionMap;
-    debug#TestArithmetic#add_two_number#4#__ret := EmptyPositionMap;
-    debug#TestArithmetic#add_two_number#5#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestArithmetic#add_two_number#0#x := debug#TestArithmetic#add_two_number#0#x[Position(25) := x];
+    assume $DebugTrackLocal(0, 0, 0, 25, x);
     assume IsValidU64(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestArithmetic#add_two_number#1#y := debug#TestArithmetic#add_two_number#1#y[Position(25) := y];
+    assume $DebugTrackLocal(0, 0, 1, 25, y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -56,19 +44,22 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 0, 112);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#TestArithmetic#add_two_number#2#res := debug#TestArithmetic#add_two_number#2#res[Position(106) := __tmp];
+    assume $DebugTrackLocal(0, 0, 2, 106, __tmp);
 
     call __tmp := LdConst(3);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 7));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#TestArithmetic#add_two_number#3#z := debug#TestArithmetic#add_two_number#3#z[Position(133) := __tmp];
+    assume $DebugTrackLocal(0, 0, 3, 133, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
@@ -77,18 +68,16 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 8);
-    debug#TestArithmetic#add_two_number#4#__ret := debug#TestArithmetic#add_two_number#4#__ret[Position(142) := __ret0];
+    assume $DebugTrackLocal(0, 0, 4, 142, __ret0);
     __ret1 := GetLocal(__m, __frame + 9);
-    debug#TestArithmetic#add_two_number#5#__ret := debug#TestArithmetic#add_two_number#5#__ret[Position(142) := __ret1];
+    assume $DebugTrackLocal(0, 0, 5, 142, __ret1);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestArithmetic#add_two_number#4#__ret := debug#TestArithmetic#add_two_number#4#__ret[Position(169) := __ret0];
     __ret1 := DefaultValue;
-    debug#TestArithmetic#add_two_number#5#__ret := debug#TestArithmetic#add_two_number#5#__ret[Position(169) := __ret1];
 }
 
 procedure TestArithmetic_add_two_number_verify (x: Value, y: Value) returns (__ret0: Value, __ret1: Value)
@@ -111,33 +100,23 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestArithmetic#multiple_ops#0#x: [Position]Value;
-    var debug#TestArithmetic#multiple_ops#1#y: [Position]Value;
-    var debug#TestArithmetic#multiple_ops#2#z: [Position]Value;
-    var debug#TestArithmetic#multiple_ops#3#res: [Position]Value;
-    var debug#TestArithmetic#multiple_ops#4#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#TestArithmetic#multiple_ops#0#x := EmptyPositionMap;
-    debug#TestArithmetic#multiple_ops#1#y := EmptyPositionMap;
-    debug#TestArithmetic#multiple_ops#2#z := EmptyPositionMap;
-    debug#TestArithmetic#multiple_ops#3#res := EmptyPositionMap;
-    debug#TestArithmetic#multiple_ops#4#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestArithmetic#multiple_ops#0#x := debug#TestArithmetic#multiple_ops#0#x[Position(173) := x];
+    assume $DebugTrackLocal(0, 1, 0, 173, x);
     assume IsValidU64(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestArithmetic#multiple_ops#1#y := debug#TestArithmetic#multiple_ops#1#y[Position(173) := y];
+    assume $DebugTrackLocal(0, 1, 1, 173, y);
     assume IsValidU64(z);
     __m := UpdateLocal(__m, __frame + 2, z);
-    debug#TestArithmetic#multiple_ops#2#z := debug#TestArithmetic#multiple_ops#2#z[Position(173) := z];
+    assume $DebugTrackLocal(0, 1, 2, 173, z);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -147,32 +126,37 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 1, 249);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     call __tmp := MulU64(GetLocal(__m, __frame + 6), GetLocal(__m, __frame + 7));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 1, 248);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#TestArithmetic#multiple_ops#3#res := debug#TestArithmetic#multiple_ops#3#res[Position(242) := __tmp];
+    assume $DebugTrackLocal(0, 1, 3, 242, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 9);
-    debug#TestArithmetic#multiple_ops#4#__ret := debug#TestArithmetic#multiple_ops#4#__ret[Position(281) := __ret0];
+    assume $DebugTrackLocal(0, 1, 4, 281, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestArithmetic#multiple_ops#4#__ret := debug#TestArithmetic#multiple_ops#4#__ret[Position(300) := __ret0];
 }
 
 procedure TestArithmetic_multiple_ops_verify (x: Value, y: Value, z: Value) returns (__ret0: Value)
@@ -209,28 +193,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestArithmetic#bool_ops#0#a: [Position]Value;
-    var debug#TestArithmetic#bool_ops#1#b: [Position]Value;
-    var debug#TestArithmetic#bool_ops#2#c: [Position]Value;
-    var debug#TestArithmetic#bool_ops#3#d: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 23;
-    debug#TestArithmetic#bool_ops#0#a := EmptyPositionMap;
-    debug#TestArithmetic#bool_ops#1#b := EmptyPositionMap;
-    debug#TestArithmetic#bool_ops#2#c := EmptyPositionMap;
-    debug#TestArithmetic#bool_ops#3#d := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(a);
     __m := UpdateLocal(__m, __frame + 0, a);
-    debug#TestArithmetic#bool_ops#0#a := debug#TestArithmetic#bool_ops#0#a[Position(304) := a];
+    assume $DebugTrackLocal(0, 2, 0, 304, a);
     assume IsValidU64(b);
     __m := UpdateLocal(__m, __frame + 1, b);
-    debug#TestArithmetic#bool_ops#1#b := debug#TestArithmetic#bool_ops#1#b[Position(304) := b];
+    assume $DebugTrackLocal(0, 2, 1, 304, b);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -256,7 +232,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 10));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#TestArithmetic#bool_ops#2#c := debug#TestArithmetic#bool_ops#2#c[Position(382) := __tmp];
+    assume $DebugTrackLocal(0, 2, 2, 382, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 11, __tmp);
@@ -281,7 +257,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 17));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#TestArithmetic#bool_ops#3#d := debug#TestArithmetic#bool_ops#3#d[Position(437) := __tmp];
+    assume $DebugTrackLocal(0, 2, 3, 437, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 18, __tmp);
@@ -343,30 +319,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestArithmetic#arithmetic_ops#0#a: [Position]Value;
-    var debug#TestArithmetic#arithmetic_ops#1#b: [Position]Value;
-    var debug#TestArithmetic#arithmetic_ops#2#c: [Position]Value;
-    var debug#TestArithmetic#arithmetic_ops#3#__ret: [Position]Value;
-    var debug#TestArithmetic#arithmetic_ops#4#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 21;
-    debug#TestArithmetic#arithmetic_ops#0#a := EmptyPositionMap;
-    debug#TestArithmetic#arithmetic_ops#1#b := EmptyPositionMap;
-    debug#TestArithmetic#arithmetic_ops#2#c := EmptyPositionMap;
-    debug#TestArithmetic#arithmetic_ops#3#__ret := EmptyPositionMap;
-    debug#TestArithmetic#arithmetic_ops#4#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(a);
     __m := UpdateLocal(__m, __frame + 0, a);
-    debug#TestArithmetic#arithmetic_ops#0#a := debug#TestArithmetic#arithmetic_ops#0#a[Position(547) := a];
+    assume $DebugTrackLocal(0, 3, 0, 547, a);
     assume IsValidU64(b);
     __m := UpdateLocal(__m, __frame + 1, b);
-    debug#TestArithmetic#arithmetic_ops#1#b := debug#TestArithmetic#arithmetic_ops#1#b[Position(547) := b];
+    assume $DebugTrackLocal(0, 3, 1, 547, b);
 
     // bytecode translation starts here
     call __tmp := LdConst(6);
@@ -376,40 +342,55 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 3, 627);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call __tmp := Sub(GetLocal(__m, __frame + 5), GetLocal(__m, __frame + 6));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 3, 627);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call __tmp := MulU64(GetLocal(__m, __frame + 7), GetLocal(__m, __frame + 8));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 3, 626);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
     call __tmp := LdConst(3);
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
     call __tmp := Div(GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 10));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 3, 626);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 11, __tmp);
 
     call __tmp := LdConst(4);
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
     call __tmp := Mod(GetLocal(__m, __frame + 11), GetLocal(__m, __frame + 12));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 3, 626);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 13, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 13));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#TestArithmetic#arithmetic_ops#2#c := debug#TestArithmetic#arithmetic_ops#2#c[Position(622) := __tmp];
+    assume $DebugTrackLocal(0, 3, 2, 622, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 14, __tmp);
@@ -439,18 +420,16 @@ Label_19:
     __m := UpdateLocal(__m, __frame + 20, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 19);
-    debug#TestArithmetic#arithmetic_ops#3#__ret := debug#TestArithmetic#arithmetic_ops#3#__ret[Position(686) := __ret0];
+    assume $DebugTrackLocal(0, 3, 3, 686, __ret0);
     __ret1 := GetLocal(__m, __frame + 20);
-    debug#TestArithmetic#arithmetic_ops#4#__ret := debug#TestArithmetic#arithmetic_ops#4#__ret[Position(686) := __ret1];
+    assume $DebugTrackLocal(0, 3, 4, 686, __ret1);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestArithmetic#arithmetic_ops#3#__ret := debug#TestArithmetic#arithmetic_ops#3#__ret[Position(713) := __ret0];
     __ret1 := DefaultValue;
-    debug#TestArithmetic#arithmetic_ops#4#__ret := debug#TestArithmetic#arithmetic_ops#4#__ret[Position(713) := __ret1];
 }
 
 procedure TestArithmetic_arithmetic_ops_verify (a: Value, b: Value) returns (__ret0: Value, __ret1: Value)
@@ -472,16 +451,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestArithmetic#overflow#0#x: [Position]Value;
-    var debug#TestArithmetic#overflow#1#y: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 6;
-    debug#TestArithmetic#overflow#0#x := EmptyPositionMap;
-    debug#TestArithmetic#overflow#1#y := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -491,7 +466,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#TestArithmetic#overflow#0#x := debug#TestArithmetic#overflow#0#x[Position(771) := __tmp];
+    assume $DebugTrackLocal(0, 4, 0, 771, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
@@ -500,12 +475,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 4, 803);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#TestArithmetic#overflow#1#y := debug#TestArithmetic#overflow#1#y[Position(799) := __tmp];
+    assume $DebugTrackLocal(0, 4, 1, 799, __tmp);
 
     return;
 
@@ -533,16 +511,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestArithmetic#underflow#0#x: [Position]Value;
-    var debug#TestArithmetic#underflow#1#y: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 6;
-    debug#TestArithmetic#underflow#0#x := EmptyPositionMap;
-    debug#TestArithmetic#underflow#1#y := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -552,7 +526,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#TestArithmetic#underflow#0#x := debug#TestArithmetic#underflow#0#x[Position(887) := __tmp];
+    assume $DebugTrackLocal(0, 5, 0, 887, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
@@ -561,12 +535,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __tmp := Sub(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 5, 901);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#TestArithmetic#underflow#1#y := debug#TestArithmetic#underflow#1#y[Position(897) := __tmp];
+    assume $DebugTrackLocal(0, 5, 1, 897, __tmp);
 
     return;
 
@@ -594,16 +571,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestArithmetic#div_by_zero#0#x: [Position]Value;
-    var debug#TestArithmetic#div_by_zero#1#y: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 6;
-    debug#TestArithmetic#div_by_zero#0#x := EmptyPositionMap;
-    debug#TestArithmetic#div_by_zero#1#y := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -613,7 +586,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#TestArithmetic#div_by_zero#0#x := debug#TestArithmetic#div_by_zero#0#x[Position(987) := __tmp];
+    assume $DebugTrackLocal(0, 6, 0, 987, __tmp);
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
@@ -622,12 +595,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __tmp := Div(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 6, 1001);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#TestArithmetic#div_by_zero#1#y := debug#TestArithmetic#div_by_zero#1#y[Position(997) := __tmp];
+    assume $DebugTrackLocal(0, 6, 1, 997, __tmp);
 
     return;
 

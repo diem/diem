@@ -73,7 +73,10 @@ Label_5:
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call MoveToSender(TestSpecs_R_type_value(), GetLocal(__m, __frame + 4));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 0, 264);
+      goto Label_Abort;
+    }
 
     return;
 

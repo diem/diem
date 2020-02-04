@@ -128,19 +128,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#GasSchedule#initialize#0#gas_schedule: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#GasSchedule#initialize#0#gas_schedule := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(gas_schedule);
     __m := UpdateLocal(__m, __frame + 0, gas_schedule);
-    debug#GasSchedule#initialize#0#gas_schedule := debug#GasSchedule#initialize#0#gas_schedule[Position(1239) := gas_schedule];
+    assume $DebugTrackLocal(6, 0, 0, 1239, gas_schedule);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -168,7 +166,10 @@ Label_7:
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call MoveToSender(GasSchedule_T_type_value(), GetLocal(__m, __frame + 6));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(6, 0, 1332);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -198,18 +199,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#GasSchedule#instruction_table_size#0#table: [Position]Value;
-    var debug#GasSchedule#instruction_table_size#1#instruction_table_len: [Position]Value;
-    var debug#GasSchedule#instruction_table_size#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#GasSchedule#instruction_table_size#0#table := EmptyPositionMap;
-    debug#GasSchedule#instruction_table_size#1#instruction_table_len := EmptyPositionMap;
-    debug#GasSchedule#instruction_table_size#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -218,36 +213,43 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), GasSchedule_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(6, 1, 1532);
+      goto Label_Abort;
+    }
 
     call table := CopyOrMoveRef(__t3);
+    assume is#Vector(Dereference(__m, table));
+    assume $DebugTrackLocal(6, 1, 0, 1524, Dereference(__m, table));
 
     call __t4 := CopyOrMoveRef(table);
 
     call __t5 := BorrowField(__t4, GasSchedule_T_instruction_schedule);
 
     call __t6 := Vector_length(GasSchedule_Cost_type_value(), __t5);
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(6, 1, 1593);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t6);
 
     __m := UpdateLocal(__m, __frame + 6, __t6);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#GasSchedule#instruction_table_size#1#instruction_table_len := debug#GasSchedule#instruction_table_size#1#instruction_table_len[Position(1569) := __tmp];
+    assume $DebugTrackLocal(6, 1, 1, 1569, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    debug#GasSchedule#instruction_table_size#2#__ret := debug#GasSchedule#instruction_table_size#2#__ret[Position(1662) := __ret0];
+    assume $DebugTrackLocal(6, 1, 2, 1662, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#GasSchedule#instruction_table_size#2#__ret := debug#GasSchedule#instruction_table_size#2#__ret[Position(1702) := __ret0];
 }
 
 procedure GasSchedule_instruction_table_size_verify () returns (__ret0: Value)
@@ -271,18 +273,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#GasSchedule#native_table_size#0#table: [Position]Value;
-    var debug#GasSchedule#native_table_size#1#native_table_len: [Position]Value;
-    var debug#GasSchedule#native_table_size#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#GasSchedule#native_table_size#0#table := EmptyPositionMap;
-    debug#GasSchedule#native_table_size#1#native_table_len := EmptyPositionMap;
-    debug#GasSchedule#native_table_size#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -291,36 +287,43 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), GasSchedule_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(6, 2, 1833);
+      goto Label_Abort;
+    }
 
     call table := CopyOrMoveRef(__t3);
+    assume is#Vector(Dereference(__m, table));
+    assume $DebugTrackLocal(6, 2, 0, 1825, Dereference(__m, table));
 
     call __t4 := CopyOrMoveRef(table);
 
     call __t5 := BorrowField(__t4, GasSchedule_T_native_schedule);
 
     call __t6 := Vector_length(GasSchedule_Cost_type_value(), __t5);
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(6, 2, 1889);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t6);
 
     __m := UpdateLocal(__m, __frame + 6, __t6);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#GasSchedule#native_table_size#1#native_table_len := debug#GasSchedule#native_table_size#1#native_table_len[Position(1870) := __tmp];
+    assume $DebugTrackLocal(6, 2, 1, 1870, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    debug#GasSchedule#native_table_size#2#__ret := debug#GasSchedule#native_table_size#2#__ret[Position(1953) := __ret0];
+    assume $DebugTrackLocal(6, 2, 2, 1953, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#GasSchedule#native_table_size#2#__ret := debug#GasSchedule#native_table_size#2#__ret[Position(1988) := __ret0];
 }
 
 procedure GasSchedule_native_table_size_verify () returns (__ret0: Value)
@@ -409,21 +412,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#has#0#addr: [Position]Value;
-    var debug#ValidatorConfig#has#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#ValidatorConfig#has#0#addr := EmptyPositionMap;
-    debug#ValidatorConfig#has#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    debug#ValidatorConfig#has#0#addr := debug#ValidatorConfig#has#0#addr[Position(645) := addr];
+    assume $DebugTrackLocal(7, 0, 0, 645, addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -433,14 +432,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    debug#ValidatorConfig#has#1#__ret := debug#ValidatorConfig#has#1#__ret[Position(687) := __ret0];
+    assume $DebugTrackLocal(7, 0, 1, 687, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#ValidatorConfig#has#1#__ret := debug#ValidatorConfig#has#1#__ret[Position(721) := __ret0];
 }
 
 procedure ValidatorConfig_has_verify (addr: Value) returns (__ret0: Value)
@@ -462,32 +460,31 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#config#0#addr: [Position]Value;
-    var debug#ValidatorConfig#config#1#t_ref: [Position]Value;
-    var debug#ValidatorConfig#config#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#ValidatorConfig#config#0#addr := EmptyPositionMap;
-    debug#ValidatorConfig#config#1#t_ref := EmptyPositionMap;
-    debug#ValidatorConfig#config#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    debug#ValidatorConfig#config#0#addr := debug#ValidatorConfig#config#0#addr[Position(907) := addr];
+    assume $DebugTrackLocal(7, 1, 0, 907, addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), ValidatorConfig_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(7, 1, 1007);
+      goto Label_Abort;
+    }
 
     call t_ref := CopyOrMoveRef(__t3);
+    assume is#Vector(Dereference(__m, t_ref));
+    assume $DebugTrackLocal(7, 1, 1, 999, Dereference(__m, t_ref));
 
     call __t4 := CopyOrMoveRef(t_ref);
 
@@ -498,14 +495,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    debug#ValidatorConfig#config#2#__ret := debug#ValidatorConfig#config#2#__ret[Position(1045) := __ret0];
+    assume $DebugTrackLocal(7, 1, 2, 1045, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#ValidatorConfig#config#2#__ret := debug#ValidatorConfig#config#2#__ret[Position(1078) := __ret0];
 }
 
 procedure ValidatorConfig_config_verify (addr: Value) returns (__ret0: Value)
@@ -524,21 +520,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#consensus_pubkey#0#config_ref: [Position]Value;
-    var debug#ValidatorConfig#consensus_pubkey#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#ValidatorConfig#consensus_pubkey#0#config_ref := EmptyPositionMap;
-    debug#ValidatorConfig#consensus_pubkey#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, config_ref));
     assume IsValidReferenceParameter(__m, __frame, config_ref);
-    debug#ValidatorConfig#consensus_pubkey#0#config_ref := debug#ValidatorConfig#consensus_pubkey#0#config_ref[Position(1129) := Dereference(__m, config_ref)];
+    assume is#Vector(Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 2, 0, 1129, Dereference(__m, config_ref));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(config_ref);
@@ -550,14 +543,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#ValidatorConfig#consensus_pubkey#1#__ret := debug#ValidatorConfig#consensus_pubkey#1#__ret[Position(1200) := __ret0];
+    assume $DebugTrackLocal(7, 2, 1, 1200, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#ValidatorConfig#consensus_pubkey#1#__ret := debug#ValidatorConfig#consensus_pubkey#1#__ret[Position(1248) := __ret0];
 }
 
 procedure ValidatorConfig_consensus_pubkey_verify (config_ref: Reference) returns (__ret0: Value)
@@ -576,21 +568,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#validator_network_signing_pubkey#0#config_ref: [Position]Value;
-    var debug#ValidatorConfig#validator_network_signing_pubkey#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#ValidatorConfig#validator_network_signing_pubkey#0#config_ref := EmptyPositionMap;
-    debug#ValidatorConfig#validator_network_signing_pubkey#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, config_ref));
     assume IsValidReferenceParameter(__m, __frame, config_ref);
-    debug#ValidatorConfig#validator_network_signing_pubkey#0#config_ref := debug#ValidatorConfig#validator_network_signing_pubkey#0#config_ref[Position(1315) := Dereference(__m, config_ref)];
+    assume is#Vector(Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 3, 0, 1315, Dereference(__m, config_ref));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(config_ref);
@@ -602,14 +591,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#ValidatorConfig#validator_network_signing_pubkey#1#__ret := debug#ValidatorConfig#validator_network_signing_pubkey#1#__ret[Position(1402) := __ret0];
+    assume $DebugTrackLocal(7, 3, 1, 1402, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#ValidatorConfig#validator_network_signing_pubkey#1#__ret := debug#ValidatorConfig#validator_network_signing_pubkey#1#__ret[Position(1466) := __ret0];
 }
 
 procedure ValidatorConfig_validator_network_signing_pubkey_verify (config_ref: Reference) returns (__ret0: Value)
@@ -628,21 +616,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#validator_network_identity_pubkey#0#config_ref: [Position]Value;
-    var debug#ValidatorConfig#validator_network_identity_pubkey#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#ValidatorConfig#validator_network_identity_pubkey#0#config_ref := EmptyPositionMap;
-    debug#ValidatorConfig#validator_network_identity_pubkey#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, config_ref));
     assume IsValidReferenceParameter(__m, __frame, config_ref);
-    debug#ValidatorConfig#validator_network_identity_pubkey#0#config_ref := debug#ValidatorConfig#validator_network_identity_pubkey#0#config_ref[Position(1534) := Dereference(__m, config_ref)];
+    assume is#Vector(Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 4, 0, 1534, Dereference(__m, config_ref));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(config_ref);
@@ -654,14 +639,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#ValidatorConfig#validator_network_identity_pubkey#1#__ret := debug#ValidatorConfig#validator_network_identity_pubkey#1#__ret[Position(1622) := __ret0];
+    assume $DebugTrackLocal(7, 4, 1, 1622, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#ValidatorConfig#validator_network_identity_pubkey#1#__ret := debug#ValidatorConfig#validator_network_identity_pubkey#1#__ret[Position(1687) := __ret0];
 }
 
 procedure ValidatorConfig_validator_network_identity_pubkey_verify (config_ref: Reference) returns (__ret0: Value)
@@ -680,21 +664,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#validator_network_address#0#config_ref: [Position]Value;
-    var debug#ValidatorConfig#validator_network_address#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#ValidatorConfig#validator_network_address#0#config_ref := EmptyPositionMap;
-    debug#ValidatorConfig#validator_network_address#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, config_ref));
     assume IsValidReferenceParameter(__m, __frame, config_ref);
-    debug#ValidatorConfig#validator_network_address#0#config_ref := debug#ValidatorConfig#validator_network_address#0#config_ref[Position(1747) := Dereference(__m, config_ref)];
+    assume is#Vector(Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 5, 0, 1747, Dereference(__m, config_ref));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(config_ref);
@@ -706,14 +687,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#ValidatorConfig#validator_network_address#1#__ret := debug#ValidatorConfig#validator_network_address#1#__ret[Position(1827) := __ret0];
+    assume $DebugTrackLocal(7, 5, 1, 1827, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#ValidatorConfig#validator_network_address#1#__ret := debug#ValidatorConfig#validator_network_address#1#__ret[Position(1884) := __ret0];
 }
 
 procedure ValidatorConfig_validator_network_address_verify (config_ref: Reference) returns (__ret0: Value)
@@ -732,21 +712,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#fullnodes_network_identity_pubkey#0#config_ref: [Position]Value;
-    var debug#ValidatorConfig#fullnodes_network_identity_pubkey#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#ValidatorConfig#fullnodes_network_identity_pubkey#0#config_ref := EmptyPositionMap;
-    debug#ValidatorConfig#fullnodes_network_identity_pubkey#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, config_ref));
     assume IsValidReferenceParameter(__m, __frame, config_ref);
-    debug#ValidatorConfig#fullnodes_network_identity_pubkey#0#config_ref := debug#ValidatorConfig#fullnodes_network_identity_pubkey#0#config_ref[Position(1952) := Dereference(__m, config_ref)];
+    assume is#Vector(Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 6, 0, 1952, Dereference(__m, config_ref));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(config_ref);
@@ -758,14 +735,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#ValidatorConfig#fullnodes_network_identity_pubkey#1#__ret := debug#ValidatorConfig#fullnodes_network_identity_pubkey#1#__ret[Position(2040) := __ret0];
+    assume $DebugTrackLocal(7, 6, 1, 2040, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#ValidatorConfig#fullnodes_network_identity_pubkey#1#__ret := debug#ValidatorConfig#fullnodes_network_identity_pubkey#1#__ret[Position(2105) := __ret0];
 }
 
 procedure ValidatorConfig_fullnodes_network_identity_pubkey_verify (config_ref: Reference) returns (__ret0: Value)
@@ -784,21 +760,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#fullnodes_network_address#0#config_ref: [Position]Value;
-    var debug#ValidatorConfig#fullnodes_network_address#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#ValidatorConfig#fullnodes_network_address#0#config_ref := EmptyPositionMap;
-    debug#ValidatorConfig#fullnodes_network_address#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, config_ref));
     assume IsValidReferenceParameter(__m, __frame, config_ref);
-    debug#ValidatorConfig#fullnodes_network_address#0#config_ref := debug#ValidatorConfig#fullnodes_network_address#0#config_ref[Position(2165) := Dereference(__m, config_ref)];
+    assume is#Vector(Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 7, 0, 2165, Dereference(__m, config_ref));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(config_ref);
@@ -810,14 +783,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#ValidatorConfig#fullnodes_network_address#1#__ret := debug#ValidatorConfig#fullnodes_network_address#1#__ret[Position(2245) := __ret0];
+    assume $DebugTrackLocal(7, 7, 1, 2245, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#ValidatorConfig#fullnodes_network_address#1#__ret := debug#ValidatorConfig#fullnodes_network_address#1#__ret[Position(2302) := __ret0];
 }
 
 procedure ValidatorConfig_fullnodes_network_address_verify (config_ref: Reference) returns (__ret0: Value)
@@ -841,44 +813,32 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#register_candidate_validator#0#consensus_pubkey: [Position]Value;
-    var debug#ValidatorConfig#register_candidate_validator#1#validator_network_signing_pubkey: [Position]Value;
-    var debug#ValidatorConfig#register_candidate_validator#2#validator_network_identity_pubkey: [Position]Value;
-    var debug#ValidatorConfig#register_candidate_validator#3#validator_network_address: [Position]Value;
-    var debug#ValidatorConfig#register_candidate_validator#4#fullnodes_network_identity_pubkey: [Position]Value;
-    var debug#ValidatorConfig#register_candidate_validator#5#fullnodes_network_address: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 14;
-    debug#ValidatorConfig#register_candidate_validator#0#consensus_pubkey := EmptyPositionMap;
-    debug#ValidatorConfig#register_candidate_validator#1#validator_network_signing_pubkey := EmptyPositionMap;
-    debug#ValidatorConfig#register_candidate_validator#2#validator_network_identity_pubkey := EmptyPositionMap;
-    debug#ValidatorConfig#register_candidate_validator#3#validator_network_address := EmptyPositionMap;
-    debug#ValidatorConfig#register_candidate_validator#4#fullnodes_network_identity_pubkey := EmptyPositionMap;
-    debug#ValidatorConfig#register_candidate_validator#5#fullnodes_network_address := EmptyPositionMap;
 
     // process and type check arguments
     assume is#ByteArray(consensus_pubkey);
     __m := UpdateLocal(__m, __frame + 0, consensus_pubkey);
-    debug#ValidatorConfig#register_candidate_validator#0#consensus_pubkey := debug#ValidatorConfig#register_candidate_validator#0#consensus_pubkey[Position(2532) := consensus_pubkey];
+    assume $DebugTrackLocal(7, 8, 0, 2532, consensus_pubkey);
     assume is#ByteArray(validator_network_signing_pubkey);
     __m := UpdateLocal(__m, __frame + 1, validator_network_signing_pubkey);
-    debug#ValidatorConfig#register_candidate_validator#1#validator_network_signing_pubkey := debug#ValidatorConfig#register_candidate_validator#1#validator_network_signing_pubkey[Position(2532) := validator_network_signing_pubkey];
+    assume $DebugTrackLocal(7, 8, 1, 2532, validator_network_signing_pubkey);
     assume is#ByteArray(validator_network_identity_pubkey);
     __m := UpdateLocal(__m, __frame + 2, validator_network_identity_pubkey);
-    debug#ValidatorConfig#register_candidate_validator#2#validator_network_identity_pubkey := debug#ValidatorConfig#register_candidate_validator#2#validator_network_identity_pubkey[Position(2532) := validator_network_identity_pubkey];
+    assume $DebugTrackLocal(7, 8, 2, 2532, validator_network_identity_pubkey);
     assume is#ByteArray(validator_network_address);
     __m := UpdateLocal(__m, __frame + 3, validator_network_address);
-    debug#ValidatorConfig#register_candidate_validator#3#validator_network_address := debug#ValidatorConfig#register_candidate_validator#3#validator_network_address[Position(2532) := validator_network_address];
+    assume $DebugTrackLocal(7, 8, 3, 2532, validator_network_address);
     assume is#ByteArray(fullnodes_network_identity_pubkey);
     __m := UpdateLocal(__m, __frame + 4, fullnodes_network_identity_pubkey);
-    debug#ValidatorConfig#register_candidate_validator#4#fullnodes_network_identity_pubkey := debug#ValidatorConfig#register_candidate_validator#4#fullnodes_network_identity_pubkey[Position(2532) := fullnodes_network_identity_pubkey];
+    assume $DebugTrackLocal(7, 8, 4, 2532, fullnodes_network_identity_pubkey);
     assume is#ByteArray(fullnodes_network_address);
     __m := UpdateLocal(__m, __frame + 5, fullnodes_network_address);
-    debug#ValidatorConfig#register_candidate_validator#5#fullnodes_network_address := debug#ValidatorConfig#register_candidate_validator#5#fullnodes_network_address[Position(2532) := fullnodes_network_address];
+    assume $DebugTrackLocal(7, 8, 5, 2532, fullnodes_network_address);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -906,7 +866,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 13, __tmp);
 
     call MoveToSender(ValidatorConfig_T_type_value(), GetLocal(__m, __frame + 13));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(7, 8, 2870);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -939,46 +902,47 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#rotate_consensus_pubkey#0#consensus_pubkey: [Position]Value;
-    var debug#ValidatorConfig#rotate_consensus_pubkey#1#t_ref: [Position]Value;
-    var debug#ValidatorConfig#rotate_consensus_pubkey#2#config_ref: [Position]Value;
-    var debug#ValidatorConfig#rotate_consensus_pubkey#3#key_ref: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 12;
-    debug#ValidatorConfig#rotate_consensus_pubkey#0#consensus_pubkey := EmptyPositionMap;
-    debug#ValidatorConfig#rotate_consensus_pubkey#1#t_ref := EmptyPositionMap;
-    debug#ValidatorConfig#rotate_consensus_pubkey#2#config_ref := EmptyPositionMap;
-    debug#ValidatorConfig#rotate_consensus_pubkey#3#key_ref := EmptyPositionMap;
 
     // process and type check arguments
     assume is#ByteArray(consensus_pubkey);
     __m := UpdateLocal(__m, __frame + 0, consensus_pubkey);
-    debug#ValidatorConfig#rotate_consensus_pubkey#0#consensus_pubkey := debug#ValidatorConfig#rotate_consensus_pubkey#0#consensus_pubkey[Position(3648) := consensus_pubkey];
+    assume $DebugTrackLocal(7, 9, 0, 3648, consensus_pubkey);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __t5 := BorrowGlobal(GetLocal(__m, __frame + 4), ValidatorConfig_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(7, 9, 3849);
+      goto Label_Abort;
+    }
 
     call t_ref := CopyOrMoveRef(__t5);
+    assume is#Vector(Dereference(__m, t_ref));
+    assume $DebugTrackLocal(7, 9, 1, 3841, Dereference(__m, t_ref));
 
     call __t6 := CopyOrMoveRef(t_ref);
 
     call __t7 := BorrowField(__t6, ValidatorConfig_T_config);
 
     call config_ref := CopyOrMoveRef(__t7);
+    assume is#Vector(Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 9, 2, 3897, Dereference(__m, config_ref));
 
     call __t8 := CopyOrMoveRef(config_ref);
 
     call __t9 := BorrowField(__t8, ValidatorConfig_Config_consensus_pubkey);
 
     call key_ref := CopyOrMoveRef(__t9);
+    assume is#ByteArray(Dereference(__m, key_ref));
+    assume $DebugTrackLocal(7, 9, 3, 3943, Dereference(__m, key_ref));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
@@ -1018,46 +982,47 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#rotate_validator_network_identity_pubkey#0#validator_network_identity_pubkey: [Position]Value;
-    var debug#ValidatorConfig#rotate_validator_network_identity_pubkey#1#t_ref: [Position]Value;
-    var debug#ValidatorConfig#rotate_validator_network_identity_pubkey#2#config_ref: [Position]Value;
-    var debug#ValidatorConfig#rotate_validator_network_identity_pubkey#3#key_ref: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 12;
-    debug#ValidatorConfig#rotate_validator_network_identity_pubkey#0#validator_network_identity_pubkey := EmptyPositionMap;
-    debug#ValidatorConfig#rotate_validator_network_identity_pubkey#1#t_ref := EmptyPositionMap;
-    debug#ValidatorConfig#rotate_validator_network_identity_pubkey#2#config_ref := EmptyPositionMap;
-    debug#ValidatorConfig#rotate_validator_network_identity_pubkey#3#key_ref := EmptyPositionMap;
 
     // process and type check arguments
     assume is#ByteArray(validator_network_identity_pubkey);
     __m := UpdateLocal(__m, __frame + 0, validator_network_identity_pubkey);
-    debug#ValidatorConfig#rotate_validator_network_identity_pubkey#0#validator_network_identity_pubkey := debug#ValidatorConfig#rotate_validator_network_identity_pubkey#0#validator_network_identity_pubkey[Position(4265) := validator_network_identity_pubkey];
+    assume $DebugTrackLocal(7, 10, 0, 4265, validator_network_identity_pubkey);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __t5 := BorrowGlobal(GetLocal(__m, __frame + 4), ValidatorConfig_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(7, 10, 4510);
+      goto Label_Abort;
+    }
 
     call t_ref := CopyOrMoveRef(__t5);
+    assume is#Vector(Dereference(__m, t_ref));
+    assume $DebugTrackLocal(7, 10, 1, 4502, Dereference(__m, t_ref));
 
     call __t6 := CopyOrMoveRef(t_ref);
 
     call __t7 := BorrowField(__t6, ValidatorConfig_T_config);
 
     call config_ref := CopyOrMoveRef(__t7);
+    assume is#Vector(Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 10, 2, 4558, Dereference(__m, config_ref));
 
     call __t8 := CopyOrMoveRef(config_ref);
 
     call __t9 := BorrowField(__t8, ValidatorConfig_Config_validator_network_identity_pubkey);
 
     call key_ref := CopyOrMoveRef(__t9);
+    assume is#ByteArray(Dereference(__m, key_ref));
+    assume $DebugTrackLocal(7, 10, 3, 4604, Dereference(__m, key_ref));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
@@ -1097,46 +1062,47 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#ValidatorConfig#rotate_validator_network_address#0#validator_network_address: [Position]Value;
-    var debug#ValidatorConfig#rotate_validator_network_address#1#t_ref: [Position]Value;
-    var debug#ValidatorConfig#rotate_validator_network_address#2#config_ref: [Position]Value;
-    var debug#ValidatorConfig#rotate_validator_network_address#3#key_ref: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 12;
-    debug#ValidatorConfig#rotate_validator_network_address#0#validator_network_address := EmptyPositionMap;
-    debug#ValidatorConfig#rotate_validator_network_address#1#t_ref := EmptyPositionMap;
-    debug#ValidatorConfig#rotate_validator_network_address#2#config_ref := EmptyPositionMap;
-    debug#ValidatorConfig#rotate_validator_network_address#3#key_ref := EmptyPositionMap;
 
     // process and type check arguments
     assume is#ByteArray(validator_network_address);
     __m := UpdateLocal(__m, __frame + 0, validator_network_address);
-    debug#ValidatorConfig#rotate_validator_network_address#0#validator_network_address := debug#ValidatorConfig#rotate_validator_network_address#0#validator_network_address[Position(4890) := validator_network_address];
+    assume $DebugTrackLocal(7, 11, 0, 4890, validator_network_address);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __t5 := BorrowGlobal(GetLocal(__m, __frame + 4), ValidatorConfig_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(7, 11, 5119);
+      goto Label_Abort;
+    }
 
     call t_ref := CopyOrMoveRef(__t5);
+    assume is#Vector(Dereference(__m, t_ref));
+    assume $DebugTrackLocal(7, 11, 1, 5111, Dereference(__m, t_ref));
 
     call __t6 := CopyOrMoveRef(t_ref);
 
     call __t7 := BorrowField(__t6, ValidatorConfig_T_config);
 
     call config_ref := CopyOrMoveRef(__t7);
+    assume is#Vector(Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 11, 2, 5167, Dereference(__m, config_ref));
 
     call __t8 := CopyOrMoveRef(config_ref);
 
     call __t9 := BorrowField(__t8, ValidatorConfig_Config_validator_network_address);
 
     call key_ref := CopyOrMoveRef(__t9);
+    assume is#ByteArray(Dereference(__m, key_ref));
+    assume $DebugTrackLocal(7, 11, 3, 5213, Dereference(__m, key_ref));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
@@ -1234,21 +1200,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#mint_with_default_capability#0#amount: [Position]Value;
-    var debug#LibraCoin#mint_with_default_capability#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraCoin#mint_with_default_capability#0#amount := EmptyPositionMap;
-    debug#LibraCoin#mint_with_default_capability#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 0, amount);
-    debug#LibraCoin#mint_with_default_capability#0#amount := debug#LibraCoin#mint_with_default_capability#0#amount[Position(807) := amount];
+    assume $DebugTrackLocal(8, 0, 0, 807, amount);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1258,23 +1220,28 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), LibraCoin_MintCapability_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 0, 940);
+      goto Label_Abort;
+    }
 
     call __t4 := LibraCoin_mint(GetLocal(__m, __frame + 1), __t3);
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 0, 916);
+      goto Label_Abort;
+    }
     assume is#Vector(__t4);
 
     __m := UpdateLocal(__m, __frame + 4, __t4);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#LibraCoin#mint_with_default_capability#1#__ret := debug#LibraCoin#mint_with_default_capability#1#__ret[Position(909) := __ret0];
+    assume $DebugTrackLocal(8, 0, 1, 909, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#mint_with_default_capability#1#__ret := debug#LibraCoin#mint_with_default_capability#1#__ret[Position(994) := __ret0];
 }
 
 procedure LibraCoin_mint_with_default_capability_verify (amount: Value) returns (__ret0: Value)
@@ -1309,28 +1276,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#mint#0#value: [Position]Value;
-    var debug#LibraCoin#mint#1#capability: [Position]Value;
-    var debug#LibraCoin#mint#2#total_value_ref: [Position]Value;
-    var debug#LibraCoin#mint#3#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 21;
-    debug#LibraCoin#mint#0#value := EmptyPositionMap;
-    debug#LibraCoin#mint#1#capability := EmptyPositionMap;
-    debug#LibraCoin#mint#2#total_value_ref := EmptyPositionMap;
-    debug#LibraCoin#mint#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(value);
     __m := UpdateLocal(__m, __frame + 0, value);
-    debug#LibraCoin#mint#0#value := debug#LibraCoin#mint#0#value[Position(1231) := value];
+    assume $DebugTrackLocal(8, 1, 0, 1231, value);
     assume is#Vector(Dereference(__m, capability));
     assume IsValidReferenceParameter(__m, __frame, capability);
-    debug#LibraCoin#mint#1#capability := debug#LibraCoin#mint#1#capability[Position(1231) := Dereference(__m, capability)];
+    assume is#Vector(Dereference(__m, capability));
+    assume $DebugTrackLocal(8, 1, 1, 1231, Dereference(__m, capability));
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1343,7 +1303,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __tmp := MulU64(GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 1, 1766);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call __tmp := Le(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 6));
@@ -1365,11 +1328,16 @@ Label_9:
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
     call __t11 := BorrowGlobal(GetLocal(__m, __frame + 10), LibraCoin_MarketCap_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 1, 1925);
+      goto Label_Abort;
+    }
 
     call __t12 := BorrowField(__t11, LibraCoin_MarketCap_total_value);
 
     call total_value_ref := CopyOrMoveRef(__t12);
+    assume IsValidU128(Dereference(__m, total_value_ref));
+    assume $DebugTrackLocal(8, 1, 2, 1902, Dereference(__m, total_value_ref));
 
     call __t13 := CopyOrMoveRef(total_value_ref);
 
@@ -1381,11 +1349,17 @@ Label_9:
     __m := UpdateLocal(__m, __frame + 15, __tmp);
 
     call __tmp := CastU128(GetLocal(__m, __frame + 15));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 1, 2036);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 16, __tmp);
 
     call __tmp := AddU128(GetLocal(__m, __frame + 14), GetLocal(__m, __frame + 16));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 1, 2011);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 17, __tmp);
 
     call __t18 := CopyOrMoveRef(total_value_ref);
@@ -1399,14 +1373,13 @@ Label_9:
     __m := UpdateLocal(__m, __frame + 20, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 20);
-    debug#LibraCoin#mint#3#__ret := debug#LibraCoin#mint#3#__ret[Position(2067) := __ret0];
+    assume $DebugTrackLocal(8, 1, 3, 2067, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#mint#3#__ret := debug#LibraCoin#mint#3#__ret[Position(2101) := __ret0];
 }
 
 procedure LibraCoin_mint_verify (value: Value, capability: Reference) returns (__ret0: Value)
@@ -1469,7 +1442,10 @@ Label_7:
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call MoveToSender(LibraCoin_MintCapability_type_value(), GetLocal(__m, __frame + 6));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 2, 2384);
+      goto Label_Abort;
+    }
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -1478,7 +1454,10 @@ Label_7:
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call MoveToSender(LibraCoin_MarketCap_type_value(), GetLocal(__m, __frame + 8));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 2, 2456);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -1504,14 +1483,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#market_cap#0#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraCoin#market_cap#0#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -1520,7 +1497,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 0, __tmp);
 
     call __t1 := BorrowGlobal(GetLocal(__m, __frame + 0), LibraCoin_MarketCap_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 3, 2667);
+      goto Label_Abort;
+    }
 
     call __t2 := BorrowField(__t1, LibraCoin_MarketCap_total_value);
 
@@ -1529,14 +1509,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraCoin#market_cap#0#__ret := debug#LibraCoin#market_cap#0#__ret[Position(2657) := __ret0];
+    assume $DebugTrackLocal(8, 3, 0, 2657, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#market_cap#0#__ret := debug#LibraCoin#market_cap#0#__ret[Position(2721) := __ret0];
 }
 
 procedure LibraCoin_market_cap_verify () returns (__ret0: Value)
@@ -1554,14 +1533,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#zero#0#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 2;
-    debug#LibraCoin#zero#0#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -1573,14 +1550,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 1);
-    debug#LibraCoin#zero#0#__ret := debug#LibraCoin#zero#0#__ret[Position(2810) := __ret0];
+    assume $DebugTrackLocal(8, 4, 0, 2810, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#zero#0#__ret := debug#LibraCoin#zero#0#__ret[Position(2834) := __ret0];
 }
 
 procedure LibraCoin_zero_verify () returns (__ret0: Value)
@@ -1599,21 +1575,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#value#0#coin_ref: [Position]Value;
-    var debug#LibraCoin#value#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraCoin#value#0#coin_ref := EmptyPositionMap;
-    debug#LibraCoin#value#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
     assume IsValidReferenceParameter(__m, __frame, coin_ref);
-    debug#LibraCoin#value#0#coin_ref := debug#LibraCoin#value#0#coin_ref[Position(2888) := Dereference(__m, coin_ref)];
+    assume is#Vector(Dereference(__m, coin_ref));
+    assume $DebugTrackLocal(8, 5, 0, 2888, Dereference(__m, coin_ref));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(coin_ref);
@@ -1625,14 +1598,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraCoin#value#1#__ret := debug#LibraCoin#value#1#__ret[Position(2935) := __ret0];
+    assume $DebugTrackLocal(8, 5, 1, 2935, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#value#1#__ret := debug#LibraCoin#value#1#__ret[Position(2970) := __ret0];
 }
 
 procedure LibraCoin_value_verify (coin_ref: Reference) returns (__ret0: Value)
@@ -1654,30 +1626,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#split#0#coin: [Position]Value;
-    var debug#LibraCoin#split#1#amount: [Position]Value;
-    var debug#LibraCoin#split#2#other: [Position]Value;
-    var debug#LibraCoin#split#3#__ret: [Position]Value;
-    var debug#LibraCoin#split#4#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#LibraCoin#split#0#coin := EmptyPositionMap;
-    debug#LibraCoin#split#1#amount := EmptyPositionMap;
-    debug#LibraCoin#split#2#other := EmptyPositionMap;
-    debug#LibraCoin#split#3#__ret := EmptyPositionMap;
-    debug#LibraCoin#split#4#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(coin);
     __m := UpdateLocal(__m, __frame + 0, coin);
-    debug#LibraCoin#split#0#coin := debug#LibraCoin#split#0#coin[Position(3109) := coin];
+    assume $DebugTrackLocal(8, 6, 0, 3109, coin);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraCoin#split#1#amount := debug#LibraCoin#split#1#amount[Position(3109) := amount];
+    assume $DebugTrackLocal(8, 6, 1, 3109, amount);
 
     // bytecode translation starts here
     call __t3 := BorrowLoc(__frame + 0);
@@ -1686,15 +1648,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __t5 := LibraCoin_withdraw(__t3, GetLocal(__m, __frame + 4));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 6, 3211);
+      goto Label_Abort;
+    }
     assume is#Vector(__t5);
 
     __m := UpdateLocal(__m, __frame + 5, __t5);
-    debug#LibraCoin#split#0#coin := debug#LibraCoin#split#0#coin[Position(3211) := GetLocal(__m, __frame + 0)];
+    assume $DebugTrackLocal(8, 6, 0, 3211, GetLocal(__m, __frame + 0));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraCoin#split#2#other := debug#LibraCoin#split#2#other[Position(3203) := __tmp];
+    assume $DebugTrackLocal(8, 6, 2, 3203, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -1703,18 +1668,16 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    debug#LibraCoin#split#3#__ret := debug#LibraCoin#split#3#__ret[Position(3259) := __ret0];
+    assume $DebugTrackLocal(8, 6, 3, 3259, __ret0);
     __ret1 := GetLocal(__m, __frame + 7);
-    debug#LibraCoin#split#4#__ret := debug#LibraCoin#split#4#__ret[Position(3259) := __ret1];
+    assume $DebugTrackLocal(8, 6, 4, 3259, __ret1);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#split#3#__ret := debug#LibraCoin#split#3#__ret[Position(3295) := __ret0];
     __ret1 := DefaultValue;
-    debug#LibraCoin#split#4#__ret := debug#LibraCoin#split#4#__ret[Position(3295) := __ret1];
 }
 
 procedure LibraCoin_split_verify (coin: Value, amount: Value) returns (__ret0: Value, __ret1: Value)
@@ -1746,28 +1709,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#withdraw#0#coin_ref: [Position]Value;
-    var debug#LibraCoin#withdraw#1#amount: [Position]Value;
-    var debug#LibraCoin#withdraw#2#value: [Position]Value;
-    var debug#LibraCoin#withdraw#3#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 18;
-    debug#LibraCoin#withdraw#0#coin_ref := EmptyPositionMap;
-    debug#LibraCoin#withdraw#1#amount := EmptyPositionMap;
-    debug#LibraCoin#withdraw#2#value := EmptyPositionMap;
-    debug#LibraCoin#withdraw#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
     assume IsValidReferenceParameter(__m, __frame, coin_ref);
-    debug#LibraCoin#withdraw#0#coin_ref := debug#LibraCoin#withdraw#0#coin_ref[Position(3557) := Dereference(__m, coin_ref)];
+    assume is#Vector(Dereference(__m, coin_ref));
+    assume $DebugTrackLocal(8, 7, 0, 3557, Dereference(__m, coin_ref));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraCoin#withdraw#1#amount := debug#LibraCoin#withdraw#1#amount[Position(3557) := amount];
+    assume $DebugTrackLocal(8, 7, 1, 3557, amount);
 
     // bytecode translation starts here
     call __t3 := CopyOrMoveRef(coin_ref);
@@ -1780,7 +1736,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraCoin#withdraw#2#value := debug#LibraCoin#withdraw#2#value[Position(3713) := __tmp];
+    assume $DebugTrackLocal(8, 7, 2, 3713, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -1810,7 +1766,10 @@ Label_11:
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
     call __tmp := Sub(GetLocal(__m, __frame + 11), GetLocal(__m, __frame + 12));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 7, 3866);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 13, __tmp);
 
     call __t14 := CopyOrMoveRef(coin_ref);
@@ -1826,14 +1785,13 @@ Label_11:
     __m := UpdateLocal(__m, __frame + 17, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 17);
-    debug#LibraCoin#withdraw#3#__ret := debug#LibraCoin#withdraw#3#__ret[Position(3902) := __ret0];
+    assume $DebugTrackLocal(8, 7, 3, 3902, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#withdraw#3#__ret := debug#LibraCoin#withdraw#3#__ret[Position(3937) := __ret0];
 }
 
 procedure LibraCoin_withdraw_verify (coin_ref: Reference, amount: Value) returns (__ret0: Value)
@@ -1852,26 +1810,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#join#0#coin1: [Position]Value;
-    var debug#LibraCoin#join#1#coin2: [Position]Value;
-    var debug#LibraCoin#join#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraCoin#join#0#coin1 := EmptyPositionMap;
-    debug#LibraCoin#join#1#coin2 := EmptyPositionMap;
-    debug#LibraCoin#join#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(coin1);
     __m := UpdateLocal(__m, __frame + 0, coin1);
-    debug#LibraCoin#join#0#coin1 := debug#LibraCoin#join#0#coin1[Position(4041) := coin1];
+    assume $DebugTrackLocal(8, 8, 0, 4041, coin1);
     assume is#Vector(coin2);
     __m := UpdateLocal(__m, __frame + 1, coin2);
-    debug#LibraCoin#join#1#coin2 := debug#LibraCoin#join#1#coin2[Position(4041) := coin2];
+    assume $DebugTrackLocal(8, 8, 1, 4041, coin2);
 
     // bytecode translation starts here
     call __t2 := BorrowLoc(__frame + 0);
@@ -1880,21 +1832,23 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     call LibraCoin_deposit(__t2, GetLocal(__m, __frame + 3));
-    if (__abort_flag) { goto Label_Abort; }
-    debug#LibraCoin#join#0#coin1 := debug#LibraCoin#join#0#coin1[Position(4102) := GetLocal(__m, __frame + 0)];
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 8, 4102);
+      goto Label_Abort;
+    }
+    assume $DebugTrackLocal(8, 8, 0, 4102, GetLocal(__m, __frame + 0));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#LibraCoin#join#2#__ret := debug#LibraCoin#join#2#__ret[Position(4149) := __ret0];
+    assume $DebugTrackLocal(8, 8, 2, 4149, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraCoin#join#2#__ret := debug#LibraCoin#join#2#__ret[Position(4173) := __ret0];
 }
 
 procedure LibraCoin_join_verify (coin1: Value, coin2: Value) returns (__ret0: Value)
@@ -1922,28 +1876,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#deposit#0#coin_ref: [Position]Value;
-    var debug#LibraCoin#deposit#1#check: [Position]Value;
-    var debug#LibraCoin#deposit#2#value: [Position]Value;
-    var debug#LibraCoin#deposit#3#check_value: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 14;
-    debug#LibraCoin#deposit#0#coin_ref := EmptyPositionMap;
-    debug#LibraCoin#deposit#1#check := EmptyPositionMap;
-    debug#LibraCoin#deposit#2#value := EmptyPositionMap;
-    debug#LibraCoin#deposit#3#check_value := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
     assume IsValidReferenceParameter(__m, __frame, coin_ref);
-    debug#LibraCoin#deposit#0#coin_ref := debug#LibraCoin#deposit#0#coin_ref[Position(4352) := Dereference(__m, coin_ref)];
+    assume is#Vector(Dereference(__m, coin_ref));
+    assume $DebugTrackLocal(8, 9, 0, 4352, Dereference(__m, coin_ref));
     assume is#Vector(check);
     __m := UpdateLocal(__m, __frame + 1, check);
-    debug#LibraCoin#deposit#1#check := debug#LibraCoin#deposit#1#check[Position(4352) := check];
+    assume $DebugTrackLocal(8, 9, 1, 4352, check);
 
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(coin_ref);
@@ -1956,7 +1903,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraCoin#deposit#2#value := debug#LibraCoin#deposit#2#value[Position(4470) := __tmp];
+    assume $DebugTrackLocal(8, 9, 2, 4470, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -1966,7 +1913,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraCoin#deposit#3#check_value := debug#LibraCoin#deposit#3#check_value[Position(4520) := __tmp];
+    assume $DebugTrackLocal(8, 9, 3, 4520, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -1975,7 +1922,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 10));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(8, 9, 4594);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 11, __tmp);
 
     call __t12 := CopyOrMoveRef(coin_ref);
@@ -2012,21 +1962,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraCoin#destroy_zero#0#coin: [Position]Value;
-    var debug#LibraCoin#destroy_zero#1#value: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 9;
-    debug#LibraCoin#destroy_zero#0#coin := EmptyPositionMap;
-    debug#LibraCoin#destroy_zero#1#value := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(coin);
     __m := UpdateLocal(__m, __frame + 0, coin);
-    debug#LibraCoin#destroy_zero#0#coin := debug#LibraCoin#destroy_zero#0#coin[Position(4858) := coin];
+    assume $DebugTrackLocal(8, 10, 0, 4858, coin);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2037,7 +1983,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraCoin#destroy_zero#1#value := debug#LibraCoin#destroy_zero#1#value[Position(4930) := __tmp];
+    assume $DebugTrackLocal(8, 10, 1, 4930, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -2116,14 +2062,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraTimestamp#initialize_timer#0#timer: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 9;
-    debug#LibraTimestamp#initialize_timer#0#timer := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -2157,13 +2101,16 @@ Label_7:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 7));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#LibraTimestamp#initialize_timer#0#timer := debug#LibraTimestamp#initialize_timer#0#timer[Position(490) := __tmp];
+    assume $DebugTrackLocal(9, 0, 0, 490, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call MoveToSender(LibraTimestamp_CurrentTimeMicroseconds_type_value(), GetLocal(__m, __frame + 8));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(9, 0, 549);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -2208,35 +2155,34 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraTimestamp#update_global_time#0#proposer: [Position]Value;
-    var debug#LibraTimestamp#update_global_time#1#timestamp: [Position]Value;
-    var debug#LibraTimestamp#update_global_time#2#global_timer: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 25;
-    debug#LibraTimestamp#update_global_time#0#proposer := EmptyPositionMap;
-    debug#LibraTimestamp#update_global_time#1#timestamp := EmptyPositionMap;
-    debug#LibraTimestamp#update_global_time#2#global_timer := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(proposer);
     __m := UpdateLocal(__m, __frame + 0, proposer);
-    debug#LibraTimestamp#update_global_time#0#proposer := debug#LibraTimestamp#update_global_time#0#proposer[Position(743) := proposer];
+    assume $DebugTrackLocal(9, 1, 0, 743, proposer);
     assume IsValidU64(timestamp);
     __m := UpdateLocal(__m, __frame + 1, timestamp);
-    debug#LibraTimestamp#update_global_time#1#timestamp := debug#LibraTimestamp#update_global_time#1#timestamp[Position(743) := timestamp];
+    assume $DebugTrackLocal(9, 1, 1, 743, timestamp);
 
     // bytecode translation starts here
     call __tmp := LdAddr(173345816);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     call __t4 := BorrowGlobal(GetLocal(__m, __frame + 3), LibraTimestamp_CurrentTimeMicroseconds_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(9, 1, 1099);
+      goto Label_Abort;
+    }
 
     call global_timer := CopyOrMoveRef(__t4);
+    assume is#Vector(Dereference(__m, global_timer));
+    assume $DebugTrackLocal(9, 1, 2, 1084, Dereference(__m, global_timer));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -2338,14 +2284,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraTimestamp#now_microseconds#0#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraTimestamp#now_microseconds#0#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -2354,7 +2298,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 0, __tmp);
 
     call __t1 := BorrowGlobal(GetLocal(__m, __frame + 0), LibraTimestamp_CurrentTimeMicroseconds_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(9, 2, 1746);
+      goto Label_Abort;
+    }
 
     call __t2 := BorrowField(__t1, LibraTimestamp_CurrentTimeMicroseconds_microseconds);
 
@@ -2363,14 +2310,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraTimestamp#now_microseconds#0#__ret := debug#LibraTimestamp#now_microseconds#0#__ret[Position(1736) := __ret0];
+    assume $DebugTrackLocal(9, 2, 0, 1736, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraTimestamp#now_microseconds#0#__ret := debug#LibraTimestamp#now_microseconds#0#__ret[Position(1815) := __ret0];
 }
 
 procedure LibraTimestamp_now_microseconds_verify () returns (__ret0: Value)
@@ -2422,14 +2368,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraTransactionTimeout#initialize#0#timeout: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 9;
-    debug#LibraTransactionTimeout#initialize#0#timeout := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -2463,13 +2407,16 @@ Label_7:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 7));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#LibraTransactionTimeout#initialize#0#timeout := debug#LibraTransactionTimeout#initialize#0#timeout[Position(441) := __tmp];
+    assume $DebugTrackLocal(10, 0, 0, 441, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call MoveToSender(LibraTransactionTimeout_TTL_type_value(), GetLocal(__m, __frame + 8));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(10, 0, 501);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -2502,21 +2449,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraTransactionTimeout#set_timeout#0#new_duration: [Position]Value;
-    var debug#LibraTransactionTimeout#set_timeout#1#timeout: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 12;
-    debug#LibraTransactionTimeout#set_timeout#0#new_duration := EmptyPositionMap;
-    debug#LibraTransactionTimeout#set_timeout#1#timeout := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(new_duration);
     __m := UpdateLocal(__m, __frame + 0, new_duration);
-    debug#LibraTransactionTimeout#set_timeout#0#new_duration := debug#LibraTransactionTimeout#set_timeout#0#new_duration[Position(564) := new_duration];
+    assume $DebugTrackLocal(10, 1, 0, 564, new_duration);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -2544,9 +2487,14 @@ Label_7:
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     call __t8 := BorrowGlobal(GetLocal(__m, __frame + 7), LibraTransactionTimeout_TTL_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(10, 1, 775);
+      goto Label_Abort;
+    }
 
     call timeout := CopyOrMoveRef(__t8);
+    assume is#Vector(Dereference(__m, timeout));
+    assume $DebugTrackLocal(10, 1, 1, 765, Dereference(__m, timeout));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -2599,29 +2547,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraTransactionTimeout#is_valid_transaction_timestamp#0#timestamp: [Position]Value;
-    var debug#LibraTransactionTimeout#is_valid_transaction_timestamp#1#current_block_time: [Position]Value;
-    var debug#LibraTransactionTimeout#is_valid_transaction_timestamp#2#max_txn_time: [Position]Value;
-    var debug#LibraTransactionTimeout#is_valid_transaction_timestamp#3#timeout: [Position]Value;
-    var debug#LibraTransactionTimeout#is_valid_transaction_timestamp#4#txn_time_microseconds: [Position]Value;
-    var debug#LibraTransactionTimeout#is_valid_transaction_timestamp#5#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 23;
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#0#timestamp := EmptyPositionMap;
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#1#current_block_time := EmptyPositionMap;
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#2#max_txn_time := EmptyPositionMap;
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#3#timeout := EmptyPositionMap;
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#4#txn_time_microseconds := EmptyPositionMap;
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#5#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(timestamp);
     __m := UpdateLocal(__m, __frame + 0, timestamp);
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#0#timestamp := debug#LibraTransactionTimeout#is_valid_transaction_timestamp#0#timestamp[Position(911) := timestamp];
+    assume $DebugTrackLocal(10, 2, 0, 911, timestamp);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2640,25 +2576,31 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 8);
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#5#__ret := debug#LibraTransactionTimeout#is_valid_transaction_timestamp#5#__ret[Position(1242) := __ret0];
+    assume $DebugTrackLocal(10, 2, 5, 1242, __ret0);
     return;
 
 Label_6:
     call __t9 := LibraTimestamp_now_microseconds();
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(10, 2, 1296);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t9);
 
     __m := UpdateLocal(__m, __frame + 9, __t9);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#1#current_block_time := debug#LibraTransactionTimeout#is_valid_transaction_timestamp#1#current_block_time[Position(1275) := __tmp];
+    assume $DebugTrackLocal(10, 2, 1, 1275, __tmp);
 
     call __tmp := LdAddr(173345816);
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
     call __t11 := BorrowGlobal(GetLocal(__m, __frame + 10), LibraTransactionTimeout_TTL_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(10, 2, 1351);
+      goto Label_Abort;
+    }
 
     call __t12 := BorrowField(__t11, LibraTransactionTimeout_TTL_duration_microseconds);
 
@@ -2668,7 +2610,7 @@ Label_6:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 13));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#3#timeout := debug#LibraTransactionTimeout#is_valid_transaction_timestamp#3#timeout[Position(1339) := __tmp];
+    assume $DebugTrackLocal(10, 2, 3, 1339, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 14, __tmp);
@@ -2677,12 +2619,15 @@ Label_6:
     __m := UpdateLocal(__m, __frame + 15, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 14), GetLocal(__m, __frame + 15));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(10, 2, 1427);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 16, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 16));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#2#max_txn_time := debug#LibraTransactionTimeout#is_valid_transaction_timestamp#2#max_txn_time[Position(1412) := __tmp];
+    assume $DebugTrackLocal(10, 2, 2, 1412, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 17, __tmp);
@@ -2691,12 +2636,15 @@ Label_6:
     __m := UpdateLocal(__m, __frame + 18, __tmp);
 
     call __tmp := MulU64(GetLocal(__m, __frame + 17), GetLocal(__m, __frame + 18));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(10, 2, 1502);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 19, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 19));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#4#txn_time_microseconds := debug#LibraTransactionTimeout#is_valid_transaction_timestamp#4#txn_time_microseconds[Position(1478) := __tmp];
+    assume $DebugTrackLocal(10, 2, 4, 1478, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 20, __tmp);
@@ -2708,14 +2656,13 @@ Label_6:
     __m := UpdateLocal(__m, __frame + 22, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 22);
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#5#__ret := debug#LibraTransactionTimeout#is_valid_transaction_timestamp#5#__ret[Position(1893) := __ret0];
+    assume $DebugTrackLocal(10, 2, 5, 1893, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraTransactionTimeout#is_valid_transaction_timestamp#5#__ret := debug#LibraTransactionTimeout#is_valid_transaction_timestamp#5#__ret[Position(1960) := __ret0];
 }
 
 procedure LibraTransactionTimeout_is_valid_transaction_timestamp_verify (timestamp: Value) returns (__ret0: Value)
@@ -2933,24 +2880,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#deposit#0#payee: [Position]Value;
-    var debug#LibraAccount#deposit#1#to_deposit: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraAccount#deposit#0#payee := EmptyPositionMap;
-    debug#LibraAccount#deposit#1#to_deposit := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#deposit#0#payee := debug#LibraAccount#deposit#0#payee[Position(3305) := payee];
+    assume $DebugTrackLocal(11, 0, 0, 3305, payee);
     assume is#Vector(to_deposit);
     __m := UpdateLocal(__m, __frame + 1, to_deposit);
-    debug#LibraAccount#deposit#1#to_deposit := debug#LibraAccount#deposit#1#to_deposit[Position(3305) := to_deposit];
+    assume $DebugTrackLocal(11, 0, 1, 3305, to_deposit);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2962,7 +2905,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // unimplemented instruction: LdByteArray(4, ByteArrayPoolIndex(0))
 
     call LibraAccount_deposit_with_metadata(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 0, 3382);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -2988,29 +2934,23 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#deposit_with_metadata#0#payee: [Position]Value;
-    var debug#LibraAccount#deposit_with_metadata#1#to_deposit: [Position]Value;
-    var debug#LibraAccount#deposit_with_metadata#2#metadata: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#LibraAccount#deposit_with_metadata#0#payee := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_metadata#1#to_deposit := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_metadata#2#metadata := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#deposit_with_metadata#0#payee := debug#LibraAccount#deposit_with_metadata#0#payee[Position(3567) := payee];
+    assume $DebugTrackLocal(11, 1, 0, 3567, payee);
     assume is#Vector(to_deposit);
     __m := UpdateLocal(__m, __frame + 1, to_deposit);
-    debug#LibraAccount#deposit_with_metadata#1#to_deposit := debug#LibraAccount#deposit_with_metadata#1#to_deposit[Position(3567) := to_deposit];
+    assume $DebugTrackLocal(11, 1, 1, 3567, to_deposit);
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 2, metadata);
-    debug#LibraAccount#deposit_with_metadata#2#metadata := debug#LibraAccount#deposit_with_metadata#2#metadata[Position(3567) := metadata];
+    assume $DebugTrackLocal(11, 1, 2, 3567, metadata);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3026,7 +2966,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call LibraAccount_deposit_with_sender_and_metadata(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5), GetLocal(__m, __frame + 6));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 1, 3709);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -3077,53 +3020,42 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#0#payee: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#1#sender: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#2#to_deposit: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#3#metadata: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#4#deposit_value: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#5#payee_account_ref: [Position]Value;
-    var debug#LibraAccount#deposit_with_sender_and_metadata#6#sender_account_ref: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 33;
-    debug#LibraAccount#deposit_with_sender_and_metadata#0#payee := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#1#sender := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#2#to_deposit := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#3#metadata := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#4#deposit_value := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#5#payee_account_ref := EmptyPositionMap;
-    debug#LibraAccount#deposit_with_sender_and_metadata#6#sender_account_ref := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#deposit_with_sender_and_metadata#0#payee := debug#LibraAccount#deposit_with_sender_and_metadata#0#payee[Position(4018) := payee];
+    assume $DebugTrackLocal(11, 2, 0, 4018, payee);
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
-    debug#LibraAccount#deposit_with_sender_and_metadata#1#sender := debug#LibraAccount#deposit_with_sender_and_metadata#1#sender[Position(4018) := sender];
+    assume $DebugTrackLocal(11, 2, 1, 4018, sender);
     assume is#Vector(to_deposit);
     __m := UpdateLocal(__m, __frame + 2, to_deposit);
-    debug#LibraAccount#deposit_with_sender_and_metadata#2#to_deposit := debug#LibraAccount#deposit_with_sender_and_metadata#2#to_deposit[Position(4018) := to_deposit];
+    assume $DebugTrackLocal(11, 2, 2, 4018, to_deposit);
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 3, metadata);
-    debug#LibraAccount#deposit_with_sender_and_metadata#3#metadata := debug#LibraAccount#deposit_with_sender_and_metadata#3#metadata[Position(4018) := metadata];
+    assume $DebugTrackLocal(11, 2, 3, 4018, metadata);
 
     // bytecode translation starts here
     call __t7 := BorrowLoc(__frame + 2);
 
     call __t8 := LibraCoin_value(__t7);
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 2, 4383);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t8);
 
     __m := UpdateLocal(__m, __frame + 8, __t8);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
-    debug#LibraAccount#deposit_with_sender_and_metadata#4#deposit_value := debug#LibraAccount#deposit_with_sender_and_metadata#4#deposit_value[Position(4367) := __tmp];
+    assume $DebugTrackLocal(11, 2, 4, 4367, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -3150,9 +3082,14 @@ Label_10:
     __m := UpdateLocal(__m, __frame + 14, __tmp);
 
     call __t15 := BorrowGlobal(GetLocal(__m, __frame + 14), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 2, 4524);
+      goto Label_Abort;
+    }
 
     call sender_account_ref := CopyOrMoveRef(__t15);
+    assume is#Vector(Dereference(__m, sender_account_ref));
+    assume $DebugTrackLocal(11, 2, 6, 4503, Dereference(__m, sender_account_ref));
 
     call __t16 := CopyOrMoveRef(sender_account_ref);
 
@@ -3171,15 +3108,23 @@ Label_10:
     __m := UpdateLocal(__m, __frame + 21, __tmp);
 
     call LibraAccount_emit_event(LibraAccount_SentPaymentEvent_type_value(), __t17, GetLocal(__m, __frame + 21));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 2, 4596);
+      goto Label_Abort;
+    }
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 22, __tmp);
 
     call __t23 := BorrowGlobal(GetLocal(__m, __frame + 22), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 2, 4935);
+      goto Label_Abort;
+    }
 
     call payee_account_ref := CopyOrMoveRef(__t23);
+    assume is#Vector(Dereference(__m, payee_account_ref));
+    assume $DebugTrackLocal(11, 2, 5, 4915, Dereference(__m, payee_account_ref));
 
     call __t24 := CopyOrMoveRef(payee_account_ref);
 
@@ -3189,7 +3134,10 @@ Label_10:
     __m := UpdateLocal(__m, __frame + 26, __tmp);
 
     call LibraCoin_deposit(__t25, GetLocal(__m, __frame + 26));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 2, 5019);
+      goto Label_Abort;
+    }
 
     call __t27 := CopyOrMoveRef(payee_account_ref);
 
@@ -3208,7 +3156,10 @@ Label_10:
     __m := UpdateLocal(__m, __frame + 32, __tmp);
 
     call LibraAccount_emit_event(LibraAccount_ReceivedPaymentEvent_type_value(), __t28, GetLocal(__m, __frame + 32));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 2, 5134);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -3237,24 +3188,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#mint_to_address#0#payee: [Position]Value;
-    var debug#LibraAccount#mint_to_address#1#amount: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 9;
-    debug#LibraAccount#mint_to_address#0#payee := EmptyPositionMap;
-    debug#LibraAccount#mint_to_address#1#amount := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#mint_to_address#0#payee := debug#LibraAccount#mint_to_address#0#payee[Position(5776) := payee];
+    assume $DebugTrackLocal(11, 3, 0, 5776, payee);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraAccount#mint_to_address#1#amount := debug#LibraAccount#mint_to_address#1#amount[Position(5776) := amount];
+    assume $DebugTrackLocal(11, 3, 1, 5776, amount);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3273,7 +3220,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call LibraAccount_create_account(GetLocal(__m, __frame + 5));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 3, 5942);
+      goto Label_Abort;
+    }
 
 Label_6:
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3283,13 +3233,19 @@ Label_6:
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     call __t8 := LibraCoin_mint_with_default_capability(GetLocal(__m, __frame + 7));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 3, 6058);
+      goto Label_Abort;
+    }
     assume is#Vector(__t8);
 
     __m := UpdateLocal(__m, __frame + 8, __t8);
 
     call LibraAccount_deposit(GetLocal(__m, __frame + 6), GetLocal(__m, __frame + 8));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 3, 6032);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -3317,28 +3273,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#withdraw_from_account#0#account: [Position]Value;
-    var debug#LibraAccount#withdraw_from_account#1#amount: [Position]Value;
-    var debug#LibraAccount#withdraw_from_account#2#to_withdraw: [Position]Value;
-    var debug#LibraAccount#withdraw_from_account#3#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#LibraAccount#withdraw_from_account#0#account := EmptyPositionMap;
-    debug#LibraAccount#withdraw_from_account#1#amount := EmptyPositionMap;
-    debug#LibraAccount#withdraw_from_account#2#to_withdraw := EmptyPositionMap;
-    debug#LibraAccount#withdraw_from_account#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
     assume IsValidReferenceParameter(__m, __frame, account);
-    debug#LibraAccount#withdraw_from_account#0#account := debug#LibraAccount#withdraw_from_account#0#account[Position(6237) := Dereference(__m, account)];
+    assume is#Vector(Dereference(__m, account));
+    assume $DebugTrackLocal(11, 4, 0, 6237, Dereference(__m, account));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraAccount#withdraw_from_account#1#amount := debug#LibraAccount#withdraw_from_account#1#amount[Position(6237) := amount];
+    assume $DebugTrackLocal(11, 4, 1, 6237, amount);
 
     // bytecode translation starts here
     call __t3 := CopyOrMoveRef(account);
@@ -3349,27 +3298,29 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __t6 := LibraCoin_withdraw(__t4, GetLocal(__m, __frame + 5));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 4, 6370);
+      goto Label_Abort;
+    }
     assume is#Vector(__t6);
 
     __m := UpdateLocal(__m, __frame + 6, __t6);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraAccount#withdraw_from_account#2#to_withdraw := debug#LibraAccount#withdraw_from_account#2#to_withdraw[Position(6356) := __tmp];
+    assume $DebugTrackLocal(11, 4, 2, 6356, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    debug#LibraAccount#withdraw_from_account#3#__ret := debug#LibraAccount#withdraw_from_account#3#__ret[Position(6440) := __ret0];
+    assume $DebugTrackLocal(11, 4, 3, 6440, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#withdraw_from_account#3#__ret := debug#LibraAccount#withdraw_from_account#3#__ret[Position(6470) := __ret0];
 }
 
 procedure LibraAccount_withdraw_from_account_verify (account: Reference, amount: Value) returns (__ret0: Value)
@@ -3395,32 +3346,31 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#withdraw_from_sender#0#amount: [Position]Value;
-    var debug#LibraAccount#withdraw_from_sender#1#sender_account: [Position]Value;
-    var debug#LibraAccount#withdraw_from_sender#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 11;
-    debug#LibraAccount#withdraw_from_sender#0#amount := EmptyPositionMap;
-    debug#LibraAccount#withdraw_from_sender#1#sender_account := EmptyPositionMap;
-    debug#LibraAccount#withdraw_from_sender#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 0, amount);
-    debug#LibraAccount#withdraw_from_sender#0#amount := debug#LibraAccount#withdraw_from_sender#0#amount[Position(6552) := amount];
+    assume $DebugTrackLocal(11, 5, 0, 6552, amount);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 5, 6686);
+      goto Label_Abort;
+    }
 
     call sender_account := CopyOrMoveRef(__t3);
+    assume is#Vector(Dereference(__m, sender_account));
+    assume $DebugTrackLocal(11, 5, 1, 6669, Dereference(__m, sender_account));
 
     call __t4 := CopyOrMoveRef(sender_account);
 
@@ -3445,20 +3395,22 @@ Label_9:
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
     call __t10 := LibraAccount_withdraw_from_account(__t8, GetLocal(__m, __frame + 9));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 5, 7031);
+      goto Label_Abort;
+    }
     assume is#Vector(__t10);
 
     __m := UpdateLocal(__m, __frame + 10, __t10);
 
     __ret0 := GetLocal(__m, __frame + 10);
-    debug#LibraAccount#withdraw_from_sender#2#__ret := debug#LibraAccount#withdraw_from_sender#2#__ret[Position(7024) := __ret0];
+    assume $DebugTrackLocal(11, 5, 2, 7024, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#withdraw_from_sender#2#__ret := debug#LibraAccount#withdraw_from_sender#2#__ret[Position(7109) := __ret0];
 }
 
 procedure LibraAccount_withdraw_from_sender_verify (amount: Value) returns (__ret0: Value)
@@ -3482,28 +3434,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#withdraw_with_capability#0#cap: [Position]Value;
-    var debug#LibraAccount#withdraw_with_capability#1#amount: [Position]Value;
-    var debug#LibraAccount#withdraw_with_capability#2#account: [Position]Value;
-    var debug#LibraAccount#withdraw_with_capability#3#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#LibraAccount#withdraw_with_capability#0#cap := EmptyPositionMap;
-    debug#LibraAccount#withdraw_with_capability#1#amount := EmptyPositionMap;
-    debug#LibraAccount#withdraw_with_capability#2#account := EmptyPositionMap;
-    debug#LibraAccount#withdraw_with_capability#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
     assume IsValidReferenceParameter(__m, __frame, cap);
-    debug#LibraAccount#withdraw_with_capability#0#cap := debug#LibraAccount#withdraw_with_capability#0#cap[Position(7192) := Dereference(__m, cap)];
+    assume is#Vector(Dereference(__m, cap));
+    assume $DebugTrackLocal(11, 6, 0, 7192, Dereference(__m, cap));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraAccount#withdraw_with_capability#1#amount := debug#LibraAccount#withdraw_with_capability#1#amount[Position(7192) := amount];
+    assume $DebugTrackLocal(11, 6, 1, 7192, amount);
 
     // bytecode translation starts here
     call __t3 := CopyOrMoveRef(cap);
@@ -3515,9 +3460,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __t6 := BorrowGlobal(GetLocal(__m, __frame + 5), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 6, 7364);
+      goto Label_Abort;
+    }
 
     call account := CopyOrMoveRef(__t6);
+    assume is#Vector(Dereference(__m, account));
+    assume $DebugTrackLocal(11, 6, 2, 7354, Dereference(__m, account));
 
     call __t7 := CopyOrMoveRef(account);
 
@@ -3525,20 +3475,22 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call __t9 := LibraAccount_withdraw_from_account(__t7, GetLocal(__m, __frame + 8));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 6, 7430);
+      goto Label_Abort;
+    }
     assume is#Vector(__t9);
 
     __m := UpdateLocal(__m, __frame + 9, __t9);
 
     __ret0 := GetLocal(__m, __frame + 9);
-    debug#LibraAccount#withdraw_with_capability#3#__ret := debug#LibraAccount#withdraw_with_capability#3#__ret[Position(7423) := __ret0];
+    assume $DebugTrackLocal(11, 6, 3, 7423, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#withdraw_with_capability#3#__ret := debug#LibraAccount#withdraw_with_capability#3#__ret[Position(7491) := __ret0];
 }
 
 procedure LibraAccount_withdraw_with_capability_verify (cap: Reference, amount: Value) returns (__ret0: Value)
@@ -3569,20 +3521,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#extract_sender_withdrawal_capability#0#sender: [Position]Value;
-    var debug#LibraAccount#extract_sender_withdrawal_capability#1#sender_account: [Position]Value;
-    var debug#LibraAccount#extract_sender_withdrawal_capability#2#delegated_ref: [Position]Value;
-    var debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 15;
-    debug#LibraAccount#extract_sender_withdrawal_capability#0#sender := EmptyPositionMap;
-    debug#LibraAccount#extract_sender_withdrawal_capability#1#sender_account := EmptyPositionMap;
-    debug#LibraAccount#extract_sender_withdrawal_capability#2#delegated_ref := EmptyPositionMap;
-    debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -3592,21 +3536,28 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#LibraAccount#extract_sender_withdrawal_capability#0#sender := debug#LibraAccount#extract_sender_withdrawal_capability#0#sender[Position(7802) := __tmp];
+    assume $DebugTrackLocal(11, 7, 0, 7802, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __t5 := BorrowGlobal(GetLocal(__m, __frame + 4), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 7, 7854);
+      goto Label_Abort;
+    }
 
     call sender_account := CopyOrMoveRef(__t5);
+    assume is#Vector(Dereference(__m, sender_account));
+    assume $DebugTrackLocal(11, 7, 1, 7837, Dereference(__m, sender_account));
 
     call __t6 := CopyOrMoveRef(sender_account);
 
     call __t7 := BorrowField(__t6, LibraAccount_T_delegated_withdrawal_capability);
 
     call delegated_ref := CopyOrMoveRef(__t7);
+    assume is#Boolean(Dereference(__m, delegated_ref));
+    assume $DebugTrackLocal(11, 7, 2, 7898, Dereference(__m, delegated_ref));
 
     call __t8 := CopyOrMoveRef(delegated_ref);
 
@@ -3637,14 +3588,13 @@ Label_13:
     __m := UpdateLocal(__m, __frame + 14, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 14);
-    debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret := debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret[Position(8228) := __ret0];
+    assume $DebugTrackLocal(11, 7, 3, 8228, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret := debug#LibraAccount#extract_sender_withdrawal_capability#3#__ret[Position(8305) := __ret0];
 }
 
 procedure LibraAccount_extract_sender_withdrawal_capability_verify () returns (__ret0: Value)
@@ -3669,23 +3619,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#restore_withdrawal_capability#0#cap: [Position]Value;
-    var debug#LibraAccount#restore_withdrawal_capability#1#account_address: [Position]Value;
-    var debug#LibraAccount#restore_withdrawal_capability#2#account: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#LibraAccount#restore_withdrawal_capability#0#cap := EmptyPositionMap;
-    debug#LibraAccount#restore_withdrawal_capability#1#account_address := EmptyPositionMap;
-    debug#LibraAccount#restore_withdrawal_capability#2#account := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(cap);
     __m := UpdateLocal(__m, __frame + 0, cap);
-    debug#LibraAccount#restore_withdrawal_capability#0#cap := debug#LibraAccount#restore_withdrawal_capability#0#cap[Position(8391) := cap];
+    assume $DebugTrackLocal(11, 8, 0, 8391, cap);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3696,15 +3640,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#restore_withdrawal_capability#1#account_address := debug#LibraAccount#restore_withdrawal_capability#1#account_address[Position(8611) := __tmp];
+    assume $DebugTrackLocal(11, 8, 1, 8611, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __t6 := BorrowGlobal(GetLocal(__m, __frame + 5), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 8, 8660);
+      goto Label_Abort;
+    }
 
     call account := CopyOrMoveRef(__t6);
+    assume is#Vector(Dereference(__m, account));
+    assume $DebugTrackLocal(11, 8, 2, 8650, Dereference(__m, account));
 
     call __tmp := LdFalse();
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -3747,34 +3696,27 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#pay_from_capability#0#payee: [Position]Value;
-    var debug#LibraAccount#pay_from_capability#1#cap: [Position]Value;
-    var debug#LibraAccount#pay_from_capability#2#amount: [Position]Value;
-    var debug#LibraAccount#pay_from_capability#3#metadata: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 16;
-    debug#LibraAccount#pay_from_capability#0#payee := EmptyPositionMap;
-    debug#LibraAccount#pay_from_capability#1#cap := EmptyPositionMap;
-    debug#LibraAccount#pay_from_capability#2#amount := EmptyPositionMap;
-    debug#LibraAccount#pay_from_capability#3#metadata := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#pay_from_capability#0#payee := debug#LibraAccount#pay_from_capability#0#payee[Position(9236) := payee];
+    assume $DebugTrackLocal(11, 9, 0, 9236, payee);
     assume is#Vector(Dereference(__m, cap));
     assume IsValidReferenceParameter(__m, __frame, cap);
-    debug#LibraAccount#pay_from_capability#1#cap := debug#LibraAccount#pay_from_capability#1#cap[Position(9236) := Dereference(__m, cap)];
+    assume is#Vector(Dereference(__m, cap));
+    assume $DebugTrackLocal(11, 9, 1, 9236, Dereference(__m, cap));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 2, amount);
-    debug#LibraAccount#pay_from_capability#2#amount := debug#LibraAccount#pay_from_capability#2#amount[Position(9236) := amount];
+    assume $DebugTrackLocal(11, 9, 2, 9236, amount);
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 3, metadata);
-    debug#LibraAccount#pay_from_capability#3#metadata := debug#LibraAccount#pay_from_capability#3#metadata[Position(9236) := metadata];
+    assume $DebugTrackLocal(11, 9, 3, 9236, metadata);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3793,7 +3735,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     call LibraAccount_create_account(GetLocal(__m, __frame + 7));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 9, 9448);
+      goto Label_Abort;
+    }
 
 Label_6:
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3813,7 +3758,10 @@ Label_6:
     __m := UpdateLocal(__m, __frame + 13, __tmp);
 
     call __t14 := LibraAccount_withdraw_with_capability(__t12, GetLocal(__m, __frame + 13));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 9, 9617);
+      goto Label_Abort;
+    }
     assume is#Vector(__t14);
 
     __m := UpdateLocal(__m, __frame + 14, __t14);
@@ -3822,7 +3770,10 @@ Label_6:
     __m := UpdateLocal(__m, __frame + 15, __tmp);
 
     call LibraAccount_deposit_with_sender_and_metadata(GetLocal(__m, __frame + 8), GetLocal(__m, __frame + 11), GetLocal(__m, __frame + 14), GetLocal(__m, __frame + 15));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 9, 9500);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -3852,29 +3803,23 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#pay_from_sender_with_metadata#0#payee: [Position]Value;
-    var debug#LibraAccount#pay_from_sender_with_metadata#1#amount: [Position]Value;
-    var debug#LibraAccount#pay_from_sender_with_metadata#2#metadata: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 11;
-    debug#LibraAccount#pay_from_sender_with_metadata#0#payee := EmptyPositionMap;
-    debug#LibraAccount#pay_from_sender_with_metadata#1#amount := EmptyPositionMap;
-    debug#LibraAccount#pay_from_sender_with_metadata#2#metadata := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#pay_from_sender_with_metadata#0#payee := debug#LibraAccount#pay_from_sender_with_metadata#0#payee[Position(9947) := payee];
+    assume $DebugTrackLocal(11, 10, 0, 9947, payee);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraAccount#pay_from_sender_with_metadata#1#amount := debug#LibraAccount#pay_from_sender_with_metadata#1#amount[Position(9947) := amount];
+    assume $DebugTrackLocal(11, 10, 1, 9947, amount);
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 2, metadata);
-    debug#LibraAccount#pay_from_sender_with_metadata#2#metadata := debug#LibraAccount#pay_from_sender_with_metadata#2#metadata[Position(9947) := metadata];
+    assume $DebugTrackLocal(11, 10, 2, 9947, metadata);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3893,7 +3838,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call LibraAccount_create_account(GetLocal(__m, __frame + 6));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 10, 10128);
+      goto Label_Abort;
+    }
 
 Label_6:
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3903,7 +3851,10 @@ Label_6:
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call __t9 := LibraAccount_withdraw_from_sender(GetLocal(__m, __frame + 8));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 10, 10245);
+      goto Label_Abort;
+    }
     assume is#Vector(__t9);
 
     __m := UpdateLocal(__m, __frame + 9, __t9);
@@ -3912,7 +3863,10 @@ Label_6:
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
     call LibraAccount_deposit_with_metadata(GetLocal(__m, __frame + 7), GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 10));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 10, 10180);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -3937,24 +3891,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#pay_from_sender#0#payee: [Position]Value;
-    var debug#LibraAccount#pay_from_sender#1#amount: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraAccount#pay_from_sender#0#payee := EmptyPositionMap;
-    debug#LibraAccount#pay_from_sender#1#amount := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    debug#LibraAccount#pay_from_sender#0#payee := debug#LibraAccount#pay_from_sender#0#payee[Position(10530) := payee];
+    assume $DebugTrackLocal(11, 11, 0, 10530, payee);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    debug#LibraAccount#pay_from_sender#1#amount := debug#LibraAccount#pay_from_sender#1#amount[Position(10530) := amount];
+    assume $DebugTrackLocal(11, 11, 1, 10530, amount);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3966,7 +3916,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // unimplemented instruction: LdByteArray(4, ByteArrayPoolIndex(0))
 
     call LibraAccount_pay_from_sender_with_metadata(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 11, 10603);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -3991,24 +3944,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#rotate_authentication_key_for_account#0#account: [Position]Value;
-    var debug#LibraAccount#rotate_authentication_key_for_account#1#new_authentication_key: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraAccount#rotate_authentication_key_for_account#0#account := EmptyPositionMap;
-    debug#LibraAccount#rotate_authentication_key_for_account#1#new_authentication_key := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
     assume IsValidReferenceParameter(__m, __frame, account);
-    debug#LibraAccount#rotate_authentication_key_for_account#0#account := debug#LibraAccount#rotate_authentication_key_for_account#0#account[Position(10698) := Dereference(__m, account)];
+    assume is#Vector(Dereference(__m, account));
+    assume $DebugTrackLocal(11, 12, 0, 10698, Dereference(__m, account));
     assume is#ByteArray(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 1, new_authentication_key);
-    debug#LibraAccount#rotate_authentication_key_for_account#1#new_authentication_key := debug#LibraAccount#rotate_authentication_key_for_account#1#new_authentication_key[Position(10698) := new_authentication_key];
+    assume $DebugTrackLocal(11, 12, 1, 10698, new_authentication_key);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
@@ -4049,30 +3999,31 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#rotate_authentication_key#0#new_authentication_key: [Position]Value;
-    var debug#LibraAccount#rotate_authentication_key#1#sender_account: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#LibraAccount#rotate_authentication_key#0#new_authentication_key := EmptyPositionMap;
-    debug#LibraAccount#rotate_authentication_key#1#sender_account := EmptyPositionMap;
 
     // process and type check arguments
     assume is#ByteArray(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 0, new_authentication_key);
-    debug#LibraAccount#rotate_authentication_key#0#new_authentication_key := debug#LibraAccount#rotate_authentication_key#0#new_authentication_key[Position(11025) := new_authentication_key];
+    assume $DebugTrackLocal(11, 13, 0, 11025, new_authentication_key);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 13, 11173);
+      goto Label_Abort;
+    }
 
     call sender_account := CopyOrMoveRef(__t3);
+    assume is#Vector(Dereference(__m, sender_account));
+    assume $DebugTrackLocal(11, 13, 1, 11156, Dereference(__m, sender_account));
 
     call __t4 := CopyOrMoveRef(sender_account);
 
@@ -4097,7 +4048,10 @@ Label_9:
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
     call LibraAccount_rotate_authentication_key_for_account(__t8, GetLocal(__m, __frame + 9));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 13, 11503);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -4124,24 +4078,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#rotate_authentication_key_with_capability#0#cap: [Position]Value;
-    var debug#LibraAccount#rotate_authentication_key_with_capability#1#new_authentication_key: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#LibraAccount#rotate_authentication_key_with_capability#0#cap := EmptyPositionMap;
-    debug#LibraAccount#rotate_authentication_key_with_capability#1#new_authentication_key := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
     assume IsValidReferenceParameter(__m, __frame, cap);
-    debug#LibraAccount#rotate_authentication_key_with_capability#0#cap := debug#LibraAccount#rotate_authentication_key_with_capability#0#cap[Position(11765) := Dereference(__m, cap)];
+    assume is#Vector(Dereference(__m, cap));
+    assume $DebugTrackLocal(11, 14, 0, 11765, Dereference(__m, cap));
     assume is#ByteArray(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 1, new_authentication_key);
-    debug#LibraAccount#rotate_authentication_key_with_capability#1#new_authentication_key := debug#LibraAccount#rotate_authentication_key_with_capability#1#new_authentication_key[Position(11765) := new_authentication_key];
+    assume $DebugTrackLocal(11, 14, 1, 11765, new_authentication_key);
 
     // bytecode translation starts here
     call __t2 := CopyOrMoveRef(cap);
@@ -4153,13 +4104,19 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __t5 := BorrowGlobal(GetLocal(__m, __frame + 4), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 14, 11984);
+      goto Label_Abort;
+    }
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call LibraAccount_rotate_authentication_key_for_account(__t5, GetLocal(__m, __frame + 6));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 14, 11928);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -4194,18 +4151,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#extract_sender_key_rotation_capability#0#sender: [Position]Value;
-    var debug#LibraAccount#extract_sender_key_rotation_capability#1#delegated_ref: [Position]Value;
-    var debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 13;
-    debug#LibraAccount#extract_sender_key_rotation_capability#0#sender := EmptyPositionMap;
-    debug#LibraAccount#extract_sender_key_rotation_capability#1#delegated_ref := EmptyPositionMap;
-    debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -4215,17 +4166,22 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    debug#LibraAccount#extract_sender_key_rotation_capability#0#sender := debug#LibraAccount#extract_sender_key_rotation_capability#0#sender[Position(12375) := __tmp];
+    assume $DebugTrackLocal(11, 15, 0, 12375, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     call __t4 := BorrowGlobal(GetLocal(__m, __frame + 3), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 15, 12431);
+      goto Label_Abort;
+    }
 
     call __t5 := BorrowField(__t4, LibraAccount_T_delegated_key_rotation_capability);
 
     call delegated_ref := CopyOrMoveRef(__t5);
+    assume is#Boolean(Dereference(__m, delegated_ref));
+    assume $DebugTrackLocal(11, 15, 1, 12410, Dereference(__m, delegated_ref));
 
     call __t6 := CopyOrMoveRef(delegated_ref);
 
@@ -4256,14 +4212,13 @@ Label_11:
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 12);
-    debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret := debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret[Position(12758) := __ret0];
+    assume $DebugTrackLocal(11, 15, 2, 12758, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret := debug#LibraAccount#extract_sender_key_rotation_capability#2#__ret[Position(12836) := __ret0];
 }
 
 procedure LibraAccount_extract_sender_key_rotation_capability_verify () returns (__ret0: Value)
@@ -4288,23 +4243,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#restore_key_rotation_capability#0#cap: [Position]Value;
-    var debug#LibraAccount#restore_key_rotation_capability#1#account_address: [Position]Value;
-    var debug#LibraAccount#restore_key_rotation_capability#2#account: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 10;
-    debug#LibraAccount#restore_key_rotation_capability#0#cap := EmptyPositionMap;
-    debug#LibraAccount#restore_key_rotation_capability#1#account_address := EmptyPositionMap;
-    debug#LibraAccount#restore_key_rotation_capability#2#account := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(cap);
     __m := UpdateLocal(__m, __frame + 0, cap);
-    debug#LibraAccount#restore_key_rotation_capability#0#cap := debug#LibraAccount#restore_key_rotation_capability#0#cap[Position(12924) := cap];
+    assume $DebugTrackLocal(11, 16, 0, 12924, cap);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -4315,15 +4264,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#restore_key_rotation_capability#1#account_address := debug#LibraAccount#restore_key_rotation_capability#1#account_address[Position(13148) := __tmp];
+    assume $DebugTrackLocal(11, 16, 1, 13148, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __t6 := BorrowGlobal(GetLocal(__m, __frame + 5), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 16, 13197);
+      goto Label_Abort;
+    }
 
     call account := CopyOrMoveRef(__t6);
+    assume is#Vector(Dereference(__m, account));
+    assume $DebugTrackLocal(11, 16, 2, 13187, Dereference(__m, account));
 
     call __tmp := LdFalse();
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -4372,21 +4326,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#create_account#0#fresh_address: [Position]Value;
-    var debug#LibraAccount#create_account#1#generator: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 19;
-    debug#LibraAccount#create_account#0#fresh_address := EmptyPositionMap;
-    debug#LibraAccount#create_account#1#generator := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(fresh_address);
     __m := UpdateLocal(__m, __frame + 0, fresh_address);
-    debug#LibraAccount#create_account#0#fresh_address := debug#LibraAccount#create_account#0#fresh_address[Position(13761) := fresh_address];
+    assume $DebugTrackLocal(11, 17, 0, 13761, fresh_address);
 
     // bytecode translation starts here
     call __tmp := LdConst(0);
@@ -4397,7 +4347,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#create_account#1#generator := debug#LibraAccount#create_account#1#generator[Position(13868) := __tmp];
+    assume $DebugTrackLocal(11, 17, 1, 13868, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -4406,13 +4356,19 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __t6 := AddressUtil_address_to_bytes(GetLocal(__m, __frame + 5));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 17, 14027);
+      goto Label_Abort;
+    }
     assume is#ByteArray(__t6);
 
     __m := UpdateLocal(__m, __frame + 6, __t6);
 
     call __t7 := LibraCoin_zero();
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 17, 14103);
+      goto Label_Abort;
+    }
     assume is#Vector(__t7);
 
     __m := UpdateLocal(__m, __frame + 7, __t7);
@@ -4429,11 +4385,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 11, __tmp);
 
     call __t12 := LibraAccount_new_event_handle_impl(LibraAccount_ReceivedPaymentEvent_type_value(), __t10, GetLocal(__m, __frame + 11));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 17, 14268);
+      goto Label_Abort;
+    }
     assume is#Vector(__t12);
 
     __m := UpdateLocal(__m, __frame + 12, __t12);
-    debug#LibraAccount#create_account#1#generator := debug#LibraAccount#create_account#1#generator[Position(14268) := GetLocal(__m, __frame + 1)];
+    assume $DebugTrackLocal(11, 17, 1, 14268, GetLocal(__m, __frame + 1));
 
     call __t13 := BorrowLoc(__frame + 1);
 
@@ -4441,11 +4400,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 14, __tmp);
 
     call __t15 := LibraAccount_new_event_handle_impl(LibraAccount_SentPaymentEvent_type_value(), __t13, GetLocal(__m, __frame + 14));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 17, 14389);
+      goto Label_Abort;
+    }
     assume is#Vector(__t15);
 
     __m := UpdateLocal(__m, __frame + 15, __t15);
-    debug#LibraAccount#create_account#1#generator := debug#LibraAccount#create_account#1#generator[Position(14389) := GetLocal(__m, __frame + 1)];
+    assume $DebugTrackLocal(11, 17, 1, 14389, GetLocal(__m, __frame + 1));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 16, __tmp);
@@ -4457,7 +4419,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 18, __tmp);
 
     call LibraAccount_save_account(GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 18));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 17, 13923);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -4485,31 +4450,30 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#create_new_account#0#fresh_address: [Position]Value;
-    var debug#LibraAccount#create_new_account#1#initial_balance: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#LibraAccount#create_new_account#0#fresh_address := EmptyPositionMap;
-    debug#LibraAccount#create_new_account#1#initial_balance := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(fresh_address);
     __m := UpdateLocal(__m, __frame + 0, fresh_address);
-    debug#LibraAccount#create_new_account#0#fresh_address := debug#LibraAccount#create_new_account#0#fresh_address[Position(14744) := fresh_address];
+    assume $DebugTrackLocal(11, 18, 0, 14744, fresh_address);
     assume IsValidU64(initial_balance);
     __m := UpdateLocal(__m, __frame + 1, initial_balance);
-    debug#LibraAccount#create_new_account#1#initial_balance := debug#LibraAccount#create_new_account#1#initial_balance[Position(14744) := initial_balance];
+    assume $DebugTrackLocal(11, 18, 1, 14744, initial_balance);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     call LibraAccount_create_account(GetLocal(__m, __frame + 2));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 18, 14837);
+      goto Label_Abort;
+    }
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
@@ -4530,7 +4494,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     call LibraAccount_pay_from_sender(GetLocal(__m, __frame + 6), GetLocal(__m, __frame + 7));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 18, 14932);
+      goto Label_Abort;
+    }
 
 Label_9:
     return;
@@ -4561,23 +4528,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#balance_for_account#0#account: [Position]Value;
-    var debug#LibraAccount#balance_for_account#1#balance_value: [Position]Value;
-    var debug#LibraAccount#balance_for_account#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 6;
-    debug#LibraAccount#balance_for_account#0#account := EmptyPositionMap;
-    debug#LibraAccount#balance_for_account#1#balance_value := EmptyPositionMap;
-    debug#LibraAccount#balance_for_account#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
     assume IsValidReferenceParameter(__m, __frame, account);
-    debug#LibraAccount#balance_for_account#0#account := debug#LibraAccount#balance_for_account#0#account[Position(15265) := Dereference(__m, account)];
+    assume is#Vector(Dereference(__m, account));
+    assume $DebugTrackLocal(11, 20, 0, 15265, Dereference(__m, account));
 
     // bytecode translation starts here
     call __t2 := CopyOrMoveRef(account);
@@ -4585,27 +4547,29 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t3 := BorrowField(__t2, LibraAccount_T_balance);
 
     call __t4 := LibraCoin_value(__t3);
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 20, 15366);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t4);
 
     __m := UpdateLocal(__m, __frame + 4, __t4);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#balance_for_account#1#balance_value := debug#LibraAccount#balance_for_account#1#balance_value[Position(15350) := __tmp];
+    assume $DebugTrackLocal(11, 20, 1, 15350, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 5);
-    debug#LibraAccount#balance_for_account#2#__ret := debug#LibraAccount#balance_for_account#2#__ret[Position(15415) := __ret0];
+    assume $DebugTrackLocal(11, 20, 2, 15415, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#balance_for_account#2#__ret := debug#LibraAccount#balance_for_account#2#__ret[Position(15447) := __ret0];
 }
 
 procedure LibraAccount_balance_for_account_verify (account: Reference) returns (__ret0: Value)
@@ -4624,44 +4588,45 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#balance#0#addr: [Position]Value;
-    var debug#LibraAccount#balance#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraAccount#balance#0#addr := EmptyPositionMap;
-    debug#LibraAccount#balance#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    debug#LibraAccount#balance#0#addr := debug#LibraAccount#balance#0#addr[Position(15535) := addr];
+    assume $DebugTrackLocal(11, 21, 0, 15535, addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     call __t2 := BorrowGlobal(GetLocal(__m, __frame + 1), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 21, 15623);
+      goto Label_Abort;
+    }
 
     call __t3 := LibraAccount_balance_for_account(__t2);
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 21, 15598);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraAccount#balance#1#__ret := debug#LibraAccount#balance#1#__ret[Position(15591) := __ret0];
+    assume $DebugTrackLocal(11, 21, 1, 15591, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#balance#1#__ret := debug#LibraAccount#balance#1#__ret[Position(15658) := __ret0];
 }
 
 procedure LibraAccount_balance_verify (addr: Value) returns (__ret0: Value)
@@ -4680,21 +4645,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#sequence_number_for_account#0#account: [Position]Value;
-    var debug#LibraAccount#sequence_number_for_account#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraAccount#sequence_number_for_account#0#account := EmptyPositionMap;
-    debug#LibraAccount#sequence_number_for_account#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
     assume IsValidReferenceParameter(__m, __frame, account);
-    debug#LibraAccount#sequence_number_for_account#0#account := debug#LibraAccount#sequence_number_for_account#0#account[Position(15735) := Dereference(__m, account)];
+    assume is#Vector(Dereference(__m, account));
+    assume $DebugTrackLocal(11, 22, 0, 15735, Dereference(__m, account));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(account);
@@ -4706,14 +4668,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraAccount#sequence_number_for_account#1#__ret := debug#LibraAccount#sequence_number_for_account#1#__ret[Position(15796) := __ret0];
+    assume $DebugTrackLocal(11, 22, 1, 15796, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#sequence_number_for_account#1#__ret := debug#LibraAccount#sequence_number_for_account#1#__ret[Position(15842) := __ret0];
 }
 
 procedure LibraAccount_sequence_number_for_account_verify (account: Reference) returns (__ret0: Value)
@@ -4732,44 +4693,45 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#sequence_number#0#addr: [Position]Value;
-    var debug#LibraAccount#sequence_number#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 4;
-    debug#LibraAccount#sequence_number#0#addr := EmptyPositionMap;
-    debug#LibraAccount#sequence_number#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    debug#LibraAccount#sequence_number#0#addr := debug#LibraAccount#sequence_number#0#addr[Position(15901) := addr];
+    assume $DebugTrackLocal(11, 23, 0, 15901, addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     call __t2 := BorrowGlobal(GetLocal(__m, __frame + 1), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 23, 16005);
+      goto Label_Abort;
+    }
 
     call __t3 := LibraAccount_sequence_number_for_account(__t2);
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 23, 15972);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    debug#LibraAccount#sequence_number#1#__ret := debug#LibraAccount#sequence_number#1#__ret[Position(15965) := __ret0];
+    assume $DebugTrackLocal(11, 23, 1, 15965, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#sequence_number#1#__ret := debug#LibraAccount#sequence_number#1#__ret[Position(16040) := __ret0];
 }
 
 procedure LibraAccount_sequence_number_verify (addr: Value) returns (__ret0: Value)
@@ -4789,28 +4751,27 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#delegated_key_rotation_capability#0#addr: [Position]Value;
-    var debug#LibraAccount#delegated_key_rotation_capability#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraAccount#delegated_key_rotation_capability#0#addr := EmptyPositionMap;
-    debug#LibraAccount#delegated_key_rotation_capability#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    debug#LibraAccount#delegated_key_rotation_capability#0#addr := debug#LibraAccount#delegated_key_rotation_capability#0#addr[Position(16132) := addr];
+    assume $DebugTrackLocal(11, 24, 0, 16132, addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     call __t2 := BorrowGlobal(GetLocal(__m, __frame + 1), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 24, 16225);
+      goto Label_Abort;
+    }
 
     call __t3 := BorrowField(__t2, LibraAccount_T_delegated_key_rotation_capability);
 
@@ -4819,14 +4780,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#LibraAccount#delegated_key_rotation_capability#1#__ret := debug#LibraAccount#delegated_key_rotation_capability#1#__ret[Position(16215) := __ret0];
+    assume $DebugTrackLocal(11, 24, 1, 16215, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#delegated_key_rotation_capability#1#__ret := debug#LibraAccount#delegated_key_rotation_capability#1#__ret[Position(16294) := __ret0];
 }
 
 procedure LibraAccount_delegated_key_rotation_capability_verify (addr: Value) returns (__ret0: Value)
@@ -4846,28 +4806,27 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#delegated_withdrawal_capability#0#addr: [Position]Value;
-    var debug#LibraAccount#delegated_withdrawal_capability#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#LibraAccount#delegated_withdrawal_capability#0#addr := EmptyPositionMap;
-    debug#LibraAccount#delegated_withdrawal_capability#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    debug#LibraAccount#delegated_withdrawal_capability#0#addr := debug#LibraAccount#delegated_withdrawal_capability#0#addr[Position(16385) := addr];
+    assume $DebugTrackLocal(11, 25, 0, 16385, addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     call __t2 := BorrowGlobal(GetLocal(__m, __frame + 1), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 25, 16476);
+      goto Label_Abort;
+    }
 
     call __t3 := BorrowField(__t2, LibraAccount_T_delegated_withdrawal_capability);
 
@@ -4876,14 +4835,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#LibraAccount#delegated_withdrawal_capability#1#__ret := debug#LibraAccount#delegated_withdrawal_capability#1#__ret[Position(16466) := __ret0];
+    assume $DebugTrackLocal(11, 25, 1, 16466, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#delegated_withdrawal_capability#1#__ret := debug#LibraAccount#delegated_withdrawal_capability#1#__ret[Position(16543) := __ret0];
 }
 
 procedure LibraAccount_delegated_withdrawal_capability_verify (addr: Value) returns (__ret0: Value)
@@ -4901,21 +4859,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#withdrawal_capability_address#0#cap: [Position]Value;
-    var debug#LibraAccount#withdrawal_capability_address#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#LibraAccount#withdrawal_capability_address#0#cap := EmptyPositionMap;
-    debug#LibraAccount#withdrawal_capability_address#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
     assume IsValidReferenceParameter(__m, __frame, cap);
-    debug#LibraAccount#withdrawal_capability_address#0#cap := debug#LibraAccount#withdrawal_capability_address#0#cap[Position(16640) := Dereference(__m, cap)];
+    assume is#Vector(Dereference(__m, cap));
+    assume $DebugTrackLocal(11, 26, 0, 16640, Dereference(__m, cap));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(cap);
@@ -4923,14 +4878,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t2 := BorrowField(__t1, LibraAccount_WithdrawalCapability_account_address);
 
     __ret0 := __t2;
-    debug#LibraAccount#withdrawal_capability_address#1#__ret := debug#LibraAccount#withdrawal_capability_address#1#__ret[Position(16730) := Dereference(__m, __ret0)];
+    assume is#Address(Dereference(__m, __ret0));
+    assume $DebugTrackLocal(11, 26, 1, 16730, Dereference(__m, __ret0));
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultReference;
-    debug#LibraAccount#withdrawal_capability_address#1#__ret := debug#LibraAccount#withdrawal_capability_address#1#__ret[Position(16769) := Dereference(__m, __ret0)];
 }
 
 procedure LibraAccount_withdrawal_capability_address_verify (cap: Reference) returns (__ret0: Reference)
@@ -4948,21 +4903,18 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#key_rotation_capability_address#0#cap: [Position]Value;
-    var debug#LibraAccount#key_rotation_capability_address#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#LibraAccount#key_rotation_capability_address#0#cap := EmptyPositionMap;
-    debug#LibraAccount#key_rotation_capability_address#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
     assume IsValidReferenceParameter(__m, __frame, cap);
-    debug#LibraAccount#key_rotation_capability_address#0#cap := debug#LibraAccount#key_rotation_capability_address#0#cap[Position(16867) := Dereference(__m, cap)];
+    assume is#Vector(Dereference(__m, cap));
+    assume $DebugTrackLocal(11, 27, 0, 16867, Dereference(__m, cap));
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(cap);
@@ -4970,14 +4922,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t2 := BorrowField(__t1, LibraAccount_KeyRotationCapability_account_address);
 
     __ret0 := __t2;
-    debug#LibraAccount#key_rotation_capability_address#1#__ret := debug#LibraAccount#key_rotation_capability_address#1#__ret[Position(16960) := Dereference(__m, __ret0)];
+    assume is#Address(Dereference(__m, __ret0));
+    assume $DebugTrackLocal(11, 27, 1, 16960, Dereference(__m, __ret0));
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultReference;
-    debug#LibraAccount#key_rotation_capability_address#1#__ret := debug#LibraAccount#key_rotation_capability_address#1#__ret[Position(16999) := Dereference(__m, __ret0)];
 }
 
 procedure LibraAccount_key_rotation_capability_address_verify (cap: Reference) returns (__ret0: Reference)
@@ -4995,21 +4947,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#exists#0#check_addr: [Position]Value;
-    var debug#LibraAccount#exists#1#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 3;
-    debug#LibraAccount#exists#0#check_addr := EmptyPositionMap;
-    debug#LibraAccount#exists#1#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Address(check_addr);
     __m := UpdateLocal(__m, __frame + 0, check_addr);
-    debug#LibraAccount#exists#0#check_addr := debug#LibraAccount#exists#0#check_addr[Position(17057) := check_addr];
+    assume $DebugTrackLocal(11, 28, 0, 17057, check_addr);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -5019,14 +4967,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    debug#LibraAccount#exists#1#__ret := debug#LibraAccount#exists#1#__ret[Position(17108) := __ret0];
+    assume $DebugTrackLocal(11, 28, 1, 17108, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#exists#1#__ret := debug#LibraAccount#exists#1#__ret[Position(17148) := __ret0];
 }
 
 procedure LibraAccount_exists_verify (check_addr: Value) returns (__ret0: Value)
@@ -5092,51 +5039,29 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#prologue#0#txn_sequence_number: [Position]Value;
-    var debug#LibraAccount#prologue#1#txn_public_key: [Position]Value;
-    var debug#LibraAccount#prologue#2#txn_gas_price: [Position]Value;
-    var debug#LibraAccount#prologue#3#txn_max_gas_units: [Position]Value;
-    var debug#LibraAccount#prologue#4#txn_expiration_time: [Position]Value;
-    var debug#LibraAccount#prologue#5#transaction_sender: [Position]Value;
-    var debug#LibraAccount#prologue#6#sender_account: [Position]Value;
-    var debug#LibraAccount#prologue#7#imm_sender_account: [Position]Value;
-    var debug#LibraAccount#prologue#8#max_transaction_fee: [Position]Value;
-    var debug#LibraAccount#prologue#9#balance_amount: [Position]Value;
-    var debug#LibraAccount#prologue#10#sequence_number_value: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 55;
-    debug#LibraAccount#prologue#0#txn_sequence_number := EmptyPositionMap;
-    debug#LibraAccount#prologue#1#txn_public_key := EmptyPositionMap;
-    debug#LibraAccount#prologue#2#txn_gas_price := EmptyPositionMap;
-    debug#LibraAccount#prologue#3#txn_max_gas_units := EmptyPositionMap;
-    debug#LibraAccount#prologue#4#txn_expiration_time := EmptyPositionMap;
-    debug#LibraAccount#prologue#5#transaction_sender := EmptyPositionMap;
-    debug#LibraAccount#prologue#6#sender_account := EmptyPositionMap;
-    debug#LibraAccount#prologue#7#imm_sender_account := EmptyPositionMap;
-    debug#LibraAccount#prologue#8#max_transaction_fee := EmptyPositionMap;
-    debug#LibraAccount#prologue#9#balance_amount := EmptyPositionMap;
-    debug#LibraAccount#prologue#10#sequence_number_value := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(txn_sequence_number);
     __m := UpdateLocal(__m, __frame + 0, txn_sequence_number);
-    debug#LibraAccount#prologue#0#txn_sequence_number := debug#LibraAccount#prologue#0#txn_sequence_number[Position(17457) := txn_sequence_number];
+    assume $DebugTrackLocal(11, 29, 0, 17457, txn_sequence_number);
     assume is#ByteArray(txn_public_key);
     __m := UpdateLocal(__m, __frame + 1, txn_public_key);
-    debug#LibraAccount#prologue#1#txn_public_key := debug#LibraAccount#prologue#1#txn_public_key[Position(17457) := txn_public_key];
+    assume $DebugTrackLocal(11, 29, 1, 17457, txn_public_key);
     assume IsValidU64(txn_gas_price);
     __m := UpdateLocal(__m, __frame + 2, txn_gas_price);
-    debug#LibraAccount#prologue#2#txn_gas_price := debug#LibraAccount#prologue#2#txn_gas_price[Position(17457) := txn_gas_price];
+    assume $DebugTrackLocal(11, 29, 2, 17457, txn_gas_price);
     assume IsValidU64(txn_max_gas_units);
     __m := UpdateLocal(__m, __frame + 3, txn_max_gas_units);
-    debug#LibraAccount#prologue#3#txn_max_gas_units := debug#LibraAccount#prologue#3#txn_max_gas_units[Position(17457) := txn_max_gas_units];
+    assume $DebugTrackLocal(11, 29, 3, 17457, txn_max_gas_units);
     assume IsValidU64(txn_expiration_time);
     __m := UpdateLocal(__m, __frame + 4, txn_expiration_time);
-    debug#LibraAccount#prologue#4#txn_expiration_time := debug#LibraAccount#prologue#4#txn_expiration_time[Position(17457) := txn_expiration_time];
+    assume $DebugTrackLocal(11, 29, 4, 17457, txn_expiration_time);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -5144,7 +5069,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 11));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
-    debug#LibraAccount#prologue#5#transaction_sender := debug#LibraAccount#prologue#5#transaction_sender[Position(17892) := __tmp];
+    assume $DebugTrackLocal(11, 29, 5, 17892, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 12, __tmp);
@@ -5168,15 +5093,23 @@ Label_8:
     __m := UpdateLocal(__m, __frame + 16, __tmp);
 
     call __t17 := BorrowGlobal(GetLocal(__m, __frame + 16), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 29, 18179);
+      goto Label_Abort;
+    }
 
     call sender_account := CopyOrMoveRef(__t17);
+    assume is#Vector(Dereference(__m, sender_account));
+    assume $DebugTrackLocal(11, 29, 6, 18162, Dereference(__m, sender_account));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 18, __tmp);
 
     call __t19 := Hash_sha3_256(GetLocal(__m, __frame + 18));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 29, 18350);
+      goto Label_Abort;
+    }
     assume is#ByteArray(__t19);
 
     __m := UpdateLocal(__m, __frame + 19, __t19);
@@ -5211,30 +5144,38 @@ Label_21:
     __m := UpdateLocal(__m, __frame + 27, __tmp);
 
     call __tmp := MulU64(GetLocal(__m, __frame + 26), GetLocal(__m, __frame + 27));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 29, 18562);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 28, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 28));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
-    debug#LibraAccount#prologue#8#max_transaction_fee := debug#LibraAccount#prologue#8#max_transaction_fee[Position(18540) := __tmp];
+    assume $DebugTrackLocal(11, 29, 8, 18540, __tmp);
 
     call __t29 := CopyOrMoveRef(sender_account);
 
     call __t30 := FreezeRef(__t29);
 
     call imm_sender_account := CopyOrMoveRef(__t30);
+    assume is#Vector(Dereference(__m, imm_sender_account));
+    assume $DebugTrackLocal(11, 29, 7, 18617, Dereference(__m, imm_sender_account));
 
     call __t31 := CopyOrMoveRef(imm_sender_account);
 
     call __t32 := LibraAccount_balance_for_account(__t31);
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 29, 18693);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t32);
 
     __m := UpdateLocal(__m, __frame + 32, __t32);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 32));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
-    debug#LibraAccount#prologue#9#balance_amount := debug#LibraAccount#prologue#9#balance_amount[Position(18676) := __tmp];
+    assume $DebugTrackLocal(11, 29, 9, 18676, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 33, __tmp);
@@ -5267,7 +5208,7 @@ Label_38:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 40));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
-    debug#LibraAccount#prologue#10#sequence_number_value := debug#LibraAccount#prologue#10#sequence_number_value[Position(18921) := __tmp];
+    assume $DebugTrackLocal(11, 29, 10, 18921, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 41, __tmp);
@@ -5315,7 +5256,10 @@ Label_56:
     __m := UpdateLocal(__m, __frame + 51, __tmp);
 
     call __t52 := LibraTransactionTimeout_is_valid_transaction_timestamp(GetLocal(__m, __frame + 51));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 29, 19160);
+      goto Label_Abort;
+    }
     assume is#Boolean(__t52);
 
     __m := UpdateLocal(__m, __frame + 52, __t52);
@@ -5385,53 +5329,40 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#epilogue#0#txn_sequence_number: [Position]Value;
-    var debug#LibraAccount#epilogue#1#txn_gas_price: [Position]Value;
-    var debug#LibraAccount#epilogue#2#txn_max_gas_units: [Position]Value;
-    var debug#LibraAccount#epilogue#3#gas_units_remaining: [Position]Value;
-    var debug#LibraAccount#epilogue#4#sender_account: [Position]Value;
-    var debug#LibraAccount#epilogue#5#transaction_fee_account: [Position]Value;
-    var debug#LibraAccount#epilogue#6#imm_sender_account: [Position]Value;
-    var debug#LibraAccount#epilogue#7#transaction_fee_amount: [Position]Value;
-    var debug#LibraAccount#epilogue#8#transaction_fee: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 37;
-    debug#LibraAccount#epilogue#0#txn_sequence_number := EmptyPositionMap;
-    debug#LibraAccount#epilogue#1#txn_gas_price := EmptyPositionMap;
-    debug#LibraAccount#epilogue#2#txn_max_gas_units := EmptyPositionMap;
-    debug#LibraAccount#epilogue#3#gas_units_remaining := EmptyPositionMap;
-    debug#LibraAccount#epilogue#4#sender_account := EmptyPositionMap;
-    debug#LibraAccount#epilogue#5#transaction_fee_account := EmptyPositionMap;
-    debug#LibraAccount#epilogue#6#imm_sender_account := EmptyPositionMap;
-    debug#LibraAccount#epilogue#7#transaction_fee_amount := EmptyPositionMap;
-    debug#LibraAccount#epilogue#8#transaction_fee := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(txn_sequence_number);
     __m := UpdateLocal(__m, __frame + 0, txn_sequence_number);
-    debug#LibraAccount#epilogue#0#txn_sequence_number := debug#LibraAccount#epilogue#0#txn_sequence_number[Position(19386) := txn_sequence_number];
+    assume $DebugTrackLocal(11, 30, 0, 19386, txn_sequence_number);
     assume IsValidU64(txn_gas_price);
     __m := UpdateLocal(__m, __frame + 1, txn_gas_price);
-    debug#LibraAccount#epilogue#1#txn_gas_price := debug#LibraAccount#epilogue#1#txn_gas_price[Position(19386) := txn_gas_price];
+    assume $DebugTrackLocal(11, 30, 1, 19386, txn_gas_price);
     assume IsValidU64(txn_max_gas_units);
     __m := UpdateLocal(__m, __frame + 2, txn_max_gas_units);
-    debug#LibraAccount#epilogue#2#txn_max_gas_units := debug#LibraAccount#epilogue#2#txn_max_gas_units[Position(19386) := txn_max_gas_units];
+    assume $DebugTrackLocal(11, 30, 2, 19386, txn_max_gas_units);
     assume IsValidU64(gas_units_remaining);
     __m := UpdateLocal(__m, __frame + 3, gas_units_remaining);
-    debug#LibraAccount#epilogue#3#gas_units_remaining := debug#LibraAccount#epilogue#3#gas_units_remaining[Position(19386) := gas_units_remaining];
+    assume $DebugTrackLocal(11, 30, 3, 19386, gas_units_remaining);
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
     call __t10 := BorrowGlobal(GetLocal(__m, __frame + 9), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 30, 19832);
+      goto Label_Abort;
+    }
 
     call sender_account := CopyOrMoveRef(__t10);
+    assume is#Vector(Dereference(__m, sender_account));
+    assume $DebugTrackLocal(11, 30, 4, 19815, Dereference(__m, sender_account));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 11, __tmp);
@@ -5443,27 +5374,38 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 13, __tmp);
 
     call __tmp := Sub(GetLocal(__m, __frame + 12), GetLocal(__m, __frame + 13));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 30, 19967);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 14, __tmp);
 
     call __tmp := MulU64(GetLocal(__m, __frame + 11), GetLocal(__m, __frame + 14));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 30, 19944);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 15, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 15));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
-    debug#LibraAccount#epilogue#7#transaction_fee_amount := debug#LibraAccount#epilogue#7#transaction_fee_amount[Position(19907) := __tmp];
+    assume $DebugTrackLocal(11, 30, 7, 19907, __tmp);
 
     call __t16 := CopyOrMoveRef(sender_account);
 
     call __t17 := FreezeRef(__t16);
 
     call imm_sender_account := CopyOrMoveRef(__t17);
+    assume is#Vector(Dereference(__m, imm_sender_account));
+    assume $DebugTrackLocal(11, 30, 6, 20029, Dereference(__m, imm_sender_account));
 
     call __t18 := CopyOrMoveRef(imm_sender_account);
 
     call __t19 := LibraAccount_balance_for_account(__t18);
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 30, 20108);
+      goto Label_Abort;
+    }
     assume IsValidU64(__t19);
 
     __m := UpdateLocal(__m, __frame + 19, __t19);
@@ -5492,14 +5434,17 @@ Label_20:
     __m := UpdateLocal(__m, __frame + 25, __tmp);
 
     call __t26 := LibraAccount_withdraw_from_account(__t24, GetLocal(__m, __frame + 25));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 30, 20255);
+      goto Label_Abort;
+    }
     assume is#Vector(__t26);
 
     __m := UpdateLocal(__m, __frame + 26, __t26);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 26));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
-    debug#LibraAccount#epilogue#8#transaction_fee := debug#LibraAccount#epilogue#8#transaction_fee[Position(20225) := __tmp];
+    assume $DebugTrackLocal(11, 30, 8, 20225, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 27, __tmp);
@@ -5508,7 +5453,10 @@ Label_20:
     __m := UpdateLocal(__m, __frame + 28, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 27), GetLocal(__m, __frame + 28));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 30, 20473);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 29, __tmp);
 
     call __t30 := CopyOrMoveRef(sender_account);
@@ -5521,9 +5469,14 @@ Label_20:
     __m := UpdateLocal(__m, __frame + 32, __tmp);
 
     call __t33 := BorrowGlobal(GetLocal(__m, __frame + 32), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 30, 20602);
+      goto Label_Abort;
+    }
 
     call transaction_fee_account := CopyOrMoveRef(__t33);
+    assume is#Vector(Dereference(__m, transaction_fee_account));
+    assume $DebugTrackLocal(11, 30, 5, 20576, Dereference(__m, transaction_fee_account));
 
     call __t34 := CopyOrMoveRef(transaction_fee_account);
 
@@ -5533,7 +5486,10 @@ Label_20:
     __m := UpdateLocal(__m, __frame + 36, __tmp);
 
     call LibraCoin_deposit(__t35, GetLocal(__m, __frame + 36));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 30, 20639);
+      goto Label_Abort;
+    }
 
     return;
 
@@ -5575,34 +5531,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#fresh_guid#0#counter: [Position]Value;
-    var debug#LibraAccount#fresh_guid#1#sender: [Position]Value;
-    var debug#LibraAccount#fresh_guid#2#count: [Position]Value;
-    var debug#LibraAccount#fresh_guid#3#count_bytes: [Position]Value;
-    var debug#LibraAccount#fresh_guid#4#preimage: [Position]Value;
-    var debug#LibraAccount#fresh_guid#5#sender_bytes: [Position]Value;
-    var debug#LibraAccount#fresh_guid#6#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 22;
-    debug#LibraAccount#fresh_guid#0#counter := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#1#sender := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#2#count := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#3#count_bytes := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#4#preimage := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#5#sender_bytes := EmptyPositionMap;
-    debug#LibraAccount#fresh_guid#6#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, counter));
     assume IsValidReferenceParameter(__m, __frame, counter);
-    debug#LibraAccount#fresh_guid#0#counter := debug#LibraAccount#fresh_guid#0#counter[Position(21344) := Dereference(__m, counter)];
+    assume is#Vector(Dereference(__m, counter));
+    assume $DebugTrackLocal(11, 31, 0, 21344, Dereference(__m, counter));
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
-    debug#LibraAccount#fresh_guid#1#sender := debug#LibraAccount#fresh_guid#1#sender[Position(21344) := sender];
+    assume $DebugTrackLocal(11, 31, 1, 21344, sender);
 
     // bytecode translation starts here
     call __t6 := CopyOrMoveRef(counter);
@@ -5610,19 +5553,24 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t7 := BorrowField(__t6, LibraAccount_EventHandleGenerator_counter);
 
     call count := CopyOrMoveRef(__t7);
+    assume IsValidU64(Dereference(__m, count));
+    assume $DebugTrackLocal(11, 31, 2, 21570, Dereference(__m, count));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call __t9 := AddressUtil_address_to_bytes(GetLocal(__m, __frame + 8));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 31, 21629);
+      goto Label_Abort;
+    }
     assume is#ByteArray(__t9);
 
     __m := UpdateLocal(__m, __frame + 9, __t9);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
-    debug#LibraAccount#fresh_guid#5#sender_bytes := debug#LibraAccount#fresh_guid#5#sender_bytes[Position(21614) := __tmp];
+    assume $DebugTrackLocal(11, 31, 5, 21614, __tmp);
 
     call __t10 := CopyOrMoveRef(count);
 
@@ -5631,14 +5579,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 11, __tmp);
 
     call __t12 := U64Util_u64_to_bytes(GetLocal(__m, __frame + 11));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 31, 21696);
+      goto Label_Abort;
+    }
     assume is#ByteArray(__t12);
 
     __m := UpdateLocal(__m, __frame + 12, __t12);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 12));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraAccount#fresh_guid#3#count_bytes := debug#LibraAccount#fresh_guid#3#count_bytes[Position(21682) := __tmp];
+    assume $DebugTrackLocal(11, 31, 3, 21682, __tmp);
 
     call __t13 := CopyOrMoveRef(count);
 
@@ -5650,7 +5601,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 15, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 14), GetLocal(__m, __frame + 15));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 31, 21755);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 16, __tmp);
 
     call __t17 := CopyOrMoveRef(count);
@@ -5664,27 +5618,29 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 19, __tmp);
 
     call __t20 := BytearrayUtil_bytearray_concat(GetLocal(__m, __frame + 18), GetLocal(__m, __frame + 19));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 31, 21890);
+      goto Label_Abort;
+    }
     assume is#ByteArray(__t20);
 
     __m := UpdateLocal(__m, __frame + 20, __t20);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 20));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
-    debug#LibraAccount#fresh_guid#4#preimage := debug#LibraAccount#fresh_guid#4#preimage[Position(21879) := __tmp];
+    assume $DebugTrackLocal(11, 31, 4, 21879, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 21, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 21);
-    debug#LibraAccount#fresh_guid#6#__ret := debug#LibraAccount#fresh_guid#6#__ret[Position(21970) := __ret0];
+    assume $DebugTrackLocal(11, 31, 6, 21970, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#fresh_guid#6#__ret := debug#LibraAccount#fresh_guid#6#__ret[Position(21997) := __ret0];
 }
 
 procedure LibraAccount_fresh_guid_verify (counter: Reference, sender: Value) returns (__ret0: Value)
@@ -5705,26 +5661,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#new_event_handle_impl#0#counter: [Position]Value;
-    var debug#LibraAccount#new_event_handle_impl#1#sender: [Position]Value;
-    var debug#LibraAccount#new_event_handle_impl#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 7;
-    debug#LibraAccount#new_event_handle_impl#0#counter := EmptyPositionMap;
-    debug#LibraAccount#new_event_handle_impl#1#sender := EmptyPositionMap;
-    debug#LibraAccount#new_event_handle_impl#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, counter));
     assume IsValidReferenceParameter(__m, __frame, counter);
-    debug#LibraAccount#new_event_handle_impl#0#counter := debug#LibraAccount#new_event_handle_impl#0#counter[Position(22101) := Dereference(__m, counter)];
+    assume is#Vector(Dereference(__m, counter));
+    assume $DebugTrackLocal(11, 32, 0, 22101, Dereference(__m, counter));
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
-    debug#LibraAccount#new_event_handle_impl#1#sender := debug#LibraAccount#new_event_handle_impl#1#sender[Position(22101) := sender];
+    assume $DebugTrackLocal(11, 32, 1, 22101, sender);
 
     // bytecode translation starts here
     call __tmp := LdConst(0);
@@ -5736,7 +5687,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __t5 := LibraAccount_fresh_guid(__t3, GetLocal(__m, __frame + 4));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 32, 22270);
+      goto Label_Abort;
+    }
     assume is#ByteArray(__t5);
 
     __m := UpdateLocal(__m, __frame + 5, __t5);
@@ -5745,14 +5699,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    debug#LibraAccount#new_event_handle_impl#2#__ret := debug#LibraAccount#new_event_handle_impl#2#__ret[Position(22229) := __ret0];
+    assume $DebugTrackLocal(11, 32, 2, 22229, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#new_event_handle_impl#2#__ret := debug#LibraAccount#new_event_handle_impl#2#__ret[Position(22321) := __ret0];
 }
 
 procedure LibraAccount_new_event_handle_impl_verify (tv0: TypeValue, counter: Reference, sender: Value) returns (__ret0: Value)
@@ -5776,18 +5729,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#new_event_handle#0#sender_account_ref: [Position]Value;
-    var debug#LibraAccount#new_event_handle#1#sender_bytes: [Position]Value;
-    var debug#LibraAccount#new_event_handle#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 8;
-    debug#LibraAccount#new_event_handle#0#sender_account_ref := EmptyPositionMap;
-    debug#LibraAccount#new_event_handle#1#sender_bytes := EmptyPositionMap;
-    debug#LibraAccount#new_event_handle#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
 
@@ -5796,9 +5743,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), LibraAccount_T_type_value());
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 33, 22622);
+      goto Label_Abort;
+    }
 
     call sender_account_ref := CopyOrMoveRef(__t3);
+    assume is#Vector(Dereference(__m, sender_account_ref));
+    assume $DebugTrackLocal(11, 33, 0, 22601, Dereference(__m, sender_account_ref));
 
     call __t4 := CopyOrMoveRef(sender_account_ref);
 
@@ -5808,20 +5760,22 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call __t7 := LibraAccount_new_event_handle_impl(tv0, __t5, GetLocal(__m, __frame + 6));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 33, 22677);
+      goto Label_Abort;
+    }
     assume is#Vector(__t7);
 
     __m := UpdateLocal(__m, __frame + 7, __t7);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    debug#LibraAccount#new_event_handle#2#__ret := debug#LibraAccount#new_event_handle#2#__ret[Position(22670) := __ret0];
+    assume $DebugTrackLocal(11, 33, 2, 22670, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#LibraAccount#new_event_handle#2#__ret := debug#LibraAccount#new_event_handle#2#__ret[Position(22779) := __ret0];
 }
 
 procedure LibraAccount_new_event_handle_verify (tv0: TypeValue) returns (__ret0: Value)
@@ -5853,27 +5807,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#emit_event#0#handle_ref: [Position]Value;
-    var debug#LibraAccount#emit_event#1#msg: [Position]Value;
-    var debug#LibraAccount#emit_event#2#count: [Position]Value;
-    var debug#LibraAccount#emit_event#3#guid: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 18;
-    debug#LibraAccount#emit_event#0#handle_ref := EmptyPositionMap;
-    debug#LibraAccount#emit_event#1#msg := EmptyPositionMap;
-    debug#LibraAccount#emit_event#2#count := EmptyPositionMap;
-    debug#LibraAccount#emit_event#3#guid := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, handle_ref));
     assume IsValidReferenceParameter(__m, __frame, handle_ref);
-    debug#LibraAccount#emit_event#0#handle_ref := debug#LibraAccount#emit_event#0#handle_ref[Position(22958) := Dereference(__m, handle_ref)];
+    assume is#Vector(Dereference(__m, handle_ref));
+    assume $DebugTrackLocal(11, 34, 0, 22958, Dereference(__m, handle_ref));
     __m := UpdateLocal(__m, __frame + 1, msg);
-    debug#LibraAccount#emit_event#1#msg := debug#LibraAccount#emit_event#1#msg[Position(22958) := msg];
+    assume $DebugTrackLocal(11, 34, 1, 22958, msg);
 
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(handle_ref);
@@ -5886,13 +5833,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    debug#LibraAccount#emit_event#3#guid := debug#LibraAccount#emit_event#3#guid[Position(23108) := __tmp];
+    assume $DebugTrackLocal(11, 34, 3, 23108, __tmp);
 
     call __t7 := CopyOrMoveRef(handle_ref);
 
     call __t8 := BorrowField(__t7, LibraAccount_EventHandle_counter);
 
     call count := CopyOrMoveRef(__t8);
+    assume IsValidU64(Dereference(__m, count));
+    assume $DebugTrackLocal(11, 34, 2, 23148, Dereference(__m, count));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -5907,7 +5856,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
     call LibraAccount_write_to_event_store(tv0, GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 11), GetLocal(__m, __frame + 12));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 34, 23196);
+      goto Label_Abort;
+    }
 
     call __t13 := CopyOrMoveRef(count);
 
@@ -5919,7 +5871,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 15, __tmp);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 14), GetLocal(__m, __frame + 15));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(11, 34, 23286);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 16, __tmp);
 
     call __t17 := CopyOrMoveRef(count);
@@ -5954,23 +5909,17 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#LibraAccount#destroy_handle#0#handle: [Position]Value;
-    var debug#LibraAccount#destroy_handle#1#guid: [Position]Value;
-    var debug#LibraAccount#destroy_handle#2#count: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 6;
-    debug#LibraAccount#destroy_handle#0#handle := EmptyPositionMap;
-    debug#LibraAccount#destroy_handle#1#guid := EmptyPositionMap;
-    debug#LibraAccount#destroy_handle#2#count := EmptyPositionMap;
 
     // process and type check arguments
     assume is#Vector(handle);
     __m := UpdateLocal(__m, __frame + 0, handle);
-    debug#LibraAccount#destroy_handle#0#handle := debug#LibraAccount#destroy_handle#0#handle[Position(23597) := handle];
+    assume $DebugTrackLocal(11, 36, 0, 23597, handle);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -5982,11 +5931,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    debug#LibraAccount#destroy_handle#1#guid := debug#LibraAccount#destroy_handle#1#guid[Position(23752) := __tmp];
+    assume $DebugTrackLocal(11, 36, 1, 23752, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    debug#LibraAccount#destroy_handle#2#count := debug#LibraAccount#destroy_handle#2#count[Position(23745) := __tmp];
+    assume $DebugTrackLocal(11, 36, 2, 23745, __tmp);
 
     return;
 

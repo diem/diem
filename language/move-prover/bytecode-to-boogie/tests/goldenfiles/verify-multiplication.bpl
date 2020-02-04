@@ -19,26 +19,20 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestMultiplication#overflow_u8_mul_bad#0#x: [Position]Value;
-    var debug#TestMultiplication#overflow_u8_mul_bad#1#y: [Position]Value;
-    var debug#TestMultiplication#overflow_u8_mul_bad#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#TestMultiplication#overflow_u8_mul_bad#0#x := EmptyPositionMap;
-    debug#TestMultiplication#overflow_u8_mul_bad#1#y := EmptyPositionMap;
-    debug#TestMultiplication#overflow_u8_mul_bad#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU8(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestMultiplication#overflow_u8_mul_bad#0#x := debug#TestMultiplication#overflow_u8_mul_bad#0#x[Position(75) := x];
+    assume $DebugTrackLocal(0, 0, 0, 75, x);
     assume IsValidU8(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestMultiplication#overflow_u8_mul_bad#1#y := debug#TestMultiplication#overflow_u8_mul_bad#1#y[Position(75) := y];
+    assume $DebugTrackLocal(0, 0, 1, 75, y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -48,18 +42,20 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     call __tmp := MulU8(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 0, 198);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#TestMultiplication#overflow_u8_mul_bad#2#__ret := debug#TestMultiplication#overflow_u8_mul_bad#2#__ret[Position(191) := __ret0];
+    assume $DebugTrackLocal(0, 0, 2, 191, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestMultiplication#overflow_u8_mul_bad#2#__ret := debug#TestMultiplication#overflow_u8_mul_bad#2#__ret[Position(221) := __ret0];
 }
 
 procedure TestMultiplication_overflow_u8_mul_bad_verify (x: Value, y: Value) returns (__ret0: Value)
@@ -81,26 +77,20 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) * i#Integer(y))) > 
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestMultiplication#overflow_u8_mul_ok#0#x: [Position]Value;
-    var debug#TestMultiplication#overflow_u8_mul_ok#1#y: [Position]Value;
-    var debug#TestMultiplication#overflow_u8_mul_ok#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#TestMultiplication#overflow_u8_mul_ok#0#x := EmptyPositionMap;
-    debug#TestMultiplication#overflow_u8_mul_ok#1#y := EmptyPositionMap;
-    debug#TestMultiplication#overflow_u8_mul_ok#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU8(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestMultiplication#overflow_u8_mul_ok#0#x := debug#TestMultiplication#overflow_u8_mul_ok#0#x[Position(273) := x];
+    assume $DebugTrackLocal(0, 1, 0, 273, x);
     assume IsValidU8(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestMultiplication#overflow_u8_mul_ok#1#y := debug#TestMultiplication#overflow_u8_mul_ok#1#y[Position(273) := y];
+    assume $DebugTrackLocal(0, 1, 1, 273, y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -110,18 +100,20 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) * i#Integer(y))) > 
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     call __tmp := MulU8(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 1, 380);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#TestMultiplication#overflow_u8_mul_ok#2#__ret := debug#TestMultiplication#overflow_u8_mul_ok#2#__ret[Position(373) := __ret0];
+    assume $DebugTrackLocal(0, 1, 2, 373, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestMultiplication#overflow_u8_mul_ok#2#__ret := debug#TestMultiplication#overflow_u8_mul_ok#2#__ret[Position(403) := __ret0];
 }
 
 procedure TestMultiplication_overflow_u8_mul_ok_verify (x: Value, y: Value) returns (__ret0: Value)
@@ -143,26 +135,20 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestMultiplication#overflow_u64_mul_bad#0#x: [Position]Value;
-    var debug#TestMultiplication#overflow_u64_mul_bad#1#y: [Position]Value;
-    var debug#TestMultiplication#overflow_u64_mul_bad#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#TestMultiplication#overflow_u64_mul_bad#0#x := EmptyPositionMap;
-    debug#TestMultiplication#overflow_u64_mul_bad#1#y := EmptyPositionMap;
-    debug#TestMultiplication#overflow_u64_mul_bad#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestMultiplication#overflow_u64_mul_bad#0#x := debug#TestMultiplication#overflow_u64_mul_bad#0#x[Position(456) := x];
+    assume $DebugTrackLocal(0, 2, 0, 456, x);
     assume IsValidU64(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestMultiplication#overflow_u64_mul_bad#1#y := debug#TestMultiplication#overflow_u64_mul_bad#1#y[Position(456) := y];
+    assume $DebugTrackLocal(0, 2, 1, 456, y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -172,18 +158,20 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     call __tmp := MulU64(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 2, 583);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#TestMultiplication#overflow_u64_mul_bad#2#__ret := debug#TestMultiplication#overflow_u64_mul_bad#2#__ret[Position(576) := __ret0];
+    assume $DebugTrackLocal(0, 2, 2, 576, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestMultiplication#overflow_u64_mul_bad#2#__ret := debug#TestMultiplication#overflow_u64_mul_bad#2#__ret[Position(606) := __ret0];
 }
 
 procedure TestMultiplication_overflow_u64_mul_bad_verify (x: Value, y: Value) returns (__ret0: Value)
@@ -205,26 +193,20 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
-    var debug#TestMultiplication#overflow_u128_mul_bad#0#x: [Position]Value;
-    var debug#TestMultiplication#overflow_u128_mul_bad#1#y: [Position]Value;
-    var debug#TestMultiplication#overflow_u128_mul_bad#2#__ret: [Position]Value;
 
     // initialize function execution
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
     __local_counter := __local_counter + 5;
-    debug#TestMultiplication#overflow_u128_mul_bad#0#x := EmptyPositionMap;
-    debug#TestMultiplication#overflow_u128_mul_bad#1#y := EmptyPositionMap;
-    debug#TestMultiplication#overflow_u128_mul_bad#2#__ret := EmptyPositionMap;
 
     // process and type check arguments
     assume IsValidU128(x);
     __m := UpdateLocal(__m, __frame + 0, x);
-    debug#TestMultiplication#overflow_u128_mul_bad#0#x := debug#TestMultiplication#overflow_u128_mul_bad#0#x[Position(858) := x];
+    assume $DebugTrackLocal(0, 3, 0, 858, x);
     assume IsValidU128(y);
     __m := UpdateLocal(__m, __frame + 1, y);
-    debug#TestMultiplication#overflow_u128_mul_bad#1#y := debug#TestMultiplication#overflow_u128_mul_bad#1#y[Position(858) := y];
+    assume $DebugTrackLocal(0, 3, 1, 858, y);
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -234,18 +216,20 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     call __tmp := MulU128(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3));
-    if (__abort_flag) { goto Label_Abort; }
+    if (__abort_flag) {
+      assume $DebugTrackAbort(0, 3, 989);
+      goto Label_Abort;
+    }
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    debug#TestMultiplication#overflow_u128_mul_bad#2#__ret := debug#TestMultiplication#overflow_u128_mul_bad#2#__ret[Position(982) := __ret0];
+    assume $DebugTrackLocal(0, 3, 2, 982, __ret0);
     return;
 
 Label_Abort:
     __abort_flag := true;
     __m := __saved_m;
     __ret0 := DefaultValue;
-    debug#TestMultiplication#overflow_u128_mul_bad#2#__ret := debug#TestMultiplication#overflow_u128_mul_bad#2#__ret[Position(1012) := __ret0];
 }
 
 procedure TestMultiplication_overflow_u128_mul_bad_verify (x: Value, y: Value) returns (__ret0: Value)
