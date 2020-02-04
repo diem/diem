@@ -3,7 +3,7 @@
 
 use super::{
     node::{LeafNode, LeafValue, SparseMerkleNode},
-    AccountState, ProofRead, SparseMerkleTree,
+    AccountStatus, ProofRead, SparseMerkleTree,
 };
 use libra_crypto::{
     hash::{CryptoHash, TestOnlyHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -370,9 +370,9 @@ fn test_update_256_siblings_in_proof() {
 
     assert_eq!(
         new_smt.get(key1),
-        AccountState::ExistsInScratchPad(new_blob1)
+        AccountStatus::ExistsInScratchPad(new_blob1)
     );
-    assert_eq!(new_smt.get(key2), AccountState::Unknown);
+    assert_eq!(new_smt.get(key2), AccountStatus::Unknown);
 }
 
 #[test]
@@ -440,17 +440,17 @@ fn test_update() {
     //           y      key3 (subtree)
     //          / \
     //         x   key4
-    assert_eq!(smt1.get(key1), AccountState::Unknown);
-    assert_eq!(smt1.get(key2), AccountState::Unknown);
-    assert_eq!(smt1.get(key3), AccountState::Unknown);
+    assert_eq!(smt1.get(key1), AccountStatus::Unknown);
+    assert_eq!(smt1.get(key2), AccountStatus::Unknown);
+    assert_eq!(smt1.get(key3), AccountStatus::Unknown);
     assert_eq!(
         smt1.get(key4),
-        AccountState::ExistsInScratchPad(value4.clone())
+        AccountStatus::ExistsInScratchPad(value4.clone())
     );
 
     let non_existing_key = b"foo".test_only_hash();
     assert_eq!(non_existing_key[0], 0b0111_0110);
-    assert_eq!(smt1.get(non_existing_key), AccountState::DoesNotExist);
+    assert_eq!(smt1.get(non_existing_key), AccountStatus::DoesNotExist);
 
     // Verify root hash.
     let value4_hash = value4.hash();
@@ -482,11 +482,11 @@ fn test_update() {
     //     key1    key2 (subtree)
     assert_eq!(
         smt2.get(key1),
-        AccountState::ExistsInScratchPad(value1.clone())
+        AccountStatus::ExistsInScratchPad(value1.clone())
     );
-    assert_eq!(smt2.get(key2), AccountState::Unknown);
-    assert_eq!(smt2.get(key3), AccountState::Unknown);
-    assert_eq!(smt2.get(key4), AccountState::ExistsInScratchPad(value4));
+    assert_eq!(smt2.get(key2), AccountStatus::Unknown);
+    assert_eq!(smt2.get(key3), AccountStatus::Unknown);
+    assert_eq!(smt2.get(key4), AccountStatus::ExistsInScratchPad(value4));
 
     // Verify root hash.
     let value1_hash = value1.hash();
@@ -504,12 +504,12 @@ fn test_update() {
         .update(vec![(key4, value4.clone())], &proof_reader)
         .unwrap();
 
-    assert_eq!(smt22.get(key1), AccountState::Unknown);
-    assert_eq!(smt22.get(key2), AccountState::Unknown);
-    assert_eq!(smt22.get(key3), AccountState::Unknown);
+    assert_eq!(smt22.get(key1), AccountStatus::Unknown);
+    assert_eq!(smt22.get(key2), AccountStatus::Unknown);
+    assert_eq!(smt22.get(key3), AccountStatus::Unknown);
     assert_eq!(
         smt22.get(key4),
-        AccountState::ExistsInScratchPad(value4.clone())
+        AccountStatus::ExistsInScratchPad(value4.clone())
     );
 
     // Now prune smt1.
@@ -517,15 +517,15 @@ fn test_update() {
 
     // For smt2, only key1 should be available since smt2 was constructed by updating smt1 with
     // key1.
-    assert_eq!(smt2.get(key1), AccountState::ExistsInScratchPad(value1));
-    assert_eq!(smt2.get(key2), AccountState::Unknown);
-    assert_eq!(smt2.get(key3), AccountState::Unknown);
-    assert_eq!(smt2.get(key4), AccountState::Unknown);
+    assert_eq!(smt2.get(key1), AccountStatus::ExistsInScratchPad(value1));
+    assert_eq!(smt2.get(key2), AccountStatus::Unknown);
+    assert_eq!(smt2.get(key3), AccountStatus::Unknown);
+    assert_eq!(smt2.get(key4), AccountStatus::Unknown);
 
     // For smt22, only key4 should be available since smt22 was constructed by updating smt1 with
     // key4.
-    assert_eq!(smt22.get(key1), AccountState::Unknown);
-    assert_eq!(smt22.get(key2), AccountState::Unknown);
-    assert_eq!(smt22.get(key3), AccountState::Unknown);
-    assert_eq!(smt22.get(key4), AccountState::ExistsInScratchPad(value4));
+    assert_eq!(smt22.get(key1), AccountStatus::Unknown);
+    assert_eq!(smt22.get(key2), AccountStatus::Unknown);
+    assert_eq!(smt22.get(key3), AccountStatus::Unknown);
+    assert_eq!(smt22.get(key4), AccountStatus::ExistsInScratchPad(value4));
 }

@@ -75,9 +75,9 @@ use libra_crypto::{
 use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
 use std::sync::Arc;
 
-/// `AccountState` describes the result of querying an account from this SparseMerkleTree.
+/// `AccountStatus` describes the result of querying an account from this SparseMerkleTree.
 #[derive(Debug, Eq, PartialEq)]
-pub enum AccountState {
+pub enum AccountStatus {
     /// The account exists in the tree, therefore we can give its value.
     ExistsInScratchPad(AccountStateBlob),
 
@@ -353,7 +353,7 @@ impl SparseMerkleTree {
     }
 
     /// Queries a `key` in this `SparseMerkleTree`.
-    pub fn get(&self, key: HashValue) -> AccountState {
+    pub fn get(&self, key: HashValue) -> AccountStatus {
         let mut current_node = Arc::clone(&self.root);
         let mut bits = key.iter_bits();
 
@@ -379,15 +379,15 @@ impl SparseMerkleTree {
             Node::Leaf(node) => {
                 if key == node.key() {
                     match node.value() {
-                        LeafValue::Blob(blob) => AccountState::ExistsInScratchPad(blob.clone()),
-                        LeafValue::BlobHash(_) => AccountState::ExistsInDB,
+                        LeafValue::Blob(blob) => AccountStatus::ExistsInScratchPad(blob.clone()),
+                        LeafValue::BlobHash(_) => AccountStatus::ExistsInDB,
                     }
                 } else {
-                    AccountState::DoesNotExist
+                    AccountStatus::DoesNotExist
                 }
             }
-            Node::Subtree(_) => AccountState::Unknown,
-            Node::Empty => AccountState::DoesNotExist,
+            Node::Subtree(_) => AccountStatus::Unknown,
+            Node::Empty => AccountStatus::DoesNotExist,
             Node::Internal(_) => {
                 unreachable!("There is an internal node at the bottom of the tree.")
             }

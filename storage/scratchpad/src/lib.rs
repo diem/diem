@@ -5,4 +5,4 @@
 
 mod sparse_merkle;
 
-pub use crate::sparse_merkle::{AccountState, ProofRead, SparseMerkleTree};
+pub use crate::sparse_merkle::{AccountStatus, ProofRead, SparseMerkleTree};
