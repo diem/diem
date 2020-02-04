@@ -9,7 +9,7 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use anyhow::{bail, Result};
+use anyhow::Result;
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -177,16 +177,6 @@ impl AccountResource {
     /// Return the delegated_withdrawal_capability field for the given AccountResource
     pub fn delegated_withdrawal_capability(&self) -> bool {
         self.delegated_withdrawal_capability
-    }
-
-    pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<&EventHandle> {
-        if *ACCOUNT_RECEIVED_EVENT_PATH == query_path {
-            Ok(&self.received_events)
-        } else if *ACCOUNT_SENT_EVENT_PATH == query_path {
-            Ok(&self.sent_events)
-        } else {
-            bail!("Unrecognized query path: {:?}", query_path);
-        }
     }
 }
 

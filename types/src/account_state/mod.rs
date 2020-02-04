@@ -1,8 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_config::{AccountResource, ACCOUNT_RESOURCE_PATH};
-use anyhow::{Error, Result};
+use crate::account_config::{
+    AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH, ACCOUNT_SENT_EVENT_PATH,
+};
+use crate::event::EventHandle;
+use anyhow::{bail, Error, Result};
 use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
 use std::collections::btree_map::BTreeMap;
@@ -19,6 +22,20 @@ impl AccountState {
             .map(|bytes| lcs::from_bytes(bytes))
             .transpose()
             .map_err(Into::into)
+    }
+
+    pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<Option<EventHandle>> {
+        let event_handle = if *ACCOUNT_RECEIVED_EVENT_PATH == query_path {
+            self.get_account_resource()?
+                .map(|account_resourese| account_resourese.received_events().clone())
+        } else if *ACCOUNT_SENT_EVENT_PATH == query_path {
+            self.get_account_resource()?
+                .map(|account_resourese| account_resourese.sent_events().clone())
+        } else {
+            bail!("Unrecognized query path: {:?}", query_path);
+        };
+
+        Ok(event_handle)
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
