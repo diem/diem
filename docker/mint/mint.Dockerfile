@@ -19,7 +19,7 @@ COPY . /libra
 RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
 
 ### Production Image ###
-FROM debian:buster AS prod
+FROM debian:buster AS pre-test
 
 # TODO: Unsure which of these are needed exactly for client
 RUN apt-get update && apt-get install -y python3-pip nano net-tools tcpdump iproute2 netcat \
@@ -36,6 +36,41 @@ COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 COPY docker/mint/server.py /opt/libra/bin
 COPY docker/mint/docker-run.sh /opt/libra/bin
 
+# Test the docker container before shipping.
+FROM pre-test AS test
+
+#install needed tools
+RUN apt-get update && apt-get install -y procps
+
+# TEST docker-run.sh
+#   GIVEN necessary environment arguments to run docker-run.sh
+ARG AC_PORT="8000"
+ARG AC_HOST="172.18.0.13"
+ARG LOG_LEVEL="info"
+
+#   WHEN we execute docker-run.sh
+#   THEN a gunicorn process is started
+#
+# NOTES:
+#   Attempt to find the gunicorn processes (it forks itself) with pgrep.
+#   Notice that the regex used by pgrep matches the start of a process name.
+#   We wait up to 5 seconds for the process to start, else fail.
+#   This is an imperfect test, and if the docker-run.sh exits before a process is found
+#   it may lead to race conditions.
+#
+# If the test fails we break the docker image build.
+RUN set -x; \
+    /opt/libra/bin/docker-run.sh &  \
+    PIDS=$( pgrep -f '^/usr/bin/python3 /usr/local/bin/gunicorn' | head -n 1 ); \
+    COUNTER=5; \
+    while [ -z $PIDS ] && [ $COUNTER -gt 0 ]; do \
+        sleep 1; \
+        PIDS=$( pgrep -f '^/usr/bin/python3 /usr/local/bin/gunicorn' | head -n 1 ); \
+        COUNTER=$(( $COUNTER - 1 )); \
+    done; \
+    if [ -z $PIDS ]; then exit 1; else kill -9 $PIDS || true; fi
+
+FROM pre-test as prod
 # Mint proxy listening address
 EXPOSE 8000
 
