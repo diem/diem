@@ -34,6 +34,19 @@ cat > /etc/profile.d/libra_prompt.sh <<EOF
 export PS1="[\u:validator@\h \w]$ "
 EOF
 
+if ${enable_logrotate}; then
+	cat >> /etc/logrotate.conf <<"EOF"
+	${log_path} {
+		daily
+		rotate 100
+		compress
+		delaycompress
+	}
+	EOF
+
+	sudo logrotate /etc/logrotate.conf
+fi
+
 yum -y install ngrep tcpdump perf gdb nmap-ncat strace htop sysstat tc git
 
 if [ ! -d /usr/local/etc/FlameGraph ] ; then
