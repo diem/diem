@@ -14,6 +14,7 @@ use std::{
     time::Duration,
 };
 use structopt::StructOpt;
+use async_trait::async_trait;
 
 #[derive(StructOpt, Debug)]
 pub struct CpuFlamegraphParams {
@@ -41,9 +42,23 @@ impl ExperimentParam for CpuFlamegraphParams {
     }
 }
 
+#[async_trait]
 impl Experiment for CpuFlamegraph {
     fn affected_validators(&self) -> HashSet<String> {
         instance::instancelist_to_set(&[self.perf_instance.clone()])
+    }
+
+    async fn run_async(&mut self, context: & mut Context<'_>) -> anyhow::Result<()> {
+        let buffer = Duration::from_secs(60);
+        let tx_emitter_duration = 2 * buffer + Duration::from_secs(self.duration_secs as u64);
+        let emit_future = context.tx_emitter.emit_txn_for(tx_emitter_duration, context.cluster.validator_instances().clone());
+        let generate_flame_graph = GenerateCpuFlamegraph::new(self.perf_instance.clone(), self.duration_secs);
+        let flame_graph_future = generate_flame_graph.apply();
+        let flame_graph_future = tokio::time::delay_for(buffer).then(|_| flame_graph_future);
+        let (emit_result, flame_graph_result) =  join!(emit_future, flame_graph_future);
+        emit_result?;
+        flame_graph_result?;
+        Ok(())
     }
 
     fn run<'a>(
@@ -51,19 +66,9 @@ impl Experiment for CpuFlamegraph {
         context: &'a mut Context,
     ) -> BoxFuture<'a, anyhow::Result<()>> {
         async move {
-            let buffer = Duration::from_secs(60);
-            let tx_emitter_duration = 2 * buffer + Duration::from_secs(self.duration_secs as u64);
-
-            let emit_future = context.tx_emitter.emit_txn_for(tx_emitter_duration, context.cluster.validator_instances().clone());
-            let generate_flame_graph = GenerateCpuFlamegraph::new(self.perf_instance.clone(), self.duration_secs);
-            let flame_graph_future = generate_flame_graph.apply();
-            let flame_graph_future = tokio::time::delay_for(buffer).then(|_| flame_graph_future);
-            let (emit_result, flame_graph_result) =  join!(emit_future, flame_graph_future);
-//            emit_result?;
-//            flame_graph_result?;
             Ok(())
         }
-        .boxed()
+            .boxed()
     }
 
     fn deadline(&self) -> Duration {

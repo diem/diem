@@ -21,6 +21,7 @@ use crate::experiments::Experiment;
 use crate::tx_emitter::{EmitJobRequest, EmitThreadParams, TxEmitter};
 use crate::util::unix_timestamp_now;
 use futures::future::{join_all, BoxFuture, FutureExt};
+use async_trait::async_trait;
 
 #[derive(Default, Debug)]
 struct Metrics {
@@ -196,6 +197,7 @@ fn print_results(metrics: Vec<Metrics>) {
     }
 }
 
+#[async_trait]
 impl Experiment for MultiRegionSimulation {
     fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, Result<()>> {
         async move {

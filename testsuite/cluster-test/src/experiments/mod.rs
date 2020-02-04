@@ -35,12 +35,16 @@ pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
 use futures::future::BoxFuture;
 use std::collections::HashMap;
 use structopt::{clap::AppSettings, StructOpt};
+use async_trait::async_trait;
 
+
+#[async_trait]
 pub trait Experiment: Display + Send {
     fn affected_validators(&self) -> HashSet<String> {
         HashSet::new()
     }
     fn run<'a>(&'a mut self, context: &'a mut Context<'a>) -> BoxFuture<'a, anyhow::Result<()>>;
+    async fn run_async(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> { Ok(()) }
     fn deadline(&self) -> Duration;
 }
 

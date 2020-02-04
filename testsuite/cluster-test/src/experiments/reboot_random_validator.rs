@@ -20,6 +20,7 @@ use crate::{
 use futures::future::{join_all, BoxFuture, FutureExt};
 use slog_scope::warn;
 use structopt::StructOpt;
+use async_trait::async_trait;
 
 #[derive(StructOpt, Debug)]
 pub struct RebootRandomValidatorsParams {
@@ -52,6 +53,7 @@ impl ExperimentParam for RebootRandomValidatorsParams {
     }
 }
 
+#[async_trait]
 impl Experiment for RebootRandomValidators {
     fn affected_validators(&self) -> HashSet<String> {
         instance::instancelist_to_set(&self.instances)

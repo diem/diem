@@ -21,6 +21,7 @@ use std::{
     time::Duration,
 };
 use structopt::StructOpt;
+use async_trait::async_trait;
 
 #[derive(StructOpt, Debug)]
 pub struct PerformanceBenchmarkNodesDownParams {
@@ -66,6 +67,7 @@ impl ExperimentParam for PerformanceBenchmarkNodesDownParams {
     }
 }
 
+#[async_trait]
 impl Experiment for PerformanceBenchmarkNodesDown {
     fn affected_validators(&self) -> HashSet<String> {
         instance::instancelist_to_set(&self.down_instances)

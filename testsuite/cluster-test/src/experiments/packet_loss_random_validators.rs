@@ -16,6 +16,7 @@ use anyhow::Result;
 use futures::future::{BoxFuture, FutureExt};
 use std::{fmt, time::Duration};
 use structopt::StructOpt;
+use async_trait::async_trait;
 
 pub struct PacketLossRandomValidators {
     instances: Vec<Instance>,
@@ -64,6 +65,7 @@ impl ExperimentParam for PacketLossRandomValidatorsParams {
     }
 }
 
+#[async_trait]
 impl Experiment for PacketLossRandomValidators {
     fn run(&mut self, _context: &mut Context) -> BoxFuture<Result<()>> {
         async move {

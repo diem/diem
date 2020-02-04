@@ -16,6 +16,7 @@ use std::{
     time::Duration,
 };
 use structopt::StructOpt;
+use async_trait::async_trait;
 
 pub struct PerformanceBenchmarkThreeRegionSimulation {
     cluster: Cluster,
@@ -33,6 +34,7 @@ impl ExperimentParam for PerformanceBenchmarkThreeRegionSimulationParams {
     }
 }
 
+#[async_trait]
 impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
     fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, anyhow::Result<()>> {
         async move {

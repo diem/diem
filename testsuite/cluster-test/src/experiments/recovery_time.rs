@@ -18,6 +18,7 @@ use crate::tx_emitter::{EmitJobRequest, EmitThreadParams};
 use crate::{effects::Action, experiments::Experiment};
 use slog_scope::info;
 use std::time::Instant;
+use async_trait::async_trait;
 
 #[derive(StructOpt, Debug)]
 pub struct RecoveryTimeParams {
@@ -45,6 +46,7 @@ impl ExperimentParam for RecoveryTimeParams {
     }
 }
 
+#[async_trait]
 impl Experiment for RecoveryTime {
     fn affected_validators(&self) -> HashSet<String> {
         let mut result = HashSet::new();
