@@ -57,11 +57,33 @@ impl Instance {
             ssh_dest.as_str(),
         ];
         let mut ssh_cmd = tokio::process::Command::new("timeout");
-        ssh_cmd.arg("60").args(ssh_args).args(args);
+        ssh_cmd.arg("90").args(ssh_args).args(args);
         if no_std_err {
             ssh_cmd.stderr(Stdio::null());
         }
         let status = ssh_cmd.status().await?;
+        ensure!(
+            status.success(),
+            "Failed with code {}",
+            status.code().unwrap_or(-1)
+        );
+        Ok(())
+    }
+
+    pub async fn scp(&self, remote_file: &str, local_file: &str) -> Result<()> {
+        let remote_file = format!("{}:{}", self.ip, remote_file);
+        let status = tokio::process::Command::new("scp")
+            .args(vec![
+                "-i",
+                "/libra_rsa",
+                "-oStrictHostKeyChecking=no",
+                "-oConnectTimeout=3",
+                "-oConnectionAttempts=10",
+                remote_file.as_str(),
+                local_file,
+            ])
+            .status()
+            .await?;
         ensure!(
             status.success(),
             "Failed with code {}",

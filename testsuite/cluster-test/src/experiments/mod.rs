@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod cpu_flamegraph;
 mod multi_region_network_simulation;
 mod packet_loss_random_validators;
 mod performance_benchmark_nodes_down;
@@ -30,6 +31,7 @@ use crate::cluster::Cluster;
 use crate::prometheus::Prometheus;
 use crate::report::SuiteReport;
 use crate::tx_emitter::TxEmitter;
+pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
 use futures::future::BoxFuture;
 use std::collections::HashMap;
 use structopt::{clap::AppSettings, StructOpt};
@@ -110,6 +112,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
         "reboot_random_validators",
         f::<RebootRandomValidatorsParams>(),
     );
+    known_experiments.insert("generate_cpu_flamegraph", f::<CpuFlamegraphParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");
     builder(args, cluster)
