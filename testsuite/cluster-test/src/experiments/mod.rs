@@ -30,15 +30,17 @@ use crate::cluster::Cluster;
 use crate::prometheus::Prometheus;
 use crate::report::SuiteReport;
 use crate::tx_emitter::TxEmitter;
-use futures::future::BoxFuture;
+
+use async_trait::async_trait;
 use std::collections::HashMap;
 use structopt::{clap::AppSettings, StructOpt};
 
+#[async_trait]
 pub trait Experiment: Display + Send {
     fn affected_validators(&self) -> HashSet<String> {
         HashSet::new()
     }
-    fn run<'a>(&'a mut self, context: &'a mut Context<'a>) -> BoxFuture<'a, anyhow::Result<()>>;
+    async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()>;
     fn deadline(&self) -> Duration;
 }
 

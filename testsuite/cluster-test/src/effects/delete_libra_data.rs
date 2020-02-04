@@ -5,7 +5,8 @@
 
 use crate::{effects::Action, instance::Instance};
 use anyhow::Result;
-use futures::future::{BoxFuture, FutureExt};
+
+use async_trait::async_trait;
 use slog_scope::info;
 use std::fmt;
 
@@ -19,15 +20,13 @@ impl DeleteLibraData {
     }
 }
 
+#[async_trait]
 impl Action for DeleteLibraData {
-    fn apply(&self) -> BoxFuture<Result<()>> {
-        async move {
-            info!("DeleteLibraData {}", self.instance);
-            self.instance
-                .run_cmd(vec!["sudo rm -rf /data/libra/common"])
-                .await
-        }
-        .boxed()
+    async fn apply(&self) -> Result<()> {
+        info!("DeleteLibraData {}", self.instance);
+        self.instance
+            .run_cmd(vec!["sudo rm -rf /data/libra/common"])
+            .await
     }
 }
 

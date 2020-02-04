@@ -17,7 +17,8 @@ use crate::{
     instance,
     instance::Instance,
 };
-use futures::future::{join_all, BoxFuture, FutureExt};
+use async_trait::async_trait;
+use futures::future::join_all;
 use slog_scope::warn;
 use structopt::StructOpt;
 
@@ -52,29 +53,27 @@ impl ExperimentParam for RebootRandomValidatorsParams {
     }
 }
 
+#[async_trait]
 impl Experiment for RebootRandomValidators {
     fn affected_validators(&self) -> HashSet<String> {
         instance::instancelist_to_set(&self.instances)
     }
 
-    fn run(&mut self, _context: &mut Context) -> BoxFuture<Result<()>> {
-        async move {
-            let futures = self.instances.iter().map(|instance| {
-                async move {
-                    let reboot = Reboot::new(instance.clone());
-                    reboot
-                        .apply()
-                        .await
-                        .map_err(|e| warn!("Failed to reboot {}: {}", instance, e))
-                }
-            });
-            let results = join_all(futures).await;
-            if results.iter().any(Result::is_err) {
-                bail!("Failed to reboot one of nodes");
+    async fn run(&mut self, _context: &mut Context<'_>) -> anyhow::Result<()> {
+        let futures = self.instances.iter().map(|instance| {
+            async move {
+                let reboot = Reboot::new(instance.clone());
+                reboot
+                    .apply()
+                    .await
+                    .map_err(|e| warn!("Failed to reboot {}: {}", instance, e))
             }
-            Ok(())
+        });
+        let results = join_all(futures).await;
+        if results.iter().any(Result::is_err) {
+            bail!("Failed to reboot one of nodes");
         }
-        .boxed()
+        Ok(())
     }
 
     fn deadline(&self) -> Duration {
