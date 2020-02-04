@@ -5,8 +5,6 @@
 
 use std::{collections::HashSet, fmt, time::Duration};
 
-use anyhow::Result;
-use futures::future::{BoxFuture, FutureExt};
 use structopt::StructOpt;
 use tokio::time;
 
@@ -16,6 +14,7 @@ use crate::experiments::{Context, ExperimentParam};
 use crate::instance::Instance;
 use crate::tx_emitter::{EmitJobRequest, EmitThreadParams};
 use crate::{effects::Action, experiments::Experiment};
+use async_trait::async_trait;
 use slog_scope::info;
 use std::time::Instant;
 
@@ -45,6 +44,7 @@ impl ExperimentParam for RecoveryTimeParams {
     }
 }
 
+#[async_trait]
 impl Experiment for RecoveryTime {
     fn affected_validators(&self) -> HashSet<String> {
         let mut result = HashSet::new();
@@ -52,55 +52,52 @@ impl Experiment for RecoveryTime {
         result
     }
 
-    fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, Result<()>> {
-        async move {
-            let stop_effect = StopContainer::new(self.instance.clone());
-            let delete_action = DeleteLibraData::new(self.instance.clone());
-            context
-                .tx_emitter
-                .mint_accounts(
-                    &EmitJobRequest {
-                        instances: context.cluster.validator_instances().to_vec(),
-                        accounts_per_client: 100,
-                        thread_params: EmitThreadParams::default(),
-                    },
-                    self.params.num_accounts_to_mint as usize,
-                )
-                .await?;
-            info!("Stopping {}", self.instance);
-            stop_effect.activate().await?;
-            info!("Deleted db for {}", self.instance);
-            delete_action.apply().await?;
-            info!("Starting instance {}", self.instance);
-            stop_effect.deactivate().await?;
-            info!("Waiting for instance to be up: {}", self.instance);
-            while !self.instance.is_up() {
-                time::delay_for(Duration::from_secs(1)).await;
-            }
-            let start_instant = Instant::now();
-            info!(
-                "Instance {} is up. Waiting for it to start committing.",
-                self.instance
-            );
-            while self
-                .instance
-                .counter("libra_consensus_last_committed_round")
-                .is_err()
-            {
-                time::delay_for(Duration::from_secs(1)).await;
-            }
-            let time_to_recover = start_instant.elapsed();
-            let recovery_rate =
-                self.params.num_accounts_to_mint as f64 / time_to_recover.as_secs() as f64;
-            let result = format!("Recovery rate : {:.1} txn/sec", recovery_rate,);
-            info!("{}", result);
-            context.report.report_text(result);
-            context
-                .report
-                .report_metric(self, "recovery_rate", recovery_rate);
-            Ok(())
+    async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
+        let stop_effect = StopContainer::new(self.instance.clone());
+        let delete_action = DeleteLibraData::new(self.instance.clone());
+        context
+            .tx_emitter
+            .mint_accounts(
+                &EmitJobRequest {
+                    instances: context.cluster.validator_instances().to_vec(),
+                    accounts_per_client: 100,
+                    thread_params: EmitThreadParams::default(),
+                },
+                self.params.num_accounts_to_mint as usize,
+            )
+            .await?;
+        info!("Stopping {}", self.instance);
+        stop_effect.activate().await?;
+        info!("Deleted db for {}", self.instance);
+        delete_action.apply().await?;
+        info!("Starting instance {}", self.instance);
+        stop_effect.deactivate().await?;
+        info!("Waiting for instance to be up: {}", self.instance);
+        while !self.instance.is_up() {
+            time::delay_for(Duration::from_secs(1)).await;
         }
-        .boxed()
+        let start_instant = Instant::now();
+        info!(
+            "Instance {} is up. Waiting for it to start committing.",
+            self.instance
+        );
+        while self
+            .instance
+            .counter("libra_consensus_last_committed_round")
+            .is_err()
+        {
+            time::delay_for(Duration::from_secs(1)).await;
+        }
+        let time_to_recover = start_instant.elapsed();
+        let recovery_rate =
+            self.params.num_accounts_to_mint as f64 / time_to_recover.as_secs() as f64;
+        let result = format!("Recovery rate : {:.1} txn/sec", recovery_rate,);
+        info!("{}", result);
+        context.report.report_text(result);
+        context
+            .report
+            .report_metric(self, "recovery_rate", recovery_rate);
+        Ok(())
     }
 
     fn deadline(&self) -> Duration {

@@ -6,7 +6,8 @@
 /// PacketLoss introduces a given percentage of PacketLoss for a given instance
 use crate::{effects::Action, instance::Instance};
 use anyhow::Result;
-use futures::future::{BoxFuture, FutureExt};
+
+use async_trait::async_trait;
 use slog_scope::info;
 use std::fmt;
 
@@ -21,15 +22,15 @@ impl PacketLoss {
     }
 }
 
+#[async_trait]
 impl Action for PacketLoss {
-    fn apply(&self) -> BoxFuture<Result<()>> {
+    async fn apply(&self) -> Result<()> {
         info!("PacketLoss {:.*}% for {}", 2, self.percent, self.instance);
-        self.instance
-            .run_cmd(vec![format!(
+        let cmd = format!(
             "sudo tc qdisc delete dev eth0 root; sudo tc qdisc add dev eth0 root netem loss {:.*}%",
             2, self.percent
-        )])
-            .boxed()
+        );
+        self.instance.run_cmd(vec![cmd]).await
     }
 }
 

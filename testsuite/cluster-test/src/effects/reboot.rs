@@ -5,7 +5,8 @@
 
 use crate::{effects::Action, instance::Instance};
 use anyhow::Result;
-use futures::future::{BoxFuture, FutureExt};
+
+use async_trait::async_trait;
 use slog_scope::info;
 use std::fmt;
 use std::time::Duration;
@@ -21,36 +22,34 @@ impl Reboot {
     }
 }
 
+#[async_trait]
 impl Action for Reboot {
-    fn apply(&self) -> BoxFuture<Result<()>> {
-        async move {
-            info!("Rebooting {}", self.instance);
-            self.instance
-                .run_cmd(vec![
-                    "touch /dev/shm/cluster_test_reboot; nohup sudo /usr/sbin/reboot &",
-                ])
-                .await?;
-            loop {
-                time::delay_for(Duration::from_secs(5)).await;
-                match self
-                    .instance
-                    .run_cmd(vec!["! cat /dev/shm/cluster_test_reboot"])
-                    .await
-                {
-                    Ok(..) => {
-                        info!("Rebooting {} complete", self.instance);
-                        return Ok(());
-                    }
-                    Err(..) => {
-                        info!(
-                            "Rebooting {} in progress - did not reboot yet",
-                            self.instance
-                        );
-                    }
+    async fn apply(&self) -> Result<()> {
+        info!("Rebooting {}", self.instance);
+        self.instance
+            .run_cmd(vec![
+                "touch /dev/shm/cluster_test_reboot; nohup sudo /usr/sbin/reboot &",
+            ])
+            .await?;
+        loop {
+            time::delay_for(Duration::from_secs(5)).await;
+            match self
+                .instance
+                .run_cmd(vec!["! cat /dev/shm/cluster_test_reboot"])
+                .await
+            {
+                Ok(..) => {
+                    info!("Rebooting {} complete", self.instance);
+                    return Ok(());
+                }
+                Err(..) => {
+                    info!(
+                        "Rebooting {} in progress - did not reboot yet",
+                        self.instance
+                    );
                 }
             }
         }
-        .boxed()
     }
 }
 

@@ -20,7 +20,8 @@ use crate::cluster::Cluster;
 use crate::experiments::Experiment;
 use crate::tx_emitter::{EmitJobRequest, EmitThreadParams, TxEmitter};
 use crate::util::unix_timestamp_now;
-use futures::future::{join_all, BoxFuture, FutureExt};
+use async_trait::async_trait;
+use futures::future::join_all;
 
 #[derive(Default, Debug)]
 struct Metrics {
@@ -196,48 +197,46 @@ fn print_results(metrics: Vec<Metrics>) {
     }
 }
 
+#[async_trait]
 impl Experiment for MultiRegionSimulation {
-    fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, Result<()>> {
-        async move {
-            let mut emitter = TxEmitter::new(&context.cluster);
-            let mut results = vec![];
-            for split in &self.params.splits {
-                for cross_region_latency in &self.params.cross_region_latencies {
-                    let job = emitter
-                        .start_job(EmitJobRequest {
-                            instances: context.cluster.validator_instances().clone(),
-                            accounts_per_client: 10,
-                            thread_params: EmitThreadParams::default(),
-                        })
-                        .await
-                        .expect("Failed to start emit job");
-                    // Wait for minting to complete and transactions to start
-                    time::delay_for(Duration::from_secs(30)).await;
-                    info!(
-                        "Running multi region simulation: split: {}, cross region latency: {}ms",
-                        split, cross_region_latency
-                    );
-                    if let Ok(metrics) = self
-                        .single_run(
-                            *split,
-                            Duration::from_millis(*cross_region_latency),
-                            context,
-                        )
-                        .await
-                        .map_err(|e| warn!("{}", e))
-                    {
-                        info!("metrics for this run: {:?}", metrics);
-                        results.push(metrics);
-                    }
-                    emitter.stop_job(job);
-                    // Sleep for a minute before different experiments
-                    time::delay_for(Duration::from_secs(60)).await;
+    async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
+        let mut emitter = TxEmitter::new(&context.cluster);
+        let mut results = vec![];
+        for split in &self.params.splits {
+            for cross_region_latency in &self.params.cross_region_latencies {
+                let job = emitter
+                    .start_job(EmitJobRequest {
+                        instances: context.cluster.validator_instances().clone(),
+                        accounts_per_client: 10,
+                        thread_params: EmitThreadParams::default(),
+                    })
+                    .await
+                    .expect("Failed to start emit job");
+                // Wait for minting to complete and transactions to start
+                time::delay_for(Duration::from_secs(30)).await;
+                info!(
+                    "Running multi region simulation: split: {}, cross region latency: {}ms",
+                    split, cross_region_latency
+                );
+                if let Ok(metrics) = self
+                    .single_run(
+                        *split,
+                        Duration::from_millis(*cross_region_latency),
+                        context,
+                    )
+                    .await
+                    .map_err(|e| warn!("{}", e))
+                {
+                    info!("metrics for this run: {:?}", metrics);
+                    results.push(metrics);
                 }
+                emitter.stop_job(job);
+                // Sleep for a minute before different experiments
+                time::delay_for(Duration::from_secs(60)).await;
             }
-            print_results(results);
-            Ok(())
         }
-        .boxed()
+        print_results(results);
+        Ok(())
     }
 
     fn deadline(&self) -> Duration {

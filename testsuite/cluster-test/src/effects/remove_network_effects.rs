@@ -6,7 +6,8 @@
 /// RemoveNetworkEffect deletes all network effects introduced on an instance
 use crate::{effects::Action, instance::Instance};
 use anyhow::Result;
-use futures::future::{BoxFuture, FutureExt};
+
+use async_trait::async_trait;
 use slog_scope::debug;
 use std::fmt;
 
@@ -20,12 +21,13 @@ impl RemoveNetworkEffects {
     }
 }
 
+#[async_trait]
 impl Action for RemoveNetworkEffects {
-    fn apply(&self) -> BoxFuture<Result<()>> {
+    async fn apply(&self) -> Result<()> {
         debug!("RemoveNetworkEffects for {}", self.instance);
         self.instance
             .run_cmd(vec!["sudo tc qdisc delete dev eth0 root; true".to_string()])
-            .boxed()
+            .await
     }
 }
 

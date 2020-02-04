@@ -12,8 +12,8 @@ use crate::{
     experiments::{Context, Experiment},
     instance::Instance,
 };
-use anyhow::Result;
-use futures::future::{BoxFuture, FutureExt};
+
+use async_trait::async_trait;
 use std::{fmt, time::Duration};
 use structopt::StructOpt;
 
@@ -64,23 +64,21 @@ impl ExperimentParam for PacketLossRandomValidatorsParams {
     }
 }
 
+#[async_trait]
 impl Experiment for PacketLossRandomValidators {
-    fn run(&mut self, _context: &mut Context) -> BoxFuture<Result<()>> {
-        async move {
-            let mut instances = vec![];
-            for instance in self.instances.iter() {
-                let packet_loss = PacketLoss::new(instance.clone(), self.percent);
-                packet_loss.apply().await?;
-                instances.push(packet_loss)
-            }
-            time::delay_for(self.duration).await;
-            for instance in self.instances.iter() {
-                let remove_network_effects = RemoveNetworkEffects::new(instance.clone());
-                remove_network_effects.apply().await?;
-            }
-            Ok(())
+    async fn run(&mut self, _context: &mut Context<'_>) -> anyhow::Result<()> {
+        let mut instances = vec![];
+        for instance in self.instances.iter() {
+            let packet_loss = PacketLoss::new(instance.clone(), self.percent);
+            packet_loss.apply().await?;
+            instances.push(packet_loss)
         }
-        .boxed()
+        time::delay_for(self.duration).await;
+        for instance in self.instances.iter() {
+            let remove_network_effects = RemoveNetworkEffects::new(instance.clone());
+            remove_network_effects.apply().await?;
+        }
+        Ok(())
     }
 
     fn deadline(&self) -> Duration {
