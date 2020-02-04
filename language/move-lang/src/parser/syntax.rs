@@ -41,21 +41,6 @@ fn user_error(file: &'static str, start_loc: usize, error: String) -> Error {
 // Miscellaneous Utilities
 //**************************************************************************************************
 
-macro_rules! token_match {
-    ($x:expr, $file:expr, $loc:expr, $actual:expr,
-     { $($c:ident::$p:ident => $e_p:expr),* }) => {{
-        $(use $c::$p;)*
-        match $x {
-            $($p => {{ $e_p }},)*
-            _ => {{
-                let mut v = vec![];
-                $(v.push(format!("'{}'", $p.to_string()));)*
-                return Err(unexpected_token_error($file, $loc, $actual, v));
-            }}
-        }
-    }}
-}
-
 fn make_loc(file: &'static str, start: usize, end: usize) -> Loc {
     Loc::new(
         file,
@@ -516,26 +501,26 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
 //          | "::" <Name> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
 fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
-    let term = token_match!(tokens.peek(), tokens.file_name(), start_loc, tokens.content(), {
+    let term = match tokens.peek() {
         Tok::Move => {
             tokens.advance()?;
             Exp_::Move(parse_var(tokens)?)
-        },
+        }
 
         Tok::Copy => {
             tokens.advance()?;
             Exp_::Copy(parse_var(tokens)?)
-        },
+        }
 
         Tok::Break => {
             tokens.advance()?;
             Exp_::Break
-        },
+        }
 
         Tok::Continue => {
             tokens.advance()?;
             Exp_::Continue
-        },
+        }
 
         Tok::NameValue => {
             // Check if this is a ModuleAccess for a pack or call expression.
@@ -554,16 +539,16 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                                 let msg =
                                     "Perhaps you need a blank space before this '<' operator?";
                                 e.push((loc, msg.to_owned()));
-                                return Err(e)
-                            },
+                                return Err(e);
+                            }
                         }
                     } else {
                         Exp_::Name(parse_name(tokens)?)
                     }
-                },
+                }
                 _ => Exp_::Name(parse_name(tokens)?),
             }
-        },
+        }
 
         Tok::AddressValue => {
             // Check if this is a ModuleIdent (in a ModuleAccess).
@@ -572,11 +557,9 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             } else {
                 Exp_::Value(parse_value(tokens)?)
             }
-        },
+        }
 
-        Tok::True => Exp_::Value(parse_value(tokens)?),
-        Tok::False => Exp_::Value(parse_value(tokens)?),
-        Tok::U64Value => Exp_::Value(parse_value(tokens)?),
+        Tok::True | Tok::False | Tok::U64Value => Exp_::Value(parse_value(tokens)?),
 
         // "(" Comma<Exp> ")"
         // "(" <Exp> ":" <Type> ")"
@@ -613,13 +596,13 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                     }
                 }
             }
-        },
+        }
 
         // "{" <Sequence>
         Tok::LBrace => {
             tokens.advance()?; // consume the LBrace
             Exp_::Block(parse_sequence(tokens)?)
-        },
+        }
 
         // "::" <Name> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
         Tok::ColonColon => {
@@ -639,7 +622,15 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             let rhs = parse_call_args(tokens)?;
             Exp_::GlobalCall(n, tys, rhs)
         }
-    });
+
+        _ => {
+            let loc = current_token_loc(tokens);
+            return Err(vec![
+                (loc, format!("Unexpected '{}'", tokens.content())),
+                (loc, "Expected an expression term".to_string()),
+            ]);
+        }
+    };
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, term))
 }
@@ -661,8 +652,7 @@ fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error>
     } else {
         None
     };
-    token_match!(tokens.peek(), tokens.file_name(), tokens.start_loc(), tokens.content(), {
-
+    match tokens.peek() {
         // <ModuleAccess> ("<" Comma<BaseType> ">")? "{" Comma<ExpField> "}"
         Tok::LBrace => {
             let fs = parse_comma_list(
@@ -673,14 +663,25 @@ fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error>
                 "a field expression",
             )?;
             Ok(Exp_::Pack(n, tys, fs))
-        },
+        }
 
         // <ModuleAccess> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
         Tok::LParen => {
             let rhs = parse_call_args(tokens)?;
             Ok(Exp_::Call(n, tys, rhs))
         }
-    })
+
+        _ => {
+            let loc = current_token_loc(tokens);
+            let msg = "Expected either a brace-enclosed pack expression or \
+                       a parenthesized list of arguments for a function call"
+                .to_string();
+            Err(vec![
+                (loc, format!("Unexpected '{}'", tokens.content())),
+                (loc, msg),
+            ])
+        }
+    }
 }
 
 // Parse the arguments to a call: "(" Comma<Exp> ")"

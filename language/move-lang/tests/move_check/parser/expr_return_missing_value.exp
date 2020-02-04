@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/expr_return_missing_value.move:5:5 ───
    │
  5 │     }
-   │     ^ Unexpected token: '}'
+   │     ^ Unexpected '}'
    ·
  5 │     }
-   │     - Expected: 'move', 'copy', 'break', 'continue', '[Name]', '[Address]', 'true', 'false', '[U64]', '(', '{', '::'
+   │     - Expected an expression term
    │
 

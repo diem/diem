@@ -3,10 +3,10 @@ error:
    ┌── tests/move_check/expansion/standalone_name_with_type_args.move:3:18 ───
    │
  3 │         let _ = n<u64>;
-   │                       ^ Unexpected token: ';'
+   │                       ^ Unexpected ';'
    ·
  3 │         let _ = n<u64>;
-   │                       - Expected: '{', '('
+   │                       - Expected either a brace-enclosed pack expression or a parenthesized list of arguments for a function call
    ·
  3 │         let _ = n<u64>;
    │                  - Perhaps you need a blank space before this '<' operator?
