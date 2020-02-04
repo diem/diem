@@ -215,7 +215,7 @@ where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     E: ::std::error::Error + Send + Sync + 'static,
 {
-    let (listener, server_addr) = transport.listen_on(listen_addr).unwrap();
+    let (listener, server_addr) = executor.enter(move || transport.listen_on(listen_addr).unwrap());
     executor.spawn(server_stream_handler(listener));
     server_addr
 }
@@ -232,7 +232,7 @@ where
     M: StreamMultiplexer + 'static,
     E: ::std::error::Error + Send + Sync + 'static,
 {
-    let (listener, server_addr) = transport.listen_on(listen_addr).unwrap();
+    let (listener, server_addr) = executor.enter(move || transport.listen_on(listen_addr).unwrap());
     executor.spawn(server_muxer_handler(listener));
     server_addr
 }
