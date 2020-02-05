@@ -41,10 +41,6 @@ use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::{
     LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier,
 };
-use mirai_annotations::{
-    debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
-    debug_checked_verify_eq,
-};
 use network::proto::{ConsensusMsg, ConsensusMsg_oneof};
 
 use crate::chained_bft::network::IncomingBlockRetrievalRequest;
@@ -447,15 +443,17 @@ impl<T: Payload> EventProcessor<T> {
             // The timeout event is late: the node has already moved to another round.
             return;
         }
-        let last_voted_round = self
-            .safety_rules
-            .consensus_state()
-            .unwrap()
-            .last_voted_round();
+
+        let use_last_vote = if let Some((_, last_voted_round)) = self.last_vote_sent {
+            last_voted_round == round
+        } else {
+            false
+        };
+
         warn!(
             "Round {} timed out: {}, expected round proposer was {:?}, broadcasting the vote to all replicas",
             round,
-            if last_voted_round == round { "already executed and voted at this round" } else { "will try to generate a backup vote" },
+            if use_last_vote { "already executed and voted at this round" } else { "will try to generate a backup vote" },
             self.proposer_election.get_valid_proposers(round).iter().map(|p| p.short_str()).collect::<Vec<String>>(),
         );
 
@@ -557,18 +555,6 @@ impl<T: Payload> EventProcessor<T> {
     /// position.
     async fn process_proposed_block(&mut self, proposal: Block<T>) {
         debug!("EventProcessor: process_proposed_block {}", proposal);
-        // Safety invariant: For any valid proposed block, its parent block == the block pointed to
-        // by its QC.
-        debug_checked_precondition_eq!(
-            proposal.parent_id(),
-            proposal.quorum_cert().certified_block().id()
-        );
-        // Safety invariant: QC of the parent block is present in the block store
-        // (Ensured by the call to pre-process proposal before this function is called).
-        debug_checked_precondition!(self
-            .block_store
-            .get_quorum_cert_for_block(proposal.parent_id())
-            .is_some());
 
         if let Some(time_to_receival) =
             duration_since_epoch().checked_sub(Duration::from_micros(proposal.timestamp_usecs()))
@@ -577,11 +563,6 @@ impl<T: Payload> EventProcessor<T> {
         }
 
         let proposal_round = proposal.round();
-        // Creating these variables here since proposal gets moved in the call to execute_and_vote.
-        // Used in MIRAI annotation later.
-        let proposal_id = proposal.id();
-        let proposal_parent_id = proposal.parent_id();
-        let certified_parent_block_round = proposal.quorum_cert().parent_block().round();
 
         let vote = match self.execute_and_vote(proposal).await {
             Err(e) => {
@@ -591,38 +572,11 @@ impl<T: Payload> EventProcessor<T> {
             Ok(vote) => vote,
         };
 
-        // Safety invariant: The vote being sent is for the proposal that was received.
-        debug_checked_verify_eq!(proposal_id, vote.vote_data().proposed().id());
-        // Safety invariant: The last voted round is updated to be the same as the proposed block's
-        // round. At this point, the replica has decided to vote for the proposed block.
-        debug_checked_verify_eq!(
-            self.safety_rules
-                .consensus_state()
-                .unwrap()
-                .last_voted_round(),
-            proposal_round
-        );
-        // Safety invariant: qc_parent <-- qc
-        // the preferred block round must be at least as large as qc_parent's round.
-        debug_checked_verify!(
-            self.safety_rules
-                .consensus_state()
-                .unwrap()
-                .preferred_round()
-                >= certified_parent_block_round
-        );
-
         let recipients = self
             .proposer_election
             .get_valid_proposers(proposal_round + 1);
         debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote);
 
-        // Safety invariant: The parent block must be present in the block store and the replica
-        // only votes for blocks with round greater than the parent block's round.
-        debug_checked_verify!(self
-            .block_store
-            .get_block(proposal_parent_id)
-            .map_or(false, |parent_block| parent_block.round() < proposal_round));
         let vote_msg = VoteMsg::new(vote, self.gen_sync_info());
         self.network.send_vote(vote_msg, recipients).await;
     }
