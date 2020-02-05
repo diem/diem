@@ -8,9 +8,14 @@ use super::{
     ast,
     ast::*,
     cfg::{BlockCFG, ReverseBlockCFG, CFG},
+    locals,
 };
 use crate::shared::unique_map::UniqueMap;
-use crate::{errors::*, parser::ast::Var, shared::*};
+use crate::{
+    errors::*,
+    parser::ast::{StructName, Var},
+    shared::*,
+};
 use state::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -19,7 +24,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 //**************************************************************************************************
 
 type PerCommandStates = BTreeMap<Label, VecDeque<LivenessState>>;
-type ForwardIntersections = BTreeMap<Label, LivenessState>;
+type ForwardIntersections = BTreeMap<Label, BTreeSet<Var>>;
 type FinalInvariants = BTreeMap<Label, LivenessState>;
 
 struct Liveness {
@@ -63,26 +68,20 @@ impl AbstractInterpreter for Liveness {}
 pub fn refine_inference_and_verify(
     errors: &mut Errors,
     _signature: &FunctionSignature,
+    _acquires: &BTreeSet<StructName>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &mut BlockCFG,
     infinite_loop_starts: &BTreeSet<Label>,
-) {
+) -> FinalInvariants {
     let (final_invariants, per_command_states) = analyze(cfg, &infinite_loop_starts);
     last_usage(
         errors,
         locals,
-        final_invariants,
+        &final_invariants,
         per_command_states,
         cfg.blocks_mut(),
     );
-    let (final_invariants, per_command_states) = analyze(cfg, &infinite_loop_starts);
-    let forward_intersections = build_forward_intersections(cfg, final_invariants);
-    release_dead_refs(
-        locals,
-        forward_intersections,
-        per_command_states,
-        cfg.blocks_mut(),
-    );
+    final_invariants
 }
 
 //**************************************************************************************************
@@ -96,7 +95,8 @@ fn analyze(
     let reverse = &mut ReverseBlockCFG::new(cfg, infinite_loop_starts);
     let initial_state = LivenessState::initial();
     let mut liveness = Liveness::new(reverse);
-    let final_invariants = liveness.analyze_function(reverse, initial_state).unwrap();
+    let (final_invariants, errors) = liveness.analyze_function(reverse, initial_state);
+    assert!(errors.is_empty());
     (final_invariants, liveness.states)
 }
 
@@ -180,7 +180,7 @@ fn exp_list_item(state: &mut LivenessState, item: &ExpListItem) {
 fn last_usage(
     errors: &mut Errors,
     locals: &UniqueMap<Var, SingleType>,
-    final_invariants: FinalInvariants,
+    final_invariants: &FinalInvariants,
     block_command_states: PerCommandStates,
     blocks: &mut Blocks,
 ) {
@@ -390,22 +390,30 @@ mod last_usage {
 /// Then `release_dead_refs_block` adds a release at the beginning of the block if the reference
 /// satisfies (1) and (2)
 
-fn release_dead_refs(
+pub fn release_dead_refs(
     locals: &UniqueMap<Var, SingleType>,
-    forward_intersections: ForwardIntersections,
-    block_command_states: PerCommandStates,
-    blocks: &mut Blocks,
+    cfg: &mut BlockCFG,
+    liveness_pre_states: &FinalInvariants,
+    locals_pre_states: &BTreeMap<Label, locals::state::LocalStates>,
 ) {
-    for (lbl, block) in &mut *blocks {
-        let initial = forward_intersections.get(lbl).unwrap();
-        let command_states = block_command_states.get(lbl).unwrap();
-        release_dead_refs_block(locals, initial, command_states, block)
+    let forward_intersections = build_forward_intersections(cfg, liveness_pre_states);
+    for (lbl, block) in cfg.blocks_mut() {
+        let locals_pre_state = locals_pre_states.get(lbl).unwrap();
+        let liveness_pre_state = liveness_pre_states.get(lbl).unwrap();
+        let forward_intersection = forward_intersections.get(lbl).unwrap();
+        release_dead_refs_block(
+            locals,
+            locals_pre_state,
+            liveness_pre_state,
+            forward_intersection,
+            block,
+        )
     }
 }
 
 fn build_forward_intersections(
     cfg: &BlockCFG,
-    final_invariants: FinalInvariants,
+    final_invariants: &FinalInvariants,
 ) -> ForwardIntersections {
     cfg.blocks()
         .keys()
@@ -419,22 +427,35 @@ fn build_forward_intersections(
                 .next()
                 .map(|init| states.fold(init.clone(), |acc, s| &acc & s))
                 .unwrap_or_else(BTreeSet::new);
-            (*lbl, LivenessState(intersection))
+            (*lbl, intersection)
         })
         .collect()
 }
 
 fn release_dead_refs_block(
     locals: &UniqueMap<Var, SingleType>,
-    initial: &LivenessState,
-    command_states: &VecDeque<LivenessState>,
+    locals_pre_state: &locals::state::LocalStates,
+    liveness_pre_state: &LivenessState,
+    forward_intersection: &BTreeSet<Var>,
     block: &mut BasicBlock,
 ) {
+    if forward_intersection.is_empty() {
+        return;
+    }
+
     let cmd_loc = block.get(0).unwrap().loc;
-    let cur_data = command_states.get(0).unwrap();
-    let dead_refs = initial
-        .0
-        .difference(&cur_data.0)
+    let cur_state = {
+        let mut s = liveness_pre_state.clone();
+        for cmd in block.iter().rev() {
+            command(&mut s, cmd);
+        }
+        s
+    };
+    // Free references that were live in ALL predecessors and that have a value
+    // (could not have a value due to errors)
+    let dead_refs = forward_intersection
+        .difference(&cur_state.0)
+        .filter(|var| locals_pre_state.get_state(var).is_available())
         .map(|var| (var, locals.get(var).unwrap()))
         .filter(is_ref);
     for (dead_ref, ty) in dead_refs {

@@ -1,0 +1,11 @@
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_return_reference_invalid_1.move:10:9 ───
+    │
+ 10 │         borrow_global_mut<T1>(Transaction::sender())
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return. Resource 'T1' is still being borrowed.
+    ·
+ 10 │         borrow_global_mut<T1>(Transaction::sender())
+    │         -------------------------------------------- It is still being mutably borrowed by this reference
+    │
+

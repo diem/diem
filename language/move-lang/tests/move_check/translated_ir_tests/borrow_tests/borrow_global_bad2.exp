@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_bad2.move:7:21 ───
+   │
+ 8 │         T { v: _ } = move_from<T>(sender);
+   │                      ^^^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'T'
+   ·
+ 7 │         let t_ref = borrow_global_mut<T>(sender);
+   │                     ---------------------------- It is still being mutably borrowed by this reference
+   │
+

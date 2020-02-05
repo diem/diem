@@ -1,17 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod state;
+pub mod state;
 
 use super::{absint::*, ast::*};
 use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::*,
     hlir::translate::{display_var, DisplayVar},
-    parser::ast::{Kind_, Var},
+    parser::ast::{Kind_, StructName, Var},
     shared::*,
 };
 use state::*;
+use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
 // Entry and trait bindings
@@ -86,13 +87,15 @@ impl<'a> AbstractInterpreter for LocalsSafety<'a> {}
 pub fn verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
+    _acquires: &BTreeSet<StructName>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &super::cfg::BlockCFG,
-) {
+) -> BTreeMap<Label, LocalStates> {
     let initial_state = LocalStates::initial(&signature.parameters, locals);
     let mut locals_safety = LocalsSafety::new(locals);
-    let result = locals_safety.analyze_function(cfg, initial_state);
-    errors.append(&mut result.err().unwrap_or_else(Errors::new));
+    let (final_state, mut es) = locals_safety.analyze_function(cfg, initial_state);
+    errors.append(&mut es);
+    final_state
 }
 
 //**************************************************************************************************

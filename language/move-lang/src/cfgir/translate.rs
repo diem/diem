@@ -126,7 +126,7 @@ fn function(context: &mut Context, _name: FunctionName, f: H::Function) -> G::Fu
     let visibility = f.visibility;
     let signature = function_signature(context, f.signature);
     let acquires = f.acquires;
-    let body = function_body(context, &signature, f.body);
+    let body = function_body(context, &signature, &acquires, f.body);
     G::Function {
         visibility,
         signature,
@@ -153,6 +153,7 @@ fn function_signature(context: &mut Context, sig: H::FunctionSignature) -> G::Fu
 fn function_body(
     context: &mut Context,
     signature: &G::FunctionSignature,
+    acquires: &BTreeSet<StructName>,
     sp!(loc, tb_): H::FunctionBody,
 ) -> G::FunctionBody {
     use G::FunctionBody_ as GB;
@@ -178,11 +179,11 @@ fn function_body(
             cfgir::refine_inference_and_verify(
                 &mut context.errors,
                 signature,
+                acquires,
                 &locals,
                 &mut cfg,
                 &infinite_loop_starts,
             );
-            cfgir::verify(&mut context.errors, signature, &locals, &cfg);
             cfgir::optimize(signature, &locals, &mut cfg);
 
             GB::Defined {

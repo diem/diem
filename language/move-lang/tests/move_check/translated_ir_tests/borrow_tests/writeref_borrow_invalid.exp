@@ -1,0 +1,11 @@
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/writeref_borrow_invalid.move:6:21 ───
+    │
+ 10 │         *g_mut = G { v: 0 };
+    │         ^^^^^^^^^^^^^^^^^^^ Invalid mutation of reference.
+    ·
+ 6 │         let v_mut = &mut root.g.v;
+    │                     ------------- Field 'v' is still being mutably borrowed by this reference
+    │
+

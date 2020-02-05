@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/copy_loc_borrowed_indirect_invalid.move:5:18 ───
+   │
+ 6 │         copy x;
+   │         ^^^^^^ Invalid copy of local 'x'
+   ·
+ 5 │         let r1 = foo(&mut x, &mut y);
+   │                  ------------------- It is still being mutably borrowed by this reference
+   │
+

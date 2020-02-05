@@ -1,0 +1,33 @@
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_invalid.move:29:18 ───
+    │
+ 30 │         let p2 = borrow_global_mut<Pair>(addr2);
+    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'Pair'
+    ·
+ 29 │         let p1 = borrow_global_mut<Pair>(addr1);
+    │                  ------------------------------ It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_invalid.move:35:18 ───
+    │
+ 36 │         let p2 = freeze(borrow_global_mut<Pair>(addr2));
+    │                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'Pair'
+    ·
+ 35 │         let p1 = freeze(borrow_global_mut<Pair>(addr1));
+    │                  -------------------------------------- It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_invalid.move:41:18 ───
+    │
+ 42 │         let c2 = &borrow_global_mut<Pair>(addr2).x;
+    │                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'Pair'
+    ·
+ 41 │         let c1 = &borrow_global_mut<Pair>(addr1).x;
+    │                  --------------------------------- It is still being borrowed by this reference
+    │
+

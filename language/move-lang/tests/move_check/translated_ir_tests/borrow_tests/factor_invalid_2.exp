@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/factor_invalid_2.move:6:29 ───
+   │
+ 8 │         &mut root.g;
+   │         ^^^^^^^^^^^ Invalid mutable borrow at field 'g'.
+   ·
+ 6 │         let eps = if (cond) bar(root) else &x1;
+   │                             --------- It is still being borrowed by this reference
+   │
+

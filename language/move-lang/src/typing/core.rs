@@ -57,6 +57,7 @@ pub struct Context {
     pub modules: UniqueMap<ModuleIdent, ModuleInfo>,
 
     pub current_module: Option<ModuleIdent>,
+    pub current_function: Option<FunctionName>,
     pub return_type: Option<Type>,
     pub locals: UniqueMap<Var, LocalStatus>,
 
@@ -84,6 +85,7 @@ impl Context {
         Context {
             subst: Subst::new(),
             current_module: None,
+            current_function: None,
             return_type: None,
             constraints: vec![],
             errors,

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_1.move:6:17 ───
+   │
+ 7 │         acquires_t1();
+   │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+   ·
+ 6 │         let x = borrow_global_mut<T1>(Transaction::sender());
+   │                 -------------------------------------------- It is still being mutably borrowed by this reference
+   │
+

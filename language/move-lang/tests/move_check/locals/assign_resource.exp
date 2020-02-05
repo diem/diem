@@ -66,7 +66,7 @@ error:
     │                ^ Invalid assignment to local 'r'
     ·
  29 │         let r = R{};
-    │             - The local contains a resource value due to this assignment. The resource must be used before you assign to this local again
+    │             - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
     │
 
 error: 

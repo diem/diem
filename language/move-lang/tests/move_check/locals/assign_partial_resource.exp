@@ -96,3 +96,14 @@ error:
     │                           - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
     │
 
+error: 
+
+    ┌── tests/move_check/locals/assign_partial_resource.move:31:25 ───
+    │
+ 32 │         (x, y)
+    │             ^ Invalid usage of local 'y'
+    ·
+ 31 │         if (cond) { x = y };
+    │                         - The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
