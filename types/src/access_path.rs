@@ -220,17 +220,6 @@ impl AccessPath {
         Self::new(address, ACCOUNT_RESOURCE_PATH.to_vec())
     }
 
-    /// Create an AccessPath for a ContractEvent.
-    /// That is an AccessPah that uniquely identifies a given event for a published resource.
-    pub fn new_for_event(address: AccountAddress, root: &[u8], key: &[u8]) -> Self {
-        let mut path: Vec<u8> = Vec::new();
-        path.extend_from_slice(root);
-        path.push(b'/');
-        path.extend_from_slice(key);
-        path.push(b'/');
-        Self::new(address, path)
-    }
-
     /// Create an AccessPath to the event for the sender account in a deposit operation.
     /// The sent counter in LibraAccount.T (LibraAccount.T.sent_events_count) is used to generate
     /// the AccessPath.
