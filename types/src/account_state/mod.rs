@@ -27,10 +27,10 @@ impl AccountState {
     pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<Option<EventHandle>> {
         let event_handle = if *ACCOUNT_RECEIVED_EVENT_PATH == query_path {
             self.get_account_resource()?
-                .map(|account_resourese| account_resourese.received_events().clone())
+                .map(|account_resource| account_resource.received_events().clone())
         } else if *ACCOUNT_SENT_EVENT_PATH == query_path {
             self.get_account_resource()?
-                .map(|account_resourese| account_resourese.sent_events().clone())
+                .map(|account_resource| account_resource.sent_events().clone())
         } else {
             bail!("Unrecognized query path: {:?}", query_path);
         };
