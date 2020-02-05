@@ -11,7 +11,7 @@ use crate::{
             rotating_proposer_election::RotatingProposer,
         },
         network::NetworkSender,
-        persistent_storage::{PersistentStorage, RecoveryData},
+        persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
         test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager, TestPayload},
     },
     util::mock_time_service::SimulatedTimeService,
@@ -24,7 +24,7 @@ use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, Val
 use network::{proto::Proposal, validator_network::ConsensusNetworkSender};
 use once_cell::sync::Lazy;
 use prost::Message as _;
-use safety_rules::{PersistentStorage as SafetyStorage, SafetyRules};
+use safety_rules::{PersistentSafetyStorage, SafetyRules};
 use std::convert::TryFrom;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
@@ -57,7 +57,7 @@ static FUZZING_SIGNER: Lazy<ValidatorSigner> = Lazy::new(|| ValidatorSigner::fro
 
 // helpers
 fn build_empty_store(
-    storage: Arc<dyn PersistentStorage<TestPayload>>,
+    storage: Arc<dyn PersistentLivenessStorage<TestPayload>>,
     initial_data: RecoveryData<TestPayload>,
 ) -> Arc<BlockStore<TestPayload>> {
     let (_commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
@@ -94,7 +94,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     // TODO: remove
     let safety_rules = SafetyRules::new(
         signer.author(),
-        SafetyStorage::in_memory(signer.private_key().clone()),
+        PersistentSafetyStorage::in_memory(signer.private_key().clone()),
     );
 
     // TODO: mock channels

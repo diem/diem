@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::persistent_storage::{LedgerRecoveryData, PersistentStorage, RecoveryData};
+use crate::chained_bft::persistent_liveness_storage::{
+    LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
+};
 
 use anyhow::Result;
 use consensus_types::{
@@ -115,7 +117,7 @@ impl<T: Payload> MockStorage<T> {
 
 // A impl that always start from genesis.
 #[async_trait::async_trait]
-impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
+impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
         for block in blocks {
             self.shared_storage
@@ -189,7 +191,7 @@ impl EmptyStorage {
 }
 
 #[async_trait::async_trait]
-impl<T: Payload> PersistentStorage<T> for EmptyStorage {
+impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage {
     fn save_tree(&self, _: Vec<Block<T>>, _: Vec<QuorumCert>) -> Result<()> {
         Ok(())
     }

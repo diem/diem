@@ -11,7 +11,7 @@ use libra_secure_storage::{InMemoryStorage, Policy, Storage, Value};
 /// Any set function is expected to sync to the remote system before returning.
 /// @TODO add access to private key from persistent store
 /// @TODO add retrieval of private key based upon public key to persistent store
-pub struct PersistentStorage {
+pub struct PersistentSafetyStorage {
     internal_store: Box<dyn Storage>,
 }
 
@@ -20,7 +20,7 @@ const EPOCH: &str = "epoch";
 const LAST_VOTED_ROUND: &str = "last_voted_round";
 const PREFERRED_ROUND: &str = "preferred_round";
 
-impl PersistentStorage {
+impl PersistentSafetyStorage {
     pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
         let storage = Box::new(InMemoryStorage::new());
         Self::initialize(storage, private_key)
@@ -116,7 +116,7 @@ mod tests {
     fn test() {
         let private_key = ValidatorSigner::from_int(0).private_key().clone();
         let internal = Box::new(InMemoryStorage::new());
-        let mut storage = PersistentStorage::initialize(internal, private_key);
+        let mut storage = PersistentSafetyStorage::initialize(internal, private_key);
         assert_eq!(storage.epoch().unwrap(), 1);
         assert_eq!(storage.last_voted_round().unwrap(), 0);
         assert_eq!(storage.preferred_round().unwrap(), 0);

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    persistent_storage::PersistentStorage,
+    persistent_safety_storage::PersistentSafetyStorage,
     serializer::{SafetyRulesInput, SerializerClient, SerializerService, TSerializerClient},
     Error, SafetyRules,
 };
@@ -20,7 +20,11 @@ pub trait RemoteService<T: Payload> {
     fn server_address(&self) -> SocketAddr;
 }
 
-pub fn execute<T: Payload>(author: Author, storage: PersistentStorage, listen_addr: SocketAddr) {
+pub fn execute<T: Payload>(
+    author: Author,
+    storage: PersistentSafetyStorage,
+    listen_addr: SocketAddr,
+) {
     let safety_rules = SafetyRules::<T>::new(author, storage);
     let mut serializer_service = SerializerService::new(safety_rules);
     let mut network_server = NetworkServer::new(listen_addr);

@@ -14,7 +14,7 @@ use crate::{
         },
         network::NetworkSender,
         network_tests::NetworkPlayground,
-        persistent_storage::RecoveryData,
+        persistent_liveness_storage::RecoveryData,
         test_utils::{
             self, consensus_runtime, MockStateComputer, MockStorage, MockTransactionManager,
             TestPayload, TreeInserter,
@@ -57,7 +57,7 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use prost::Message as _;
-use safety_rules::{ConsensusState, PersistentStorage as SafetyStorage, SafetyRulesManager};
+use safety_rules::{ConsensusState, PersistentSafetyStorage as SafetyStorage, SafetyRulesManager};
 use std::sync::RwLock;
 use std::{collections::HashMap, convert::TryFrom, num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
