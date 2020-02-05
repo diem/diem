@@ -31,7 +31,7 @@ use futures::{
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{
-    multiplexing::StreamMultiplexer,
+    multiplexing::{Control, StreamMultiplexer},
     transport::{ConnectionOrigin, Transport},
 };
 use parity_multiaddr::Multiaddr;
@@ -560,8 +560,9 @@ where
                 );
                 // Drop the new connection and keep the one already stored in active_peers
                 let drop_fut = async move {
+                    let (_, mut control) = connection.start().await;
                     if let Err(e) =
-                        tokio::time::timeout(transport::TRANSPORT_TIMEOUT, connection.close()).await
+                        tokio::time::timeout(transport::TRANSPORT_TIMEOUT, control.close()).await
                     {
                         error!(
                             "Closing connection with Peer {} failed with error: {}",

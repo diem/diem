@@ -11,7 +11,7 @@ use futures::{future::BoxFuture, stream::StreamExt, FutureExt, SinkExt};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{
-    multiplexing::StreamMultiplexer,
+    multiplexing::{Control, StreamMultiplexer},
     negotiate::{negotiate_inbound, negotiate_outbound_interactive, negotiate_outbound_select},
     transport::ConnectionOrigin,
 };
@@ -55,7 +55,7 @@ where
     /// Origin of the connection.
     origin: ConnectionOrigin,
     /// Underlying connection.
-    connection: TMuxer,
+    connection: Option<TMuxer>,
     /// Channel to receive requests for opening new outbound substreams.
     requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
     /// Channel to send peer notifications to PeerManager.
@@ -79,7 +79,6 @@ impl<TMuxer> Peer<TMuxer>
 where
     TMuxer: StreamMultiplexer + 'static,
     TMuxer::Substream: 'static,
-    TMuxer::Outbound: 'static,
 {
     pub fn new(
         identity: Identity,
@@ -103,7 +102,7 @@ where
             identity,
             address,
             origin,
-            connection,
+            connection: Some(connection),
             requests_rx,
             peer_notifs_tx,
             rpc_protocols,
@@ -116,7 +115,8 @@ where
     }
 
     pub async fn start(mut self) {
-        let mut substream_rx = self.connection.listen_for_inbound().fuse();
+        let (substream_rx, control) = self.connection.take().unwrap().start().await;
+        let mut substream_rx = substream_rx.fuse();
         let mut pending_outbound_substreams = FuturesUnordered::new();
         let mut pending_inbound_substreams = FuturesUnordered::new();
         let self_peer_id = self.identity.peer_id();
@@ -124,7 +124,7 @@ where
             futures::select! {
                 maybe_req = self.requests_rx.next() => {
                     if let Some(request) = maybe_req {
-                        self.handle_request(&mut pending_outbound_substreams, request).await;
+                        self.handle_request(control.clone(), &mut pending_outbound_substreams, request).await;
                     } else {
                         // This branch will only be taken if all PeerRequest senders for this Peer
                         // get dropped.
@@ -142,12 +142,12 @@ where
                         Some(Err(e)) => {
                             warn!("Inbound substream error {:?} with peer {}",
                                 e, self_peer_id.short_str());
-                            self.close_connection(DisconnectReason::ConnectionLost).await;
+                            self.close_connection(control.clone(), DisconnectReason::ConnectionLost).await;
                         }
                         None => {
                             warn!("Inbound substreams exhausted with peer {}",
                                 self_peer_id.short_str());
-                            self.close_connection(DisconnectReason::ConnectionLost).await;
+                            self.close_connection(control.clone(), DisconnectReason::ConnectionLost).await;
                         }
                     }
                 },
@@ -203,6 +203,7 @@ where
 
     async fn handle_request<'a>(
         &'a mut self,
+        control: TMuxer::Control,
         pending: &'a mut FuturesUnordered<BoxFuture<'static, ()>>,
         request: PeerRequest<TMuxer::Substream>,
     ) {
@@ -213,10 +214,12 @@ where
         );
         match request {
             PeerRequest::OpenSubstream(protocol, channel) => {
-                pending.push(self.handle_open_outbound_substream_request(protocol, channel));
+                pending
+                    .push(self.handle_open_outbound_substream_request(protocol, control, channel));
             }
             PeerRequest::CloseConnection => {
-                self.close_connection(DisconnectReason::Requested).await;
+                self.close_connection(control, DisconnectReason::Requested)
+                    .await;
             }
         }
     }
@@ -224,29 +227,28 @@ where
     fn handle_open_outbound_substream_request(
         &self,
         protocol: ProtocolId,
+        control: TMuxer::Control,
         channel: oneshot::Sender<Result<TMuxer::Substream, PeerManagerError>>,
     ) -> BoxFuture<'static, ()> {
-        let outbound = self.connection.open_outbound();
         let optimistic_negotiation = self.identity.is_protocol_supported(&protocol);
-        let negotiate = Self::negotiate_outbound_substream(
+        Self::negotiate_outbound_substream(
             self.identity.peer_id(),
-            outbound,
+            control,
             protocol,
             optimistic_negotiation,
             channel,
-        );
-
-        negotiate.boxed()
+        )
+        .boxed()
     }
 
     async fn negotiate_outbound_substream(
         peer_id: PeerId,
-        outbound_fut: TMuxer::Outbound,
+        mut control: TMuxer::Control,
         protocol: ProtocolId,
         optimistic_negotiation: bool,
         channel: oneshot::Sender<Result<TMuxer::Substream, PeerManagerError>>,
     ) {
-        let response = match outbound_fut.await {
+        let response = match control.open_stream().await {
             Ok(substream) => {
                 // TODO(bmwill) Evaluate if we should still try to open and negotiate an outbound
                 // substream even though we know for a fact that the Identity struct of this Peer
@@ -302,8 +304,8 @@ where
         })
     }
 
-    async fn close_connection(&mut self, reason: DisconnectReason) {
-        match tokio::time::timeout(transport::TRANSPORT_TIMEOUT, self.connection.close()).await {
+    async fn close_connection(&mut self, mut control: TMuxer::Control, reason: DisconnectReason) {
+        match tokio::time::timeout(transport::TRANSPORT_TIMEOUT, control.close()).await {
             Err(e) => {
                 error!(
                     "Failed to gracefully close connection with peer: {}; error: {}",

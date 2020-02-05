@@ -8,7 +8,6 @@ use crate::{
 };
 use channel;
 use futures::{
-    channel::oneshot,
     executor::block_on,
     future::join,
     io::{AsyncReadExt, AsyncWriteExt},
@@ -52,7 +51,7 @@ fn build_test_peer(
     origin: ConnectionOrigin,
 ) -> (
     Peer<Yamux<MemorySocket>>,
-    PeerHandle<StreamHandle<MemorySocket>>,
+    PeerHandle<StreamHandle>,
     Yamux<MemorySocket>,
     channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
     channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
@@ -93,14 +92,14 @@ fn build_test_peer(
 fn build_test_connected_peers() -> (
     (
         Peer<Yamux<MemorySocket>>,
-        PeerHandle<StreamHandle<MemorySocket>>,
+        PeerHandle<StreamHandle>,
         channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
         channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
         channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
     ),
     (
         Peer<Yamux<MemorySocket>>,
-        PeerHandle<StreamHandle<MemorySocket>>,
+        PeerHandle<StreamHandle>,
         channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
         channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
         channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
@@ -123,7 +122,7 @@ fn build_test_connected_peers() -> (
         peer_direct_send_notifs_rx_b,
     ) = build_test_peer(ConnectionOrigin::Outbound);
     // Make sure both peers are connected
-    peer_b.connection = connection_a;
+    peer_b.connection = Some(connection_a);
     (
         (
             peer_a,
@@ -186,11 +185,12 @@ async fn assert_peer_disconnected_event<TSubstream>(
     }
 }
 
-#[test]
-fn peer_open_substream() {
+#[tokio::test(core_threads = 2)]
+async fn peer_open_substream() {
+    ::libra_logger::try_init_for_testing();
     let (
         peer,
-        _peer_handle,
+        mut peer_handle,
         connection,
         _peer_notifs_rx,
         _peer_rpc_notifs_rx,
@@ -198,8 +198,8 @@ fn peer_open_substream() {
     ) = build_test_peer(ConnectionOrigin::Inbound);
 
     let server = async move {
-        let substream_listener = connection.listen_for_inbound();
-        let (substream, _substream_listener) = substream_listener.into_future().await;
+        let (mut substream_listener, _) = connection.start().await;
+        let substream = substream_listener.next().await;
         let (mut substream, _protocol) =
             negotiate_inbound(substream.unwrap().unwrap(), [HELLO_PROTOCOL])
                 .await
@@ -215,27 +215,24 @@ fn peer_open_substream() {
     };
 
     let client = async move {
-        let (substream_tx, substream_rx) = oneshot::channel();
-        peer.handle_open_outbound_substream_request(
-            ProtocolId::from_static(HELLO_PROTOCOL),
-            substream_tx,
-        )
-        .await;
-        let mut substream = substream_rx.await.unwrap().unwrap();
+        let mut substream = peer_handle
+            .open_substream(ProtocolId::from_static(HELLO_PROTOCOL))
+            .await
+            .unwrap();
         let mut buf = Vec::new();
         substream.read_to_end(&mut buf).await.unwrap();
         substream.close().await.unwrap();
         assert_eq!(buf, b"hello world");
     };
-
+    tokio::spawn(peer.start());
     block_on(join(server, client));
 }
 
 // Test that if two peers request to open a substream with each other simultaneously that
 // we won't deadlock.
-#[test]
-fn peer_open_substream_simultaneous() {
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+#[tokio::test(core_threads = 2)]
+async fn peer_open_substream_simultaneous() {
+    ::libra_logger::try_init_for_testing();
     let (
         (
             peer_a,
@@ -287,10 +284,10 @@ fn peer_open_substream_simultaneous() {
         .await;
     };
 
-    runtime.spawn(peer_a.start());
-    runtime.spawn(peer_b.start());
+    tokio::spawn(peer_a.start());
+    tokio::spawn(peer_b.start());
 
-    runtime.block_on(test);
+    block_on(test);
 }
 
 #[tokio::test]
@@ -318,8 +315,9 @@ async fn peer_disconnect_request() {
     join(test, peer.start()).await;
 }
 
-#[tokio::test]
+#[tokio::test(core_threads = 2)]
 async fn peer_disconnect_connection_lost() {
+    libra_logger::try_init_for_testing();
     let (
         peer,
         peer_handle,
@@ -330,7 +328,7 @@ async fn peer_disconnect_connection_lost() {
     ) = build_test_peer(ConnectionOrigin::Inbound);
 
     let test = async move {
-        connection.close().await.unwrap();
+        drop(connection);
         assert_peer_disconnected_event(
             peer_handle.peer_id,
             RoleType::Validator,
@@ -339,12 +337,11 @@ async fn peer_disconnect_connection_lost() {
         )
         .await;
     };
-
-    join(test, peer.start()).await;
+    block_on(join(test, peer.start()));
 }
 
-#[test]
-fn peer_terminates_when_request_tx_has_dropped() {
+#[tokio::test]
+async fn peer_terminates_when_request_tx_has_dropped() {
     let (
         peer,
         peer_handle,
