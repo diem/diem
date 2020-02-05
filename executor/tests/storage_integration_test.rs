@@ -16,6 +16,7 @@ use libra_types::{
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
     crypto_proxies::ValidatorVerifier,
+    discovery_set::{DISCOVERY_SET_CHANGE_EVENT_PATH, GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH},
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
@@ -64,6 +65,76 @@ fn get_test_signed_transaction(
         public_key,
         program,
     ))
+}
+
+#[test]
+fn test_genesis() {
+    let mut rt = Runtime::new().unwrap();
+    let (config, _genesis_key) = config_builder::test_config();
+    let (_storage_server_handle, _executor, mut _committed_trees) =
+        create_storage_service_and_executor(&config);
+
+    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
+
+    let request_items = vec![
+        RequestItem::GetEventsByEventAccessPath {
+            access_path: GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH.clone(),
+            start_event_seq_num: 0,
+            ascending: true,
+            limit: 100,
+        },
+        RequestItem::GetEventsByEventAccessPath {
+            access_path: AccessPath::new(
+                association_address(),
+                DISCOVERY_SET_CHANGE_EVENT_PATH.to_vec(),
+            ),
+            start_event_seq_num: 0,
+            ascending: true,
+            limit: 100,
+        },
+    ];
+
+    let (
+        mut response_items,
+        ledger_info_with_sigs,
+        validator_change_proof,
+        _ledger_consistency_proof,
+    ) = rt
+        .block_on(
+            storage_read_client.update_to_latest_ledger(
+                /* client_known_version = */ 0,
+                request_items.clone(),
+            ),
+        )
+        .unwrap();
+
+    verify_update_to_latest_ledger_response(
+        &VerifierType::TrustedVerifier(EpochInfo {
+            epoch: 0,
+            verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
+        }),
+        0,
+        &request_items,
+        &response_items,
+        &ledger_info_with_sigs,
+        &validator_change_proof,
+    )
+    .unwrap();
+    response_items.reverse();
+
+    let (discovery_set_change_events, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_events_by_access_path_response()
+        .unwrap();
+    assert_eq!(discovery_set_change_events.len(), 1);
+
+    let (non_existent_events, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_events_by_access_path_response()
+        .unwrap();
+    assert!(non_existent_events.is_empty());
 }
 
 #[test]
