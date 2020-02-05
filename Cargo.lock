@@ -656,6 +656,7 @@ dependencies = [
  "rusoto_ec2 0.41.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_ecr 0.41.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_ecs 0.41.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusoto_s3 0.41.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3890,6 +3891,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusoto_s3"
+version = "0.41.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusoto_core 0.41.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xml-rs 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "rust-argon2"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6233,6 +6245,7 @@ dependencies = [
 "checksum rusoto_ec2 0.41.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d41787042d15ec7c5f3542495339e1418aac8aaff914d26129e17b46f63faadd"
 "checksum rusoto_ecr 0.41.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4722ab9d239d0d113c0e628acfb445f904082a36c09397dce318b218dd4cd276"
 "checksum rusoto_ecs 0.41.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f4e2b14019525016c8954c73ec2f080df22673276f859414fd30de7bef83adff"
+"checksum rusoto_s3 0.41.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b6c840fca030950caf0c9bea89eb35311aa5b01c0341fb0aaf28d347b5c416d7"
 "checksum rust-argon2 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4ca4eaef519b494d1f2848fc602d18816fed808a981aedf4f1f00ceb7c9d32cf"
 "checksum rust_decimal 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "f7a28ded8f10361cefb69a8d8e1d195acf59344150534c165c401d6611cf013d"
 "checksum rustc-demangle 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)" = "4c691c0e608126e00913e33f0ccf3727d5fc84573623b8d65b2df340b5201783"

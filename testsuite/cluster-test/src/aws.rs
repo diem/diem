@@ -3,12 +3,16 @@
 
 #![forbid(unsafe_code)]
 
+use anyhow::{bail, format_err, Result};
 use reqwest::{self, Url};
 use rusoto_core::Region;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Ec2Client};
 use rusoto_ecr::EcrClient;
 use rusoto_ecs::EcsClient;
+use rusoto_s3::{PutObjectRequest, S3Client, S3};
 use slog_scope::*;
+use std::fs::File;
+use std::io::Read;
 use std::{thread, time::Duration};
 
 #[derive(Clone)]
@@ -111,4 +115,25 @@ fn current_instance_id() -> String {
     let response = client.get(url).send();
     let response = response.expect("Metadata request failed");
     response.text().expect("Failed to parse metadata response")
+}
+
+pub fn upload_to_s3(local_filename: &str, bucket: &str, dest_filename: &str) -> Result<()> {
+    let mut f = File::open(local_filename).unwrap();
+    let mut contents: Vec<u8> = Vec::new();
+    match f.read_to_end(&mut contents) {
+        Err(e) => bail!("Error opening file to send to S3: {}", e),
+        Ok(_) => {
+            let req = PutObjectRequest {
+                bucket: bucket.to_owned(),
+                key: dest_filename.to_owned(),
+                body: Some(contents.into()),
+                ..Default::default()
+            };
+            S3Client::new(Region::UsWest2)
+                .put_object(req)
+                .sync()
+                .map_err(|e| format_err!("Failed to upload to S3: {:?}", e))
+                .map(|_| ())
+        }
+    }
 }
