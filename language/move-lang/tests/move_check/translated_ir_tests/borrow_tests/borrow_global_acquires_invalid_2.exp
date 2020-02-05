@@ -1,0 +1,33 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:7:17 ───
+   │
+ 9 │         acquires_t1();
+   │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+   ·
+ 7 │         let x = borrow_global_mut<T1>(Transaction::sender());
+   │                 -------------------------------------------- It is still being mutably borrowed by this reference
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:14:17 ───
+    │
+ 16 │         acquires_t1();
+    │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+    ·
+ 14 │         let x = borrow_global_mut<T1>(Transaction::sender());
+    │                 -------------------------------------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:21:17 ───
+    │
+ 22 │         acquires_t1();
+    │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+    ·
+ 21 │         let x = borrow_global_mut<T1>(Transaction::sender());
+    │                 -------------------------------------------- It is still being mutably borrowed by this reference
+    │
+

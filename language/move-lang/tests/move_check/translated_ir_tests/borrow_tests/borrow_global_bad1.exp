@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_bad1.move:6:17 ───
+   │
+ 7 │         let y = borrow_global_mut<T>(addr);
+   │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'T'
+   ·
+ 6 │         let x = borrow_global_mut<T>(Transaction::sender());
+   │                 ------------------------------------------- It is still being mutably borrowed by this reference
+   │
+

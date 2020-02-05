@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_requires_acquire.move:5:9 ───
+   │
+ 5 │         borrow_global<T1>(addr);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
+   ·
+ 5 │         borrow_global<T1>(addr);
+   │                       -- The call acquires '0x8675309::A::T1', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list
+   │
+

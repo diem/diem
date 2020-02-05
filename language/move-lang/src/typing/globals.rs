@@ -91,6 +91,10 @@ fn exp(
         | E::Continue
         | E::UnresolvedError => (),
 
+        E::ModuleCall(call) if is_current_function(context, call) => {
+            exp(context, annotated_acquires, seen, &call.arguments);
+        }
+
         E::ModuleCall(call) => {
             let loc = e.exp.loc;
             let acquires = call
@@ -170,6 +174,13 @@ fn exp_list_item(
         I::Single(e, _) | I::Splat(_, e, _) => {
             exp(context, annotated_acquires, seen, e);
         }
+    }
+}
+
+fn is_current_function(context: &Context, call: &T::ModuleCall) -> bool {
+    match (&context.current_module, &context.current_function) {
+        (Some(m), Some(f)) => m == &call.module && f == &call.name,
+        _ => false,
     }
 }
 

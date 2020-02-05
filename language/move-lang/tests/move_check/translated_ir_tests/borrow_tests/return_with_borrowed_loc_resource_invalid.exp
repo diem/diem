@@ -1,0 +1,16 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/return_with_borrowed_loc_resource_invalid.move:4:13 ───
+   │
+ 4 │       fun t() {
+   │ ╭─────────────^
+ 5 │ │         let s = X { u: 0 };
+ 6 │ │         let u = &s.u;
+ 7 │ │         copy u;
+ 8 │ │     }
+   │ ╰─────^ Invalid return
+   ·
+ 5 │         let s = X { u: 0 };
+   │             - The local 's' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+   │
+

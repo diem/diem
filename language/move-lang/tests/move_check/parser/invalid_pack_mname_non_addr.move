@@ -5,6 +5,6 @@ module M {
     }
 
     fun bar() {
-        bar()::bar()::M::S { }
+        fun bar()::bar()::M::S { }
     }
 }

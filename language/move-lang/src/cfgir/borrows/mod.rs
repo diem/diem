@@ -5,9 +5,13 @@ mod state;
 
 use super::{absint::*, ast::*};
 use crate::shared::unique_map::UniqueMap;
-use crate::{errors::*, parser::ast::Var, shared::*};
+use crate::{
+    errors::*,
+    parser::ast::{StructName, Var},
+    shared::*,
+};
 use state::*;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
 // Entry and trait bindings
@@ -76,15 +80,17 @@ impl AbstractInterpreter for BorrowSafety {}
 pub fn verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
+    acquires: &BTreeSet<StructName>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &super::cfg::BlockCFG,
-) {
-    let mut initial_state = BorrowState::initial(locals);
+) -> BTreeMap<Label, BorrowState> {
+    let mut initial_state = BorrowState::initial(locals, acquires.clone(), !errors.is_empty());
     initial_state.bind_arguments(&signature.parameters);
     let mut safety = BorrowSafety::new(locals);
     initial_state.canonicalize_locals(&safety.local_numbers);
-    let result = safety.analyze_function(cfg, initial_state);
-    errors.append(&mut result.err().unwrap_or_else(Errors::new));
+    let (final_state, mut es) = safety.analyze_function(cfg, initial_state);
+    errors.append(&mut es);
+    final_state
 }
 
 //**************************************************************************************************

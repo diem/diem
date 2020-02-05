@@ -1,0 +1,44 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/return_with_borrowed_loc_invalid.move:7:9 ───
+   │
+ 7 │         &x
+   │         ^^ Invalid return. Local 'x' is still being borrowed.
+   ·
+ 7 │         &x
+   │         -- It is still being borrowed by this reference
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/return_with_borrowed_loc_invalid.move:13:9 ───
+    │
+ 13 │         copy y
+    │         ^^^^^^ Invalid return. Local 'x' is still being borrowed.
+    ·
+ 13 │         copy y
+    │         ------ It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/return_with_borrowed_loc_invalid.move:20:17 ───
+    │
+ 21 │         move u
+    │         ^^^^^^ Invalid return. Local 's' is still being borrowed.
+    ·
+ 20 │         let u = &y.u;
+    │                 ---- It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/return_with_borrowed_loc_invalid.move:29:9 ───
+    │
+ 29 │         copy u
+    │         ^^^^^^ Invalid return. Local 's' is still being borrowed.
+    ·
+ 29 │         copy u
+    │         ------ It is still being borrowed by this reference
+    │
+

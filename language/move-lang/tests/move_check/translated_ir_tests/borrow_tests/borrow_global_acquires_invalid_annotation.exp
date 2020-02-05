@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_annotation.move:4:32 ───
+   │
+ 4 │     public fun test() acquires T1 {
+   │                                ^^ Invalid 'acquires' list. The resource '0x8675309::A::T1' was never acquired by 'move_from', 'borrow_global', 'borrow_global_mut', or a transitive call
+   │
+

@@ -18,6 +18,15 @@ pub enum LocalState {
     MaybeUnavailable { available: Loc, unavailable: Loc },
 }
 
+impl LocalState {
+    pub fn is_available(&self) -> bool {
+        match self {
+            LocalState::Available(_) => true,
+            LocalState::Unavailable(_) | LocalState::MaybeUnavailable { .. } => false,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct LocalStates {
     local_states: UniqueMap<Var, LocalState>,

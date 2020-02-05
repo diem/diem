@@ -12,6 +12,7 @@ const EXP_EXT: &str = "exp";
 
 const KEEP_TMP: &str = "KEEP";
 const UPDATE_BASELINE: &str = "UPDATE_BASELINE";
+const UB: &str = "UB";
 
 fn format_diff(expected: String, actual: String) -> String {
     use difference::*;
@@ -65,7 +66,7 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     };
 
     let save_errors = read_bool_var(KEEP_TMP);
-    let update_baseline = read_bool_var(UPDATE_BASELINE);
+    let update_baseline = read_bool_var(UPDATE_BASELINE) || read_bool_var(UB);
 
     fs::write(out_path.clone(), error_buffer)?;
     let rendered_errors = fs::read_to_string(out_path.clone())?;

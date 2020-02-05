@@ -6,7 +6,7 @@ error:
    │                        ^^^^^^ Invalid usage of local 'x'
    ·
  3 │         let x: u64;
-   │             - The local does not have a value due to this position. The local must be assigned a value before being used
+   │             - The local might not have a value due to this position. The local must be assigned a value before being used
    │
 
 error: 
@@ -17,7 +17,7 @@ error:
    │                        ^ Invalid usage of local 'x'
    ·
  8 │         let x: u64;
-   │             - The local does not have a value due to this position. The local must be assigned a value before being used
+   │             - The local might not have a value due to this position. The local must be assigned a value before being used
    │
 
 error: 
@@ -28,7 +28,7 @@ error:
     │                        ^^ Invalid usage of local 'x'
     ·
  13 │         let x: u64;
-    │             - The local does not have a value due to this position. The local must be assigned a value before being used
+    │             - The local might not have a value due to this position. The local must be assigned a value before being used
     │
 
 error: 
@@ -40,5 +40,16 @@ error:
     ·
  18 │         let x: u64;
     │             - The local does not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_before_assign_loop.move:18:13 ───
+    │
+ 20 │         x;
+    │         ^ Invalid usage of local 'x'
+    ·
+ 18 │         let x: u64;
+    │             - The local might not have a value due to this position. The local must be assigned a value before being used
     │
 

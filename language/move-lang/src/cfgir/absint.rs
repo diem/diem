@@ -38,7 +38,7 @@ struct BlockInvariant<State> {
 /// A map from block id's to the pre/post of each block after a fixed point is reached.
 type InvariantMap<State> = BTreeMap<Label, BlockInvariant<State>>;
 
-fn collect_errors<State>(map: InvariantMap<State>) -> Result<BTreeMap<Label, State>, Errors> {
+fn collect_states_and_errors<State>(map: InvariantMap<State>) -> (BTreeMap<Label, State>, Errors) {
     let mut errors = Errors::new();
     let final_states = map
         .into_iter()
@@ -49,11 +49,7 @@ fn collect_errors<State>(map: InvariantMap<State>) -> Result<BTreeMap<Label, Sta
             (lbl, pre)
         })
         .collect();
-    if errors.is_empty() {
-        Ok(final_states)
-    } else {
-        Err(errors)
-    }
+    (final_states, errors)
 }
 
 /// Take a pre-state + instruction and mutate it to produce a post-state
@@ -86,7 +82,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         &mut self,
         cfg: &dyn CFG,
         initial_state: Self::State,
-    ) -> Result<BTreeMap<Label, Self::State>, Errors> {
+    ) -> (BTreeMap<Label, Self::State>, Errors) {
         let mut inv_map: InvariantMap<Self::State> = InvariantMap::new();
         let start = cfg.start_block();
         let mut work_list = vec![start];
@@ -104,17 +100,12 @@ pub trait AbstractInterpreter: TransferFunctions {
                 None => unreachable!("Missing invariant for block"),
             };
 
-            let post_state = match self.execute_block(cfg, &block_invariant.pre, block_lbl) {
-                Err(e) => {
-                    block_invariant.post = BlockPostcondition::Error(e);
-                    continue;
-                }
-                Ok(state) => {
-                    block_invariant.post = BlockPostcondition::Success;
-                    state
-                }
+            let (post_state, errors) = self.execute_block(cfg, &block_invariant.pre, block_lbl);
+            block_invariant.post = if errors.is_empty() {
+                BlockPostcondition::Success
+            } else {
+                BlockPostcondition::Error(errors)
             };
-
             // propagate postcondition of this block to successor blocks
             for next_lbl in cfg.successors(block_lbl) {
                 match inv_map.get_mut(next_lbl) {
@@ -147,7 +138,7 @@ pub trait AbstractInterpreter: TransferFunctions {
             }
         }
 
-        collect_errors(inv_map)
+        collect_states_and_errors(inv_map)
     }
 
     fn execute_block(
@@ -155,16 +146,12 @@ pub trait AbstractInterpreter: TransferFunctions {
         cfg: &dyn CFG,
         pre_state: &Self::State,
         block_lbl: Label,
-    ) -> Result<Self::State, Errors> {
+    ) -> (Self::State, Errors) {
         let mut state = pre_state.clone();
         let mut errors = vec![];
         for (idx, cmd) in cfg.commands(block_lbl) {
             errors.append(&mut self.execute(&mut state, block_lbl, idx, cmd));
         }
-        if errors.is_empty() {
-            Ok(state)
-        } else {
-            Err(errors)
-        }
+        (state, errors)
     }
 }

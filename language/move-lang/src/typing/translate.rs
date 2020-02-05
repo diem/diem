@@ -75,7 +75,8 @@ fn main_function(
 // Functions
 //**************************************************************************************************
 
-fn function(context: &mut Context, _name: FunctionName, f: N::Function) -> T::Function {
+fn function(context: &mut Context, name: FunctionName, f: N::Function) -> T::Function {
+    context.current_function = Some(name);
     let N::Function {
         visibility,
         mut signature,
@@ -89,7 +90,7 @@ fn function(context: &mut Context, _name: FunctionName, f: N::Function) -> T::Fu
     expand::function_signature(context, &mut signature);
 
     let body = function_body(context, &acquires, n_body);
-
+    context.current_function = None;
     T::Function {
         visibility,
         signature,
