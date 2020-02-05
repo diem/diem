@@ -8,8 +8,7 @@
 //! native function itself.
 use crate::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
-    StructDefinitionIndex, NO_TYPE_ACTUALS, NUMBER_OF_BYTECODE_INSTRUCTIONS,
-    NUMBER_OF_NATIVE_FUNCTIONS,
+    StructDefinitionIndex, NO_TYPE_ACTUALS, NUMBER_OF_NATIVE_FUNCTIONS,
 };
 pub use crate::file_format_common::Opcodes;
 use libra_types::{identifier::Identifier, transaction::MAX_TRANSACTION_SIZE_IN_BYTES};
@@ -284,7 +283,7 @@ impl CostTable {
                 }
             }
             debug_assert!(
-                instructions_covered == NUMBER_OF_BYTECODE_INSTRUCTIONS,
+                instructions_covered == Bytecode::NUM_INSTRUCTIONS,
                 "all instructions must be in the cost table"
             );
         }

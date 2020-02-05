@@ -1222,10 +1222,11 @@ pub enum Bytecode {
     Shr,
 }
 
-/// The number of bytecode instructions.
-/// This is necessary for checking that all instructions are covered since Rust
-/// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 59;
+impl Bytecode {
+    /// The number of bytecode instructions. This is necessary for checking that all instructions
+    /// are covered.
+    pub const NUM_INSTRUCTIONS: usize = 59;
+}
 
 pub const NUMBER_OF_NATIVE_FUNCTIONS: usize = 17;
 
