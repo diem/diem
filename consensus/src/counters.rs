@@ -73,6 +73,28 @@ pub static COMMITTED_TXNS_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
 });
 
 /// Histogram of idle time of spent in event processing loop
+pub static STARTUP_SYNC_LOOP_IDLE_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(
+        register_histogram!(
+            "libra_consensus_startup_sync_loop_idle_duration_s",
+            "Histogram of idle time of spent in startup sync loop"
+        )
+        .unwrap(),
+    )
+});
+
+/// Histogram of idle time of spent in event processing loop
+pub static STARTUP_SYNC_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(
+        register_histogram!(
+            "libra_consensus_startup_sync_loop_busy_duration_s",
+            "Histogram of busy time of spent in startup sync loop"
+        )
+        .unwrap(),
+    )
+});
+
+/// Histogram of idle time of spent in event processing loop
 pub static EVENT_PROCESSING_LOOP_IDLE_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
     DurationHistogram::new(
         register_histogram!(

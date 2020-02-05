@@ -24,7 +24,7 @@ mod mock_txn_manager;
 use consensus_types::block::block_test_utils::gen_test_certificate;
 use libra_types::block_info::BlockInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
-pub use mock_storage::{EmptyStorage, MockStorage};
+pub use mock_storage::{EmptyStorage, MockSharedStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
 use std::thread;
 use std::time::Duration;

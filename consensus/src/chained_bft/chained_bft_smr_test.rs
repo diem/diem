@@ -8,7 +8,8 @@ use crate::{
         network::ConsensusTypes,
         network_tests::NetworkPlayground,
         test_utils::{
-            consensus_runtime, MockStateComputer, MockStorage, MockTransactionManager, TestPayload,
+            consensus_runtime, MockSharedStorage, MockStateComputer, MockStorage,
+            MockTransactionManager, TestPayload,
         },
     },
     consensus_provider::ConsensusProvider,
@@ -25,6 +26,7 @@ use libra_config::{
     generator::{self, ValidatorSwarm},
 };
 use libra_crypto::hash::CryptoHash;
+use libra_crypto::HashValue;
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet, ValidatorVerifier};
 use network::peer_manager::conn_status_channel;
@@ -92,6 +94,16 @@ impl SMRNode {
             state_sync,
             shared_mempool,
         }
+    }
+
+    fn restart_with_empty_shared_storage(mut self, playground: &mut NetworkPlayground) -> Self {
+        let validator_set = self.storage.shared_storage.validator_set.clone();
+        let shared_storage = Arc::new(MockSharedStorage::new(validator_set));
+        self.storage = Arc::new(MockStorage::new_with_ledger_info(
+            shared_storage,
+            self.storage.get_ledger_info(),
+        ));
+        self.restart(playground)
     }
 
     fn restart(mut self, playground: &mut NetworkPlayground) -> Self {
@@ -276,6 +288,64 @@ fn happy_path_with_multi_proposer() {
     basic_full_round(2, MultipleOrderedProposers);
 }
 
+async fn basic_commit(
+    playground: &mut NetworkPlayground,
+    nodes: &mut Vec<SMRNode>,
+    block_ids: &mut Vec<HashValue>,
+) {
+    let num_rounds = 10;
+
+    for round in 0..num_rounds {
+        let _proposals = playground
+            .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
+            .await;
+
+        // A proposal is carrying a QC that commits a block of round - 3.
+        if round >= 3 {
+            let block_id_to_commit = block_ids[round - 3];
+            let commit_v1 = nodes[0].commit_cb_receiver.next().await.unwrap();
+            let commit_v2 = nodes[1].commit_cb_receiver.next().await.unwrap();
+            assert_eq!(
+                commit_v1.ledger_info().consensus_block_id(),
+                block_id_to_commit
+            );
+            verify_finality_proof(&nodes[0], &commit_v1);
+            assert_eq!(
+                commit_v2.ledger_info().consensus_block_id(),
+                block_id_to_commit
+            );
+            verify_finality_proof(&nodes[1], &commit_v2);
+        }
+
+        // v1 and v2 send votes
+        let votes = playground
+            .wait_for_messages(1, NetworkPlayground::votes_only)
+            .await;
+        let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&votes[0].1).unwrap() {
+            ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+            _ => panic!("Unexpected message found"),
+        };
+        block_ids.push(vote_msg.vote().vote_data().proposed().id());
+    }
+
+    assert!(
+        nodes[0].smr.block_store().unwrap().root().round() >= 7,
+        "round of node 0 is {}",
+        nodes[0].smr.block_store().unwrap().root().round()
+    );
+    assert!(
+        nodes[1].smr.block_store().unwrap().root().round() >= 7,
+        "round of node 1 is {}",
+        nodes[1].smr.block_store().unwrap().root().round()
+    );
+
+    // This message is for proposal with round 11 to delivery the QC, but not gather the QC
+    // so after restart, proposer will propose round 11 again.
+    playground
+        .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
+        .await;
+}
+
 /// Verify the basic e2e flow: blocks are committed, txn manager is notified, block tree is
 /// pruned, restart the node and we can still continue.
 #[test]
@@ -285,59 +355,8 @@ fn basic_commit_and_restart() {
     let mut nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer, false);
     let mut block_ids = vec![];
 
-    block_on(async {
-        let num_rounds = 10;
+    block_on(basic_commit(&mut playground, &mut nodes, &mut block_ids));
 
-        for round in 0..num_rounds {
-            let _proposals = playground
-                .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
-                .await;
-
-            // A proposal is carrying a QC that commits a block of round - 3.
-            if round >= 3 {
-                let block_id_to_commit = block_ids[round - 3];
-                let commit_v1 = nodes[0].commit_cb_receiver.next().await.unwrap();
-                let commit_v2 = nodes[1].commit_cb_receiver.next().await.unwrap();
-                assert_eq!(
-                    commit_v1.ledger_info().consensus_block_id(),
-                    block_id_to_commit
-                );
-                verify_finality_proof(&nodes[0], &commit_v1);
-                assert_eq!(
-                    commit_v2.ledger_info().consensus_block_id(),
-                    block_id_to_commit
-                );
-                verify_finality_proof(&nodes[1], &commit_v2);
-            }
-
-            // v1 and v2 send votes
-            let votes = playground
-                .wait_for_messages(1, NetworkPlayground::votes_only)
-                .await;
-            let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&votes[0].1).unwrap() {
-                ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
-                _ => panic!("Unexpected message found"),
-            };
-            block_ids.push(vote_msg.vote().vote_data().proposed().id());
-        }
-
-        assert!(
-            nodes[0].smr.block_store().unwrap().root().round() >= 7,
-            "round of node 0 is {}",
-            nodes[0].smr.block_store().unwrap().root().round()
-        );
-        assert!(
-            nodes[1].smr.block_store().unwrap().root().round() >= 7,
-            "round of node 1 is {}",
-            nodes[1].smr.block_store().unwrap().root().round()
-        );
-
-        // This message is for proposal with round 11 to delivery the QC, but not gather the QC
-        // so after restart, proposer will propose round 11 again.
-        playground
-            .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
-            .await;
-    });
     // create a new playground to avoid polling potential vote messages in previous one.
     playground = NetworkPlayground::new(runtime.handle().clone());
     nodes = nodes
@@ -373,6 +392,64 @@ fn basic_commit_and_restart() {
             "round of node 0 is {}",
             nodes[0].smr.block_store().unwrap().root().round()
         );
+        assert!(
+            nodes[1].smr.block_store().unwrap().root().round() >= 17,
+            "round of node 1 is {}",
+            nodes[1].smr.block_store().unwrap().root().round()
+        );
+    });
+}
+
+/// Test restart with an empty shared storage to simulate empty consensus db
+#[test]
+fn basic_commit_and_restart_from_clean_storage() {
+    let runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let mut nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer, false);
+    let mut block_ids = vec![];
+
+    block_on(basic_commit(&mut playground, &mut nodes, &mut block_ids));
+
+    // create a new playground to avoid polling potential vote messages in previous one.
+    playground = NetworkPlayground::new(runtime.handle().clone());
+    nodes = nodes
+        .into_iter()
+        .enumerate()
+        .map(|(index, node)| {
+            if index == 0 {
+                node.restart_with_empty_shared_storage(&mut playground)
+            } else {
+                node.restart(&mut playground)
+            }
+        })
+        .collect();
+
+    block_on(async {
+        let mut round = 0;
+
+        while round < 10 {
+            // The loop is to ensure that we collect a network vote(enough for QC with 2 nodes) then
+            // move the round forward because there's a race that node1 may or may not
+            // reject round 11 depends on whether it voted for before restart.
+            loop {
+                let msg = playground
+                    .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
+                    .await;
+                let vote_msg = lcs::from_bytes(&msg[0].1.message);
+                if let Ok(ConsensusTypes::<TestPayload>::VoteMsg(_)) = vote_msg {
+                    round += 1;
+                    break;
+                }
+            }
+        }
+
+        // Because of the race, we can't assert the commit reliably, instead we assert
+        // both nodes commit to at least round 17.
+        // We cannot reliable wait for the event of "commit & prune": the only thing that we know is
+        // that after receiving the vote for round 20, the root should be at least height 16.
+        // Since we are starting from empty storage for node 0, we can't really get block_store
+        // for it. But testing node 1's round is sufficient because we only have two nodes and
+        // if node 0 never starts up successfully we can't possible advance
         assert!(
             nodes[1].smr.block_store().unwrap().root().round() >= 17,
             "round of node 1 is {}",
