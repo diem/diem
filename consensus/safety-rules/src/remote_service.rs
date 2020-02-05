@@ -30,10 +30,20 @@ pub fn execute<T: Payload>(
     let mut network_server = NetworkServer::new(listen_addr);
 
     loop {
-        let request = network_server.read().unwrap();
-        let response = serializer_service.handle_message(request).unwrap();
-        network_server.write(&response).unwrap();
+        if let Err(e) = process_one_message(&mut network_server, &mut serializer_service) {
+            eprintln!("Warning: Failed to process message: {}", e);
+        }
     }
+}
+
+fn process_one_message<T: Payload>(
+    network_server: &mut NetworkServer,
+    serializer_service: &mut SerializerService<T>,
+) -> Result<(), Error> {
+    let request = network_server.read()?;
+    let response = serializer_service.handle_message(request)?;
+    network_server.write(&response)?;
+    Ok(())
 }
 
 struct RemoteClient<T> {
