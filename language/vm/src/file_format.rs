@@ -38,6 +38,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use mirai_annotations::*;
+use num_variants::NumVariants;
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
@@ -801,9 +802,10 @@ impl CodeUnit {
 ///
 /// Bytecodes operate on a stack machine and each bytecode has side effect on the stack and the
 /// instruction stream.
-#[derive(Clone, Hash, Eq, PartialEq)]
+#[derive(Clone, Hash, Eq, NumVariants, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+#[num_variants = "NUM_INSTRUCTIONS"]
 pub enum Bytecode {
     /// Pop and discard the value at the top of the stack.
     /// The value on the stack must be an unrestricted type.
@@ -1220,12 +1222,6 @@ pub enum Bytecode {
     ///
     /// ```..., u64_value(1), u64_value(2) -> ..., u64_value```
     Shr,
-}
-
-impl Bytecode {
-    /// The number of bytecode instructions. This is necessary for checking that all instructions
-    /// are covered.
-    pub const NUM_INSTRUCTIONS: usize = 59;
 }
 
 pub const NUMBER_OF_NATIVE_FUNCTIONS: usize = 17;
