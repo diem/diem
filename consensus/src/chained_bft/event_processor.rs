@@ -12,7 +12,7 @@ use crate::{
             proposer_election::ProposerElection,
         },
         network::NetworkSender,
-        persistent_storage::PersistentStorage,
+        persistent_liveness_storage::PersistentLivenessStorage,
     },
     counters,
     state_replication::TxnManager,
@@ -77,7 +77,7 @@ pub struct EventProcessor<T> {
     safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
     txn_manager: Box<dyn TxnManager<Payload = T>>,
     network: NetworkSender,
-    storage: Arc<dyn PersistentStorage<T>>,
+    storage: Arc<dyn PersistentLivenessStorage<T>>,
     time_service: Arc<dyn TimeService>,
     // Cache of the last sent vote message.
     last_vote_sent: Option<(Vote, Round)>,
@@ -94,7 +94,7 @@ impl<T: Payload> EventProcessor<T> {
         safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
         txn_manager: Box<dyn TxnManager<Payload = T>>,
         network: NetworkSender,
-        storage: Arc<dyn PersistentStorage<T>>,
+        storage: Arc<dyn PersistentLivenessStorage<T>>,
         time_service: Arc<dyn TimeService>,
         validators: Arc<ValidatorVerifier>,
     ) -> Self {

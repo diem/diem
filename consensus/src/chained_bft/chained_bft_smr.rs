@@ -7,7 +7,7 @@ use crate::{
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         network::{NetworkReceivers, NetworkTask},
-        persistent_storage::PersistentStorage,
+        persistent_liveness_storage::PersistentLivenessStorage,
     },
     consensus_provider::ConsensusProvider,
     counters,
@@ -44,7 +44,7 @@ pub struct ChainedBftSMR<T> {
     author: Author,
     runtime: Option<Runtime>,
     block_store: Option<Arc<BlockStore<T>>>,
-    storage: Arc<dyn PersistentStorage<T>>,
+    storage: Arc<dyn PersistentLivenessStorage<T>>,
     input: Option<ChainedBftSMRInput<T>>,
 }
 
@@ -54,7 +54,7 @@ impl<T: Payload> ChainedBftSMR<T> {
         network_events: ConsensusNetworkEvents,
         node_config: &mut NodeConfig,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
-        storage: Arc<dyn PersistentStorage<T>>,
+        storage: Arc<dyn PersistentLivenessStorage<T>>,
         txn_manager: Box<dyn TxnManager<Payload = T>>,
     ) -> Self {
         let input = ChainedBftSMRInput {

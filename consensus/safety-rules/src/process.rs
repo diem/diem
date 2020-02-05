@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    persistent_storage::PersistentStorage,
+    persistent_safety_storage::PersistentSafetyStorage,
     remote_service::{self, RemoteService},
     safety_rules_manager,
 };
@@ -60,5 +60,5 @@ impl<T: Payload> RemoteService<T> for ProcessService {
 
 struct ProcessServiceData {
     author: Author,
-    storage: PersistentStorage,
+    storage: PersistentSafetyStorage,
 }

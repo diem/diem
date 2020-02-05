@@ -6,7 +6,7 @@
 mod consensus_state;
 mod error;
 mod local_client;
-mod persistent_storage;
+mod persistent_safety_storage;
 mod process;
 mod remote_service;
 mod safety_rules;
@@ -17,8 +17,9 @@ mod t_safety_rules;
 mod thread;
 
 pub use crate::{
-    consensus_state::ConsensusState, error::Error, persistent_storage::PersistentStorage,
-    process::ProcessService, safety_rules::SafetyRules, safety_rules_manager::SafetyRulesManager,
+    consensus_state::ConsensusState, error::Error,
+    persistent_safety_storage::PersistentSafetyStorage, process::ProcessService,
+    safety_rules::SafetyRules, safety_rules_manager::SafetyRulesManager,
     t_safety_rules::TSafetyRules,
 };
 

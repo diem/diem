@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    consensus_state::ConsensusState, error::Error, persistent_storage::PersistentStorage,
-    t_safety_rules::TSafetyRules,
+    consensus_state::ConsensusState, error::Error,
+    persistent_safety_storage::PersistentSafetyStorage, t_safety_rules::TSafetyRules,
 };
 use consensus_types::{
     block::Block,
@@ -33,7 +33,7 @@ use std::marker::PhantomData;
 /// @TODO update storage with hash of ledger info (waypoint) during epoch changes (includes a new validator
 /// set)
 pub struct SafetyRules<T> {
-    persistent_storage: PersistentStorage,
+    persistent_storage: PersistentSafetyStorage,
     validator_signer: ValidatorSigner,
     marker: PhantomData<T>,
 }
@@ -42,7 +42,7 @@ impl<T: Payload> SafetyRules<T> {
     /// Constructs a new instance of SafetyRules with the given persistent storage and the
     /// consensus private keys
     /// @TODO replace this with an API that takes in a SafetyRulesConfig
-    pub fn new(author: Author, persistent_storage: PersistentStorage) -> Self {
+    pub fn new(author: Author, persistent_storage: PersistentSafetyStorage) -> Self {
         let consensus_key = persistent_storage
             .consensus_key()
             .expect("Unable to retrieve consensus private key");

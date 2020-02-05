@@ -3,7 +3,7 @@
 
 use crate::{
     local_client::LocalClient,
-    persistent_storage::PersistentStorage,
+    persistent_safety_storage::PersistentSafetyStorage,
     remote_service::RemoteService,
     serializer::{SerializerClient, SerializerService},
     spawned_process::SpawnedProcess,
@@ -15,7 +15,7 @@ use libra_config::config::{NodeConfig, SafetyRulesBackend, SafetyRulesService};
 use libra_secure_storage::{InMemoryStorage, OnDiskStorage, Storage};
 use std::sync::{Arc, RwLock};
 
-pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentStorage) {
+pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSafetyStorage) {
     let author = config
         .validator_network
         .as_ref()
@@ -39,9 +39,9 @@ pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSto
             .take_private()
             .expect("Failed to take Consensus private key, key absent or already read");
 
-        PersistentStorage::initialize(internal_storage, private_key)
+        PersistentSafetyStorage::initialize(internal_storage, private_key)
     } else {
-        PersistentStorage::new(internal_storage)
+        PersistentSafetyStorage::new(internal_storage)
     };
 
     (author, storage)
@@ -74,14 +74,14 @@ impl<T: Payload> SafetyRulesManager<T> {
         }
     }
 
-    pub fn new_local(author: Author, storage: PersistentStorage) -> Self {
+    pub fn new_local(author: Author, storage: PersistentSafetyStorage) -> Self {
         let safety_rules = SafetyRules::new(author, storage);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Local(Arc::new(RwLock::new(safety_rules))),
         }
     }
 
-    pub fn new_serializer(author: Author, storage: PersistentStorage) -> Self {
+    pub fn new_serializer(author: Author, storage: PersistentSafetyStorage) -> Self {
         let safety_rules = SafetyRules::new(author, storage);
         let serializer_service = SerializerService::new(safety_rules);
         Self {
@@ -98,7 +98,7 @@ impl<T: Payload> SafetyRulesManager<T> {
         }
     }
 
-    pub fn new_thread(author: Author, storage: PersistentStorage) -> Self {
+    pub fn new_thread(author: Author, storage: PersistentSafetyStorage) -> Self {
         let thread = ThreadService::<T>::new(author, storage);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Thread(thread),

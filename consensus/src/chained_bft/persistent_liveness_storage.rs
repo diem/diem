@@ -20,14 +20,13 @@ use libra_types::ledger_info::LedgerInfo;
 use std::{collections::HashSet, sync::Arc};
 use storage_client::StorageRead;
 
-/// Persistent storage is essential for maintaining safety when a node crashes.  Specifically,
-/// upon a restart, a correct node will not equivocate.  Even if all nodes crash, safety is
-/// guaranteed.  This trait also also supports liveness aspects (i.e. highest timeout certificate)
-/// and supports clean up (i.e. tree pruning).
+/// PersistentLivenessStorage is essential for maintaining liveness when a node crashes.  Specifically,
+/// upon a restart, a correct node will recover.  Even if all nodes crash, liveness is
+/// guaranteed.
 /// Blocks persisted are proposed but not yet committed.  The committed state is persisted
 /// via StateComputer.
 #[async_trait::async_trait]
-pub trait PersistentStorage<T>: Send + Sync {
+pub trait PersistentLivenessStorage<T>: Send + Sync {
     /// Persist the blocks and quorum certs into storage atomically.
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()>;
 
@@ -293,7 +292,7 @@ impl StorageWriteProxy {
 }
 
 #[async_trait::async_trait]
-impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
+impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
         self.db
             .save_blocks_and_quorum_certificates(blocks, quorum_certs)
@@ -378,7 +377,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         )
         .expect("Cannot construct recovery data");
 
-        (self as &dyn PersistentStorage<T>)
+        (self as &dyn PersistentLivenessStorage<T>)
             .prune_tree(initial_data.take_blocks_to_prune())
             .expect("unable to prune dangling blocks during restart");
         if initial_data.last_vote.is_none() {

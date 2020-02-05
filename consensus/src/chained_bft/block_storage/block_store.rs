@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::{block_tree::BlockTree, BlockReader},
-        persistent_storage::{PersistentStorage, RecoveryData, RootInfo},
+        persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData, RootInfo},
     },
     counters,
     state_replication::StateComputer,
@@ -56,12 +56,12 @@ pub struct BlockStore<T> {
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     /// The persistent storage backing up the in-memory data structure, every write should go
     /// through this before in-memory tree.
-    storage: Arc<dyn PersistentStorage<T>>,
+    storage: Arc<dyn PersistentLivenessStorage<T>>,
 }
 
 impl<T: Payload> BlockStore<T> {
     pub fn new(
-        storage: Arc<dyn PersistentStorage<T>>,
+        storage: Arc<dyn PersistentLivenessStorage<T>>,
         initial_data: RecoveryData<T>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         max_pruned_blocks_in_mem: usize,

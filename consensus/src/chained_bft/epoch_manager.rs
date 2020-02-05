@@ -13,7 +13,7 @@ use crate::{
             rotating_proposer_election::{choose_leader, RotatingProposer},
         },
         network::NetworkSender,
-        persistent_storage::{PersistentStorage, RecoveryData},
+        persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     },
     counters,
     state_replication::{StateComputer, TxnManager},
@@ -54,7 +54,7 @@ pub struct EpochManager<T> {
     timeout_sender: channel::Sender<Round>,
     txn_manager: Box<dyn TxnManager<Payload = T>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
-    storage: Arc<dyn PersistentStorage<T>>,
+    storage: Arc<dyn PersistentLivenessStorage<T>>,
     safety_rules_manager: SafetyRulesManager<T>,
 }
 
@@ -69,7 +69,7 @@ impl<T: Payload> EpochManager<T> {
         timeout_sender: channel::Sender<Round>,
         txn_manager: Box<dyn TxnManager<Payload = T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
-        storage: Arc<dyn PersistentStorage<T>>,
+        storage: Arc<dyn PersistentLivenessStorage<T>>,
         safety_rules_manager: SafetyRulesManager<T>,
     ) -> Self {
         Self {
