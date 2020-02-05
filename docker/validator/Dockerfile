@@ -16,7 +16,7 @@ FROM toolchain AS builder
 
 COPY . /libra
 
-RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
+RUN RUSTFLAGS='-C force-frame-pointers=y' cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
 RUN strip /libra/target/release/config-builder
 
 ### Production Image ###
