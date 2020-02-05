@@ -14,9 +14,13 @@ use cli::{
 use libra_logger::set_default_global_logger;
 use libra_types::waypoint::Waypoint;
 use rustyline::{config::CompletionType, error::ReadlineError, Config, Editor};
-use std::num::NonZeroU16;
-use std::time::{Duration, UNIX_EPOCH};
+use std::{
+    num::NonZeroU16,
+    str::FromStr,
+    time::{Duration, UNIX_EPOCH},
+};
 use structopt::StructOpt;
+use ureq;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -51,8 +55,18 @@ struct Args {
     #[structopt(short = "r", long = "sync")]
     pub sync: bool,
     /// If set, a client uses the waypoint parameter for its initial LedgerInfo verification.
-    #[structopt(name = "waypoint", short, long)]
+    #[structopt(
+        name = "waypoint",
+        long,
+        help = "Explicitly specify the waypoint to use"
+    )]
     pub waypoint: Option<Waypoint>,
+    #[structopt(
+        name = "waypoint_url",
+        long,
+        help = "URL for a file with the waypoint to use"
+    )]
+    pub waypoint_url: Option<String>,
     /// Verbose output.
     #[structopt(short = "v", long = "verbose")]
     pub verbose: bool,
@@ -70,6 +84,17 @@ fn main() {
         .clone()
         .unwrap_or_else(|| "".to_string());
     let mnemonic_file = args.mnemonic_file.clone();
+
+    // If waypoint is given explicitly, use its value,
+    // otherwise if waypoint_url is given, try to retrieve the waypoint from the URL,
+    // otherwise waypoint is None.
+    let waypoint = args.waypoint.or_else(|| {
+        args.waypoint_url.as_ref().map(|url_str| {
+            retrieve_waypoint(url_str.as_str()).unwrap_or_else(|e| {
+                panic!("Failure to retrieve a waypoint from {}: {}", url_str, e)
+            })
+        })
+    });
     let mut client_proxy = ClientProxy::new(
         &args.host,
         args.port.get(),
@@ -77,7 +102,7 @@ fn main() {
         args.sync,
         args.faucet_server.clone(),
         mnemonic_file,
-        args.waypoint,
+        waypoint,
     )
     .expect("Failed to construct client.");
 
@@ -179,6 +204,22 @@ fn print_help(client_info: &str, commands: &[std::sync::Arc<dyn Command>]) {
     println!("help | h \n\tPrints this help");
     println!("quit | q! \n\tExit this client");
     println!("\n");
+}
+
+/// Retrieve a waypoint given the URL.
+fn retrieve_waypoint(url_str: &str) -> anyhow::Result<Waypoint> {
+    let response = ureq::get(url_str).timeout_connect(10_000).call();
+    match response.status() {
+        200 => response
+            .into_string()
+            .map_err(|_| anyhow::format_err!("Failed to parse waypoint from URL {}", url_str))
+            .and_then(|r| Waypoint::from_str(r.trim())),
+        _ => Err(anyhow::format_err!(
+            "URL {} returned {}",
+            url_str,
+            response.status_line()
+        )),
+    }
 }
 
 #[cfg(test)]
