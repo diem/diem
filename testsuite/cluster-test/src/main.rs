@@ -102,6 +102,8 @@ struct Args {
     // emit_tx options
     #[structopt(long, default_value = "10")]
     accounts_per_client: usize,
+    #[structopt(long)]
+    threads_per_ac: Option<usize>,
     #[structopt(long, default_value = "50")]
     wait_millis: u64,
     #[structopt(long)]
@@ -138,11 +140,21 @@ pub fn main() {
         let duration = Duration::from_secs(args.duration);
         if args.swarm {
             let util = BasicSwarmUtil::setup(&args);
-            rt.block_on(util.emit_tx(args.accounts_per_client, thread_params, duration));
+            rt.block_on(util.emit_tx(
+                args.accounts_per_client,
+                args.threads_per_ac,
+                thread_params,
+                duration,
+            ));
             return;
         } else {
             let util = ClusterUtil::setup(&args);
-            rt.block_on(util.emit_tx(args.accounts_per_client, thread_params, duration));
+            rt.block_on(util.emit_tx(
+                args.accounts_per_client,
+                args.threads_per_ac,
+                thread_params,
+                duration,
+            ));
             return;
         }
     } else if args.discovery {
@@ -305,6 +317,7 @@ impl BasicSwarmUtil {
     pub async fn emit_tx(
         self,
         accounts_per_client: usize,
+        threads_per_ac: Option<usize>,
         thread_params: EmitThreadParams,
         duration: Duration,
     ) {
@@ -313,6 +326,7 @@ impl BasicSwarmUtil {
             .start_job(EmitJobRequest {
                 instances: self.cluster.validator_instances().to_vec(),
                 accounts_per_client,
+                threads_per_ac,
                 thread_params,
             })
             .await
@@ -370,6 +384,7 @@ impl ClusterUtil {
     pub async fn emit_tx(
         self,
         accounts_per_client: usize,
+        threads_per_ac: Option<usize>,
         thread_params: EmitThreadParams,
         duration: Duration,
     ) {
@@ -378,6 +393,7 @@ impl ClusterUtil {
             .start_job(EmitJobRequest {
                 instances: self.cluster.validator_instances().to_vec(),
                 accounts_per_client,
+                threads_per_ac,
                 thread_params,
             })
             .await
@@ -669,11 +685,10 @@ impl ClusterTestRunner {
         loop {
             let job = self
                 .runtime
-                .block_on(self.tx_emitter.start_job(EmitJobRequest {
-                    instances: instances.clone(),
-                    accounts_per_client: 10,
-                    thread_params: EmitThreadParams::default(),
-                }))
+                .block_on(
+                    self.tx_emitter
+                        .start_job(EmitJobRequest::for_instances(instances.clone())),
+                )
                 .expect("Failed to start emit job");
             thread::sleep(Duration::from_secs(30) + window);
             let now = unix_timestamp_now();

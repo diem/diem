@@ -12,7 +12,7 @@ use crate::cluster::Cluster;
 use crate::effects::{DeleteLibraData, Effect, StopContainer};
 use crate::experiments::{Context, ExperimentParam};
 use crate::instance::Instance;
-use crate::tx_emitter::{EmitJobRequest, EmitThreadParams};
+use crate::tx_emitter::EmitJobRequest;
 use crate::{effects::Action, experiments::Experiment};
 use async_trait::async_trait;
 use slog_scope::info;
@@ -58,11 +58,7 @@ impl Experiment for RecoveryTime {
         context
             .tx_emitter
             .mint_accounts(
-                &EmitJobRequest {
-                    instances: context.cluster.validator_instances().to_vec(),
-                    accounts_per_client: 100,
-                    thread_params: EmitThreadParams::default(),
-                },
+                &EmitJobRequest::for_instances(context.cluster.validator_instances().to_vec()),
                 self.params.num_accounts_to_mint as usize,
             )
             .await?;

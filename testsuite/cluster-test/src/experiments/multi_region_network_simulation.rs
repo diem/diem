@@ -18,7 +18,7 @@ use crate::experiments::{Context, ExperimentParam};
 
 use crate::cluster::Cluster;
 use crate::experiments::Experiment;
-use crate::tx_emitter::{EmitJobRequest, EmitThreadParams, TxEmitter};
+use crate::tx_emitter::{EmitJobRequest, TxEmitter};
 use crate::util::unix_timestamp_now;
 use async_trait::async_trait;
 use futures::future::join_all;
@@ -205,11 +205,9 @@ impl Experiment for MultiRegionSimulation {
         for split in &self.params.splits {
             for cross_region_latency in &self.params.cross_region_latencies {
                 let job = emitter
-                    .start_job(EmitJobRequest {
-                        instances: context.cluster.validator_instances().clone(),
-                        accounts_per_client: 10,
-                        thread_params: EmitThreadParams::default(),
-                    })
+                    .start_job(EmitJobRequest::for_instances(
+                        context.cluster.validator_instances().clone(),
+                    ))
                     .await
                     .expect("Failed to start emit job");
                 // Wait for minting to complete and transactions to start
