@@ -7,8 +7,10 @@
 //! operations are blocking and return only complete blocks of data. The intended use case has the
 //! server blocking on read.  Upon receiving a payload during a read, the server should process the
 //! payload, write a response, and then block on read again. The client should block on read after
-//! performing a write. Note: if the server will attempt to accept or acquire a new client if one
-//! does not exist prior to performing any operations.
+//! performing a write. Upon errors or remote disconnections, the call (read, write) will return an
+//! error to let the caller know of the event. A follow up call will result in the service
+//! attempting to either reconnect in the case of a client or accept a new client in the case of a
+//! server.
 //!
 //! Internally both the client and server leverage a NetworkStream that communications in blocks
 //! where a block is a length prefixed array of bytes.
@@ -16,7 +18,7 @@
 use anyhow::{anyhow, ensure, Result};
 use std::{
     io::{Read, Write},
-    net::{SocketAddr, TcpListener, TcpStream},
+    net::{Shutdown, SocketAddr, TcpListener, TcpStream},
     thread, time,
 };
 
@@ -49,6 +51,11 @@ impl NetworkClient {
         self.stream.read()
     }
 
+    /// Shutdown the internal network stream
+    pub fn shutdown(&self) -> Result<()> {
+        self.stream.shutdown()
+    }
+
     /// Blocking read until able to successfully read an entire message
     pub fn write(&mut self, data: &[u8]) -> Result<()> {
         self.stream.write(data)
@@ -73,12 +80,30 @@ impl NetworkServer {
     /// blocks until able to successfully read an entire message
     pub fn read(&mut self) -> Result<Vec<u8>> {
         let stream = self.client()?;
-        stream.read()
+        let result = stream.read();
+        if result.is_err() {
+            self.stream = None;
+        }
+        result
     }
 
+    /// Shutdown the internal network stream
+    pub fn shutdown(&self) -> Result<()> {
+        self.stream
+            .as_ref()
+            .ok_or_else(|| anyhow!("No active stream"))?
+            .shutdown()
+    }
+
+    /// If there isn't already a downstream client, it accepts. Otherwise it
+    /// blocks until it is able to successfully send an entire message.
     pub fn write(&mut self, data: &[u8]) -> Result<()> {
         let stream = self.client()?;
-        stream.write(data)
+        let result = stream.write(data);
+        if result.is_err() {
+            self.stream = None;
+        }
+        result
     }
 
     fn client(&mut self) -> Result<&mut NetworkStream> {
@@ -118,12 +143,20 @@ impl NetworkStream {
 
         loop {
             let read = self.stream.read(&mut self.temp_buffer)?;
+            if read == 0 {
+                anyhow::bail!("Remote stream cleanly closed");
+            }
             self.buffer.extend(self.temp_buffer[0..read].to_vec());
             let result = self.read_buffer();
             if !result.is_empty() {
                 return Ok(result);
             }
         }
+    }
+
+    /// Terminate the socket
+    pub fn shutdown(&self) -> Result<()> {
+        Ok(self.stream.shutdown(Shutdown::Both)?)
     }
 
     /// Blocking write until able to successfully send an entire message
@@ -202,6 +235,28 @@ mod test {
         let data = vec![4, 5, 6, 7];
         server.write(&data).unwrap();
         let result = client.read().unwrap();
+        assert_eq!(data, result);
+    }
+
+    #[test]
+    fn test_shutdown() {
+        let server_port = utils::get_available_port();
+        let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
+        let mut server = NetworkServer::new(server_addr);
+        let mut client = NetworkClient::connect(server_addr).unwrap();
+
+        let data = vec![0, 1, 2, 3];
+        client.write(&data).unwrap();
+        let result = server.read().unwrap();
+        assert_eq!(data, result);
+
+        client.shutdown().unwrap();
+        let mut client = NetworkClient::connect(server_addr).unwrap();
+        assert!(server.read().is_err());
+
+        let data = vec![4, 5, 6, 7];
+        client.write(&data).unwrap();
+        let result = server.read().unwrap();
         assert_eq!(data, result);
     }
 }
