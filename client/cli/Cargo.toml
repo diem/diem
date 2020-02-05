@@ -23,6 +23,7 @@ reqwest = { version = "0.10.1", features = ["blocking"], default-features = fals
 serde = { version = "1.0.96", features = ["derive"] }
 serde_json = "1.0.40"
 structopt = "0.3.2"
+ureq = { version = "0.11.3"}
 
 admission-control-proto = { path = "../../admission_control/admission-control-proto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
