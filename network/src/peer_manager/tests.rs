@@ -18,8 +18,8 @@ use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{
     multiplexing::{
-        yamux::{Mode, Yamux},
-        StreamMultiplexer,
+        yamux::{Mode, Yamux, YamuxControl},
+        Control, StreamMultiplexer,
     },
     negotiate::negotiate_outbound_interactive,
     transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
@@ -120,8 +120,8 @@ fn build_test_peer_manager(
     (peer_manager, peer_manager_request_tx, hello_rx)
 }
 
-async fn open_hello_substream<T: StreamMultiplexer>(connection: &T) -> io::Result<()> {
-    let outbound = connection.open_outbound().await?;
+async fn open_hello_substream<T: Control>(connection: &mut T) -> io::Result<()> {
+    let outbound = connection.open_stream().await?;
     let (_, _) = negotiate_outbound_interactive(outbound, [HELLO_PROTOCOL]).await?;
     Ok(())
 }
@@ -161,8 +161,8 @@ async fn assert_peer_disconnected_event(
 // to simultaneous dial tie-breaking.  It also checks the correct events were sent from the
 // Peer actors to PeerManager's internal_event_rx.
 async fn check_correct_connection_is_live(
-    live_connection: Yamux<MemorySocket>,
-    dropped_connection: Yamux<MemorySocket>,
+    mut live_connection: YamuxControl,
+    mut dropped_connection: YamuxControl,
     live_connection_origin: ConnectionOrigin,
     dropped_connection_origin: ConnectionOrigin,
     expected_peer_id: PeerId,
@@ -187,8 +187,8 @@ async fn check_correct_connection_is_live(
         .await;
     }
 
-    assert!(open_hello_substream(&dropped_connection).await.is_err());
-    assert!(open_hello_substream(&live_connection).await.is_ok());
+    assert!(open_hello_substream(&mut dropped_connection).await.is_err());
+    assert!(open_hello_substream(&mut live_connection).await.is_ok());
 
     live_connection.close().await.unwrap();
     assert_peer_disconnected_event(
@@ -232,8 +232,8 @@ fn peer_manager_simultaneous_dial_two_inbound() {
 
         // outbound1 should have been dropped since it was the older inbound connection
         check_correct_connection_is_live(
-            outbound2,
-            outbound1,
+            outbound2.start().await.1,
+            outbound1.start().await.1,
             ConnectionOrigin::Inbound,
             ConnectionOrigin::Inbound,
             ids[0],
@@ -278,8 +278,8 @@ fn peer_manager_simultaneous_dial_inbound_outbound_remote_id_larger() {
         // inbound2 should be dropped because for outbound1 the remote peer has a greater
         // PeerId and is the "dialer"
         check_correct_connection_is_live(
-            outbound1,
-            inbound2,
+            outbound1.start().await.1,
+            inbound2.start().await.1,
             ConnectionOrigin::Inbound,
             ConnectionOrigin::Outbound,
             ids[1],
@@ -324,8 +324,8 @@ fn peer_manager_simultaneous_dial_inbound_outbound_own_id_larger() {
         // outbound1 should be dropped because for inbound2 PeerManager's PeerId is greater and
         // is the "dialer"
         check_correct_connection_is_live(
-            inbound2,
-            outbound1,
+            inbound2.start().await.1,
+            outbound1.start().await.1,
             ConnectionOrigin::Outbound,
             ConnectionOrigin::Inbound,
             ids[0],
@@ -370,8 +370,8 @@ fn peer_manager_simultaneous_dial_outbound_inbound_remote_id_larger() {
         // inbound1 should be dropped because for outbound2 the remote peer has a greater
         // PeerID and is the "dialer"
         check_correct_connection_is_live(
-            outbound2,
-            inbound1,
+            outbound2.start().await.1,
+            inbound1.start().await.1,
             ConnectionOrigin::Inbound,
             ConnectionOrigin::Outbound,
             ids[1],
@@ -416,8 +416,8 @@ fn peer_manager_simultaneous_dial_outbound_inbound_own_id_larger() {
         // outbound2 should be dropped because for inbound1 PeerManager's PeerId is greater and
         // is the "dialer"
         check_correct_connection_is_live(
-            inbound1,
-            outbound2,
+            inbound1.start().await.1,
+            outbound2.start().await.1,
             ConnectionOrigin::Outbound,
             ConnectionOrigin::Inbound,
             ids[0],
@@ -460,8 +460,8 @@ fn peer_manager_simultaneous_dial_two_outbound() {
         );
         // inbound1 should have been dropped since it was the older outbound connection
         check_correct_connection_is_live(
-            inbound2,
-            inbound1,
+            inbound2.start().await.1,
+            inbound1.start().await.1,
             ConnectionOrigin::Outbound,
             ConnectionOrigin::Outbound,
             ids[0],
