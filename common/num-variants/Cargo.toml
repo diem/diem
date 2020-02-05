@@ -1,0 +1,16 @@
+[package]
+name = "num-variants"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+edition = "2018"
+publish = false
+
+[lib]
+proc-macro = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+syn = "1.0.1"
+quote = "1.0.0"
+proc-macro2 = "1.0.1"
