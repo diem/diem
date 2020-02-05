@@ -88,7 +88,19 @@ impl Default for EmitThreadParams {
 pub struct EmitJobRequest {
     pub instances: Vec<Instance>,
     pub accounts_per_client: usize,
+    pub threads_per_ac: Option<usize>,
     pub thread_params: EmitThreadParams,
+}
+
+impl EmitJobRequest {
+    pub fn for_instances(instances: Vec<Instance>) -> Self {
+        Self {
+            instances,
+            accounts_per_client: 10,
+            threads_per_ac: None,
+            thread_params: EmitThreadParams::default(),
+        }
+    }
 }
 
 impl TxEmitter {
@@ -112,7 +124,21 @@ impl TxEmitter {
     }
 
     pub async fn start_job(&mut self, req: EmitJobRequest) -> Result<EmitJob> {
-        let num_clients = req.instances.len();
+        let threads_per_ac = match req.threads_per_ac {
+            Some(x) => x,
+            None => {
+                // Trying to create somewhere between 75-150 threads
+                // We want to have equal numbers of threads for each AC, so that they are equally loaded
+                // Otherwise things like flamegrap/perf going to show different numbers depending on which AC is chosen
+                // Also limiting number of threads as max 10 per AC for use cases with very small number of nodes or use --peers
+                min(10, max(1, 150 / req.instances.len()))
+            }
+        };
+        let num_clients = req.instances.len() * threads_per_ac;
+        info!(
+            "Will use {} threads per AC with total {} AC clients",
+            threads_per_ac, num_clients
+        );
         let num_accounts = req.accounts_per_client * num_clients;
         self.mint_accounts(&req, num_accounts).await?;
         let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
@@ -122,32 +148,35 @@ impl TxEmitter {
         let mut all_accounts = all_accounts.into_iter();
         let stop = Arc::new(AtomicBool::new(false));
         let stats = Arc::new(TxStats::default());
-        for instance in req.instances {
-            let client = Self::make_client(&instance);
-            let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
-            let all_addresses = all_addresses.clone();
-            let stop = stop.clone();
-            let peer_id = instance.peer_name().clone();
-            let params = req.thread_params.clone();
-            let stats = Arc::clone(&stats);
-            let thread = SubmissionThread {
-                accounts,
-                instance,
-                client,
-                all_addresses,
-                stop,
-                params,
-                stats,
-            };
-            let join_handle = thread::Builder::new()
-                .name(format!("txem-{}", peer_id))
-                .spawn(move || {
-                    let mut rt = Runtime::new().unwrap();
-                    rt.block_on(thread.run())
-                })
-                .unwrap();
-            workers.push(Worker { join_handle });
-            thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
+        for _ in 1..threads_per_ac {
+            for instance in &req.instances {
+                let instance = instance.clone();
+                let client = Self::make_client(&instance);
+                let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
+                let all_addresses = all_addresses.clone();
+                let stop = stop.clone();
+                let peer_id = instance.peer_name().clone();
+                let params = req.thread_params.clone();
+                let stats = Arc::clone(&stats);
+                let thread = SubmissionThread {
+                    accounts,
+                    instance,
+                    client,
+                    all_addresses,
+                    stop,
+                    params,
+                    stats,
+                };
+                let join_handle = thread::Builder::new()
+                    .name(format!("txem-{}", peer_id))
+                    .spawn(move || {
+                        let mut rt = Runtime::new().unwrap();
+                        rt.block_on(thread.run())
+                    })
+                    .unwrap();
+                workers.push(Worker { join_handle });
+                thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
+            }
         }
         Ok(EmitJob {
             workers,
@@ -254,11 +283,7 @@ impl TxEmitter {
         instances: Vec<Instance>,
     ) -> Result<TxStats> {
         let job = self
-            .start_job(EmitJobRequest {
-                instances,
-                accounts_per_client: 10,
-                thread_params: EmitThreadParams::default(),
-            })
+            .start_job(EmitJobRequest::for_instances(instances))
             .await?;
         thread::sleep(duration);
         let stats = self.stop_job(job);
