@@ -12,7 +12,9 @@ use crate::{
             proposer_election::ProposerElection,
         },
         network::NetworkSender,
-        persistent_liveness_storage::PersistentLivenessStorage,
+        persistent_liveness_storage::{
+            LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
+        },
     },
     counters,
     state_replication::TxnManager,
@@ -20,7 +22,7 @@ use crate::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
 };
-use anyhow::{ensure, format_err, Context};
+use anyhow::{ensure, format_err, Context, Result};
 use consensus_types::{
     accumulator_extension_proof::AccumulatorExtensionProof,
     block::Block,
@@ -62,6 +64,79 @@ mod event_processor_test;
 #[cfg(any(feature = "fuzzing", test))]
 #[path = "event_processor_fuzzing.rs"]
 pub mod event_processor_fuzzing;
+
+/// During the event of the node can't recover from local data, StartupSyncProcessor is responsible
+/// for processing the events carrying sync info and use the info to retrieve blocks from peers
+#[allow(dead_code)]
+pub struct StartupSyncProcessor<T> {
+    network: NetworkSender,
+    storage: Arc<dyn PersistentLivenessStorage<T>>,
+    ledger_recovery_data: LedgerRecoveryData<T>,
+}
+
+#[allow(dead_code)]
+impl<T: Payload> StartupSyncProcessor<T> {
+    pub fn new(
+        network: NetworkSender,
+        storage: Arc<dyn PersistentLivenessStorage<T>>,
+        ledger_recovery_data: LedgerRecoveryData<T>,
+    ) -> Self {
+        StartupSyncProcessor {
+            network,
+            storage,
+            ledger_recovery_data,
+        }
+    }
+
+    pub async fn process_proposal_msg(
+        &mut self,
+        proposal_msg: ProposalMsg<T>,
+    ) -> Result<RecoveryData<T>> {
+        let author = proposal_msg.proposer();
+        let sync_info = proposal_msg.sync_info();
+        self.sync_up(&sync_info, author).await
+    }
+
+    pub async fn process_vote(&mut self, vote_msg: VoteMsg) -> Result<RecoveryData<T>> {
+        let author = vote_msg.vote().author();
+        let sync_info = vote_msg.sync_info();
+        self.sync_up(&sync_info, author).await
+    }
+
+    pub async fn process_sync_info_msg(
+        &mut self,
+        sync_info: SyncInfo,
+        peer: Author,
+    ) -> Result<RecoveryData<T>> {
+        debug!("Startup Sync received a sync info msg: {}", sync_info);
+        self.sync_up(&sync_info, peer).await
+    }
+
+    async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData<T>> {
+        ensure!(
+            sync_info.highest_round() > self.ledger_recovery_data.commit_round(),
+            "Received sync info has lower round number than committed block"
+        );
+        ensure!(
+            sync_info.epoch() == self.ledger_recovery_data.epoch(),
+            "Received sync info is in different epoch than committed block"
+        );
+        let mut retriever = BlockRetriever::new(
+            self.network.clone(),
+            // Give a timeout of 1 hour to make sure there's enough time for trying to fetch from all peers
+            Instant::now() + Duration::new(3600, 0),
+            peer,
+        );
+        let (blocks, quorum_certs) =
+            BlockStore::fast_forward_sync(&sync_info.highest_commit_cert(), &mut retriever)
+                .await
+                .expect("Failed to fast forward sync with peers");
+        self.storage
+            .save_tree(blocks, quorum_certs)
+            .expect("Failed to save retrieved blocks and quorum certs to consensus db");
+        Ok(self.storage.start().await)
+    }
+}
 
 /// Consensus SMR is working in an event based fashion: EventProcessor is responsible for
 /// processing the individual events (e.g., process_new_round, process_proposal, process_vote,

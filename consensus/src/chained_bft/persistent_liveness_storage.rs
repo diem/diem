@@ -13,6 +13,7 @@ use executor::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_types::block_info::Round;
 use libra_types::crypto_proxies::ValidatorPublicKeys;
 use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::crypto_proxies::ValidatorVerifier;
@@ -53,29 +54,43 @@ pub struct RootInfo<T>(pub Block<T>, pub QuorumCert, pub QuorumCert);
 /// LedgerRecoveryData is a subset of RecoveryData that we can get solely from ledger info
 /// In the case of an epoch boundary ledger info(i.e. it has validator set), we generate the virtual genesis block.
 pub struct LedgerRecoveryData<T> {
+    epoch: u64,
     validators: Arc<ValidatorVerifier>,
     validator_keys: ValidatorSet,
+    storage_ledger: LedgerInfo,
     genesis_root: Option<RootInfo<T>>,
 }
 
 impl<T: Payload> LedgerRecoveryData<T> {
-    pub fn new(storage_ledger: &LedgerInfo, validator_keys: ValidatorSet) -> Self {
+    pub fn new(storage_ledger: LedgerInfo, validator_keys: ValidatorSet) -> Self {
+        let mut epoch = storage_ledger.epoch();
         let genesis_root = if storage_ledger.next_validator_set().is_some() {
-            let genesis_block = Block::make_genesis_block_from_ledger_info(storage_ledger);
+            let genesis_block = Block::make_genesis_block_from_ledger_info(&storage_ledger);
             let genesis_qc = QuorumCert::certificate_for_genesis_from_ledger_info(
-                storage_ledger,
+                &storage_ledger,
                 genesis_block.id(),
             );
+            epoch = genesis_block.epoch();
             Some(RootInfo(genesis_block, genesis_qc.clone(), genesis_qc))
         } else {
             None
         };
 
         LedgerRecoveryData {
+            epoch,
             validators: Arc::new((&validator_keys).into()),
             validator_keys,
+            storage_ledger,
             genesis_root,
         }
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.epoch
+    }
+
+    pub fn commit_round(&self) -> Round {
+        self.storage_ledger.round()
     }
 
     pub fn genesis_root(&self) -> Option<RootInfo<T>> {
@@ -320,7 +335,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             .expect("startup info is None");
 
         LedgerRecoveryData::new(
-            startup_info.latest_ledger_info.ledger_info(),
+            startup_info.latest_ledger_info.ledger_info().clone(),
             startup_info.get_validator_set().clone(),
         )
     }
@@ -363,8 +378,10 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
         let validator_set = startup_info.get_validator_set().clone();
-        let ledger_recovery_data =
-            LedgerRecoveryData::new(startup_info.latest_ledger_info.ledger_info(), validator_set);
+        let ledger_recovery_data = LedgerRecoveryData::new(
+            startup_info.latest_ledger_info.ledger_info().clone(),
+            validator_set,
+        );
         let root_executed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
         let mut initial_data = RecoveryData::new(
             last_vote,

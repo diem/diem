@@ -140,25 +140,8 @@ impl<T: Payload> BlockStore<T> {
         if !self.need_sync_for_quorum_cert(&highest_commit_cert) {
             return Ok(());
         }
-        debug!(
-            "Start state sync with peer: {}, to block: {} from {}",
-            retriever.preferred_peer.short_str(),
-            highest_commit_cert.commit_info(),
-            self.root()
-        );
-        let blocks = retriever
-            .retrieve_block_for_qc(&highest_commit_cert, 3)
-            .await?;
-        assert_eq!(
-            blocks.last().expect("should have 3-chain").id(),
-            highest_commit_cert.commit_info().id(),
-        );
-        let mut quorum_certs = vec![];
-        quorum_certs.push(highest_commit_cert.clone());
-        quorum_certs.push(blocks[0].quorum_cert().clone());
-        quorum_certs.push(blocks[1].quorum_cert().clone());
-        // If a node restarts in the middle of state synchronization, it is going to try to catch up
-        // to the stored quorum certs as the new root.
+        let (blocks, quorum_certs) =
+            Self::fast_forward_sync(&highest_commit_cert, retriever).await?;
         self.storage
             .save_tree(blocks.clone(), quorum_certs.clone())?;
         let pre_sync_instance = Instant::now();
@@ -181,6 +164,31 @@ impl<T: Payload> BlockStore<T> {
                 .await;
         }
         Ok(())
+    }
+
+    pub async fn fast_forward_sync(
+        highest_commit_cert: &QuorumCert,
+        retriever: &mut BlockRetriever,
+    ) -> anyhow::Result<(Vec<Block<T>>, Vec<QuorumCert>)> {
+        debug!(
+            "Start state sync with peer: {}, to block: {}",
+            retriever.preferred_peer.short_str(),
+            highest_commit_cert.commit_info(),
+        );
+        let blocks = retriever
+            .retrieve_block_for_qc(&highest_commit_cert, 3)
+            .await?;
+        assert_eq!(
+            blocks.last().expect("should have 3-chain").id(),
+            highest_commit_cert.commit_info().id(),
+        );
+        let mut quorum_certs = vec![];
+        quorum_certs.push(highest_commit_cert.clone());
+        quorum_certs.push(blocks[0].quorum_cert().clone());
+        quorum_certs.push(blocks[1].quorum_cert().clone());
+        // If a node restarts in the middle of state synchronization, it is going to try to catch up
+        // to the stored quorum certs as the new root.
+        Ok((blocks, quorum_certs))
     }
 }
 
