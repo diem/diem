@@ -45,6 +45,7 @@ use libra_types::{
 use network::proto::ConsensusMsg;
 
 use crate::chained_bft::network::IncomingBlockRetrievalRequest;
+use crate::state_replication::StateComputer;
 use consensus_types::{
     block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
     executed_block::ExecutedBlock,
@@ -73,6 +74,7 @@ pub mod event_processor_fuzzing;
 pub struct StartupSyncProcessor<T> {
     network: NetworkSender<T>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
+    state_computer: Arc<dyn StateComputer<Payload = T>>,
     ledger_recovery_data: LedgerRecoveryData<T>,
 }
 
@@ -81,11 +83,13 @@ impl<T: Payload> StartupSyncProcessor<T> {
     pub fn new(
         network: NetworkSender<T>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
+        state_computer: Arc<dyn StateComputer<Payload = T>>,
         ledger_recovery_data: LedgerRecoveryData<T>,
     ) -> Self {
         StartupSyncProcessor {
             network,
             storage,
+            state_computer,
             ledger_recovery_data,
         }
     }
@@ -129,14 +133,15 @@ impl<T: Payload> StartupSyncProcessor<T> {
             Instant::now() + Duration::new(5, 0),
             peer,
         );
-        let (blocks, quorum_certs) =
-            BlockStore::fast_forward_sync(&sync_info.highest_commit_cert(), &mut retriever)
-                .await
-                .expect("Failed to fast forward sync with peers");
-        self.storage
-            .save_tree(blocks, quorum_certs)
-            .expect("Failed to save retrieved blocks and quorum certs to consensus db");
-        Ok(self.storage.start().await)
+        let recovery_data = BlockStore::fast_forward_sync(
+            &sync_info.highest_commit_cert(),
+            &mut retriever,
+            self.storage.clone(),
+            self.state_computer.clone(),
+        )
+        .await?;
+
+        Ok(recovery_data)
     }
 }
 

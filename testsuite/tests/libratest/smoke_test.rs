@@ -437,6 +437,73 @@ fn test_startup_sync_state() {
 }
 
 #[test]
+fn test_startup_sync_state_with_empty_consensus_db() {
+    let (mut env, mut client_proxy_1) = setup_swarm_and_client_proxy(4, 1);
+    client_proxy_1.create_next_account(false).unwrap();
+    client_proxy_1.create_next_account(false).unwrap();
+    client_proxy_1
+        .mint_coins(&["mb", "0", "100"], true)
+        .unwrap();
+    client_proxy_1
+        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(90.0),
+        Decimal::from_str(&client_proxy_1.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy_1.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+    let peer_to_stop = 0;
+    env.validator_swarm.kill_node(peer_to_stop);
+    let node_config = NodeConfig::load(
+        env.validator_swarm
+            .config
+            .config_files
+            .get(peer_to_stop)
+            .unwrap(),
+    )
+    .unwrap();
+    let consensus_db_path = node_config.storage.dir().join("consensusdb");
+    // Verify that consensus db exists and
+    // we are not deleting a non-existent directory
+    assert!(consensus_db_path.as_path().exists());
+    // Delete the consensus db to simulate consensus db is nuked
+    fs::remove_dir_all(consensus_db_path).unwrap();
+    assert!(env
+        .validator_swarm
+        .add_node(peer_to_stop, RoleType::Validator, false)
+        .is_ok());
+    // create the client for the restarted node
+    let accounts = client_proxy_1.copy_all_accounts();
+    let mut client_proxy_0 = env.get_validator_ac_client(0, None);
+    let sender_address = accounts[0].address;
+    client_proxy_0.set_accounts(accounts);
+    client_proxy_0.wait_for_transaction(sender_address, 1);
+    assert_eq!(
+        Decimal::from_f64(90.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+    client_proxy_1
+        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .unwrap();
+    client_proxy_0.wait_for_transaction(sender_address, 2);
+    assert_eq!(
+        Decimal::from_f64(80.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(20.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+}
+
+#[test]
 fn test_basic_state_synchronization() {
     // - Start a swarm of 5 nodes (3 nodes forming a QC).
     // - Kill one node and continue submitting transactions to the others.

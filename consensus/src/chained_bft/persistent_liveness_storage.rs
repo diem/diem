@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::epoch_manager::LivenessStorageData;
 use crate::{
     chained_bft::consensusdb::ConsensusDB, consensus_provider::create_storage_read_client,
 };
@@ -41,7 +42,7 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
     async fn recover_from_ledger(&self) -> LedgerRecoveryData<T>;
 
     /// Construct necessary data to start consensus.
-    async fn start(&self) -> RecoveryData<T>;
+    async fn start(&self) -> LivenessStorageData<T>;
 
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas
     /// to jump to this round
@@ -53,6 +54,7 @@ pub struct RootInfo<T>(pub Block<T>, pub QuorumCert, pub QuorumCert);
 
 /// LedgerRecoveryData is a subset of RecoveryData that we can get solely from ledger info
 /// In the case of an epoch boundary ledger info(i.e. it has validator set), we generate the virtual genesis block.
+#[derive(Clone)]
 pub struct LedgerRecoveryData<T> {
     epoch: u64,
     validators: Arc<ValidatorVerifier>,
@@ -150,7 +152,8 @@ impl<T: Payload> RecoveryData<T> {
                 // for better readability
                 quorum_certs.sort_by_key(|qc| qc.certified_block().round());
                 format!(
-                    "Blocks in db: {}\nQuorum Certs in db: {}\n",
+                    "\nRoot id: {}\nBlocks in db: {}\nQuorum Certs in db: {}\n",
+                    storage_ledger.consensus_block_id(),
                     blocks
                         .iter()
                         .map(|b| format!("\n\t{}", b))
@@ -340,7 +343,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
         )
     }
 
-    async fn start(&self) -> RecoveryData<T> {
+    async fn start(&self) -> LivenessStorageData<T> {
         info!("Start consensus recovery.");
         let raw_data = self
             .db
@@ -383,37 +386,42 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             validator_set,
         );
         let root_executed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
-        let mut initial_data = RecoveryData::new(
+        match RecoveryData::new(
             last_vote,
-            ledger_recovery_data,
+            ledger_recovery_data.clone(),
             blocks,
             quorum_certs,
             startup_info.latest_ledger_info.ledger_info(),
             root_executed_trees,
             highest_timeout_certificate,
-        )
-        .expect("Cannot construct recovery data");
+        ) {
+            Ok(mut initial_data) => {
+                (self as &dyn PersistentLivenessStorage<T>)
+                    .prune_tree(initial_data.take_blocks_to_prune())
+                    .expect("unable to prune dangling blocks during restart");
+                if initial_data.last_vote.is_none() {
+                    self.db
+                        .delete_last_vote_msg()
+                        .expect("unable to cleanup last vote");
+                }
+                if initial_data.highest_timeout_certificate.is_none() {
+                    self.db
+                        .delete_highest_timeout_certificate()
+                        .expect("unable to cleanup highest timeout cert");
+                }
+                info!(
+                    "Starting up the consensus state machine with recovery data - [last_vote {}], [highest timeout certificate: {}]",
+                    initial_data.last_vote.as_ref().map_or("None".to_string(), |v| v.to_string()),
+                    initial_data.highest_timeout_certificate.as_ref().map_or("None".to_string(), |v| v.to_string()),
+                );
 
-        (self as &dyn PersistentLivenessStorage<T>)
-            .prune_tree(initial_data.take_blocks_to_prune())
-            .expect("unable to prune dangling blocks during restart");
-        if initial_data.last_vote.is_none() {
-            self.db
-                .delete_last_vote_msg()
-                .expect("unable to cleanup last vote");
+                LivenessStorageData::RecoveryData(initial_data)
+            }
+            Err(e) => {
+                error!("Failed to construct recovery data: {}", e);
+                LivenessStorageData::LedgerRecoveryData(ledger_recovery_data)
+            }
         }
-        if initial_data.highest_timeout_certificate.is_none() {
-            self.db
-                .delete_highest_timeout_certificate()
-                .expect("unable to cleanup highest timeout cert");
-        }
-        info!(
-            "Starting up the consensus state machine with recovery data - [last_vote {}], [highest timeout certificate: {}]",
-            initial_data.last_vote.as_ref().map_or("None".to_string(), |v| v.to_string()),
-            initial_data.highest_timeout_certificate.as_ref().map_or("None".to_string(), |v| v.to_string()),
-        );
-
-        initial_data
     }
 
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
