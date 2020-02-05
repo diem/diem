@@ -1,0 +1,27 @@
+---
+name: Land-blocking Test
+
+on:
+  push:
+    branches:
+      - auto
+
+jobs:
+  build-and-run-cluster-test:
+    name: Build images and run cluster test
+    runs-on: self-hosted
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup env
+      run: |
+        echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
+    - name: Build, tag and push images
+      run: |
+        docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary
+    - name: Launch cluster test
+      run: |
+        JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
+        ./scripts/cti \
+          --tag dev_$LIBRA_GIT_REV \
+          --report report.json \
+          --run bench
