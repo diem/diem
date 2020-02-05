@@ -5,7 +5,7 @@
 use std::cmp::min;
 use std::env;
 
-use crate::experiments::ExperimentParam;
+use crate::experiments::{CpuFlamegraphParams, ExperimentParam};
 use crate::{
     cluster::Cluster,
     experiments::{
@@ -52,6 +52,9 @@ impl ExperimentSuite {
         ));
         experiments.push(Box::new(
             PerformanceBenchmarkThreeRegionSimulationParams {}.build(cluster),
+        ));
+        experiments.push(Box::new(
+            CpuFlamegraphParams { duration_secs: 60 }.build(cluster),
         ));
         Self { experiments }
     }
