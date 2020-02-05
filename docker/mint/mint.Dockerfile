@@ -12,11 +12,44 @@ WORKDIR /libra
 COPY rust-toolchain /libra/rust-toolchain
 RUN rustup install $(cat rust-toolchain)
 
-FROM toolchain AS builder
+FROM toolchain AS build-clone
+# Let's hope Jack doesn't decide to rewrite history.  Perhaps a proper release is in order.
+# We could also simply choose to build nightlies instead and have less work to do in the
+# build layers.
+ENV DEP_SHADOW_VERSION 956632e3c7b2f501758de6a92f38c50cd3fffaf3
+RUN cargo install --git https://github.com/metajack/cargo-create-deponly-shadow --rev ${DEP_SHADOW_VERSION}
 
+# Here we start trickery
+# Copy in the code.
+WORKDIR /libra
 COPY . /libra
+# Generate a shadow project (Cargo.toml(s)/Cargo.lock/needed rust files.)
+# note that the rust files are currently generated with current timestamp,
+# a hack will be needed later until this is fixed
+RUN cargo create-deponly-shadow --output-dir /shadow
 
-RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
+#  builder layer start from a fresh toolchain layer.  No code in it.
+FROM toolchain as builder
+# Copy in the shadow libra project
+WORKDIR /libra
+# Copy code from /shadow built in build-clone in to /libra
+COPY --from=build-clone /shadow /libra
+
+# Build our dependencies
+ARG TARGET_DIR=/tmp/dockertarget
+RUN cargo build --release --target-dir=${TARGET_DIR} -p libra-node -p cli -p config-builder -p safety-rules
+# We are now at a happy place where dependencies will be prebuilt by cargo and just our code
+# changes will be recompiled, unless we modify dependencies.
+
+# Delete the shadow repo and copy in the full libra project
+WORKDIR /
+RUN rm -rf /libra
+WORKDIR /libra
+COPY . /libra
+# Hack to update the build.rs timestamp so cargo doesn't choke.
+RUN find /libra -name '*.rs' | xargs touch
+# Finally we build our code.
+RUN cargo build --release --target-dir=${TARGET_DIR} -p libra-node -p cli -p config-builder -p safety-rules && cd ${TARGET_DIR}/release && rm -r build deps incremental
 
 ### Production Image ###
 FROM debian:buster AS pre-test
@@ -31,8 +64,9 @@ RUN pip3 install -r /libra/docker/mint/requirements.txt
 
 RUN mkdir -p /opt/libra/bin  /libra/client/data/wallet/
 
-COPY --from=builder /libra/target/release/cli /opt/libra/bin
-COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
+ARG TARGET_DIR=/tmp/dockertarget
+COPY --from=builder ${TARGET_DIR}/release/cli /opt/libra/bin
+COPY --from=builder ${TARGET_DIR}/release/config-builder /opt/libra/bin
 COPY docker/mint/server.py /opt/libra/bin
 COPY docker/mint/docker-run.sh /opt/libra/bin
 
