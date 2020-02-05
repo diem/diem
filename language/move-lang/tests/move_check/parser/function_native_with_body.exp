@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/function_native_with_body.move:3:17 ───
    │
  3 │     native fn() {}
-   │                 ^ Unexpected token: '{'
+   │                 ^ Unexpected '{'
    ·
  3 │     native fn() {}
-   │                 - Expected: ';'
+   │                 - Expected ';'
    │
 

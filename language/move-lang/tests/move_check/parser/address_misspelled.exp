@@ -3,6 +3,6 @@ error:
    ┌── tests/move_check/parser/address_misspelled.move:1:1 ───
    │
  1 │ addrexx 0x1:
-   │ ^ Invalid address directive. Expected 'address' got 'addrexx'
+   │ ^^^^^^^ Invalid address directive. Expected 'address' got 'addrexx'
    │
 

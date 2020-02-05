@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/struct_native_resource.move:3:14 ───
    │
  3 │     resource native struct S;
-   │              ^^^^^^ Unexpected token: 'native'
+   │              ^^^^^^ Unexpected 'native'
    ·
  3 │     resource native struct S;
-   │              ------ Expected: 'struct'
+   │              ------ Expected 'struct'
    │
 

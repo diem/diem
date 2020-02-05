@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/invalid_pack_mname_non_addr.move:4:14 ───
    │
  4 │         false::M::S { }
-   │              ^^ Unexpected token: '::'
+   │              ^^ Unexpected '::'
    ·
  4 │         false::M::S { }
-   │              -- Expected: ';'
+   │              -- Expected ';'
    │
 

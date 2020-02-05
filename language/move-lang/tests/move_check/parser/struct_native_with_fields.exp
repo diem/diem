@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/struct_native_with_fields.move:3:21 ───
    │
  3 │     native struct S { f: u64 }
-   │                     ^ Unexpected token: '{'
+   │                     ^ Unexpected '{'
    ·
  3 │     native struct S { f: u64 }
-   │                     - Expected: ';'
+   │                     - Expected ';'
    │
 

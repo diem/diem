@@ -3,6 +3,6 @@ error:
    ┌── tests/move_check/parser/native_main.move:1:1 ───
    │
  1 │ native main();
-   │ ^ Native functions can only be declared inside a module
+   │ ^^^^^^ Native functions can only be declared inside a module
    │
 

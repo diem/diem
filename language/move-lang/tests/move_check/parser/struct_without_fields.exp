@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/struct_without_fields.move:3:13 ───
    │
  3 │     struct S;
-   │             ^ Unexpected token: ';'
+   │             ^ Unexpected ';'
    ·
  3 │     struct S;
-   │             - Expected: '{'
+   │             - Expected '{'
    │
 

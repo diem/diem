@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/acquires_list_generic.move:6:21 ───
    │
  6 │     foo() acquires B<CupC<R>> {
-   │                     ^ Unexpected token: '<'
+   │                     ^ Unexpected '<'
    ·
  6 │     foo() acquires B<CupC<R>> {
-   │                     - Expected: ','
+   │                     - Expected ','
    │
 

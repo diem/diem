@@ -17,24 +17,17 @@ use crate::shared::*;
 // Error Handling
 //**************************************************************************************************
 
-fn unexpected_token_error(
-    file: &'static str,
-    start_loc: usize,
-    actual: &str,
-    expected: Vec<String>,
-) -> Error {
-    let fmt_expected =
-        |expected: Vec<String>| -> String { format!("Expected: {}", expected.join(", ")) };
-    let loc = make_loc(file, start_loc, start_loc + actual.len());
+fn unexpected_token_error<'input>(tokens: &Lexer<'input>, expected: &str) -> Error {
+    let loc = current_token_loc(tokens);
+    let unexpected = if tokens.peek() == Tok::EOF {
+        "end-of-file".to_string()
+    } else {
+        format!("'{}'", tokens.content())
+    };
     vec![
-        (loc, format!("Unexpected token: '{}'", actual)),
-        (loc, fmt_expected(expected)),
+        (loc, format!("Unexpected {}", unexpected)),
+        (loc, format!("Expected {}", expected)),
     ]
-}
-
-fn user_error(file: &'static str, start_loc: usize, error: String) -> Error {
-    let loc = make_loc(file, start_loc, start_loc);
-    vec![(loc, error)]
 }
 
 //**************************************************************************************************
@@ -78,12 +71,8 @@ fn match_token<'input>(tokens: &mut Lexer<'input>, tok: Tok) -> Result<bool, Err
 // Check for the specified token and return an error if it does not match.
 fn consume_token<'input>(tokens: &mut Lexer<'input>, tok: Tok) -> Result<(), Error> {
     if tokens.peek() != tok {
-        return Err(unexpected_token_error(
-            tokens.file_name(),
-            tokens.start_loc(),
-            tokens.content(),
-            vec![format!("'{}'", tok.to_string())],
-        ));
+        let expected = format!("'{}'", &tok.to_string());
+        return Err(unexpected_token_error(tokens, &expected));
     }
     tokens.advance()?;
     Ok(())
@@ -178,15 +167,10 @@ where
 // Parse a name:
 //      Name = <NameValue>
 fn parse_name<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<String>, Error> {
-    let start_loc = tokens.start_loc();
     if tokens.peek() != Tok::NameValue {
-        return Err(unexpected_token_error(
-            tokens.file_name(),
-            start_loc,
-            tokens.content(),
-            vec!["a name value".to_string()],
-        ));
+        return Err(unexpected_token_error(tokens, "a name value"));
     }
+    let start_loc = tokens.start_loc();
     let name = tokens.content().to_string();
     tokens.advance()?;
     let end_loc = tokens.previous_end_loc();
@@ -197,15 +181,10 @@ fn parse_name<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<String>, Err
 //      Address = <AddressValue>
 fn parse_address<'input>(tokens: &mut Lexer<'input>) -> Result<Address, Error> {
     if tokens.peek() != Tok::AddressValue {
-        return Err(unexpected_token_error(
-            tokens.file_name(),
-            tokens.start_loc(),
-            tokens.content(),
-            vec!["an account address value".to_string()],
-        ));
+        return Err(unexpected_token_error(tokens, "an account address value"));
     }
-    let addr = Address::parse_str(&tokens.content())
-        .map_err(|msg| user_error(tokens.file_name(), tokens.start_loc(), msg));
+    let addr =
+        Address::parse_str(&tokens.content()).map_err(|msg| vec![(current_token_loc(tokens), msg)]);
     tokens.advance()?;
     addr
 }
@@ -275,11 +254,7 @@ fn parse_module_access<'input, F: FnOnce() -> String>(
         }
 
         _ => {
-            let loc = current_token_loc(tokens);
-            return Err(vec![
-                (loc, format!("Unexpected '{}'", tokens.content())),
-                (loc, format!("Expected {}", item_description())),
-            ]);
+            return Err(unexpected_token_error(tokens, &item_description()));
         }
     };
     let end_loc = tokens.previous_end_loc();
@@ -624,11 +599,7 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
         }
 
         _ => {
-            let loc = current_token_loc(tokens);
-            return Err(vec![
-                (loc, format!("Unexpected '{}'", tokens.content())),
-                (loc, "Expected an expression term".to_string()),
-            ]);
+            return Err(unexpected_token_error(tokens, "an expression term"));
         }
     };
     let end_loc = tokens.previous_end_loc();
@@ -672,14 +643,9 @@ fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error>
         }
 
         _ => {
-            let loc = current_token_loc(tokens);
-            let msg = "Expected either a brace-enclosed pack expression or \
-                       a parenthesized list of arguments for a function call"
-                .to_string();
-            Err(vec![
-                (loc, format!("Unexpected '{}'", tokens.content())),
-                (loc, msg),
-            ])
+            let expected = "either a brace-enclosed pack expression or \
+                            a parenthesized list of arguments for a function call";
+            Err(unexpected_token_error(tokens, expected))
         }
     }
 }
@@ -1012,13 +978,8 @@ fn parse_type_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Name, Kin
             Tok::Copyable => Kind_::Affine,
             Tok::Resource => Kind_::Resource,
             _ => {
-                let loc = current_token_loc(tokens);
-                let msg =
-                    "Type parameter constraint can be either 'copyable' or 'resource'".to_string();
-                return Err(vec![
-                    (loc, format!("Unexpected '{}'", tokens.content())),
-                    (loc, msg),
-                ]);
+                let expected = "either 'copyable' or 'resource'";
+                return Err(unexpected_token_error(tokens, expected));
             }
         };
         tokens.advance()?;
@@ -1065,11 +1026,11 @@ fn parse_function_decl<'input>(
         consume_optional_token_with_loc(tokens, Tok::Native)?
     } else {
         if tokens.peek() == Tok::Native {
-            return Err(user_error(
-                tokens.file_name(),
-                tokens.start_loc(),
+            let loc = current_token_loc(tokens);
+            return Err(vec![(
+                loc,
                 "Native functions can only be declared inside a module".to_string(),
-            ));
+            )]);
         }
         None
     };
@@ -1325,15 +1286,13 @@ fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<FileDefinition, Erro
             } else {
                 let addr_name = parse_name(tokens)?;
                 if addr_name.value != "address" {
-                    let msg = format!(
-                        "Invalid address directive. Expected 'address' got '{}'",
-                        addr_name.value
-                    );
-                    return Err(user_error(
-                        tokens.file_name(),
-                        addr_name.loc.span().start().to_usize(),
-                        msg,
-                    ));
+                    return Err(vec![(
+                        addr_name.loc,
+                        format!(
+                            "Invalid address directive. Expected 'address' got '{}'",
+                            addr_name.value
+                        ),
+                    )]);
                 }
                 let start_loc = tokens.start_loc();
                 let addr = parse_address(tokens)?;
@@ -1352,12 +1311,11 @@ fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<FileDefinition, Erro
         }
         let function = parse_function_decl(tokens, /* allow_native */ false)?;
         if tokens.peek() != Tok::EOF {
-            return Err(unexpected_token_error(
-                tokens.file_name(),
-                tokens.start_loc(),
-                tokens.content(),
-                vec![],
-            ));
+            let loc = current_token_loc(tokens);
+            return Err(vec![(
+                loc,
+                "Unexpected text after end of main function".to_string(),
+            )]);
         }
         FileDefinition::Main(Main { uses, function })
     };

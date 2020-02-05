@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/expansion/unpack_assign_block_expr.move:4:13 ───
    │
  4 │         S { let f = 0; } = S { f: 0 };
-   │             ^^^ Unexpected token: 'let'
+   │             ^^^ Unexpected 'let'
    ·
  4 │         S { let f = 0; } = S { f: 0 };
-   │             --- Expected: a name value
+   │             --- Expected a name value
    │
 
