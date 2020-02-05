@@ -5,7 +5,7 @@ use crate::{
     access_path::{AccessPath, Accesses},
     account_config,
     discovery_info::DiscoveryInfo,
-    event::EventKey,
+    event::{EventHandle, EventKey},
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
     validator_set::validator_set_module_name,
@@ -37,9 +37,37 @@ pub fn discovery_set_tag() -> StructTag {
     }
 }
 
-#[allow(dead_code)]
-pub(crate) fn discovery_set_path() -> Vec<u8> {
-    AccessPath::resource_access_vec(&discovery_set_tag(), &Accesses::empty())
+/// Path to the DiscoverySet resource.
+pub static DISCOVERY_SET_RESOURCE_PATH: Lazy<Vec<u8>> =
+    Lazy::new(|| AccessPath::resource_access_vec(&discovery_set_tag(), &Accesses::empty()));
+
+/// The path to the discovery set change event handle under a DiscoverSetResource.
+pub static DISCOVERY_SET_CHANGE_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
+    let mut path = DISCOVERY_SET_RESOURCE_PATH.to_vec();
+    path.extend_from_slice(b"/change_events_count/");
+    path
+});
+
+/// The AccessPath pointing to the discovery set change event handle under the system discovery set address.
+pub static GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH: Lazy<AccessPath> = Lazy::new(|| {
+    AccessPath::new(
+        account_config::discovery_set_address(),
+        DISCOVERY_SET_CHANGE_EVENT_PATH.to_vec(),
+    )
+});
+
+#[derive(Serialize, Deserialize)]
+pub struct DiscoverySetResource {
+    /// The current discovery set. Updated only at epoch boundaries via reconfiguration.
+    discovery_set: Vec<DiscoveryInfo>,
+    /// Handle where discovery set change events are emitted
+    change_events: EventHandle,
+}
+
+impl DiscoverySetResource {
+    pub fn change_events(&self) -> &EventHandle {
+        &self.change_events
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

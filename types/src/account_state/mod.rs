@@ -1,16 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_config::{
-    AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH, ACCOUNT_SENT_EVENT_PATH,
+use crate::{
+    account_config::{
+        AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH,
+        ACCOUNT_SENT_EVENT_PATH,
+    },
+    discovery_set::{
+        DiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH, DISCOVERY_SET_RESOURCE_PATH,
+    },
+    event::EventHandle,
 };
-use crate::event::EventHandle;
 use anyhow::{bail, Error, Result};
-use serde::export::Formatter;
-use serde::{Deserialize, Serialize};
-use std::collections::btree_map::BTreeMap;
-use std::convert::TryFrom;
-use std::fmt;
+use serde::{export::Formatter, Deserialize, Serialize};
+use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct AccountState(BTreeMap<Vec<u8>, Vec<u8>>);
@@ -24,6 +27,14 @@ impl AccountState {
             .map_err(Into::into)
     }
 
+    pub fn get_discovery_set_resource(&self) -> Result<Option<DiscoverySetResource>> {
+        self.0
+            .get(&*DISCOVERY_SET_RESOURCE_PATH)
+            .map(|bytes| lcs::from_bytes(bytes))
+            .transpose()
+            .map_err(Into::into)
+    }
+
     pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<Option<EventHandle>> {
         let event_handle = if *ACCOUNT_RECEIVED_EVENT_PATH == query_path {
             self.get_account_resource()?
@@ -31,6 +42,9 @@ impl AccountState {
         } else if *ACCOUNT_SENT_EVENT_PATH == query_path {
             self.get_account_resource()?
                 .map(|account_resource| account_resource.sent_events().clone())
+        } else if *DISCOVERY_SET_CHANGE_EVENT_PATH == query_path {
+            self.get_discovery_set_resource()?
+                .map(|discovery_set_resource| discovery_set_resource.change_events().clone())
         } else {
             bail!("Unrecognized query path: {:?}", query_path);
         };
