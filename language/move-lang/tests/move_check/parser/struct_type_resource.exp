@@ -6,6 +6,6 @@ error:
    │                 ^^^ Unexpected 'res'
    ·
  3 │     struct S<T: res> { }
-   │                 --- Type parameter constraint can be either 'copyable' or 'resource'
+   │                 --- Expected either 'copyable' or 'resource'
    │
 

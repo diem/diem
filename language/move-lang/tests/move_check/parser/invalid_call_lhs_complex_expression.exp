@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/invalid_call_lhs_complex_expression.move:3:29 ───
    │
  3 │         (if (true) 5 else 0)();
-   │                             ^ Unexpected token: '('
+   │                             ^ Unexpected '('
    ·
  3 │         (if (true) 5 else 0)();
-   │                             - Expected: ';'
+   │                             - Expected ';'
    │
 

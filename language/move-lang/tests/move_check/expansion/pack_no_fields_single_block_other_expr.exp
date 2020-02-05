@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/expansion/pack_no_fields_single_block_other_expr.move:6:19 ───
    │
  6 │         let s = S 0;
-   │                   ^ Unexpected token: '0'
+   │                   ^ Unexpected '0'
    ·
  6 │         let s = S 0;
-   │                   - Expected: ';'
+   │                   - Expected ';'
    │
 

@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/function_public_native.move:3:12 ───
    │
  3 │     public native f();
-   │            ^^^^^^ Unexpected token: 'native'
+   │            ^^^^^^ Unexpected 'native'
    ·
  3 │     public native f();
-   │            ------ Expected: a name value
+   │            ------ Expected a name value
    │
 

@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/function_params_missing.move:3:8 ───
    │
  3 │     fn { }
-   │        ^ Unexpected token: '{'
+   │        ^ Unexpected '{'
    ·
  3 │     fn { }
-   │        - Expected: '('
+   │        - Expected '('
    │
 

@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/invalid_call_lhs_return.move:3:20 ───
    │
  3 │         (return ())(0, 1);
-   │                    ^ Unexpected token: '('
+   │                    ^ Unexpected '('
    ·
  3 │         (return ())(0, 1);
-   │                    - Expected: ';'
+   │                    - Expected ';'
    │
 

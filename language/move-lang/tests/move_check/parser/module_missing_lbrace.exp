@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/module_missing_lbrace.move:2:5 ───
    │
  2 │     f() {}
-   │     ^ Unexpected token: 'f'
+   │     ^ Unexpected 'f'
    ·
  2 │     f() {}
-   │     - Expected: '{'
+   │     - Expected '{'
    │
 
