@@ -97,7 +97,7 @@ impl<TMessage: PartialEq> PartialEq for Event<TMessage> {
 /// `NetworkEvents` is really just a thin wrapper around a
 /// `channel::Receiver<NetworkNotification>` that deserializes inbound messages.
 #[pin_project]
-pub struct NetworkEvents<TMessage: Message + Default> {
+pub struct NetworkEvents<TMessage> {
     #[pin]
     event_stream: Select<
         Map<
@@ -137,7 +137,7 @@ impl<TMessage: Message + Default> NetworkEvents<TMessage> {
     }
 }
 
-impl<TMessage: Message + Default> Stream for NetworkEvents<TMessage> {
+impl<TMessage> Stream for NetworkEvents<TMessage> {
     type Item = Result<Event<TMessage>, NetworkError>;
 
     fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
@@ -180,7 +180,7 @@ fn control_msg_to_event<TMessage>(
     }
 }
 
-impl<TMessage: Message + Default> FusedStream for NetworkEvents<TMessage> {
+impl<TMessage> FusedStream for NetworkEvents<TMessage> {
     fn is_terminated(&self) -> bool {
         self.event_stream.is_terminated()
     }
@@ -202,12 +202,12 @@ impl<TMessage: Message + Default> FusedStream for NetworkEvents<TMessage> {
 /// Provide Protobuf wrapper over `[peer_manager::PeerManagerRequestSender]`
 /// The `TMessage` generic is a protobuf message type (`prost::Message`).
 #[derive(Clone)]
-pub struct NetworkSender<TMessage: Message + Default> {
+pub struct NetworkSender<TMessage> {
     inner: PeerManagerRequestSender,
     _marker: PhantomData<TMessage>,
 }
 
-impl<TMessage: Message + Default> NetworkSender<TMessage> {
+impl<TMessage> NetworkSender<TMessage> {
     pub fn new(inner: PeerManagerRequestSender) -> Self {
         Self {
             inner,
@@ -234,7 +234,9 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
         self.inner.disconnect_peer(peer).await?;
         Ok(())
     }
+}
 
+impl<TMessage: Message + Default> NetworkSender<TMessage> {
     /// Send a protobuf message to a single recipient. Provides a wrapper over
     /// `[peer_manager::PeerManagerRequestSender::send_to]`.
     pub fn send_to(
