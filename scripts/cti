@@ -9,6 +9,7 @@ PR=""
 WORKSPACE="cluster-test-ci"
 ENV="env"
 REPORT=""
+MARKER=$USER
 
 while (( "$#" )); do
   case "$1" in
@@ -23,6 +24,10 @@ while (( "$#" )); do
     -M|--master)
       TAG=master
       shift 1
+      ;;
+    --marker)
+      MARKER=$2
+      shift 2
       ;;
     -T|--tag)
       TAG=$2
@@ -58,6 +63,7 @@ then
       echo "-W|--workspace <WORKSPACE>: Use custom workplace <WORKSPACE>"
       echo "-E|--env <ENV>: Set environment variable, ex. -E RUST_LOG=debug. Can be repeated, e.g. -E A=B -E C=D"
       echo "-R|--report file.json: Generate json report into file.json"
+      echo "--marker <MARKER>: Marker to identify purpose of this run. Must be set by automatic invocations like CI"
       echo
       echo "To see cluster test runner arguments run cti --master"
       echo
@@ -90,7 +96,7 @@ echo " * tail -f /data/libra/libra.log"
 echo "**********"
 
 
-ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com $ENV REMOTE_USER=$USER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" --deploy $TAG $* | tee $OUTPUT_TEE
+ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com $ENV CTI_MARKER=$MARKER REMOTE_USER=$MARKER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" --deploy $TAG $* | tee $OUTPUT_TEE
 
 if [ ! -z "$REPORT" ]; then
     cat $OUTPUT_TEE | awk '/====json-report-begin===/{f=1;next} /====json-report-end===/{f=0} f' > $REPORT

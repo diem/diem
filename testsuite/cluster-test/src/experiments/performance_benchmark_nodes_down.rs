@@ -38,8 +38,8 @@ pub struct PerformanceBenchmarkNodesDownParams {
     pub is_fullnode: bool,
     #[structopt(
     long,
-    default_value = stringify!(DEFAULT_BENCH_DURATION),
-    help = "Number of nodes which should be down"
+    default_value = Box::leak(format!("{}", DEFAULT_BENCH_DURATION).into_boxed_str()),
+    help = "Duration of an experiment in seconds"
     )]
     pub duration: u64,
 }
