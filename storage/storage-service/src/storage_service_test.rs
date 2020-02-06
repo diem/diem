@@ -43,6 +43,7 @@ proptest! {
 
         let mut version = 0;
         let mut all_accounts = BTreeMap::new();
+        let mut all_txns = vec![];
 
         for (txns_to_commit, ledger_info_with_sigs) in &blocks {
             rt.block_on(write_client.save_transactions(
@@ -62,6 +63,13 @@ proptest! {
             for (address, blob) in account_states.iter() {
                 all_accounts.insert(address.hash(), blob.clone());
             }
+
+            // Record all transactions.
+            all_txns.extend(
+                txns_to_commit
+                    .iter()
+                    .map(|txn_to_commit| txn_to_commit.transaction().clone()),
+            );
 
             let account_state_request_items = account_states
                 .keys()
@@ -98,14 +106,26 @@ proptest! {
         }
 
         // Check state backup for all account states.
-        let stream = rt
-            .block_on(read_client.backup_account_state(version - 1))
-            .unwrap();
-        let backup_responses = rt.block_on(stream.collect::<Vec<_>>());
-        for ((hash, blob), response) in zip_eq(all_accounts, backup_responses) {
-            let resp = response.unwrap();
-            prop_assert_eq!(&hash, &resp.account_key);
-            prop_assert_eq!(&blob, &resp.account_state_blob);
+        {
+            let stream = rt
+                .block_on(read_client.backup_account_state(version - 1))
+                .unwrap();
+            let backup_responses = rt.block_on(stream.collect::<Vec<_>>());
+            for ((hash, blob), response) in zip_eq(all_accounts, backup_responses) {
+                let resp = response.unwrap();
+                prop_assert_eq!(&hash, &resp.account_key);
+                prop_assert_eq!(&blob, &resp.account_state_blob);
+            }
+        }
+
+        {
+            let stream = rt
+                .block_on(read_client.backup_transaction(0, all_txns.len() as u64))
+                .unwrap();
+            let backup_responses = rt.block_on(stream.collect::<Vec<_>>());
+            for (txn, resp) in zip_eq(all_txns, backup_responses) {
+                prop_assert_eq!(txn, resp.unwrap().transaction);
+            }
         }
     }
 }

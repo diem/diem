@@ -8,12 +8,12 @@ use crate::{
     change_set::ChangeSet, errors::LibraDbError,
     schema::transaction_by_account::TransactionByAccountSchema,
 };
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{Transaction, Version},
 };
-use schemadb::DB;
+use schemadb::{SchemaIterator, DB};
 use std::sync::Arc;
 
 pub(crate) struct TransactionStore {
@@ -51,6 +51,22 @@ impl TransactionStore {
             .ok_or_else(|| LibraDbError::NotFound(format!("Txn {}", version)).into())
     }
 
+    /// Gets an iterator that yields `num_transactions` transactions starting from `start_version`.
+    pub fn get_transaction_iter(
+        &self,
+        start_version: Version,
+        num_transactions: u64,
+    ) -> Result<TransactionIter> {
+        let mut iter = self.db.iter::<TransactionSchema>(Default::default())?;
+        iter.seek(&start_version)?;
+        Ok(TransactionIter {
+            inner: iter,
+            end_version: start_version
+                .checked_add(num_transactions)
+                .ok_or_else(|| format_err!("Too many transactions requested."))?,
+        })
+    }
+
     /// Save signed transaction at `version`
     pub fn put_transaction(
         &self,
@@ -67,6 +83,28 @@ impl TransactionStore {
         cs.batch.put::<TransactionSchema>(&version, &transaction)?;
 
         Ok(())
+    }
+}
+
+pub struct TransactionIter<'a> {
+    inner: SchemaIterator<'a, TransactionSchema>,
+    end_version: Version,
+}
+
+impl<'a> TransactionIter<'a> {
+    fn next_impl(&mut self) -> Result<Option<Transaction>> {
+        match self.inner.next().transpose()? {
+            Some((version, transaction)) if version < self.end_version => Ok(Some(transaction)),
+            _ => Ok(None),
+        }
+    }
+}
+
+impl<'a> Iterator for TransactionIter<'a> {
+    type Item = Result<Transaction>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_impl().transpose()
     }
 }
 

@@ -34,7 +34,7 @@ use libra_types::{
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
-    transaction::{TransactionListWithProof, TransactionToCommit, Version},
+    transaction::{Transaction, TransactionListWithProof, TransactionToCommit, Version},
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
@@ -835,6 +835,69 @@ impl From<BackupAccountStateResponse> for crate::proto::storage::BackupAccountSt
 impl Into<(HashValue, AccountStateBlob)> for BackupAccountStateResponse {
     fn into(self) -> (HashValue, AccountStateBlob) {
         (self.account_key, self.account_state_blob)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct BackupTransactionRequest {
+    pub start_version: Version,
+    pub num_transactions: u64,
+}
+
+impl BackupTransactionRequest {
+    pub fn new(start_version: Version, num_transactions: u64) -> Self {
+        Self {
+            start_version,
+            num_transactions,
+        }
+    }
+}
+
+impl TryFrom<crate::proto::storage::BackupTransactionRequest> for BackupTransactionRequest {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::BackupTransactionRequest) -> Result<Self> {
+        Ok(Self {
+            start_version: proto.start_version,
+            num_transactions: proto.num_transactions,
+        })
+    }
+}
+
+impl From<BackupTransactionRequest> for crate::proto::storage::BackupTransactionRequest {
+    fn from(request: BackupTransactionRequest) -> Self {
+        Self {
+            start_version: request.start_version,
+            num_transactions: request.num_transactions,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct BackupTransactionResponse {
+    pub transaction: Transaction,
+}
+
+impl TryFrom<crate::proto::storage::BackupTransactionResponse> for BackupTransactionResponse {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::BackupTransactionResponse) -> Result<Self> {
+        Ok(Self {
+            transaction: proto
+                .transaction
+                .ok_or_else(|| format_err!("Missing transaction."))?
+                .try_into()?,
+        })
+    }
+}
+
+impl From<BackupTransactionResponse> for crate::proto::storage::BackupTransactionResponse {
+    fn from(response: BackupTransactionResponse) -> Self {
+        Self {
+            transaction: Some(response.transaction.into()),
+        }
     }
 }
 

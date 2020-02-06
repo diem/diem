@@ -15,6 +15,7 @@ extern crate prometheus;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod test_helper;
 
+pub mod backup;
 pub mod errors;
 pub mod schema;
 
@@ -31,6 +32,7 @@ mod transaction_store;
 mod libradb_test;
 
 use crate::{
+    backup::BackupHandler,
     change_set::{ChangeSet, SealedChangeSet},
     errors::LibraDbError,
     event_store::EventStore,
@@ -121,7 +123,7 @@ fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<(
 pub struct LibraDB {
     db: Arc<DB>,
     ledger_store: LedgerStore,
-    transaction_store: TransactionStore,
+    transaction_store: Arc<TransactionStore>,
     state_store: Arc<StateStore>,
     event_store: EventStore,
     system_store: SystemStore,
@@ -179,7 +181,7 @@ impl LibraDB {
             event_store: EventStore::new(Arc::clone(&db)),
             ledger_store: LedgerStore::new(Arc::clone(&db)),
             state_store: Arc::new(StateStore::new(Arc::clone(&db))),
-            transaction_store: TransactionStore::new(Arc::clone(&db)),
+            transaction_store: Arc::new(TransactionStore::new(Arc::clone(&db))),
             system_store: SystemStore::new(Arc::clone(&db)),
             pruner: Pruner::new(Arc::clone(&db), Self::NUM_HISTORICAL_VERSIONS_TO_KEEP),
         }
@@ -767,6 +769,12 @@ impl LibraDB {
     }
 
     // ================================== Backup APIs ===================================
+
+    /// Gets an instance of `BackupHandler` for data backup purpose.
+    pub fn get_backup_handler(&self) -> BackupHandler {
+        BackupHandler::new(Arc::clone(&self.transaction_store))
+    }
+
     /// Gets an iterator which can yield all accounts in the state tree.
     pub fn get_account_iter(
         &self,

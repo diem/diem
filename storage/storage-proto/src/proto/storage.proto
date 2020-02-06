@@ -62,6 +62,10 @@ service Storage {
 
   rpc GetAccountStateRangeProof(GetAccountStateRangeProofRequest)
       returns (GetAccountStateRangeProofResponse);
+
+  // Returns a stream of transactions.
+  rpc BackupTransaction(BackupTransactionRequest)
+      returns (stream BackupTransactionResponse);
 }
 
 message SaveTransactionsRequest {
@@ -189,4 +193,16 @@ message GetAccountStateRangeProofRequest {
 
 message GetAccountStateRangeProofResponse {
   types.SparseMerkleRangeProof proof = 1;
+}
+
+message BackupTransactionRequest {
+  // The version of the first transaction.
+  uint64 start_version = 1;
+
+  // Number of transactions to request.
+  uint64 num_transactions = 2;
+}
+
+message BackupTransactionResponse {
+  types.Transaction transaction = 1;
 }
