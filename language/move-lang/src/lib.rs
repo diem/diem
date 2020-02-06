@@ -18,6 +18,7 @@ pub mod typing;
 
 pub mod command_line;
 
+pub mod ir_translation;
 pub mod test_utils;
 
 use codespan::{ByteIndex, Span};

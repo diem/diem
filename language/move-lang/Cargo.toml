@@ -36,3 +36,7 @@ harness = false
 [[test]]
 name = "functional_testsuite"
 harness = false
+
+[[test]]
+name = "ir_test_coverage"
+harness = true
