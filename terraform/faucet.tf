@@ -39,6 +39,7 @@ data "template_file" "ecs_faucet_definition" {
 
 resource "aws_ecs_task_definition" "faucet" {
   family                = "${terraform.workspace}-faucet"
+  depends_on            = [aws_instance.validator]
   container_definitions = data.template_file.ecs_faucet_definition.rendered
   execution_role_arn    = aws_iam_role.ecsTaskExecutionRole.arn
 
