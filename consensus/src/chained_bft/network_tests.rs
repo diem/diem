@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    network::{NetworkReceivers, NetworkSender},
+    network::{ConsensusDataRequest, NetworkSender},
     test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
 use channel;
@@ -11,8 +11,11 @@ use consensus_types::{
     proposal_msg::ProposalMsg, sync_info::SyncInfo, vote::Vote, vote_data::VoteData,
     vote_msg::VoteMsg,
 };
-use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
+use futures::{
+    channel::mpsc, executor::block_on, select, stream::select, SinkExt, StreamExt, TryStreamExt,
+};
 use libra_prost_ext::MessageExt;
+use libra_types::account_address::AccountAddress;
 use libra_types::block_info::BlockInfo;
 use network::{
     interface::{NetworkNotification, NetworkRequest},
@@ -328,7 +331,7 @@ impl DropConfig {
     }
 }
 
-use crate::chained_bft::network::NetworkTask;
+use crate::chained_bft::network::{FromNetworkMsg, NetworkTask};
 use crate::chained_bft::test_utils::TestPayload;
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
@@ -343,7 +346,9 @@ use std::convert::{TryFrom, TryInto};
 fn test_network_api() {
     let runtime = consensus_runtime();
     let num_nodes = 5;
-    let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
+    let mut data_request_senders = Vec::new();
+    let mut receivers: Vec<mpsc::UnboundedReceiver<(AccountAddress, FromNetworkMsg<u64>)>> =
+        Vec::new();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = Vec::new();
     let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
@@ -357,17 +362,15 @@ fn test_network_api() {
 
         playground.add_node(*peer, consensus_tx, network_reqs_rx);
         let (self_sender, self_receiver) = channel::new_test(8);
+        let network_events = network_events.map_err(Into::<anyhow::Error>::into);
+        let all_events = Box::new(select(network_events, self_receiver));
         let node = NetworkSender::new(*peer, network_sender, self_sender, Arc::clone(&validators));
-        let (task, receiver) = NetworkTask::new(
-            Arc::new(RwLock::new(EpochInfo {
-                epoch: 1,
-                verifier: Arc::clone(&validators),
-            })),
-            network_events,
-            self_receiver,
-        );
-        receivers.push(receiver);
-        runtime.handle().spawn(task.start());
+        let (network_data_request_sender, network_data_request_receiver) = mpsc::unbounded();
+        let (network_data_sender, network_data_receiver) = mpsc::unbounded();
+        let network_task = NetworkTask::new(network_data_request_receiver, network_data_sender);
+        receivers.push(network_data_receiver);
+        data_request_senders.push(network_data_request_sender);
+        runtime.handle().spawn(network_task.start(all_events));
         nodes.push(node);
     }
     let vote_msg = VoteMsg::new(
@@ -391,17 +394,40 @@ fn test_network_api() {
         playground
             .wait_for_messages(3, NetworkPlayground::take_all)
             .await;
-        for r in receivers.iter_mut().take(5).skip(2) {
-            let v = r.votes.next().await.unwrap();
-            assert_eq!(v, vote_msg);
+        for sender in data_request_senders.iter() {
+            let _ = sender.unbounded_send(ConsensusDataRequest::NewData);
         }
-        nodes[0].broadcast_proposal(proposal.clone()).await;
+        for r in receivers.iter_mut().take(5).skip(2) {
+            while let Some(msg) = r.next().await {
+                let v = match msg.1 {
+                    FromNetworkMsg::Vote(vote_msg) => vote_msg,
+                    _ => continue,
+                };
+                assert_eq!(v, vote_msg);
+                break;
+            }
+        }
+        nodes[0].broadcast_proposal::<u64>(proposal.clone()).await;
         playground
             .wait_for_messages(4, NetworkPlayground::take_all)
             .await;
+        for sender in data_request_senders.iter() {
+            let _ = sender.unbounded_send(ConsensusDataRequest::NewData);
+        }
         for r in receivers.iter_mut().take(num_nodes - 1) {
-            let p = r.proposals.next().await.unwrap();
-            assert_eq!(p, proposal);
+            while let Some(msg) = r.next().await {
+                let p = match msg.1 {
+                    FromNetworkMsg::Proposal(proposal) => proposal,
+                    _ => continue,
+                };
+                let p = p
+                    .validate_signatures(&validators)
+                    .unwrap()
+                    .verify_well_formed()
+                    .unwrap();
+                assert_eq!(p, proposal);
+                break;
+            }
         }
     });
 }
@@ -411,7 +437,9 @@ fn test_rpc() {
     let runtime = consensus_runtime();
     let num_nodes = 2;
     let mut senders = Vec::new();
-    let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
+    let mut data_request_senders = Vec::new();
+    let mut receivers: Vec<mpsc::UnboundedReceiver<(AccountAddress, FromNetworkMsg<u64>)>> =
+        Vec::new();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = Vec::new();
     let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
@@ -431,20 +459,20 @@ fn test_rpc() {
             self_sender,
             Arc::clone(&validators),
         );
-        let (task, receiver) = NetworkTask::new(
-            Arc::new(RwLock::new(EpochInfo {
-                epoch: 1,
-                verifier: Arc::clone(&validators),
-            })),
-            network_events,
-            self_receiver,
-        );
+
+        let network_events = network_events.map_err(Into::<anyhow::Error>::into);
+        let all_events = Box::new(select(network_events, self_receiver));
+        let (network_data_request_sender, network_data_request_receiver) = mpsc::unbounded();
+        let (network_data_sender, network_data_receiver) = mpsc::unbounded();
+        let network_task = NetworkTask::new(network_data_request_receiver, network_data_sender);
+
         senders.push(network_sender);
-        receivers.push(receiver);
-        runtime.handle().spawn(task.start());
+        receivers.push(network_data_receiver);
+        data_request_senders.push(network_data_request_sender);
+        runtime.handle().spawn(network_task.start(all_events));
         nodes.push(node);
     }
-    let receiver_1 = receivers.remove(1);
+    let mut receiver_1 = receivers.remove(1);
     let node0 = nodes[0].clone();
     let peer1 = peers[1];
     let vote_msg = VoteMsg::new(
@@ -458,9 +486,14 @@ fn test_rpc() {
     );
 
     // verify request block rpc
-    let mut block_retrieval = receiver_1.block_retrieval;
+    let network_data_request_sender = data_request_senders.remove(1);
+    let _ = network_data_request_sender.unbounded_send(ConsensusDataRequest::NewData);
     let on_request_block = async move {
-        while let Some(request) = block_retrieval.next().await {
+        while let Some(msg) = receiver_1.next().await {
+            let request = match msg.1 {
+                FromNetworkMsg::RequestBlock(request) => request,
+                _ => continue,
+            };
             // make sure the network task is not blocked during RPC
             // we limit the network notification queue size to 1 so if it's blocked,
             // we can not process 2 votes and the test will timeout
