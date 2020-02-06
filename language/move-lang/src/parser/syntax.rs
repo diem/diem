@@ -367,7 +367,6 @@ fn parse_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList, Error
 //          <Address>
 //          | "true"
 //          | "false"
-//          | <U64>
 fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
     let start_loc = tokens.start_loc();
     let val = match tokens.peek() {
@@ -382,11 +381,6 @@ fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
         Tok::False => {
             tokens.advance()?;
             Value_::Bool(false)
-        }
-        Tok::U64Value => {
-            let i = u64::from_str(tokens.content()).unwrap();
-            tokens.advance()?;
-            Value_::U64(i)
         }
         _ => unreachable!("parse_value called with invalid token"),
     };
@@ -536,7 +530,22 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             }
         }
 
-        Tok::True | Tok::False | Tok::U64Value => Exp_::Value(parse_value(tokens)?),
+        Tok::True | Tok::False => Exp_::Value(parse_value(tokens)?),
+        Tok::NumValue => {
+            let i = match u128::from_str(tokens.content()) {
+                Ok(i) => i,
+                Err(_) => {
+                    let end_loc = start_loc + tokens.content().len();
+                    let loc = make_loc(tokens.file_name(), start_loc, end_loc);
+                    let msg =
+                        "Invalid number literal. The given literal is too large to fit into the \
+                         largest number type 'u128'";
+                    return Err(vec![(loc, msg.to_owned())]);
+                }
+            };
+            tokens.advance()?;
+            Exp_::InferredNum(i)
+        }
 
         // "(" Comma<Exp> ")"
         // "(" <Exp> ":" <Type> ")"

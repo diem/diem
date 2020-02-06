@@ -6,7 +6,7 @@ error:
    │         ^ Invalid assignment to local 'f'
    ·
  7 │         f = 0;
-   │             - The type: 'u64'
+   │             - The type: integer
    ·
  6 │         let R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
    │                         - Is not compatible with: '&u64'
@@ -34,7 +34,7 @@ error:
     │         ^ Invalid assignment to local 'f'
     ·
  13 │         f = 0;
-    │             - The type: 'u64'
+    │             - The type: integer
     ·
  12 │         let R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
     │                         - Is not compatible with: '&mut u64'
@@ -62,7 +62,7 @@ error:
     │         ^ Invalid assignment to local 'f'
     ·
  20 │         f = &0;
-    │             -- The type: '&u64'
+    │             -- The type: '&{integer}'
     ·
  19 │         let R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
     │                         - Is not a subtype of: '&mut u64'

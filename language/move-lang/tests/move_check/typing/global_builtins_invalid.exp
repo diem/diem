@@ -61,7 +61,7 @@ error:
     │                        ^^^^^^^^^^^^ Invalid call of 'exists'. Invalid argument for parameter '0'
     ·
  13 │         let _ : bool = exists<R>(0);
-    │                                  - The type: 'u64'
+    │                                  - The type: integer
     ·
  13 │         let _ : bool = exists<R>(0);
     │                        ------ Is not compatible with: 'address'
@@ -75,7 +75,7 @@ error:
     │                  ^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to_sender'. Invalid argument for parameter '0'
     ·
  14 │         let () = move_to_sender<R>(0);
-    │                                    - The type: 'u64'
+    │                                    - The type: integer
     ·
  14 │         let () = move_to_sender<R>(0);
     │                                 - Is not compatible with: '0x8675309::M::R'
@@ -89,7 +89,7 @@ error:
     │                  ^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
     ·
  15 │         let () = move_to_sender(0);
-    │                                 - Expected a nominal resource. Found the type: u64
+    │                                 - Expected a nominal resource. Found the type: 'u64'
     │
 
 error: 
@@ -100,7 +100,7 @@ error:
     │                      ^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global'. Invalid argument for parameter '0'
     ·
  16 │         let _ : &R = borrow_global<R>(0);
-    │                                       - The type: 'u64'
+    │                                       - The type: integer
     ·
  16 │         let _ : &R = borrow_global<R>(0);
     │                      ------------- Is not compatible with: 'address'
@@ -114,7 +114,7 @@ error:
     │                          ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'. Invalid argument for parameter '0'
     ·
  17 │         let _ : &mut R = borrow_global_mut<R>(0);
-    │                                               - The type: 'u64'
+    │                                               - The type: integer
     ·
  17 │         let _ : &mut R = borrow_global_mut<R>(0);
     │                          ----------------- Is not compatible with: 'address'
@@ -128,7 +128,7 @@ error:
     │                    ^^^^^^^^^^^^^^^ Invalid call of 'move_from'. Invalid argument for parameter '0'
     ·
  18 │         let R {} = move_from<R>(0);
-    │                                 - The type: 'u64'
+    │                                 - The type: integer
     ·
  18 │         let R {} = move_from<R>(0);
     │                    --------- Is not compatible with: 'address'

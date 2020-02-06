@@ -6,7 +6,7 @@ error:
    │          ^ Invalid mutation. Expected a mutable reference
    ·
  6 │         let u = 0;
-   │                 - The type: 'u64'
+   │                 - The type: integer
    ·
  7 │         *u = 1;
    │          - Is not compatible with: '&mut _'
@@ -76,7 +76,7 @@ error:
     │          ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
     ·
  3 │     struct X { s: S }
-    │                   - The type: 0x8675309::M::S
+    │                   - The type: '0x8675309::M::S'
     ·
  2 │     struct S { f: u64 }
     │            - Is declared as a non-implicitly copyable type here
@@ -118,7 +118,7 @@ error:
     │          ^^^^^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
     ·
  3 │     struct X { s: S }
-    │                   - The type: 0x8675309::M::S
+    │                   - The type: '0x8675309::M::S'
     ·
  2 │     struct S { f: u64 }
     │            - Is declared as a non-implicitly copyable type here

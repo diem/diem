@@ -6,7 +6,7 @@ error:
    │                ^^^^^^^^ Invalid type annotation
    ·
  5 │         let x: &mut u64 = &0;
-   │                           -- The type: '&u64'
+   │                           -- The type: '&{integer}'
    ·
  5 │         let x: &mut u64 = &0;
    │                -------- Is not a subtype of: '&mut u64'
@@ -20,7 +20,7 @@ error:
     │          ^ Invalid assignment to local 'x'
     ·
  10 │         (x, y) = (&0, &0);
-    │                   -- The type: '&u64'
+    │                   -- The type: '&{integer}'
     ·
  9 │         let (x, y): (&mut u64, &mut u64);
     │                      -------- Is not a subtype of: '&mut u64'
@@ -34,7 +34,7 @@ error:
     │             ^ Invalid assignment to local 'y'
     ·
  10 │         (x, y) = (&0, &0);
-    │                       -- The type: '&u64'
+    │                       -- The type: '&{integer}'
     ·
  9 │         let (x, y): (&mut u64, &mut u64);
     │                                -------- Is not a subtype of: '&mut u64'
@@ -48,7 +48,7 @@ error:
     │          ^ Invalid assignment to local 'x'
     ·
  13 │         (x, y) = (&0, &0);
-    │                   -- The type: '&u64'
+    │                   -- The type: '&{integer}'
     ·
  12 │         let (x, y): (&mut u64, &u64);
     │                      -------- Is not a subtype of: '&mut u64'
@@ -62,7 +62,7 @@ error:
     │             ^ Invalid assignment to local 'y'
     ·
  16 │         (x, y)= (&0, &0);
-    │                      -- The type: '&u64'
+    │                      -- The type: '&{integer}'
     ·
  15 │         let (x, y): (&u64, &mut u64);
     │                            -------- Is not a subtype of: '&mut u64'

@@ -6,7 +6,7 @@ error:
    │              ^ Invalid loop body
    ·
  3 │         loop 0
-   │              - The type: 'u64'
+   │              - The type: integer
    ·
  3 │         loop 0
    │              - Is not compatible with: '()'
@@ -48,7 +48,7 @@ error:
     │              ^^^^^^^^^^^^^^^^ Invalid loop body
     ·
  15 │         loop { let x = 0; x }
-    │                        - The type: 'u64'
+    │                        - The type: integer
     ·
  15 │         loop { let x = 0; x }
     │              ---------------- Is not compatible with: '()'
@@ -62,7 +62,7 @@ error:
     │              ^^^^^^^^^^^^^^^^^^^^^^ Invalid loop body
     ·
  19 │         loop { if (true) 1 else 0 }
-    │                          - The type: 'u64'
+    │                          - The type: integer
     ·
  19 │         loop { if (true) 1 else 0 }
     │              ---------------------- Is not compatible with: '()'

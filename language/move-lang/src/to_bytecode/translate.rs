@@ -636,7 +636,10 @@ fn base_type(context: &mut Context, sp!(_, bt_): G::BaseType) -> Result<F::Signa
     Ok(match bt_ {
         B::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Address))), _) => ST::Address,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U8))), _) => ST::U8,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U64))), _) => ST::U64,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U128))), _) => ST::U128,
+
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bool))), _) => ST::Bool,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bytearray))), _) => ST::ByteArray,
         B::Apply(_, sp!(_, TN::ModuleType(m, s)), tys) => {
@@ -847,7 +850,9 @@ fn exp_(
                     let idx = context.byte_array_index(eloc, bytes)?;
                     B::LdByteArray(idx)
                 }
+                V::U8(u) => B::LdU8(u),
                 V::U64(u) => B::LdU64(u),
+                V::U128(u) => B::LdU128(u),
                 V::Bool(b) => {
                     if b {
                         B::LdTrue
@@ -1098,6 +1103,8 @@ fn binary_op(code: &mut Code, sp!(_, op_): BinOp) {
         O::BitOr => B::BitOr,
         O::BitAnd => B::BitAnd,
         O::Xor => B::Xor,
+        O::Shl => B::Shl,
+        O::Shr => B::Shr,
 
         O::And => B::And,
         O::Or => B::Or,

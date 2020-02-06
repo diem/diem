@@ -142,6 +142,7 @@ pub type ExpDotted = Spanned<ExpDotted_>;
 #[allow(clippy::large_enum_variant)]
 pub enum Exp_ {
     Value(Value),
+    InferredNum(u128),
     Move(Var),
     Copy(Var),
 
@@ -457,6 +458,7 @@ impl AstDebug for Exp_ {
         use Exp_ as E;
         match self {
             E::Unit => w.write("()"),
+            E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Value(v) => v.ast_debug(w),
             E::Move(v) => w.write(&format!("move {}", v)),
             E::Copy(v) => w.write(&format!("copy {}", v)),

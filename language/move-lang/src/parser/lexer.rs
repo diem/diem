@@ -11,7 +11,7 @@ use crate::shared::*;
 pub enum Tok {
     EOF,
     AddressValue,
-    U64Value,
+    NumValue,
     NameValue,
     Exclaim,
     ExclaimEqual,
@@ -72,7 +72,7 @@ impl fmt::Display for Tok {
         let s = match *self {
             EOF => "[end-of-file]",
             AddressValue => "[Address]",
-            U64Value => "[U64]",
+            NumValue => "[Num]",
             NameValue => "[Name]",
             Exclaim => "!",
             ExclaimEqual => "!=",
@@ -211,12 +211,12 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
                 let hex_len = get_hex_digits_len(&text[2..]);
                 if hex_len == 0 {
                     // Fall back to treating this as a "0" token.
-                    (Tok::U64Value, 1)
+                    (Tok::NumValue, 1)
                 } else {
                     (Tok::AddressValue, 2 + hex_len)
                 }
             } else {
-                (Tok::U64Value, get_decimal_digits_len(&text))
+                (Tok::NumValue, get_decimal_digits_len(&text))
             }
         }
         'A'..='Z' | 'a'..='z' | '_' => {

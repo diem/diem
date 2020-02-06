@@ -34,10 +34,10 @@ error:
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
    ·
  7 │         foo<bool, bool>(0, false);
-   │             ---- The type: 'bool'
+   │                         - The type: integer
    ·
  7 │         foo<bool, bool>(0, false);
-   │                         - Is not compatible with: 'u64'
+   │             ---- Is not compatible with: 'bool'
    │
 
 error: 
@@ -48,10 +48,10 @@ error:
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
    ·
  8 │         foo<bool, bool>(false, 0);
-   │                   ---- The type: 'bool'
+   │                                - The type: integer
    ·
  8 │         foo<bool, bool>(false, 0);
-   │                                - Is not compatible with: 'u64'
+   │                   ---- Is not compatible with: 'bool'
    │
 
 error: 
@@ -62,10 +62,10 @@ error:
    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
    ·
  9 │         foo<bool, bool>(0, 0);
-   │             ---- The type: 'bool'
+   │                         - The type: integer
    ·
  9 │         foo<bool, bool>(0, 0);
-   │                         - Is not compatible with: 'u64'
+   │             ---- Is not compatible with: 'bool'
    │
 
 error: 
@@ -76,10 +76,10 @@ error:
    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
    ·
  9 │         foo<bool, bool>(0, 0);
-   │                   ---- The type: 'bool'
+   │                            - The type: integer
    ·
  9 │         foo<bool, bool>(0, 0);
-   │                            - Is not compatible with: 'u64'
+   │                   ---- Is not compatible with: 'bool'
    │
 
 error: 

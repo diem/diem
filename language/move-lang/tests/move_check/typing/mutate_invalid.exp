@@ -6,7 +6,7 @@ error:
    │          ^^^^^^ Invalid mutation. New value is not valid for the reference
    ·
  6 │         *&mut 0 = false;
-   │               - The type: 'u64'
+   │          ------ The type: 'integer'
    ·
  6 │         *&mut 0 = false;
    │                   ----- Is not compatible with: 'bool'
@@ -20,10 +20,10 @@ error:
    │          ^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
    ·
  7 │         *&mut S{f:0}.f = &1;
-   │                          -- The type: '&u64'
+   │                          -- The type: '&{integer}'
    ·
  7 │         *&mut S{f:0}.f = &1;
-   │          ------------- Is not compatible with: 'u64'
+   │          ------------- Is not compatible with: ''u64''
    │
 
 error: 
@@ -56,10 +56,10 @@ error:
     │          ^^^^^^^^^^^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
     ·
  10 │         *&mut bar(&mut S{f:0}).f = &0;
-    │                                    -- The type: '&u64'
+    │                                    -- The type: '&{integer}'
     ·
  10 │         *&mut bar(&mut S{f:0}).f = &0;
-    │          ----------------------- Is not compatible with: 'u64'
+    │          ----------------------- Is not compatible with: ''u64''
     │
 
 error: 
@@ -112,10 +112,10 @@ error:
     │         ^^^ Invalid mutation. New value is not valid for the reference
     ·
  19 │         r.f = &0;
-    │               -- The type: '&u64'
+    │               -- The type: '&{integer}'
     ·
  19 │         r.f = &0;
-    │         --- Is not compatible with: 'u64'
+    │         --- Is not compatible with: ''u64''
     │
 
 error: 

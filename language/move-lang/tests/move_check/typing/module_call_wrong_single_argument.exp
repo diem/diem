@@ -6,7 +6,7 @@ error:
     │         ^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 's'
     ·
  24 │         foo(0);
-    │             - The type: 'u64'
+    │             - The type: integer
     ·
  17 │     public fun foo(s: S) {
     │                       - Is not compatible with: '0x1::M::S'
@@ -62,7 +62,7 @@ error:
     │         ^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 's'
     ·
  31 │         X::foo(0);
-    │                - The type: 'u64'
+    │                - The type: integer
     ·
  6 │     public fun foo(s: S) {
     │                       - Is not compatible with: '0x1::X::S'

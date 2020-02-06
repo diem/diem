@@ -20,7 +20,7 @@ error:
    │          ^^ Invalid mutation. Expected a mutable reference
    ·
  6 │         *&0 = 1;
-   │          -- The type: '&u64'
+   │          -- The type: '&{integer}'
    ·
  6 │         *&0 = 1;
    │          -- Is not a subtype of: '&mut _'

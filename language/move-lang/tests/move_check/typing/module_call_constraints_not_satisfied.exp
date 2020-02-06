@@ -108,7 +108,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  30 │         rsrc(Box3<C, C, C> {});
-    │              ---------------- The copyable type '0x8675309::M::Box3<C,C,C>' does not satisfy the constraint 'resource'
+    │              ---------------- The copyable type '0x8675309::M::Box3<C, C, C>' does not satisfy the constraint 'resource'
     ·
  29 │     fun t2<R: resource, C: copyable>() {
     │                            -------- The type's constraint information was declared here
@@ -125,7 +125,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  32 │         cpy(Box3<R, C, C> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<R,C,C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The resource type '0x8675309::M::Box3<R, C, C>' does not satisfy the constraint 'copyable'
     ·
  29 │     fun t2<R: resource, C: copyable>() {
     │               -------- The type's constraint information was declared here
@@ -142,7 +142,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  33 │         cpy(Box3<C, R, C> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<C,R,C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The resource type '0x8675309::M::Box3<C, R, C>' does not satisfy the constraint 'copyable'
     ·
  29 │     fun t2<R: resource, C: copyable>() {
     │               -------- The type's constraint information was declared here
@@ -159,7 +159,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  34 │         cpy(Box3<C, C, R> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<C,C,R>' does not satisfy the constraint 'copyable'
+    │             ---------------- The resource type '0x8675309::M::Box3<C, C, R>' does not satisfy the constraint 'copyable'
     ·
  29 │     fun t2<R: resource, C: copyable>() {
     │               -------- The type's constraint information was declared here
@@ -176,7 +176,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  36 │         cpy(Box3<C, R, R> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<C,R,R>' does not satisfy the constraint 'copyable'
+    │             ---------------- The resource type '0x8675309::M::Box3<C, R, R>' does not satisfy the constraint 'copyable'
     ·
  29 │     fun t2<R: resource, C: copyable>() {
     │               -------- The type's constraint information was declared here
@@ -193,7 +193,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  37 │         cpy(Box3<R, C, R> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<R,C,R>' does not satisfy the constraint 'copyable'
+    │             ---------------- The resource type '0x8675309::M::Box3<R, C, R>' does not satisfy the constraint 'copyable'
     ·
  29 │     fun t2<R: resource, C: copyable>() {
     │               -------- The type's constraint information was declared here
@@ -210,7 +210,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  38 │         cpy(Box3<R, R, C> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<R,R,C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The resource type '0x8675309::M::Box3<R, R, C>' does not satisfy the constraint 'copyable'
     ·
  29 │     fun t2<R: resource, C: copyable>() {
     │               -------- The type's constraint information was declared here
@@ -227,7 +227,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  40 │         cpy(Box3<R, R, R> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<R,R,R>' does not satisfy the constraint 'copyable'
+    │             ---------------- The resource type '0x8675309::M::Box3<R, R, R>' does not satisfy the constraint 'copyable'
     ·
  29 │     fun t2<R: resource, C: copyable>() {
     │               -------- The type's constraint information was declared here
@@ -244,7 +244,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  44 │         cpy(Box3<U, C, C> {});
-    │             ---------------- The type '0x8675309::M::Box3<U,C,C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<U, C, C>' does not satisfy the constraint 'copyable'
     ·
  43 │     fun t3<U, C: copyable>() {
     │            - The type's constraint information was declared here
@@ -261,7 +261,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  45 │         cpy(Box3<C, U, C> {});
-    │             ---------------- The type '0x8675309::M::Box3<C,U,C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<C, U, C>' does not satisfy the constraint 'copyable'
     ·
  43 │     fun t3<U, C: copyable>() {
     │            - The type's constraint information was declared here
@@ -278,7 +278,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  46 │         cpy(Box3<C, C, U> {});
-    │             ---------------- The type '0x8675309::M::Box3<C,C,U>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<C, C, U>' does not satisfy the constraint 'copyable'
     ·
  43 │     fun t3<U, C: copyable>() {
     │            - The type's constraint information was declared here
@@ -295,7 +295,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  48 │         cpy(Box3<C, U, U> {});
-    │             ---------------- The type '0x8675309::M::Box3<C,U,U>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<C, U, U>' does not satisfy the constraint 'copyable'
     ·
  43 │     fun t3<U, C: copyable>() {
     │            - The type's constraint information was declared here
@@ -312,7 +312,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  49 │         cpy(Box3<U, C, U> {});
-    │             ---------------- The type '0x8675309::M::Box3<U,C,U>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<U, C, U>' does not satisfy the constraint 'copyable'
     ·
  43 │     fun t3<U, C: copyable>() {
     │            - The type's constraint information was declared here
@@ -329,7 +329,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  50 │         cpy(Box3<U, U, C> {});
-    │             ---------------- The type '0x8675309::M::Box3<U,U,C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<U, U, C>' does not satisfy the constraint 'copyable'
     ·
  43 │     fun t3<U, C: copyable>() {
     │            - The type's constraint information was declared here
@@ -346,7 +346,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  52 │         cpy(Box3<U, U, U> {});
-    │             ---------------- The type '0x8675309::M::Box3<U,U,U>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<U, U, U>' does not satisfy the constraint 'copyable'
     ·
  43 │     fun t3<U, C: copyable>() {
     │            - The type's constraint information was declared here

@@ -34,7 +34,7 @@ error:
    │          ^ Invalid argument to '!'
    ·
  9 │         !0;
-   │          - The type: 'u64'
+   │          - The type: integer
    ·
  9 │         !0;
    │          - Is not compatible with: 'bool'
@@ -48,7 +48,7 @@ error:
     │          ^ Invalid argument to '!'
     ·
  10 │         !1;
-    │          - The type: 'u64'
+    │          - The type: integer
     ·
  10 │         !1;
     │          - Is not compatible with: 'bool'
@@ -90,7 +90,7 @@ error:
     │          ^^^^^^^^^^ Invalid argument to '!'
     ·
  13 │         !(0, false);
-    │          ---------- The type: '(u64,bool)'
+    │          ---------- The type: '({integer}, bool)'
     ·
  13 │         !(0, false);
     │          ---------- Is not compatible with: 'bool'

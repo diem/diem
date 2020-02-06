@@ -231,7 +231,12 @@ pub type BindList = Spanned<Vec<Bind>>;
 pub enum Value_ {
     // 0x<hex representation up to 64 digits with padding 0s>
     Address(Address),
+    // <num>u8
+    U8(u8),
+    // <num>u64
     U64(u64),
+    // <num>u128
+    U128(u128),
     // true
     // false
     Bool(bool),
@@ -267,6 +272,10 @@ pub enum BinOp_ {
     BitAnd,
     // ^
     Xor,
+    // <<
+    Shl,
+    // >>
+    Shr,
 
     // Bool ops
     // &&
@@ -294,6 +303,8 @@ pub type BinOp = Spanned<BinOp_>;
 #[allow(clippy::large_enum_variant)]
 pub enum Exp_ {
     Value(Value),
+    // <num>
+    InferredNum(u128),
     // move(x)
     Move(Var),
     // copy(x)
@@ -442,11 +453,74 @@ impl Type_ {
     }
 }
 
+impl UnaryOp_ {
+    pub const NOT: &'static str = "!";
+    pub const NEG: &'static str = "-";
+
+    pub fn symbol(&self) -> &'static str {
+        use UnaryOp_ as U;
+        match self {
+            U::Not => U::NOT,
+            U::Neg => U::NEG,
+        }
+    }
+
+    pub fn is_pure(&self) -> bool {
+        use UnaryOp_ as U;
+        match self {
+            U::Not | U::Neg => true,
+        }
+    }
+}
+
 impl BinOp_ {
+    pub const ADD: &'static str = "+";
+    pub const SUB: &'static str = "-";
+    pub const MUL: &'static str = "*";
+    pub const MOD: &'static str = "%";
+    pub const DIV: &'static str = "/";
+    pub const BIT_OR: &'static str = "|";
+    pub const BIT_AND: &'static str = "&";
+    pub const XOR: &'static str = "^";
+    pub const SHL: &'static str = "<<";
+    pub const SHR: &'static str = ">>";
+    pub const AND: &'static str = "&&";
+    pub const OR: &'static str = "||";
+    pub const EQ: &'static str = "==";
+    pub const NEQ: &'static str = "!=";
+    pub const LT: &'static str = "<";
+    pub const GT: &'static str = ">";
+    pub const LE: &'static str = "<=";
+    pub const GE: &'static str = ">=";
+
+    pub fn symbol(&self) -> &'static str {
+        use BinOp_ as B;
+        match self {
+            B::Add => B::ADD,
+            B::Sub => B::SUB,
+            B::Mul => B::MUL,
+            B::Mod => B::MOD,
+            B::Div => B::DIV,
+            B::BitOr => B::BIT_OR,
+            B::BitAnd => B::BIT_AND,
+            B::Xor => B::XOR,
+            B::Shl => B::SHL,
+            B::Shr => B::SHR,
+            B::And => B::AND,
+            B::Or => B::OR,
+            B::Eq => B::EQ,
+            B::Neq => B::NEQ,
+            B::Lt => B::LT,
+            B::Gt => B::GT,
+            B::Le => B::LE,
+            B::Ge => B::GE,
+        }
+    }
+
     pub fn is_pure(&self) -> bool {
         use BinOp_ as B;
         match self {
-            B::Add | B::Sub | B::Mul | B::Mod | B::Div => false,
+            B::Add | B::Sub | B::Mul | B::Mod | B::Div | B::Shl | B::Shr => false,
             B::BitOr
             | B::BitAnd
             | B::Xor
@@ -458,15 +532,6 @@ impl BinOp_ {
             | B::Gt
             | B::Le
             | B::Ge => true,
-        }
-    }
-}
-
-impl UnaryOp_ {
-    pub fn is_pure(&self) -> bool {
-        use UnaryOp_ as U;
-        match self {
-            U::Not | U::Neg => true,
         }
     }
 }
@@ -483,35 +548,13 @@ impl fmt::Display for ModuleIdent {
 
 impl fmt::Display for UnaryOp_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        use UnaryOp_::*;
-        match self {
-            Not => write!(f, "!"),
-            Neg => write!(f, "-"),
-        }
+        write!(f, "{}", self.symbol())
     }
 }
 
 impl fmt::Display for BinOp_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        use BinOp_::*;
-        match self {
-            Add => write!(f, "+"),
-            Sub => write!(f, "-"),
-            Mul => write!(f, "*"),
-            Mod => write!(f, "%"),
-            Div => write!(f, "/"),
-            BitOr => write!(f, "|"),
-            BitAnd => write!(f, "&"),
-            Xor => write!(f, "^"),
-            And => write!(f, "&&"),
-            Or => write!(f, "||"),
-            Eq => write!(f, "=="),
-            Neq => write!(f, "!="),
-            Lt => write!(f, "<"),
-            Gt => write!(f, ">"),
-            Le => write!(f, "<="),
-            Ge => write!(f, ">="),
-        }
+        write!(f, "{}", self.symbol())
     }
 }
 
@@ -822,6 +865,7 @@ impl AstDebug for Exp_ {
         match self {
             E::Unit => w.write("()"),
             E::Value(v) => v.ast_debug(w),
+            E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Move(v) => w.write(&format!("move {}", v)),
             E::Copy(v) => w.write(&format!("copy {}", v)),
             E::Name(n) => w.write(&format!("{}", n)),
@@ -958,7 +1002,9 @@ impl AstDebug for Value_ {
         use Value_ as V;
         w.write(&match self {
             V::Address(addr) => format!("{}", addr),
-            V::U64(u) => format!("{}", u),
+            V::U8(u) => format!("{}u8", u),
+            V::U64(u) => format!("{}u64", u),
+            V::U128(u) => format!("{}u128", u),
             V::Bool(b) => format!("{}", b),
             V::Bytearray(v) => format!("{:?}", v),
         })

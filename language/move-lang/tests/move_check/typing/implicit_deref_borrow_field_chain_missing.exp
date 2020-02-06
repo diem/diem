@@ -30,7 +30,7 @@ error:
     │         ^^^^^^^^^^^^ Unbound field 'g'
     ·
  4 │     struct X3 { f: u64, }
-    │                    --- Expected a struct type in the current module but got: u64
+    │                    --- Expected a struct type in the current module but got: 'u64'
     │
 
 error: 
@@ -65,6 +65,6 @@ error:
     │         ^^^^^^^^^^^^^^^^ Unbound field 'g'
     ·
  4 │     struct X3 { f: u64, }
-    │                    --- Expected a struct type in the current module but got: u64
+    │                    --- Expected a struct type in the current module but got: 'u64'
     │
 

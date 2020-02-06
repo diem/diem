@@ -6,7 +6,7 @@ error:
    │                ^^ Invalid dereference. Can only dereference references to copyable types
    ·
  6 │         R {} = *r;
-   │                -- The type: 0x8675309::M::R
+   │                -- The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {}
    │     -------- Is found to be a non-copyable type here
@@ -20,7 +20,7 @@ error:
    │                        ^^ Invalid dereference. Can only dereference references to copyable types
    ·
  7 │         B { r: R{} } = *b;
-   │                        -- The type: 0x8675309::M::B
+   │                        -- The type: '0x8675309::M::B'
    ·
  3 │     resource struct B { r: R }
    │     -------- Is found to be a non-copyable type here
@@ -34,7 +34,7 @@ error:
    │               ^^^^^ Invalid dereference. Can only dereference references to copyable types
    ·
  8 │         R{} = *&b.r;
-   │               ----- The type: 0x8675309::M::R
+   │               ----- The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {}
    │     -------- Is found to be a non-copyable type here
@@ -48,7 +48,7 @@ error:
     │                ^^ Invalid dereference. Can only dereference references to copyable types
     ·
  12 │         R {} = *r;
-    │                -- The type: 0x8675309::M::R
+    │                -- The type: '0x8675309::M::R'
     ·
  2 │     resource struct R {}
     │     -------- Is found to be a non-copyable type here
@@ -62,7 +62,7 @@ error:
     │                        ^^ Invalid dereference. Can only dereference references to copyable types
     ·
  13 │         B { r: R{} } = *b;
-    │                        -- The type: 0x8675309::M::B
+    │                        -- The type: '0x8675309::M::B'
     ·
  3 │     resource struct B { r: R }
     │     -------- Is found to be a non-copyable type here
@@ -76,7 +76,7 @@ error:
     │               ^^^^^ Invalid dereference. Can only dereference references to copyable types
     ·
  14 │         R{} = *&b.r;
-    │               ----- The type: 0x8675309::M::R
+    │               ----- The type: '0x8675309::M::R'
     ·
  2 │     resource struct R {}
     │     -------- Is found to be a non-copyable type here
@@ -90,7 +90,7 @@ error:
     │               ^^^^^^^^^ Invalid dereference. Can only dereference references to copyable types
     ·
  15 │         R{} = *&mut b.r;
-    │               --------- The type: 0x8675309::M::R
+    │               --------- The type: '0x8675309::M::R'
     ·
  2 │     resource struct R {}
     │     -------- Is found to be a non-copyable type here

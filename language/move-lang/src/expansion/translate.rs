@@ -663,6 +663,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
     let e_ = match pe_ {
         PE::Unit => EE::Unit,
         PE::Value(v) => EE::Value(v),
+        PE::InferredNum(u) => EE::InferredNum(u),
         PE::Move(v) => EE::Move(v),
         PE::Copy(v) => EE::Copy(v),
         PE::Name(n) => match context.module_alias_get(&n) {

@@ -4,12 +4,14 @@
 use super::core::{self, Context};
 use crate::{
     naming::ast::{
-        BaseType, BaseType_, FunctionSignature, SingleType, SingleType_, TParam, Type, Type_,
+        BaseType, BaseType_, BuiltinTypeName_, FunctionSignature, SingleType, SingleType_, TParam,
+        Type, TypeName_, Type_,
     },
-    parser::ast::{Kind, Kind_},
+    parser::ast::{Kind, Kind_, Value_},
     shared::*,
     typing::ast as T,
 };
+use std::convert::TryInto;
 
 //**************************************************************************************************
 // Functions
@@ -38,38 +40,53 @@ fn type_(context: &mut Context, ty: &mut Type) {
     match &mut ty.value {
         Unit => (),
         Multiple(ss) => single_types(context, ss),
-        Single(s) => single_type(context, s),
+        Single(s) => {
+            let replaced = single_type(context, s);
+            if replaced {
+                ty.loc = s.loc;
+            }
+        }
     }
 }
 
 fn expected_types(context: &mut Context, ss: &mut Vec<Option<SingleType>>) {
     for st_opt in ss {
         if let Some(ss) = st_opt {
-            single_type(context, ss)
+            single_type(context, ss);
         }
     }
 }
 
 fn single_types(context: &mut Context, ss: &mut Vec<SingleType>) {
     for st in ss {
-        single_type(context, st)
+        single_type(context, st);
     }
 }
 
-fn single_type(context: &mut Context, st: &mut SingleType) {
+fn single_type(context: &mut Context, st: &mut SingleType) -> bool {
     use SingleType_::*;
     match &mut st.value {
-        Ref(_, b) | Base(b) => base_type(context, b),
+        Ref(_, b) => {
+            base_type(context, b);
+            false
+        }
+        Base(b) => {
+            let replaced = base_type(context, b);
+            if replaced {
+                st.loc = b.loc;
+            }
+            replaced
+        }
     }
 }
 
 fn base_types(context: &mut Context, bs: &mut Vec<BaseType>) {
     for bt in bs {
-        base_type(context, bt)
+        base_type(context, bt);
     }
 }
 
-pub fn base_type(context: &mut Context, bt: &mut BaseType) {
+pub fn base_type(context: &mut Context, bt: &mut BaseType) -> bool {
     use BaseType_ as B;
     match &mut bt.value {
         B::Var(tvar) => {
@@ -89,9 +106,13 @@ pub fn base_type(context: &mut Context, bt: &mut BaseType) {
                 _ => (),
             }
             *bt = replacement;
-            base_type(context, bt)
+            base_type(context, bt);
+            true
         }
-        B::Apply(Some(_), _, bs) => base_types(context, bs),
+        B::Apply(Some(_), _, bs) => {
+            base_types(context, bs);
+            false
+        }
         B::Apply(_, _, _) => {
             let kind = core::infer_kind_base(&context, &context.subst, bt.clone()).unwrap();
             match &mut bt.value {
@@ -101,10 +122,11 @@ pub fn base_type(context: &mut Context, bt: &mut BaseType) {
                 }
                 _ => panic!("ICE impossible. tapply switched to nontapply"),
             }
+            false
         }
-        B::Param(_) => (),
+        B::Param(_) => false,
         // TODO might want to add a flag to Anything for reporting errors or not
-        B::Anything => (),
+        B::Anything => false,
     }
 }
 
@@ -179,6 +201,67 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
                 Kind_::Unrestricted => E::Copy { from_user, var },
                 Kind_::Unknown | Kind_::Affine | Kind_::Resource => E::Move { from_user, var },
             }
+        }
+        E::InferredNum(v) => {
+            use BaseType_ as B;
+            use BuiltinTypeName_ as BT;
+            use SingleType_ as S;
+            use TypeName_ as TN;
+            use Type_ as T;
+            macro_rules! builtin {
+                ($b:pat) => {
+                    T::Single(sp!(
+                        _,
+                        S::Base(sp!(_, B::Apply(_, sp!(_, TN::Builtin(sp!(_, $b))), _)))
+                    ))
+                };
+            }
+            let bt = match &e.ty.value {
+                builtin!(bt) if bt.is_numeric() => bt,
+                _ => panic!("ICE inferred num failed {:?}", &e.ty.value),
+            };
+            let v = *v;
+            let u8_max = std::u8::MAX as u128;
+            let u64_max = std::u64::MAX as u128;
+            let u128_max = std::u128::MAX;
+            let max = match bt {
+                BT::U8 => u8_max,
+                BT::U64 => u64_max,
+                BT::U128 => u128_max,
+                _ => unreachable!(),
+            };
+            let new_exp = if v > max {
+                let msg = format!(
+                    "Expected a literal of type '{}', but the value is too large.",
+                    bt
+                );
+                let fix_bt = if v > u64_max {
+                    BT::U128
+                } else {
+                    assert!(v > u8_max);
+                    BT::U64
+                };
+                let fix = format!(
+                    "Annotating the literal might help inference: '{value}{type}'",
+                    value=v,
+                    type=fix_bt,
+                );
+                context.error(vec![
+                    (e.exp.loc, "Invalid numerical literal".into()),
+                    (e.ty.loc, msg),
+                    (e.exp.loc, fix),
+                ]);
+                E::UnresolvedError
+            } else {
+                let value_ = match bt {
+                    BT::U8 => Value_::U8(v.try_into().unwrap()),
+                    BT::U64 => Value_::U64(v.try_into().unwrap()),
+                    BT::U128 => Value_::U128(v),
+                    _ => unreachable!(),
+                };
+                E::Value(sp(e.exp.loc, value_))
+            };
+            e.exp.value = new_exp;
         }
 
         E::Unit
@@ -262,7 +345,9 @@ fn bind(context: &mut Context, b: &mut T::Bind) {
             context.error(vec![(b.loc, msg)]);
             b.value = B::Ignore
         }
-        B::Var(_, Some(st)) => single_type(context, st),
+        B::Var(_, Some(st)) => {
+            single_type(context, st);
+        }
         B::BorrowUnpack(_, _, _, bts, fields) | B::Unpack(_, _, bts, fields) => {
             base_types(context, bts);
             for (_, (_, (bt, innerb))) in fields.iter_mut() {
@@ -283,7 +368,9 @@ fn assign(context: &mut Context, a: &mut T::Assign) {
     use T::Assign_ as A;
     match &mut a.value {
         A::Ignore => (),
-        A::Var(_, st) => single_type(context, st),
+        A::Var(_, st) => {
+            single_type(context, st);
+        }
         A::Unpack(_, _, bts, fields) | A::BorrowUnpack(_, _, _, bts, fields) => {
             base_types(context, bts);
             for (_, (_, (bt, innera))) in fields.iter_mut() {
@@ -307,7 +394,9 @@ fn builtin_function(context: &mut Context, b: &mut T::BuiltinFunction) {
         | B::MoveFrom(bt)
         | B::BorrowGlobal(_, bt)
         | B::Exists(bt)
-        | B::Freeze(bt) => base_type(context, bt),
+        | B::Freeze(bt) => {
+            base_type(context, bt);
+        }
     }
 }
 

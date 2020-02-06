@@ -140,6 +140,7 @@ pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 pub enum UnannotatedExp_ {
     Unit,
     Value(Value),
+    InferredNum(u128),
     Move {
         from_user: bool,
         var: Var,
@@ -358,6 +359,7 @@ impl AstDebug for UnannotatedExp_ {
         match self {
             E::Unit => w.write("()"),
             E::Value(v) => v.ast_debug(w),
+            E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Move {
                 from_user: false,
                 var: v,
