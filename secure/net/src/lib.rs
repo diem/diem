@@ -23,47 +23,71 @@ use std::{
 };
 
 pub struct NetworkClient {
-    stream: NetworkStream,
+    server: SocketAddr,
+    stream: Option<NetworkStream>,
 }
 
 impl NetworkClient {
-    pub fn connect(server: SocketAddr) -> Result<Self> {
-        let mut stream = TcpStream::connect(server);
-
-        let mut attempts = 0;
-        let sleeptime = time::Duration::from_millis(100);
-
-        while stream.is_err() && attempts < 5 {
-            thread::sleep(sleeptime);
-            attempts += 1;
-            stream = TcpStream::connect(server);
+    pub fn new(server: SocketAddr) -> Self {
+        Self {
+            server,
+            stream: None,
         }
-        let stream = stream?;
-        stream.set_nodelay(true)?;
-
-        Ok(Self {
-            stream: NetworkStream::new(stream),
-        })
     }
 
     /// Blocking read until able to successfully read an entire message
     pub fn read(&mut self) -> Result<Vec<u8>> {
-        self.stream.read()
+        let stream = self.server()?;
+        let result = stream.read();
+        if result.is_err() {
+            self.stream = None;
+        }
+        result
     }
 
     /// Shutdown the internal network stream
-    pub fn shutdown(&self) -> Result<()> {
-        self.stream.shutdown()
+    pub fn shutdown(&mut self) -> Result<()> {
+        let stream = self
+            .stream
+            .take()
+            .ok_or_else(|| anyhow!("No active stream"))?;
+        stream.shutdown()?;
+        Ok(())
     }
 
     /// Blocking read until able to successfully read an entire message
     pub fn write(&mut self, data: &[u8]) -> Result<()> {
-        self.stream.write(data)
+        let stream = self.server()?;
+        let result = stream.write(data);
+        if result.is_err() {
+            self.stream = None;
+        }
+        result
+    }
+
+    fn server(&mut self) -> Result<&mut NetworkStream> {
+        if self.stream.is_none() {
+            let mut stream = TcpStream::connect(self.server);
+
+            let sleeptime = time::Duration::from_millis(100);
+            while stream.is_err() {
+                thread::sleep(sleeptime);
+                stream = TcpStream::connect(self.server);
+            }
+
+            let stream = stream?;
+            stream.set_nodelay(true)?;
+            self.stream = Some(NetworkStream::new(stream));
+        }
+
+        self.stream
+            .as_mut()
+            .ok_or_else(|| anyhow!("Unable to retrieve a stream"))
     }
 }
 
 pub struct NetworkServer {
-    listener: TcpListener,
+    listener: Option<TcpListener>,
     stream: Option<NetworkStream>,
 }
 
@@ -71,7 +95,7 @@ impl NetworkServer {
     pub fn new(listen: SocketAddr) -> Self {
         let listener = TcpListener::bind(listen).unwrap();
         Self {
-            listener,
+            listener: Some(listener),
             stream: None,
         }
     }
@@ -88,11 +112,16 @@ impl NetworkServer {
     }
 
     /// Shutdown the internal network stream
-    pub fn shutdown(&self) -> Result<()> {
-        self.stream
-            .as_ref()
-            .ok_or_else(|| anyhow!("No active stream"))?
-            .shutdown()
+    pub fn shutdown(&mut self) -> Result<()> {
+        self.listener
+            .take()
+            .ok_or_else(|| anyhow!("Listener already shutdown"))?;
+        let stream = self
+            .stream
+            .take()
+            .ok_or_else(|| anyhow!("No active stream"))?;
+        stream.shutdown()?;
+        Ok(())
     }
 
     /// If there isn't already a downstream client, it accepts. Otherwise it
@@ -108,7 +137,11 @@ impl NetworkServer {
 
     fn client(&mut self) -> Result<&mut NetworkStream> {
         if self.stream.is_none() {
-            let (stream, _stream_addr) = self.listener.accept()?;
+            let listener = self
+                .listener
+                .as_mut()
+                .ok_or_else(|| anyhow!("Listener already shutdown"))?;
+            let (stream, _stream_addr) = listener.accept()?;
             stream.set_nodelay(true)?;
             self.stream = Some(NetworkStream::new(stream));
         }
@@ -225,7 +258,7 @@ mod test {
         let server_port = utils::get_available_port();
         let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
         let mut server = NetworkServer::new(server_addr);
-        let mut client = NetworkClient::connect(server_addr).unwrap();
+        let mut client = NetworkClient::new(server_addr);
 
         let data = vec![0, 1, 2, 3];
         client.write(&data).unwrap();
@@ -239,11 +272,11 @@ mod test {
     }
 
     #[test]
-    fn test_shutdown() {
+    fn test_client_shutdown() {
         let server_port = utils::get_available_port();
         let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
         let mut server = NetworkServer::new(server_addr);
-        let mut client = NetworkClient::connect(server_addr).unwrap();
+        let mut client = NetworkClient::new(server_addr);
 
         let data = vec![0, 1, 2, 3];
         client.write(&data).unwrap();
@@ -251,10 +284,35 @@ mod test {
         assert_eq!(data, result);
 
         client.shutdown().unwrap();
-        let mut client = NetworkClient::connect(server_addr).unwrap();
+        let mut client = NetworkClient::new(server_addr);
         assert!(server.read().is_err());
 
         let data = vec![4, 5, 6, 7];
+        client.write(&data).unwrap();
+        let result = server.read().unwrap();
+        assert_eq!(data, result);
+    }
+
+    #[test]
+    fn test_server_shutdown() {
+        let server_port = utils::get_available_port();
+        let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
+        let mut server = NetworkServer::new(server_addr);
+        let mut client = NetworkClient::new(server_addr);
+
+        let data = vec![0, 1, 2, 3];
+        client.write(&data).unwrap();
+        let result = server.read().unwrap();
+        assert_eq!(data, result);
+
+        server.shutdown().unwrap();
+        let mut server = NetworkServer::new(server_addr);
+
+        let data = vec![4, 5, 6, 7];
+        // We aren't notified immediately that a server has shutdown, but it happens eventually
+        while client.write(&data).is_ok() {}
+
+        let data = vec![8, 9, 10, 11];
         client.write(&data).unwrap();
         let result = server.read().unwrap();
         assert_eq!(data, result);
