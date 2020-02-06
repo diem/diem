@@ -22,6 +22,8 @@ jobs:
       run: |
         JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
         ./scripts/cti \
+          --marker land \
           --tag dev_$LIBRA_GIT_REV \
           --report report.json \
-          --run bench
+          --run bench \
+          -- --duration 60
