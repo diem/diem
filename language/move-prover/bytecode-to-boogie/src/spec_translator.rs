@@ -340,13 +340,23 @@ impl<'env> SpecTranslator<'env> {
                 format!("i#Integer({}) {} i#Integer({})", l, op, r)
             }
             GlobalType::Bool => format!("b#Boolean({}) {} b#Boolean({})", l, op, r),
-            _ => panic!("unexpected type"),
+            &UNKNOWN_TYPE => self.error(
+                "unknown result type of helper function; cannot use in operation",
+                "<error>".to_string(),
+            ),
+            &ERROR_TYPE => "<error>".to_string(),
+            _ => panic!("unexpected type: {:?}", expected_operand_type),
         };
         match result_type {
             GlobalType::U8 | GlobalType::U64 | GlobalType::U128 => {
                 BoogieExpr(format!("Integer({})", expr), result_type)
             }
             GlobalType::Bool => BoogieExpr(format!("Boolean({})", expr), result_type),
+            UNKNOWN_TYPE => self.error(
+                "unknown result type of helper function; cannot use in operation",
+                BoogieExpr("<error>".to_string(), ERROR_TYPE),
+            ),
+            ERROR_TYPE => BoogieExpr("<error>".to_string(), ERROR_TYPE),
             _ => panic!("unexpected type"),
         }
     }
