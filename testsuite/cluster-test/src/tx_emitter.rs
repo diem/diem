@@ -148,7 +148,7 @@ impl TxEmitter {
         let mut all_accounts = all_accounts.into_iter();
         let stop = Arc::new(AtomicBool::new(false));
         let stats = Arc::new(TxStats::default());
-        for _ in 1..threads_per_ac {
+        for _ in 0..threads_per_ac {
             for instance in &req.instances {
                 let instance = instance.clone();
                 let client = Self::make_client(&instance);
