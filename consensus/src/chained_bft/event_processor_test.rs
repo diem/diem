@@ -44,12 +44,13 @@ use consensus_types::{
 use futures::{
     channel::{mpsc, oneshot},
     executor::block_on,
+    stream::select,
+    TryStreamExt,
 };
 use libra_crypto::HashValue;
 use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::{
-    random_validator_verifier, EpochInfo, LedgerInfoWithSignatures, ValidatorSigner,
-    ValidatorVerifier,
+    random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
 };
 use network::{
     proto::{ConsensusMsg, ConsensusMsg_oneof},
@@ -57,7 +58,6 @@ use network::{
 };
 use prost::Message as _;
 use safety_rules::{ConsensusState, PersistentStorage as SafetyStorage, SafetyRulesManager};
-use std::sync::RwLock;
 use std::{collections::HashMap, convert::TryFrom, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
@@ -142,16 +142,14 @@ impl NodeSetup {
             initial_data.validators(),
         );
 
-        let (task, _receiver) = NetworkTask::<TestPayload>::new(
-            Arc::new(RwLock::new(EpochInfo {
-                epoch: 0,
-                verifier: initial_data.validators(),
-            })),
-            network_events,
-            self_receiver,
-        );
+        let network_events = network_events.map_err(Into::<anyhow::Error>::into);
+        let all_events = Box::new(select(network_events, self_receiver));
+        let (_, network_data_request_receiver) = mpsc::unbounded();
+        let (network_data_sender, _) = mpsc::unbounded();
+        let network_task =
+            NetworkTask::<TestPayload>::new(network_data_request_receiver, network_data_sender);
 
-        executor.spawn(task.start());
+        executor.spawn(network_task.start(all_events));
         let last_vote_sent = initial_data.last_vote();
         let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let state_computer = Arc::new(MockStateComputer::new(

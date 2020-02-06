@@ -12,7 +12,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{
-    channel::mpsc, executor::block_on, select, stream::select, SinkExt, StreamExt, TryStreamExt,
+    channel::mpsc, executor::block_on, stream::select, SinkExt, StreamExt, TryStreamExt,
 };
 use libra_prost_ext::MessageExt;
 use libra_types::account_address::AccountAddress;
@@ -339,7 +339,6 @@ use consensus_types::block_retrieval::{
 use libra_crypto::HashValue;
 #[cfg(test)]
 use libra_types::crypto_proxies::random_validator_verifier;
-use libra_types::crypto_proxies::EpochInfo;
 use std::convert::{TryFrom, TryInto};
 
 #[test]
