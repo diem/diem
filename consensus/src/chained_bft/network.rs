@@ -341,7 +341,8 @@ impl<T: Payload> NetworkTask<T> {
                             self.clear_data();
                         }
                     }
-                }
+                },
+                complete => break,
             }
         }
     }
