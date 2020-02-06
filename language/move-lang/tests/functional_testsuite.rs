@@ -7,7 +7,7 @@ use functional_tests::{
     testsuite,
 };
 use libra_types::account_address::AccountAddress as LibraAddress;
-use move_lang::test_utils::stdlib_files;
+use move_lang::test_utils::{stdlib_files, FUNCTIONAL_TEST_DIR};
 use move_lang::{move_compile_no_report, shared::Address, to_bytecode::translate::CompiledUnit};
 use std::{convert::TryFrom, io::Write, path::Path};
 use tempfile::NamedTempFile;
@@ -71,4 +71,4 @@ fn functional_testsuite(path: &Path) -> datatest_stable::Result<()> {
     testsuite::functional_tests(compiler, path)
 }
 
-datatest_stable::harness!(functional_testsuite, "tests/functional", r".*\.move");
+datatest_stable::harness!(functional_testsuite, FUNCTIONAL_TEST_DIR, r".*\.move");

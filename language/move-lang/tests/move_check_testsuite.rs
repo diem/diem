@@ -111,4 +111,4 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     }
 }
 
-datatest_stable::harness!(move_check_testsuite, "tests/move_check", r".*\.move");
+datatest_stable::harness!(move_check_testsuite, MOVE_CHECK_DIR, r".*\.move");

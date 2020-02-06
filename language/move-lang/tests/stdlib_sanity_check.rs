@@ -48,6 +48,6 @@ fn sanity_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
 
 datatest_stable::harness!(
     sanity_check_testsuite,
-    "stdlib/transaction_scripts",
+    STD_LIB_TRANSACTION_SCRIPTS_DIR,
     r".*\.move"
 );
