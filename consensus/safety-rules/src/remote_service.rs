@@ -12,7 +12,7 @@ use std::{marker::PhantomData, net::SocketAddr};
 
 pub trait RemoteService<T: Payload> {
     fn client(&self) -> SerializerClient<T> {
-        let network_client = NetworkClient::connect(self.server_address()).unwrap();
+        let network_client = NetworkClient::new(self.server_address());
         let service = Box::new(RemoteClient::new(network_client));
         SerializerClient::new_client(service)
     }
