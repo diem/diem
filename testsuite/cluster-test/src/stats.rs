@@ -16,6 +16,17 @@ pub fn avg_tps(prometheus: &Prometheus, start: Duration, end: Duration) -> Resul
         .map_err(|e| format_err!("No tps data: {}", e))
 }
 
+pub fn avg_txns_per_block(prometheus: &Prometheus, start: Duration, end: Duration) -> Result<f64> {
+    prometheus
+        .query_range_avg(
+            "irate(libra_consensus_num_txns_per_block_sum[1m])/irate(libra_consensus_num_txns_per_block_count[1m])".to_string(),
+            &start,
+            &end,
+            10, /* step */
+        )
+        .map_err(|e| format_err!("No txns_per_block data: {}", e))
+}
+
 pub fn avg_latency(prometheus: &Prometheus, start: Duration, end: Duration) -> Result<f64> {
     prometheus.query_range_avg(
         "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"

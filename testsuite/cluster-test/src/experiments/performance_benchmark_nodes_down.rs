@@ -91,6 +91,7 @@ impl Experiment for PerformanceBenchmarkNodesDown {
         let end = unix_timestamp_now() - buffer;
         let start = end - window + 2 * buffer;
         let (avg_tps, avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
+        let avg_txns_per_block = stats::avg_txns_per_block(&context.prometheus, start, end)?;
         info!(
             "Link to dashboard : {}",
             context.prometheus.link_to_dashboard(start, end)
@@ -105,10 +106,14 @@ impl Experiment for PerformanceBenchmarkNodesDown {
         context
             .report
             .report_metric(&self, "expired_txn", expired_txn as f64);
+        context
+            .report
+            .report_metric(&self, "avg_txns_per_block", avg_txns_per_block as f64);
         context.report.report_metric(&self, "avg_tps", avg_tps);
         context
             .report
             .report_metric(&self, "avg_latency", avg_latency);
+        info!("avg_txns_per_block: {}", avg_txns_per_block);
         let expired_text = if expired_txn == 0 {
             "no expired txns".to_string()
         } else {
