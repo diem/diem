@@ -4,14 +4,14 @@
 use crate::{BuildSwarm, Error};
 use anyhow::{ensure, Result};
 use libra_config::{
-    config::{NodeConfig, SeedPeersConfig},
+    config::{ConsensusType, NodeConfig, RemoteService, SafetyRulesService, SeedPeersConfig},
     generator,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::transaction::Transaction;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::collections::HashMap;
+use std::{collections::HashMap, net::SocketAddr};
 use vm_genesis;
 
 const DEFAULT_SEED: [u8; 32] = [13u8; 32];
@@ -24,6 +24,7 @@ pub struct ValidatorConfig {
     index: usize,
     listen: Multiaddr,
     nodes: usize,
+    safety_rules_addr: Option<SocketAddr>,
     seed: [u8; 32],
     template: NodeConfig,
 }
@@ -36,6 +37,7 @@ impl Default for ValidatorConfig {
             index: 0,
             listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
             nodes: 1,
+            safety_rules_addr: None,
             seed: DEFAULT_SEED,
             template: NodeConfig::default(),
         }
@@ -72,6 +74,11 @@ impl ValidatorConfig {
         self
     }
 
+    pub fn safety_rules_addr(&mut self, safety_rules_addr: Option<SocketAddr>) -> &mut Self {
+        self.safety_rules_addr = safety_rules_addr;
+        self
+    }
+
     pub fn seed(&mut self, seed: [u8; 32]) -> &mut Self {
         self.seed = seed;
         self
@@ -102,6 +109,10 @@ impl ValidatorConfig {
         seed_peers.insert(first_peer_id, vec![self.bootstrap.clone()]);
         let seed_peers_config = SeedPeersConfig { seed_peers };
         validator_network.seed_peers = seed_peers_config;
+
+        if self.safety_rules_addr.is_some() {
+            self.build_safety_rules(&mut config);
+        }
 
         Ok(config)
     }
@@ -162,6 +173,16 @@ impl ValidatorConfig {
         let faucet_key = Ed25519PrivateKey::generate_for_testing(&mut faucet_rng);
         let config_seed: [u8; 32] = faucet_rng.gen();
         (faucet_key, config_seed)
+    }
+
+    fn build_safety_rules(&self, config: &mut NodeConfig) {
+        let safety_rules_config = &mut config.consensus.safety_rules;
+        if let Some(server_address) = self.safety_rules_addr {
+            safety_rules_config.service = SafetyRulesService::Process(RemoteService {
+                server_address,
+                consensus_type: ConsensusType::SignedTransactions,
+            })
+        }
     }
 }
 
