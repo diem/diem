@@ -14,6 +14,7 @@ use std::{
     convert::TryInto,
     fs::{self, File},
     io::Write,
+    net::SocketAddr,
     path::PathBuf,
 };
 use structopt::StructOpt;
@@ -28,6 +29,8 @@ enum Args {
     Faucet(FaucetArgs),
     #[structopt(about = "Create or extend a FullNode network")]
     FullNode(FullNodeCommand),
+    #[structopt(about = "Create a new SafetyRules config")]
+    SafetyRules(SafetyRulesArgs),
     #[structopt(about = "Create a new validator config")]
     Validator(ValidatorArgs),
 }
@@ -95,6 +98,12 @@ struct FullNodeArgs {
 }
 
 #[derive(Debug, StructOpt)]
+struct SafetyRulesArgs {
+    #[structopt(flatten)]
+    validator_common: ValidatorCommonArgs,
+}
+
+#[derive(Debug, StructOpt)]
 struct ValidatorArgs {
     #[structopt(short = "a", long, parse(from_str = parse_addr))]
     /// Advertised address for this node, if this is null, listen is reused
@@ -102,31 +111,45 @@ struct ValidatorArgs {
     #[structopt(short = "b", long, parse(from_str = parse_addr))]
     /// Advertised address for the first node in this test net
     bootstrap: Multiaddr,
+    #[structopt(short = "l", long, parse(from_str = parse_addr))]
+    /// Listening address for this node
+    listen: Multiaddr,
+    #[structopt(short = "t", long, parse(from_os_str))]
+    /// Path to a template NodeConfig
+    template: Option<PathBuf>,
+    #[structopt(flatten)]
+    validator_common: ValidatorCommonArgs,
+}
+
+#[derive(Debug, StructOpt)]
+struct ValidatorCommonArgs {
     #[structopt(short = "d", long, parse(from_os_str))]
     /// The data directory for the configs (e.g. /opt/libra/etc)
     data_dir: PathBuf,
     #[structopt(short = "i", long, default_value = "0")]
     /// Specify the index into the number of nodes to write to output dir
     index: usize,
-    #[structopt(short = "l", long, parse(from_str = parse_addr))]
-    /// Listening address for this node
-    listen: Multiaddr,
-    #[structopt(short = "n", long, default_value = "1")]
-    /// Specify the number of nodes to configure
-    nodes: usize,
     #[structopt(short = "o", long, parse(from_os_str))]
     /// The output directory
     output_dir: PathBuf,
+    #[structopt(short = "n", long, default_value = "1")]
+    /// Specify the number of nodes to configure
+    nodes: usize,
+    #[structopt(long, parse(from_str = parse_socket_addr))]
+    /// Specify the IP:Port for Safety rules. If this is not defined, SafetyRules will run in its
+    /// default configuration.
+    safety_rules_addr: Option<SocketAddr>,
     #[structopt(short = "s", long)]
     /// Use the provided seed for generating keys for each of the validators
     seed: Option<String>,
-    #[structopt(short = "t", long, parse(from_os_str))]
-    /// Path to a template NodeConfig
-    template: Option<PathBuf>,
 }
 
 fn parse_addr(src: &str) -> Multiaddr {
     src.parse::<Multiaddr>().unwrap()
+}
+
+fn parse_socket_addr(src: &str) -> SocketAddr {
+    src.parse::<SocketAddr>().unwrap()
 }
 
 fn main() {
@@ -135,6 +158,7 @@ fn main() {
     match args {
         Args::Faucet(faucet_args) => build_faucet(faucet_args),
         Args::FullNode(full_node_args) => build_full_node(full_node_args),
+        Args::SafetyRules(safety_rules_args) => build_safety_rules(safety_rules_args),
         Args::Validator(validator_args) => build_validator(validator_args),
     };
 }
@@ -224,8 +248,29 @@ fn build_full_node_config_builder(args: &FullNodeArgs) -> FullNodeConfig {
     config_builder
 }
 
+fn build_safety_rules(args: SafetyRulesArgs) {
+    if node_config_exists(&args.validator_common.output_dir) {
+        eprintln!("SafetyRules config already exists in this directory");
+        return;
+    }
+
+    let mut config_builder = ValidatorConfig::new();
+    config_builder
+        .index(args.validator_common.index)
+        .nodes(args.validator_common.nodes)
+        .safety_rules_addr(args.validator_common.safety_rules_addr);
+
+    if let Some(seed) = args.validator_common.seed.as_ref() {
+        config_builder.seed(parse_seed(seed));
+    }
+
+    let mut node_config = config_builder.build().expect("ConfigBuilder failed");
+    node_config.set_data_dir(args.validator_common.data_dir);
+    save_config(node_config, &args.validator_common.output_dir);
+}
+
 fn build_validator(args: ValidatorArgs) {
-    if node_config_exists(&args.output_dir) {
+    if node_config_exists(&args.validator_common.output_dir) {
         eprintln!("Node config already exists in this directory");
         return;
     }
@@ -234,18 +279,19 @@ fn build_validator(args: ValidatorArgs) {
     config_builder
         .advertised(args.advertised)
         .bootstrap(args.bootstrap)
-        .index(args.index)
+        .index(args.validator_common.index)
         .listen(args.listen)
-        .nodes(args.nodes)
+        .nodes(args.validator_common.nodes)
+        .safety_rules_addr(args.validator_common.safety_rules_addr)
         .template(load_template(args.template));
 
-    if let Some(seed) = args.seed.as_ref() {
+    if let Some(seed) = args.validator_common.seed.as_ref() {
         config_builder.seed(parse_seed(seed));
     }
 
     let mut node_config = config_builder.build().expect("ConfigBuilder failed");
-    node_config.set_data_dir(args.data_dir);
-    save_config(node_config, &args.output_dir);
+    node_config.set_data_dir(args.validator_common.data_dir);
+    save_config(node_config, &args.validator_common.output_dir);
 }
 
 fn node_config_exists(output_dir: &PathBuf) -> bool {
