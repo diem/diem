@@ -309,5 +309,5 @@ pub fn format_delim<T: fmt::Display, I: IntoIterator<Item = T>>(items: I, delim:
 }
 
 pub fn format_comma<T: fmt::Display, I: IntoIterator<Item = T>>(items: I) -> String {
-    format_delim(items, ",")
+    format_delim(items, ", ")
 }

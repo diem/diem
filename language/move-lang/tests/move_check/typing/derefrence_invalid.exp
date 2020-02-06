@@ -20,7 +20,7 @@ error:
    │                  ^^^^ Invalid type annotation
    ·
  7 │         (*x_mut: &u64);
-   │          ------ The type: 'u64'
+   │          ------ The type: ''u64''
    ·
  7 │         (*x_mut: &u64);
    │                  ---- Is not compatible with: '&u64'
@@ -76,7 +76,7 @@ error:
     │                 ^^ Invalid type annotation
     ·
  12 │         (*&s.x: &X);
-    │          ----- The type: '0x8675309::M::X'
+    │          ----- The type: ''0x8675309::M::X''
     ·
  12 │         (*&s.x: &X);
     │                 -- Is not compatible with: '&0x8675309::M::X'
@@ -118,10 +118,10 @@ error:
     │                         ^^^^^^^^^^^ Invalid type annotation
     ·
  16 │         (*&mut s_mut.f: (bool, u64));
-    │          ------------- The type: 'u64'
+    │          ------------- The type: ''u64''
     ·
  16 │         (*&mut s_mut.f: (bool, u64));
-    │                         ----------- Is not compatible with: '(bool,u64)'
+    │                         ----------- Is not compatible with: '(bool, u64)'
     │
 
 error: 
@@ -146,10 +146,10 @@ error:
     │                     ^^^^^^ Invalid type annotation
     ·
  18 │         (*&s_mut.x: (X, S));
-    │          --------- The type: '0x8675309::M::X'
+    │          --------- The type: ''0x8675309::M::X''
     ·
  18 │         (*&s_mut.x: (X, S));
-    │                     ------ Is not compatible with: '(0x8675309::M::X,0x8675309::M::S)'
+    │                     ------ Is not compatible with: '(0x8675309::M::X, 0x8675309::M::S)'
     │
 
 error: 
@@ -160,7 +160,7 @@ error:
     │                         ^^ Invalid type annotation
     ·
  19 │         (*&mut s_mut.x: ());
-    │          ------------- The type: '0x8675309::M::X'
+    │          ------------- The type: ''0x8675309::M::X''
     ·
  19 │         (*&mut s_mut.x: ());
     │                         -- Is not compatible with: '()'

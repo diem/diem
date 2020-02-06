@@ -62,7 +62,7 @@ error:
     │             ^ Invalid if condition
     ·
  10 │         if (0) () else ();
-    │             - The type: 'u64'
+    │             - The type: integer
     ·
  10 │         if (0) () else ();
     │             - Is not compatible with: 'bool'
@@ -90,7 +90,7 @@ error:
     │             ^^^^^^^^^^^^^ Invalid if condition
     ·
  15 │         if ((false, true)) () else ();
-    │             ------------- The type: '(bool,bool)'
+    │             ------------- The type: '(bool, bool)'
     ·
  15 │         if ((false, true)) () else ();
     │             ------------- Is not compatible with: 'bool'
@@ -104,7 +104,7 @@ error:
     │             ^^^^^^^^^^ Invalid if condition
     ·
  16 │         if ((0, false)) () else ()
-    │             ---------- The type: '(u64,bool)'
+    │             ---------- The type: '({integer}, bool)'
     ·
  16 │         if ((0, false)) () else ()
     │             ---------- Is not compatible with: 'bool'

@@ -8,8 +8,9 @@ use crate::{
     naming::ast as N,
     parser::ast::{Field, FunctionName, Kind, Kind_, ModuleIdent, StructName, Var},
     shared::*,
+    typing::core::{self, Subst},
 };
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
 // Context
@@ -540,13 +541,13 @@ fn check_no_nominal_resources(
                 field, s
             );
             let tmsg = format!(
-                "Field '{}' is a resource due to the type: '{}'",
+                "Field '{}' is a resource due to the type: {}",
                 field,
-                ty.value.subst_format(&HashMap::new())
+                core::error_format_base(ty, &Subst::empty()),
             );
             let kmsg = format!(
-                "Type '{}' was declared as a resource here",
-                ty.value.subst_format(&HashMap::new())
+                "Type {} was declared as a resource here",
+                core::error_format_base(ty, &Subst::empty()),
             );
             context.error(vec![
                 (field.loc(), field_msg),
@@ -743,6 +744,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
     let sp!(eloc, e_) = e;
     let ne_ = match e_ {
         EE::Unit => NE::Unit,
+        EE::InferredNum(u) => NE::InferredNum(u),
         EE::Value(val) => NE::Value(val),
         EE::Move(v) => NE::Move(v),
         EE::Copy(v) => NE::Copy(v),

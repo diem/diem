@@ -20,7 +20,7 @@ error:
    │                   ^^^^^^^^ Invalid return
    ·
  9 │         if (true) return 1 else return 0
-   │                          - The type: 'u64'
+   │                          - The type: integer
    ·
  8 │     fun t1(): () {
    │               -- Is not compatible with: '()'
@@ -34,7 +34,7 @@ error:
    │                                 ^^^^^^^^ Invalid return
    ·
  9 │         if (true) return 1 else return 0
-   │                                        - The type: 'u64'
+   │                                        - The type: integer
    ·
  8 │     fun t1(): () {
    │               -- Is not compatible with: '()'
@@ -48,10 +48,10 @@ error:
     │              ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
     ·
  13 │         loop return (0, false, R{});
-    │                     --------------- The type: '(u64,bool,0x8675309::M::R)'
+    │                     --------------- The type: '({integer}, bool, 0x8675309::M::R)'
     ·
  12 │     fun t2(): (u64, bool) {
-    │               ----------- Is not compatible with: '(u64,bool)'
+    │               ----------- Is not compatible with: '(u64, bool)'
     │
 
 error: 
@@ -62,10 +62,10 @@ error:
     │                      ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
     ·
  18 │         while (true) return (0, false, R{});
-    │                             --------------- The type: '(u64,bool,0x8675309::M::R)'
+    │                             --------------- The type: '({integer}, bool, 0x8675309::M::R)'
     ·
  17 │     fun t3(): (u64, bool, R, bool) {
-    │               -------------------- Is not compatible with: '(u64,bool,0x8675309::M::R,bool)'
+    │               -------------------- Is not compatible with: '(u64, bool, 0x8675309::M::R, bool)'
     │
 
 error: 
@@ -76,7 +76,7 @@ error:
     │                       ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
     ·
  23 │         while (false) return (0, false, R{});
-    │                               - The type: 'u64'
+    │                               - The type: integer
     ·
  22 │     fun t4(): (bool, u64, R) {
     │                ---- Is not compatible with: 'bool'

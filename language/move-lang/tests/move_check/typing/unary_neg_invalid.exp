@@ -1,9 +1,9 @@
 error: 
 
-   ┌── tests/move_check/typing/unary_neg_invalid.move:7:10 ───
+   ┌── tests/move_check/typing/unary_neg_invalid.move:7:9 ───
    │
  7 │         -&0;
-   │          ^^ Invalid argument to '-'
+   │         ^^^ Invalid argument to '-'
    ·
  7 │         -&0;
    │          -- Found: '&u64'. But the operation is not yet supported on any type
@@ -11,10 +11,10 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/unary_neg_invalid.move:8:10 ───
+   ┌── tests/move_check/typing/unary_neg_invalid.move:8:9 ───
    │
  8 │         -&1;
-   │          ^^ Invalid argument to '-'
+   │         ^^^ Invalid argument to '-'
    ·
  8 │         -&1;
    │          -- Found: '&u64'. But the operation is not yet supported on any type
@@ -22,10 +22,10 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/unary_neg_invalid.move:9:10 ───
+   ┌── tests/move_check/typing/unary_neg_invalid.move:9:9 ───
    │
  9 │         -true;
-   │          ^^^^ Invalid argument to '-'
+   │         ^^^^^ Invalid argument to '-'
    ·
  9 │         -true;
    │          ---- Found: 'bool'. But the operation is not yet supported on any type
@@ -33,10 +33,10 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/unary_neg_invalid.move:10:10 ───
+    ┌── tests/move_check/typing/unary_neg_invalid.move:10:9 ───
     │
  10 │         -false;
-    │          ^^^^^ Invalid argument to '-'
+    │         ^^^^^^ Invalid argument to '-'
     ·
  10 │         -false;
     │          ----- Found: 'bool'. But the operation is not yet supported on any type
@@ -47,10 +47,24 @@ error:
     ┌── tests/move_check/typing/unary_neg_invalid.move:6:24 ───
     │
  11 │         -r;
-    │          ^ Invalid argument to '-'
+    │         ^^ Invalid argument to '-'
     ·
  6 │     fun t0(x: bool, r: R) {
     │                        - Found: '0x8675309::M::R'. But the operation is not yet supported on any type
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unary_neg_invalid.move:2:5 ───
+    │
+ 11 │         -r;
+    │         ^^ Cannot ignore resource values. The value must be used
+    ·
+ 6 │     fun t0(x: bool, r: R) {
+    │                        - The type: '0x8675309::M::R'
+    ·
+ 2 │     resource struct R {
+    │     -------- Is found to be a non-copyable type here
     │
 
 error: 
@@ -58,7 +72,7 @@ error:
     ┌── tests/move_check/typing/unary_neg_invalid.move:6:24 ───
     │
  12 │         -r;
-    │          ^ Invalid argument to '-'
+    │         ^^ Invalid argument to '-'
     ·
  6 │     fun t0(x: bool, r: R) {
     │                        - Found: '0x8675309::M::R'. But the operation is not yet supported on any type
@@ -66,21 +80,35 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/unary_neg_invalid.move:13:10 ───
+    ┌── tests/move_check/typing/unary_neg_invalid.move:2:5 ───
     │
- 13 │         -(0, false);
-    │          ^^^^^^^^^^ Invalid argument to '-'
+ 12 │         -r;
+    │         ^^ Cannot ignore resource values. The value must be used
     ·
- 13 │         -(0, false);
-    │          ---------- Found: '(u64,bool)'. But the operation is not yet supported on any type
+ 6 │     fun t0(x: bool, r: R) {
+    │                        - The type: '0x8675309::M::R'
+    ·
+ 2 │     resource struct R {
+    │     -------- Is found to be a non-copyable type here
     │
 
 error: 
 
-    ┌── tests/move_check/typing/unary_neg_invalid.move:14:10 ───
+    ┌── tests/move_check/typing/unary_neg_invalid.move:13:9 ───
+    │
+ 13 │         -(0, false);
+    │         ^^^^^^^^^^^ Invalid argument to '-'
+    ·
+ 13 │         -(0, false);
+    │          ---------- Found: '(u64, bool)'. But the operation is not yet supported on any type
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unary_neg_invalid.move:14:9 ───
     │
  14 │         -();
-    │          ^^ Invalid argument to '-'
+    │         ^^^ Invalid argument to '-'
     ·
  14 │         -();
     │          -- Found: '()'. But the operation is not yet supported on any type

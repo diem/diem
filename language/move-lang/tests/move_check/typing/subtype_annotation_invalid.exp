@@ -6,7 +6,7 @@ error:
    │              ^^^^^^^^ Invalid type annotation
    ·
  5 │         (&0: &mut u64);
-   │          -- The type: '&u64'
+   │          -- The type: '&{integer}'
    ·
  5 │         (&0: &mut u64);
    │              -------- Is not a subtype of: '&mut u64'
@@ -20,7 +20,7 @@ error:
    │                    ^^^^^^^^^^^^^^^^^^^^ Invalid type annotation
    ·
  9 │         ((&0, &0): (&mut u64, &mut u64));
-   │           -- The type: '&u64'
+   │           -- The type: '&{integer}'
    ·
  9 │         ((&0, &0): (&mut u64, &mut u64));
    │                     -------- Is not a subtype of: '&mut u64'
@@ -34,7 +34,7 @@ error:
     │                    ^^^^^^^^^^^^^^^^ Invalid type annotation
     ·
  10 │         ((&0, &0): (&mut u64, &u64));
-    │           -- The type: '&u64'
+    │           -- The type: '&{integer}'
     ·
  10 │         ((&0, &0): (&mut u64, &u64));
     │                     -------- Is not a subtype of: '&mut u64'
@@ -48,7 +48,7 @@ error:
     │                    ^^^^^^^^^^^^^^^^ Invalid type annotation
     ·
  11 │         ((&0, &0): (&u64, &mut u64));
-    │               -- The type: '&u64'
+    │               -- The type: '&{integer}'
     ·
  11 │         ((&0, &0): (&u64, &mut u64));
     │                           -------- Is not a subtype of: '&mut u64'

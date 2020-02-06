@@ -105,7 +105,7 @@ error:
     │                ^^ Invalid type annotation
     ·
  18 │         let x: () = 0;
-    │                     - The type: 'u64'
+    │                     - The type: integer
     ·
  18 │         let x: () = 0;
     │                -- Is not compatible with: '()'
@@ -155,10 +155,10 @@ error:
     │                           ^^^^^^^^^^^^^^^^^ Invalid type annotation
     ·
  20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
-    │                                               ------------------- The type: '(u64,bool,0x8675309::M::R)'
+    │                                               ------------------- The type: '({integer}, bool, 0x8675309::M::R)'
     ·
  20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
-    │                           ----------------- Is not compatible with: '(u64,bool,0x8675309::M::R,0x8675309::M::R)'
+    │                           ----------------- Is not compatible with: '(u64, bool, 0x8675309::M::R, 0x8675309::M::R)'
     │
 
 error: 
@@ -180,9 +180,9 @@ error:
     │                           ^^^^^^^^^^^ Invalid type annotation
     ·
  21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
-    │                                         ------------------- The type: '(u64,bool,0x8675309::M::R)'
+    │                                         ------------------- The type: '({integer}, bool, 0x8675309::M::R)'
     ·
  21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
-    │                           ----------- Is not compatible with: '(u64,bool)'
+    │                           ----------- Is not compatible with: '(u64, bool)'
     │
 

@@ -37,6 +37,6 @@ error:
    │          -- The type: '()'
    ·
  5 │         ({}: (u64, bool));
-   │              ----------- Is not compatible with: '(u64,bool)'
+   │              ----------- Is not compatible with: '(u64, bool)'
    │
 

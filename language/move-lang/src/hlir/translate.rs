@@ -778,6 +778,7 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
         // All other expressiosn
         TE::Unit => HE::Unit,
         TE::Value(v) => HE::Value(v),
+        TE::InferredNum(_) => panic!("ICE unexpanded inferred num"),
         TE::Move { from_user, var } => HE::Move {
             from_user,
             var: context.remapped_local(var),

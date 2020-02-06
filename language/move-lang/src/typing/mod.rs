@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod ast;
-mod core;
+pub mod core;
 mod expand;
 mod globals;
 pub mod translate;

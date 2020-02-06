@@ -6,7 +6,7 @@ error:
    │          ^ Invalid mutation. Can only assign to references of a copyable type
    ·
  5 │         *r = R {};
-   │          - The type: 0x8675309::M::R
+   │          - The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {}
    │     -------- Is found to be a non-copyable type here
@@ -20,7 +20,7 @@ error:
    │          ^ Invalid mutation. Can only assign to references of a copyable type
    ·
  9 │         *r = x;
-   │          - The type: T
+   │          - The type: 'T'
    ·
  8 │     fun t1<T>(r: &mut T, x: T) {
    │            - Is found to be a non-copyable type here
@@ -34,7 +34,7 @@ error:
     │          ^ Invalid mutation. Can only assign to references of a copyable type
     ·
  13 │         *r = x;
-    │          - The type: T
+    │          - The type: 'T'
     ·
  12 │     fun t2<T: resource>(r: &mut T, x: T) {
     │               -------- Is found to be a non-copyable type here

@@ -6,7 +6,7 @@ error:
    │             ^^^^ Invalid type annotation
    ·
  5 │         let x = 0;
-   │                 - The type: 'u64'
+   │                 - The type: integer
    ·
  8 │         (x: bool);
    │             ---- Is not compatible with: 'bool'
@@ -34,7 +34,7 @@ error:
     │             ^^^^ Invalid type annotation
     ·
  5 │         let x = 0;
-    │                 - The type: 'u64'
+    │                 - The type: integer
     ·
  11 │         (x: bool);
     │             ---- Is not compatible with: 'bool'
@@ -76,7 +76,7 @@ error:
     │             ^^^^ Invalid type annotation
     ·
  5 │         let x = 0;
-    │                 - The type: 'u64'
+    │                 - The type: integer
     ·
  14 │         (x: bool);
     │             ---- Is not compatible with: 'bool'
@@ -118,7 +118,7 @@ error:
     │             ^^^^^^^ Invalid type annotation
     ·
  18 │         let x = 0;
-    │                 - The type: 'u64'
+    │                 - The type: integer
     ·
  27 │         (x: address);
     │             ------- Is not compatible with: 'address'
@@ -146,7 +146,7 @@ error:
     │             ^^^^ Invalid type annotation
     ·
  31 │         let x = 0;
-    │                 - The type: 'u64'
+    │                 - The type: integer
     ·
  37 │         (x: bool);
     │             ---- Is not compatible with: 'bool'

@@ -12,7 +12,7 @@ use crate::{
     shared::*,
 };
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap, VecDeque},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     fmt,
 };
 
@@ -92,8 +92,12 @@ pub struct Function {
 pub enum BuiltinTypeName_ {
     // address
     Address,
+    // u8
+    U8,
     // u64
     U64,
+    // u128
+    U128,
     // bool
     Bool,
     // bytearray
@@ -204,6 +208,7 @@ pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 #[allow(clippy::large_enum_variant)]
 pub enum Exp_ {
     Value(Value),
+    InferredNum(u128),
     Move(Var),
     Copy(Var),
     Use(Var),
@@ -257,14 +262,18 @@ pub type SequenceItem = Spanned<SequenceItem_>;
 
 impl BuiltinTypeName_ {
     pub const ADDRESS: &'static str = "address";
+    pub const U_8: &'static str = "u8";
     pub const U_64: &'static str = "u64";
+    pub const U_128: &'static str = "u128";
     pub const BOOL: &'static str = "bool";
     pub const BYTE_ARRAY: &'static str = "bytearray";
 
     pub fn all_names() -> BTreeSet<&'static str> {
         let mut s = BTreeSet::new();
         s.insert(Self::ADDRESS);
+        s.insert(Self::U_8);
         s.insert(Self::U_64);
+        s.insert(Self::U_128);
         s.insert(Self::BOOL);
         s.insert(Self::BYTE_ARRAY);
         s
@@ -278,26 +287,32 @@ impl BuiltinTypeName_ {
     pub fn numeric() -> BTreeSet<BuiltinTypeName_> {
         use BuiltinTypeName_ as BT;
         let mut s = BT::signed();
+        s.insert(BT::U8);
         s.insert(BT::U64);
-        // s.insert(BT::U256);
+        s.insert(BT::U128);
         s
     }
 
     pub fn bits() -> BTreeSet<BuiltinTypeName_> {
         use BuiltinTypeName_ as BT;
         BT::numeric()
-        // s.insert(BT::U8);
     }
 
     pub fn ordered() -> BTreeSet<BuiltinTypeName_> {
         Self::bits()
     }
 
+    pub fn is_numeric(&self) -> bool {
+        Self::numeric().contains(self)
+    }
+
     pub fn resolve(name_str: &str) -> Option<Self> {
         use BuiltinTypeName_ as BT;
         match name_str {
             BT::ADDRESS => Some(BT::Address),
+            BT::U_8 => Some(BT::U8),
             BT::U_64 => Some(BT::U64),
+            BT::U_128 => Some(BT::U128),
             BT::BOOL => Some(BT::Bool),
             BT::BYTE_ARRAY => Some(BT::Bytearray),
             _ => None,
@@ -307,7 +322,7 @@ impl BuiltinTypeName_ {
     pub fn kind(&self) -> Kind_ {
         use BuiltinTypeName_::*;
         match self {
-            Address | U64 | Bool | Bytearray => Kind_::Unrestricted,
+            Address | U8 | U64 | U128 | Bool | Bytearray => Kind_::Unrestricted,
         }
     }
 
@@ -315,7 +330,7 @@ impl BuiltinTypeName_ {
         use BuiltinTypeName_::*;
         // Match here to make sure this function is fixed when collections are added
         match self {
-            Address | U64 | Bool | Bytearray => vec![],
+            Address | U8 | U64 | U128 | Bool | Bytearray => vec![],
         }
     }
 }
@@ -339,13 +354,7 @@ impl BuiltinFunction_ {
     pub const BORROW_GLOBAL_MUT: &'static str = "borrow_global_mut";
     pub const EXISTS: &'static str = "exists";
     pub const FREEZE: &'static str = "freeze";
-    // pub const GET_HEIGHT: &'static str = "get_height";
-    // pub const GET_MAX_GAS_PRICE: &'static str = "get_max_gas_price";
-    // pub const GET_MAX_GAS_UNITS: &'static str = "get_max_gas_units";
-    // pub const GET_PUBLIC_KEY: &'static str = "get_public_key";
-    // pub const GET_SENDER: &'static str = "get_sender";
-    // pub const GET_SEQUENCE_NUMBER: &'static str = "get_sequence_number";
-    // pub const EMIT_EVENT: &'static str = "emit_event";
+
     pub fn all_names() -> BTreeSet<&'static str> {
         let mut s = BTreeSet::new();
         s.insert(Self::MOVE_TO_SENDER);
@@ -372,29 +381,6 @@ impl BuiltinFunction_ {
 }
 
 impl BaseType_ {
-    pub fn subst_format(&self, subst: &HashMap<TVar, BaseType>) -> String {
-        use BaseType_::*;
-        match self {
-            Apply(_, n, tys) => {
-                let tys_str = if !tys.is_empty() {
-                    format!(
-                        "<{}>",
-                        format_comma(tys.iter().map(|t| t.value.subst_format(subst)))
-                    )
-                } else {
-                    "".to_string()
-                };
-                format!("{}{}", n, tys_str)
-            }
-            Param(tp) => tp.debug.value.to_string(),
-            Var(id) => match subst.get(id) {
-                Some(t) => t.value.subst_format(subst),
-                None => "_".to_string(),
-            },
-            Anything => "_".to_string(),
-        }
-    }
-
     pub fn anything(loc: Loc) -> BaseType {
         sp(loc, BaseType_::Anything)
     }
@@ -413,24 +399,20 @@ impl BaseType_ {
         Self::builtin(loc, BuiltinTypeName_::Address)
     }
 
+    pub fn u8(loc: Loc) -> BaseType {
+        Self::builtin(loc, BuiltinTypeName_::U8)
+    }
+
     pub fn u64(loc: Loc) -> BaseType {
         Self::builtin(loc, BuiltinTypeName_::U64)
+    }
+
+    pub fn u128(loc: Loc) -> BaseType {
+        Self::builtin(loc, BuiltinTypeName_::U128)
     }
 }
 
 impl SingleType_ {
-    pub fn subst_format(&self, subst: &HashMap<TVar, BaseType>) -> String {
-        use SingleType_::*;
-        match self {
-            Ref(mut_, ty) => format!(
-                "&{}{}",
-                if *mut_ { "mut " } else { "" },
-                ty.value.subst_format(subst)
-            ),
-            Base(ty) => ty.value.subst_format(subst),
-        }
-    }
-
     pub fn base(sp!(loc, b_): BaseType) -> SingleType {
         sp(loc, SingleType_::Base(sp(loc, b_)))
     }
@@ -447,24 +429,20 @@ impl SingleType_ {
         Self::base(BaseType_::address(loc))
     }
 
+    pub fn u8(loc: Loc) -> SingleType {
+        Self::base(BaseType_::u8(loc))
+    }
+
     pub fn u64(loc: Loc) -> SingleType {
         Self::base(BaseType_::u64(loc))
+    }
+
+    pub fn u128(loc: Loc) -> SingleType {
+        Self::base(BaseType_::u128(loc))
     }
 }
 
 impl Type_ {
-    pub fn subst_format(&self, subst: &HashMap<TVar, BaseType>) -> String {
-        use Type_::*;
-        match self {
-            Unit => "()".into(),
-            Single(s) => s.value.subst_format(subst),
-            Multiple(ss) => {
-                let inner = format_comma(ss.iter().map(|s| s.value.subst_format(subst)));
-                format!("({})", inner)
-            }
-        }
-    }
-
     pub fn base(b: BaseType) -> Type {
         Self::single(SingleType_::base(b))
     }
@@ -485,8 +463,16 @@ impl Type_ {
         Self::single(SingleType_::address(loc))
     }
 
+    pub fn u8(loc: Loc) -> Type {
+        Self::single(SingleType_::u8(loc))
+    }
+
     pub fn u64(loc: Loc) -> Type {
         Self::single(SingleType_::u64(loc))
+    }
+
+    pub fn u128(loc: Loc) -> Type {
+        Self::single(SingleType_::u128(loc))
     }
 }
 
@@ -496,7 +482,9 @@ impl Value_ {
         use Value_::*;
         let b_ = match self {
             Address(_) => T::Address,
+            U8(_) => T::U8,
             U64(_) => T::U64,
+            U128(_) => T::U128,
             Bool(_) => T::Bool,
             Bytearray(_) => T::Bytearray,
         };
@@ -512,15 +500,17 @@ impl Value_ {
 
 impl fmt::Display for BuiltinTypeName_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        use BuiltinTypeName_::*;
+        use BuiltinTypeName_ as BT;
         write!(
             f,
             "{}",
             match self {
-                Address => "address",
-                U64 => "u64",
-                Bool => "bool",
-                Bytearray => "bytearray",
+                BT::Address => BT::ADDRESS,
+                BT::U8 => BT::U_8,
+                BT::U64 => BT::U_64,
+                BT::U128 => BT::U_128,
+                BT::Bool => BT::BOOL,
+                BT::Bytearray => BT::BYTE_ARRAY,
             }
         )
     }
@@ -798,6 +788,7 @@ impl AstDebug for Exp_ {
         match self {
             E::Unit => w.write("()"),
             E::Value(v) => v.ast_debug(w),
+            E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Move(v) => w.write(&format!("move {}", v)),
             E::Copy(v) => w.write(&format!("copy {}", v)),
             E::Use(v) => w.write(&format!("{}", v)),

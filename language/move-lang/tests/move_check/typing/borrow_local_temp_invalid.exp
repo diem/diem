@@ -6,7 +6,7 @@ error:
    │         ^^^ Invalid borrow
    ·
  3 │         &();
-   │          -- Expected a single non-reference type, but got: ()
+   │          -- Expected a single non-reference type, but got: '()'
    │
 
 error: 
@@ -17,7 +17,7 @@ error:
    │         ^^^^^^^ Invalid borrow
    ·
  4 │         &(0, 1);
-   │          ------ Expected a single non-reference type, but got: (u64,u64)
+   │          ------ Expected a single non-reference type, but got: '({integer}, {integer})'
    │
 
 error: 
@@ -28,7 +28,7 @@ error:
    │         ^^^^^^^^^^^^^^^^^^ Invalid borrow
    ·
  5 │         &(0, 1, true, 0x0);
-   │          ----------------- Expected a single non-reference type, but got: (u64,u64,bool,address)
+   │          ----------------- Expected a single non-reference type, but got: '({integer}, {integer}, bool, address)'
    │
 
 error: 
@@ -39,7 +39,7 @@ error:
    │         ^^^^^ Invalid borrow
    ·
  9 │         &(&0);
-   │          ---- Expected a single non-reference type, but got: &u64
+   │          ---- Expected a single non-reference type, but got: '&{integer}'
    │
 
 error: 
@@ -50,7 +50,7 @@ error:
     │         ^^^^^^^^^ Invalid borrow
     ·
  10 │         &(&mut 1);
-    │          -------- Expected a single non-reference type, but got: &mut u64
+    │          -------- Expected a single non-reference type, but got: '&mut {integer}'
     │
 
 error: 
@@ -61,7 +61,7 @@ error:
     │         ^^^^^^^ Invalid borrow
     ·
  11 │         &mut &2;
-    │              -- Expected a single non-reference type, but got: &u64
+    │              -- Expected a single non-reference type, but got: '&{integer}'
     │
 
 error: 
@@ -72,6 +72,6 @@ error:
     │         ^^^^^^^^^^^ Invalid borrow
     ·
  12 │         &mut &mut 3;
-    │              ------ Expected a single non-reference type, but got: &mut u64
+    │              ------ Expected a single non-reference type, but got: '&mut {integer}'
     │
 

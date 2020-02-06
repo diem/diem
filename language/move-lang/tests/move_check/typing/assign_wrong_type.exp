@@ -78,7 +78,7 @@ error:
     │          ^ Invalid assignment to local 'x'
     ·
  27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
-    │                            - The type: 'u64'
+    │                            - The type: integer
     ·
  23 │         let x = false;
     │                 ----- Is not compatible with: 'bool'
@@ -91,11 +91,11 @@ error:
  27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
     │             ^ Invalid assignment to local 'b'
     ·
- 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
-    │                               ----- The type: 'bool'
-    ·
  24 │         let b = 0;
-    │                 - Is not compatible with: 'u64'
+    │                 - The type: integer
+    ·
+ 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │                               ----- Is not compatible with: 'bool'
     │
 
 error: 

@@ -6,7 +6,7 @@ error:
    │                      ^ Invalid loop body
    ·
  3 │         while (cond) 0;
-   │                      - The type: 'u64'
+   │                      - The type: integer
    ·
  3 │         while (cond) 0;
    │                      - Is not compatible with: '()'
@@ -48,7 +48,7 @@ error:
    │                      ^^^^^^^^^^^^^^^^ Invalid loop body
    ·
  6 │         while (cond) { let x = 0; x };
-   │                                - The type: 'u64'
+   │                                - The type: integer
    ·
  6 │         while (cond) { let x = 0; x };
    │                      ---------------- Is not compatible with: '()'
@@ -62,7 +62,7 @@ error:
    │                      ^^^^^^^^^^^^^^^^^^^^^^ Invalid loop body
    ·
  7 │         while (cond) { if (cond) 1 else 0 };
-   │                                  - The type: 'u64'
+   │                                  - The type: integer
    ·
  7 │         while (cond) { if (cond) 1 else 0 };
    │                      ---------------------- Is not compatible with: '()'

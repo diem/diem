@@ -10,10 +10,9 @@ use crate::{
     errors::Errors,
     expansion::ast::Fields,
     naming::ast::{
-        self as N, BaseType, BaseType_, BuiltinTypeName_, SingleType, SingleType_, TVar, Type,
-        TypeName_, Type_,
+        self as N, BaseType, BaseType_, SingleType, SingleType_, TVar, Type, TypeName_, Type_,
     },
-    parser::ast::{BinOp_, Field, FunctionName, Kind_, ModuleIdent, StructName, UnaryOp_, Var},
+    parser::ast::{BinOp_, Field, FunctionName, ModuleIdent, StructName, UnaryOp_, Var},
     shared::*,
     typing::ast as T,
 };
@@ -126,7 +125,6 @@ fn function_body(
     sp!(loc, nb_): N::FunctionBody,
 ) -> T::FunctionBody {
     assert!(context.constraints.is_empty());
-
     let mut b_ = match nb_ {
         N::FunctionBody_::Native => T::FunctionBody_::Native,
         N::FunctionBody_::Defined(es) => {
@@ -172,15 +170,6 @@ fn struct_def(context: &mut Context, _name: StructName, s: &mut N::StructDefinit
 // Types
 //**************************************************************************************************
 
-macro_rules! TApply {
-    ($k:pat, $n:pat, $args:pat) => {
-        Type_::Single(sp!(
-            _,
-            SingleType_::Base(sp!(_, BaseType_::Apply($k, $n, $args)))
-        ))
-    };
-}
-
 fn typing_error<T: Into<String>, F: FnOnce() -> T>(
     context: &mut Context,
     loc: Loc,
@@ -194,22 +183,25 @@ fn typing_error<T: Into<String>, F: FnOnce() -> T>(
             (loc, msg().into()),
             (
                 st1.loc,
-                format!("The type: '{}'", st1.value.subst_format(subst)),
+                format!("The type: {}", core::error_format_single(&st1, subst)),
             ),
             (
                 st2.loc,
-                format!("Is not a subtype of: '{}'", st2.value.subst_format(subst)),
+                format!(
+                    "Is not a subtype of: {}",
+                    core::error_format_single(&st2, subst)
+                ),
             ),
         ],
         Incompatible(t1, t2) => vec![
             (loc, msg().into()),
             (
                 t1.loc,
-                format!("The type: '{}'", t1.value.subst_format(subst)),
+                format!("The type: {}", core::error_format(&t1, subst)),
             ),
             (
                 t2.loc,
-                format!("Is not compatible with: '{}'", t2.value.subst_format(subst)),
+                format!("Is not compatible with: {}", core::error_format(&t2, subst)),
             ),
         ],
         RecursiveType(rloc) => vec![
@@ -230,7 +222,7 @@ fn subtype<T: Into<String>, F: FnOnce() -> T>(
     lhs: &Type,
     rhs: &Type,
 ) -> Type {
-    let subst = std::mem::replace(&mut context.subst, Subst::new());
+    let subst = std::mem::replace(&mut context.subst, Subst::empty());
     match core::subtype(subst.clone(), lhs, rhs) {
         Err(e) => {
             context.subst = subst;
@@ -251,7 +243,7 @@ fn subtype_single<T: Into<String>, F: FnOnce() -> T>(
     lhs: &SingleType,
     rhs: &SingleType,
 ) -> SingleType {
-    let subst = std::mem::replace(&mut context.subst, Subst::new());
+    let subst = std::mem::replace(&mut context.subst, Subst::empty());
     match core::subtype_single(subst.clone(), lhs, rhs) {
         Err(e) => {
             context.subst = subst;
@@ -272,7 +264,7 @@ fn join<T: Into<String>, F: FnOnce() -> T>(
     t1: &Type,
     t2: &Type,
 ) -> Type {
-    let subst = std::mem::replace(&mut context.subst, Subst::new());
+    let subst = std::mem::replace(&mut context.subst, Subst::empty());
     match core::join(subst.clone(), t1, t2) {
         Err(e) => {
             context.subst = subst;
@@ -294,7 +286,7 @@ pub fn join_single<T: Into<String>, F: FnOnce() -> T>(
     t1: &SingleType,
     t2: &SingleType,
 ) -> SingleType {
-    let subst = std::mem::replace(&mut context.subst, Subst::new());
+    let subst = std::mem::replace(&mut context.subst, Subst::empty());
     match core::join_single(subst.clone(), t1, t2) {
         Err(e) => {
             context.subst = subst;
@@ -315,7 +307,7 @@ fn join_base<T: Into<String>, F: FnOnce() -> T>(
     t1: &BaseType,
     t2: &BaseType,
 ) -> BaseType {
-    let subst = std::mem::replace(&mut context.subst, Subst::new());
+    let subst = std::mem::replace(&mut context.subst, Subst::empty());
     match core::join_base_type(subst.clone(), t1, t2) {
         Err(e) => {
             context.subst = subst;
@@ -325,56 +317,6 @@ fn join_base<T: Into<String>, F: FnOnce() -> T>(
         Ok((next_subst, ty)) => {
             context.subst = next_subst;
             ty
-        }
-    }
-}
-
-fn expect_builtin_ty<T: Into<String>, F: FnOnce() -> T>(
-    context: &mut Context,
-    builtin_set: BTreeSet<BuiltinTypeName_>,
-    loc: Loc,
-    msg: F,
-    ty: &Type,
-) -> Type {
-    use BaseType_::*;
-    use SingleType_::*;
-    use TypeName_::*;
-    use Type_::*;
-    let sp!(_, t_) = core::unfold_type(&context.subst, ty.clone());
-    let tmsg = || {
-        let set_msg = if builtin_set.is_empty() {
-            "the operation is not yet supported on any type".to_string()
-        } else {
-            format!(
-                "expected: {}",
-                format_comma(builtin_set.iter().map(|b| format!("'{}'", b)))
-            )
-        };
-        format!(
-            "Found: '{}'. But {}",
-            t_.subst_format(&Subst::new()),
-            set_msg
-        )
-    };
-    match &t_ {
-        TApply!(k, sp!(_, Builtin(sp!(_, b))), args) if builtin_set.contains(b) => {
-            if let Some(sp!(_, Kind_::Resource)) = k {
-                panic!("ICE assumes this type is being consumed so shouldn't be a resource");
-            }
-            assert!(args.is_empty());
-            ty.clone()
-        }
-        Single(sp!(_, Base(sp!(_, Var(_))))) => panic!("ICE unfold_type failed"),
-        Single(sp!(_, Base(sp!(_, Anything)))) => {
-            context.error(vec![
-                (loc, format!("{}. Try annotating this type.", msg().into())),
-                (ty.loc, tmsg()),
-            ]);
-            Type_::anything(loc)
-        }
-        _ => {
-            context.error(vec![(loc, msg().into()), (ty.loc, tmsg())]);
-            Type_::anything(loc)
         }
     }
 }
@@ -508,6 +450,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
     let (ty, e_) = match ne_ {
         NE::Unit => (sp(eloc, Type_::Unit), TE::Unit),
         NE::Value(sp!(vloc, v)) => (Type_::base(v.type_(vloc)), TE::Value(sp(vloc, v))),
+        NE::InferredNum(v) => (core::make_num_tvar(context, eloc), TE::InferredNum(v)),
 
         NE::Move(var) => {
             let st = get_local(context, eloc, "move", &var);
@@ -670,7 +613,6 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (Type_::base(inner), TE::Dereference(eref))
         }
         NE::UnaryExp(uop, nr) => {
-            use BuiltinTypeName_ as BT;
             use UnaryOp_::*;
             let msg = || format!("Invalid argument to '{}'", &uop);
             let er = exp(context, *nr);
@@ -680,58 +622,76 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                     subtype(context, rloc, msg, &er.ty, &Type_::bool(rloc));
                     Type_::bool(eloc)
                 }
-                Neg => expect_builtin_ty(context, BT::signed(), er.exp.loc, msg, &er.ty),
+                Neg => {
+                    context.add_signed_constraint(eloc, uop.value.symbol(), er.ty.clone());
+                    er.ty.clone()
+                }
             };
             (ty, TE::UnaryExp(uop, er))
         }
         NE::BinopExp(nl, bop, nr) => {
             use BinOp_::*;
-            use BuiltinTypeName_ as BT;
-            let msg = || format!("Invalid argument to '{}'", &bop);
+            let msg = || format!("Incompatible arguments to '{}'", &bop);
             let el = exp(context, *nl);
             let er = exp(context, *nr);
             let (ty, operand_ty) = match &bop.value {
                 Sub | Add | Mul | Mod | Div => {
-                    let ty = expect_builtin_ty(context, BT::numeric(), el.exp.loc, msg, &el.ty);
-                    let operand_ty = subtype(context, er.exp.loc, msg, &er.ty, &ty);
-                    (ty, operand_ty)
+                    // TODO after typing refactor, just add to operand ty
+                    context.add_numeric_constraint(el.exp.loc, bop.value.symbol(), el.ty.clone());
+                    context.add_numeric_constraint(er.exp.loc, bop.value.symbol(), el.ty.clone());
+                    let operand_ty = join(context, er.exp.loc, msg, &el.ty, &er.ty);
+                    (operand_ty.clone(), operand_ty)
                 }
 
                 BitOr | BitAnd | Xor => {
-                    let ty = expect_builtin_ty(context, BT::bits(), el.exp.loc, msg, &el.ty);
-                    let operand_ty = subtype(context, er.exp.loc, msg, &er.ty, &ty);
-                    (ty, operand_ty)
+                    // TODO after typing refactor, just add to operand ty
+                    context.add_bits_constraint(el.exp.loc, bop.value.symbol(), el.ty.clone());
+                    context.add_bits_constraint(er.exp.loc, bop.value.symbol(), el.ty.clone());
+                    let operand_ty = join(context, er.exp.loc, msg, &el.ty, &er.ty);
+                    context.add_bits_constraint(eloc, bop.value.symbol(), operand_ty.clone());
+                    (operand_ty.clone(), operand_ty)
+                }
+
+                Shl | Shr => {
+                    let msg = || format!("Invalid argument to '{}'", &bop);
+                    let u8ty = Type_::u8(er.exp.loc);
+                    context.add_bits_constraint(el.exp.loc, bop.value.symbol(), el.ty.clone());
+                    subtype(context, er.exp.loc, msg, &er.ty, &u8ty);
+                    (el.ty.clone(), el.ty.clone())
                 }
 
                 Lt | Gt | Le | Ge => {
-                    let ty = expect_builtin_ty(context, BT::ordered(), el.exp.loc, msg, &el.ty);
-                    let operand_ty = join(context, er.exp.loc, msg, &er.ty, &ty);
+                    // TODO after typing refactor, just add to operand ty
+                    context.add_ordered_constraint(el.exp.loc, bop.value.symbol(), el.ty.clone());
+                    context.add_ordered_constraint(er.exp.loc, bop.value.symbol(), el.ty.clone());
+                    let operand_ty = join(context, er.exp.loc, msg, &el.ty, &er.ty);
                     (Type_::bool(eloc), operand_ty)
                 }
 
                 Eq | Neq => {
                     let ty = join(context, er.exp.loc, msg, &el.ty, &er.ty);
-                    let st = match ty {
-                        sp!(tloc, t@Type_::Unit) | sp!(tloc, t@Type_::Multiple(_)) => {
-                            let subst_t = t.subst_format(&context.subst);
+                    match &ty {
+                        sp!(tloc, Type_::Unit) | sp!(tloc, Type_::Multiple(_)) => {
+                            let tystr = core::error_format(&ty, &context.subst);
                             let msg = format!(
                                 "Invalid use of '{}'. Expected an expression of a single \
                                  type but got an expression of the list: {}",
-                                &bop, subst_t
+                                &bop, tystr
                             );
-                            context.error(vec![(eloc, msg), (tloc, "Type found here".into())]);
-                            SingleType_::anything(eloc)
+                            context.error(vec![(eloc, msg), (*tloc, "Type found here".into())]);
                         }
-                        sp!(_, Type_::Single(t)) => t,
+                        sp!(_, Type_::Single(t)) => {
+                            let msg = format!(
+                                "Cannot use '{}' on resource values. This would destroy the resource. \
+                                 Try borrowing the values with '&' first.'",
+                                &bop
+                            );
+                            // TODO after typing refactor, just add to operand ty
+                            context.add_copyable_constraint(eloc, msg, t.clone());
+                        }
                     };
-                    let msg = format!(
-                        "Cannot use '{}' on resource values. This would destroy the resource. \
-                         Try borrowing the values with '&' first.'",
-                        &bop
-                    );
-                    context.add_copyable_constraint(eloc, msg, st.clone());
 
-                    (Type_::bool(eloc), Type_::single(st))
+                    (Type_::bool(eloc), ty)
                 }
 
                 And | Or => {
@@ -753,8 +713,8 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 .map(|e| {
                     use Type_::*;
                     match &e.ty {
-                        sp!(tloc, t@Unit) | sp!(tloc, t@Multiple(_)) => {
-                            let subst_t = t.subst_format(&context.subst);
+                        sp!(tloc, Unit) | sp!(tloc, Multiple(_)) => {
+                            let subst_t = core::error_format(&e.ty, &context.subst);
                             let msg = format!(
                                 "Invalid result list item. Expected an expression of a \
                                  single type but got an expression of the list: {}",
@@ -815,9 +775,9 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             let er = exp_(context, *ner);
             let inner = match &er.ty {
                 sp!(_, Type_::Single(sp!(_, SingleType_::Base(b)))) => b.clone(),
-                sp!(tloc, t) => {
+                sp!(tloc, _) => {
                     // TODO we could just collapse this so &&x == &x
-                    let s = t.subst_format(&context.subst);
+                    let s = core::error_format(&er.ty, &context.subst);
                     let tmsg = format!("Expected a single non-reference type, but got: {}", s);
                     context.error(vec![(eloc, "Invalid borrow".into()), (*tloc, tmsg)]);
                     BaseType_::anything(eloc)
@@ -1384,14 +1344,14 @@ fn resolve_field(context: &mut Context, loc: Loc, ty: BaseType, field: &Field) -
             }
             core::make_field_type(context, loc, &m, &n, targs, field)
         }
-        sp!(tloc, t) => {
+        t => {
             context.error(vec![
                 (loc, msg()),
                 (
-                    tloc,
+                    t.loc,
                     format!(
                         "Expected a struct type in the current module but got: {}",
-                        t.subst_format(&context.subst)
+                        core::error_format_base(&t, &context.subst)
                     ),
                 ),
             ]);
@@ -1465,11 +1425,11 @@ fn exp_dotted(
             use Type_::*;
             let e = exp(context, *ne);
             let (borrow_needed, bt) = match &e.ty {
-                sp!(tloc, t@Unit) | sp!(tloc, t@Multiple(_)) => {
-                    let subst_t = t.subst_format(&context.subst);
+                sp!(tloc, Unit) | sp!(tloc, Multiple(_)) => {
+                    let subst_t = core::error_format(&e.ty, &context.subst);
                     let msg = format!(
                         "Invalid {}. Expected an expression of a single type but got an \
-                         expression of type: '{}'",
+                         expression of type: {}",
                         verb, subst_t
                     );
                     context.error(vec![(e.exp.loc, msg), (*tloc, "Type found here".into())]);

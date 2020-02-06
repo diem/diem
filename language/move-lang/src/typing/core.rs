@@ -5,8 +5,8 @@ use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::*,
     naming::ast::{
-        self as N, BaseType, BaseType_, FunctionSignature, SingleType, SingleType_,
-        StructDefinition, TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_,
+        self as N, BaseType, BaseType_, BuiltinTypeName_, FunctionSignature, SingleType,
+        SingleType_, StructDefinition, TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_,
     },
     parser::ast::{
         Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc, StructName,
@@ -29,8 +29,11 @@ pub enum Constraint {
         fix: String,
     },
     KindConstraint(Loc, BaseType, Kind),
+    NumericConstraint(Loc, &'static str, Type),
+    BitsConstraint(Loc, &'static str, Type),
+    OrderedConstraint(Loc, &'static str, Type),
+    SignedConstraint(Loc, &'static str, Type),
 }
-pub type Subst = HashMap<TVar, BaseType>;
 pub type Constraints = Vec<Constraint>;
 type TParamSubst = HashMap<TParamID, BaseType>;
 
@@ -83,7 +86,7 @@ impl Context {
             ModuleInfo { structs, functions }
         });
         Context {
-            subst: Subst::new(),
+            subst: Subst::empty(),
             current_module: None,
             current_function: None,
             return_type: None,
@@ -100,7 +103,7 @@ impl Context {
         assert!(!self.in_loop, "ICE in_loop should be reset after the loop");
         self.return_type = None;
         self.locals = UniqueMap::new();
-        self.subst = Subst::new();
+        self.subst = Subst::empty();
         self.constraints = Constraints::new();
     }
 
@@ -137,6 +140,26 @@ impl Context {
 
     pub fn add_kind_constraint(&mut self, loc: Loc, b: BaseType, k: Kind) {
         self.constraints.push(Constraint::KindConstraint(loc, b, k))
+    }
+
+    pub fn add_numeric_constraint(&mut self, loc: Loc, op: &'static str, t: Type) {
+        self.constraints
+            .push(Constraint::NumericConstraint(loc, op, t))
+    }
+
+    pub fn add_bits_constraint(&mut self, loc: Loc, op: &'static str, t: Type) {
+        self.constraints
+            .push(Constraint::BitsConstraint(loc, op, t))
+    }
+
+    pub fn add_ordered_constraint(&mut self, loc: Loc, op: &'static str, t: Type) {
+        self.constraints
+            .push(Constraint::OrderedConstraint(loc, op, t))
+    }
+
+    pub fn add_signed_constraint(&mut self, loc: Loc, op: &'static str, t: Type) {
+        self.constraints
+            .push(Constraint::SignedConstraint(loc, op, t))
     }
 
     pub fn declare_local(&mut self, var: Var, ty_opt: Option<SingleType>) {
@@ -188,6 +211,142 @@ impl Context {
 
     pub fn function_acquires(&mut self, m: &ModuleIdent, n: &FunctionName) -> BTreeSet<StructName> {
         self.function_info(m, n).acquires.clone()
+    }
+}
+
+//**************************************************************************************************
+// Subst
+//**************************************************************************************************
+
+#[derive(Clone, Debug)]
+pub struct Subst {
+    tvars: HashMap<TVar, BaseType>,
+    num_vars: HashMap<TVar, Loc>,
+}
+
+impl Subst {
+    pub fn empty() -> Self {
+        Self {
+            tvars: HashMap::new(),
+            num_vars: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, tvar: TVar, bt: BaseType) {
+        self.tvars.insert(tvar, bt);
+    }
+
+    pub fn get(&self, tvar: &TVar) -> Option<&BaseType> {
+        self.tvars.get(tvar)
+    }
+
+    pub fn new_num_var(&mut self, loc: Loc) -> TVar {
+        let tvar = TVar::next();
+        assert!(self.num_vars.insert(tvar, loc).is_none());
+        tvar
+    }
+
+    pub fn set_num_var(&mut self, tvar: TVar, loc: Loc) {
+        self.num_vars.entry(tvar).or_insert(loc);
+        if let Some(sp!(_, BaseType_::Var(next))) = self.get(&tvar) {
+            let next = *next;
+            self.set_num_var(next, loc)
+        }
+    }
+
+    pub fn is_num_var(&self, tvar: &TVar) -> bool {
+        self.num_vars.contains_key(tvar)
+    }
+}
+
+impl ast_debug::AstDebug for Subst {
+    fn ast_debug(&self, w: &mut ast_debug::AstWriter) {
+        let Subst { tvars, num_vars } = self;
+
+        w.write("tvars:");
+        w.indent(4, |w| {
+            let mut tvars = tvars.iter().collect::<Vec<_>>();
+            tvars.sort_by_key(|(v, _)| *v);
+            for (tvar, bt) in tvars {
+                w.write(&format!("{:?} => ", tvar));
+                bt.ast_debug(w);
+                w.new_line();
+            }
+        });
+        w.write("num_vars:");
+        w.indent(4, |w| {
+            let mut num_vars = num_vars.keys().collect::<Vec<_>>();
+            num_vars.sort();
+            for tvar in num_vars {
+                w.writeln(&format!("{:?}", tvar))
+            }
+        })
+    }
+}
+
+//**************************************************************************************************
+// Type error display
+//**************************************************************************************************
+
+pub fn error_format_base(b: &BaseType, subst: &Subst) -> String {
+    error_format_base_(b, subst, false)
+}
+
+fn error_format_base_(sp!(_, b_): &BaseType, subst: &Subst, nested: bool) -> String {
+    use BaseType_::*;
+    let res = match b_ {
+        Apply(_, n, tys) => {
+            let tys_str = if !tys.is_empty() {
+                format!(
+                    "<{}>",
+                    format_comma(tys.iter().map(|t| error_format_base_(t, subst, true)))
+                )
+            } else {
+                "".to_string()
+            };
+            format!("{}{}", n, tys_str)
+        }
+        Param(tp) => tp.debug.value.to_string(),
+        Var(id) => match subst.get(id) {
+            Some(t) => error_format_base_(t, subst, nested),
+            None if nested && subst.is_num_var(id) => "{integer}".to_string(),
+            None if subst.is_num_var(id) => return "integer".to_string(),
+            None => "_".to_string(),
+        },
+        Anything => "_".to_string(),
+    };
+    if nested {
+        res
+    } else {
+        format!("'{}'", res)
+    }
+}
+
+pub fn error_format_single(s: &SingleType, subst: &Subst) -> String {
+    error_format_single_(s, subst, false)
+}
+
+fn error_format_single_(sp!(_, s_): &SingleType, subst: &Subst, nested: bool) -> String {
+    use SingleType_::*;
+    match s_ {
+        Ref(mut_, ty) => format!(
+            "'&{}{}'",
+            if *mut_ { "mut " } else { "" },
+            error_format_base_(ty, subst, true)
+        ),
+        Base(ty) => error_format_base_(ty, subst, nested),
+    }
+}
+
+pub fn error_format(sp!(_, t_): &Type, subst: &Subst) -> String {
+    use Type_::*;
+    match t_ {
+        Unit => "'()'".into(),
+        Single(s) => error_format_single_(s, subst, false),
+        Multiple(ss) => {
+            let inner = format_comma(ss.iter().map(|s| error_format_single_(s, subst, true)));
+            format!("'({})'", inner)
+        }
     }
 }
 
@@ -287,7 +446,7 @@ pub fn make_struct_type(
             let constraints = sdef
                 .type_parameters
                 .iter()
-                .map(|tp| tp.kind.clone())
+                .map(|tp| (loc, tp.kind.clone()))
                 .collect();
             let ty_args = make_tparams(context, loc, constraints);
             (
@@ -386,7 +545,7 @@ pub fn make_function_type(
         Some(current) => m == current,
         None => false,
     };
-    let constraints = context
+    let constraints: Vec<_> = context
         .function_info(m, f)
         .signature
         .type_parameters
@@ -395,7 +554,10 @@ pub fn make_function_type(
         .collect();
 
     let ty_args = match ty_args_opt {
-        None => make_tparams(context, loc, constraints),
+        None => {
+            let locs_constraints = constraints.into_iter().map(|k| (loc, k)).collect();
+            make_tparams(context, loc, locs_constraints)
+        }
         Some(ty_args) => {
             let ty_args = check_type_argument_arity(
                 context,
@@ -442,6 +604,20 @@ pub fn make_function_type(
 //**************************************************************************************************
 
 pub fn solve_constraints(context: &mut Context) {
+    use BuiltinTypeName_ as BT;
+    let num_vars = context.subst.num_vars.clone();
+    let mut subst = std::mem::replace(&mut context.subst, Subst::empty());
+    for (num_var, loc) in num_vars {
+        let tvar = sp(loc, BaseType_::Var(num_var));
+        if let BaseType_::Anything = unfold_type_base(&subst, tvar.clone()).value {
+            let next_subst = join_base_type(subst, &BaseType_::u64(loc), &tvar)
+                .unwrap()
+                .0;
+            subst = next_subst;
+        }
+    }
+    context.subst = subst;
+
     let constraints = std::mem::replace(&mut context.constraints, vec![]);
     for constraint in constraints {
         match constraint {
@@ -450,6 +626,18 @@ pub fn solve_constraints(context: &mut Context) {
                 solve_implicitly_copyable_constraint(context, loc, msg, ty, fix)
             }
             Constraint::KindConstraint(loc, b, k) => solve_kind_constraint(context, loc, b, k),
+            Constraint::NumericConstraint(loc, op, t) => {
+                solve_builtin_type_constraint(context, BT::numeric(), loc, op, t)
+            }
+            Constraint::BitsConstraint(loc, op, t) => {
+                solve_builtin_type_constraint(context, BT::bits(), loc, op, t)
+            }
+            Constraint::OrderedConstraint(loc, op, t) => {
+                solve_builtin_type_constraint(context, BT::ordered(), loc, op, t)
+            }
+            Constraint::SignedConstraint(loc, op, t) => {
+                solve_builtin_type_constraint(context, BT::signed(), loc, op, t)
+            }
         }
     }
 }
@@ -480,9 +668,9 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
         // affine </: linear
         // all </: linear
         (K::Unrestricted, K::Resource) | (K::Affine, K::Resource) | (K::Unknown, K::Resource) => {
-            let ty_str = b.value.subst_format(&context.subst);
+            let ty_str = error_format_base(&b, &context.subst);
             let cmsg = format!(
-                "The {} type '{}' does not satisfy the constraint '{}'",
+                "The {} type {} does not satisfy the constraint '{}'",
                 Kind_::VALUE_CONSTRAINT,
                 ty_str,
                 Kind_::RESOURCE_CONSTRAINT
@@ -509,9 +697,9 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
                 K::Resource => "resource ",
                 K::Unknown => "",
             };
-            let ty_str = b.value.subst_format(&context.subst);
+            let ty_str = error_format_base(&b, &context.subst);
             let cmsg = format!(
-                "The {}type '{}' does not satisfy the constraint '{}'",
+                "The {}type {} does not satisfy the constraint '{}'",
                 resource_msg,
                 ty_str,
                 Kind_::VALUE_CONSTRAINT
@@ -544,7 +732,7 @@ fn solve_copyable_constraint(context: &mut Context, loc: Loc, msg: String, s: Si
     match kind {
         sp!(_, Kind_::Unrestricted) | sp!(_, Kind_::Affine) => (),
         sp!(rloc, Kind_::Unknown) | sp!(rloc, Kind_::Resource) => {
-            let ty_str = s.value.subst_format(&context.subst);
+            let ty_str = error_format_single(&s, &context.subst);
             context.error(vec![
                 (loc, msg),
                 (sloc, format!("The type: {}", ty_str)),
@@ -572,7 +760,7 @@ fn solve_implicitly_copyable_constraint(
     match kind {
         sp!(_, Kind_::Unrestricted) => (),
         sp!(kloc, Kind_::Affine) => {
-            let ty_str = b.value.subst_format(&context.subst);
+            let ty_str = error_format_base(&b, &context.subst);
             context.error(vec![
                 (loc, format!("{} {}", msg, fix)),
                 (bloc, format!("The type: {}", ty_str)),
@@ -583,12 +771,67 @@ fn solve_implicitly_copyable_constraint(
             ])
         }
         sp!(kloc, Kind_::Unknown) | sp!(kloc, Kind_::Resource) => {
-            let ty_str = b.value.subst_format(&context.subst);
+            let ty_str = error_format_base(&b, &context.subst);
             context.error(vec![
                 (loc, msg),
                 (bloc, format!("The type: {}", ty_str)),
                 (kloc, "Is declared as a non-copyable type here".into()),
             ])
+        }
+    }
+}
+
+macro_rules! TApply {
+    ($k:pat, $n:pat, $args:pat) => {
+        Type_::Single(sp!(
+            _,
+            SingleType_::Base(sp!(_, BaseType_::Apply($k, $n, $args)))
+        ))
+    };
+}
+
+fn solve_builtin_type_constraint(
+    context: &mut Context,
+    builtin_set: BTreeSet<BuiltinTypeName_>,
+    loc: Loc,
+    op: &'static str,
+    ty: Type,
+) {
+    use BaseType_::*;
+    use SingleType_::*;
+    use TypeName_::*;
+    use Type_::*;
+    let tloc = ty.loc;
+    let t = unfold_type(&context.subst, ty);
+    let tmsg = || {
+        let set_msg = if builtin_set.is_empty() {
+            "the operation is not yet supported on any type".to_string()
+        } else {
+            format!(
+                "expected: {}",
+                format_comma(builtin_set.iter().map(|b| format!("'{}'", b)))
+            )
+        };
+        format!(
+            "Found: {}. But {}",
+            error_format(&t, &context.subst),
+            set_msg
+        )
+    };
+    match &t.value {
+        TApply!(k, sp!(_, Builtin(sp!(_, b))), args) if builtin_set.contains(b) => {
+            if let Some(sp!(_, Kind_::Resource)) = k {
+                panic!("ICE assumes this type is being consumed so shouldn't be a resource");
+            }
+            assert!(args.is_empty());
+        }
+        Single(sp!(_, Base(sp!(_, Var(_))))) => panic!("ICE unfold_type failed"),
+        _ => {
+            let error = vec![
+                (loc, format!("Invalid argument to '{}'", op)),
+                (tloc, tmsg()),
+            ];
+            context.error(error)
         }
     }
 }
@@ -752,15 +995,20 @@ fn instantiate_type_args(
     constraints: Vec<Kind>,
 ) -> Vec<BaseType> {
     assert!(ty_args.len() == constraints.len());
+    let locs_constraints = constraints
+        .into_iter()
+        .zip(&ty_args)
+        .map(|(k, t)| (t.loc, k))
+        .collect();
+    let tvars = make_tparams(context, loc, locs_constraints);
     ty_args = ty_args
         .into_iter()
         .map(|t| instantiate_base(context, t))
         .collect();
-    let tvars = make_tparams(context, loc, constraints);
 
     assert!(ty_args.len() == tvars.len());
     let mut res = vec![];
-    let subst = std::mem::replace(&mut context.subst, /* dummy value */ Subst::new());
+    let subst = std::mem::replace(&mut context.subst, /* dummy value */ Subst::empty());
     context.subst = tvars
         .into_iter()
         .zip(ty_args)
@@ -805,11 +1053,20 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
     ty_args
 }
 
-fn make_tparams(context: &mut Context, loc: Loc, tparam_constraints: Vec<Kind>) -> Vec<BaseType> {
+pub fn make_num_tvar(context: &mut Context, loc: Loc) -> Type {
+    let tvar = context.subst.new_num_var(loc);
+    Type_::base(sp(loc, BaseType_::Var(tvar)))
+}
+
+fn make_tparams(
+    context: &mut Context,
+    loc: Loc,
+    tparam_constraints: Vec<(Loc, Kind)>,
+) -> Vec<BaseType> {
     tparam_constraints
         .into_iter()
-        .map(|constraint| {
-            let tvar = sp(loc, BaseType_::Var(TVar::next()));
+        .map(|(vloc, constraint)| {
+            let tvar = sp(vloc, BaseType_::Var(TVar::next()));
             context.add_kind_constraint(loc, tvar.clone(), constraint);
             tvar
         })
@@ -820,6 +1077,7 @@ fn make_tparams(context: &mut Context, loc: Loc, tparam_constraints: Vec<Kind>) 
 // Subtype and joining
 //**************************************************************************************************
 
+#[derive(Debug)]
 pub enum TypingError {
     SubtypeError(Box<SingleType>, Box<SingleType>),
     Incompatible(Box<Type>, Box<Type>),
@@ -992,9 +1250,19 @@ pub fn join_base_type(
             }
         }
         (sp!(loc, Var(id)), other) | (other, sp!(loc, Var(id))) => {
-            let new_tvar = TVar::next();
-            subst.insert(new_tvar, other.clone());
-            join_tvar(subst, *loc, *id, other.loc, new_tvar)
+            if subst.get(id).is_none() {
+                match bind_tvar(&mut subst, *loc, *id, other.clone()) {
+                    Err(()) => Err(TypingError::Incompatible(
+                        Box::new(Type_::base(sp(*loc, Var(*id)))),
+                        Box::new(Type_::base(other.clone())),
+                    )),
+                    Ok(()) => Ok((subst, sp(*loc, Var(*id)))),
+                }
+            } else {
+                let new_tvar = TVar::next();
+                subst.insert(new_tvar, other.clone());
+                join_tvar(subst, *loc, *id, other.loc, new_tvar)
+            }
         }
         _ => Err(TypingError::Incompatible(
             Box::new(Type_::base(t1.clone())),
@@ -1039,16 +1307,40 @@ fn join_tvar(
     };
 
     let new_tvar = TVar::next();
+    let num_loc_1 = subst.num_vars.get(&last_id1);
+    let num_loc_2 = subst.num_vars.get(&last_id2);
+    match (num_loc_1, num_loc_2) {
+        (Some(nloc), _) | (_, Some(nloc)) => {
+            let nloc = *nloc;
+            subst.set_num_var(id1, nloc);
+            subst.set_num_var(id2, nloc);
+            subst.set_num_var(new_tvar, nloc);
+        }
+        _ => (),
+    }
     subst.insert(last_id1, sp(loc1, Var(new_tvar)));
     subst.insert(last_id2, sp(loc2, Var(new_tvar)));
 
     let (mut subst, new_ty) = join_base_type(subst, &ty1, &ty2)?;
     match subst.get(&new_tvar) {
         Some(sp!(tloc, _)) => Err(TypingError::RecursiveType(*tloc)),
-        None => {
-            subst.insert(new_tvar, new_ty);
-            Ok((subst, sp(loc1, Var(new_tvar))))
-        }
+        None => match bind_tvar(&mut subst, loc1, new_tvar, new_ty) {
+            Ok(()) => Ok((subst, sp(loc1, Var(new_tvar)))),
+            Err(()) => {
+                let ty1 = match ty1 {
+                    sp!(loc, Anything) => sp(loc, Var(id1)),
+                    t => t,
+                };
+                let ty2 = match ty2 {
+                    sp!(loc, Anything) => sp(loc, Var(id2)),
+                    t => t,
+                };
+                Err(TypingError::Incompatible(
+                    Box::new(Type_::base(ty1)),
+                    Box::new(Type_::base(ty2)),
+                ))
+            }
+        },
     }
 }
 
@@ -1056,5 +1348,35 @@ fn forward_tvar(subst: &Subst, id: TVar) -> TVar {
     match subst.get(&id) {
         Some(sp!(_, BaseType_::Var(next))) => forward_tvar(subst, *next),
         Some(_) | None => id,
+    }
+}
+
+fn bind_tvar(subst: &mut Subst, loc: Loc, tvar: TVar, ty: BaseType) -> Result<(), ()> {
+    // check not necessary for soundness but improves error message structure
+    if !check_num_tvar(&subst, loc, &tvar, &ty) {
+        return Err(());
+    }
+    match &ty.value {
+        BaseType_::Anything => (),
+        _ => subst.insert(tvar, ty),
+    }
+    Ok(())
+}
+
+fn check_num_tvar(subst: &Subst, loc: Loc, tvar: &TVar, ty: &BaseType) -> bool {
+    !subst.is_num_var(tvar) || check_num_tvar_(subst, loc, tvar, ty)
+}
+
+fn check_num_tvar_(subst: &Subst, loc: Loc, tvar: &TVar, ty: &BaseType) -> bool {
+    use BaseType_ as B;
+    match &ty.value {
+        B::Anything => true,
+        B::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, bt))), _) => bt.is_numeric(),
+
+        B::Var(v) if subst.tvars.contains_key(v) => {
+            check_num_tvar_(subst, loc, tvar, subst.get(v).unwrap())
+        }
+        B::Var(v) => subst.is_num_var(v),
+        _ => false,
     }
 }

@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::core::Context;
+use super::core::{self, Context, Subst};
 use crate::{
     naming::ast::{self as N, BaseType, BaseType_, TypeName_},
     parser::ast::StructName,
     shared::*,
     typing::ast as T,
 };
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 
 pub type Seen = BTreeSet<StructName>;
 
@@ -80,7 +80,7 @@ fn exp(
 ) {
     use T::UnannotatedExp_ as E;
     match &e.exp.value {
-        E::Use(_) => panic!("ICE should have been expanded"),
+        E::InferredNum(_) | E::Use(_) => panic!("ICE should have been expanded"),
 
         E::Unit
         | E::Value(_)
@@ -286,7 +286,7 @@ where
             return None;
         }
         B::Param(_) | B::Apply(_, sp!(_, TN::Builtin(_)), _) => {
-            let ty_debug = global_type.value.subst_format(&HashMap::new());
+            let ty_debug = core::error_format_base(global_type, &Subst::empty());
             let tmsg = format!("Expected a nominal resource. Found the type: {}", ty_debug);
 
             context.error(vec![(*loc, msg()), (*tloc, tmsg)]);
@@ -301,9 +301,9 @@ where
 
     match &context.current_module {
         Some(current_module) if current_module != &declared_module => {
-            let ty_debug = global_type.value.subst_format(&HashMap::new());
+            let ty_debug = core::error_format_base(global_type, &Subst::empty());
             let tmsg = format!(
-                "The type '{}' was not declared in the current module. Global storage access is \
+                "The type {} was not declared in the current module. Global storage access is \
                  internal to the module'",
                 ty_debug
             );
@@ -314,7 +314,7 @@ where
     }
 
     if resource_opt.is_none() {
-        let ty_debug = global_type.value.subst_format(&HashMap::new());
+        let ty_debug = core::error_format_base(global_type, &Subst::empty());
         let tmsg = format!("Expected a nominal resource. Found the type: {}", ty_debug);
 
         context.error(vec![

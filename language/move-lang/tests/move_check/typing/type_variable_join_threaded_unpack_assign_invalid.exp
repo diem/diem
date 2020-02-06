@@ -5,8 +5,8 @@ error:
  36 │         f1
     │         ^^ Invalid return expression
     ·
- 35 │         Container::put(&mut v, Box { f1: 0, f2: 0});
-    │                                          - The type: 'u64'
+ 34 │         Box { f1, f2 }  = Container::get(&v);
+    │         -------------- The type: 'integer'
     ·
  30 │     fun t0(): bool {
     │               ---- Is not compatible with: 'bool'

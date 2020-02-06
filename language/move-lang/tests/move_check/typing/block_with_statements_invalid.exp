@@ -6,7 +6,7 @@ error:
    │                             ^^^^ Invalid type annotation
    ·
  4 │         ({ let x = 0; x } : bool);
-   │                    - The type: 'u64'
+   │                    - The type: integer
    ·
  4 │         ({ let x = 0; x } : bool);
    │                             ---- Is not compatible with: 'bool'
@@ -20,7 +20,7 @@ error:
    │                              ^^^ Invalid type annotation
    ·
  5 │         ({ let x = 0; &x } : u64);
-   │                       -- The type: '&u64'
+   │                       -- The type: '&{integer}'
    ·
  5 │         ({ let x = 0; &x } : u64);
    │                              --- Is not compatible with: 'u64'
@@ -34,7 +34,7 @@ error:
    │                                        ^^ Invalid type annotation
    ·
  6 │         ({ let y = 0; &mut (y + 1) } : ());
-   │                       ------------ The type: '&mut u64'
+   │                       ------------ The type: '&mut {integer}'
    ·
  6 │         ({ let y = 0; &mut (y + 1) } : ());
    │                                        -- Is not compatible with: '()'
@@ -48,7 +48,7 @@ error:
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
    ·
  7 │         ({ let r = { let r = R {}; r }; r } : R);
-   │                                               - The type: 0x8675309::M::R
+   │                                               - The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {}
    │     -------- Is found to be a non-copyable type here
@@ -62,9 +62,9 @@ error:
    │                                             ^^^^^^^^^^^ Invalid type annotation
    ·
  8 │         ({ let x = 0; (x, false, false) } : (u64, bool));
-   │                       ----------------- The type: '(u64,bool,bool)'
+   │                       ----------------- The type: '({integer}, bool, bool)'
    ·
  8 │         ({ let x = 0; (x, false, false) } : (u64, bool));
-   │                                             ----------- Is not compatible with: '(u64,bool)'
+   │                                             ----------- Is not compatible with: '(u64, bool)'
    │
 
