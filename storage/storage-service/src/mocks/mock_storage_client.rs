@@ -31,7 +31,7 @@ use rand::{
 };
 use std::convert::TryFrom;
 use storage_client::StorageRead;
-use storage_proto::{BackupAccountStateResponse, StartupInfo};
+use storage_proto::{BackupAccountStateResponse, BackupTransactionResponse, StartupInfo};
 
 /// This is a mock of the storage read client used in tests.
 ///
@@ -123,6 +123,14 @@ impl StorageRead for MockStorageReadClient {
         _rightmost_key: HashValue,
         _version: Version,
     ) -> Result<SparseMerkleRangeProof> {
+        unimplemented!()
+    }
+
+    async fn backup_transaction(
+        &self,
+        _start_version: Version,
+        _num_transactions: u64,
+    ) -> Result<BoxStream<'_, Result<BackupTransactionResponse, Error>>> {
         unimplemented!()
     }
 }

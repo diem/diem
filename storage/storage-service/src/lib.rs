@@ -24,13 +24,13 @@ use libradb::LibraDB;
 use std::{convert::TryFrom, path::Path, sync::Arc};
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
-    BackupAccountStateRequest, BackupAccountStateResponse, GetAccountStateRangeProofRequest,
-    GetAccountStateRangeProofResponse, GetAccountStateWithProofByVersionRequest,
-    GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
-    GetLatestAccountStateRequest, GetLatestAccountStateResponse, GetLatestStateRootRequest,
-    GetLatestStateRootResponse, GetStartupInfoRequest, GetStartupInfoResponse,
-    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
-    SaveTransactionsResponse,
+    BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionRequest,
+    BackupTransactionResponse, GetAccountStateRangeProofRequest, GetAccountStateRangeProofResponse,
+    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+    GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
+    GetLatestStateRootRequest, GetLatestStateRootResponse, GetStartupInfoRequest,
+    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    SaveTransactionsRequest, SaveTransactionsResponse,
 };
 use tokio::runtime::Runtime;
 
@@ -338,6 +338,51 @@ impl Storage for StorageService {
             .get_account_state_range_proof_inner(req)
             .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
         Ok(tonic::Response::new(resp))
+    }
+
+    type BackupTransactionStream = mpsc::Receiver<Result<BackupTransactionResponse, tonic::Status>>;
+
+    async fn backup_transaction(
+        &self,
+        request: tonic::Request<BackupTransactionRequest>,
+    ) -> Result<tonic::Response<Self::BackupTransactionStream>, tonic::Status> {
+        debug!("[GRPC] Storage::backup_transaction");
+        let req = request.into_inner();
+
+        let backup_handler = self.db.get_backup_handler();
+        let (mut tx, rx) = mpsc::channel(32);
+
+        tokio::spawn(async move {
+            let iter = match backup_handler
+                .get_transaction_iter(req.start_version, req.num_transactions)
+            {
+                Ok(iter) => iter,
+                Err(e) => {
+                    tx.send(Err(tonic::Status::new(
+                        tonic::Code::Internal,
+                        e.to_string(),
+                    )))
+                    .await
+                    .unwrap();
+                    return;
+                }
+            };
+
+            let iter = iter.map(|res| match res {
+                Ok(transaction) => {
+                    let resp: BackupTransactionResponse =
+                        storage_proto::BackupTransactionResponse { transaction }.into();
+                    Ok(resp)
+                }
+                Err(e) => Err(tonic::Status::new(tonic::Code::Internal, e.to_string())),
+            });
+
+            for resp in iter {
+                tx.send(resp).await.unwrap();
+            }
+        });
+
+        Ok(tonic::Response::new(rx))
     }
 }
 

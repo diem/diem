@@ -61,3 +61,5 @@ test_conversion!(
     test_get_account_state_range_proof_response,
     GetAccountStateRangeProofResponse,
 );
+test_conversion!(test_backup_transaction_request, BackupTransactionRequest);
+test_conversion!(test_backup_transaction_response, BackupTransactionResponse);

@@ -13,32 +13,16 @@ proptest! {
 
     #[test]
     fn test_put_get(
-        mut universe in any_with::<AccountInfoUniverse>(3),
+        universe in any_with::<AccountInfoUniverse>(3),
         gens in vec(
             (any::<Index>(), any::<SignatureCheckedTransactionGen>()),
             1..10
         ),
     ) {
-        let txns = gens
-            .into_iter()
-            .map(|(index, gen)| {
-                Transaction::UserTransaction(gen.materialize(index, &mut universe).into_inner())
-            })
-            .collect::<Vec<_>>();
-
         let tmp_dir = TempPath::new();
         let db = LibraDB::new(&tmp_dir);
         let store = &db.transaction_store;
-
-        prop_assert!(store.get_transaction(0).is_err());
-
-        let mut cs = ChangeSet::new();
-        for (ver, txn) in txns.iter().enumerate() {
-            store
-                .put_transaction(ver as Version, &txn, &mut cs)
-                .unwrap();
-        }
-        store.db.write_schemas(cs.batch).unwrap();
+        let txns = init_store(universe, gens, &store);
 
         let ledger_version = txns.len() as Version - 1;
         for (ver, txn) in txns.iter().enumerate() {
@@ -60,4 +44,83 @@ proptest! {
 
         prop_assert!(store.get_transaction(ledger_version + 1).is_err());
     }
+
+    #[test]
+    fn test_get_transaction_iter(
+        universe in any_with::<AccountInfoUniverse>(3),
+        gens in vec(
+            (any::<Index>(), any::<SignatureCheckedTransactionGen>()),
+            1..10
+        ),
+    ) {
+        let tmp_dir = TempPath::new();
+        let db = LibraDB::new(&tmp_dir);
+        let store = &db.transaction_store;
+        let txns = init_store(universe, gens, &store);
+
+        let total_num_txns = txns.len() as u64;
+
+        let actual = store
+            .get_transaction_iter(0, total_num_txns)
+            .unwrap()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        prop_assert_eq!(actual, txns.clone());
+
+        let actual = store
+            .get_transaction_iter(0, total_num_txns + 1)
+            .unwrap()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        prop_assert_eq!(actual, txns.clone());
+
+        let actual = store
+            .get_transaction_iter(0, 0)
+            .unwrap()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        prop_assert!(actual.is_empty());
+
+        if total_num_txns > 0 {
+            let actual = store
+                .get_transaction_iter(0, total_num_txns - 1)
+                .unwrap()
+                .collect::<Result<Vec<_>>>()
+                .unwrap();
+            prop_assert_eq!(
+                actual,
+                txns
+                    .into_iter()
+                    .take(total_num_txns as usize - 1)
+                    .collect::<Vec<_>>()
+            );
+        }
+
+        prop_assert!(store.get_transaction_iter(10, u64::max_value()).is_err());
+    }
+}
+
+fn init_store(
+    mut universe: AccountInfoUniverse,
+    gens: Vec<(Index, SignatureCheckedTransactionGen)>,
+    store: &TransactionStore,
+) -> Vec<Transaction> {
+    let txns = gens
+        .into_iter()
+        .map(|(index, gen)| {
+            Transaction::UserTransaction(gen.materialize(index, &mut universe).into_inner())
+        })
+        .collect::<Vec<_>>();
+
+    assert!(store.get_transaction(0).is_err());
+
+    let mut cs = ChangeSet::new();
+    for (ver, txn) in txns.iter().enumerate() {
+        store
+            .put_transaction(ver as Version, &txn, &mut cs)
+            .unwrap();
+    }
+    store.db.write_schemas(cs.batch).unwrap();
+
+    txns
 }

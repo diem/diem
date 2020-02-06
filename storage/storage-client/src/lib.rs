@@ -32,12 +32,12 @@ use storage_proto::{
     proto::storage::{
         storage_client::StorageClient, GetLatestStateRootRequest, GetStartupInfoRequest,
     },
-    BackupAccountStateRequest, BackupAccountStateResponse, GetAccountStateRangeProofRequest,
-    GetAccountStateRangeProofResponse, GetAccountStateWithProofByVersionRequest,
-    GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
-    GetLatestAccountStateRequest, GetLatestAccountStateResponse, GetLatestStateRootResponse,
-    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    SaveTransactionsRequest, StartupInfo,
+    BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionRequest,
+    BackupTransactionResponse, GetAccountStateRangeProofRequest, GetAccountStateRangeProofResponse,
+    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+    GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
+    GetLatestStateRootResponse, GetStartupInfoResponse, GetTransactionsRequest,
+    GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
 };
 
 /// This provides storage read interfaces backed by real storage service.
@@ -233,6 +233,27 @@ impl StorageRead for StorageReadServiceClient {
 
         Ok(GetAccountStateRangeProofResponse::try_from(resp)?.into())
     }
+
+    async fn backup_transaction(
+        &self,
+        start_version: Version,
+        num_transactions: u64,
+    ) -> Result<BoxStream<'_, Result<BackupTransactionResponse, Error>>> {
+        let proto_req: storage_proto::proto::storage::BackupTransactionRequest =
+            BackupTransactionRequest::new(start_version, num_transactions).into();
+        let stream = self
+            .client()
+            .await?
+            .backup_transaction(proto_req)
+            .await?
+            .into_inner()
+            .map(|resp| {
+                let resp = BackupTransactionResponse::try_from(resp?)?;
+                Ok(resp)
+            })
+            .boxed();
+        Ok(stream)
+    }
 }
 
 /// This provides storage write interfaces backed by real storage service.
@@ -373,6 +394,13 @@ pub trait StorageRead: Send + Sync {
         rightmost_key: HashValue,
         version: Version,
     ) -> Result<SparseMerkleRangeProof>;
+
+    /// Gets a stream of transactions (for backup purpose).
+    async fn backup_transaction(
+        &self,
+        start_version: Version,
+        num_transactions: u64,
+    ) -> Result<BoxStream<'_, Result<BackupTransactionResponse, Error>>>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.
