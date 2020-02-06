@@ -36,12 +36,31 @@ pub struct PerformanceBenchmarkNodesDownParams {
         help = "Whether cluster test should run against validators or full nodes"
     )]
     pub is_fullnode: bool,
+    #[structopt(
+    long,
+    default_value = stringify!(DEFAULT_BENCH_DURATION),
+    help = "Number of nodes which should be down"
+    )]
+    pub duration: u64,
 }
 
 pub struct PerformanceBenchmarkNodesDown {
     down_instances: Vec<Instance>,
     up_instances: Vec<Instance>,
     num_nodes_down: usize,
+    duration: Duration,
+}
+
+pub const DEFAULT_BENCH_DURATION: u64 = 180;
+
+impl PerformanceBenchmarkNodesDownParams {
+    pub fn new_nodes_down(num_nodes_down: usize) -> Self {
+        Self {
+            num_nodes_down,
+            is_fullnode: false,
+            duration: DEFAULT_BENCH_DURATION,
+        }
+    }
 }
 
 impl ExperimentParam for PerformanceBenchmarkNodesDownParams {
@@ -54,6 +73,7 @@ impl ExperimentParam for PerformanceBenchmarkNodesDownParams {
                 down_instances: down_instances.into_fullnode_instances(),
                 up_instances: up_instances.into_fullnode_instances(),
                 num_nodes_down: self.num_nodes_down,
+                duration: Duration::from_secs(self.duration),
             }
         } else {
             let (down_instances, up_instances) =
@@ -62,6 +82,7 @@ impl ExperimentParam for PerformanceBenchmarkNodesDownParams {
                 down_instances: down_instances.into_validator_instances(),
                 up_instances: up_instances.into_validator_instances(),
                 num_nodes_down: self.num_nodes_down,
+                duration: Duration::from_secs(self.duration),
             }
         }
     }
@@ -82,12 +103,12 @@ impl Experiment for PerformanceBenchmarkNodesDown {
             .collect();
         let futures = stop_effects.iter().map(|e| e.activate());
         join_all(futures).await;
-        let window = Duration::from_secs(240);
+        let buffer = Duration::from_secs(30);
+        let window = self.duration + buffer * 2;
         let stats = context
             .tx_emitter
             .emit_txn_for(window, self.up_instances.clone())
             .await?;
-        let buffer = Duration::from_secs(30);
         let end = unix_timestamp_now() - buffer;
         let start = end - window + 2 * buffer;
         let (avg_tps, avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
