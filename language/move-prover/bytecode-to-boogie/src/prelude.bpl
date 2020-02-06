@@ -783,7 +783,7 @@ procedure {:inline 1} Vector_push_back(ta: TypeValue, r: Reference, val: Value) 
     call WriteRef(r, push_back_vector(v, val));
 }
 
-procedure {:inline 1} Vector_pop_back(ta: TypeValue, r: Reference) returns (e: Value){
+procedure {:inline 1} Vector_pop_back(ta: TypeValue, r: Reference) returns (e: Value) {
     var v: Value;
     var len: int;
     v := Dereference(__m, r);
@@ -855,8 +855,7 @@ procedure {:inline 1} Vector_destroy_empty(ta: TypeValue, v: Value) {
     }
 }
 
-procedure {:inline 1} Vector_swap(ta: TypeValue, src: Reference, i: Value, j: Value)
-{
+procedure {:inline 1} Vector_swap(ta: TypeValue, src: Reference, i: Value, j: Value) {
     var i_ind: int;
     var j_ind: int;
     var v: Value;
@@ -875,9 +874,7 @@ procedure {:inline 1} Vector_swap(ta: TypeValue, src: Reference, i: Value, j: Va
     call WriteRef(src, v);
 }
 
-procedure {:inline 1} Vector_get(ta: TypeValue, src: Reference, i: Value) returns (e: Value)
-requires vlen(Dereference(__m, src)) > i#Integer(i);
-{
+procedure {:inline 1} Vector_get(ta: TypeValue, src: Reference, i: Value) returns (e: Value) {
     var i_ind: int;
     var v: Value;
 
