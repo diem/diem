@@ -22,7 +22,7 @@ if [ ! -f Cargo.toml ]; then
 fi
 
 PACKAGE_MANAGER=
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
 	if which yum &>/dev/null; then
 		PACKAGE_MANAGER="yum"
 	elif which apt-get &>/dev/null; then
