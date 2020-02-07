@@ -56,7 +56,7 @@ pub fn set_global_logger(async_drain: bool, chan_size: Option<usize>) -> GlobalL
 }
 
 /// Creates and sets the global logger with the given filter level.
-fn set_global_logger_with_level(
+pub fn set_global_logger_with_level(
     async_drain: bool,
     chan_size: Option<usize>,
     filter_level: FilterLevel,
