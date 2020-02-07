@@ -703,7 +703,7 @@ impl<T: Payload> EventProcessor<T> {
     /// potential attacks).
     /// 2. Add the vote to the store and check whether it finishes a QC.
     /// 3. Once the QC successfully formed, notify the Pacemaker.
-    pub async fn process_vote(&mut self, vote_msg: VoteMsg) {
+    pub async fn process_vote(&mut self, vote_msg: Box<VoteMsg>) {
         // Check whether this validator is a valid recipient of the vote.
         if !vote_msg.vote().is_timeout() {
             // Unlike timeout votes regular votes are sent to the leaders of the next round only.

@@ -90,7 +90,7 @@ impl<T: Payload> ChainedBftSMR<T> {
     fn start_event_processing(
         executor: Handle,
         mut epoch_manager: EpochManager<T>,
-        mut event_processor: EventProcessor<T>,
+        mut event_processor: Box<EventProcessor<T>>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
         network_task: NetworkTask<T>,
         all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,

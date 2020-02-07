@@ -62,7 +62,7 @@ pub struct EpochManager<T> {
 pub enum EpochMsg<T> {
     Proposal(ProposalMsg<T>),
     RequestBlock(IncomingBlockRetrievalRequest),
-    Vote(VoteMsg),
+    Vote(Box<VoteMsg>),
     Sync(SyncInfo),
 }
 
@@ -75,7 +75,7 @@ pub enum EpochCheck<T> {
     // to the current epoch.
     NotCurrent,
     // A new epoch has started.
-    NewStart(EventProcessor<T>),
+    NewStart(Box<EventProcessor<T>>),
 }
 
 impl<T: Payload> EpochManager<T> {
@@ -125,7 +125,7 @@ impl<T: Payload> EpochManager<T> {
                     .validate_signatures(&self.epoch_info.verifier)?
                     .verify_well_formed()?;
                 ensure!(
-                    proposal.proposal().author() == Some(peer_id.clone()),
+                    proposal.proposal().author() == Some(*peer_id),
                     "proposal received must be from the sending peer"
                 );
                 debug!("Received proposal {}", proposal);
@@ -319,7 +319,7 @@ impl<T: Payload> EpochManager<T> {
     pub async fn start_new_epoch(
         &mut self,
         ledger_info: LedgerInfoWithSignatures,
-    ) -> EventProcessor<T> {
+    ) -> Box<EventProcessor<T>> {
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
         if let Err(e) = self.state_computer.sync_to(ledger_info.clone()).await {
             error!("State sync to new epoch {} failed with {:?}, we'll try to start from current libradb", ledger_info, e);
@@ -332,7 +332,7 @@ impl<T: Payload> EpochManager<T> {
         self.start_epoch(initial_data)
     }
 
-    pub fn start_epoch(&mut self, initial_data: RecoveryData<T>) -> EventProcessor<T> {
+    pub fn start_epoch(&mut self, initial_data: RecoveryData<T>) -> Box<EventProcessor<T>> {
         let validators = initial_data.validators();
         let epoch = self.epoch();
         counters::EPOCH.set(epoch as i64);
@@ -384,7 +384,7 @@ impl<T: Payload> EpochManager<T> {
             validators.clone(),
         );
 
-        EventProcessor::new(
+        let event_processor = EventProcessor::new(
             block_store,
             last_vote,
             pacemaker,
@@ -396,6 +396,7 @@ impl<T: Payload> EpochManager<T> {
             self.storage.clone(),
             self.time_service.clone(),
             validators,
-        )
+        );
+        Box::new(event_processor)
     }
 }

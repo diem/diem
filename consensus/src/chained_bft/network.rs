@@ -268,7 +268,7 @@ pub enum FromNetworkMsg<T> {
     RequestEpoch(EpochRetrievalRequest),
     EpochChange(ValidatorChangeProof),
     Sync(SyncInfo),
-    Vote(VoteMsg),
+    Vote(Box<VoteMsg>),
 }
 
 pub enum ConsensusDataRequest {
@@ -483,27 +483,27 @@ impl<T: Payload> NetworkTask<T> {
 
             match msg_type {
                 MessageType::Proposal => {
-                    &counters::PROPOSAL_CHANNEL_MSGS
+                    counters::PROPOSAL_CHANNEL_MSGS
                         .with_label_values(&["dequeued"])
                         .inc();
                 }
                 MessageType::Vote => {
-                    &counters::VOTES_CHANNEL_MSGS
+                    counters::VOTES_CHANNEL_MSGS
                         .with_label_values(&["dequeued"])
                         .inc();
                 }
                 MessageType::RequestBlock => {
-                    &counters::BLOCK_RETRIEVAL_CHANNEL_MSGS
+                    counters::BLOCK_RETRIEVAL_CHANNEL_MSGS
                         .with_label_values(&["dequeued"])
                         .inc();
                 }
                 MessageType::Sync => {
-                    &counters::SYNC_INFO_CHANNEL_MSGS
+                    counters::SYNC_INFO_CHANNEL_MSGS
                         .with_label_values(&["dequeued"])
                         .inc();
                 }
                 MessageType::EpochChange => {
-                    &counters::EPOCH_CHANGE_CHANNEL_MSGS
+                    counters::EPOCH_CHANGE_CHANNEL_MSGS
                         .with_label_values(&["dequeued"])
                         .inc();
                 }
@@ -523,10 +523,10 @@ impl<T: Payload> NetworkTask<T> {
         let incoming = self
             .incoming
             .entry(peer_id.clone())
-            .or_insert_with(|| Default::default());
+            .or_insert_with(Default::default);
         let msg_queue = incoming
             .entry(msg_type.clone())
-            .or_insert_with(|| Default::default());
+            .or_insert_with(Default::default);
 
         let dropped = {
             if msg_queue.len() == 2 {
@@ -554,51 +554,51 @@ impl<T: Payload> NetworkTask<T> {
         match msg_type {
             MessageType::Proposal => {
                 if dropped {
-                    &counters::PROPOSAL_CHANNEL_MSGS
+                    counters::PROPOSAL_CHANNEL_MSGS
                         .with_label_values(&["dropped"])
                         .inc();
                 }
-                &counters::PROPOSAL_CHANNEL_MSGS
+                counters::PROPOSAL_CHANNEL_MSGS
                     .with_label_values(&["enqueued"])
                     .inc();
             }
             MessageType::Vote => {
                 if dropped {
-                    &counters::VOTES_CHANNEL_MSGS
+                    counters::VOTES_CHANNEL_MSGS
                         .with_label_values(&["dropped"])
                         .inc();
                 }
-                &counters::VOTES_CHANNEL_MSGS
+                counters::VOTES_CHANNEL_MSGS
                     .with_label_values(&["enqueued"])
                     .inc();
             }
             MessageType::RequestBlock => {
                 if dropped {
-                    &counters::BLOCK_RETRIEVAL_CHANNEL_MSGS
+                    counters::BLOCK_RETRIEVAL_CHANNEL_MSGS
                         .with_label_values(&["dropped"])
                         .inc();
                 }
-                &counters::BLOCK_RETRIEVAL_CHANNEL_MSGS
+                counters::BLOCK_RETRIEVAL_CHANNEL_MSGS
                     .with_label_values(&["enqueued"])
                     .inc();
             }
             MessageType::Sync => {
                 if dropped {
-                    &counters::SYNC_INFO_CHANNEL_MSGS
+                    counters::SYNC_INFO_CHANNEL_MSGS
                         .with_label_values(&["dropped"])
                         .inc();
                 }
-                &counters::SYNC_INFO_CHANNEL_MSGS
+                counters::SYNC_INFO_CHANNEL_MSGS
                     .with_label_values(&["enqueued"])
                     .inc();
             }
             MessageType::EpochChange => {
                 if dropped {
-                    &counters::EPOCH_CHANGE_CHANNEL_MSGS
+                    counters::EPOCH_CHANGE_CHANNEL_MSGS
                         .with_label_values(&["dropped"])
                         .inc();
                 }
-                &counters::EPOCH_CHANGE_CHANNEL_MSGS
+                counters::EPOCH_CHANGE_CHANNEL_MSGS
                     .with_label_values(&["enqueued"])
                     .inc();
             }
@@ -630,7 +630,11 @@ impl<T: Payload> NetworkTask<T> {
             vote_msg.vote().author() == peer_id,
             "vote received must be from the sending peer"
         );
-        self.queue_msg(peer_id, FromNetworkMsg::Vote(vote_msg), MessageType::Vote);
+        self.queue_msg(
+            peer_id,
+            FromNetworkMsg::Vote(Box::new(vote_msg)),
+            MessageType::Vote,
+        );
         Ok(())
     }
 
