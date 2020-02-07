@@ -8,7 +8,7 @@ use num::{BigInt, Num};
 
 use libra_types::account_address::AccountAddress;
 use move_ir_types::ast::{BinOp, CopyableVal_, Field_, Loc, QualifiedStructIdent, Type};
-use move_ir_types::spec_language_ast::{Condition, SpecExp, StorageLocation};
+use move_ir_types::spec_language_ast::{Condition_, SpecExp, StorageLocation};
 
 use crate::boogie_helpers::{boogie_field_name, boogie_type_value};
 use crate::code_writer::CodeWriter;
@@ -79,7 +79,7 @@ impl<'env> SpecTranslator<'env> {
         // must have existed! So we can assume txn_sender account
         // exists in pre-condition.
         for cond in self.func_env.get_specification() {
-            if let Condition::Requires(expr) = &cond.value {
+            if let Condition_::Requires(expr) = &cond.value {
                 self.update_location(cond.span);
                 emitln!(
                     self.writer,
@@ -98,7 +98,7 @@ impl<'env> SpecTranslator<'env> {
             .get_specification()
             .iter()
             .filter_map(|c| match &c.value {
-                Condition::SucceedsIf(expr) => {
+                Condition_::SucceedsIf(expr) => {
                     self.update_location(c.span);
                     Some(format!("b#Boolean({})", self.translate_expr(expr).result()))
                 }
@@ -113,7 +113,7 @@ impl<'env> SpecTranslator<'env> {
             .get_specification()
             .iter()
             .filter_map(|c| match &c.value {
-                Condition::AbortsIf(expr) => {
+                Condition_::AbortsIf(expr) => {
                     self.update_location(c.span);
                     Some(format!("b#Boolean({})", self.translate_expr(expr).result()))
                 }
@@ -140,7 +140,7 @@ impl<'env> SpecTranslator<'env> {
 
         // Generate explicit ensures conditions
         for cond in self.func_env.get_specification() {
-            if let Condition::Ensures(expr) = &cond.value {
+            if let Condition_::Ensures(expr) = &cond.value {
                 // FIXME: Do we really need to check whether succeeds_if & aborts_if are
                 // empty, below?
                 self.update_location(cond.span);

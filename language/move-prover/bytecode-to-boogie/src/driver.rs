@@ -17,7 +17,7 @@ use libra_types::identifier::Identifier;
 use log::info;
 use move_ir_types::ast::Loc;
 use move_ir_types::ast::ModuleDefinition;
-use move_ir_types::spec_language_ast::Condition_;
+use move_ir_types::spec_language_ast::{Condition, Invariant};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
@@ -107,7 +107,9 @@ impl Driver {
             let parsed_module = abort_on_error(parse_module(&code), "mvir parsing errors");
 
             // Extract information from parsed module.
-            let mut infos = self.extract_function_infos(&parsed_module);
+            let mut func_infos = self.extract_function_infos(&parsed_module);
+            let mut struct_infos = self.extract_struct_infos(&parsed_module);
+            let synthetics = parsed_module.synthetics.clone();
 
             // Compile module.
             let (compiled_module, source_map) = abort_on_error(
@@ -126,15 +128,19 @@ impl Driver {
             // Add module to environment.
             let struct_data = (0..verified_module.struct_defs().len())
                 .map(|idx| {
-                    self.env
-                        .create_struct_data(&verified_module, StructDefinitionIndex(idx as u16))
+                    let def_idx = StructDefinitionIndex(idx as u16);
+                    self.env.create_struct_data(
+                        &verified_module,
+                        def_idx,
+                        struct_infos.remove(&def_idx).unwrap(),
+                    )
                 })
                 .collect();
             let function_data = (0..verified_module.function_defs().len())
                 .map(|idx| {
                     let def_idx = FunctionDefinitionIndex(idx as u16);
                     let (arg_names, type_arg_names, specs) =
-                        infos.remove(&def_idx).expect("function index");
+                        func_infos.remove(&def_idx).expect("function index");
 
                     self.env.create_function_data(
                         &verified_module,
@@ -151,6 +157,7 @@ impl Driver {
                 source_map,
                 struct_data,
                 function_data,
+                synthetics,
             );
         }
     }
@@ -159,8 +166,7 @@ impl Driver {
     fn extract_function_infos(
         &self,
         parsed_module: &ModuleDefinition,
-    ) -> BTreeMap<FunctionDefinitionIndex, (Vec<Identifier>, Vec<Identifier>, Vec<Condition_>)>
-    {
+    ) -> BTreeMap<FunctionDefinitionIndex, (Vec<Identifier>, Vec<Identifier>, Vec<Condition>)> {
         let mut result = BTreeMap::new();
         for (raw_index, (_, def)) in parsed_module.functions.iter().enumerate() {
             let type_arg_names = def
@@ -182,6 +188,19 @@ impl Driver {
                 index,
                 (arg_names, type_arg_names, def.value.specifications.clone()),
             );
+        }
+        result
+    }
+
+    /// Extract struct infos from parsed module.
+    fn extract_struct_infos(
+        &self,
+        parsed_module: &ModuleDefinition,
+    ) -> BTreeMap<StructDefinitionIndex, Vec<Invariant>> {
+        let mut result = BTreeMap::new();
+        for (raw_index, def) in parsed_module.structs.iter().enumerate() {
+            let index = StructDefinitionIndex(raw_index as u16);
+            result.insert(index, def.invariants.clone());
         }
         result
     }

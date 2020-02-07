@@ -253,6 +253,7 @@ impl<'a> ModuleGenerator<'a> {
             name,
             type_formals,
             fields,
+            invariants: vec![],
         };
         self.current_module.structs.push(Spanned::no_loc(strct))
     }
@@ -309,6 +310,7 @@ impl<'a> ModuleGenerator<'a> {
             imports: Self::imports(callable_modules),
             structs: Vec::new(),
             functions: Vec::new(),
+            synthetics: Vec::new(),
         };
         Self {
             options,
