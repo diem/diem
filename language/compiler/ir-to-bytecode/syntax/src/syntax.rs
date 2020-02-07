@@ -8,6 +8,7 @@ use std::str::FromStr;
 
 use crate::lexer::*;
 use hex;
+use libra_types::identifier::Identifier;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 use move_ir_types::{ast::*, spec_language_ast::*};
 
@@ -62,9 +63,9 @@ fn consume_token<'input>(
 
 fn adjust_token<'input>(
     tokens: &mut Lexer<'input>,
-    list_end_token: Tok,
+    list_end_tokens: &[Tok],
 ) -> Result<(), ParseError<usize, anyhow::Error>> {
-    if tokens.peek() == Tok::GreaterGreater && list_end_token == Tok::Greater {
+    if tokens.peek() == Tok::GreaterGreater && list_end_tokens.contains(&Tok::Greater) {
         tokens.replace_token(Tok::Greater, 1)?;
     }
     Ok(())
@@ -72,7 +73,7 @@ fn adjust_token<'input>(
 
 fn parse_comma_list<'input, F, R>(
     tokens: &mut Lexer<'input>,
-    list_end_token: Tok,
+    list_end_tokens: &[Tok],
     parse_list_item: F,
     allow_trailing_comma: bool,
 ) -> Result<Vec<R>, ParseError<usize, anyhow::Error>>
@@ -80,17 +81,17 @@ where
     F: Fn(&mut Lexer<'input>) -> Result<R, ParseError<usize, anyhow::Error>>,
 {
     let mut v = vec![];
-    adjust_token(tokens, list_end_token)?;
-    if tokens.peek() != list_end_token {
+    adjust_token(tokens, list_end_tokens)?;
+    if !list_end_tokens.contains(&tokens.peek()) {
         loop {
             v.push(parse_list_item(tokens)?);
-            adjust_token(tokens, list_end_token)?;
-            if tokens.peek() == list_end_token {
+            adjust_token(tokens, list_end_tokens)?;
+            if list_end_tokens.contains(&tokens.peek()) {
                 break;
             }
             consume_token(tokens, Tok::Comma)?;
-            adjust_token(tokens, list_end_token)?;
-            if tokens.peek() == list_end_token && allow_trailing_comma {
+            adjust_token(tokens, list_end_tokens)?;
+            if list_end_tokens.contains(&tokens.peek()) && allow_trailing_comma {
                 break;
             }
         }
@@ -561,7 +562,7 @@ fn parse_pack_<'input>(
     type_actuals: Vec<Type>,
 ) -> Result<Exp_, ParseError<usize, anyhow::Error>> {
     consume_token(tokens, Tok::LBrace)?;
-    let fs = parse_comma_list(tokens, Tok::RBrace, parse_field_exp, true)?;
+    let fs = parse_comma_list(tokens, &[Tok::RBrace], parse_field_exp, true)?;
     consume_token(tokens, Tok::RBrace)?;
     Ok(Exp_::Pack(
         StructName::parse(name)?,
@@ -609,7 +610,7 @@ fn parse_term_<'input>(
         }
         Tok::LParen => {
             tokens.advance()?;
-            let exps = parse_comma_list(tokens, Tok::RParen, parse_exp, true)?;
+            let exps = parse_comma_list(tokens, &[Tok::RParen], parse_exp, true)?;
             consume_token(tokens, Tok::RParen)?;
             Ok(Exp_::ExprList(exps))
         }
@@ -827,7 +828,7 @@ fn parse_field_bindings<'input>(
 fn parse_assign_<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<Cmd_, ParseError<usize, anyhow::Error>> {
-    let lvalues = parse_comma_list(tokens, Tok::Equal, parse_lvalue, false)?;
+    let lvalues = parse_comma_list(tokens, &[Tok::Equal], parse_lvalue, false)?;
     if lvalues.is_empty() {
         return Err(ParseError::InvalidToken {
             location: tokens.start_loc(),
@@ -844,7 +845,7 @@ fn parse_unpack_<'input>(
     type_actuals: Vec<Type>,
 ) -> Result<Cmd_, ParseError<usize, anyhow::Error>> {
     consume_token(tokens, Tok::LBrace)?;
-    let bindings = parse_comma_list(tokens, Tok::RBrace, parse_field_bindings, true)?;
+    let bindings = parse_comma_list(tokens, &[Tok::RBrace], parse_field_bindings, true)?;
     consume_token(tokens, Tok::RBrace)?;
     consume_token(tokens, Tok::Equal)?;
     let e = parse_exp(tokens)?;
@@ -886,7 +887,7 @@ fn parse_cmd_<'input>(
         }
         Tok::Return => {
             tokens.advance()?;
-            let v = parse_comma_list(tokens, Tok::Semicolon, parse_exp, true)?;
+            let v = parse_comma_list(tokens, &[Tok::Semicolon], parse_exp, true)?;
             Ok(Cmd_::Return(Box::new(Spanned::no_loc(Exp_::ExprList(v)))))
         }
         Tok::Continue => {
@@ -910,7 +911,7 @@ fn parse_cmd_<'input>(
         | Tok::ToU128 => Ok(Cmd_::Exp(Box::new(parse_call(tokens)?))),
         Tok::LParen => {
             tokens.advance()?;
-            let v = parse_comma_list(tokens, Tok::RParen, parse_exp, true)?;
+            let v = parse_comma_list(tokens, &[Tok::RParen], parse_exp, true)?;
             consume_token(tokens, Tok::RParen)?;
             Ok(Cmd_::Exp(Box::new(Spanned::no_loc(Exp_::ExprList(v)))))
         }
@@ -1230,7 +1231,7 @@ fn parse_type_actuals<'input>(
 ) -> Result<Vec<Type>, ParseError<usize, anyhow::Error>> {
     let tys = if tokens.peek() == Tok::Less {
         tokens.advance()?; // consume the "<"
-        let list = parse_comma_list(tokens, Tok::Greater, parse_type, true)?;
+        let list = parse_comma_list(tokens, &[Tok::Greater], parse_type, true)?;
         consume_token(tokens, Tok::Greater)?;
         list
     } else {
@@ -1255,7 +1256,7 @@ fn parse_name_and_type_formals<'input>(
         parse_name(tokens)?
     };
     let k = if has_types {
-        let list = parse_comma_list(tokens, Tok::Greater, parse_type_formal, true)?;
+        let list = parse_comma_list(tokens, &[Tok::Greater], parse_type_formal, true)?;
         consume_token(tokens, Tok::Greater)?;
         list
     } else {
@@ -1280,7 +1281,7 @@ fn parse_name_and_type_actuals<'input>(
         parse_name(tokens)?
     };
     let tys = if has_types {
-        let list = parse_comma_list(tokens, Tok::Greater, parse_type, true)?;
+        let list = parse_comma_list(tokens, &[Tok::Greater], parse_type, true)?;
         consume_token(tokens, Tok::Greater)?;
         list
     } else {
@@ -1560,25 +1561,25 @@ fn parse_spec_exp<'input>(
 // That is needed to parse paths with dots separating field names.
 fn parse_spec_condition<'input>(
     tokens: &mut Lexer<'input>,
-) -> Result<Condition, ParseError<usize, anyhow::Error>> {
+) -> Result<Condition_, ParseError<usize, anyhow::Error>> {
     // Set lexer to read names without trailing punctuation
     tokens.spec_mode = true;
     let retval = Ok(match tokens.peek() {
         Tok::AbortsIf => {
             tokens.advance()?;
-            Condition::AbortsIf(parse_spec_exp(tokens)?)
+            Condition_::AbortsIf(parse_spec_exp(tokens)?)
         }
         Tok::Ensures => {
             tokens.advance()?;
-            Condition::Ensures(parse_spec_exp(tokens)?)
+            Condition_::Ensures(parse_spec_exp(tokens)?)
         }
         Tok::Requires => {
             tokens.advance()?;
-            Condition::Requires(parse_spec_exp(tokens)?)
+            Condition_::Requires(parse_spec_exp(tokens)?)
         }
         Tok::SucceedsIf => {
             tokens.advance()?;
-            Condition::SucceedsIf(parse_spec_exp(tokens)?)
+            Condition_::SucceedsIf(parse_spec_exp(tokens)?)
         }
         _ => {
             tokens.spec_mode = false;
@@ -1589,6 +1590,58 @@ fn parse_spec_condition<'input>(
     });
     tokens.spec_mode = false;
     retval
+}
+
+fn parse_invariant<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<Invariant, ParseError<usize, anyhow::Error>> {
+    // Set lexer to read names without trailing punctuation
+    tokens.spec_mode = true;
+    let start = tokens.start_loc();
+    let result = parse_invariant_(tokens);
+    tokens.spec_mode = false;
+    Ok(spanned(start, tokens.previous_end_loc(), result?))
+}
+
+fn parse_invariant_<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<Invariant_, ParseError<usize, anyhow::Error>> {
+    consume_token(tokens, Tok::Invariant)?;
+    let modifier = if tokens.peek() == Tok::LBrace {
+        tokens.advance()?;
+        let s = parse_name(tokens)?;
+        consume_token(tokens, Tok::RBrace)?;
+        s
+    } else {
+        String::new()
+    };
+    let condition = parse_spec_exp(tokens)?;
+    Ok(Invariant_ {
+        modifier,
+        condition,
+    })
+}
+
+fn parse_synthetic<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<SyntheticDefinition, ParseError<usize, anyhow::Error>> {
+    // Set lexer to read names without trailing punctuation
+    tokens.spec_mode = true;
+    let start = tokens.start_loc();
+    let result = parse_synthetic_(tokens);
+    tokens.spec_mode = false;
+    Ok(spanned(start, tokens.previous_end_loc(), result?))
+}
+
+fn parse_synthetic_<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<SyntheticDefinition_, ParseError<usize, anyhow::Error>> {
+    consume_token(tokens, Tok::Synthetic)?;
+    let name = Identifier::from(parse_field(tokens)?.value.name());
+    consume_token(tokens, Tok::Colon)?;
+    let type_ = parse_type(tokens)?;
+    consume_token(tokens, Tok::Semicolon)?;
+    Ok(SyntheticDefinition_ { name, type_ })
 }
 
 // FunctionDecl : (FunctionName, Function_) = {
@@ -1631,7 +1684,7 @@ fn parse_function_decl<'input>(
 
     let (name, type_formals) = parse_name_and_type_formals(tokens)?;
     consume_token(tokens, Tok::LParen)?;
-    let args = parse_comma_list(tokens, Tok::RParen, parse_arg_decl, true)?;
+    let args = parse_comma_list(tokens, &[Tok::RParen], parse_arg_decl, true)?;
     consume_token(tokens, Tok::RParen)?;
 
     let ret = if tokens.peek() == Tok::Colon {
@@ -1767,7 +1820,7 @@ fn parse_script<'input>(
     }
     consume_token(tokens, Tok::Main)?;
     consume_token(tokens, Tok::LParen)?;
-    let args = parse_comma_list(tokens, Tok::RParen, parse_arg_decl, true)?;
+    let args = parse_comma_list(tokens, &[Tok::RParen], parse_arg_decl, true)?;
     consume_token(tokens, Tok::RParen)?;
     let (locals, body) = parse_function_block_(tokens)?;
     let end_loc = tokens.previous_end_loc();
@@ -1831,13 +1884,29 @@ fn parse_struct_decl<'input>(
     }
 
     consume_token(tokens, Tok::LBrace)?;
-    let fields = parse_comma_list(tokens, Tok::RBrace, parse_field_decl, true)?;
+    let fields = parse_comma_list(
+        tokens,
+        &[Tok::RBrace, Tok::Invariant],
+        parse_field_decl,
+        true,
+    )?;
+    let invariants = if tokens.peek() == Tok::Invariant {
+        parse_comma_list(tokens, &[Tok::RBrace], parse_invariant, true)?
+    } else {
+        vec![]
+    };
     consume_token(tokens, Tok::RBrace)?;
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(
         start_loc,
         end_loc,
-        StructDefinition_::move_declared(is_nominal_resource, name, type_formals, fields)?,
+        StructDefinition_::move_declared(
+            is_nominal_resource,
+            name,
+            type_formals,
+            fields,
+            invariants,
+        )?,
     ))
 }
 
@@ -1944,6 +2013,11 @@ fn parse_module<'input>(
         imports.push(parse_import_decl(tokens)?);
     }
 
+    let mut synthetics = vec![];
+    while tokens.peek() == Tok::Synthetic {
+        synthetics.push(parse_synthetic(tokens)?);
+    }
+
     let mut structs: Vec<StructDefinition> = vec![];
     while is_struct_decl(tokens)? {
         structs.push(parse_struct_decl(tokens)?);
@@ -1955,7 +2029,9 @@ fn parse_module<'input>(
     }
     tokens.advance()?; // consume the RBrace
 
-    Ok(ModuleDefinition::new(name, imports, structs, functions)?)
+    Ok(ModuleDefinition::new(
+        name, imports, structs, functions, synthetics,
+    )?)
 }
 
 // pub ScriptOrModule: ScriptOrModule = {

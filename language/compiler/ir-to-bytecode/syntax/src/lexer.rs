@@ -72,6 +72,8 @@ pub enum Tok {
     ToU128,
     If,
     Import,
+    /// For spec language
+    Invariant,
     Let,
     Loop,
     Main,
@@ -92,6 +94,7 @@ pub enum Tok {
     Script,
     Struct,
     SucceedsIf,
+    Synthetic,
     True,
     /// Transaction sender in the specification language
     TxnSender,
@@ -417,6 +420,7 @@ fn get_name_token(name: &str) -> Tok {
         "main" => Tok::Main,
         "module" => Tok::Module,
         "native" => Tok::Native,
+        "invariant" => Tok::Invariant,
         "old" => Tok::Old,
         "public" => Tok::Public,
         "requires" => Tok::Requires,
@@ -425,6 +429,7 @@ fn get_name_token(name: &str) -> Tok {
         "return" => Tok::Return,
         "struct" => Tok::Struct,
         "succeeds_if" => Tok::SucceedsIf,
+        "synthetic" => Tok::Synthetic,
         "true" => Tok::True,
         "txn_sender" => Tok::TxnSender,
         "u8" => Tok::U8,

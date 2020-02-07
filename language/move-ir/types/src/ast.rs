@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::spec_language_ast::Condition_;
+use crate::spec_language_ast::{Condition, Invariant, SyntheticDefinition};
 use anyhow::Result;
 use codespan::{ByteIndex, Span};
 use libra_types::{
@@ -97,6 +97,8 @@ pub struct ModuleDefinition {
     pub structs: Vec<StructDefinition>,
     /// the procedure that the module defines
     pub functions: Vec<(FunctionName, Function)>,
+    /// the synthetic, specification variables the module defines.
+    pub synthetics: Vec<SyntheticDefinition>,
 }
 
 /// Either a qualified module name like `addr.m` or `Transaction.m`, which refers to a module in
@@ -224,6 +226,8 @@ pub struct StructDefinition_ {
     pub type_formals: Vec<(TypeVar, Kind)>,
     /// the fields each instance has
     pub fields: StructDefinitionFields,
+    /// the invariants for this struct
+    pub invariants: Vec<Invariant>,
 }
 
 /// The type of a StructDefinition along with its source location information
@@ -295,7 +299,7 @@ pub struct Function_ {
     /// of references into global storage
     pub acquires: Vec<StructName>,
     /// List of specifications for the Move prover (experimental)
-    pub specifications: Vec<Condition_>,
+    pub specifications: Vec<Condition>,
     /// The code for the procedure
     pub body: FunctionBody,
 }
@@ -670,12 +674,14 @@ impl ModuleDefinition {
         imports: Vec<ImportDefinition>,
         structs: Vec<StructDefinition>,
         functions: Vec<(FunctionName, Function)>,
+        synthetics: Vec<SyntheticDefinition>,
     ) -> Result<Self> {
         Ok(ModuleDefinition {
             name: ModuleName::parse(name.into())?,
             imports,
             structs,
             functions,
+            synthetics,
         })
     }
 
@@ -779,12 +785,14 @@ impl StructDefinition_ {
         name: impl Into<Box<str>>,
         type_formals: Vec<(TypeVar, Kind)>,
         fields: Fields<Type>,
+        invariants: Vec<Invariant>,
     ) -> Result<Self> {
         Ok(StructDefinition_ {
             is_nominal_resource,
             name: StructName::parse(name)?,
             type_formals,
             fields: StructDefinitionFields::Move { fields },
+            invariants,
         })
     }
 
@@ -801,6 +809,7 @@ impl StructDefinition_ {
             name: StructName::parse(name)?,
             type_formals,
             fields: StructDefinitionFields::Native,
+            invariants: vec![],
         })
     }
 }
@@ -851,7 +860,7 @@ impl Function_ {
         return_type: Vec<Type>,
         type_formals: Vec<(TypeVar, Kind)>,
         acquires: Vec<StructName>,
-        specifications: Vec<Condition_>,
+        specifications: Vec<Condition>,
         body: FunctionBody,
     ) -> Self {
         let signature = FunctionSignature::new(formals, return_type, type_formals);

@@ -13,7 +13,7 @@ use bytecode_source_map::source_map::ModuleSourceMap;
 use bytecode_verifier::VerifiedModule;
 use libra_types::{identifier::IdentStr, identifier::Identifier, language_storage::ModuleId};
 use move_ir_types::ast::Loc;
-use move_ir_types::spec_language_ast::Condition_;
+use move_ir_types::spec_language_ast::{Condition, Invariant, SyntheticDefinition};
 use vm::access::ModuleAccess;
 use vm::file_format::{
     AddressPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, Kind,
@@ -124,6 +124,7 @@ impl GlobalEnv {
         source_map: ModuleSourceMap<Loc>,
         struct_data: Vec<StructData>,
         function_data: Vec<FunctionData>,
+        synthetics: Vec<SyntheticDefinition>,
     ) {
         let idx = self.module_data.len();
         self.module_data.push(ModuleData {
@@ -132,6 +133,7 @@ impl GlobalEnv {
             module,
             struct_data,
             function_data,
+            synthetics,
             source_map,
             source_file_path: source_file_path.to_owned(),
             source_text: RefCell::new(None),
@@ -147,7 +149,7 @@ impl GlobalEnv {
         def_idx: FunctionDefinitionIndex,
         arg_names: Vec<Identifier>,
         type_arg_names: Vec<Identifier>,
-        spec: Vec<Condition_>,
+        spec: Vec<Condition>,
     ) -> FunctionData {
         let handle_idx = module.function_def_at(def_idx).function;
         FunctionData {
@@ -165,6 +167,7 @@ impl GlobalEnv {
         &self,
         module: &VerifiedModule,
         def_idx: StructDefinitionIndex,
+        invariants: Vec<Invariant>,
     ) -> StructData {
         let handle_idx = module.struct_def_at(def_idx).struct_handle;
         let field_data = if let StructFieldInformation::Declared {
@@ -185,6 +188,7 @@ impl GlobalEnv {
             def_idx,
             handle_idx,
             field_data,
+            invariants,
         }
     }
 
@@ -259,6 +263,9 @@ pub struct ModuleData {
 
     /// Function data, in definition index order.
     function_data: Vec<FunctionData>,
+
+    /// Synthetic variables.
+    synthetics: Vec<SyntheticDefinition>,
 
     /// Module source location information.
     source_map: ModuleSourceMap<Loc>,
@@ -532,6 +539,11 @@ impl<'env> ModuleEnv<'env> {
         let addr = &self.data.module.address_pool()[idx.0 as usize];
         BigInt::from_str_radix(&addr.to_string(), 16).unwrap()
     }
+
+    /// Returns synthetic definitions in this module.
+    pub fn get_synthetics(&'env self) -> &'env [SyntheticDefinition] {
+        &self.data.synthetics
+    }
 }
 
 /// # Struct Environment
@@ -546,6 +558,9 @@ pub struct StructData {
 
     /// Field definitions.
     field_data: Vec<FieldData>,
+
+    // Invariants
+    invariants: Vec<Invariant>,
 }
 
 #[derive(Debug, Clone)]
@@ -649,6 +664,11 @@ impl<'env> StructEnv<'env> {
             .map(|(i, k)| TypeParameter(new_identifier(&format!("tv{}", i)), *k))
             .collect_vec()
     }
+
+    /// Returns the invariants associated with this struct.
+    pub fn get_invariants(&'env self) -> &[Invariant] {
+        &self.data.invariants
+    }
 }
 
 /// # Field Environment
@@ -725,7 +745,7 @@ pub struct FunctionData {
     type_arg_names: Vec<Identifier>,
 
     /// List of specification conditions. Not in bytecode but obtained from AST.
-    spec: Vec<Condition_>,
+    spec: Vec<Condition>,
 }
 
 #[derive(Debug)]
@@ -878,7 +898,7 @@ impl<'env> FunctionEnv<'env> {
     }
 
     /// Returns specification conditions associated with this function.
-    pub fn get_specification(&'env self) -> &'env [Condition_] {
+    pub fn get_specification(&'env self) -> &'env [Condition] {
         &self.data.spec
     }
 

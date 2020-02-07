@@ -3,8 +3,9 @@
 
 use crate::ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Spanned, Type};
 use libra_types::account_address::AccountAddress;
+use libra_types::identifier::Identifier;
 
-/// AST for the Move Prover specification language. Just postconditions for now
+/// AST for the Move Prover specification language.
 
 /// A location that can store a value
 #[derive(PartialEq, Debug, Clone)]
@@ -61,7 +62,7 @@ pub enum SpecExp {
 
 /// A specification directive to be verified
 #[derive(PartialEq, Debug, Clone)]
-pub enum Condition {
+pub enum Condition_ {
     /// Postconditions
     Ensures(SpecExp),
     /// Preconditions
@@ -73,4 +74,27 @@ pub enum Condition {
 }
 
 /// Specification directive with span.
-pub type Condition_ = Spanned<Condition>;
+pub type Condition = Spanned<Condition_>;
+
+/// An invariant over a resource.
+#[derive(PartialEq, Debug, Clone)]
+pub struct Invariant_ {
+    // A free string (for now) which specifies the function of this invariant.
+    pub modifier: String,
+
+    // A specification expressions
+    pub condition: SpecExp,
+}
+
+/// Invariant with span.
+pub type Invariant = Spanned<Invariant_>;
+
+/// A synthetic variable definition.
+#[derive(PartialEq, Debug, Clone)]
+pub struct SyntheticDefinition_ {
+    pub name: Identifier,
+    pub type_: Type,
+}
+
+/// Synthetic with span.
+pub type SyntheticDefinition = Spanned<SyntheticDefinition_>;
