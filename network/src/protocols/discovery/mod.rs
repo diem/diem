@@ -40,6 +40,7 @@ use crate::{
     NetworkPublicKeys,
 };
 use anyhow::anyhow;
+use bytes::Bytes;
 use channel;
 use futures::{
     sink::SinkExt,
@@ -57,6 +58,7 @@ use parity_multiaddr::Multiaddr;
 use prost::Message;
 use rand::{rngs::SmallRng, FromEntropy, Rng};
 use std::{
+    cmp::max,
     collections::{HashMap, HashSet},
     convert::{TryFrom, TryInto},
     sync::{Arc, RwLock},
@@ -70,13 +72,18 @@ mod test;
 pub struct Discovery<TTicker> {
     /// Note for self, which is prefixed with an underscore as this is not used but is in
     /// preparation for logic that changes the advertised Note while the validator is running.
-    _note: Note,
+    note: VerifiedNote,
     /// PeerId for self.
     peer_id: PeerId,
     /// Our node type.
     role: RoleType,
+    /// The DNS domain name other public full nodes should query to get this
+    /// validator's list of full nodes.
+    dns_seed_addr: Bytes,
     /// Validator for verifying signatures on messages.
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+    /// Signer for signing notes.
+    signer: Signer,
     /// Current state, maintaining the most recent Note for each peer, alongside parsed PeerInfo.
     known_peers: HashMap<PeerId, VerifiedNote>,
     /// Info for seed peers.
@@ -115,32 +122,22 @@ where
         // TODO(philiphayes): wire through config
         let dns_seed_addr = b"example.com";
 
-        let self_peer_info = create_peer_info(self_addrs.clone());
-        let self_full_node_payload = create_full_node_payload(dns_seed_addr);
-        let self_note = create_note(
-            &signer,
-            self_peer_id,
-            self_peer_info.clone(),
-            self_full_node_payload,
-        );
-        // We don't verify the self note because trusted_peers may not be populated yet
-        let self_verified_note = VerifiedNote {
-            peer_id: self_peer_id,
-            addrs: self_addrs,
-            epoch: self_peer_info.epoch,
-            raw_note: self_note.clone(),
-        };
+        let epoch = get_unix_epoch();
+        let self_verified_note =
+            create_self_verified_note(&signer, self_peer_id, self_addrs, dns_seed_addr, epoch);
 
-        let known_peers = vec![(self_peer_id, self_verified_note)]
+        let known_peers = vec![(self_peer_id, self_verified_note.clone())]
             .into_iter()
             .collect();
 
         Self {
-            _note: self_note,
+            note: self_verified_note,
             peer_id: self_peer_id,
             role,
+            dns_seed_addr: Bytes::from_static(dns_seed_addr),
             seed_peers,
             trusted_peers,
+            signer,
             known_peers,
             connected_peers: HashSet::new(),
             ticker,
@@ -294,7 +291,7 @@ where
     async fn reconcile(&mut self, remote_peer: PeerId, remote_notes: Vec<VerifiedNote>) {
         // If a peer is previously unknown, or has a newer epoch number, we update its
         // corresponding entry in the map.
-        for note in remote_notes {
+        for mut note in remote_notes.into_iter() {
             match self.known_peers.get_mut(&note.peer_id) {
                 // If we know about this peer, and receive the same or an older epoch, we do
                 // nothing.
@@ -314,31 +311,59 @@ where
                         note.peer_id.short_str(),
                         remote_peer.short_str()
                     );
-                    // We can never receive a note with a higher epoch number on us than what we
-                    // ourselves have broadcasted.
-                    assert_ne!(note.peer_id, self.peer_id);
-                    // Update internal state of the peer with new Note.
-                    self.known_peers.insert(note.peer_id, note.clone());
+                    // It is unlikely that we receive a note with a higher epoch number on us than
+                    // what we ourselves have broadcasted. However, this can happen in case of
+                    // the clock being reset, or the validator process being restarted on a node
+                    // with clock behind the previous node. In such scenarios, it's best to issue a
+                    // newer note with an epoch number higher than what we observed (unless the
+                    // issued epoch number is u64::MAX).
+                    if note.peer_id == self.peer_id {
+                        info!(
+                            "Received an older note for self, but with higher epoch. \
+                             Previous epoch: {}, current epoch: {}",
+                            note.epoch, self.note.epoch
+                        );
+                        if note.epoch == std::u64::MAX {
+                            security_log(SecurityEvent::InvalidDiscoveryMsg)
+                                .data(
+                                    "Older note received for self has u64::MAX epoch. \
+                                     This likely means that the node's network signing key has \
+                                     been compromised.",
+                                )
+                                .log();
+                            continue;
+                        }
+                        note = create_self_verified_note(
+                            &self.signer,
+                            self.peer_id,
+                            self.note.addrs.clone(),
+                            &self.dns_seed_addr,
+                            max(note.epoch + 1, get_unix_epoch()),
+                        );
+                        self.note = note.clone();
+                    } else {
+                        // The multiaddrs in the peer's discovery Note.
+                        let mut peer_addrs: Vec<Multiaddr> = note.addrs.clone();
 
-                    // The multiaddrs in the peer's discovery Note.
-                    let mut peer_addrs: Vec<Multiaddr> = note.addrs.clone();
+                        // Append the addrs in the seed PeerInfo if this peer is
+                        // configured as one of our seed peers.
+                        if let Some(seed_info) = self.seed_peers.get(&note.peer_id) {
+                            let seed_addrs_iter = seed_info.addrs.iter().cloned().map(|addr| {
+                                Multiaddr::try_from(addr).expect("Multiaddr parsing fails")
+                            });
+                            peer_addrs.extend(seed_addrs_iter);
+                        }
 
-                    // Append the addrs in the seed PeerInfo if this peer is
-                    // configured as one of our seed peers.
-                    if let Some(seed_info) = self.seed_peers.get(&note.peer_id) {
-                        let seed_addrs_iter = seed_info.addrs.iter().cloned().map(|addr| {
-                            Multiaddr::try_from(addr).expect("Multiaddr parsing fails")
-                        });
-                        peer_addrs.extend(seed_addrs_iter);
+                        self.conn_mgr_reqs_tx
+                            .send(ConnectivityRequest::UpdateAddresses(
+                                note.peer_id,
+                                peer_addrs,
+                            ))
+                            .await
+                            .expect("ConnectivityRequest::UpdateAddresses send");
                     }
-
-                    self.conn_mgr_reqs_tx
-                        .send(ConnectivityRequest::UpdateAddresses(
-                            note.peer_id,
-                            peer_addrs,
-                        ))
-                        .await
-                        .expect("ConnectivityRequest::UpdateAddresses send");
+                    // Update internal state of the peer with new Note.
+                    self.known_peers.insert(note.peer_id, note);
                 }
             }
         }
@@ -372,50 +397,75 @@ struct VerifiedNote {
 }
 
 // Creates a PeerInfo combining the given addresses with the current unix timestamp as epoch.
-fn create_peer_info(addrs: Vec<Multiaddr>) -> PeerInfo {
+fn create_peer_info(addrs: Vec<Multiaddr>, epoch: u64) -> PeerInfo {
     let mut peer_info = PeerInfo::default();
-    // TODO: Currently, SystemTime::now() in Rust is not guaranteed to use a monotonic clock.
-    // At the moment, it's unclear how to do this in a platform-agnostic way. For Linux, we
-    // could use something like the [timerfd trait](https://docs.rs/crate/timerfd/1.0.0).
-    let time_since_epoch = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("System clock reset to before unix epoch")
-        .as_millis() as u64;
-    peer_info.epoch = time_since_epoch;
+    peer_info.epoch = epoch;
     peer_info.addrs = addrs.into_iter().map(|addr| addr.as_ref().into()).collect();
     peer_info
 }
 
-fn create_full_node_payload(dns_seed_addr: &[u8]) -> FullNodePayload {
-    let mut full_node_payload = FullNodePayload::default();
+fn get_unix_epoch() -> u64 {
     // TODO: Currently, SystemTime::now() in Rust is not guaranteed to use a monotonic clock.
     // At the moment, it's unclear how to do this in a platform-agnostic way. For Linux, we
     // could use something like the [timerfd trait](https://docs.rs/crate/timerfd/1.0.0).
-    let time_since_epoch = SystemTime::now()
+    SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("System clock reset to before unix epoch")
-        .as_millis() as u64;
-    full_node_payload.epoch = time_since_epoch;
+        .as_millis() as u64
+}
+
+fn create_full_node_payload(dns_seed_addr: &[u8], epoch: u64) -> FullNodePayload {
+    let mut full_node_payload = FullNodePayload::default();
+    full_node_payload.epoch = epoch;
     full_node_payload.dns_seed_addr = dns_seed_addr.into();
     full_node_payload
 }
 
 // Creates a note by signing the given peer info, and combining the signature, peer_info and
 // peer_id into a note.
+fn create_self_verified_note(
+    signer: &Signer,
+    self_peer_id: PeerId,
+    self_addrs: Vec<Multiaddr>,
+    dns_seed_addr: &[u8],
+    epoch: u64,
+) -> VerifiedNote {
+    let note = create_note(
+        signer,
+        self_peer_id,
+        self_addrs.clone(),
+        dns_seed_addr,
+        epoch,
+    );
+    // We don't verify the self note because trusted_peers may not be populated yet
+    VerifiedNote {
+        peer_id: self_peer_id,
+        addrs: self_addrs,
+        epoch,
+        raw_note: note,
+    }
+}
+
 fn create_note(
     signer: &Signer,
-    peer_id: PeerId,
-    peer_info: PeerInfo,
-    full_node_payload: FullNodePayload,
+    self_peer_id: PeerId,
+    self_addrs: Vec<Multiaddr>,
+    dns_seed_addr: &[u8],
+    epoch: u64,
 ) -> Note {
-    let peer_info_bytes = peer_info.to_bytes().expect("Protobuf serialization fails");
+    let self_peer_info = create_peer_info(self_addrs, epoch);
+    let self_full_node_payload = create_full_node_payload(dns_seed_addr, epoch);
+
+    let peer_info_bytes = self_peer_info
+        .to_bytes()
+        .expect("Protobuf serialization fails");
     let peer_info_signature = sign(&signer, &peer_info_bytes);
 
     let mut signed_peer_info = SignedPeerInfo::default();
     signed_peer_info.peer_info = peer_info_bytes.to_vec();
     signed_peer_info.signature = peer_info_signature;
 
-    let payload_bytes = full_node_payload
+    let payload_bytes = self_full_node_payload
         .to_bytes()
         .expect("Protobuf serialization fails");
     let payload_signature = sign(&signer, &payload_bytes);
@@ -425,9 +475,10 @@ fn create_note(
     signed_full_node_payload.signature = payload_signature;
 
     let mut note = Note::default();
-    note.peer_id = peer_id.into();
+    note.peer_id = self_peer_id.into();
     note.signed_peer_info = Some(signed_peer_info);
     note.signed_full_node_payload = Some(signed_full_node_payload);
+
     note
 }
 
