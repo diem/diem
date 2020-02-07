@@ -18,6 +18,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, executor::block_on, prelude::*};
+use libra_config::config::ConsensusConfig;
 use libra_config::{
     config::{
         ConsensusProposerType::{self, FixedProposer, MultipleOrderedProposers, RotatingProposer},
@@ -543,7 +544,8 @@ fn basic_state_sync() {
             .next()
             .await
             .expect("Fail to be notified by a mempool committed txns");
-        assert_eq!(nodes[3].mempool.get_committed_txns().len(), 100);
+        let max_block_size = ConsensusConfig::default().max_block_size as usize;
+        assert_eq!(nodes[3].mempool.get_committed_txns().len(), max_block_size);
     });
 }
 
