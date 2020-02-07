@@ -11,7 +11,7 @@ use cli::{
     client_proxy::ClientProxy,
     commands::{get_commands, parse_cmd, report_error, Command},
 };
-use libra_logger::set_default_global_logger;
+use libra_logger::set_global_logger;
 use libra_types::waypoint::Waypoint;
 use rustyline::{config::CompletionType, error::ReadlineError, Config, Editor};
 use std::{
@@ -73,7 +73,7 @@ struct Args {
 }
 
 fn main() {
-    let _logger = set_default_global_logger(false /* async */, None);
+    let _logger = set_global_logger(false /* async */, None);
     crash_handler::setup_panic_handler();
     let args = Args::from_args();
 

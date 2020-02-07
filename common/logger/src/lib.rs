@@ -10,7 +10,7 @@
 //! ```rust, no_run
 //! use libra_logger::prelude::*;
 //!
-//! let _g = libra_logger::set_default_global_logger(false /* async */, Some(256));
+//! let _g = libra_logger::set_global_logger(false /* async */, Some(256));
 //! info!("Starting...");
 //! ```
 
@@ -35,8 +35,8 @@ use slog::{o, Discard, Drain, FilterLevel, Logger, Never};
 pub use slog::{slog_crit, slog_debug, slog_error, slog_info, slog_trace, slog_warn};
 use slog_async::Async;
 use slog_envlogger::{EnvLogger, LogBuilder};
+use slog_scope::GlobalLoggerGuard;
 pub use slog_scope::{crit, debug, error, info, trace, warn};
-use slog_scope::{set_global_logger, GlobalLoggerGuard};
 use slog_term::{PlainDecorator, TermDecorator};
 use std::sync::Mutex;
 
@@ -49,18 +49,22 @@ pub mod prelude {
 
 pub use simple_logger::{set_simple_logger, set_simple_logger_prefix};
 
-/// Creates and sets default global logger.
+/// Creates and sets the global logger at the default filter level.
 /// Caller must keep the returned guard alive.
-pub fn set_default_global_logger(async_drain: bool, chan_size: Option<usize>) -> GlobalLoggerGuard {
-    let logger = create_default_root_logger(async_drain, chan_size);
-    set_global_logger(logger)
+pub fn set_global_logger(async_drain: bool, chan_size: Option<usize>) -> GlobalLoggerGuard {
+    set_global_logger_with_level(async_drain, chan_size, FilterLevel::Info)
 }
 
-/// Creates a root logger with default settings.
-fn create_default_root_logger(async_drain: bool, chan_size: Option<usize>) -> Logger {
+/// Creates and sets the global logger with the given filter level.
+fn set_global_logger_with_level(
+    async_drain: bool,
+    chan_size: Option<usize>,
+    filter_level: FilterLevel,
+) -> GlobalLoggerGuard {
     let drain = GlogFormat::new(PlainDecorator::new(::std::io::stderr()), ErrorCategorizer).fuse();
-    let logger = create_env_logger(drain);
-    get_logger(async_drain, chan_size, logger)
+    let env_logger = create_env_logger_with_level(drain, filter_level);
+    let logger = get_logger(async_drain, chan_size, env_logger);
+    slog_scope::set_global_logger(logger)
 }
 
 /// Creates a logger that respects RUST_LOG environment variable
@@ -79,38 +83,28 @@ where
     builder.build()
 }
 
-/// Creates a logger that respects RUST_LOG environment variable
-fn create_env_logger<D>(drain: D) -> EnvLogger<D>
-where
-    D: Drain<Err = Never, Ok = ()> + Send + 'static,
-{
-    // Have the default logging level be 'Info'
-    create_env_logger_with_level(drain, FilterLevel::Info)
-}
+/// slog_scope::set_global_logger() returns a guard, which must be kept in
+/// scope. If the guard is no longer scoped, Slog panics, thinking that
+/// set_global_logger() has not been called. As such, to support logging
+/// during tests, we define and keep these guards at global scope. This is
+/// ugly, but it works.
+static TESTING_ENVLOGGER_GUARD: Lazy<GlobalLoggerGuard> = Lazy::new(|| {
+    if ::std::env::var("RUST_LOG").is_ok() {
+        set_global_logger(false /* async */, None /* chan_size */)
+    } else {
+        let logger = Logger::root(Discard, o!());
+        slog_scope::set_global_logger(logger)
+    }
+});
 
 /// Creates a root logger with test settings: does not do output if test passes.
 /// Caveat: cargo test does not capture output for non main thread. So this logger is not
 /// very useful for multithreading scenarios.
-fn create_test_root_logger() -> Logger {
-    let drain = GlogFormat::new(TermDecorator::new().build(), ErrorCategorizer).fuse();
-    let envlogger = create_env_logger_with_level(drain, FilterLevel::Debug);
-    Logger::root(Mutex::new(envlogger).fuse(), o!())
-}
-
-static TESTING_ENVLOGGER_GUARD: Lazy<GlobalLoggerGuard> = Lazy::new(|| {
-    let logger = {
-        if ::std::env::var("RUST_LOG").is_ok() {
-            create_default_root_logger(false /* async */, None /* chan_size */)
-        } else {
-            Logger::root(Discard, o!())
-        }
-    };
-    set_global_logger(logger)
-});
-
 static END_TO_END_TESTING_ENVLOGGER_GUARD: Lazy<GlobalLoggerGuard> = Lazy::new(|| {
-    let logger = create_test_root_logger();
-    set_global_logger(logger)
+    let drain = GlogFormat::new(TermDecorator::new().build(), ErrorCategorizer).fuse();
+    let env_logger = create_env_logger_with_level(drain, FilterLevel::Debug);
+    let logger = Logger::root(Mutex::new(env_logger).fuse(), o!());
+    slog_scope::set_global_logger(logger)
 });
 
 /// Create and setup default global logger following the env-logger conventions,
