@@ -6,7 +6,7 @@
 #![forbid(unsafe_code)]
 
 use libra_config::config::NodeConfig;
-use safety_rules::ProcessService;
+use safety_rules::Process;
 use std::{env, process};
 
 fn main() {
@@ -22,6 +22,6 @@ fn main() {
         process::exit(1);
     });
 
-    let mut service = ProcessService::new(config);
+    let mut service = Process::new(config);
     service.start();
 }

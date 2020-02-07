@@ -4,6 +4,7 @@
 use crate::{
     local_client::LocalClient,
     persistent_safety_storage::PersistentSafetyStorage,
+    process::ProcessService,
     remote_service::RemoteService,
     serializer::{SerializerClient, SerializerService},
     spawned_process::SpawnedProcess,
@@ -13,7 +14,10 @@ use crate::{
 use consensus_types::common::{Author, Payload};
 use libra_config::config::{NodeConfig, SafetyRulesBackend, SafetyRulesService};
 use libra_secure_storage::{InMemoryStorage, OnDiskStorage, Storage};
-use std::sync::{Arc, RwLock};
+use std::{
+    net::SocketAddr,
+    sync::{Arc, RwLock},
+};
 
 pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSafetyStorage) {
     let author = config
@@ -49,6 +53,7 @@ pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSaf
 
 enum SafetyRulesWrapper<T> {
     Local(Arc<RwLock<SafetyRules<T>>>),
+    Process(ProcessService<T>),
     Serializer(Arc<RwLock<SerializerService<T>>>),
     SpawnedProcess(SpawnedProcess<T>),
     Thread(ThreadService<T>),
@@ -60,9 +65,11 @@ pub struct SafetyRulesManager<T> {
 
 impl<T: Payload> SafetyRulesManager<T> {
     pub fn new(config: &mut NodeConfig) -> Self {
-        if let SafetyRulesService::SpawnedProcess(_) = config.consensus.safety_rules.service {
-            return Self::new_spawned_process(config);
-        }
+        match &config.consensus.safety_rules.service {
+            SafetyRulesService::Process(conf) => return Self::new_process(conf.server_address),
+            SafetyRulesService::SpawnedProcess(_) => return Self::new_spawned_process(config),
+            _ => (),
+        };
 
         let (author, storage) = extract_service_inputs(config);
         let sr_config = &config.consensus.safety_rules;
@@ -78,6 +85,13 @@ impl<T: Payload> SafetyRulesManager<T> {
         let safety_rules = SafetyRules::new(author, storage);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Local(Arc::new(RwLock::new(safety_rules))),
+        }
+    }
+
+    pub fn new_process(server_addr: SocketAddr) -> Self {
+        let process_service = ProcessService::<T>::new(server_addr);
+        Self {
+            internal_safety_rules: SafetyRulesWrapper::Process(process_service),
         }
     }
 
@@ -110,6 +124,7 @@ impl<T: Payload> SafetyRulesManager<T> {
             SafetyRulesWrapper::Local(safety_rules) => {
                 Box::new(LocalClient::new(safety_rules.clone()))
             }
+            SafetyRulesWrapper::Process(process) => Box::new(process.client()),
             SafetyRulesWrapper::Serializer(serializer_service) => {
                 Box::new(SerializerClient::new(serializer_service.clone()))
             }
