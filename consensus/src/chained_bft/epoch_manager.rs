@@ -111,16 +111,82 @@ impl<T: Payload> EpochManager<T> {
         self.epoch_info.epoch
     }
 
+    // Potentially handles the message if it is not current and returns None,
+    // returns Some(msg) if current.
+    async fn check_for_non_current_epoch(
+        &mut self,
+        peer_id: &AccountAddress,
+        msg: FromNetworkMsg<T>,
+    ) -> Option<FromNetworkMsg<T>> {
+        match msg {
+            FromNetworkMsg::Proposal(proposal) => {
+                if proposal.epoch() != self.epoch_info.epoch {
+                    return None;
+                }
+                Some(FromNetworkMsg::Proposal(proposal))
+            }
+            FromNetworkMsg::RequestBlock(req_with_callback) => {
+                Some(FromNetworkMsg::RequestBlock(req_with_callback))
+            }
+            FromNetworkMsg::Vote(vote_msg) => {
+                let msg_epoch = vote_msg.epoch();
+                if msg_epoch != self.epoch_info.epoch {
+                    self.process_different_epoch(msg_epoch, peer_id.clone())
+                        .await;
+                    return None;
+                }
+                Some(FromNetworkMsg::Vote(vote_msg))
+            }
+            FromNetworkMsg::Sync(sync_info) => {
+                let sync_epoch = sync_info.epoch();
+                match sync_epoch.cmp(&self.epoch()) {
+                    Ordering::Equal => {
+                        // SyncInfo verification is postponed to the moment it's actually used.
+                        Some(FromNetworkMsg::Sync(sync_info))
+                    }
+                    Ordering::Less | Ordering::Greater => {
+                        self.process_different_epoch(sync_epoch, peer_id.clone())
+                            .await;
+                        None
+                    }
+                }
+            }
+            FromNetworkMsg::EpochChange(proof) => {
+                let msg_epoch = match proof.epoch() {
+                    Ok(epoch) => epoch,
+                    Err(_) => return None,
+                };
+                match msg_epoch.cmp(&self.epoch()) {
+                    Ordering::Equal => Some(FromNetworkMsg::EpochChange(proof)),
+                    Ordering::Less | Ordering::Greater => {
+                        self.process_different_epoch(msg_epoch, peer_id.clone())
+                            .await;
+                        None
+                    }
+                }
+            }
+            FromNetworkMsg::RequestEpoch(request) => match request.end_epoch.cmp(&self.epoch()) {
+                Ordering::Less | Ordering::Equal => Some(FromNetworkMsg::RequestEpoch(request)),
+                Ordering::Greater => {
+                    warn!("Received EpochRetrievalRequest beyond what we have locally");
+                    None
+                }
+            },
+        }
+    }
+
     pub async fn check_epoch(
         &mut self,
         peer_id: &AccountAddress,
         msg: FromNetworkMsg<T>,
     ) -> anyhow::Result<EpochCheck<T>> {
+        let msg = match self.check_for_non_current_epoch(peer_id, msg).await {
+            None => return Ok(EpochCheck::NotCurrent),
+            Some(msg) => msg,
+        };
+
         match msg {
             FromNetworkMsg::Proposal(proposal) => {
-                if proposal.epoch() != self.epoch_info.epoch {
-                    return Ok(EpochCheck::NotCurrent);
-                }
                 let proposal = proposal
                     .validate_signatures(&self.epoch_info.verifier)?
                     .verify_well_formed()?;
@@ -135,14 +201,6 @@ impl<T: Payload> EpochManager<T> {
                 EpochMsg::RequestBlock(req_with_callback),
             )),
             FromNetworkMsg::Vote(vote_msg) => {
-                let msg_epoch = vote_msg.epoch();
-
-                if msg_epoch != self.epoch_info.epoch {
-                    self.process_different_epoch(msg_epoch, peer_id.clone())
-                        .await;
-                    return Ok(EpochCheck::NotCurrent);
-                }
-
                 debug!("Received {}", vote_msg);
                 vote_msg.verify(&self.epoch_info.verifier).map_err(|e| {
                     security_log(SecurityEvent::InvalidConsensusVote)
@@ -153,53 +211,26 @@ impl<T: Payload> EpochManager<T> {
                 })?;
                 Ok(EpochCheck::Current(EpochMsg::Vote(vote_msg)))
             }
-            FromNetworkMsg::Sync(sync_info) => {
-                let sync_epoch = sync_info.epoch();
-                match sync_epoch.cmp(&self.epoch()) {
-                    Ordering::Equal => {
-                        // SyncInfo verification is postponed to the moment it's actually used.
-                        Ok(EpochCheck::Current(EpochMsg::Sync(sync_info)))
-                    }
-                    Ordering::Less | Ordering::Greater => {
-                        self.process_different_epoch(sync_epoch, peer_id.clone())
-                            .await;
-                        Ok(EpochCheck::NotCurrent)
-                    }
-                }
-            }
+            FromNetworkMsg::Sync(sync_info) => Ok(EpochCheck::Current(EpochMsg::Sync(sync_info))),
             FromNetworkMsg::EpochChange(proof) => {
-                let msg_epoch = proof.epoch()?;
-                match msg_epoch.cmp(&self.epoch()) {
-                    Ordering::Equal => {
-                        let verifier = VerifierType::TrustedVerifier(self.epoch_info.clone());
-                        let target_ledger_info = proof.verify(&verifier)?;
-                        debug!(
-                            "Received epoch change to {}",
-                            target_ledger_info.ledger_info().epoch() + 1
-                        );
-                        if self.epoch() <= target_ledger_info.ledger_info().epoch() {
-                            let event_processor = self.start_new_epoch(target_ledger_info).await;
-                            Ok(EpochCheck::NewStart(event_processor))
-                        } else {
-                            Ok(EpochCheck::NotCurrent)
-                        }
-                    }
-                    Ordering::Less | Ordering::Greater => {
-                        self.process_different_epoch(msg_epoch, peer_id.clone())
-                            .await;
-                        Ok(EpochCheck::NotCurrent)
-                    }
+                let verifier = VerifierType::TrustedVerifier(self.epoch_info.clone());
+
+                let target_ledger_info = proof.verify(&verifier)?;
+                debug!(
+                    "Received epoch change to {}",
+                    target_ledger_info.ledger_info().epoch() + 1
+                );
+
+                // Note: is this additional check necessary?
+                if self.epoch() <= target_ledger_info.ledger_info().epoch() {
+                    let event_processor = self.start_new_epoch(target_ledger_info).await;
+                    Ok(EpochCheck::NewStart(event_processor))
+                } else {
+                    Ok(EpochCheck::NotCurrent)
                 }
             }
             FromNetworkMsg::RequestEpoch(request) => {
-                match request.end_epoch.cmp(&self.epoch()) {
-                    Ordering::Less | Ordering::Equal => {
-                        self.process_epoch_retrieval(request, peer_id.clone()).await;
-                    }
-                    Ordering::Greater => {
-                        warn!("Received EpochRetrievalRequest beyond what we have locally");
-                    }
-                }
+                self.process_epoch_retrieval(request, peer_id.clone()).await;
                 Ok(EpochCheck::NotCurrent)
             }
         }
