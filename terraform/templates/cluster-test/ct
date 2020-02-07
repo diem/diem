@@ -3,7 +3,26 @@
 # SPDX-License-Identifier: Apache-2.0
 set -e
 
-echo "$(TZ='America/Los_Angeles' date) [${REMOTE_USER}] $*" >> ~/ct.log
+# Different versions of cti script have different name for this, will eventually get rid of REMOTE_USER
+MARKER=${CTI_MARKER:-${REMOTE_USER}}
+
+CONF_FILE=$(readlink -f $0).conf
+[[ -f "$CONF_FILE" ]] && source "$CONF_FILE"
+# This will allow to block(gate) certain --marker
+# Config file should be in same directory as this shell script and has suffix .conf
+# For example if this script is located in /usr/local/bin/ct, then config file is /usr/local/bin/ct.conf
+# Example of config file:
+#    RET_land=0 # do not run cluster test and return success for land jobs
+#    RET_nightly=1 # do not run cluster test and return failure for nightly jobs
+#    RET_user-x=1 # do not run cluster test and return failure for user user-x
+CONF_NAME=RET_$MARKER
+CONF_VALUE="${!CONF_NAME}"
+if [ ! -z "${CONF_VALUE}" ]; then
+    echo "Config ${CONF_NAME} is set to ${CONF_VALUE}, will use this as exit code and terminate"
+    exit ${CONF_VALUE}
+fi
+
+echo "$(TZ='America/Los_Angeles' date) [${MARKER}] $*" >> ~/ct.log
 
 DOCKER_IMAGE=""
 WAIT_TO="45m"
