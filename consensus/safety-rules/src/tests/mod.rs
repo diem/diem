@@ -8,3 +8,4 @@ mod serializer;
 mod spawned_process;
 mod suite;
 mod thread;
+mod vault;
