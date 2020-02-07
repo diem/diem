@@ -25,10 +25,8 @@ struct Opt {
 fn main() {
     let opt = Opt::from_args();
 
-    let _logger = libra_logger::set_default_global_logger(
-        true, /* async_drain */
-        None, /* chan_size */
-    );
+    let _logger =
+        libra_logger::set_global_logger(true /* async_drain */, None /* chan_size */);
 
     rayon::ThreadPoolBuilder::new()
         .thread_name(|index| format!("rayon-global-{}", index))
