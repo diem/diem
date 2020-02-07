@@ -117,7 +117,12 @@ fn current_instance_id() -> String {
     response.text().expect("Failed to parse metadata response")
 }
 
-pub fn upload_to_s3(local_filename: &str, bucket: &str, dest_filename: &str) -> Result<()> {
+pub fn upload_to_s3(
+    local_filename: &str,
+    bucket: &str,
+    dest_filename: &str,
+    content_type: Option<String>,
+) -> Result<()> {
     let mut f = File::open(local_filename).unwrap();
     let mut contents: Vec<u8> = Vec::new();
     match f.read_to_end(&mut contents) {
@@ -127,6 +132,7 @@ pub fn upload_to_s3(local_filename: &str, bucket: &str, dest_filename: &str) -> 
                 bucket: bucket.to_owned(),
                 key: dest_filename.to_owned(),
                 body: Some(contents.into()),
+                content_type,
                 ..Default::default()
             };
             S3Client::new(Region::UsWest2)

@@ -1,24 +1,28 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::experiments::ExperimentParam;
-use crate::{
-    aws, cluster::Cluster, experiments::Context, experiments::Experiment, instance,
-    instance::Instance,
-};
-
-use crate::effects::{Action, GenerateCpuFlamegraph};
-use anyhow::{format_err, Result};
-use async_trait::async_trait;
-use chrono::{Datelike, Timelike, Utc};
-use futures::future::FutureExt;
-use futures::join;
 use std::{
     collections::HashSet,
     fmt::{Display, Error, Formatter},
     time::Duration,
 };
+
+use anyhow::{format_err, Result};
+
+use futures::future::FutureExt;
+use futures::join;
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 use structopt::StructOpt;
+
+use async_trait::async_trait;
+
+use crate::effects::{Action, GenerateCpuFlamegraph};
+use crate::experiments::ExperimentParam;
+use crate::{
+    aws, cluster::Cluster, experiments::Context, experiments::Experiment, instance,
+    instance::Instance,
+};
 
 #[derive(StructOpt, Debug)]
 pub struct CpuFlamegraphParams {
@@ -70,23 +74,21 @@ impl Experiment for CpuFlamegraph {
         let (emit_result, flame_graph_result) = join!(emit_future, flame_graph_future);
         emit_result.map_err(|e| format_err!("Emiting tx failed: {:?}", e))?;
         flame_graph_result.map_err(|e| format_err!("Failed to generate flamegraph: {:?}", e))?;
-        let now = Utc::now();
         let filename = format!(
-            "{:04}{:02}{:02}-{:02}{:02}{:02}-libra-node-perf.svg",
-            now.year(),
-            now.month(),
-            now.day(),
-            now.hour(),
-            now.minute(),
-            now.second()
+            "{}-libra-node-perf.svg",
+            thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(30)
+                .collect::<String>()
         );
         aws::upload_to_s3(
             "perf-kernel.svg",
             "toro-cluster-test-flamegraphs",
             filename.as_str(),
+            Some("image/svg+xml".to_string()),
         )?;
         context.report.report_text(format!(
-            "perf flamegraph : https://s3.console.aws.amazon.com/s3/object/toro-cluster-test-flamegraphs/{}",
+            "perf flamegraph : https://toro-cluster-test-flamegraphs.s3-us-west-2.amazonaws.com/{}",
             filename
         ));
         Ok(())
