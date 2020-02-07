@@ -108,18 +108,18 @@ pub fn build_memory_noise_transport(
                 }
             }
         })
+        .and_then(move |(peer_id, socket), origin| {
+            async move {
+                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+                match_peer_id(identity, peer_id)
+                    .and_then(|identity| check_role(&own_identity, identity))
+                    .and_then(|identity| Ok((identity, socket)))
+            }
+        })
         .and_then(|(peer_id, socket), origin| {
             async move {
                 let muxer = Yamux::upgrade_connection(socket, origin).await?;
                 Ok((peer_id, muxer))
-            }
-        })
-        .and_then(move |(peer_id, muxer), origin| {
-            async move {
-                let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, muxer)))
             }
         })
         .with_timeout(TRANSPORT_TIMEOUT)
@@ -148,18 +148,18 @@ pub fn build_unauthenticated_memory_noise_transport(
                 Ok((peer_id, socket))
             }
         })
+        .and_then(move |(peer_id, socket), origin| {
+            async move {
+                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+                match_peer_id(identity, peer_id)
+                    .and_then(|identity| check_role(&own_identity, identity))
+                    .and_then(|identity| Ok((identity, socket)))
+            }
+        })
         .and_then(|(peer_id, socket), origin| {
             async move {
                 let muxer = Yamux::upgrade_connection(socket, origin).await?;
                 Ok((peer_id, muxer))
-            }
-        })
-        .and_then(move |(peer_id, muxer), origin| {
-            async move {
-                let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, muxer)))
             }
         })
         .with_timeout(TRANSPORT_TIMEOUT)
@@ -170,18 +170,17 @@ pub fn build_memory_transport(
     own_identity: Identity,
 ) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
-
     memory_transport
-        .and_then(|socket, origin| {
+        .and_then(move |socket, origin| {
             async move {
-                let muxer = Yamux::upgrade_connection(socket, origin).await?;
-                Ok(muxer)
+                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+                check_role(&own_identity, identity).and_then(|identity| Ok((identity, socket)))
             }
         })
-        .and_then(move |muxer, origin| {
+        .and_then(|(identity, socket), origin| {
             async move {
-                let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
-                check_role(&own_identity, identity).and_then(|identity| Ok((identity, muxer)))
+                let muxer = Yamux::upgrade_connection(socket, origin).await?;
+                Ok((identity, muxer))
             }
         })
         .with_timeout(TRANSPORT_TIMEOUT)
@@ -213,18 +212,18 @@ pub fn build_tcp_noise_transport(
                 }
             }
         })
+        .and_then(move |(peer_id, socket), origin| {
+            async move {
+                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+                match_peer_id(identity, peer_id)
+                    .and_then(|identity| check_role(&own_identity, identity))
+                    .and_then(|identity| Ok((identity, socket)))
+            }
+        })
         .and_then(|(peer_id, socket), origin| {
             async move {
                 let muxer = Yamux::upgrade_connection(socket, origin).await?;
                 Ok((peer_id, muxer))
-            }
-        })
-        .and_then(move |(peer_id, muxer), origin| {
-            async move {
-                let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, muxer)))
             }
         })
         .with_timeout(TRANSPORT_TIMEOUT)
@@ -254,18 +253,18 @@ pub fn build_unauthenticated_tcp_noise_transport(
                 Ok((peer_id, socket))
             }
         })
+        .and_then(move |(peer_id, socket), origin| {
+            async move {
+                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+                match_peer_id(identity, peer_id)
+                    .and_then(|identity| check_role(&own_identity, identity))
+                    .and_then(|identity| Ok((identity, socket)))
+            }
+        })
         .and_then(|(peer_id, socket), origin| {
             async move {
                 let muxer = Yamux::upgrade_connection(socket, origin).await?;
                 Ok((peer_id, muxer))
-            }
-        })
-        .and_then(move |(peer_id, muxer), origin| {
-            async move {
-                let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, muxer)))
             }
         })
         .with_timeout(TRANSPORT_TIMEOUT)
@@ -276,16 +275,16 @@ pub fn build_tcp_transport(
     own_identity: Identity,
 ) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
     LIBRA_TCP_TRANSPORT
-        .and_then(|socket, origin| {
+        .and_then(move |socket, origin| {
             async move {
-                let muxer = Yamux::upgrade_connection(socket, origin).await?;
-                Ok(muxer)
+                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+                check_role(&own_identity, identity).and_then(|identity| Ok((identity, socket)))
             }
         })
-        .and_then(move |muxer, origin| {
+        .and_then(|(identity, socket), origin| {
             async move {
-                let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
-                check_role(&own_identity, identity).and_then(|identity| Ok((identity, muxer)))
+                let muxer = Yamux::upgrade_connection(socket, origin).await?;
+                Ok((identity, muxer))
             }
         })
         .with_timeout(TRANSPORT_TIMEOUT)
