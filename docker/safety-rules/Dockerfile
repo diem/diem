@@ -24,7 +24,8 @@ FROM debian:buster AS prod
 
 RUN addgroup --system --gid 6180 libra && adduser --system --ingroup libra --no-create-home --uid 6180 libra
 
-RUN mkdir -p /opt/libra/bin /opt/libra/etc
+RUN mkdir -p /opt/libra/bin /opt/libra/etc /opt/libra/data/common
+COPY docker/safety-rules/docker-run-dynamic.sh /
 COPY --from=builder /libra/target/release/safety-rules /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 
