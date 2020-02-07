@@ -6,6 +6,6 @@ error:
     │              ^ Unexpected '0'
     ·
  11 │         X::S 0 = 0;
-    │              - Expected either a brace-enclosed pack expression or a parenthesized list of arguments for a function call
+    │              - Expected either a brace-enclosed list of field expressions or a parenthesized list of arguments for a function call
     │
 
