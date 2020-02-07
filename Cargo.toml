@@ -56,6 +56,7 @@ members = [
     "language/move-prover/stackless-bytecode-generator",
     "language/stdlib",
     "language/vm",
+    "language/vm/vm-derive",
     "language/vm/serializer_tests",
     "language/vm/vm-runtime",
     "language/vm/vm-runtime/vm-cache-map",

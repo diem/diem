@@ -16,6 +16,7 @@ use std::{
     fmt,
     ops::Deref,
 };
+use vm::make_ir_bytecode;
 
 /// Generic wrapper that keeps file locations for any ast-node
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
@@ -158,6 +159,17 @@ pub enum Kind {
 }
 
 //**************************************************************************************************
+// Labels
+//**************************************************************************************************
+
+/// Newtype for a label in a bytecode function body.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Label_(Identifier);
+
+/// The type of a label with a location.
+pub type Label = Spanned<Label_>;
+
+//**************************************************************************************************
 // Types
 //**************************************************************************************************
 
@@ -281,6 +293,8 @@ pub enum FunctionBody {
     /// The body is provided by the runtime
     Native,
 }
+
+make_ir_bytecode!(Bytecode);
 
 /// A Move function/procedure
 #[derive(PartialEq, Debug, Clone)]

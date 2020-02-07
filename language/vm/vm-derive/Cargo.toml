@@ -1,0 +1,18 @@
+[package]
+name = "vm-derive"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Macros for the Move VM."
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "1.0.1"
+quote = "1.0.0"
+proc-macro2 = "1.0.1"

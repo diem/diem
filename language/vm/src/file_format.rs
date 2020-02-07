@@ -44,6 +44,7 @@ use once_cell::sync::Lazy;
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
+use vm_derive::IRBytecode;
 
 /// Generic index into one of the tables in the binary format.
 pub type TableIndex = u16;
@@ -802,7 +803,7 @@ impl CodeUnit {
 ///
 /// Bytecodes operate on a stack machine and each bytecode has side effect on the stack and the
 /// instruction stream.
-#[derive(Clone, Hash, Eq, NumVariants, PartialEq)]
+#[derive(Clone, Hash, Eq, IRBytecode, NumVariants, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 #[num_variants = "NUM_INSTRUCTIONS"]
