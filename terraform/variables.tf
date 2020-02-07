@@ -184,3 +184,8 @@ variable "logstash_version" {
   type    = string
   default = "latest"
 }
+
+variable "elastic_storage_size" {
+  default = 500
+  description = "The volume size for Elasticsearch"
+}

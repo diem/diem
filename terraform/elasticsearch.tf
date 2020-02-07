@@ -9,7 +9,7 @@ resource "aws_elasticsearch_domain" "logging" {
 
   ebs_options {
       ebs_enabled = true
-      volume_size = 20
+      volume_size = var.elastic_storage_size
   }
 
   snapshot_options {
