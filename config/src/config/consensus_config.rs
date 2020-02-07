@@ -19,7 +19,7 @@ pub struct ConsensusConfig {
 impl Default for ConsensusConfig {
     fn default() -> ConsensusConfig {
         ConsensusConfig {
-            max_block_size: 100,
+            max_block_size: 200,
             proposer_type: ConsensusProposerType::MultipleOrderedProposers,
             contiguous_rounds: 2,
             max_pruned_blocks_in_mem: 10000,
