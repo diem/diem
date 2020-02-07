@@ -68,8 +68,9 @@ fn set_default_global_logger(
         return None;
     }
 
-    Some(libra_logger::set_global_logger(
+    Some(libra_logger::set_global_logger_with_level(
         logger_config.is_async,
         Some(logger_config.chan_size),
+        logger_config.filter_level,
     ))
 }

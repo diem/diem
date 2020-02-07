@@ -77,6 +77,8 @@ upstream_peers = []
 [logger]
 is_async = true
 chan_size = 256
+filter_level = "INFO"
+
 [vm_config.publishing_options]
 type = "Locked"
 whitelist = [
