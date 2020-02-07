@@ -21,9 +21,9 @@ proptest! {
     ) {
         let txns = gens
             .into_iter()
-            .map(|(index, gen)| Transaction::UserTransaction(
-                gen.materialize(index, &mut universe).into_inner()
-            ))
+            .map(|(index, gen)| {
+                Transaction::UserTransaction(gen.materialize(index, &mut universe).into_inner())
+            })
             .collect::<Vec<_>>();
 
         let tmp_dir = TempPath::new();
@@ -43,7 +43,9 @@ proptest! {
         let ledger_version = txns.len() as Version - 1;
         for (ver, txn) in txns.iter().enumerate() {
             prop_assert_eq!(store.get_transaction(ver as Version).unwrap(), txn.clone());
-            let user_txn = txn.as_signed_user_txn().expect("All should be user transactions here.");
+            let user_txn = txn
+                .as_signed_user_txn()
+                .expect("All should be user transactions here.");
             prop_assert_eq!(
                 store
                     .lookup_transaction_by_account(
