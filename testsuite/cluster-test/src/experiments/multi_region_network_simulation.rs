@@ -18,7 +18,6 @@ use crate::experiments::{Context, ExperimentParam};
 
 use crate::cluster::Cluster;
 use crate::experiments::Experiment;
-use crate::tx_emitter::{EmitJobRequest, TxEmitter};
 use crate::util::unix_timestamp_now;
 use async_trait::async_trait;
 use futures::future::join_all;
@@ -200,14 +199,12 @@ fn print_results(metrics: Vec<Metrics>) {
 #[async_trait]
 impl Experiment for MultiRegionSimulation {
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
-        let mut emitter = TxEmitter::new(&context.cluster);
         let mut results = vec![];
         for split in &self.params.splits {
             for cross_region_latency in &self.params.cross_region_latencies {
-                let job = emitter
-                    .start_job(EmitJobRequest::for_instances(
-                        context.cluster.validator_instances().clone(),
-                    ))
+                let job = context
+                    .tx_emitter
+                    .start_job(context.cluster.validator_instances().clone())
                     .await
                     .expect("Failed to start emit job");
                 // Wait for minting to complete and transactions to start
@@ -228,7 +225,7 @@ impl Experiment for MultiRegionSimulation {
                     info!("metrics for this run: {:?}", metrics);
                     results.push(metrics);
                 }
-                emitter.stop_job(job);
+                context.tx_emitter.stop_job(job);
                 // Sleep for a minute before different experiments
                 time::delay_for(Duration::from_secs(60)).await;
             }

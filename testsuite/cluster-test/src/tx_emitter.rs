@@ -55,6 +55,25 @@ const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempoo
 pub struct TxEmitter {
     accounts: Vec<AccountData>,
     mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    tx_emitter_params: TxEmitterParams,
+}
+
+pub struct TxEmitterParams {
+    pub wait_millis: u64,
+    pub wait_committed: bool,
+    pub accounts_per_client: usize,
+    pub threads_per_ac: Option<usize>,
+}
+
+impl Default for TxEmitterParams {
+    fn default() -> Self {
+        Self {
+            wait_millis: 50,
+            wait_committed: true,
+            accounts_per_client: 10,
+            threads_per_ac: Some(1),
+        }
+    }
 }
 
 pub struct EmitJob {
@@ -70,44 +89,12 @@ pub struct TxStats {
     pub expired: AtomicU64,
 }
 
-#[derive(Clone)]
-pub struct EmitThreadParams {
-    pub wait_millis: u64,
-    pub wait_committed: bool,
-}
-
-impl Default for EmitThreadParams {
-    fn default() -> Self {
-        Self {
-            wait_millis: 50,
-            wait_committed: true,
-        }
-    }
-}
-
-pub struct EmitJobRequest {
-    pub instances: Vec<Instance>,
-    pub accounts_per_client: usize,
-    pub threads_per_ac: Option<usize>,
-    pub thread_params: EmitThreadParams,
-}
-
-impl EmitJobRequest {
-    pub fn for_instances(instances: Vec<Instance>) -> Self {
-        Self {
-            instances,
-            accounts_per_client: 10,
-            threads_per_ac: None,
-            thread_params: EmitThreadParams::default(),
-        }
-    }
-}
-
 impl TxEmitter {
-    pub fn new(cluster: &Cluster) -> Self {
+    pub fn new(cluster: &Cluster, tx_emitter_params: TxEmitterParams) -> Self {
         Self {
             accounts: vec![],
             mint_key_pair: cluster.mint_key_pair().clone(),
+            tx_emitter_params,
         }
     }
 
@@ -123,24 +110,24 @@ impl TxEmitter {
         NamedAdmissionControlClient(mint_instance.clone(), Self::make_client(mint_instance))
     }
 
-    pub async fn start_job(&mut self, req: EmitJobRequest) -> Result<EmitJob> {
-        let threads_per_ac = match req.threads_per_ac {
+    pub async fn start_job(&mut self, instances: Vec<Instance>) -> Result<EmitJob> {
+        let threads_per_ac = match self.tx_emitter_params.threads_per_ac {
             Some(x) => x,
             None => {
                 // Trying to create somewhere between 75-150 threads
                 // We want to have equal numbers of threads for each AC, so that they are equally loaded
                 // Otherwise things like flamegrap/perf going to show different numbers depending on which AC is chosen
                 // Also limiting number of threads as max 10 per AC for use cases with very small number of nodes or use --peers
-                min(10, max(1, 150 / req.instances.len()))
+                min(10, max(1, 150 / instances.len()))
             }
         };
-        let num_clients = req.instances.len() * threads_per_ac;
+        let num_clients = instances.len() * threads_per_ac;
         info!(
             "Will use {} threads per AC with total {} AC clients",
             threads_per_ac, num_clients
         );
-        let num_accounts = req.accounts_per_client * num_clients;
-        self.mint_accounts(&req, num_accounts).await?;
+        let num_accounts = self.tx_emitter_params.accounts_per_client * num_clients;
+        self.mint_accounts(instances.clone(), num_accounts).await?;
         let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
         let mut workers = vec![];
         let all_addresses: Vec<_> = all_accounts.iter().map(|d| d.address).collect();
@@ -149,14 +136,17 @@ impl TxEmitter {
         let stop = Arc::new(AtomicBool::new(false));
         let stats = Arc::new(TxStats::default());
         for _ in 0..threads_per_ac {
-            for instance in &req.instances {
+            for instance in &instances {
                 let instance = instance.clone();
                 let client = Self::make_client(&instance);
-                let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
+                let accounts = (&mut all_accounts)
+                    .take(self.tx_emitter_params.accounts_per_client)
+                    .collect();
                 let all_addresses = all_addresses.clone();
                 let stop = stop.clone();
                 let peer_id = instance.peer_name().clone();
-                let params = req.thread_params.clone();
+                let wait_committed = self.tx_emitter_params.wait_committed;
+                let wait_millis = self.tx_emitter_params.wait_millis;
                 let stats = Arc::clone(&stats);
                 let thread = SubmissionThread {
                     accounts,
@@ -164,7 +154,8 @@ impl TxEmitter {
                     client,
                     all_addresses,
                     stop,
-                    params,
+                    wait_committed,
+                    wait_millis,
                     stats,
                 };
                 let join_handle = thread::Builder::new()
@@ -185,13 +176,17 @@ impl TxEmitter {
         })
     }
 
-    pub async fn mint_accounts(&mut self, req: &EmitJobRequest, num_accounts: usize) -> Result<()> {
+    pub async fn mint_accounts(
+        &mut self,
+        instances: Vec<Instance>,
+        num_accounts: usize,
+    ) -> Result<()> {
         if self.accounts.len() >= num_accounts {
             info!("Not minting accounts");
             return Ok(()); // Early return to skip printing 'Minting ...' logs
         }
         let mut faucet_account = load_faucet_account(
-            &mut Self::pick_mint_client(&req.instances),
+            &mut Self::pick_mint_client(&instances),
             self.mint_key_pair.clone(),
         )
         .await?;
@@ -202,20 +197,19 @@ impl TxEmitter {
             LIBRA_PER_NEW_ACCOUNT * num_accounts as u64,
         );
         execute_and_wait_transactions(
-            &mut Self::pick_mint_client(&req.instances),
+            &mut Self::pick_mint_client(&instances),
             &mut faucet_account,
             vec![mint_txn],
         )
         .await?;
-        let libra_per_seed =
-            (LIBRA_PER_NEW_ACCOUNT * num_accounts as u64) / req.instances.len() as u64;
+        let libra_per_seed = (LIBRA_PER_NEW_ACCOUNT * num_accounts as u64) / instances.len() as u64;
         // Create seed accounts with which we can create actual accounts concurrently
         let seed_accounts = create_new_accounts(
             &mut faucet_account,
-            req.instances.len(),
+            instances.len(),
             libra_per_seed,
             100,
-            Self::pick_mint_client(&req.instances),
+            Self::pick_mint_client(&instances),
         )
         .await
         .map_err(|e| format_err!("Failed to mint seed_accounts: {}", e))?;
@@ -226,8 +220,8 @@ impl TxEmitter {
             .enumerate()
             .map(|(i, mut seed_account)| {
                 // Spawn new threads
-                let instance = req.instances[i].clone();
-                let num_new_accounts = num_accounts / req.instances.len();
+                let instance = instances[i].clone();
+                let num_new_accounts = num_accounts / instances.len();
                 thread::spawn(move || {
                     let mut rt = Runtime::new().unwrap();
                     let client =
@@ -282,9 +276,7 @@ impl TxEmitter {
         duration: Duration,
         instances: Vec<Instance>,
     ) -> Result<TxStats> {
-        let job = self
-            .start_job(EmitJobRequest::for_instances(instances))
-            .await?;
+        let job = self.start_job(instances).await?;
         thread::sleep(duration);
         let stats = self.stop_job(job);
         Ok(stats)
@@ -301,14 +293,15 @@ struct SubmissionThread {
     client: AdmissionControlClientAsync,
     all_addresses: Arc<Vec<AccountAddress>>,
     stop: Arc<AtomicBool>,
-    params: EmitThreadParams,
     stats: Arc<TxStats>,
+    wait_millis: u64,
+    wait_committed: bool,
 }
 
 impl SubmissionThread {
     #[allow(clippy::collapsible_if)]
     async fn run(mut self) -> Vec<AccountData> {
-        let wait = Duration::from_millis(self.params.wait_millis);
+        let wait = Duration::from_millis(self.wait_millis);
         let mut rng = ThreadRng::default();
         while !self.stop.load(Ordering::Relaxed) {
             let requests = self.gen_requests(&mut rng);
@@ -336,7 +329,7 @@ impl SubmissionThread {
                     debug!("[{}] Thread won't sleep", self.instance);
                 }
             }
-            if self.params.wait_committed {
+            if self.wait_committed {
                 if let Err(uncommitted) =
                     wait_for_accounts_sequence(&mut self.client, &mut self.accounts).await
                 {

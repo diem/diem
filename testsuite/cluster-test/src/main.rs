@@ -25,7 +25,7 @@ use cluster_test::health::PrintFailures;
 use cluster_test::instance::Instance;
 use cluster_test::prometheus::Prometheus;
 use cluster_test::report::SuiteReport;
-use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
+use cluster_test::tx_emitter::TxEmitterParams;
 use cluster_test::util::unix_timestamp_now;
 use cluster_test::{
     aws::Aws,
@@ -133,28 +133,20 @@ pub fn main() {
 
     if args.emit_tx {
         let mut rt = Runtime::new().unwrap();
-        let thread_params = EmitThreadParams {
+        let duration = Duration::from_secs(args.duration);
+        let tx_emitter_params = TxEmitterParams {
             wait_millis: args.wait_millis,
             wait_committed: !args.burst,
+            accounts_per_client: args.accounts_per_client,
+            threads_per_ac: args.threads_per_ac,
         };
-        let duration = Duration::from_secs(args.duration);
         if args.swarm {
             let util = BasicSwarmUtil::setup(&args);
-            rt.block_on(util.emit_tx(
-                args.accounts_per_client,
-                args.threads_per_ac,
-                thread_params,
-                duration,
-            ));
+            rt.block_on(util.emit_tx(duration, tx_emitter_params));
             return;
         } else {
             let util = ClusterUtil::setup(&args);
-            rt.block_on(util.emit_tx(
-                args.accounts_per_client,
-                args.threads_per_ac,
-                thread_params,
-                duration,
-            ));
+            rt.block_on(util.emit_tx(duration, tx_emitter_params));
             return;
         }
     } else if args.discovery {
@@ -314,21 +306,10 @@ impl BasicSwarmUtil {
         }
     }
 
-    pub async fn emit_tx(
-        self,
-        accounts_per_client: usize,
-        threads_per_ac: Option<usize>,
-        thread_params: EmitThreadParams,
-        duration: Duration,
-    ) {
-        let mut emitter = TxEmitter::new(&self.cluster);
+    pub async fn emit_tx(self, duration: Duration, tx_emitter_params: TxEmitterParams) {
+        let mut emitter = TxEmitter::new(&self.cluster, tx_emitter_params);
         let job = emitter
-            .start_job(EmitJobRequest {
-                instances: self.cluster.validator_instances().to_vec(),
-                accounts_per_client,
-                threads_per_ac,
-                thread_params,
-            })
+            .start_job(self.cluster.validator_instances().to_vec())
             .await
             .expect("Failed to start emit job");
         thread::sleep(duration);
@@ -381,21 +362,10 @@ impl ClusterUtil {
         runtime.block_on(join_all(futures));
     }
 
-    pub async fn emit_tx(
-        self,
-        accounts_per_client: usize,
-        threads_per_ac: Option<usize>,
-        thread_params: EmitThreadParams,
-        duration: Duration,
-    ) {
-        let mut emitter = TxEmitter::new(&self.cluster);
+    pub async fn emit_tx(self, duration: Duration, tx_emitter_params: TxEmitterParams) {
+        let mut emitter = TxEmitter::new(&self.cluster, tx_emitter_params);
         emitter
-            .start_job(EmitJobRequest {
-                instances: self.cluster.validator_instances().to_vec(),
-                accounts_per_client,
-                threads_per_ac,
-                thread_params,
-            })
+            .start_job(self.cluster.validator_instances().to_vec())
             .await
             .expect("Failed to start emit job");
         self.run_stat_loop(duration);
@@ -446,7 +416,13 @@ impl ClusterTestRunner {
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
             .ok();
-        let tx_emitter = TxEmitter::new(&cluster);
+        let tx_emitter_params = TxEmitterParams {
+            wait_millis: args.wait_millis,
+            wait_committed: !args.burst,
+            accounts_per_client: args.accounts_per_client,
+            threads_per_ac: args.threads_per_ac,
+        };
+        let tx_emitter = TxEmitter::new(&cluster, tx_emitter_params);
         let prometheus = Prometheus::new(
             cluster
                 .prometheus_ip()
@@ -685,10 +661,7 @@ impl ClusterTestRunner {
         loop {
             let job = self
                 .runtime
-                .block_on(
-                    self.tx_emitter
-                        .start_job(EmitJobRequest::for_instances(instances.clone())),
-                )
+                .block_on(self.tx_emitter.start_job(instances.clone()))
                 .expect("Failed to start emit job");
             thread::sleep(Duration::from_secs(30) + window);
             let now = unix_timestamp_now();
