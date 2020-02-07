@@ -464,8 +464,6 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
 //      Term =
 //          "move" <Var>
 //          | "copy" <Var>
-//          | "break"
-//          | "continue"
 //          | <Name>
 //          | <Value>
 //          | "(" Comma<Exp> ")"
@@ -485,16 +483,6 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
         Tok::Copy => {
             tokens.advance()?;
             Exp_::Copy(parse_var(tokens)?)
-        }
-
-        Tok::Break => {
-            tokens.advance()?;
-            Exp_::Break
-        }
-
-        Tok::Continue => {
-            tokens.advance()?;
-            Exp_::Continue
         }
 
         Tok::NameValue => {
@@ -669,10 +657,12 @@ fn parse_call_args<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<Vec<Exp
 //          "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
 //          | "while" "(" <Exp> ")" <Exp>
 //          | "loop" <Exp>
-//          | <UnaryExp> "=" <Exp>
 //          | "return" <Exp>
 //          | "abort" <Exp>
+//          | "break"
+//          | "continue"
 //          | <BinOpExp>
+//          | <UnaryExp> "=" <Exp>
 fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
     let exp = match tokens.peek() {
@@ -711,6 +701,14 @@ fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             tokens.advance()?;
             let e = Box::new(parse_exp(tokens)?);
             Exp_::Abort(e)
+        }
+        Tok::Break => {
+            tokens.advance()?;
+            Exp_::Break
+        }
+        Tok::Continue => {
+            tokens.advance()?;
+            Exp_::Continue
         }
         _ => {
             // This could be either an assignment or a binary operator
@@ -758,7 +756,7 @@ fn get_precedence(token: Tok) -> u32 {
 
 // Parse a binary operator expression:
 //      BinOpExp =
-//          <UnaryExp> <BinOp> <BinOpExp>
+//          <UnaryExp> (<BinOp> <BinOpExp>)?
 //      BinOp = (listed from lowest to highest precedence)
 //          "||"
 //          | "&&"
