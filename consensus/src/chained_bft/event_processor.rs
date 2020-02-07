@@ -119,8 +119,8 @@ impl<T: Payload> StartupSyncProcessor<T> {
         );
         let mut retriever = BlockRetriever::new(
             self.network.clone(),
-            // Give a timeout of 1 hour to make sure there's enough time for trying to fetch from all peers
-            Instant::now() + Duration::new(3600, 0),
+            // Give a timeout of 5 sec per attempt try to fetch block from peer
+            Instant::now() + Duration::new(5, 0),
             peer,
         );
         let (blocks, quorum_certs) =
