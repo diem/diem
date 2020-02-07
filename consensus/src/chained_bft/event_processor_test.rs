@@ -537,10 +537,10 @@ fn process_vote_timeout_msg_test() {
     let signature = vote_on_timeout.timeout().sign(&non_proposer.signer);
     vote_on_timeout.add_timeout_signature(signature);
 
-    let vote_msg_on_timeout = VoteMsg::new(
+    let vote_msg_on_timeout = Box::new(VoteMsg::new(
         vote_on_timeout,
         SyncInfo::new(block_0_quorum_cert, certificate_for_genesis(), None),
-    );
+    ));
     block_on(
         static_proposer
             .event_processor
@@ -671,7 +671,7 @@ fn process_votes_basic_test() {
         a1.quorum_cert().certified_block().clone(),
     );
 
-    let vote_msg = VoteMsg::new(
+    let vote_msg = Box::new(VoteMsg::new(
         Vote::new(
             vote_data,
             node.signer.author(),
@@ -679,7 +679,7 @@ fn process_votes_basic_test() {
             &node.signer,
         ),
         test_utils::placeholder_sync_info(),
-    );
+    ));
 
     block_on(async move {
         node.event_processor.process_vote(vote_msg).await;

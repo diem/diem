@@ -267,7 +267,7 @@ pub enum FromNetworkMsg<T> {
     RequestBlock(IncomingBlockRetrievalRequest),
     RequestEpoch(EpochRetrievalRequest),
     EpochChange(ValidatorChangeProof),
-    Sync(SyncInfo),
+    Sync(Box<SyncInfo>),
     Vote(Box<VoteMsg>),
 }
 
@@ -644,7 +644,11 @@ impl<T: Payload> NetworkTask<T> {
         peer_id: AccountAddress,
     ) -> anyhow::Result<()> {
         let sync_info = SyncInfo::try_from(sync_info)?;
-        self.queue_msg(peer_id, FromNetworkMsg::Sync(sync_info), MessageType::Sync);
+        self.queue_msg(
+            peer_id,
+            FromNetworkMsg::Sync(Box::new(sync_info)),
+            MessageType::Sync,
+        );
         Ok(())
     }
 

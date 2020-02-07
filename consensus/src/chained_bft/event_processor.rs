@@ -357,11 +357,11 @@ impl<T: Payload> EventProcessor<T> {
     }
 
     /// Process the SyncInfo sent by peers to catch up to latest state.
-    pub async fn process_sync_info_msg(&mut self, sync_info: SyncInfo, peer: Author) {
+    pub async fn process_sync_info_msg(&mut self, sync_info: Box<SyncInfo>, peer: Author) {
         debug!("Received a sync info msg: {}", sync_info);
         counters::SYNC_INFO_MSGS_RECEIVED_COUNT.inc();
         // To avoid a ping-pong cycle between two peers that move forward together.
-        if let Err(e) = self.sync_up(&sync_info, peer, false).await {
+        if let Err(e) = self.sync_up(&*sync_info, peer, false).await {
             error!("Fail to process sync info: {}", e);
         }
     }

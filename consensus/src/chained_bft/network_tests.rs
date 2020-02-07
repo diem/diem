@@ -402,7 +402,7 @@ fn test_network_api() {
                     FromNetworkMsg::Vote(vote_msg) => vote_msg,
                     _ => continue,
                 };
-                assert_eq!(v, vote_msg);
+                assert_eq!(*v, vote_msg);
                 break;
             }
         }

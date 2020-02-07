@@ -63,7 +63,7 @@ pub enum EpochMsg<T> {
     Proposal(ProposalMsg<T>),
     RequestBlock(IncomingBlockRetrievalRequest),
     Vote(Box<VoteMsg>),
-    Sync(SyncInfo),
+    Sync(Box<SyncInfo>),
 }
 
 /// The result of the epoch manager handling a network msg.
