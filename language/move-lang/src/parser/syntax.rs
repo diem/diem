@@ -643,7 +643,7 @@ fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error>
         }
 
         _ => {
-            let expected = "either a brace-enclosed pack expression or \
+            let expected = "either a brace-enclosed list of field expressions or \
                             a parenthesized list of arguments for a function call";
             Err(unexpected_token_error(tokens, expected))
         }
@@ -1314,7 +1314,7 @@ fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<FileDefinition, Erro
             let loc = current_token_loc(tokens);
             return Err(vec![(
                 loc,
-                "Unexpected text after end of main function".to_string(),
+                "Unexpected characters after end of main function".to_string(),
             )]);
         }
         FileDefinition::Main(Main { uses, function })

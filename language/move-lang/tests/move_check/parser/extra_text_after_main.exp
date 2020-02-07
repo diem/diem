@@ -3,6 +3,6 @@ error:
    ┌── tests/move_check/parser/extra_text_after_main.move:5:1 ───
    │
  5 │ foo() {
-   │ ^^^ Unexpected text after end of main function
+   │ ^^^ Unexpected characters after end of main function
    │
 
