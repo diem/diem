@@ -92,7 +92,7 @@ locals {
 
 variable "validator_type" {
   description = "EC2 instance type of validator instances"
-  default     = "c5d.large"
+  default     = "c5.large"
 }
 
 variable "validator_ebs_size" {
@@ -188,4 +188,9 @@ variable "logstash_version" {
 variable "elastic_storage_size" {
   default = 500
   description = "The volume size for Elasticsearch"
+}
+
+variable "restore_vol_id" {
+  default     = ""
+  description = "volume id to restore validator data from"
 }

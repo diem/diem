@@ -132,6 +132,15 @@ locals {
   image_version      = substr(var.image_tag, 0, 6) == "sha256" ? "@${var.image_tag}" : ":${var.image_tag}"
 }
 
+resource "aws_ebs_snapshot" "restore_snapshot" {
+  count = var.restore_vol_id == "" ? 0 : 1
+  volume_id = var.restore_vol_id
+
+  tags = {
+    Name = "${terraform.workspace}-restore-snap"
+  }
+}
+
 resource "aws_instance" "validator" {
   count         = var.num_validators
   ami           = local.aws_ecs_ami
@@ -147,11 +156,13 @@ resource "aws_instance" "validator" {
   iam_instance_profile        = aws_iam_instance_profile.ecsInstanceRole.name
   user_data                   = local.user_data
 
-  dynamic "root_block_device" {
+  dynamic "ebs_block_device" {
     for_each = contains(local.ebs_types, split(var.validator_type, ".")[0]) ? [0] : []
     content {
+      device_name = "/dev/xvdb"
       volume_type = "io1"
-      volume_size = var.validator_ebs_size
+      volume_size = var.restore_vol_id == "" ? var.validator_ebs_size : aws_ebs_snapshot.restore_snapshot.0.volume_size
+      snapshot_id = var.restore_vol_id == "" ? "" : aws_ebs_snapshot.restore_snapshot.0.id
       iops        = var.validator_ebs_size * 50 # max 50iops/gb
     }
   }
