@@ -29,7 +29,7 @@ use libra_types::{
     },
     transaction::{TransactionInfo, Version},
 };
-use schemadb::{ReadOptions, DB};
+use schemadb::{ReadOptions, SchemaIterator, DB};
 use std::{ops::Deref, sync::Arc};
 
 pub(crate) struct LedgerStore {
@@ -212,6 +212,26 @@ impl LedgerStore {
             .ok_or_else(|| LibraDbError::NotFound(String::from("Genesis TransactionInfo.")).into())
     }
 
+    /// Gets an iterator that yields `num_transaction_infos` transaction infos starting from
+    /// `start_version`.
+    pub fn get_transaction_info_iter(
+        &self,
+        start_version: Version,
+        num_transaction_infos: u64,
+    ) -> Result<TransactionInfoIter> {
+        let mut iter = self
+            .db
+            .iter::<TransactionInfoSchema>(ReadOptions::default())?;
+        iter.seek(&start_version)?;
+        Ok(TransactionInfoIter {
+            inner: iter,
+            expected_next_version: start_version,
+            end_version: start_version
+                .checked_add(num_transaction_infos)
+                .ok_or_else(|| format_err!("Too many transaction infos requested."))?,
+        })
+    }
+
     /// Get transaction info at `version` with proof towards root of ledger at `ledger_version`.
     pub fn get_transaction_info_with_proof(
         &self,
@@ -319,6 +339,42 @@ impl HashReader for LedgerStore {
         self.db
             .get::<TransactionAccumulatorSchema>(&position)?
             .ok_or_else(|| format_err!("{} does not exist.", position))
+    }
+}
+
+pub struct TransactionInfoIter<'a> {
+    inner: SchemaIterator<'a, TransactionInfoSchema>,
+    expected_next_version: Version,
+    end_version: Version,
+}
+
+impl<'a> TransactionInfoIter<'a> {
+    fn next_impl(&mut self) -> Result<Option<TransactionInfo>> {
+        if self.expected_next_version >= self.end_version {
+            return Ok(None);
+        }
+
+        let ret = match self.inner.next().transpose()? {
+            Some((version, transaction_info)) => {
+                ensure!(
+                    version == self.expected_next_version,
+                    "Transaction info versions are not consecutive.",
+                );
+                self.expected_next_version += 1;
+                Some(transaction_info)
+            }
+            _ => None,
+        };
+
+        Ok(ret)
+    }
+}
+
+impl<'a> Iterator for TransactionInfoIter<'a> {
+    type Item = Result<TransactionInfo>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_impl().transpose()
     }
 }
 

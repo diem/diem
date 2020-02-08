@@ -32,8 +32,9 @@ use storage_proto::{
     proto::storage::{
         storage_client::StorageClient, GetLatestStateRootRequest, GetStartupInfoRequest,
     },
-    BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionRequest,
-    BackupTransactionResponse, GetAccountStateRangeProofRequest, GetAccountStateRangeProofResponse,
+    BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionInfoRequest,
+    BackupTransactionInfoResponse, BackupTransactionRequest, BackupTransactionResponse,
+    GetAccountStateRangeProofRequest, GetAccountStateRangeProofResponse,
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
     GetLatestStateRootResponse, GetStartupInfoResponse, GetTransactionsRequest,
@@ -254,6 +255,27 @@ impl StorageRead for StorageReadServiceClient {
             .boxed();
         Ok(stream)
     }
+
+    async fn backup_transaction_info(
+        &self,
+        start_version: Version,
+        num_transactions: u64,
+    ) -> Result<BoxStream<'_, Result<BackupTransactionInfoResponse, Error>>> {
+        let proto_req: storage_proto::proto::storage::BackupTransactionInfoRequest =
+            BackupTransactionInfoRequest::new(start_version, num_transactions).into();
+        let stream = self
+            .client()
+            .await?
+            .backup_transaction_info(proto_req)
+            .await?
+            .into_inner()
+            .map(|resp| {
+                let resp = BackupTransactionInfoResponse::try_from(resp?)?;
+                Ok(resp)
+            })
+            .boxed();
+        Ok(stream)
+    }
 }
 
 /// This provides storage write interfaces backed by real storage service.
@@ -401,6 +423,13 @@ pub trait StorageRead: Send + Sync {
         start_version: Version,
         num_transactions: u64,
     ) -> Result<BoxStream<'_, Result<BackupTransactionResponse, Error>>>;
+
+    /// Gets a stream of transaction infos (for backup purpose).
+    async fn backup_transaction_info(
+        &self,
+        start_version: Version,
+        num_transaction_infos: u64,
+    ) -> Result<BoxStream<'_, Result<BackupTransactionInfoResponse, Error>>>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.

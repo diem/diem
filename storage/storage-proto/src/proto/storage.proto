@@ -10,6 +10,7 @@ import "get_with_proof.proto";
 import "ledger_info.proto";
 import "proof.proto";
 import "transaction.proto";
+import "transaction_info.proto";
 import "validator_change.proto";
 import "validator_set.proto";
 
@@ -66,6 +67,10 @@ service Storage {
   // Returns a stream of transactions.
   rpc BackupTransaction(BackupTransactionRequest)
       returns (stream BackupTransactionResponse);
+
+  // Returns a stream of transaction infos.
+  rpc BackupTransactionInfo(BackupTransactionInfoRequest)
+      returns (stream BackupTransactionInfoResponse);
 }
 
 message SaveTransactionsRequest {
@@ -205,4 +210,16 @@ message BackupTransactionRequest {
 
 message BackupTransactionResponse {
   types.Transaction transaction = 1;
+}
+
+message BackupTransactionInfoRequest {
+  // The version of the first transaction info.
+  uint64 start_version = 1;
+
+  // Number of transaction infos to request.
+  uint64 num_transactions = 2;
+}
+
+message BackupTransactionInfoResponse {
+  types.TransactionInfo transaction_info = 1;
 }

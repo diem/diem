@@ -122,7 +122,7 @@ fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<(
 /// access to the core Libra data structures.
 pub struct LibraDB {
     db: Arc<DB>,
-    ledger_store: LedgerStore,
+    ledger_store: Arc<LedgerStore>,
     transaction_store: Arc<TransactionStore>,
     state_store: Arc<StateStore>,
     event_store: EventStore,
@@ -179,7 +179,7 @@ impl LibraDB {
         LibraDB {
             db: Arc::clone(&db),
             event_store: EventStore::new(Arc::clone(&db)),
-            ledger_store: LedgerStore::new(Arc::clone(&db)),
+            ledger_store: Arc::new(LedgerStore::new(Arc::clone(&db))),
             state_store: Arc::new(StateStore::new(Arc::clone(&db))),
             transaction_store: Arc::new(TransactionStore::new(Arc::clone(&db))),
             system_store: SystemStore::new(Arc::clone(&db)),
@@ -772,7 +772,10 @@ impl LibraDB {
 
     /// Gets an instance of `BackupHandler` for data backup purpose.
     pub fn get_backup_handler(&self) -> BackupHandler {
-        BackupHandler::new(Arc::clone(&self.transaction_store))
+        BackupHandler::new(
+            Arc::clone(&self.ledger_store),
+            Arc::clone(&self.transaction_store),
+        )
     }
 
     /// Gets an iterator which can yield all accounts in the state tree.
