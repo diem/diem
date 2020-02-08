@@ -66,7 +66,6 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 12;
 
     // process and type check arguments
     assume IsValidU64(x1);
@@ -75,6 +74,9 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume IsValidU64(x2);
     __m := UpdateLocal(__m, __frame + 1, x2);
     assume $DebugTrackLocal(1, 0, 1, 162, x2);
+
+    // increase the local counter
+    __local_counter := __local_counter + 12;
 
     // bytecode translation starts here
     call __t4 := Vector_empty(IntegerType());
@@ -164,11 +166,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 7;
 
     // process and type check arguments
     __m := UpdateLocal(__m, __frame + 0, x);
     assume $DebugTrackLocal(1, 1, 0, 471, x);
+
+    // increase the local counter
+    __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(tv0);
@@ -241,13 +245,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 13;
 
     // process and type check arguments
     __m := UpdateLocal(__m, __frame + 0, x);
     assume $DebugTrackLocal(1, 2, 0, 672, x);
     __m := UpdateLocal(__m, __frame + 1, y);
     assume $DebugTrackLocal(1, 2, 1, 672, y);
+
+    // increase the local counter
+    __local_counter := __local_counter + 13;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -331,9 +337,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := LdConst(1);

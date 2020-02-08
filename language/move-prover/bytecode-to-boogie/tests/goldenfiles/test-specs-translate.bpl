@@ -78,7 +78,6 @@ ensures old(b#Boolean(Boolean(i#Integer(x1) <= i#Integer(Integer(0))))) ==> __ab
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 7;
 
     // process and type check arguments
     assume IsValidU64(x1);
@@ -87,6 +86,9 @@ ensures old(b#Boolean(Boolean(i#Integer(x1) <= i#Integer(Integer(0))))) ==> __ab
     assume IsValidU64(x2);
     __m := UpdateLocal(__m, __frame + 1, x2);
     assume $DebugTrackLocal(0, 0, 1, 293, x2);
+
+    // increase the local counter
+    __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -141,9 +143,11 @@ ensures old(b#Boolean(ExistsResource(__m, TestSpecs_R_type_value(), a#Address(Ad
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 0;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 0;
 
     // bytecode translation starts here
     return;
@@ -172,9 +176,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 0;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 0;
 
     // bytecode translation starts here
     return;
@@ -204,12 +210,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 2;
 
     // process and type check arguments
     assume is#Vector(r);
     __m := UpdateLocal(__m, __frame + 0, r);
     assume $DebugTrackLocal(0, 3, 0, 770, r);
+
+    // increase the local counter
+    __local_counter := __local_counter + 2;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -245,12 +253,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 2;
 
     // process and type check arguments
     assume is#Vector(r);
     __m := UpdateLocal(__m, __frame + 0, r);
     assume $DebugTrackLocal(0, 4, 0, 879, r);
+
+    // increase the local counter
+    __local_counter := __local_counter + 2;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -286,12 +296,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 2;
 
     // process and type check arguments
     assume is#Vector(r);
     __m := UpdateLocal(__m, __frame + 0, r);
     assume $DebugTrackLocal(0, 5, 0, 1000, r);
+
+    // increase the local counter
+    __local_counter := __local_counter + 2;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -327,13 +339,15 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(SelectField(Dereference(__m, r), T
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 1;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, r));
-    assume IsValidReferenceParameter(__m, __frame, r);
+    assume IsValidReferenceParameter(__m, __local_counter, r);
     assume is#Vector(Dereference(__m, r));
     assume $DebugTrackLocal(0, 6, 0, 1152, Dereference(__m, r));
+
+    // increase the local counter
+    __local_counter := __local_counter + 1;
 
     // bytecode translation starts here
     return;
@@ -367,9 +381,11 @@ ensures b#Boolean(Boolean(IsEqual(__ret2, Integer(10))));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 3;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 3;
 
     // bytecode translation starts here
     call __tmp := LdConst(7);
@@ -417,12 +433,14 @@ ensures b#Boolean(Boolean(b#Boolean(number_in_range(x)) && b#Boolean(Boolean(i#I
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 2;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
     assume $DebugTrackLocal(0, 8, 0, 1459, x);
+
+    // increase the local counter
+    __local_counter := __local_counter + 2;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));

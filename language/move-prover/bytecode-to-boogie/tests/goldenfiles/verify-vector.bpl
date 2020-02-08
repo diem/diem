@@ -25,9 +25,11 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 6;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 6;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
@@ -105,9 +107,11 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 11;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 11;
 
     // bytecode translation starts here
     call __t3 := Vector_empty(IntegerType());
@@ -212,9 +216,11 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 10;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 10;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
@@ -319,9 +325,11 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 12;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 12;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
@@ -437,9 +445,11 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 10;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 10;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
@@ -539,9 +549,11 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 7;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
@@ -632,9 +644,11 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 15;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 15;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
@@ -772,9 +786,11 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 7;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
     call __t1 := Vector_empty(IntegerType());
@@ -852,9 +868,11 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 7;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
     call __t1 := Vector_empty(IntegerType());
@@ -943,9 +961,11 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 20;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 20;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
@@ -1106,9 +1126,11 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(i#Integer(__ret1) + i#Integer(
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 10;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 10;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
@@ -1217,12 +1239,14 @@ ensures b#Boolean(Boolean(IsEqual(Integer(i#Integer(__ret0) + i#Integer(Integer(
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 15;
 
     // process and type check arguments
     assume is#Vector(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 11, 0, 4491, v);
+
+    // increase the local counter
+    __local_counter := __local_counter + 15;
 
     // bytecode translation starts here
     call __t3 := BorrowLoc(__frame + 0);
@@ -1330,12 +1354,14 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 2;
 
     // process and type check arguments
     assume is#Vector(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 12, 0, 4891, v);
+
+    // increase the local counter
+    __local_counter := __local_counter + 2;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1373,12 +1399,14 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 4;
 
     // process and type check arguments
     assume is#Vector(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 13, 0, 5056, v);
+
+    // increase the local counter
+    __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
     call __t1 := BorrowLoc(__frame + 0);
@@ -1448,12 +1476,14 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 18;
 
     // process and type check arguments
     assume is#Vector(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 14, 0, 5316, v);
+
+    // increase the local counter
+    __local_counter := __local_counter + 18;
 
     // bytecode translation starts here
     call __t2 := BorrowLoc(__frame + 0);
@@ -1582,12 +1612,14 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 6;
 
     // process and type check arguments
     assume is#Vector(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 15, 0, 5864, v);
+
+    // increase the local counter
+    __local_counter := __local_counter + 6;
 
     // bytecode translation starts here
     call __t1 := BorrowLoc(__frame + 0);
@@ -1667,12 +1699,14 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 7;
 
     // process and type check arguments
     assume is#Vector(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 16, 0, 6295, v);
+
+    // increase the local counter
+    __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
     call __t1 := BorrowLoc(__frame + 0);
@@ -1761,12 +1795,14 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 19;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
     assume $DebugTrackLocal(1, 17, 0, 6588, x);
+
+    // increase the local counter
+    __local_counter := __local_counter + 19;
 
     // bytecode translation starts here
     call __t3 := Vector_empty(IntegerType());
@@ -1909,9 +1945,11 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(7))));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 7;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
     call __t1 := Vector_empty(IntegerType());
@@ -1992,9 +2030,11 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 8;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 8;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
@@ -2077,9 +2117,11 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 11;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 11;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
@@ -2118,7 +2160,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       goto Label_Abort;
     }
     assume IsValidU64(Dereference(__m, __t7));
-    assume IsValidReferenceParameter(__m, __frame, __t7);
+    assume IsValidReferenceParameter(__m, __local_counter, __t7);
 
 
 
@@ -2156,6 +2198,112 @@ procedure VerifyVector_test_borrow1_verify () returns (__ret0: Value, __ret1: Va
 
 procedure {:inline 1} VerifyVector_test_borrow2 () returns (__ret0: Value, __ret1: Value)
 requires ExistsTxnSenderAccount(__m, __txn);
+ensures !__abort_flag ==> b#Boolean(Boolean(false));
+ensures old(!(b#Boolean(Boolean(true)))) ==> !__abort_flag;
+ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
+
+{
+    // declare local variables
+    var ev1: Value; // Vector_T_type_value(IntegerType())
+    var y: Reference; // ReferenceType(IntegerType())
+    var __t2: Value; // Vector_T_type_value(IntegerType())
+    var __t3: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t4: Value; // IntegerType()
+    var __t5: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t6: Value; // IntegerType()
+    var __t7: Reference; // ReferenceType(IntegerType())
+    var __t8: Value; // IntegerType()
+    var __t9: Reference; // ReferenceType(IntegerType())
+    var __t10: Value; // IntegerType()
+    var __tmp: Value;
+    var __frame: int;
+    var __saved_m: Memory;
+
+    // initialize function execution
+    assume !__abort_flag;
+    __saved_m := __m;
+    __frame := __local_counter;
+
+    // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 11;
+
+    // bytecode translation starts here
+    call __t2 := Vector_empty(IntegerType());
+    if (__abort_flag) {
+      assume $DebugTrackAbort(1, 21, 8135);
+      goto Label_Abort;
+    }
+    assume is#Vector(__t2);
+
+    __m := UpdateLocal(__m, __frame + 2, __t2);
+
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
+    __m := UpdateLocal(__m, __frame + 0, __tmp);
+    assume $DebugTrackLocal(1, 21, 0, 8129, __tmp);
+
+    call __t3 := BorrowLoc(__frame + 0);
+
+    call __tmp := LdConst(7);
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
+
+    call Vector_push_back(IntegerType(), __t3, GetLocal(__m, __frame + 4));
+    if (__abort_flag) {
+      assume $DebugTrackAbort(1, 21, 8164);
+      goto Label_Abort;
+    }
+    assume $DebugTrackLocal(1, 21, 0, 8164, GetLocal(__m, __frame + 0));
+
+    call __t5 := BorrowLoc(__frame + 0);
+
+    call __tmp := LdConst(1);
+    __m := UpdateLocal(__m, __frame + 6, __tmp);
+
+    call __t7 := Vector_borrow(IntegerType(), __t5, GetLocal(__m, __frame + 6));
+    if (__abort_flag) {
+      assume $DebugTrackAbort(1, 21, 8212);
+      goto Label_Abort;
+    }
+    assume IsValidU64(Dereference(__m, __t7));
+    assume IsValidReferenceParameter(__m, __local_counter, __t7);
+
+
+
+    call y := CopyOrMoveRef(__t7);
+    assume IsValidU64(Dereference(__m, y));
+    assume $DebugTrackLocal(1, 21, 1, 8208, Dereference(__m, y));
+
+    call __tmp := LdConst(7);
+    __m := UpdateLocal(__m, __frame + 8, __tmp);
+
+    call __t9 := CopyOrMoveRef(y);
+
+    call __tmp := ReadRef(__t9);
+    assume IsValidU64(__tmp);
+    __m := UpdateLocal(__m, __frame + 10, __tmp);
+
+    __ret0 := GetLocal(__m, __frame + 8);
+    assume $DebugTrackLocal(1, 21, 2, 8249, __ret0);
+    __ret1 := GetLocal(__m, __frame + 10);
+    assume $DebugTrackLocal(1, 21, 3, 8249, __ret1);
+    return;
+
+Label_Abort:
+    __abort_flag := true;
+    __m := __saved_m;
+    __ret0 := DefaultValue;
+    __ret1 := DefaultValue;
+}
+
+procedure VerifyVector_test_borrow2_verify () returns (__ret0: Value, __ret1: Value)
+{
+    call InitVerification();
+    call __ret0, __ret1 := VerifyVector_test_borrow2();
+}
+
+procedure {:inline 1} VerifyVector_test_borrow3 () returns (__ret0: Value, __ret1: Value)
+requires ExistsTxnSenderAccount(__m, __txn);
 ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
 {
     // declare local variables
@@ -2178,14 +2326,16 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 11;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 11;
 
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 21, 8190);
+      assume $DebugTrackAbort(1, 22, 8496);
       goto Label_Abort;
     }
     assume is#Vector(__t2);
@@ -2194,7 +2344,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    assume $DebugTrackLocal(1, 21, 0, 8184, __tmp);
+    assume $DebugTrackLocal(1, 22, 0, 8490, __tmp);
 
     call __t3 := BorrowLoc(__frame + 0);
 
@@ -2203,31 +2353,31 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
 
     call Vector_push_back(IntegerType(), __t3, GetLocal(__m, __frame + 4));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 21, 8219);
+      assume $DebugTrackAbort(1, 22, 8525);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 21, 0, 8219, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 22, 0, 8525, GetLocal(__m, __frame + 0));
 
     call __t5 := BorrowLoc(__frame + 0);
 
-    call __tmp := LdConst(1);
+    call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call __t7 := Vector_borrow(IntegerType(), __t5, GetLocal(__m, __frame + 6));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 21, 8267);
+      assume $DebugTrackAbort(1, 22, 8573);
       goto Label_Abort;
     }
     assume IsValidU64(Dereference(__m, __t7));
-    assume IsValidReferenceParameter(__m, __frame, __t7);
+    assume IsValidReferenceParameter(__m, __local_counter, __t7);
 
 
 
     call y := CopyOrMoveRef(__t7);
     assume IsValidU64(Dereference(__m, y));
-    assume $DebugTrackLocal(1, 21, 1, 8263, Dereference(__m, y));
+    assume $DebugTrackLocal(1, 22, 1, 8569, Dereference(__m, y));
 
-    call __tmp := LdConst(7);
+    call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call __t9 := CopyOrMoveRef(y);
@@ -2237,9 +2387,9 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 8);
-    assume $DebugTrackLocal(1, 21, 2, 8304, __ret0);
+    assume $DebugTrackLocal(1, 22, 2, 8610, __ret0);
     __ret1 := GetLocal(__m, __frame + 10);
-    assume $DebugTrackLocal(1, 21, 3, 8304, __ret1);
+    assume $DebugTrackLocal(1, 22, 3, 8610, __ret1);
     return;
 
 Label_Abort:
@@ -2249,8 +2399,8 @@ Label_Abort:
     __ret1 := DefaultValue;
 }
 
-procedure VerifyVector_test_borrow2_verify () returns (__ret0: Value, __ret1: Value)
+procedure VerifyVector_test_borrow3_verify () returns (__ret0: Value, __ret1: Value)
 {
     call InitVerification();
-    call __ret0, __ret1 := VerifyVector_test_borrow2();
+    call __ret0, __ret1 := VerifyVector_test_borrow3();
 }

@@ -21,12 +21,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 4;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
     assume $DebugTrackLocal(0, 0, 0, 25, x);
+
+    // increase the local counter
+    __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -73,12 +75,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 4;
 
     // process and type check arguments
     assume IsValidU64(x);
     __m := UpdateLocal(__m, __frame + 0, x);
     assume $DebugTrackLocal(0, 1, 0, 75, x);
+
+    // increase the local counter
+    __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -148,12 +152,14 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 24;
 
     // process and type check arguments
     assume is#Boolean(b);
     __m := UpdateLocal(__m, __frame + 0, b);
     assume $DebugTrackLocal(0, 2, 0, 125, b);
+
+    // increase the local counter
+    __local_counter := __local_counter + 24;
 
     // bytecode translation starts here
     call __tmp := LdConst(3);

@@ -24,7 +24,6 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume IsValidU8(x);
@@ -33,6 +32,9 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume IsValidU8(y);
     __m := UpdateLocal(__m, __frame + 1, y);
     assume $DebugTrackLocal(0, 0, 1, 72, y);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -82,7 +84,6 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) + i#Integer(y))) > 
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume IsValidU8(x);
@@ -91,6 +92,9 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) + i#Integer(y))) > 
     assume IsValidU8(y);
     __m := UpdateLocal(__m, __frame + 1, y);
     assume $DebugTrackLocal(0, 1, 1, 270, y);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -140,7 +144,6 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume IsValidU64(x);
@@ -149,6 +152,9 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume IsValidU64(y);
     __m := UpdateLocal(__m, __frame + 1, y);
     assume $DebugTrackLocal(0, 2, 1, 452, y);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -198,7 +204,6 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) + i#Integer(y))) > 
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume IsValidU64(x);
@@ -207,6 +212,9 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(x) + i#Integer(y))) > 
     assume IsValidU64(y);
     __m := UpdateLocal(__m, __frame + 1, y);
     assume $DebugTrackLocal(0, 3, 1, 654, y);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -256,7 +264,6 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume IsValidU128(x);
@@ -265,6 +272,9 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume IsValidU128(y);
     __m := UpdateLocal(__m, __frame + 1, y);
     assume $DebugTrackLocal(0, 4, 1, 855, y);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));

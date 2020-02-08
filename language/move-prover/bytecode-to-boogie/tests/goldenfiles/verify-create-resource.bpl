@@ -46,9 +46,11 @@ ensures old(b#Boolean(ExistsResource(__m, TestSpecs_R_type_value(), a#Address(Ad
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -110,9 +112,11 @@ ensures old(b#Boolean(ExistsResource(__m, TestSpecs_R_type_value(), a#Address(Ad
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 3;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 3;
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
