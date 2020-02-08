@@ -18,7 +18,16 @@ if [ -n "${CFG_SEED}" ]; then # Random seed to use
 	    params+="-s ${CFG_SEED} "
 fi
 if [ -n "${CFG_SAFETY_RULES_LISTEN_ADDR}" ]; then
-    params+="--safety-rules-addr ${CFG_SAFETY_RULES_LISTEN_ADDR}"
+    params+="--safety-rules-addr ${CFG_SAFETY_RULES_LISTEN_ADDR} "
+fi
+if [ -n "${CFG_SAFETY_RULES_BACKEND}" ]; then
+    params+="--safety-rules-backend ${CFG_SAFETY_RULES_BACKEND} "
+fi
+if [ -n "${CFG_SAFETY_RULES_HOST}" ]; then
+    params+="--safety-rules-host ${CFG_SAFETY_RULES_HOST} "
+fi
+if [ -n "${CFG_SAFETY_RULES_TOKEN}" ]; then
+    params+="--safety-rules-token ${CFG_SAFETY_RULES_TOKEN} "
 fi
 
 /opt/libra/bin/config-builder safety-rules \

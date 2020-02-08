@@ -139,6 +139,15 @@ struct ValidatorCommonArgs {
     /// Specify the IP:Port for Safety rules. If this is not defined, SafetyRules will run in its
     /// default configuration.
     safety_rules_addr: Option<SocketAddr>,
+    /// Specifies the type of backend to use for safety rules: in-memory, on-disk, or vault
+    #[structopt(long)]
+    safety_rules_backend: Option<String>,
+    /// Specifies the host URL for secure storages hosted on remote URLs
+    #[structopt(long)]
+    safety_rules_host: Option<String>,
+    /// Specifies the token for secure storages that use credentials
+    #[structopt(long)]
+    safety_rules_token: Option<String>,
     #[structopt(short = "s", long)]
     /// Use the provided seed for generating keys for each of the validators
     seed: Option<String>,
@@ -258,7 +267,10 @@ fn build_safety_rules(args: SafetyRulesArgs) {
     config_builder
         .index(args.validator_common.index)
         .nodes(args.validator_common.nodes)
-        .safety_rules_addr(args.validator_common.safety_rules_addr);
+        .safety_rules_addr(args.validator_common.safety_rules_addr)
+        .safety_rules_backend(args.validator_common.safety_rules_backend)
+        .safety_rules_host(args.validator_common.safety_rules_host)
+        .safety_rules_token(args.validator_common.safety_rules_token);
 
     if let Some(seed) = args.validator_common.seed.as_ref() {
         config_builder.seed(parse_seed(seed));
@@ -283,6 +295,9 @@ fn build_validator(args: ValidatorArgs) {
         .listen(args.listen)
         .nodes(args.validator_common.nodes)
         .safety_rules_addr(args.validator_common.safety_rules_addr)
+        .safety_rules_backend(args.validator_common.safety_rules_backend)
+        .safety_rules_host(args.validator_common.safety_rules_host)
+        .safety_rules_token(args.validator_common.safety_rules_token)
         .template(load_template(args.template));
 
     if let Some(seed) = args.validator_common.seed.as_ref() {

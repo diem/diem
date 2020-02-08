@@ -33,6 +33,7 @@ impl SafetyRulesConfig {
 #[serde(rename_all = "snake_case")]
 pub enum SafetyRulesBackend {
     InMemoryStorage,
+    Vault(VaultConfig),
     OnDiskStorage(OnDiskStorageConfig),
 }
 
@@ -69,6 +70,17 @@ impl OnDiskStorageConfig {
     pub fn set_data_dir(&mut self, data_dir: PathBuf) {
         self.data_dir = data_dir;
     }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct VaultConfig {
+    /// In testing scenarios this will install baseline data if it is not specified. Note: this can
+    /// only be used if the token provided has root or sudo access.
+    pub default: bool,
+    /// Vault's URL, note: only HTTP is currently supported.
+    pub server: String,
+    /// The authorization token for access secrets
+    pub token: String,
 }
 
 /// Defines how safety rules should be executed
