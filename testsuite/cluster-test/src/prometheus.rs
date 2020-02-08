@@ -25,7 +25,7 @@ pub struct TimeSeries {
 
 impl Prometheus {
     pub fn new(ip: &str, workspace: &str) -> Self {
-        let url = format!("http://{}:9091", ip)
+        let url = format!("http://{}:80", ip)
             .parse()
             .expect("Failed to parse prometheus url");
         let public_url = format!("http://prometheus.{}.aws.hlw3truzy4ls.com:9091", workspace)
@@ -58,7 +58,7 @@ impl Prometheus {
         let url = self
             .url
             .join(&format!(
-                "api/datasources/proxy/1/api/v1/query_range?query={}&start={}&end={}&step={}",
+                "api/v1/query_range?query={}&start={}&end={}&step={}",
                 query,
                 start.as_secs(),
                 end.as_secs(),

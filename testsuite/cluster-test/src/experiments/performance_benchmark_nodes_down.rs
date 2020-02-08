@@ -103,7 +103,7 @@ impl Experiment for PerformanceBenchmarkNodesDown {
             .collect();
         let futures = stop_effects.iter().map(|e| e.activate());
         join_all(futures).await;
-        let buffer = Duration::from_secs(30);
+        let buffer = Duration::from_secs(60);
         let window = self.duration + buffer * 2;
         let stats = context
             .tx_emitter

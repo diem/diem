@@ -1,0 +1,48 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cluster-test
+rules:
+  - apiGroups: [""]
+    resources: ["*"]
+    verbs: ["*"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-test
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cluster-test
+subjects:
+  - kind: ServiceAccount
+    name: cluster-test
+roleRef:
+  kind: Role
+  name: cluster-test
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cluster-test
+spec:
+  nodeSelector:
+    nodeType: utilities
+  restartPolicy: Never
+  serviceAccountName: cluster-test
+  containers:
+    - name: main
+      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:dev_kush_pull_2473
+      imagePullPolicy: Always
+      env:
+      - name: RUST_BACKTRACE
+        value: "1"
+      - name: THREADS_PER_AC
+        value: "3"
+      command: ['cluster-test', '--threads-per-ac', '2', '--accounts-per-client', '16', '--wait-millis', '0', '--run', 'bench']
+      # command: ['cluster-test', '--threads-per-ac', '20', '--emit-tx', '--duration', '180']
+#      command: ['sleep', 'infinity']

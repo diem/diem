@@ -320,7 +320,8 @@ impl BasicSwarmUtil {
 impl ClusterUtil {
     pub fn setup(args: &Args) -> Self {
         let aws = Aws::new();
-        let cluster = Cluster::discover(&aws).expect("Failed to discover cluster");
+        //        let cluster = Cluster::discover(&aws).expect("Failed to discover cluster");
+        let cluster = Cluster::discover_k8s().expect("Failed to discover cluster");
         let cluster = if args.peers.is_empty() {
             cluster
         } else {

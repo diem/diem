@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use crate::util::run_cmd;
 use crate::{aws::Aws, instance::Instance};
 use anyhow::{ensure, format_err, Result};
 use config_builder::ValidatorConfig;
@@ -46,6 +47,34 @@ impl Cluster {
             prometheus_ip: None,
             mint_key_pair,
         }
+    }
+
+    pub fn discover_k8s() -> Result<Self> {
+        let seed = "1337133713371337133713371337133713371337133713371337133713371337";
+        let seed = hex::decode(seed).expect("Invalid hex in seed.");
+        let seed = seed[..32].try_into().expect("Invalid seed");
+        let mint_key = ValidatorConfig::new().seed(seed).build_faucet_client();
+        let mint_key_pair = KeyPair::from(mint_key);
+        let ac_port = AdmissionControlConfig::default().address.port() as u32;
+        let validator_instances: Vec<_> = run_cmd(
+            r###"
+        kubectl get pods -owide -l app=libra-validator | grep -v IP | awk '{print $6}'
+        "###,
+        )
+        .trim()
+        .split('\n')
+        .enumerate()
+        .map(|(i, ip)| Instance::new(format!("validator-{}", i), ip.to_string(), ac_port))
+        .collect();
+        println!("Discovered {} validators", validator_instances.len());
+        Ok(Self {
+            validator_instances,
+            fullnode_instances: vec![],
+            prometheus_ip: Some(
+                "libra-testnet-prometheus-server.default.svc.cluster.local".to_string(),
+            ),
+            mint_key_pair,
+        })
     }
 
     pub fn discover(aws: &Aws) -> Result<Self> {

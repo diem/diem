@@ -122,11 +122,11 @@ impl TxEmitter {
             }
         };
         let num_clients = instances.len() * threads_per_ac;
-        info!(
-            "Will use {} threads per AC with total {} AC clients",
-            threads_per_ac, num_clients
-        );
         let num_accounts = self.tx_emitter_params.accounts_per_client * num_clients;
+        info!(
+            "Will use {} threads per AC with total {} AC clients and create a total of {} accounts",
+            threads_per_ac, num_clients, num_accounts
+        );
         self.mint_accounts(instances.clone(), num_accounts).await?;
         let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
         let mut workers = vec![];
