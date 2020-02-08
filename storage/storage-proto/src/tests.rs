@@ -63,3 +63,11 @@ test_conversion!(
 );
 test_conversion!(test_backup_transaction_request, BackupTransactionRequest);
 test_conversion!(test_backup_transaction_response, BackupTransactionResponse);
+test_conversion!(
+    test_backup_transaction_info_request,
+    BackupTransactionInfoRequest,
+);
+test_conversion!(
+    test_backup_transaction_info_response,
+    BackupTransactionInfoResponse,
+);

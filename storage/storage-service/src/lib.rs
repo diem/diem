@@ -24,8 +24,9 @@ use libradb::LibraDB;
 use std::{convert::TryFrom, path::Path, sync::Arc};
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
-    BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionRequest,
-    BackupTransactionResponse, GetAccountStateRangeProofRequest, GetAccountStateRangeProofResponse,
+    BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionInfoRequest,
+    BackupTransactionInfoResponse, BackupTransactionRequest, BackupTransactionResponse,
+    GetAccountStateRangeProofRequest, GetAccountStateRangeProofResponse,
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
     GetLatestStateRootRequest, GetLatestStateRootResponse, GetStartupInfoRequest,
@@ -372,6 +373,52 @@ impl Storage for StorageService {
                 Ok(transaction) => {
                     let resp: BackupTransactionResponse =
                         storage_proto::BackupTransactionResponse { transaction }.into();
+                    Ok(resp)
+                }
+                Err(e) => Err(tonic::Status::new(tonic::Code::Internal, e.to_string())),
+            });
+
+            for resp in iter {
+                tx.send(resp).await.unwrap();
+            }
+        });
+
+        Ok(tonic::Response::new(rx))
+    }
+
+    type BackupTransactionInfoStream =
+        mpsc::Receiver<Result<BackupTransactionInfoResponse, tonic::Status>>;
+
+    async fn backup_transaction_info(
+        &self,
+        request: tonic::Request<BackupTransactionInfoRequest>,
+    ) -> Result<tonic::Response<Self::BackupTransactionInfoStream>, tonic::Status> {
+        debug!("[GRPC] Storage::backup_transaction_info");
+        let req = request.into_inner();
+
+        let backup_handler = self.db.get_backup_handler();
+        let (mut tx, rx) = mpsc::channel(32);
+
+        tokio::spawn(async move {
+            let iter = match backup_handler
+                .get_transaction_info_iter(req.start_version, req.num_transactions)
+            {
+                Ok(iter) => iter,
+                Err(e) => {
+                    tx.send(Err(tonic::Status::new(
+                        tonic::Code::Internal,
+                        e.to_string(),
+                    )))
+                    .await
+                    .unwrap();
+                    return;
+                }
+            };
+
+            let iter = iter.map(|res| match res {
+                Ok(transaction_info) => {
+                    let resp: BackupTransactionInfoResponse =
+                        storage_proto::BackupTransactionInfoResponse { transaction_info }.into();
                     Ok(resp)
                 }
                 Err(e) => Err(tonic::Status::new(tonic::Code::Internal, e.to_string())),
