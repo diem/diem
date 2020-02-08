@@ -38,6 +38,6 @@ proptest! {
             .unwrap()
             .collect::<Result<Vec<_>>>()
             .unwrap();
-        prop_assert_eq!(actual, expected.clone());
+        prop_assert_eq!(actual, expected);
     }
 }
