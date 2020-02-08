@@ -13,7 +13,7 @@ use crate::{
 };
 use consensus_types::common::{Author, Payload};
 use libra_config::config::{NodeConfig, SafetyRulesBackend, SafetyRulesService};
-use libra_secure_storage::{InMemoryStorage, OnDiskStorage, Storage};
+use libra_secure_storage::{InMemoryStorage, OnDiskStorage, Storage, VaultStorage};
 use std::{
     net::SocketAddr,
     sync::{Arc, RwLock},
@@ -32,6 +32,13 @@ pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSaf
         SafetyRulesBackend::OnDiskStorage(config) => {
             (config.default, Box::new(OnDiskStorage::new(config.path())))
         }
+        SafetyRulesBackend::Vault(config) => (
+            config.default,
+            Box::new(VaultStorage::new(
+                config.server.clone(),
+                config.token.clone(),
+            )),
+        ),
     };
 
     let storage = if initialize {
