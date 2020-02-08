@@ -87,7 +87,7 @@ pub fn boogie_type_check(env: &GlobalEnv, name: &str, sig: &GlobalType) -> Strin
         GlobalType::Reference(rtype) | GlobalType::MutableReference(rtype) => {
             let n = format!("Dereference(__m, {})", params);
             ret = boogie_type_check(env, &n, rtype);
-            params = format!("__m, __frame, {}", params);
+            params = format!("__m, __local_counter, {}", params);
             "IsValidReferenceParameter"
         }
         // Otherwise it is a type parameter which is opaque
