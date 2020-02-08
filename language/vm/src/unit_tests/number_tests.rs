@@ -82,14 +82,12 @@ fn lab128_u32_test() {
 #[test]
 fn lab128_malformed_test() {
     assert!(read_uleb128_as_u16(&mut Cursor::new(&[])).is_err());
-    assert!(read_uleb128_as_u16(&mut Cursor::new(&[0x80, 0x80])).is_err());
     assert!(read_uleb128_as_u16(&mut Cursor::new(&[0x80])).is_err());
     assert!(read_uleb128_as_u16(&mut Cursor::new(&[0x80, 0x80])).is_err());
     assert!(read_uleb128_as_u16(&mut Cursor::new(&[0x80, 0x80, 0x80, 0x80])).is_err());
     assert!(read_uleb128_as_u16(&mut Cursor::new(&[0x80, 0x80, 0x80, 0x2])).is_err());
 
     assert!(read_uleb128_as_u32(&mut Cursor::new(&[])).is_err());
-    assert!(read_uleb128_as_u32(&mut Cursor::new(&[0x80, 0x80])).is_err());
     assert!(read_uleb128_as_u32(&mut Cursor::new(&[0x80])).is_err());
     assert!(read_uleb128_as_u32(&mut Cursor::new(&[0x80, 0x80])).is_err());
     assert!(read_uleb128_as_u32(&mut Cursor::new(&[0x80, 0x80, 0x80, 0x80])).is_err());
