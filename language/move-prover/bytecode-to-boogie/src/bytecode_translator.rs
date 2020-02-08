@@ -1012,11 +1012,6 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "assume !__abort_flag;");
         emitln!(self.writer, "__saved_m := __m;");
         emitln!(self.writer, "__frame := __local_counter;");
-        emitln!(
-            self.writer,
-            "__local_counter := __local_counter + {};",
-            code.local_types.len()
-        );
 
         emitln!(self.writer, "\n// process and type check arguments");
         for i in 0..num_args {
@@ -1036,6 +1031,13 @@ impl<'env> ModuleTranslator<'env> {
                 );
             }
         }
+
+        emitln!(self.writer, "\n// increase the local counter ");
+        emitln!(
+            self.writer,
+            "__local_counter := __local_counter + {};",
+            code.local_types.len()
+        );
 
         emitln!(self.writer, "\n// bytecode translation starts here");
 

@@ -270,9 +270,10 @@ module VerifyVector {
         return (7, *move(y));
     }
 
-    // TODO: This method accesses vector out-of-bounds, so should not be proved. However, Move Prover does not catch it currently.
+    // succeeds. Always aborts due to the out-of-bounds index used.
     public test_borrow2() : u64 * u64
-    ensures RET(0) == RET(1)
+    aborts_if true
+    ensures false
     {
         let ev1: Vector.T<u64>;
         let y : &u64;
@@ -280,5 +281,17 @@ module VerifyVector {
         Vector.push_back<u64>(&mut ev1, 7);
         y = Vector.borrow<u64>(&ev1, 1);
         return (7, *move(y));
+    }
+
+    // fails. 0 != 7
+    public test_borrow3() : u64 * u64
+    ensures RET(0) == RET(1) //! A postcondition might not hold on this return path.
+    {
+        let ev1: Vector.T<u64>;
+        let y : &u64;
+        ev1 = Vector.empty<u64>();
+        Vector.push_back<u64>(&mut ev1, 7);
+        y = Vector.borrow<u64>(&ev1, 0);
+        return (0, *move(y));
     }
 }
