@@ -308,7 +308,7 @@ function {:constructor} Reference(l: Location, p: Path): Reference;
 const DefaultReference: Reference;
 
 function {:inline} IsValidReferenceParameter(m: Memory, local_counter: int, r: Reference): bool {
-  // If the reference parameter is for a local, its index must be less then the current
+  // If the reference parameter is for a local, its index must be less than the current
   // local counter. This prevents any aliasing with locals which we create later.
   (is#Local(l#Reference(r)) ==> i#Local(l#Reference(r)) < local_counter)
   &&
