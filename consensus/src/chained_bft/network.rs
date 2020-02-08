@@ -310,10 +310,15 @@ impl<T: Payload> NetworkTask<T> {
         let mut all_events = all_events.fuse();
         loop {
             select! {
-                message = all_events.next() => {
+                message = all_events.select_next_some() => {
                     match message {
-                        Some(Ok(msg)) => self.handle_msg(msg).await,
-                        _ => continue,
+                        Ok(msg) => self.handle_msg(msg).await,
+                        Err(e) => {
+                            warn!("Received an error instead of a consensus msg: {:?}", e);
+
+                            // Note: does it make sense to wait for another message?
+                            continue;
+                        },
                     }
 
                     if consensus_needs_data {
