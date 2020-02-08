@@ -58,8 +58,9 @@ impl Address {
         assert!(result.len() >= 32);
         Self::try_from(&result[..]).map_err(|_| {
             format!(
-                "The address {:?} is of invalid length. Addresses are at most 32-bytes long",
-                result
+                "Address is {} bytes long. The maximum size is {} bytes",
+                result.len(),
+                ADDRESS_LENGTH
             )
         })
     }
