@@ -39,13 +39,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 3;
 
     // process and type check arguments
     assume IsValidU64(Dereference(__m, b));
-    assume IsValidReferenceParameter(__m, __frame, b);
+    assume IsValidReferenceParameter(__m, __local_counter, b);
     assume IsValidU64(Dereference(__m, b));
     assume $DebugTrackLocal(0, 0, 0, 71, Dereference(__m, b));
+
+    // increase the local counter
+    __local_counter := __local_counter + 3;
 
     // bytecode translation starts here
     call __tmp := LdConst(10);
@@ -95,9 +97,11 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 12;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 12;
 
     // bytecode translation starts here
     call __tmp := LdConst(20);

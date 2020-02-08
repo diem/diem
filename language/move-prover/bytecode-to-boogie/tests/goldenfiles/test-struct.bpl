@@ -111,7 +111,6 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 4;
 
     // process and type check arguments
     assume is#Vector(a);
@@ -120,6 +119,9 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume is#Vector(c);
     __m := UpdateLocal(__m, __frame + 1, c);
     assume $DebugTrackLocal(0, 0, 1, 252, c);
+
+    // increase the local counter
+    __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -178,12 +180,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 20;
 
     // process and type check arguments
     assume is#Address(a);
     __m := UpdateLocal(__m, __frame + 0, a);
     assume $DebugTrackLocal(0, 1, 0, 351, a);
+
+    // increase the local counter
+    __local_counter := __local_counter + 20;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -326,12 +330,14 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 24;
 
     // process and type check arguments
     assume is#Address(a);
     __m := UpdateLocal(__m, __frame + 0, a);
     assume $DebugTrackLocal(0, 2, 0, 835, a);
+
+    // increase the local counter
+    __local_counter := __local_counter + 24;
 
     // bytecode translation starts here
     call __tmp := LdFalse();
@@ -464,12 +470,14 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 16;
 
     // process and type check arguments
     assume is#Address(a);
     __m := UpdateLocal(__m, __frame + 0, a);
     assume $DebugTrackLocal(0, 3, 0, 1372, a);
+
+    // increase the local counter
+    __local_counter := __local_counter + 16;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));

@@ -23,12 +23,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 6;
 
     // process and type check arguments
     assume is#Boolean(cond);
     __m := UpdateLocal(__m, __frame + 0, cond);
     assume $DebugTrackLocal(0, 0, 0, 117, cond);
+
+    // increase the local counter
+    __local_counter := __local_counter + 6;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));

@@ -41,13 +41,15 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, ref), Tes
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 4;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, ref));
-    assume IsValidReferenceParameter(__m, __frame, ref);
+    assume IsValidReferenceParameter(__m, __local_counter, ref);
     assume is#Vector(Dereference(__m, ref));
     assume $DebugTrackLocal(0, 0, 0, 66, Dereference(__m, ref));
+
+    // increase the local counter
+    __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(ref);

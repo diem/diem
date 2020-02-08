@@ -140,12 +140,14 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapa
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 0, amount);
     assume $DebugTrackLocal(0, 0, 0, 806, amount);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -224,16 +226,18 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 24;
 
     // process and type check arguments
     assume IsValidU64(value);
     __m := UpdateLocal(__m, __frame + 0, value);
     assume $DebugTrackLocal(0, 1, 0, 1723, value);
     assume is#Vector(Dereference(__m, capability));
-    assume IsValidReferenceParameter(__m, __frame, capability);
+    assume IsValidReferenceParameter(__m, __local_counter, capability);
     assume is#Vector(Dereference(__m, capability));
     assume $DebugTrackLocal(0, 1, 1, 1723, Dereference(__m, capability));
+
+    // increase the local counter
+    __local_counter := __local_counter + 24;
 
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(capability);
@@ -364,9 +368,11 @@ ensures old(b#Boolean(Boolean(!IsEqual(Address(TxnSenderAddress(__txn)), Address
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 9;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 9;
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -447,9 +453,11 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 4;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
     call __tmp := LdAddr(173345816);
@@ -498,9 +506,11 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), Intege
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 2;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 2;
 
     // bytecode translation starts here
     call __tmp := LdConst(0);
@@ -541,13 +551,15 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, coin_ref)
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 4;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
-    assume IsValidReferenceParameter(__m, __frame, coin_ref);
+    assume IsValidReferenceParameter(__m, __local_counter, coin_ref);
     assume is#Vector(Dereference(__m, coin_ref));
     assume $DebugTrackLocal(0, 5, 0, 4555, Dereference(__m, coin_ref));
+
+    // increase the local counter
+    __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(coin_ref);
@@ -596,7 +608,6 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 8;
 
     // process and type check arguments
     assume is#Vector(coin);
@@ -605,6 +616,9 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
     assume $DebugTrackLocal(0, 6, 1, 4818, amount);
+
+    // increase the local counter
+    __local_counter := __local_counter + 8;
 
     // bytecode translation starts here
     call __t3 := BorrowLoc(__frame + 0);
@@ -684,16 +698,18 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(__m, coin_ref), 
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 18;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
-    assume IsValidReferenceParameter(__m, __frame, coin_ref);
+    assume IsValidReferenceParameter(__m, __local_counter, coin_ref);
     assume is#Vector(Dereference(__m, coin_ref));
     assume $DebugTrackLocal(0, 7, 0, 5391, Dereference(__m, coin_ref));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
     assume $DebugTrackLocal(0, 7, 1, 5391, amount);
+
+    // increase the local counter
+    __local_counter := __local_counter + 18;
 
     // bytecode translation starts here
     call __t3 := CopyOrMoveRef(coin_ref);
@@ -789,7 +805,6 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(coin1, Lib
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume is#Vector(coin1);
@@ -798,6 +813,9 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(coin1, Lib
     assume is#Vector(coin2);
     __m := UpdateLocal(__m, __frame + 1, coin2);
     assume $DebugTrackLocal(0, 8, 1, 6020, coin2);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __t2 := BorrowLoc(__frame + 0);
@@ -859,16 +877,18 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 14;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, coin_ref));
-    assume IsValidReferenceParameter(__m, __frame, coin_ref);
+    assume IsValidReferenceParameter(__m, __local_counter, coin_ref);
     assume is#Vector(Dereference(__m, coin_ref));
     assume $DebugTrackLocal(0, 9, 0, 6465, Dereference(__m, coin_ref));
     assume is#Vector(check);
     __m := UpdateLocal(__m, __frame + 1, check);
     assume $DebugTrackLocal(0, 9, 1, 6465, check);
+
+    // increase the local counter
+    __local_counter := __local_counter + 14;
 
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(coin_ref);
@@ -948,12 +968,14 @@ ensures old(b#Boolean(Boolean(!IsEqual(SelectField(coin, LibraCoin_T_value), Int
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 9;
 
     // process and type check arguments
     assume is#Vector(coin);
     __m := UpdateLocal(__m, __frame + 0, coin);
     assume $DebugTrackLocal(0, 10, 0, 7117, coin);
+
+    // increase the local counter
+    __local_counter := __local_counter + 9;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1271,12 +1293,14 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(IsEqual(SelectField(SelectField(__re
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 26;
 
     // process and type check arguments
     assume is#Address(fresh_address);
     __m := UpdateLocal(__m, __frame + 0, fresh_address);
     assume $DebugTrackLocal(5, 0, 0, 3283, fresh_address);
+
+    // increase the local counter
+    __local_counter := __local_counter + 26;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1418,7 +1442,6 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume is#Address(payee);
@@ -1427,6 +1450,9 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume is#Vector(to_deposit);
     __m := UpdateLocal(__m, __frame + 1, to_deposit);
     assume $DebugTrackLocal(5, 1, 1, 4674, to_deposit);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1476,7 +1502,6 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 7;
 
     // process and type check arguments
     assume is#Address(payee);
@@ -1488,6 +1513,9 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 2, metadata);
     assume $DebugTrackLocal(5, 2, 2, 5450, metadata);
+
+    // increase the local counter
+    __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1566,7 +1594,6 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 33;
 
     // process and type check arguments
     assume is#Address(payee);
@@ -1581,6 +1608,9 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 3, metadata);
     assume $DebugTrackLocal(5, 3, 3, 6415, metadata);
+
+    // increase the local counter
+    __local_counter := __local_counter + 33;
 
     // bytecode translation starts here
     call __t7 := BorrowLoc(__frame + 2);
@@ -1741,7 +1771,6 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapa
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 9;
 
     // process and type check arguments
     assume is#Address(payee);
@@ -1750,6 +1779,9 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapa
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
     assume $DebugTrackLocal(5, 4, 1, 8679, amount);
+
+    // increase the local counter
+    __local_counter := __local_counter + 9;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -1831,16 +1863,18 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(SelectField(Dereference(__m,
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 8;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
-    assume IsValidReferenceParameter(__m, __frame, account);
+    assume IsValidReferenceParameter(__m, __local_counter, account);
     assume is#Vector(Dereference(__m, account));
     assume $DebugTrackLocal(5, 5, 0, 10231, Dereference(__m, account));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
     assume $DebugTrackLocal(5, 5, 1, 10231, amount);
+
+    // increase the local counter
+    __local_counter := __local_counter + 8;
 
     // bytecode translation starts here
     call __t3 := CopyOrMoveRef(account);
@@ -1909,12 +1943,14 @@ ensures old(b#Boolean(SelectField(Dereference(__m, GetResourceReference(LibraAcc
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 11;
 
     // process and type check arguments
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 0, amount);
     assume $DebugTrackLocal(5, 6, 0, 10712, amount);
+
+    // increase the local counter
+    __local_counter := __local_counter + 11;
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -2002,16 +2038,18 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 10;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
-    assume IsValidReferenceParameter(__m, __frame, cap);
+    assume IsValidReferenceParameter(__m, __local_counter, cap);
     assume is#Vector(Dereference(__m, cap));
     assume $DebugTrackLocal(5, 7, 0, 11652, Dereference(__m, cap));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
     assume $DebugTrackLocal(5, 7, 1, 11652, amount);
+
+    // increase the local counter
+    __local_counter := __local_counter + 10;
 
     // bytecode translation starts here
     call __t3 := CopyOrMoveRef(cap);
@@ -2094,9 +2132,11 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 15;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 15;
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -2196,12 +2236,14 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 10;
 
     // process and type check arguments
     assume is#Vector(cap);
     __m := UpdateLocal(__m, __frame + 0, cap);
     assume $DebugTrackLocal(5, 9, 0, 13429, cap);
+
+    // increase the local counter
+    __local_counter := __local_counter + 10;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2275,14 +2317,13 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(Boolean(!(b#Boolean(old(
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 16;
 
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
     assume $DebugTrackLocal(5, 10, 0, 14433, payee);
     assume is#Vector(Dereference(__m, cap));
-    assume IsValidReferenceParameter(__m, __frame, cap);
+    assume IsValidReferenceParameter(__m, __local_counter, cap);
     assume is#Vector(Dereference(__m, cap));
     assume $DebugTrackLocal(5, 10, 1, 14433, Dereference(__m, cap));
     assume IsValidU64(amount);
@@ -2291,6 +2332,9 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(Boolean(!(b#Boolean(old(
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 3, metadata);
     assume $DebugTrackLocal(5, 10, 3, 14433, metadata);
+
+    // increase the local counter
+    __local_counter := __local_counter + 16;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2393,7 +2437,6 @@ ensures old(b#Boolean(SelectField(Dereference(__m, GetResourceReference(LibraAcc
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 16;
 
     // process and type check arguments
     assume is#Address(payee);
@@ -2405,6 +2448,9 @@ ensures old(b#Boolean(SelectField(Dereference(__m, GetResourceReference(LibraAcc
     assume is#ByteArray(metadata);
     __m := UpdateLocal(__m, __frame + 2, metadata);
     assume $DebugTrackLocal(5, 11, 2, 16060, metadata);
+
+    // increase the local counter
+    __local_counter := __local_counter + 16;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2514,7 +2560,6 @@ ensures old(b#Boolean(SelectField(Dereference(__m, GetResourceReference(LibraAcc
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 10;
 
     // process and type check arguments
     assume is#Address(payee);
@@ -2523,6 +2568,9 @@ ensures old(b#Boolean(SelectField(Dereference(__m, GetResourceReference(LibraAcc
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
     assume $DebugTrackLocal(5, 12, 1, 17668, amount);
+
+    // increase the local counter
+    __local_counter := __local_counter + 10;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2589,16 +2637,18 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(Dereference(__m, account), LibraAc
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
-    assume IsValidReferenceParameter(__m, __frame, account);
+    assume IsValidReferenceParameter(__m, __local_counter, account);
     assume is#Vector(Dereference(__m, account));
     assume $DebugTrackLocal(5, 13, 0, 18853, Dereference(__m, account));
     assume is#ByteArray(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 1, new_authentication_key);
     assume $DebugTrackLocal(5, 13, 1, 18853, new_authentication_key);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
@@ -2648,12 +2698,14 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 10;
 
     // process and type check arguments
     assume is#ByteArray(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 0, new_authentication_key);
     assume $DebugTrackLocal(5, 14, 0, 19253, new_authentication_key);
+
+    // increase the local counter
+    __local_counter := __local_counter + 10;
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -2730,16 +2782,18 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 7;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
-    assume IsValidReferenceParameter(__m, __frame, cap);
+    assume IsValidReferenceParameter(__m, __local_counter, cap);
     assume is#Vector(Dereference(__m, cap));
     assume $DebugTrackLocal(5, 15, 0, 20225, Dereference(__m, cap));
     assume is#ByteArray(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 1, new_authentication_key);
     assume $DebugTrackLocal(5, 15, 1, 20225, new_authentication_key);
+
+    // increase the local counter
+    __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
     call __t2 := CopyOrMoveRef(cap);
@@ -2807,9 +2861,11 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 13;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 13;
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -2903,12 +2959,14 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 10;
 
     // process and type check arguments
     assume is#Vector(cap);
     __m := UpdateLocal(__m, __frame + 0, cap);
     assume $DebugTrackLocal(5, 17, 0, 21751, cap);
+
+    // increase the local counter
+    __local_counter := __local_counter + 10;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -2992,12 +3050,14 @@ ensures old(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 19;
 
     // process and type check arguments
     assume is#Address(fresh_address);
     __m := UpdateLocal(__m, __frame + 0, fresh_address);
     assume $DebugTrackLocal(5, 18, 0, 22651, fresh_address);
+
+    // increase the local counter
+    __local_counter := __local_counter + 19;
 
     // bytecode translation starts here
     call __tmp := LdConst(0);
@@ -3123,7 +3183,6 @@ ensures old(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 8;
 
     // process and type check arguments
     assume is#Address(fresh_address);
@@ -3132,6 +3191,9 @@ ensures old(b#Boolean(ExistsResource(__m, LibraAccount_T_type_value(), a#Address
     assume IsValidU64(initial_balance);
     __m := UpdateLocal(__m, __frame + 1, initial_balance);
     assume $DebugTrackLocal(5, 19, 1, 23890, initial_balance);
+
+    // increase the local counter
+    __local_counter := __local_counter + 8;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3199,13 +3261,15 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(SelectField(Dereference(__
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 6;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
-    assume IsValidReferenceParameter(__m, __frame, account);
+    assume IsValidReferenceParameter(__m, __local_counter, account);
     assume is#Vector(Dereference(__m, account));
     assume $DebugTrackLocal(5, 21, 0, 25151, Dereference(__m, account));
+
+    // increase the local counter
+    __local_counter := __local_counter + 6;
 
     // bytecode translation starts here
     call __t2 := CopyOrMoveRef(account);
@@ -3263,12 +3327,14 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 4;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
     assume $DebugTrackLocal(5, 22, 0, 25470, addr);
+
+    // increase the local counter
+    __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3321,13 +3387,15 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, account),
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 4;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, account));
-    assume IsValidReferenceParameter(__m, __frame, account);
+    assume IsValidReferenceParameter(__m, __local_counter, account);
     assume is#Vector(Dereference(__m, account));
     assume $DebugTrackLocal(5, 23, 0, 25787, Dereference(__m, account));
+
+    // increase the local counter
+    __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(account);
@@ -3373,12 +3441,14 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 4;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
     assume $DebugTrackLocal(5, 24, 0, 26004, addr);
+
+    // increase the local counter
+    __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3435,12 +3505,14 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
     assume $DebugTrackLocal(5, 25, 0, 26354, addr);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3494,12 +3566,14 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 5;
 
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
     assume $DebugTrackLocal(5, 26, 0, 26744, addr);
+
+    // increase the local counter
+    __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3548,13 +3622,15 @@ ensures b#Boolean(Boolean((__ret0) == (SelectFieldFromRef(cap, LibraAccount_With
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 3;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
-    assume IsValidReferenceParameter(__m, __frame, cap);
+    assume IsValidReferenceParameter(__m, __local_counter, cap);
     assume is#Vector(Dereference(__m, cap));
     assume $DebugTrackLocal(5, 27, 0, 27134, Dereference(__m, cap));
+
+    // increase the local counter
+    __local_counter := __local_counter + 3;
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(cap);
@@ -3593,13 +3669,15 @@ ensures b#Boolean(Boolean((__ret0) == (SelectFieldFromRef(cap, LibraAccount_KeyR
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 3;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, cap));
-    assume IsValidReferenceParameter(__m, __frame, cap);
+    assume IsValidReferenceParameter(__m, __local_counter, cap);
     assume is#Vector(Dereference(__m, cap));
     assume $DebugTrackLocal(5, 28, 0, 27410, Dereference(__m, cap));
+
+    // increase the local counter
+    __local_counter := __local_counter + 3;
 
     // bytecode translation starts here
     call __t1 := CopyOrMoveRef(cap);
@@ -3638,12 +3716,14 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, ExistsResource(__m, LibraAccount_T_typ
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 3;
 
     // process and type check arguments
     assume is#Address(check_addr);
     __m := UpdateLocal(__m, __frame + 0, check_addr);
     assume $DebugTrackLocal(5, 29, 0, 27648, check_addr);
+
+    // increase the local counter
+    __local_counter := __local_counter + 3;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
@@ -3726,7 +3806,6 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 50;
 
     // process and type check arguments
     assume IsValidU64(txn_sequence_number);
@@ -3741,6 +3820,9 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume IsValidU64(txn_max_gas_units);
     __m := UpdateLocal(__m, __frame + 3, txn_max_gas_units);
     assume $DebugTrackLocal(5, 30, 3, 28109, txn_max_gas_units);
+
+    // increase the local counter
+    __local_counter := __local_counter + 50;
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -3989,7 +4071,6 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 37;
 
     // process and type check arguments
     assume IsValidU64(txn_sequence_number);
@@ -4004,6 +4085,9 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume IsValidU64(gas_units_remaining);
     __m := UpdateLocal(__m, __frame + 3, gas_units_remaining);
     assume $DebugTrackLocal(5, 31, 3, 29902, gas_units_remaining);
+
+    // increase the local counter
+    __local_counter := __local_counter + 37;
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -4194,16 +4278,18 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 22;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, counter));
-    assume IsValidReferenceParameter(__m, __frame, counter);
+    assume IsValidReferenceParameter(__m, __local_counter, counter);
     assume is#Vector(Dereference(__m, counter));
     assume $DebugTrackLocal(5, 32, 0, 31860, Dereference(__m, counter));
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
     assume $DebugTrackLocal(5, 32, 1, 31860, sender);
+
+    // increase the local counter
+    __local_counter := __local_counter + 22;
 
     // bytecode translation starts here
     call __t6 := CopyOrMoveRef(counter);
@@ -4327,16 +4413,18 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 7;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, counter));
-    assume IsValidReferenceParameter(__m, __frame, counter);
+    assume IsValidReferenceParameter(__m, __local_counter, counter);
     assume is#Vector(Dereference(__m, counter));
     assume $DebugTrackLocal(5, 33, 0, 32671, Dereference(__m, counter));
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
     assume $DebugTrackLocal(5, 33, 1, 32671, sender);
+
+    // increase the local counter
+    __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
     call __tmp := LdConst(0);
@@ -4398,9 +4486,11 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(SelectFiel
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 8;
 
     // process and type check arguments
+
+    // increase the local counter
+    __local_counter := __local_counter + 8;
 
     // bytecode translation starts here
     call __tmp := GetTxnSenderAddress();
@@ -4479,15 +4569,17 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 18;
 
     // process and type check arguments
     assume is#Vector(Dereference(__m, handle_ref));
-    assume IsValidReferenceParameter(__m, __frame, handle_ref);
+    assume IsValidReferenceParameter(__m, __local_counter, handle_ref);
     assume is#Vector(Dereference(__m, handle_ref));
     assume $DebugTrackLocal(5, 35, 0, 33671, Dereference(__m, handle_ref));
     __m := UpdateLocal(__m, __frame + 1, msg);
     assume $DebugTrackLocal(5, 35, 1, 33671, msg);
+
+    // increase the local counter
+    __local_counter := __local_counter + 18;
 
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(handle_ref);
@@ -4581,12 +4673,14 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 6;
 
     // process and type check arguments
     assume is#Vector(handle);
     __m := UpdateLocal(__m, __frame + 0, handle);
     assume $DebugTrackLocal(5, 37, 0, 34391, handle);
+
+    // increase the local counter
+    __local_counter := __local_counter + 6;
 
     // bytecode translation starts here
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));

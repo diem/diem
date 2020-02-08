@@ -101,12 +101,14 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     assume !__abort_flag;
     __saved_m := __m;
     __frame := __local_counter;
-    __local_counter := __local_counter + 57;
 
     // process and type check arguments
     assume is#Boolean(flag);
     __m := UpdateLocal(__m, __frame + 0, flag);
     assume $DebugTrackLocal(0, 0, 0, 53, flag);
+
+    // increase the local counter
+    __local_counter := __local_counter + 57;
 
     // bytecode translation starts here
     call __tmp := LdConst(0);
