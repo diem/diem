@@ -2,14 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{accumulator_extension_proof::AccumulatorExtensionProof, block::Block};
-use anyhow::{Error, Result};
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_types::crypto_proxies::ValidatorSet;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{
-    convert::TryFrom,
-    fmt::{Display, Formatter},
-};
+use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 /// This structure contains all the information needed by safety rules to
 /// evaluate a proposal / block for correctness / safety and to produce a Vote.
@@ -56,29 +52,5 @@ impl<T> VoteProposal<T> {
 impl<T: PartialEq> Display for VoteProposal<T> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "VoteProposal[block: {}]", self.block,)
-    }
-}
-
-impl<T> TryFrom<VoteProposal<T>> for network::proto::VoteProposal
-where
-    T: Serialize + Default + PartialEq,
-{
-    type Error = Error;
-
-    fn try_from(vote_proposal: VoteProposal<T>) -> Result<Self> {
-        Ok(Self {
-            bytes: lcs::to_bytes(&vote_proposal)?,
-        })
-    }
-}
-
-impl<T> TryFrom<network::proto::VoteProposal> for VoteProposal<T>
-where
-    T: DeserializeOwned + Serialize,
-{
-    type Error = Error;
-
-    fn try_from(proto: network::proto::VoteProposal) -> Result<Self> {
-        Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }

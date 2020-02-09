@@ -22,7 +22,6 @@ use mirai_annotations::debug_checked_verify_eq;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 use std::{
     collections::BTreeMap,
-    convert::TryFrom,
     fmt::{Display, Formatter},
 };
 
@@ -285,30 +284,6 @@ where
             "Block id mismatch the hash"
         );
         Ok(())
-    }
-}
-
-impl<T> TryFrom<network::proto::Block> for Block<T>
-where
-    T: DeserializeOwned + Serialize,
-{
-    type Error = anyhow::Error;
-
-    fn try_from(proto: network::proto::Block) -> anyhow::Result<Self> {
-        Ok(lcs::from_bytes(&proto.bytes)?)
-    }
-}
-
-impl<T> TryFrom<Block<T>> for network::proto::Block
-where
-    T: Serialize + Default + PartialEq,
-{
-    type Error = anyhow::Error;
-
-    fn try_from(block: Block<T>) -> anyhow::Result<Self> {
-        Ok(Self {
-            bytes: lcs::to_bytes(&block)?,
-        })
     }
 }
 

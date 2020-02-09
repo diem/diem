@@ -24,10 +24,7 @@ mod health_checker {
 use ::libra_types::proto::types;
 
 pub use self::{
-    consensus::{
-        consensus_msg::Message as ConsensusMsg_oneof, Block, ConsensusMsg, Proposal, RequestBlock,
-        RequestEpoch, RespondBlock, SyncInfo, VoteMsg, VoteProposal,
-    },
+    consensus::ConsensusMsg,
     health_checker::{
         health_checker_msg::Message as HealthCheckerMsg_oneof, HealthCheckerMsg, Ping, Pong,
     },

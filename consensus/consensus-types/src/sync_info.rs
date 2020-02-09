@@ -5,12 +5,8 @@ use crate::{common::Round, quorum_cert::QuorumCert, timeout_certificate::Timeout
 use anyhow::{ensure, Context};
 use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::ValidatorVerifier;
-use network;
 use serde::{Deserialize, Serialize};
-use std::{
-    convert::TryFrom,
-    fmt::{Display, Formatter},
-};
+use std::fmt::{Display, Formatter};
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 /// This struct describes basic synchronization metadata.
@@ -116,23 +112,5 @@ impl SyncInfo {
 
     pub fn epoch(&self) -> u64 {
         self.highest_quorum_cert.certified_block().epoch()
-    }
-}
-
-impl TryFrom<network::proto::SyncInfo> for SyncInfo {
-    type Error = anyhow::Error;
-
-    fn try_from(proto: network::proto::SyncInfo) -> anyhow::Result<Self> {
-        Ok(lcs::from_bytes(&proto.bytes)?)
-    }
-}
-
-impl TryFrom<SyncInfo> for network::proto::SyncInfo {
-    type Error = anyhow::Error;
-
-    fn try_from(info: SyncInfo) -> anyhow::Result<Self> {
-        Ok(Self {
-            bytes: lcs::to_bytes(&info)?,
-        })
     }
 }

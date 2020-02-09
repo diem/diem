@@ -816,7 +816,6 @@ dependencies = [
  "libra-crypto-derive 0.1.0",
  "libra-types 0.1.0",
  "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "network 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",

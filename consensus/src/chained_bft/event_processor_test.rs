@@ -12,7 +12,7 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
-        network::NetworkSender,
+        network::{ConsensusTypes, NetworkSender},
         network_tests::NetworkPlayground,
         persistent_liveness_storage::RecoveryData,
         test_utils::{
@@ -24,16 +24,14 @@ use crate::{
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::block::block_test_utils::gen_test_certificate;
-use consensus_types::block_retrieval::{
-    BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
-};
+use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
 use consensus_types::{
     block::{
         block_test_utils::{certificate_for_genesis, placeholder_ledger_info},
         Block,
     },
     common::Author,
-    proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
+    proposal_msg::ProposalMsg,
     sync_info::SyncInfo,
     timeout::Timeout,
     timeout_certificate::TimeoutCertificate,
@@ -53,7 +51,7 @@ use libra_types::crypto_proxies::{
 };
 use network::peer_manager::conn_status_channel;
 use network::{
-    proto::{ConsensusMsg, ConsensusMsg_oneof},
+    proto::ConsensusMsg,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use prost::Message as _;
@@ -252,17 +250,13 @@ fn basic_new_rank_event_test() {
             .await;
         let pending_proposals: Vec<ProposalMsg<TestPayload>> = pending_messages
             .into_iter()
-            .filter_map(|m| match m.1.message {
-                Some(ConsensusMsg_oneof::Proposal(proposal)) => Some(
-                    ProposalUncheckedSignatures::<TestPayload>::try_from(proposal)
-                        .unwrap()
-                        .into(),
-                ),
+            .filter_map(|m| match ConsensusTypes::try_from(&m.1) {
+                Ok(ConsensusTypes::ProposalMsg(proposal)) => Some(*proposal),
                 _ => None,
             })
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
-        assert_eq!(pending_proposals[0].proposal().round(), new_round,);
+        assert_eq!(pending_proposals[0].proposal().round(), new_round);
         assert_eq!(
             pending_proposals[0]
                 .proposal()
@@ -319,12 +313,8 @@ fn basic_new_rank_event_test() {
             .await;
         let pending_proposals: Vec<ProposalMsg<TestPayload>> = pending_messages
             .into_iter()
-            .filter_map(|m| match m.1.message {
-                Some(ConsensusMsg_oneof::Proposal(proposal)) => Some(
-                    ProposalUncheckedSignatures::<TestPayload>::try_from(proposal)
-                        .unwrap()
-                        .into(),
-                ),
+            .filter_map(|m| match ConsensusTypes::<TestPayload>::try_from(&m.1) {
+                Ok(ConsensusTypes::ProposalMsg(proposal)) => Some(*proposal),
                 _ => None,
             })
             .collect::<Vec<_>>();
@@ -367,10 +357,8 @@ fn process_successful_proposal_test() {
                     return None;
                 }
 
-                match m.1.message {
-                    Some(ConsensusMsg_oneof::VoteMsg(vote_msg)) => {
-                        Some(VoteMsg::try_from(vote_msg).unwrap())
-                    }
+                match ConsensusTypes::<TestPayload>::try_from(&m.1) {
+                    Ok(ConsensusTypes::VoteMsg(vote_msg)) => Some(*vote_msg),
                     _ => None,
                 }
             })
@@ -419,10 +407,8 @@ fn process_old_proposal_test() {
                     return None;
                 }
 
-                match m.1.message {
-                    Some(ConsensusMsg_oneof::VoteMsg(vote_msg)) => {
-                        Some(VoteMsg::try_from(vote_msg).unwrap())
-                    }
+                match ConsensusTypes::<TestPayload>::try_from(&m.1) {
+                    Ok(ConsensusTypes::VoteMsg(vote_msg)) => Some(*vote_msg),
                     _ => None,
                 }
             })
@@ -731,14 +717,11 @@ fn process_block_retrieval() {
             .await;
         match rx1.await {
             Ok(Ok(bytes)) => {
-                let msg = ConsensusMsg::decode(bytes.as_ref()).unwrap();
-                let response = match msg.message {
-                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
-                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
-                    }
+                let response = ConsensusMsg::decode(bytes).unwrap();
+                let response = match ConsensusTypes::<TestPayload>::try_from(&response) {
+                    Ok(ConsensusTypes::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
                     _ => panic!("block retrieval failure"),
-                }
-                .unwrap();
+                };
                 assert_eq!(response.status(), BlockRetrievalStatus::Succeeded);
                 assert_eq!(response.blocks().get(0).unwrap().id(), block_id);
             }
@@ -757,14 +740,11 @@ fn process_block_retrieval() {
             .await;
         match rx2.await {
             Ok(Ok(bytes)) => {
-                let msg = ConsensusMsg::decode(bytes.as_ref()).unwrap();
-                let response = match msg.message {
-                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
-                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
-                    }
+                let response = ConsensusMsg::decode(bytes).unwrap();
+                let response = match ConsensusTypes::<TestPayload>::try_from(&response) {
+                    Ok(ConsensusTypes::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
                     _ => panic!("block retrieval failure"),
-                }
-                .unwrap();
+                };
                 assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
                 assert!(response.blocks().is_empty());
             }
@@ -782,14 +762,11 @@ fn process_block_retrieval() {
             .await;
         match rx3.await {
             Ok(Ok(bytes)) => {
-                let msg = ConsensusMsg::decode(bytes.as_ref()).unwrap();
-                let response = match msg.message {
-                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
-                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
-                    }
+                let response = ConsensusMsg::decode(bytes).unwrap();
+                let response = match ConsensusTypes::<TestPayload>::try_from(&response) {
+                    Ok(ConsensusTypes::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
                     _ => panic!("block retrieval failure"),
-                }
-                .unwrap();
+                };
                 assert_eq!(response.status(), BlockRetrievalStatus::NotEnoughBlocks);
                 assert_eq!(block_id, response.blocks().get(0).unwrap().id());
                 assert_eq!(
@@ -860,14 +837,13 @@ fn nil_vote_on_timeout() {
         // Process the outgoing vote message and verify that it contains a round signature
         // and that the vote extends genesis.
         node.event_processor.process_local_timeout(1).await;
-        let vote_msg = VoteMsg::try_from(
-            playground
-                .wait_for_messages(1, NetworkPlayground::timeout_votes_only)
-                .await[0]
-                .1
-                .clone(),
-        )
-        .unwrap();
+        let msg = &playground
+            .wait_for_messages(1, NetworkPlayground::timeout_votes_only)
+            .await[0];
+        let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&msg.1) {
+            Ok(ConsensusTypes::VoteMsg(vote_msg)) => *vote_msg,
+            _ => panic!("Failed to retrieve VoteMsg"),
+        };
 
         let vote = vote_msg.vote();
 

@@ -11,7 +11,7 @@ use crate::{
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
         },
-        network::NetworkSender,
+        network::{ConsensusTypes, NetworkSender},
         persistent_liveness_storage::{
             LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
         },
@@ -41,16 +41,18 @@ use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::{
     LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier,
 };
-use network::proto::{ConsensusMsg, ConsensusMsg_oneof};
+use network::proto::ConsensusMsg;
 
 use crate::chained_bft::network::IncomingBlockRetrievalRequest;
 use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
-use std::convert::TryInto;
-use std::time::Instant;
-use std::{sync::Arc, time::Duration};
+use std::{
+    convert::TryFrom,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use termion::color::*;
 
 #[cfg(test)]
@@ -65,7 +67,7 @@ pub mod event_processor_fuzzing;
 /// for processing the events carrying sync info and use the info to retrieve blocks from peers
 #[allow(dead_code)]
 pub struct StartupSyncProcessor<T> {
-    network: NetworkSender,
+    network: NetworkSender<T>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     ledger_recovery_data: LedgerRecoveryData<T>,
 }
@@ -73,7 +75,7 @@ pub struct StartupSyncProcessor<T> {
 #[allow(dead_code)]
 impl<T: Payload> StartupSyncProcessor<T> {
     pub fn new(
-        network: NetworkSender,
+        network: NetworkSender<T>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
         ledger_recovery_data: LedgerRecoveryData<T>,
     ) -> Self {
@@ -147,7 +149,7 @@ pub struct EventProcessor<T> {
     proposal_generator: ProposalGenerator<T>,
     safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
     txn_manager: Box<dyn TxnManager<Payload = T>>,
-    network: NetworkSender,
+    network: NetworkSender<T>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     time_service: Arc<dyn TimeService>,
     // Cache of the last sent vote message.
@@ -164,7 +166,7 @@ impl<T: Payload> EventProcessor<T> {
         proposal_generator: ProposalGenerator<T>,
         safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
         txn_manager: Box<dyn TxnManager<Payload = T>>,
-        network: NetworkSender,
+        network: NetworkSender<T>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
         time_service: Arc<dyn TimeService>,
         validators: Arc<ValidatorVerifier>,
@@ -193,7 +195,7 @@ impl<T: Payload> EventProcessor<T> {
         }
     }
 
-    fn create_block_retriever(&self, deadline: Instant, author: Author) -> BlockRetriever {
+    fn create_block_retriever(&self, deadline: Instant, author: Author) -> BlockRetriever<T> {
         BlockRetriever::new(self.network.clone(), deadline, author)
     }
 
@@ -897,24 +899,17 @@ impl<T: Payload> EventProcessor<T> {
             status = BlockRetrievalStatus::IdNotFound;
         }
 
-        let response = BlockRetrievalResponse::new(status, blocks);
-        if let Err(e) = response
-            .try_into()
-            .and_then(|proto| {
-                let bytes = ConsensusMsg {
-                    message: Some(ConsensusMsg_oneof::RespondBlock(proto)),
-                }
-                .to_bytes()?;
-                Ok(bytes)
-            })
-            .and_then(|response_data| {
+        let response = Box::new(BlockRetrievalResponse::new(status, blocks));
+        if let Err(e) = ConsensusMsg::try_from(ConsensusTypes::BlockRetrievalResponse(response))
+            .and_then(|proto| Ok(proto.to_bytes()?))
+            .and_then(|bytes| {
                 request
                     .response_sender
-                    .send(Ok(response_data))
+                    .send(Ok(bytes))
                     .map_err(|e| format_err!("{:?}", e))
             })
         {
-            error!("Failed to return the requested block: {:?}", e);
+            warn!("Failed to serialize BlockRetrievalResponse: {:?}", e);
         }
     }
 

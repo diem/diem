@@ -6,7 +6,6 @@ use anyhow::ensure;
 use libra_crypto::hash::HashValue;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 use std::fmt;
 
 /// RPC to get a chain of block of the given length starting from the given block id.
@@ -38,24 +37,6 @@ impl fmt::Display for BlockRetrievalRequest {
             "[BlockRetrievalRequest starting from id {} with {} blocks]",
             self.block_id, self.num_blocks
         )
-    }
-}
-
-impl TryFrom<network::proto::RequestBlock> for BlockRetrievalRequest {
-    type Error = anyhow::Error;
-
-    fn try_from(proto: network::proto::RequestBlock) -> anyhow::Result<Self> {
-        Ok(lcs::from_bytes(&proto.bytes)?)
-    }
-}
-
-impl TryFrom<BlockRetrievalRequest> for network::proto::RequestBlock {
-    type Error = anyhow::Error;
-
-    fn try_from(block_retrieval_request: BlockRetrievalRequest) -> anyhow::Result<Self> {
-        Ok(Self {
-            bytes: lcs::to_bytes(&block_retrieval_request)?,
-        })
     }
 }
 
@@ -139,23 +120,5 @@ impl<T: Payload> fmt::Display for BlockRetrievalResponse<T> {
             }
             _ => write!(f, "[BlockRetrievalResponse: status: {:?}", self.status()),
         }
-    }
-}
-
-impl<T: Payload> TryFrom<network::proto::RespondBlock> for BlockRetrievalResponse<T> {
-    type Error = anyhow::Error;
-
-    fn try_from(proto: network::proto::RespondBlock) -> anyhow::Result<Self> {
-        Ok(lcs::from_bytes(&proto.bytes)?)
-    }
-}
-
-impl<T: Payload> TryFrom<BlockRetrievalResponse<T>> for network::proto::RespondBlock {
-    type Error = anyhow::Error;
-
-    fn try_from(block_retrieval_response: BlockRetrievalResponse<T>) -> anyhow::Result<Self> {
-        Ok(Self {
-            bytes: lcs::to_bytes(&block_retrieval_response)?,
-        })
     }
 }

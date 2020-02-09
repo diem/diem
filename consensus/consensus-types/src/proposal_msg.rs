@@ -6,10 +6,9 @@ use crate::{
     common::{Author, Payload, Round},
     sync_info::SyncInfo,
 };
-use anyhow::{bail, ensure, format_err, Context, Error, Result};
+use anyhow::{ensure, format_err, Context, Result};
 use libra_types::crypto_proxies::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
-use std::convert::{TryFrom, TryInto};
 use std::fmt;
 
 /// ProposalMsg contains the required information for the proposer election protocol to make its
@@ -25,25 +24,6 @@ pub struct ProposalMsg<T> {
 /// via the `validate_signatures` function.
 pub struct ProposalUncheckedSignatures<T>(ProposalMsg<T>);
 
-impl<T: Payload> TryFrom<network::proto::Proposal> for ProposalUncheckedSignatures<T> {
-    type Error = Error;
-
-    fn try_from(proto: network::proto::Proposal) -> Result<Self> {
-        Ok(ProposalUncheckedSignatures(lcs::from_bytes(&proto.bytes)?))
-    }
-}
-
-impl<T: Payload> TryFrom<network::proto::ConsensusMsg> for ProposalUncheckedSignatures<T> {
-    type Error = Error;
-
-    fn try_from(proto: network::proto::ConsensusMsg) -> Result<Self> {
-        match proto.message {
-            Some(network::proto::ConsensusMsg_oneof::Proposal(proposal)) => proposal.try_into(),
-            _ => bail!("Missing proposal"),
-        }
-    }
-}
-
 #[cfg(any(test, feature = "fuzzing"))]
 impl<T: Payload> From<ProposalUncheckedSignatures<T>> for ProposalMsg<T> {
     fn from(proposal: ProposalUncheckedSignatures<T>) -> Self {
@@ -52,6 +32,10 @@ impl<T: Payload> From<ProposalUncheckedSignatures<T>> for ProposalMsg<T> {
 }
 
 impl<T: Payload> ProposalUncheckedSignatures<T> {
+    pub fn new(proposal: ProposalMsg<T>) -> Self {
+        Self(proposal)
+    }
+
     /// Validates the signatures of the proposal. This includes the leader's signature over the
     /// block and the QC, the timeout certificate signatures.
     pub fn validate_signatures(self, validator: &ValidatorVerifier) -> Result<ProposalMsg<T>> {
@@ -160,15 +144,5 @@ impl<T: Payload> fmt::Display for ProposalMsg<T> {
             None => String::from("NIL"),
         };
         write!(f, "[proposal {} from {}]", self.proposal, author,)
-    }
-}
-
-impl<T: Payload> TryFrom<ProposalMsg<T>> for network::proto::Proposal {
-    type Error = Error;
-
-    fn try_from(proposal: ProposalMsg<T>) -> Result<Self> {
-        Ok(Self {
-            bytes: lcs::to_bytes(&proposal)?,
-        })
     }
 }

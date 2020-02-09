@@ -5,6 +5,7 @@ use crate::{
     chained_bft::{
         block_storage::BlockReader,
         chained_bft_smr::ChainedBftSMR,
+        network::ConsensusTypes,
         network_tests::NetworkPlayground,
         test_utils::{
             consensus_runtime, MockStateComputer, MockStorage, MockTransactionManager, TestPayload,
@@ -13,10 +14,7 @@ use crate::{
     consensus_provider::ConsensusProvider,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use consensus_types::{
-    proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-    vote_msg::VoteMsg,
-};
+use consensus_types::vote_msg::VoteMsg;
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use libra_config::config::ConsensusConfig;
 use libra_config::{
@@ -27,14 +25,9 @@ use libra_config::{
     generator::{self, ValidatorSwarm},
 };
 use libra_crypto::hash::CryptoHash;
-use libra_types::crypto_proxies::{
-    LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorSet, ValidatorVerifier,
-};
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet, ValidatorVerifier};
 use network::peer_manager::conn_status_channel;
-use network::{
-    proto::ConsensusMsg_oneof,
-    validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
-};
+use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use std::{convert::TryFrom, num::NonZeroUsize, sync::Arc};
 
 /// Auxiliary struct that is preparing SMR for the test
@@ -178,10 +171,10 @@ fn basic_start_test() {
         let msg = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
-        let first_proposal: ProposalMsg<Vec<u64>> =
-            ProposalUncheckedSignatures::<Vec<u64>>::try_from(msg[0].1.clone())
-                .unwrap()
-                .into();
+        let first_proposal = match ConsensusTypes::<TestPayload>::try_from(&msg[0].1).unwrap() {
+            ConsensusTypes::ProposalMsg(proposal) => proposal,
+            _ => panic!("Unexpected message found"),
+        };
         assert_eq!(first_proposal.proposal().parent_id(), genesis.id());
         assert_eq!(
             first_proposal
@@ -210,7 +203,12 @@ fn start_with_proposal_test() {
             .wait_for_messages(2, NetworkPlayground::votes_only)
             .await
             .into_iter()
-            .map(|(_, msg)| VoteMsg::try_from(msg).unwrap())
+            .map(
+                |(_, msg)| match ConsensusTypes::<TestPayload>::try_from(&msg).unwrap() {
+                    ConsensusTypes::VoteMsg(vote_msg) => *vote_msg,
+                    _ => panic!("Unexpected message found"),
+                },
+            )
             .collect();
         let proposed_block_id = votes[0].vote().vote_data().proposed().id();
 
@@ -251,10 +249,11 @@ fn basic_full_round(num_nodes: usize, proposer_type: ConsensusProposerType) {
         let broadcast_proposals_2 = playground
             .wait_for_messages(num_messages_to_send, NetworkPlayground::proposals_only)
             .await;
-        let next_proposal: ProposalMsg<Vec<u64>> =
-            ProposalUncheckedSignatures::<Vec<u64>>::try_from(broadcast_proposals_2[0].1.clone())
-                .unwrap()
-                .into();
+        let msg = &broadcast_proposals_2;
+        let next_proposal = match ConsensusTypes::<TestPayload>::try_from(&msg[0].1).unwrap() {
+            ConsensusTypes::ProposalMsg(proposal) => proposal,
+            _ => panic!("Unexpected message found"),
+        };
         assert!(next_proposal.proposal().round() >= 2);
     });
 }
@@ -310,7 +309,10 @@ fn basic_commit_and_restart() {
             let votes = playground
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
-            let vote_msg = VoteMsg::try_from(votes[0].1.clone()).unwrap();
+            let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&votes[0].1).unwrap() {
+                ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+                _ => panic!("Unexpected message found"),
+            };
             block_ids.push(vote_msg.vote().vote_data().proposed().id());
         }
 
@@ -349,7 +351,8 @@ fn basic_commit_and_restart() {
                 let msg = playground
                     .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
                     .await;
-                if let Some(ConsensusMsg_oneof::VoteMsg(_)) = msg[0].1.message {
+                let vote_msg = lcs::from_bytes(&msg[0].1.message);
+                if let Ok(ConsensusTypes::<TestPayload>::VoteMsg(_)) = vote_msg {
                     round += 1;
                     break;
                 }
@@ -390,7 +393,10 @@ fn basic_block_retrieval() {
             let votes = playground
                 .wait_for_messages(2, NetworkPlayground::votes_only)
                 .await;
-            let vote_msg = VoteMsg::try_from(votes[0].1.clone()).unwrap();
+            let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&votes[0].1).unwrap() {
+                ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+                _ => panic!("Unexpected message found"),
+            };
             let proposal_id = vote_msg.vote().vote_data().proposed().id();
             first_proposals.push(proposal_id);
         }
@@ -448,7 +454,10 @@ fn block_retrieval_with_timeout() {
             let votes = playground
                 .wait_for_messages(2, NetworkPlayground::votes_only)
                 .await;
-            let vote_msg = VoteMsg::try_from(votes[0].1.clone()).unwrap();
+            let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&votes[0].1).unwrap() {
+                ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+                _ => panic!("Unexpected message found"),
+            };
             let proposal_id = vote_msg.vote().vote_data().proposed().id();
             first_proposals.push(proposal_id);
         }
@@ -493,7 +502,10 @@ fn basic_state_sync() {
             let votes = playground
                 .wait_for_messages(2, NetworkPlayground::votes_only)
                 .await;
-            let vote_msg = VoteMsg::try_from(votes[0].1.clone()).unwrap();
+            let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&votes[0].1).unwrap() {
+                ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+                _ => panic!("Unexpected message found"),
+            };
             let proposal_id = vote_msg.vote().vote_data().proposed().id();
             proposals.push(proposal_id);
         }
@@ -674,10 +686,10 @@ fn aggregate_timeout_votes() {
         let msg = playground
             .wait_for_messages(2, NetworkPlayground::proposals_only)
             .await;
-        let first_proposal: ProposalMsg<Vec<u64>> =
-            ProposalUncheckedSignatures::<Vec<u64>>::try_from(msg[0].1.clone())
-                .unwrap()
-                .into();
+        let first_proposal = match ConsensusTypes::<TestPayload>::try_from(&msg[0].1).unwrap() {
+            ConsensusTypes::ProposalMsg(proposal) => proposal,
+            _ => panic!("Unexpected message found"),
+        };
         let proposal_id = first_proposal.proposal().id();
         // wait for node 0 send vote to 1 and 2
         playground
@@ -814,7 +826,10 @@ fn secondary_proposers() {
             .await;
         let mut secondary_proposal_ids = vec![];
         for msg in timeout_votes {
-            let vote_msg = VoteMsg::try_from(msg.1).unwrap();
+            let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&msg.1).unwrap() {
+                ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+                _ => panic!("Unexpected message found"),
+            };
             assert!(vote_msg.vote().is_timeout());
             secondary_proposal_ids.push(vote_msg.vote().vote_data().proposed().id());
         }
@@ -862,8 +877,8 @@ fn reconfiguration_test() {
             let mut msg = playground
                 .wait_for_messages(1, NetworkPlayground::take_all)
                 .await;
-            if let Some(ConsensusMsg_oneof::EpochChange(proof)) = msg.pop().unwrap().1.message {
-                let proof = ValidatorChangeProof::try_from(proof).unwrap();
+            let msg = ConsensusTypes::<TestPayload>::try_from(&msg.pop().unwrap().1);
+            if let Ok(ConsensusTypes::<TestPayload>::ValidatorChangeProof(proof)) = msg {
                 if proof.epoch().unwrap() == target_epoch {
                     break;
                 }

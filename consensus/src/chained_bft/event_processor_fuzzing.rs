@@ -17,15 +17,12 @@ use crate::{
     util::mock_time_service::SimulatedTimeService,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures};
+use consensus_types::proposal_msg::ProposalMsg;
 use futures::{channel::mpsc, executor::block_on};
-use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
-use network::{proto::Proposal, validator_network::ConsensusNetworkSender};
+use network::validator_network::ConsensusNetworkSender;
 use once_cell::sync::Lazy;
-use prost::Message as _;
 use safety_rules::{PersistentSafetyStorage, SafetyRules};
-use std::convert::TryFrom;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -42,12 +39,7 @@ pub fn generate_corpus_proposal() -> Vec<u8> {
             })
             .await;
         // serialize and return proposal
-        let proposal = proposal.unwrap();
-        Proposal::try_from(proposal)
-            .unwrap()
-            .to_bytes()
-            .unwrap()
-            .to_vec()
+        lcs::to_bytes(&proposal.unwrap()).unwrap()
     })
 }
 
@@ -154,7 +146,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     // create node
     let mut event_processor = create_node_for_fuzzing();
 
-    let proposal = match Proposal::decode(data) {
+    let proposal: ProposalMsg<TestPayload> = match lcs::from_bytes(data) {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {
@@ -163,18 +155,6 @@ pub fn fuzz_proposal(data: &[u8]) {
             return;
         }
     };
-
-    let proposal = match ProposalUncheckedSignatures::<TestPayload>::try_from(proposal) {
-        Ok(xx) => xx,
-        Err(_) => {
-            if cfg!(test) {
-                panic!();
-            }
-            return;
-        }
-    };
-
-    let proposal: ProposalMsg<TestPayload> = proposal.into();
 
     let proposal = match proposal.verify_well_formed() {
         Ok(xx) => xx,
