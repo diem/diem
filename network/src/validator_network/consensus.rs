@@ -9,7 +9,7 @@ use crate::{
     counters,
     error::NetworkError,
     peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
-    proto::{ConsensusMsg, ConsensusMsg_oneof, RequestBlock, RespondBlock},
+    proto::ConsensusMsg,
     protocols::rpc::error::RpcError,
     validator_network::network_builder::NetworkBuilder,
     validator_network::{NetworkEvents, NetworkSender},
@@ -97,28 +97,16 @@ impl ConsensusNetworkSender {
             .send_to_many(recipients, protocol, message)
     }
 
-    pub async fn request_block(
+    pub async fn send_rpc(
         &mut self,
         recipient: PeerId,
-        req_msg: RequestBlock,
+        message: ConsensusMsg,
         timeout: Duration,
-    ) -> Result<RespondBlock, RpcError> {
+    ) -> Result<ConsensusMsg, RpcError> {
         let protocol = ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL);
-        let req_msg_enum = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::RequestBlock(req_msg)),
-        };
-
-        let res_msg_enum = self
-            .peer_mgr_reqs_tx
-            .unary_rpc(recipient, protocol, req_msg_enum, timeout)
-            .await?;
-
-        if let Some(ConsensusMsg_oneof::RespondBlock(response)) = res_msg_enum.message {
-            Ok(response)
-        } else {
-            // TODO: context
-            Err(RpcError::InvalidRpcResponse)
-        }
+        self.peer_mgr_reqs_tx
+            .unary_rpc(recipient, protocol, message, timeout)
+            .await
     }
 
     pub async fn update_eligible_nodes(
@@ -150,7 +138,6 @@ mod tests {
     use super::*;
     use crate::{
         peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest},
-        proto::VoteMsg,
         protocols::{direct_send::Message, rpc::InboundRpcRequest},
         utils::MessageExt,
         validator_network::Event,
@@ -161,15 +148,6 @@ mod tests {
     use prost::Message as _;
     use std::num::NonZeroUsize;
 
-    fn new_test_vote() -> ConsensusMsg {
-        let mut vote_msg = VoteMsg::default();
-        vote_msg.bytes = vec![];
-
-        ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::VoteMsg(vote_msg)),
-        }
-    }
-
     // Direct send messages should get deserialized through the
     // `ConsensusNetworkEvents` stream.
     #[test]
@@ -179,8 +157,8 @@ mod tests {
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let mut stream = ConsensusNetworkEvents::new(consensus_rx, control_notifs_rx);
 
+        let consensus_msg = ConsensusMsg::default();
         let peer_id = PeerId::random();
-        let consensus_msg = new_test_vote();
         let network_msg = Message {
             protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             mdata: consensus_msg.clone().to_bytes().unwrap(),
@@ -227,8 +205,8 @@ mod tests {
         let (conn_mgr_reqs_tx, _conn_mgr_reqs_rx) = channel::new_test(8);
         let mut sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
 
+        let consensus_msg = ConsensusMsg::default();
         let peer_id = PeerId::random();
-        let consensus_msg = new_test_vote();
         let expected_network_msg = Message {
             protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             mdata: consensus_msg.clone().to_bytes().unwrap(),
@@ -257,16 +235,10 @@ mod tests {
         let mut stream = ConsensusNetworkEvents::new(consensus_rx, control_notifs_rx);
 
         // build rpc request
-        let req_msg = RequestBlock::default();
-        let req_msg_enum = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::RequestBlock(req_msg)),
-        };
-        let req_data = req_msg_enum.clone().to_bytes().unwrap();
-
         let (res_tx, _) = oneshot::channel();
         let rpc_req = InboundRpcRequest {
             protocol: ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
-            data: req_data,
+            data: ConsensusMsg::default().to_bytes().unwrap(),
             res_tx,
         };
 
@@ -282,7 +254,7 @@ mod tests {
 
         // request should be properly deserialized
         let (res_tx, _) = oneshot::channel();
-        let expected_event = Event::RpcRequest((peer_id, req_msg_enum, res_tx));
+        let expected_event = Event::RpcRequest((peer_id, ConsensusMsg::default(), res_tx));
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, expected_event);
     }
@@ -298,15 +270,11 @@ mod tests {
 
         // send get_block rpc request
         let peer_id = PeerId::random();
-        let req_msg = RequestBlock::default();
-        let f_res_msg = sender.request_block(peer_id, req_msg.clone(), Duration::from_secs(5));
+        let req_msg = ConsensusMsg::default();
+        let f_res_msg = sender.send_rpc(peer_id, req_msg, Duration::from_secs(5));
 
         // build rpc response
-        let res_msg = RespondBlock::default();
-        let res_msg_enum = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::RespondBlock(res_msg.clone())),
-        };
-        let res_data = res_msg_enum.to_bytes().unwrap();
+        let res_msg = ConsensusMsg::default().to_bytes().unwrap();
 
         // the future response
         let f_recv = async move {
@@ -317,13 +285,10 @@ mod tests {
 
                     // check request deserializes
                     let req_msg_enum = ConsensusMsg::decode(req.data.as_ref()).unwrap();
-                    assert_eq!(
-                        req_msg_enum.message,
-                        Some(ConsensusMsg_oneof::RequestBlock(req_msg))
-                    );
+                    assert_eq!(req_msg_enum, ConsensusMsg::default());
 
                     // remote replies with some response message
-                    req.res_tx.send(Ok(res_data)).unwrap();
+                    req.res_tx.send(Ok(res_msg)).unwrap();
                     Ok(())
                 }
                 event => panic!("Unexpected event: {:?}", event),
@@ -331,6 +296,6 @@ mod tests {
         };
 
         let (recv_res_msg, _) = block_on(try_join(f_res_msg, f_recv)).unwrap();
-        assert_eq!(recv_res_msg, res_msg);
+        assert_eq!(recv_res_msg, ConsensusMsg::default());
     }
 }

@@ -76,7 +76,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn sync_to(
         &self,
         sync_info: &SyncInfo,
-        mut retriever: BlockRetriever,
+        mut retriever: BlockRetriever<T>,
     ) -> anyhow::Result<()> {
         self.process_highest_commit_cert(sync_info.highest_commit_cert().clone(), &mut retriever)
             .await?;
@@ -101,7 +101,7 @@ impl<T: Payload> BlockStore<T> {
     async fn fetch_quorum_cert(
         &self,
         qc: QuorumCert,
-        mut retriever: BlockRetriever,
+        mut retriever: BlockRetriever<T>,
     ) -> anyhow::Result<()> {
         let mut pending = vec![];
         let mut retrieve_qc = qc.clone();
@@ -135,7 +135,7 @@ impl<T: Payload> BlockStore<T> {
     async fn process_highest_commit_cert(
         &self,
         highest_commit_cert: QuorumCert,
-        retriever: &mut BlockRetriever,
+        retriever: &mut BlockRetriever<T>,
     ) -> anyhow::Result<()> {
         if !self.need_sync_for_quorum_cert(&highest_commit_cert) {
             return Ok(());
@@ -168,7 +168,7 @@ impl<T: Payload> BlockStore<T> {
 
     pub async fn fast_forward_sync(
         highest_commit_cert: &QuorumCert,
-        retriever: &mut BlockRetriever,
+        retriever: &mut BlockRetriever<T>,
     ) -> anyhow::Result<(Vec<Block<T>>, Vec<QuorumCert>)> {
         debug!(
             "Start state sync with peer: {}, to block: {}",
@@ -193,14 +193,14 @@ impl<T: Payload> BlockStore<T> {
 }
 
 /// BlockRetriever is used internally to retrieve blocks
-pub struct BlockRetriever {
-    network: NetworkSender,
+pub struct BlockRetriever<T> {
+    network: NetworkSender<T>,
     deadline: Instant,
     preferred_peer: Author,
 }
 
-impl BlockRetriever {
-    pub fn new(network: NetworkSender, deadline: Instant, preferred_peer: Author) -> Self {
+impl<T: Payload> BlockRetriever<T> {
+    pub fn new(network: NetworkSender<T>, deadline: Instant, preferred_peer: Author) -> Self {
         Self {
             network,
             deadline,
@@ -219,14 +219,11 @@ impl BlockRetriever {
     /// leader to drive quorum certificate creation The other peers from the quorum certificate
     /// will be randomly tried next.  If all members of the quorum certificate are exhausted, an
     /// error is returned
-    async fn retrieve_block_for_qc<'a, T>(
+    async fn retrieve_block_for_qc<'a>(
         &'a mut self,
         qc: &'a QuorumCert,
         num_blocks: u64,
-    ) -> anyhow::Result<Vec<Block<T>>>
-    where
-        T: Payload,
-    {
+    ) -> anyhow::Result<Vec<Block<T>>> {
         let block_id = qc.certified_block().id();
         let mut peers: Vec<&AccountAddress> = qc.ledger_info().signatures().keys().collect();
         let mut attempt = 0_u32;

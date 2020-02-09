@@ -23,7 +23,7 @@ use libra_config::config::RoleType;
 use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use libra_prost_ext::MessageExt;
 use network::{
-    proto::{ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock},
+    proto::ConsensusMsg,
     protocols::rpc::error::RpcError,
     validator_network::{
         self,
@@ -175,9 +175,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
 
 fn compose_proposal(msg_len: usize) -> ConsensusMsg {
     let mut msg = ConsensusMsg::default();
-    let mut proposal = Proposal::default();
-    proposal.bytes = vec![0u8; msg_len];
-    msg.message = Some(ConsensusMsg_oneof::Proposal(proposal));
+    msg.message = vec![0u8; msg_len];
     msg
 }
 
@@ -278,7 +276,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     assert_eq!(first_listener_event, Event::NewPeer(dialer_peer_id));
 
     // Compose RequestBlock message and RespondBlock message with `msg_len` bytes payload
-    let req = compose_request_block();
+    let req = compose_send_rpc();
     let res = compose_respond_block(*msg_len);
 
     // The listener side keeps receiving RPC requests and sending responses back
@@ -299,7 +297,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     b.iter(|| {
         let mut requests = FuturesUnordered::new();
         for _ in 0..NUM_MSGS {
-            requests.push(request_block(
+            requests.push(send_rpc(
                 dialer_sender.clone(),
                 listener_peer_id,
                 req.clone(),
@@ -311,25 +309,23 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     });
 }
 
-async fn request_block(
+async fn send_rpc(
     mut sender: ConsensusNetworkSender,
     recipient: PeerId,
-    req_msg: RequestBlock,
-) -> Result<RespondBlock, RpcError> {
+    req_msg: ConsensusMsg,
+) -> Result<ConsensusMsg, RpcError> {
     sender
-        .request_block(recipient, req_msg, Duration::from_secs(15))
+        .send_rpc(recipient, req_msg, Duration::from_secs(15))
         .await
 }
 
-fn compose_request_block() -> RequestBlock {
-    RequestBlock::default()
+fn compose_send_rpc() -> ConsensusMsg {
+    ConsensusMsg::default()
 }
 
 fn compose_respond_block(msg_len: usize) -> ConsensusMsg {
     let mut msg = ConsensusMsg::default();
-    let mut res = RespondBlock::default();
-    res.bytes = vec![0u8; msg_len];
-    msg.message = Some(ConsensusMsg_oneof::RespondBlock(res));
+    msg.message = vec![0u8; msg_len];
     msg
 }
 

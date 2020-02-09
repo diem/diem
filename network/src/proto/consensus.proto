@@ -7,30 +7,4 @@ package consensus;
 
 import "validator_change.proto";
 
-message ConsensusMsg {
-  oneof message {
-    Proposal proposal = 1;
-    VoteMsg vote_msg = 2;
-    RequestBlock request_block = 3;
-    RespondBlock respond_block = 4;
-    SyncInfo sync_info = 5;
-    types.ValidatorChangeProof epoch_change = 6;
-    RequestEpoch request_epoch = 7;
-  }
-}
-
-message Proposal { bytes bytes = 1; }
-
-message SyncInfo { bytes bytes = 1; }
-
-message Block { bytes bytes = 1; }
-
-message VoteMsg { bytes bytes = 1; }
-
-message VoteProposal { bytes bytes = 1; }
-
-message RequestBlock { bytes bytes = 1; }
-
-message RespondBlock { bytes bytes = 1; }
-
-message RequestEpoch { bytes bytes = 1; }
+message ConsensusMsg { bytes message = 1; }

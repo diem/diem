@@ -5,12 +5,7 @@ use crate::{sync_info::SyncInfo, vote::Vote};
 use anyhow::ensure;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
-#[cfg(any(test, feature = "fuzzing"))]
-use std::convert::TryInto;
-use std::{
-    convert::TryFrom,
-    fmt::{Display, Formatter},
-};
+use std::fmt::{Display, Formatter};
 
 /// VoteMsg is the struct that is ultimately sent by the voter in response for
 /// receiving a proposal.
@@ -58,35 +53,5 @@ impl VoteMsg {
         // it. This way we avoid verifying O(n) SyncInfo messages while aggregating the votes
         // (O(n^2) signature verifications).
         self.vote().verify(validator)
-    }
-}
-
-#[cfg(any(test, feature = "fuzzing"))]
-impl TryFrom<network::proto::ConsensusMsg> for VoteMsg {
-    type Error = anyhow::Error;
-
-    fn try_from(proto: network::proto::ConsensusMsg) -> anyhow::Result<Self> {
-        match proto.message {
-            Some(network::proto::ConsensusMsg_oneof::VoteMsg(vote_msg)) => vote_msg.try_into(),
-            _ => anyhow::bail!("Missing vote"),
-        }
-    }
-}
-
-impl TryFrom<network::proto::VoteMsg> for VoteMsg {
-    type Error = anyhow::Error;
-
-    fn try_from(proto: network::proto::VoteMsg) -> anyhow::Result<Self> {
-        Ok(lcs::from_bytes(&proto.bytes)?)
-    }
-}
-
-impl TryFrom<VoteMsg> for network::proto::VoteMsg {
-    type Error = anyhow::Error;
-
-    fn try_from(vote_msg: VoteMsg) -> anyhow::Result<Self> {
-        Ok(Self {
-            bytes: lcs::to_bytes(&vote_msg)?,
-        })
     }
 }

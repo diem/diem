@@ -12,7 +12,7 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::{choose_leader, RotatingProposer},
         },
-        network::NetworkSender,
+        network::{ConsensusTypes, NetworkSender},
         persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     },
     counters,
@@ -31,13 +31,13 @@ use libra_types::{
     crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorVerifier},
 };
 use network::{
-    proto::{ConsensusMsg, ConsensusMsg_oneof},
+    proto::ConsensusMsg,
     validator_network::{ConsensusNetworkSender, Event},
 };
 use safety_rules::SafetyRulesManager;
 use std::{
     cmp::Ordering,
-    convert::TryInto,
+    convert::TryFrom,
     sync::{Arc, RwLock},
     time::Duration,
 };
@@ -150,8 +150,13 @@ impl<T: Payload> EpochManager<T> {
                 return;
             }
         };
-        let msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::EpochChange(proof.into())),
+        let msg = ConsensusTypes::ValidatorChangeProof::<T>(Box::new(proof));
+        let msg = match ConsensusMsg::try_from(msg) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                warn!("Failed to serialize ValidatorChangeProof: {:?}", e);
+                return;
+            }
         };
         if let Err(e) = self.network_sender.send_to(peer_id, msg) {
             warn!(
@@ -180,10 +185,9 @@ impl<T: Payload> EpochManager<T> {
                     start_epoch: self.epoch(),
                     end_epoch: different_epoch,
                 };
-                let msg = match request.try_into() {
-                    Ok(bytes) => ConsensusMsg {
-                        message: Some(ConsensusMsg_oneof::RequestEpoch(bytes)),
-                    },
+                let request = ConsensusTypes::EpochRetrievalRequest::<T>(Box::new(request));
+                let msg = match ConsensusMsg::try_from(request) {
+                    Ok(msg) => msg,
                     Err(e) => {
                         warn!("Fail to serialize EpochRetrievalRequest: {:?}", e);
                         return;

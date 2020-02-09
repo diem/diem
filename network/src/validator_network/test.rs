@@ -4,7 +4,7 @@
 //! Integration tests for validator_network.
 use crate::{
     common::NetworkPublicKeys,
-    proto::{ConsensusMsg, ConsensusMsg_oneof, MempoolSyncMsg, RequestBlock, RespondBlock},
+    proto::{ConsensusMsg, MempoolSyncMsg},
     utils::MessageExt,
     validator_network::{
         self,
@@ -418,13 +418,10 @@ fn test_consensus_rpc() {
         validator_network::consensus::add_to_network(&mut network_builder);
     let _dialer_addr = network_builder.build();
 
-    let req_block_msg = RequestBlock::default();
-
-    let res_block_msg = RespondBlock::default();
+    let msg = ConsensusMsg::default();
 
     // The dialer dials the listener and sends a RequestBlock rpc request
-    let req_block_msg_clone = req_block_msg.clone();
-    let res_block_msg_clone = res_block_msg.clone();
+    let msg_clone = msg.clone();
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
         match dialer_con_net_events.next().await.unwrap().unwrap() {
@@ -436,14 +433,10 @@ fn test_consensus_rpc() {
 
         // Dialer sends a RequestBlock rpc request.
         let res_block_msg = dialer_con_net_sender
-            .request_block(
-                listener_peer_id,
-                req_block_msg_clone,
-                Duration::from_secs(10),
-            )
+            .send_rpc(listener_peer_id, msg_clone.clone(), Duration::from_secs(10))
             .await
             .unwrap();
-        assert_eq!(res_block_msg, res_block_msg_clone);
+        assert_eq!(res_block_msg, msg_clone);
     };
 
     // The listener receives a RequestBlock rpc request and sends a RespondBlock
@@ -463,16 +456,10 @@ fn test_consensus_rpc() {
                 assert_eq!(peer_id, dialer_peer_id);
 
                 // Check the request
-                assert_eq!(
-                    req_msg.message,
-                    Some(ConsensusMsg_oneof::RequestBlock(req_block_msg))
-                );
+                assert_eq!(req_msg, msg);
 
                 // Send the serialized response back.
-                let res_msg = ConsensusMsg {
-                    message: Some(ConsensusMsg_oneof::RespondBlock(res_block_msg)),
-                };
-                let res_data = res_msg.to_bytes().unwrap();
+                let res_data = msg.to_bytes().unwrap();
                 res_tx.send(Ok(res_data)).unwrap();
             }
             event => panic!("Unexpected event {:?}", event),
