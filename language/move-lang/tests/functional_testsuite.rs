@@ -35,12 +35,12 @@ impl Compiler for MoveSourceCompiler {
         input: &str,
     ) -> Result<ScriptOrModule> {
         let cur_file = NamedTempFile::new()?;
+        let sender_addr = Address::try_from(address.as_ref()).unwrap();
         cur_file.reopen()?.write_all(input.as_bytes())?;
         let cur_path = cur_file.path().to_str().unwrap().to_owned();
-        self.temp_files.push(cur_file);
 
         let targets = &vec![cur_path.clone()];
-        let sender = Some(Address::try_from(address.as_ref()).unwrap());
+        let sender = Some(sender_addr);
         let (files, units_or_errors) = move_compile_no_report(targets, &self.deps, sender)?;
         let unit = match units_or_errors {
             Err(errors) => {
@@ -59,6 +59,9 @@ impl Compiler for MoveSourceCompiler {
         Ok(match unit {
             CompiledUnit::Script(_, compiled_script) => ScriptOrModule::Script(compiled_script),
             CompiledUnit::Module(_, compiled_module) => {
+                let input = format!("address {}:\n{}", sender_addr, input);
+                cur_file.reopen()?.write_all(input.as_bytes())?;
+                self.temp_files.push(cur_file);
                 self.deps.push(cur_path);
                 ScriptOrModule::Module(compiled_module)
             }
