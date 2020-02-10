@@ -1,16 +1,16 @@
 error: 
 
-   ┌── tests/move_check/naming/unbound_struct_in_module.move:6:12 ───
+   ┌── tests/move_check/naming/unbound_struct_in_module.move:6:16 ───
    │
- 6 │     foo(s: X::S): X::S {
-   │            ^^^^ Invalid module access. Unbound struct 'S' in module '0x1::X'
+ 6 │     fun foo(s: X::S): X::S {
+   │                ^^^^ Invalid module access. Unbound struct 'S' in module '0x1::X'
    │
 
 error: 
 
-   ┌── tests/move_check/naming/unbound_struct_in_module.move:6:19 ───
+   ┌── tests/move_check/naming/unbound_struct_in_module.move:6:23 ───
    │
- 6 │     foo(s: X::S): X::S {
-   │                   ^^^^ Invalid module access. Unbound struct 'S' in module '0x1::X'
+ 6 │     fun foo(s: X::S): X::S {
+   │                       ^^^^ Invalid module access. Unbound struct 'S' in module '0x1::X'
    │
 

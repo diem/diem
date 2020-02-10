@@ -4,7 +4,7 @@ module M {
     resource struct R3 {}
     resource struct R4 {}
     resource struct R5 {}
-    foo() acquires R1 {
+    fun foo() acquires R1 {
         borrow_global<R1, R2>(0x1);
         exists<R1, R2, R3>(0x1);
         R1 {} = move_from<R1, R2, R3, R4>(0x1);

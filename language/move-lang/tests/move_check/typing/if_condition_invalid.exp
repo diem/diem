@@ -42,13 +42,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/if_condition_invalid.move:8:24 ───
+   ┌── tests/move_check/typing/if_condition_invalid.move:8:28 ───
    │
  9 │         if (x) () else ();
    │             ^ Invalid if condition
    ·
- 8 │     t1<T: copyable>(x: T) {
-   │                        - The type: 'T'
+ 8 │     fun t1<T: copyable>(x: T) {
+   │                            - The type: 'T'
    ·
  9 │         if (x) () else ();
    │             - Is not compatible with: 'bool'

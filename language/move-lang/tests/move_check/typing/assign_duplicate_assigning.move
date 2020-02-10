@@ -1,7 +1,7 @@
 module M {
     resource struct R {f: u64}
 
-    t0() {
+    fun t0() {
         let x;
         (x, x) = (0, 0);
         let f;

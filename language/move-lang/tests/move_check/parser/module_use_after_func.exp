@@ -6,6 +6,6 @@ error:
    │     ^^^ Unexpected 'use'
    ·
  4 │     use 0x1::X;
-   │     --- Expected a name value
+   │     --- Expected 'fun'
    │
 

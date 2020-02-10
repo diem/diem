@@ -26,7 +26,7 @@ module ValidatorSet {
 
     // This can only be invoked by the special validator set address, and only a single time.
     // Currently, it is invoked in the genesis transaction.
-    public initialize() {
+    public fun initialize() {
         // Only callable by the validator set address
         Transaction::assert(Transaction::sender() == 0x1D8, 1);
         move_to_sender(T {
@@ -36,12 +36,12 @@ module ValidatorSet {
     }
 
     // Return the size of the current validator set
-    public size(): u64 acquires T {
+    public fun size(): u64 acquires T {
         Vector::length(&borrow_global<T>(0x1D8).validators)
     }
 
     // Return true if addr is a current validator
-    public is_validator(addr: address): bool acquires T {
+    public fun is_validator(addr: address): bool acquires T {
         let validators = &borrow_global<T>(0x1D8).validators;
         let size = Vector::length(validators);
         if (size == 0) return false;
@@ -56,7 +56,7 @@ module ValidatorSet {
 
     // TODO: Decide on access control policy. For now, we ensure that this is only callable from the
     // genesis txn. Obviously, we'll need a different policy once we support reconfiguration.
-    add_validator(addr: address) acquires T {
+    fun add_validator(addr: address) acquires T {
         // A prospective validator must have an account
         Transaction::assert(LibraAccount::exists(addr), 17);
 
@@ -75,7 +75,7 @@ module ValidatorSet {
     // Trigger a reconfiguation the Libra system by:
     // (1) Computing a new validator set and storing it on chain
     // (2) Emitting an event containing new validator set, which will be passed to the executor
-    reconfigure() acquires T {
+    fun reconfigure() acquires T {
         // TODO: for now, we just emit the current validator set. Eventually, we'll compute the new
         // validator set from a larger list of candidate validators sorted by stake.
         let validator_set = borrow_global_mut<T>(0x1D8);
@@ -86,7 +86,7 @@ module ValidatorSet {
     }
 
     // Get the address of the i'th validator.
-    public get_ith_validator_address(i: u64): address acquires T {
+    public fun get_ith_validator_address(i: u64): address acquires T {
         let validator_set = borrow_global<T>(0x1D8);
         Transaction::assert(i < Vector::length(&validator_set.validators), 3);
         Vector::borrow(&validator_set.validators, i).addr

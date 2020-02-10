@@ -1,25 +1,25 @@
 error: 
 
-   ┌── tests/move_check/naming/unbound_struct_in_current.move:2:12 ───
+   ┌── tests/move_check/naming/unbound_struct_in_current.move:2:16 ───
    │
- 2 │     foo(s: Self::S): Self::S {
-   │            ^^^^^^^ Invalid module access. Unbound struct 'S' in module '0x8675309::M'
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/unbound_struct_in_current.move:2:22 ───
-   │
- 2 │     foo(s: Self::S): Self::S {
-   │                      ^^^^^^^ Invalid module access. Unbound struct 'S' in module '0x8675309::M'
+ 2 │     fun foo(s: Self::S): Self::S {
+   │                ^^^^^^^ Invalid module access. Unbound struct 'S' in module '0x8675309::M'
    │
 
 error: 
 
-   ┌── tests/move_check/naming/unbound_struct_in_current.move:7:12 ───
+   ┌── tests/move_check/naming/unbound_struct_in_current.move:2:26 ───
    │
- 7 │     bar(): Self::S {
-   │            ^^^^^^^ Invalid module access. Unbound struct 'S' in module '0x8675309::M'
+ 2 │     fun foo(s: Self::S): Self::S {
+   │                          ^^^^^^^ Invalid module access. Unbound struct 'S' in module '0x8675309::M'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_struct_in_current.move:7:16 ───
+   │
+ 7 │     fun bar(): Self::S {
+   │                ^^^^^^^ Invalid module access. Unbound struct 'S' in module '0x8675309::M'
    │
 
 error: 

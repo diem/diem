@@ -6,6 +6,6 @@ error:
    │         ^ Unexpected '1'
    ·
  1 │ address 1:
-   │         - Expected '('
+   │         - Expected an account address value
    │
 

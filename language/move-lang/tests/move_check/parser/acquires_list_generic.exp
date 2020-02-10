@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/parser/acquires_list_generic.move:6:21 ───
+   ┌── tests/move_check/parser/acquires_list_generic.move:6:25 ───
    │
- 6 │     foo() acquires B<CupC<R>> {
-   │                     ^ Unexpected '<'
+ 6 │     fun foo() acquires B<CupC<R>> {
+   │                         ^ Unexpected '<'
    ·
- 6 │     foo() acquires B<CupC<R>> {
-   │                     - Expected ','
+ 6 │     fun foo() acquires B<CupC<R>> {
+   │                         - Expected ','
    │
 

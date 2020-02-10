@@ -1,6 +1,6 @@
 module M {
     resource struct R {}
-    t0() {
+    fun t0() {
         ({ let x = 0; x } : bool);
         ({ let x = 0; &x } : u64);
         ({ let y = 0; &mut (y + 1) } : ());

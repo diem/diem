@@ -1,6 +1,6 @@
 // There should not be any tokens after the top-level main function.
-main() {
+fun main() {
 }
 
-foo() {
+fun foo() {
 }

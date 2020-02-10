@@ -1,9 +1,9 @@
 error: 
 
-   ┌── tests/move_check/locals/unused_resource.move:4:10 ───
+   ┌── tests/move_check/locals/unused_resource.move:4:14 ───
    │
- 4 │       t0() {
-   │ ╭──────────^
+ 4 │       fun t0() {
+   │ ╭──────────────^
  5 │ │         let r = R{};
  6 │ │     }
    │ ╰─────^ Invalid return
@@ -22,10 +22,10 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:8:20 ───
+    ┌── tests/move_check/locals/unused_resource.move:8:24 ───
     │
- 8 │       t1(cond: bool) {
-    │ ╭────────────────────^
+ 8 │       fun t1(cond: bool) {
+    │ ╭────────────────────────^
  9 │ │         let r;
  10 │ │         if (cond) { r = R{}; };
  11 │ │     }
@@ -45,10 +45,10 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:13:20 ───
+    ┌── tests/move_check/locals/unused_resource.move:13:24 ───
     │
- 13 │       t2(cond: bool) {
-    │ ╭────────────────────^
+ 13 │       fun t2(cond: bool) {
+    │ ╭────────────────────────^
  14 │ │         let r;
  15 │ │         if (cond) {} else { r = R{}; };
  16 │ │     }
@@ -68,10 +68,10 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:18:20 ───
+    ┌── tests/move_check/locals/unused_resource.move:18:24 ───
     │
- 18 │       t3(cond: bool) {
-    │ ╭────────────────────^
+ 18 │       fun t3(cond: bool) {
+    │ ╭────────────────────────^
  19 │ │         let r;
  20 │ │         while (cond) { r = R{} };
  21 │ │     }
@@ -121,10 +121,10 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:27:10 ───
+    ┌── tests/move_check/locals/unused_resource.move:27:14 ───
     │
- 27 │       t5() {
-    │ ╭──────────^
+ 27 │       fun t5() {
+    │ ╭──────────────^
  28 │ │         let _ = &R{};
  29 │ │     }
     │ ╰─────^ Invalid return
@@ -135,14 +135,14 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:31:11 ───
+    ┌── tests/move_check/locals/unused_resource.move:31:15 ───
     │
- 31 │       t6<T>(x: T) {
-    │ ╭─────────────────^
+ 31 │       fun t6<T>(x: T) {
+    │ ╭─────────────────────^
  32 │ │     }
     │ ╰─────^ Invalid return
     ·
- 31 │     t6<T>(x: T) {
-    │           - The local 'x' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+ 31 │     fun t6<T>(x: T) {
+    │               - The local 'x' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
     │
 

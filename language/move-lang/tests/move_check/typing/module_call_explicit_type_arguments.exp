@@ -1,26 +1,26 @@
 error: 
 
-   ┌── tests/move_check/typing/module_call_explicit_type_arguments.move:2:15 ───
+   ┌── tests/move_check/typing/module_call_explicit_type_arguments.move:2:19 ───
    │
- 2 │       foo<T, U>(x: T, y: U) {
-   │ ╭───────────────────────────^
+ 2 │       fun foo<T, U>(x: T, y: U) {
+   │ ╭───────────────────────────────^
  3 │ │     }
    │ ╰─────^ Invalid return
    ·
- 2 │     foo<T, U>(x: T, y: U) {
-   │               - The local 'x' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+ 2 │     fun foo<T, U>(x: T, y: U) {
+   │                   - The local 'x' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
    │
 
 error: 
 
-   ┌── tests/move_check/typing/module_call_explicit_type_arguments.move:2:21 ───
+   ┌── tests/move_check/typing/module_call_explicit_type_arguments.move:2:25 ───
    │
- 2 │       foo<T, U>(x: T, y: U) {
-   │ ╭───────────────────────────^
+ 2 │       fun foo<T, U>(x: T, y: U) {
+   │ ╭───────────────────────────────^
  3 │ │     }
    │ ╰─────^ Invalid return
    ·
- 2 │     foo<T, U>(x: T, y: U) {
-   │                     - The local 'y' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+ 2 │     fun foo<T, U>(x: T, y: U) {
+   │                         - The local 'y' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
    │
 

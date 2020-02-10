@@ -1,7 +1,7 @@
 module M {
     struct T {}
     struct S { f: u64, g: u64 }
-    foo() {
+    fun foo() {
         let f;
         let g;
         let s = S{ f: 0, g: 0};

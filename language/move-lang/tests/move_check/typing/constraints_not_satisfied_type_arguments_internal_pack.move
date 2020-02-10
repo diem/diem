@@ -4,7 +4,7 @@ module M {
 
     struct Box<T> {}
 
-    foo() {
+    fun foo() {
         Box<CupC<R>>{};
         Box<R>{};
     }

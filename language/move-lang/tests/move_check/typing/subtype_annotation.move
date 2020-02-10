@@ -1,7 +1,7 @@
 module M {
     struct S {}
 
-    t0() {
+    fun t0() {
         (&mut 0: &mut u64);
         (&mut 0: &u64);
         (&0: &u64);
@@ -11,7 +11,7 @@ module M {
         (&S{}: &S);
     }
 
-    t1() {
+    fun t1() {
         ((&mut 0, &mut 0): (&mut u64, &mut u64));
         ((&mut 0, &mut 0): (&mut u64, &u64));
         ((&mut 0, &mut 0): (&u64, &mut u64));

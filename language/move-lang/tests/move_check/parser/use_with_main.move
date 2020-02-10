@@ -2,5 +2,5 @@
 use 0x0::Module;
 use 0XaBcD::Module as M;
 use 0x0000::Z;
-main() {
+fun main() {
 }

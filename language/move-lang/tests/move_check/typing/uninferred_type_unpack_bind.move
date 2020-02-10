@@ -1,7 +1,7 @@
 module M {
     struct S<T> {}
 
-    t() {
+    fun t() {
         let S{} = S{};
     }
 }

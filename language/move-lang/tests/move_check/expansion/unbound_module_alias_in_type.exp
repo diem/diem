@@ -1,8 +1,8 @@
 error: 
 
-   ┌── tests/move_check/expansion/unbound_module_alias_in_type.move:2:12 ───
+   ┌── tests/move_check/expansion/unbound_module_alias_in_type.move:2:16 ───
    │
- 2 │     foo(x: X::T) {}
-   │            ^ Unbound module alias 'X'
+ 2 │     fun foo(x: X::T) {}
+   │                ^ Unbound module alias 'X'
    │
 

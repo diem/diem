@@ -8,17 +8,17 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/generics_with_type_parameters.move:3:15 ───
+   ┌── tests/move_check/naming/generics_with_type_parameters.move:3:19 ───
    │
- 3 │     foo<T>(x: T<bool>): T<u64> {}
-   │               ^^^^^^^ Generic type parameters cannot take type arguments
+ 3 │     fun foo<T>(x: T<bool>): T<u64> {}
+   │                   ^^^^^^^ Generic type parameters cannot take type arguments
    │
 
 error: 
 
-   ┌── tests/move_check/naming/generics_with_type_parameters.move:3:25 ───
+   ┌── tests/move_check/naming/generics_with_type_parameters.move:3:29 ───
    │
- 3 │     foo<T>(x: T<bool>): T<u64> {}
-   │                         ^^^^^^ Generic type parameters cannot take type arguments
+ 3 │     fun foo<T>(x: T<bool>): T<u64> {}
+   │                             ^^^^^^ Generic type parameters cannot take type arguments
    │
 

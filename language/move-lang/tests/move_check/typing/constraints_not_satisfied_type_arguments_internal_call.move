@@ -2,10 +2,10 @@ module M {
     struct CupC<T: copyable> {}
     resource struct R {}
 
-    box<T>() {
+    fun box<T>() {
     }
 
-    foo() {
+    fun foo() {
         box<CupC<R>>();
     }
 

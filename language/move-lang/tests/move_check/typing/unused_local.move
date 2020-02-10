@@ -1,15 +1,15 @@
 module M {
     struct S { f: u64, g: bool }
 
-    t0() {
+    fun t0() {
         let x;
     }
 
-    t1() {
+    fun t1() {
         let (x, y);
     }
 
-    t2() {
+    fun t2() {
         let S{ f, g };
     }
 }

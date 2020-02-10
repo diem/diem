@@ -1,9 +1,9 @@
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_temp_resource.move:5:10 ───
+   ┌── tests/move_check/typing/borrow_local_temp_resource.move:5:14 ───
    │
- 5 │       t0() {
-   │ ╭──────────^
+ 5 │       fun t0() {
+   │ ╭──────────────^
  6 │ │         &R{};
  7 │ │         &mut R{};
  8 │ │     }
@@ -15,10 +15,10 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_temp_resource.move:5:10 ───
+   ┌── tests/move_check/typing/borrow_local_temp_resource.move:5:14 ───
    │
- 5 │       t0() {
-   │ ╭──────────^
+ 5 │       fun t0() {
+   │ ╭──────────────^
  6 │ │         &R{};
  7 │ │         &mut R{};
  8 │ │     }

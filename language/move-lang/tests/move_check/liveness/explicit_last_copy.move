@@ -1,23 +1,23 @@
 module M {
-    t0() {
+    fun t0() {
         let x = 0;
         copy x;
     }
 
-    t1() {
+    fun t1() {
         let x = 0;
         let x = copy x;
         x;
     }
 
-    t2(cond: bool) {
+    fun t2(cond: bool) {
         if (cond) {
             let x = 0;
             copy x;
         }
     }
 
-    t3(cond: bool) {
+    fun t3(cond: bool) {
         let x = 0;
         copy x;
         if (cond) {
@@ -25,7 +25,7 @@ module M {
         }
     }
 
-    t4(cond: bool) {
+    fun t4(cond: bool) {
         let x = 0;
         if (cond) {
             copy x;
@@ -34,14 +34,14 @@ module M {
         }
     }
 
-    t5(cond: bool) {
+    fun t5(cond: bool) {
         let x = 0;
         while (cond) {
             copy x;
         };
     }
 
-    t6(cond: bool) {
+    fun t6(cond: bool) {
         let x = 0;
         while (cond) {
             copy x;

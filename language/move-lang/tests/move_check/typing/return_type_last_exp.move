@@ -1,15 +1,15 @@
 module M {
     resource struct R {}
 
-    t0(): () {
+    fun t0(): () {
         ()
     }
 
-    t1(): u64 {
+    fun t1(): u64 {
         0
     }
 
-    t2(): (u64, bool, R) {
+    fun t2(): (u64, bool, R) {
         (0, false, R{})
     }
 

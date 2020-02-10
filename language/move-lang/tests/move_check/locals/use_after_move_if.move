@@ -1,17 +1,17 @@
 module M {
-    tmove(cond: bool) {
+    fun tmove(cond: bool) {
         let x = 0;
         if (cond) { _ = move x };
         let _ = move x + 1;
     }
 
-    tcopy(cond: bool) {
+    fun tcopy(cond: bool) {
         let x = 0;
         if (cond) { _ = move x };
         let _ = x + 1;
     }
 
-    tborrow(cond: bool) {
+    fun tborrow(cond: bool) {
         let x = 0;
         if (cond) { _ = move x };
         let _ = &x;

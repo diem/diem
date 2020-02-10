@@ -1,11 +1,11 @@
 module M {
     resource struct R {}
 
-    t0(cond: bool) {
+    fun t0(cond: bool) {
         if (cond) () else ();
     }
 
-    t1(cond: bool) {
+    fun t1(cond: bool) {
         if (cond) 0x0 else 0x0;
         if (cond) false else false;
         R {} = if (cond) R{} else R{};
@@ -13,7 +13,7 @@ module M {
         if (cond) &mut 0 else &mut 1;
     }
 
-    t2(cond: bool) {
+    fun t2(cond: bool) {
         if (cond) (0, false) else (1, true);
         (_, _, _, R{}) = if (cond) (0, 0x0, &0, R{}) else (1, 0x1, &1, R{});
     }

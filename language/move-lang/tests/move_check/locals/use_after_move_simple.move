@@ -1,7 +1,7 @@
 module M {
     struct S {}
 
-    tmove() {
+    fun tmove() {
         let x = 0;
         move x;
         let _ = move x + 1;
@@ -11,7 +11,7 @@ module M {
         let _s3 = s;
     }
 
-    tcopy() {
+    fun tcopy() {
         let x = 0;
         move x;
         let _ = x + 1;
@@ -21,7 +21,7 @@ module M {
         let _s3 = copy s;
     }
 
-    tborrow() {
+    fun tborrow() {
         let x = 0;
         move x;
         let _ = &x;

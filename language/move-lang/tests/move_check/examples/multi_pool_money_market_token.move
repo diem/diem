@@ -4,16 +4,16 @@ address 0x0:
 module Map {
     native struct T<K, V>;
 
-    native public empty<K, V>(): T<K, V>;
+    native public fun empty<K, V>(): T<K, V>;
 
-    native public get<K, V>(m: &T<K, V>, k: &K): &V;
-    native public get_mut<K, V>(m: &mut T<K, V>, k: &K): &mut V;
+    native public fun get<K, V>(m: &T<K, V>, k: &K): &V;
+    native public fun get_mut<K, V>(m: &mut T<K, V>, k: &K): &mut V;
 
-    native public contains_key<K, V>(m: &T<K, V>, k: &K): bool;
+    native public fun contains_key<K, V>(m: &T<K, V>, k: &K): bool;
     // throws on duplicate as I don't feel like mocking up Option
-    native public insert<K, V>(m: &T<K, V>, k: K, v: V);
+    native public fun insert<K, V>(m: &T<K, V>, k: K, v: V);
     // throws on miss as I don't feel like mocking up Option
-    native public remove<K, V>(m: &T<K, V>, k: &K): V;
+    native public fun remove<K, V>(m: &T<K, V>, k: &K): V;
 }
 
 address 0x1:
@@ -27,37 +27,37 @@ module Token {
     }
 
     // control the minting/creation in the defining module of `ATy`
-    public create<ATy: copyable>(type: ATy, value: u64): Coin<ATy> {
+    public fun create<ATy: copyable>(type: ATy, value: u64): Coin<ATy> {
         Coin { type, value: 0 }
     }
 
-    public value<ATy: copyable>(coin: &Coin<ATy>): u64 {
+    public fun value<ATy: copyable>(coin: &Coin<ATy>): u64 {
         coin.value
     }
 
-    public split<ATy: copyable>(coin: Coin<ATy>, amount: u64): (Coin<ATy>, Coin<ATy>) {
+    public fun split<ATy: copyable>(coin: Coin<ATy>, amount: u64): (Coin<ATy>, Coin<ATy>) {
         let other = withdraw(&mut coin, amount);
         (coin, other)
     }
 
-    public withdraw<ATy: copyable>(coin: &mut Coin<ATy>, amount: u64): Coin<ATy> {
+    public fun withdraw<ATy: copyable>(coin: &mut Coin<ATy>, amount: u64): Coin<ATy> {
         Transaction::assert(coin.value >= amount, 10);
         coin.value = coin.value - amount;
         Coin { type: *&coin.type, value: amount }
     }
 
-    public join<ATy: copyable>(coin1: Coin<ATy>, coin2: Coin<ATy>): Coin<ATy> {
+    public fun join<ATy: copyable>(coin1: Coin<ATy>, coin2: Coin<ATy>): Coin<ATy> {
         deposit(&mut coin1, coin2);
         coin1
     }
 
-    public deposit<ATy: copyable>(coin: &mut Coin<ATy>, check: Coin<ATy>) {
+    public fun deposit<ATy: copyable>(coin: &mut Coin<ATy>, check: Coin<ATy>) {
         let Coin { value, type } = check;
         Transaction::assert(&coin.type == &type, 42);
         coin.value = coin.value + value;
     }
 
-    public destroy_zero<ATy: copyable>(coin: Coin<ATy>) {
+    public fun destroy_zero<ATy: copyable>(coin: Coin<ATy>) {
         let Coin { value, type: _ } = coin;
         Transaction::assert(value == 0, 11)
     }
@@ -89,13 +89,13 @@ module OneToOneMarket {
         price: u64,
     }
 
-    accept<AssetType: copyable>(init: Token::Coin<AssetType>) {
+    fun accept<AssetType: copyable>(init: Token::Coin<AssetType>) {
         let sender = Transaction::sender();
         Transaction::assert(!exists<Pool<AssetType>>(sender), 42);
         move_to_sender(Pool<AssetType> { coin: init })
     }
 
-    public register_price<In: copyable, Out: copyable>(
+    public fun register_price<In: copyable, Out: copyable>(
         initial_in: Token::Coin<In>,
         initial_out: Token::Coin<Out>,
         price: u64
@@ -105,7 +105,7 @@ module OneToOneMarket {
         move_to_sender(Price<In, Out> { price })
     }
 
-    public deposit<In: copyable, Out: copyable>(pool_owner: address, coin: Token::Coin<In>)
+    public fun deposit<In: copyable, Out: copyable>(pool_owner: address, coin: Token::Coin<In>)
         acquires Pool, DepositRecord
     {
         let amount = Token::value(&coin);
@@ -116,7 +116,7 @@ module OneToOneMarket {
         Token::deposit(&mut pool.coin, coin)
     }
 
-    public borrow<In: copyable, Out: copyable>(
+    public fun borrow<In: copyable, Out: copyable>(
         pool_owner: address,
         amount: u64,
     ): Token::Coin<Out>
@@ -130,7 +130,7 @@ module OneToOneMarket {
         Token::withdraw(&mut pool.coin, amount)
     }
 
-    max_borrow_amount<In: copyable, Out: copyable>(pool_owner: address): u64
+    fun max_borrow_amount<In: copyable, Out: copyable>(pool_owner: address): u64
         acquires Price, Pool, DepositRecord, BorrowRecord
     {
         let input_deposited = deposited_amount<In, Out>(pool_owner);
@@ -149,7 +149,7 @@ module OneToOneMarket {
 
     }
 
-    update_deposit_record<In: copyable, Out: copyable>(pool_owner: address, amount: u64)
+    fun update_deposit_record<In: copyable, Out: copyable>(pool_owner: address, amount: u64)
         acquires DepositRecord
     {
         let sender = Transaction::sender();
@@ -164,7 +164,7 @@ module OneToOneMarket {
         Map::insert(record, pool_owner, amount)
     }
 
-    update_borrow_record<In: copyable, Out: copyable>(pool_owner: address, amount: u64)
+    fun update_borrow_record<In: copyable, Out: copyable>(pool_owner: address, amount: u64)
         acquires BorrowRecord
     {
         let sender = Transaction::sender();
@@ -179,7 +179,7 @@ module OneToOneMarket {
         Map::insert(record, pool_owner, amount)
     }
 
-    deposited_amount<In: copyable, Out: copyable>(pool_owner: address): u64
+    fun deposited_amount<In: copyable, Out: copyable>(pool_owner: address): u64
         acquires DepositRecord
     {
         let sender = Transaction::sender();
@@ -190,7 +190,7 @@ module OneToOneMarket {
         else 0
     }
 
-    borrowed_amount<In: copyable, Out: copyable>(pool_owner: address): u64
+    fun borrowed_amount<In: copyable, Out: copyable>(pool_owner: address): u64
         acquires BorrowRecord
     {
         let sender = Transaction::sender();
@@ -214,17 +214,17 @@ module ToddNickles {
         nickles: Token::Coin<T>,
     }
 
-    public init() {
+    public fun init() {
         Transaction::assert(Transaction::sender() == 0x70DD, 42);
         move_to_sender(Wallet { nickles: Token::create(T{}, 0) })
     }
 
-    public mint(): Token::Coin<T> {
+    public fun mint(): Token::Coin<T> {
         Transaction::assert(Transaction::sender() == 0x70DD, 42);
         Token::create(T{}, 5)
     }
 
-    public destroy(c: Token::Coin<T>) acquires Wallet {
+    public fun destroy(c: Token::Coin<T>) acquires Wallet {
         Token::deposit(&mut borrow_global_mut<Wallet>(0x70DD).nickles, c)
     }
 

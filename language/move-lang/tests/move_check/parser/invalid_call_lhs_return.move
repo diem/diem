@@ -1,5 +1,5 @@
 module M {
-    foo() {
+    fun foo() {
         (return ())(0, 1);
     }
 }

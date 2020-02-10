@@ -9,7 +9,7 @@ module M {
 
 
 
-    t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+    fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
         0 == false;
         &0 == 1;
         1 == &0;
@@ -17,17 +17,17 @@ module M {
         s_mut == s;
     }
 
-    t1(r: R) {
+    fun t1(r: R) {
         r == r;
     }
 
-    t3() {
+    fun t3() {
         G0{} == G0{};
         G1{} == G1{};
         G2{} == G2{};
     }
 
-    t4() {
+    fun t4() {
         () == ();
         (0, 1) == (0, 1);
         (1, 2, 3) == (0, 1);

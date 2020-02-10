@@ -1,4 +1,4 @@
 module M {
     // Test a missing ">" after the type parameters.
-    fn<T1, T2 () { }
+    fun fn<T1, T2 () { }
 }

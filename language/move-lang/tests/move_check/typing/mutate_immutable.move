@@ -1,7 +1,7 @@
 module M {
     struct S { f: u64 }
 
-    t0(s: &mut S) {
+    fun t0(s: &mut S) {
         *(s: &S) = S { f: 0 };
         *&0 = 1;
         let x = 0;

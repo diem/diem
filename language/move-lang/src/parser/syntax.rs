@@ -1000,13 +1000,13 @@ fn parse_type_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Name, Kin
 //          <NativeFunctionDecl>
 //          | <MoveFunctionDecl>
 //      NativeFunctionDecl =
-//          "native" "public"?
+//          "native" "public"? "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
 //          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
 //          ";"
 //      MoveFunctionDecl =
-//          "public"?
+//          "public"? "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
 //          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
@@ -1043,7 +1043,8 @@ fn parse_function_decl<'input>(
         FunctionVisibility::Internal
     };
 
-    // <FunctionDefName>
+    // "fun" <FunctionDefName>
+    consume_token(tokens, Tok::Fun)?;
     let name = FunctionName(parse_name(tokens)?);
     let type_parameters = if tokens.peek() == Tok::Less {
         parse_comma_list(
@@ -1277,7 +1278,7 @@ fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, 
 fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<FileDefinition, Error> {
     let f = if tokens.peek() == Tok::EOF
         || tokens.peek() == Tok::Module
-        || (tokens.peek() == Tok::NameValue && tokens.lookahead()? == Tok::AddressValue)
+        || tokens.peek() == Tok::NameValue
     {
         let mut v = vec![];
         while tokens.peek() != Tok::EOF {

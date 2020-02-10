@@ -1,16 +1,16 @@
 module M {
     struct S { f: u64, g: u64 }
-    id<T>(r: &T): &T {
+    fun id<T>(r: &T): &T {
         r
     }
-    id_mut<T>(r: &mut T): &mut T {
+    fun id_mut<T>(r: &mut T): &mut T {
         r
     }
-    imm_imm<T1, T2>(x: &T1, y: &T2) { }
-    mut_imm<T1, T2>(x: &mut T1, y: &T2) { }
-    mut_mut<T1, T2>(x: &mut T1, y: &mut T2) { }
+    fun imm_imm<T1, T2>(x: &T1, y: &T2) { }
+    fun mut_imm<T1, T2>(x: &mut T1, y: &T2) { }
+    fun mut_mut<T1, T2>(x: &mut T1, y: &mut T2) { }
 
-    t0(s1: &mut S, s2: &mut S) {
+    fun t0(s1: &mut S, s2: &mut S) {
         imm_imm(freeze(s1), freeze(s1));
         imm_imm(freeze(s1), &s1.f);
         imm_imm(&s1.f, &s1.f);

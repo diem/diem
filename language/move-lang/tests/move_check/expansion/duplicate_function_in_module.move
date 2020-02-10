@@ -1,4 +1,4 @@
 module M {
-    foo() { }
-    foo() { }
+    fun foo() { }
+    fun foo() { }
 }

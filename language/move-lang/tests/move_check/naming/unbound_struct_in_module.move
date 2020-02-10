@@ -3,7 +3,7 @@ module X {}
 module M {
     use 0x1::X;
 
-    foo(s: X::S): X::S {
+    fun foo(s: X::S): X::S {
         let s = s;
         s
     }

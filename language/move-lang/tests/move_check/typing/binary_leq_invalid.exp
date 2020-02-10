@@ -47,24 +47,24 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_leq_invalid.move:7:19 ───
+    ┌── tests/move_check/typing/binary_leq_invalid.move:7:23 ───
     │
  12 │         r <= r;
     │         ^ Invalid argument to '<='
     ·
- 7 │     t0(x: u64, r: R, s: S) {
-    │                   - Found: '0x8675309::M::R'. But expected: 'u64'
+ 7 │     fun t0(x: u64, r: R, s: S) {
+    │                       - Found: '0x8675309::M::R'. But expected: 'u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_leq_invalid.move:7:25 ───
+    ┌── tests/move_check/typing/binary_leq_invalid.move:7:29 ───
     │
  13 │         s <= s;
     │         ^ Invalid argument to '<='
     ·
- 7 │     t0(x: u64, r: R, s: S) {
-    │                         - Found: '0x8675309::M::S'. But expected: 'u64'
+ 7 │     fun t0(x: u64, r: R, s: S) {
+    │                             - Found: '0x8675309::M::S'. But expected: 'u64'
     │
 
 error: 

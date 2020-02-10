@@ -1,14 +1,14 @@
 module M {
     resource struct R {}
 
-    exists(): u64 { 0 }
-    move_to_sender(): u64 { 0 }
-    borrow_global(): u64 { 0 }
-    borrow_global_mut(): u64 { 0 }
-    move_from(): u64 { 0 }
-    freeze(): u64 { 0 }
+    fun exists(): u64 { 0 }
+    fun move_to_sender(): u64 { 0 }
+    fun borrow_global(): u64 { 0 }
+    fun borrow_global_mut(): u64 { 0 }
+    fun move_from(): u64 { 0 }
+    fun freeze(): u64 { 0 }
 
-    t() acquires Self::R {
+    fun t() acquires Self::R {
         let _ : u64 = exists();
         let _ : bool = ::exists<Self::R>(0x0);
 

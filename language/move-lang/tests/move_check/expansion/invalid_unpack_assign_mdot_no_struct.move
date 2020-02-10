@@ -1,5 +1,5 @@
 module M {
-    foo() {
+    fun foo() {
         Self::f {} = 0;
         Self::f() = 0;
     }

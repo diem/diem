@@ -1,5 +1,5 @@
 module M {
-    t0(cond: bool) {
+    fun t0(cond: bool) {
         let v = 0;
         let (x, y);
         if (cond) {

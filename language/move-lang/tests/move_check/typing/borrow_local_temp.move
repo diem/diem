@@ -2,7 +2,7 @@ module M {
     struct S {}
     resource struct R {}
 
-    t0() {
+    fun t0() {
         (&true : &bool);
         (&mut false : &mut bool);
         (&0 : &u64);

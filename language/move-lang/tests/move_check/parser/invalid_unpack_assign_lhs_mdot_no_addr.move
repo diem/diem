@@ -1,5 +1,5 @@
 module M {
-    foo() {
+    fun foo() {
         let f = 0;
         false::M { f } = 0;
 

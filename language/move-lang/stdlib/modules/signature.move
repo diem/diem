@@ -1,12 +1,12 @@
 address 0x0:
 
 module Signature {
-    native public ed25519_verify(
+    native public fun ed25519_verify(
         signature: bytearray,
         public_key: bytearray,
         message: bytearray,
     ): bool;
-    native public ed25519_threshold_verify(
+    native public fun ed25519_threshold_verify(
         bitmap: bytearray,
         signature: bytearray,
         public_key: bytearray,

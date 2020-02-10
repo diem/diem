@@ -6,6 +6,6 @@ error:
    │     ^^^^^^ Unexpected 'struct'
    ·
  4 │     struct S {}
-   │     ------ Expected a name value
+   │     ------ Expected 'fun'
    │
 

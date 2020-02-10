@@ -1,3 +1,3 @@
 module M {
-    foo(x: u64, x: u64) {}
+    fun foo(x: u64, x: u64) {}
 }

@@ -42,13 +42,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/while_condition_invalid.move:8:24 ───
+   ┌── tests/move_check/typing/while_condition_invalid.move:8:28 ───
    │
  9 │         while (x) ();
    │                ^ Invalid while condition
    ·
- 8 │     t1<T: copyable>(x: T) {
-   │                        - The type: 'T'
+ 8 │     fun t1<T: copyable>(x: T) {
+   │                            - The type: 'T'
    ·
  9 │         while (x) ();
    │                - Is not compatible with: 'bool'

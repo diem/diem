@@ -1,14 +1,14 @@
 module M {
     struct Outer { s1: Inner, s2: Inner }
     struct Inner { f1: u64, f2: u64 }
-    id<T>(r: &T): &T {
+    fun id<T>(r: &T): &T {
         r
     }
-    id_mut<T>(r: &mut T): &mut T {
+    fun id_mut<T>(r: &mut T): &mut T {
         r
     }
 
-    t0(cond: bool, outer: &mut Outer, other: &mut Outer) {
+    fun t0(cond: bool, outer: &mut Outer, other: &mut Outer) {
         let inner = &outer.s1;
         let c; if (cond) c = copy inner else c = &outer.s1;
         let f1 = &inner.f1;
@@ -60,7 +60,7 @@ module M {
         *inner;
     }
 
-    t1(cond: bool, outer: &mut Outer, other: &mut Outer) {
+    fun t1(cond: bool, outer: &mut Outer, other: &mut Outer) {
         let inner = &outer.s1;
         let c; if (cond) c = &inner.f1 else c = &inner.f2;
         let f1 = &inner.f1;

@@ -1,12 +1,12 @@
 error: 
 
-   ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:16 ───
+   ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:20 ───
    │
  7 │         (s1: Self::S);
    │              ^^^^^^^ Invalid type annotation
    ·
- 6 │     foo<S>(s1: S, s2: S): S {
-   │                - The type: 'S'
+ 6 │     fun foo<S>(s1: S, s2: S): S {
+   │                    - The type: 'S'
    ·
  7 │         (s1: Self::S);
    │              ------- Is not compatible with: '0x1::M::S'
@@ -14,37 +14,37 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:9 ───
+   ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:13 ───
    │
  8 │         let s: S = S {};
    │                    ^ Invalid construction. Expected a struct name
    ·
- 6 │     foo<S>(s1: S, s2: S): S {
-   │         - But 'S' was declared as a type parameter here
+ 6 │     fun foo<S>(s1: S, s2: S): S {
+   │             - But 'S' was declared as a type parameter here
    │
 
 error: 
 
-    ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:16 ───
+    ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:20 ───
     │
  9 │         bar(s1);
     │         ^^^^^^^ Invalid call of '0x1::M::bar'. Invalid argument for parameter 's'
     ·
- 6 │     foo<S>(s1: S, s2: S): S {
-    │                - The type: 'S'
+ 6 │     fun foo<S>(s1: S, s2: S): S {
+    │                    - The type: 'S'
     ·
- 13 │     bar(s: S) {}
-    │            - Is not compatible with: '0x1::M::S'
+ 13 │     fun bar(s: S) {}
+    │                - Is not compatible with: '0x1::M::S'
     │
 
 error: 
 
-    ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:9 ───
+    ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:13 ───
     │
  10 │         S {}
     │         ^ Invalid construction. Expected a struct name
     ·
- 6 │     foo<S>(s1: S, s2: S): S {
-    │         - But 'S' was declared as a type parameter here
+ 6 │     fun foo<S>(s1: S, s2: S): S {
+    │             - But 'S' was declared as a type parameter here
     │
 

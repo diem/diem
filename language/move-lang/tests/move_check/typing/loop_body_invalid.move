@@ -1,21 +1,21 @@
 module M {
-    t0() {
+    fun t0() {
         loop 0
     }
 
-    t1() {
+    fun t1() {
         loop false
     }
 
-    t2() {
+    fun t2() {
         loop { 0x0 }
     }
 
-    t3() {
+    fun t3() {
         loop { let x = 0; x }
     }
 
-    t4() {
+    fun t4() {
         loop { if (true) 1 else 0 }
     }
 }

@@ -2,7 +2,7 @@ module M {
     struct CupC<T: copyable> {}
     resource struct R {}
 
-    foo() {
+    fun foo() {
         let x: CupC<R>;
     }
 

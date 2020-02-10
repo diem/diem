@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:10:11 ───
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:10:15 ───
     │
  11 │         loop { if (false) break }
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
@@ -8,13 +8,13 @@ error:
  11 │         loop { if (false) break }
     │         ------------------------- The type: '()'
     ·
- 10 │     t0(): X::R {
-    │           ---- Is not compatible with: '0x1::X::R'
+ 10 │     fun t0(): X::R {
+    │               ---- Is not compatible with: '0x1::X::R'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:14:11 ───
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:14:15 ───
     │
  15 │         loop { let x = 0; break }
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
@@ -22,8 +22,8 @@ error:
  15 │         loop { let x = 0; break }
     │         ------------------------- The type: '()'
     ·
- 14 │     t1(): u64 {
-    │           --- Is not compatible with: 'u64'
+ 14 │     fun t1(): u64 {
+    │               --- Is not compatible with: 'u64'
     │
 
 error: 

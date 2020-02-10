@@ -4,7 +4,7 @@ module M {
 
     struct B<T>{}
 
-    foo() {
+    fun foo() {
         let B<CupC<R>> {} = abort 0;
         B<CupC<R>> {} = abort 0;
     }

@@ -56,13 +56,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/unary_not_invalid.move:6:20 ───
+    ┌── tests/move_check/typing/unary_not_invalid.move:6:24 ───
     │
  11 │         !r;
     │          ^ Invalid argument to '!'
     ·
- 6 │     t0(x: bool, r: R) {
-    │                    - The type: '0x8675309::M::R'
+ 6 │     fun t0(x: bool, r: R) {
+    │                        - The type: '0x8675309::M::R'
     ·
  11 │         !r;
     │          - Is not compatible with: 'bool'
@@ -70,13 +70,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/unary_not_invalid.move:6:20 ───
+    ┌── tests/move_check/typing/unary_not_invalid.move:6:24 ───
     │
  12 │         !r;
     │          ^ Invalid argument to '!'
     ·
- 6 │     t0(x: bool, r: R) {
-    │                    - The type: '0x8675309::M::R'
+ 6 │     fun t0(x: bool, r: R) {
+    │                        - The type: '0x8675309::M::R'
     ·
  12 │         !r;
     │          - Is not compatible with: 'bool'

@@ -1,11 +1,11 @@
 error: 
 
-    ┌── tests/move_check/dependencies/multiple_cycles.move:25:10 ───
+    ┌── tests/move_check/dependencies/multiple_cycles.move:25:14 ───
     │
- 25 │     f(): 0x1::F::S { abort 0 }
-    │          ^^^^^^^^^ Invalid use of module '0x1::F' in module '0x1::D'.
+ 25 │     fun f(): 0x1::F::S { abort 0 }
+    │              ^^^^^^^^^ Invalid use of module '0x1::F' in module '0x1::D'.
     ·
- 25 │     f(): 0x1::F::S { abort 0 }
-    │          --------- Using this module creates a dependency cycle: '0x1::F' uses '0x1::D' uses '0x1::F'
+ 25 │     fun f(): 0x1::F::S { abort 0 }
+    │              --------- Using this module creates a dependency cycle: '0x1::F' uses '0x1::D' uses '0x1::F'
     │
 

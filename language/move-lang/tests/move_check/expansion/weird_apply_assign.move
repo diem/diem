@@ -1,6 +1,6 @@
 module M {
     struct S { f: u64 }
-    foo() {
+    fun foo() {
         let f: u64;
         { f } = S { f: 0 };
 
