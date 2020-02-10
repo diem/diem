@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::experiments::ExperimentParam;
+use crate::tx_emitter::EmitJobRequest;
 use crate::{
     cluster::Cluster,
     effects::{Effect, StopContainer},
@@ -105,9 +106,13 @@ impl Experiment for PerformanceBenchmarkNodesDown {
         join_all(futures).await;
         let buffer = Duration::from_secs(30);
         let window = self.duration + buffer * 2;
+        let emit_job_request = EmitJobRequest {
+            instances: self.up_instances.clone(),
+            ..context.global_emit_job_request.clone()
+        };
         let stats = context
             .tx_emitter
-            .emit_txn_for(window, self.up_instances.clone())
+            .emit_txn_for(window, emit_job_request)
             .await?;
         let end = unix_timestamp_now() - buffer;
         let start = end - window + 2 * buffer;

@@ -30,7 +30,7 @@ pub use recovery_time::{RecoveryTime, RecoveryTimeParams};
 use crate::cluster::Cluster;
 use crate::prometheus::Prometheus;
 use crate::report::SuiteReport;
-use crate::tx_emitter::TxEmitter;
+use crate::tx_emitter::{EmitJobRequest, TxEmitter};
 
 use async_trait::async_trait;
 pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
@@ -56,6 +56,7 @@ pub struct Context<'a> {
     prometheus: &'a Prometheus,
     cluster: &'a Cluster,
     report: &'a mut SuiteReport,
+    global_emit_job_request: &'a mut EmitJobRequest,
 }
 
 impl<'a> Context<'a> {
@@ -64,12 +65,14 @@ impl<'a> Context<'a> {
         prometheus: &'a Prometheus,
         cluster: &'a Cluster,
         report: &'a mut SuiteReport,
+        emit_job_request: &'a mut EmitJobRequest,
     ) -> Self {
         Context {
             tx_emitter,
             prometheus,
             cluster,
             report,
+            global_emit_job_request: emit_job_request,
         }
     }
 }

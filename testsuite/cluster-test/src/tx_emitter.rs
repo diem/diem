@@ -85,6 +85,7 @@ impl Default for EmitThreadParams {
     }
 }
 
+#[derive(Clone)]
 pub struct EmitJobRequest {
     pub instances: Vec<Instance>,
     pub accounts_per_client: usize,
@@ -280,11 +281,9 @@ impl TxEmitter {
     pub async fn emit_txn_for(
         &mut self,
         duration: Duration,
-        instances: Vec<Instance>,
+        emit_job_request: EmitJobRequest,
     ) -> Result<TxStats> {
-        let job = self
-            .start_job(EmitJobRequest::for_instances(instances))
-            .await?;
+        let job = self.start_job(emit_job_request).await?;
         thread::sleep(duration);
         let stats = self.stop_job(job);
         Ok(stats)

@@ -19,6 +19,7 @@ use async_trait::async_trait;
 
 use crate::effects::{Action, GenerateCpuFlamegraph};
 use crate::experiments::ExperimentParam;
+use crate::tx_emitter::EmitJobRequest;
 use crate::{
     aws, cluster::Cluster, experiments::Context, experiments::Experiment, instance,
     instance::Instance,
@@ -59,12 +60,13 @@ impl Experiment for CpuFlamegraph {
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {
         let buffer = Duration::from_secs(60);
         let tx_emitter_duration = 2 * buffer + Duration::from_secs(self.duration_secs as u64);
+        let emit_job_request = EmitJobRequest {
+            instances: context.cluster.validator_instances().clone(),
+            ..context.global_emit_job_request.clone()
+        };
         let emit_future = context
             .tx_emitter
-            .emit_txn_for(
-                tx_emitter_duration,
-                context.cluster.validator_instances().clone(),
-            )
+            .emit_txn_for(tx_emitter_duration, emit_job_request)
             .boxed();
         let flame_graph =
             GenerateCpuFlamegraph::new(self.perf_instance.clone(), self.duration_secs);

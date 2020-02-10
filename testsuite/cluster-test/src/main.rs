@@ -287,6 +287,7 @@ struct ClusterTestRunner {
     prometheus: Prometheus,
     github: GitHub,
     report: SuiteReport,
+    global_emit_job_request: EmitJobRequest,
 }
 
 fn parse_host_port(s: &str) -> Result<(String, u32)> {
@@ -456,6 +457,15 @@ impl ClusterTestRunner {
         let github = GitHub::new();
         let report = SuiteReport::new();
         let runtime = Runtime::new().expect("Failed to create tokio runtime");
+        let global_emit_job_request = EmitJobRequest {
+            instances: vec![],
+            accounts_per_client: args.accounts_per_client,
+            threads_per_ac: args.threads_per_ac,
+            thread_params: EmitThreadParams {
+                wait_millis: args.wait_millis,
+                wait_committed: !args.burst,
+            },
+        };
         Self {
             logs,
             cluster,
@@ -469,6 +479,7 @@ impl ClusterTestRunner {
             prometheus,
             github,
             report,
+            global_emit_job_request,
         }
     }
 
@@ -604,6 +615,7 @@ impl ClusterTestRunner {
             &self.prometheus,
             &self.cluster,
             &mut self.report,
+            &mut self.global_emit_job_request,
         );
         {
             let logs = &mut self.logs;
