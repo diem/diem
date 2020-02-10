@@ -8,7 +8,7 @@ use crate::{
     change_set::ChangeSet, errors::LibraDbError,
     schema::transaction_by_account::TransactionByAccountSchema,
 };
-use anyhow::{format_err, Result};
+use anyhow::{ensure, format_err, Result};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{Transaction, Version},
@@ -61,6 +61,7 @@ impl TransactionStore {
         iter.seek(&start_version)?;
         Ok(TransactionIter {
             inner: iter,
+            expected_next_version: start_version,
             end_version: start_version
                 .checked_add(num_transactions)
                 .ok_or_else(|| format_err!("Too many transactions requested."))?,
@@ -88,15 +89,29 @@ impl TransactionStore {
 
 pub struct TransactionIter<'a> {
     inner: SchemaIterator<'a, TransactionSchema>,
+    expected_next_version: Version,
     end_version: Version,
 }
 
 impl<'a> TransactionIter<'a> {
     fn next_impl(&mut self) -> Result<Option<Transaction>> {
-        match self.inner.next().transpose()? {
-            Some((version, transaction)) if version < self.end_version => Ok(Some(transaction)),
-            _ => Ok(None),
+        if self.expected_next_version >= self.end_version {
+            return Ok(None);
         }
+
+        let ret = match self.inner.next().transpose()? {
+            Some((version, transaction)) => {
+                ensure!(
+                    version == self.expected_next_version,
+                    "Transaction versions are not consecutive.",
+                );
+                self.expected_next_version += 1;
+                Some(transaction)
+            }
+            None => None,
+        };
+
+        Ok(ret)
     }
 }
 
