@@ -3,8 +3,11 @@
 
 #![forbid(unsafe_code)]
 
-use crate::crypto_proxies::{EpochInfo, LedgerInfoWithSignatures};
-use crate::waypoint::Waypoint;
+use crate::{
+    crypto_proxies::{EpochInfo, LedgerInfoWithSignatures},
+    ledger_info::LedgerInfo,
+    waypoint::Waypoint,
+};
 use anyhow::{ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*};
@@ -51,6 +54,22 @@ impl VerifierType {
             VerifierType::TrustedVerifier(epoch_info) => epoch_info.epoch < epoch,
         }
     }
+
+    /// Returns true if the given [`LedgerInfo`] is stale and probably in our
+    /// trusted prefix.
+    ///
+    /// For example, if we have a waypoint with version 5, an epoch change ledger
+    /// info with version 3 < 5 is already in our trusted prefix and so we can
+    /// ignore it.
+    ///
+    /// Likewise, if we're in epoch 10 with the corresponding validator set, an
+    /// epoch change ledger info with epoch 6 can be safely ignored.
+    pub fn is_ledger_info_stale(&self, ledger_info: &LedgerInfo) -> bool {
+        match self {
+            VerifierType::Waypoint(waypoint) => ledger_info.version() < waypoint.version(),
+            VerifierType::TrustedVerifier(epoch_info) => ledger_info.epoch() < epoch_info.epoch,
+        }
+    }
 }
 
 impl ValidatorChangeProof {
@@ -69,32 +88,69 @@ impl ValidatorChangeProof {
             .ok_or_else(|| format_err!("Empty ValidatorChangeProof"))
     }
 
-    /// Verify the proof is correctly chained with known epoch and validator verifier
-    /// and return the LedgerInfo to start target epoch
-    /// In case waypoint is present it's going to be used for verifying the very first epoch change
-    /// (it's the responsibility of the caller to not pass waypoint in case it's not needed).
+    /// Verify the proof is correctly chained with known epoch and validator
+    /// verifier and return the [`LedgerInfoWithSignatures`] to start target epoch.
+    ///
+    /// In case a waypoint is present, it's going to be used for verifying the
+    /// very first epoch change (it's the responsibility of the caller to not
+    /// pass a waypoint in case it's not needed).
+    ///
+    /// We will also skip any stale ledger info's in the [`ValidatorChangeProof`].
     pub fn verify(&self, verifier: &VerifierType) -> Result<LedgerInfoWithSignatures> {
         ensure!(
             !self.ledger_info_with_sigs.is_empty(),
-            "Empty ValidatorChangeProof"
+            "The ValidatorChangeProof is empty"
         );
+        ensure!(
+            !verifier
+                .is_ledger_info_stale(self.ledger_info_with_sigs.last().unwrap().ledger_info()),
+            "The ValidatorChangeProof is stale as our verifier is already ahead \
+             of the entire ValidatorChangeProof"
+        );
+
         self.ledger_info_with_sigs
             .iter()
-            .try_fold(verifier.clone(), |verifier, ledger_info| {
-                verifier.verify(ledger_info)?;
-                // While the original verification could've been via waypoints, all the next epoch
-                // changes are verified using the (already trusted) validator sets.
-                ledger_info
+            // Skip any stale ledger infos in the proof prefix. Note that with
+            // the assertion above, we are guaranteed there is at least one
+            // non-stale ledger info in the proof.
+            //
+            // It's useful to skip these stale ledger infos to better allow for
+            // concurrent client requests.
+            //
+            // For example, suppose the following:
+            //
+            // 1. My current trusted state is at epoch 5.
+            // 2. I make two concurrent requests to two validators A and B, who
+            //    live at epochs 9 and 11 respectively.
+            //
+            // If A's response returns first, I will ratchet my trusted state
+            // to epoch 9. When B's response returns, I will still be able to
+            // ratchet forward to 11 even though B's ValidatorChangeProof
+            // includes a bunch of stale ledger infos (for epochs 5, 6, 7, 8).
+            //
+            // Of course, if B's response returns first, we will reject A's
+            // response as it's completely stale.
+            .skip_while(|&ledger_info_with_sigs| {
+                verifier.is_ledger_info_stale(ledger_info_with_sigs.ledger_info())
+            })
+            // Try to verify each (epoch -> epoch + 1) jump in the ValidatorChangeProof.
+            .try_fold(verifier.clone(), |verifier, ledger_info_with_sigs| {
+                verifier.verify(ledger_info_with_sigs)?;
+                // While the original verification could've been via waypoints,
+                // all the next epoch changes are verified using the (already
+                // trusted) validator sets.
+                ledger_info_with_sigs
                     .ledger_info()
                     .next_validator_set()
                     .map(|v| {
                         VerifierType::TrustedVerifier(EpochInfo {
-                            epoch: ledger_info.ledger_info().epoch() + 1,
+                            epoch: ledger_info_with_sigs.ledger_info().epoch() + 1,
                             verifier: Arc::new(v.into()),
                         })
                     })
-                    .ok_or_else(|| format_err!("LedgerInfo doesn't carry ValidatorSet"))
+                    .ok_or_else(|| format_err!("LedgerInfo doesn't carry a ValidatorSet"))
             })?;
+
         Ok(self.ledger_info_with_sigs.last().unwrap().clone())
     }
 }
@@ -157,9 +213,11 @@ mod tests {
         let all_epoch: Vec<u64> = (1..=10).collect();
         let mut valid_ledger_info = vec![];
         let mut validator_verifier = vec![];
+
         // We generate end-epoch ledger info for epoch 1 to 10, each signed by the current
-        // validator set and carries next validator set.
+        // validator set and carrying the next validator set.
         let (mut current_signers, mut current_verifier) = random_validator_verifier(1, None, true);
+        let mut current_version = 123;
         for epoch in &all_epoch {
             validator_verifier.push(current_verifier.clone());
             let (next_signers, next_verifier) =
@@ -171,7 +229,7 @@ mod tests {
                     0,
                     HashValue::zero(),
                     HashValue::zero(),
-                    42,
+                    current_version,
                     0,
                     validator_set,
                 ),
@@ -184,6 +242,7 @@ mod tests {
             valid_ledger_info.push(LedgerInfoWithSignatures::new(ledger_info, signatures));
             current_signers = next_signers;
             current_verifier = next_verifier;
+            current_version += 1;
         }
 
         // Test well-formed proof will succeed
@@ -201,6 +260,14 @@ mod tests {
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[2],
                 verifier: Arc::new(validator_verifier[2].clone())
+            }))
+            .is_ok());
+
+        // Test proof with stale prefix will verify
+        assert!(proof_1
+            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+                epoch: all_epoch[4],
+                verifier: Arc::new(validator_verifier[4].clone())
             }))
             .is_ok());
 
@@ -256,10 +323,25 @@ mod tests {
             .verify(&VerifierType::Waypoint(waypoint_for_1_to_2))
             .is_ok());
 
-        // Waypoint to wrong epoch change fails verification.
-        let waypoint_for_2_to_3 = Waypoint::new(valid_ledger_info[1].ledger_info()).unwrap();
+        // Test proof with stale prefix will verify with a Waypoint
+        let waypoint_for_5_to_6 = Waypoint::new(valid_ledger_info[4].ledger_info()).unwrap();
         assert!(proof_1
-            .verify(&VerifierType::Waypoint(waypoint_for_2_to_3))
+            .verify(&VerifierType::Waypoint(waypoint_for_5_to_6))
+            .is_ok());
+
+        // Waypoint before proof range will fail to verify
+        let waypoint_for_3_to_4 = Waypoint::new(valid_ledger_info[2].ledger_info()).unwrap();
+        let proof_7 =
+            ValidatorChangeProof::new(valid_ledger_info[4..8].to_vec(), /* more */ false);
+        assert!(proof_7
+            .verify(&VerifierType::Waypoint(waypoint_for_3_to_4))
+            .is_err());
+
+        // Waypoint after proof range will fail to verify
+        let proof_8 =
+            ValidatorChangeProof::new(valid_ledger_info[0..1].to_vec(), /* more */ false);
+        assert!(proof_8
+            .verify(&VerifierType::Waypoint(waypoint_for_3_to_4))
             .is_err());
     }
 }
