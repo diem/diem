@@ -12,7 +12,7 @@ use num::{BigInt, Num};
 use bytecode_source_map::source_map::ModuleSourceMap;
 use bytecode_verifier::VerifiedModule;
 use libra_types::{identifier::IdentStr, identifier::Identifier, language_storage::ModuleId};
-use move_ir_types::ast::Loc;
+use move_ir_types::ast::{Loc, QualifiedStructIdent, Type, TypeVar_};
 use move_ir_types::spec_language_ast::{Condition, Invariant, SyntheticDefinition};
 use vm::access::ModuleAccess;
 use vm::file_format::{
@@ -28,7 +28,7 @@ use vm::views::{
 use crate::cli::Options;
 use codespan::{CodeMap, ColumnIndex, FileMap, FileName, LineIndex};
 use codespan_reporting::termcolor::{ColorChoice, StandardStream};
-use codespan_reporting::{emit, Diagnostic, Severity};
+use codespan_reporting::{emit, Diagnostic, Label, Severity};
 use libra_types::account_address::AccountAddress;
 use std::fs;
 
@@ -90,6 +90,13 @@ impl GlobalType {
     }
 }
 
+/// A dummy type to represent an error. We use a type parameter for this, with an index
+/// which no one will/can ever realistically use.
+pub const ERROR_TYPE: GlobalType = GlobalType::TypeParameter(std::u16::MAX);
+
+/// A dummy type to represent an unknown type.
+pub const UNKNOWN_TYPE: GlobalType = GlobalType::TypeParameter(std::u16::MAX - 1);
+
 /// Line/Column position pair.
 pub type Position = (LineIndex, ColumnIndex);
 
@@ -133,12 +140,23 @@ impl GlobalEnv {
             module,
             struct_data,
             function_data,
-            synthetics,
+            synthetics: vec![],
             source_map,
             source_file_path: source_file_path.to_owned(),
             source_text: RefCell::new(None),
             diags: RefCell::new(vec![]),
         });
+        let typed_synthetics = {
+            let module_env = self.get_module(self.module_data.len() - 1);
+            synthetics
+                .into_iter()
+                .map(|syn| {
+                    let ty = module_env.translate_ast_type(syn.span, &syn.type_, &[]);
+                    (syn, ty)
+                })
+                .collect_vec()
+        };
+        self.module_data.last_mut().unwrap().synthetics = typed_synthetics;
     }
 
     /// Creates data for a function, adding any information not contained in bytecode. This is
@@ -183,12 +201,31 @@ impl GlobalEnv {
         } else {
             vec![]
         };
+        let mut data_invariants = vec![];
+        let mut update_invariants = vec![];
+        let mut pack_invariants = vec![];
+        let mut unpack_invariants = vec![];
+        let mut other_invariants = vec![];
+
+        for inv in invariants {
+            match inv.modifier.as_str() {
+                "" | DATA_MODIFIER => data_invariants.push(inv),
+                UPDATE_MODIFIER => update_invariants.push(inv),
+                PACK_MODIFIER => pack_invariants.push(inv),
+                UNPACK_MODIFIER => unpack_invariants.push(inv),
+                _ => other_invariants.push(inv),
+            }
+        }
 
         StructData {
             def_idx,
             handle_idx,
             field_data,
-            invariants,
+            data_invariants,
+            update_invariants,
+            pack_invariants,
+            unpack_invariants,
+            other_invariants,
         }
     }
 
@@ -242,6 +279,29 @@ impl GlobalEnv {
             .iter()
             .map(|module_data| &module_data.module)
     }
+
+    /// Returns all structs in all modules which carry invariants.
+    pub fn get_all_structs_with_invariants(&self) -> Vec<GlobalType> {
+        let mut res = vec![];
+        for module_env in self.get_modules() {
+            for struct_env in module_env.get_structs() {
+                if struct_env.has_invariants() {
+                    let formals = struct_env
+                        .get_type_parameters()
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, _)| GlobalType::TypeParameter(idx as u16))
+                        .collect_vec();
+                    res.push(GlobalType::Struct(
+                        module_env.get_module_idx(),
+                        struct_env.get_def_idx(),
+                        formals,
+                    ));
+                }
+            }
+        }
+        res
+    }
 }
 
 /// # Module Environment
@@ -265,7 +325,7 @@ pub struct ModuleData {
     function_data: Vec<FunctionData>,
 
     /// Synthetic variables.
-    synthetics: Vec<SyntheticDefinition>,
+    synthetics: Vec<(SyntheticDefinition, GlobalType)>,
 
     /// Module source location information.
     source_map: ModuleSourceMap<Loc>,
@@ -364,7 +424,7 @@ impl<'env> ModuleEnv<'env> {
         // TODO: we may want to represent this as hash table or btree. For now we just search.
         for data in &self.data.function_data {
             let func_env = FunctionEnv {
-                module_env: self,
+                module_env: self.clone(),
                 data,
             };
             if func_env.get_name() == name {
@@ -378,7 +438,7 @@ impl<'env> ModuleEnv<'env> {
     pub fn get_function(&'env self, idx: &FunctionDefinitionIndex) -> FunctionEnv<'env> {
         let data = &self.data.function_data[idx.0 as usize];
         FunctionEnv {
-            module_env: self,
+            module_env: self.clone(),
             data,
         }
     }
@@ -391,7 +451,7 @@ impl<'env> ModuleEnv<'env> {
     /// Returns iterator over FunctionEnvs in this module.
     pub fn get_functions(&'env self) -> impl Iterator<Item = FunctionEnv<'env>> {
         self.data.function_data.iter().map(move |data| FunctionEnv {
-            module_env: self,
+            module_env: self.clone(),
             data,
         })
     }
@@ -443,7 +503,7 @@ impl<'env> ModuleEnv<'env> {
         // TODO: we may want to represent this as hash table or btree. For now we just search.
         for data in &self.data.struct_data {
             let struct_env = StructEnv {
-                module_env: self,
+                module_env: self.clone(),
                 data,
             };
             if struct_env.get_name() == name {
@@ -455,6 +515,15 @@ impl<'env> ModuleEnv<'env> {
 
     /// Gets a StructEnv by index.
     pub fn get_struct(&'env self, idx: &StructDefinitionIndex) -> StructEnv<'env> {
+        let data = &self.data.struct_data[idx.0 as usize];
+        StructEnv {
+            module_env: self.clone(),
+            data,
+        }
+    }
+
+    /// Gets a StructEnv by index.
+    pub fn into_get_struct(self, idx: &StructDefinitionIndex) -> StructEnv<'env> {
         let data = &self.data.struct_data[idx.0 as usize];
         StructEnv {
             module_env: self,
@@ -479,7 +548,7 @@ impl<'env> ModuleEnv<'env> {
     /// Returns iterator over structs in this module.
     pub fn get_structs(&'env self) -> impl Iterator<Item = StructEnv<'env>> {
         self.data.struct_data.iter().map(move |data| StructEnv {
-            module_env: self,
+            module_env: self.clone(),
             data,
         })
     }
@@ -541,8 +610,132 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Returns synthetic definitions in this module.
-    pub fn get_synthetics(&'env self) -> &'env [SyntheticDefinition] {
+    pub fn get_synthetics(&'env self) -> &'env [(SyntheticDefinition, GlobalType)] {
         &self.data.synthetics
+    }
+
+    /// Find a synthetic by name.
+    pub fn find_synthetic(
+        &'env self,
+        name: &str,
+    ) -> Option<&'env (SyntheticDefinition, GlobalType)> {
+        for syn in &self.data.synthetics {
+            if syn.0.name.as_str() == name {
+                return Some(syn);
+            }
+        }
+        None
+    }
+
+    /// Translate an AST type declared in this module into a global type. Translation errors
+    /// will be reported on the module, and the ERROR_TYPE will be used where they occur.
+    pub fn translate_ast_type(
+        &self,
+        loc: Loc,
+        ast_type: &Type,
+        type_params: &[TypeParameter],
+    ) -> GlobalType {
+        match ast_type {
+            Type::Address => GlobalType::Address,
+            Type::U8 => GlobalType::U8,
+            Type::U64 => GlobalType::U64,
+            Type::U128 => GlobalType::U128,
+            Type::Bool => GlobalType::Bool,
+            Type::ByteArray => GlobalType::ByteArray,
+            Type::Reference(is_mut, bt) => {
+                if *is_mut {
+                    GlobalType::MutableReference(Box::new(self.translate_ast_type(
+                        loc,
+                        &*bt,
+                        type_params,
+                    )))
+                } else {
+                    GlobalType::Reference(Box::new(self.translate_ast_type(loc, &*bt, type_params)))
+                }
+            }
+            Type::TypeParameter(param) => {
+                self.translate_type_param_ast_type(loc, param, type_params)
+            }
+            Type::Struct(ident, args) => {
+                self.translate_struct_ast_type(loc, ident, args, type_params)
+            }
+        }
+    }
+
+    /// Translates a struct AST type into a GlobalType, context checking it.
+    pub fn translate_struct_ast_type(
+        &self,
+        loc: Loc,
+        ident: &QualifiedStructIdent,
+        actuals: &[Type],
+        type_params: &[TypeParameter],
+    ) -> GlobalType {
+        let struct_name = ident.name.as_inner();
+        let mut module_name = ident.module.as_inner().to_string();
+        if module_name == "Self" {
+            module_name = self.get_id().name().to_string();
+        }
+        let translated_actuals = actuals
+            .iter()
+            .map(|t| self.translate_ast_type(loc, t, type_params))
+            .collect_vec();
+        if let Some(module_env) = self.env.find_module_by_name(&module_name) {
+            if let Some(struct_env) = module_env.find_struct(struct_name) {
+                let expected_count = struct_env.get_type_parameters().len();
+                if expected_count != translated_actuals.len() {
+                    self.error(
+                        loc,
+                        &format!(
+                            "unexpected number of type actuals for `{}`; found {}, expected {}",
+                            struct_env.get_name(),
+                            expected_count,
+                            translated_actuals.len()
+                        ),
+                        ERROR_TYPE,
+                    )
+                } else {
+                    GlobalType::Struct(
+                        module_env.get_module_idx(),
+                        struct_env.get_def_idx(),
+                        translated_actuals,
+                    )
+                }
+            } else {
+                self.error(
+                    loc,
+                    &format!("no struct `{}` in module `{}`", struct_name, module_name),
+                    ERROR_TYPE,
+                )
+            }
+        } else {
+            self.error(loc, &format!("no module `{}`", module_name), ERROR_TYPE)
+        }
+    }
+
+    /// Translate a type parameter AST type.
+    fn translate_type_param_ast_type(
+        &self,
+        loc: Loc,
+        param: &TypeVar_,
+        type_params: &[TypeParameter],
+    ) -> GlobalType {
+        let name = param.name().as_str();
+        if let Some(pos) = type_params.iter().position(|p| p.0.as_str() == name) {
+            GlobalType::TypeParameter(pos as u16)
+        } else {
+            self.error(
+                loc,
+                &format!("cannot resolve type parameter `{}`", name),
+                ERROR_TYPE,
+            )
+        }
+    }
+
+    /// Reports an error in this module.
+    pub fn error<T>(&self, loc: Loc, msg: &str, pass_through: T) -> T {
+        let diag = Diagnostic::new_error(msg).with_label(Label::new_primary(loc));
+        self.add_diag(diag);
+        pass_through
     }
 }
 
@@ -560,13 +753,22 @@ pub struct StructData {
     field_data: Vec<FieldData>,
 
     // Invariants
-    invariants: Vec<Invariant>,
+    data_invariants: Vec<Invariant>,
+    update_invariants: Vec<Invariant>,
+    pack_invariants: Vec<Invariant>,
+    unpack_invariants: Vec<Invariant>,
+    other_invariants: Vec<Invariant>,
 }
+
+const DATA_MODIFIER: &str = "data";
+const PACK_MODIFIER: &str = "pack";
+const UNPACK_MODIFIER: &str = "unpack";
+const UPDATE_MODIFIER: &str = "update";
 
 #[derive(Debug, Clone)]
 pub struct StructEnv<'env> {
     /// Reference to enclosing module.
-    pub module_env: &'env ModuleEnv<'env>,
+    pub module_env: ModuleEnv<'env>,
 
     /// Reference to the struct data.
     data: &'env StructData,
@@ -616,10 +818,21 @@ impl<'env> StructEnv<'env> {
         name.as_str() == "Vector" && addr == &AccountAddress::from_hex_literal("0x0").unwrap()
     }
 
+    /// Determines whether this struct is a resource type.
+    pub fn is_resource(&self) -> bool {
+        let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
+        let handle = self
+            .module_env
+            .data
+            .module
+            .struct_handle_at(def.struct_handle);
+        handle.is_nominal_resource
+    }
+
     /// Get an iterator for the fields.
     pub fn get_fields(&'env self) -> impl Iterator<Item = FieldEnv<'env>> {
         self.data.field_data.iter().map(move |data| FieldEnv {
-            struct_env: self,
+            struct_env: self.clone(),
             data,
         })
     }
@@ -629,7 +842,7 @@ impl<'env> StructEnv<'env> {
         for data in &self.data.field_data {
             if data.def_idx == *idx {
                 return FieldEnv {
-                    struct_env: self,
+                    struct_env: self.clone(),
                     data,
                 };
             }
@@ -641,7 +854,7 @@ impl<'env> StructEnv<'env> {
     pub fn find_field(&'env self, name: &IdentStr) -> Option<FieldEnv<'env>> {
         for data in &self.data.field_data {
             let env = FieldEnv {
-                struct_env: self,
+                struct_env: self.clone(),
                 data,
             };
             if env.get_name() == name {
@@ -665,9 +878,37 @@ impl<'env> StructEnv<'env> {
             .collect_vec()
     }
 
-    /// Returns the invariants associated with this struct.
-    pub fn get_invariants(&'env self) -> &[Invariant] {
-        &self.data.invariants
+    /// Returns true if this struct has invariants.
+    pub fn has_invariants(&self) -> bool {
+        !self.data.data_invariants.is_empty()
+            || !self.data.update_invariants.is_empty()
+            || !self.data.pack_invariants.is_empty()
+            || !self.data.unpack_invariants.is_empty()
+    }
+
+    /// Returns the data invariants associated with this struct.
+    pub fn get_data_invariants(&'env self) -> &'env [Invariant] {
+        &self.data.data_invariants
+    }
+
+    /// Returns the update invariants associated with this struct.
+    pub fn get_update_invariants(&'env self) -> &'env [Invariant] {
+        &self.data.update_invariants
+    }
+
+    /// Returns the pack invariants associated with this struct.
+    pub fn get_pack_invariants(&'env self) -> &'env [Invariant] {
+        &self.data.pack_invariants
+    }
+
+    /// Returns the unpack invariants associated with this struct.
+    pub fn get_unpack_invariants(&'env self) -> &'env [Invariant] {
+        &self.data.unpack_invariants
+    }
+
+    /// Returns the other invariants associated with this struct.
+    pub fn get_other_invariants(&'env self) -> &'env [Invariant] {
+        &self.data.other_invariants
     }
 }
 
@@ -682,7 +923,7 @@ pub struct FieldData {
 #[derive(Debug)]
 pub struct FieldEnv<'env> {
     /// Reference to enclosing struct.
-    pub struct_env: &'env StructEnv<'env>,
+    pub struct_env: StructEnv<'env>,
 
     /// Reference to the field data.
     data: &'env FieldData,
@@ -751,7 +992,7 @@ pub struct FunctionData {
 #[derive(Debug)]
 pub struct FunctionEnv<'env> {
     /// Reference to enclosing module.
-    pub module_env: &'env ModuleEnv<'env>,
+    pub module_env: ModuleEnv<'env>,
 
     /// Reference to the function data.
     data: &'env FunctionData,

@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module TestReference
+
+
+
 // ** structs of module TestReference
 
 const unique TestReference_T: TypeName;
@@ -8,10 +12,16 @@ axiom TestReference_T_value == 0;
 function TestReference_T_type_value(): TypeValue {
     StructType(TestReference_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-procedure {:inline 1} Pack_TestReference_T(value: Value) returns (_struct: Value)
+function {:inline 1} $TestReference_T_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && IsValidU64(SelectField(__this, TestReference_T_value))
+}
+
+procedure {:inline 1} Pack_TestReference_T(module_idx: int, func_idx: int, var_idx: int, code_idx: int, value: Value) returns (_struct: Value)
 {
     assume IsValidU64(value);
     _struct := Vector(ExtendValueArray(EmptyValueArray, value));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestReference_T(_struct: Value) returns (value: Value)
@@ -41,8 +51,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume IsValidU64(Dereference(__m, b));
-    assume IsValidReferenceParameter(__m, __local_counter, b);
+    assume IsValidU64(Dereference(__m, b)) && IsValidReferenceParameter(__m, __local_counter, b);
     assume IsValidU64(Dereference(__m, b));
     assume $DebugTrackLocal(0, 0, 0, 71, Dereference(__m, b));
 
@@ -56,6 +65,8 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t2 := CopyOrMoveRef(b);
 
     call WriteRef(__t2, GetLocal(__m, __frame + 1));
+    assume IsValidU64(Dereference(__m, b));
+    assume $DebugTrackLocal(0, 0, 0, 106, Dereference(__m, b));
 
     return;
 
@@ -111,7 +122,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 0, __tmp);
     assume $DebugTrackLocal(0, 1, 0, 249, __tmp);
 
-    call __t3 := BorrowLoc(__frame + 0);
+    call __t3 := BorrowLoc(__frame + 0, IntegerType());
 
     call b_ref := CopyOrMoveRef(__t3);
     assume IsValidU64(Dereference(__m, b_ref));

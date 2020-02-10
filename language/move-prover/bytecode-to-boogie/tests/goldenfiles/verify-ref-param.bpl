@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module TestSpecs
+
+
+
 // ** structs of module TestSpecs
 
 const unique TestSpecs_T: TypeName;
@@ -8,10 +12,16 @@ axiom TestSpecs_T_value == 0;
 function TestSpecs_T_type_value(): TypeValue {
     StructType(TestSpecs_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-procedure {:inline 1} Pack_TestSpecs_T(value: Value) returns (_struct: Value)
+function {:inline 1} $TestSpecs_T_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && IsValidU64(SelectField(__this, TestSpecs_T_value))
+}
+
+procedure {:inline 1} Pack_TestSpecs_T(module_idx: int, func_idx: int, var_idx: int, code_idx: int, value: Value) returns (_struct: Value)
 {
     assume IsValidU64(value);
     _struct := Vector(ExtendValueArray(EmptyValueArray, value));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestSpecs_T(_struct: Value) returns (value: Value)
@@ -43,9 +53,8 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, ref), Tes
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(Dereference(__m, ref));
-    assume IsValidReferenceParameter(__m, __local_counter, ref);
-    assume is#Vector(Dereference(__m, ref));
+    assume $TestSpecs_T_is_well_formed(Dereference(__m, ref)) && IsValidReferenceParameter(__m, __local_counter, ref);
+    assume $TestSpecs_T_is_well_formed(Dereference(__m, ref));
     assume $DebugTrackLocal(0, 0, 0, 66, Dereference(__m, ref));
 
     // increase the local counter

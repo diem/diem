@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module TestGenerics
+
+
+
 // ** structs of module TestGenerics
 
 const unique TestGenerics_R: TypeName;
@@ -8,17 +12,23 @@ axiom TestGenerics_R_v == 0;
 function TestGenerics_R_type_value(): TypeValue {
     StructType(TestGenerics_R, ExtendTypeValueArray(EmptyTypeValueArray, Vector_T_type_value(IntegerType())))
 }
-procedure {:inline 1} Pack_TestGenerics_R(v: Value) returns (_struct: Value)
+function {:inline 1} $TestGenerics_R_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && $Vector_T_is_well_formed(SelectField(__this, TestGenerics_R_v))
+}
+
+procedure {:inline 1} Pack_TestGenerics_R(module_idx: int, func_idx: int, var_idx: int, code_idx: int, v: Value) returns (_struct: Value)
 {
-    assume is#Vector(v);
+    assume $Vector_T_is_well_formed(v);
     _struct := Vector(ExtendValueArray(EmptyValueArray, v));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestGenerics_R(_struct: Value) returns (v: Value)
 {
     assume is#Vector(_struct);
     v := SelectField(_struct, TestGenerics_R_v);
-    assume is#Vector(v);
+    assume $Vector_T_is_well_formed(v);
 }
 
 const unique TestGenerics_T: TypeName;
@@ -27,17 +37,23 @@ axiom TestGenerics_T_v == 0;
 function TestGenerics_T_type_value(tv0: TypeValue): TypeValue {
     StructType(TestGenerics_T, ExtendTypeValueArray(EmptyTypeValueArray, Vector_T_type_value(tv0)))
 }
-procedure {:inline 1} Pack_TestGenerics_T(tv0: TypeValue, v: Value) returns (_struct: Value)
+function {:inline 1} $TestGenerics_T_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && $Vector_T_is_well_formed(SelectField(__this, TestGenerics_T_v))
+}
+
+procedure {:inline 1} Pack_TestGenerics_T(module_idx: int, func_idx: int, var_idx: int, code_idx: int, tv0: TypeValue, v: Value) returns (_struct: Value)
 {
-    assume is#Vector(v);
+    assume $Vector_T_is_well_formed(v);
     _struct := Vector(ExtendValueArray(EmptyValueArray, v));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestGenerics_T(_struct: Value) returns (v: Value)
 {
     assume is#Vector(_struct);
     v := SelectField(_struct, TestGenerics_T_v);
-    assume is#Vector(v);
+    assume $Vector_T_is_well_formed(v);
 }
 
 
@@ -84,7 +100,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
       assume $DebugTrackAbort(1, 0, 260);
       goto Label_Abort;
     }
-    assume is#Vector(__t4);
+    assume $Vector_T_is_well_formed(__t4);
 
     __m := UpdateLocal(__m, __frame + 4, __t4);
 
@@ -92,7 +108,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
     assume $DebugTrackLocal(1, 0, 2, 256, __tmp);
 
-    call __t5 := BorrowLoc(__frame + 2);
+    call __t5 := BorrowLoc(__frame + 2, Vector_T_type_value(IntegerType()));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -104,7 +120,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     }
     assume $DebugTrackLocal(1, 0, 2, 289, GetLocal(__m, __frame + 2));
 
-    call __t7 := BorrowLoc(__frame + 2);
+    call __t7 := BorrowLoc(__frame + 2, Vector_T_type_value(IntegerType()));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
@@ -119,7 +135,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    call __tmp := Pack_TestGenerics_R(GetLocal(__m, __frame + 9));
+    call __tmp := Pack_TestGenerics_R(1, 0, 3, 391, GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 10));
@@ -180,7 +196,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
       assume $DebugTrackAbort(1, 1, 561);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -188,7 +204,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 1, 1, 557, __tmp);
 
-    call __t3 := BorrowLoc(__frame + 1);
+    call __t3 := BorrowLoc(__frame + 1, Vector_T_type_value(tv0));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -203,7 +219,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call __tmp := Pack_TestGenerics_T(tv0, GetLocal(__m, __frame + 5));
+    call __tmp := Pack_TestGenerics_T(0, 0, 0, 0, tv0, GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
@@ -264,7 +280,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
       assume $DebugTrackAbort(1, 2, 827);
       goto Label_Abort;
     }
-    assume is#Vector(__t6);
+    assume $TestGenerics_T_is_well_formed(__t6);
 
     __m := UpdateLocal(__m, __frame + 6, __t6);
 
@@ -280,7 +296,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
       assume $DebugTrackAbort(1, 2, 865);
       goto Label_Abort;
     }
-    assume is#Vector(__t8);
+    assume $TestGenerics_T_is_well_formed(__t8);
 
     __m := UpdateLocal(__m, __frame + 8, __t8);
 

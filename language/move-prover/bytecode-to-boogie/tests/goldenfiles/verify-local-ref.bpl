@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module TestSpecs
+
+
+
 // ** structs of module TestSpecs
 
 
@@ -22,8 +26,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume IsValidU64(Dereference(__m, b));
-    assume IsValidReferenceParameter(__m, __local_counter, b);
+    assume IsValidU64(Dereference(__m, b)) && IsValidReferenceParameter(__m, __local_counter, b);
     assume IsValidU64(Dereference(__m, b));
     assume $DebugTrackLocal(0, 0, 0, 24, Dereference(__m, b));
 
@@ -37,6 +40,8 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t2 := CopyOrMoveRef(b);
 
     call WriteRef(__t2, GetLocal(__m, __frame + 1));
+    assume IsValidU64(Dereference(__m, b));
+    assume $DebugTrackLocal(0, 0, 0, 59, Dereference(__m, b));
 
     return;
 
@@ -90,7 +95,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
     __m := UpdateLocal(__m, __frame + 0, __tmp);
     assume $DebugTrackLocal(0, 1, 0, 252, __tmp);
 
-    call __t3 := BorrowLoc(__frame + 0);
+    call __t3 := BorrowLoc(__frame + 0, IntegerType());
 
     call b_ref := CopyOrMoveRef(__t3);
     assume IsValidU64(Dereference(__m, b_ref));
@@ -188,7 +193,7 @@ ensures old(b#Boolean(Boolean(true))) ==> !__abort_flag;
     __m := UpdateLocal(__m, __frame + 0, __tmp);
     assume $DebugTrackLocal(0, 2, 0, 621, __tmp);
 
-    call __t3 := BorrowLoc(__frame + 0);
+    call __t3 := BorrowLoc(__frame + 0, IntegerType());
 
     call b_ref := CopyOrMoveRef(__t3);
     assume IsValidU64(Dereference(__m, b_ref));

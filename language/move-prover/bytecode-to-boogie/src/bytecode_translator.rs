@@ -5,8 +5,10 @@
 
 use std::collections::BTreeSet;
 
+use codespan::ByteOffset;
 use itertools::Itertools;
-use log::info;
+#[allow(unused_imports)]
+use log::{debug, info};
 
 use libra_types::account_address::AccountAddress;
 use libra_types::language_storage::ModuleId;
@@ -17,16 +19,17 @@ use stackless_bytecode_generator::{
 };
 
 use crate::boogie_helpers::{
-    boogie_field_name, boogie_function_name, boogie_local_type, boogie_struct_name,
-    boogie_struct_type_value, boogie_type_check, boogie_type_value, boogie_type_values,
+    boogie_declare_global, boogie_field_name, boogie_function_name, boogie_invariant_target,
+    boogie_local_type, boogie_struct_name, boogie_struct_type_value, boogie_synthetic_name,
+    boogie_type_check, boogie_type_value, boogie_type_values, boogie_var_before_borrow,
 };
+use crate::cli::InvariantModel;
 use crate::code_writer::CodeWriter;
 use crate::driver::PSEUDO_PRELUDE_MODULE;
 use crate::env::{
-    FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, Parameter, StructEnv, TypeParameter,
+    FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, Parameter, StructEnv, TypeParameter, ERROR_TYPE,
 };
 use crate::spec_translator::SpecTranslator;
-use codespan::ByteOffset;
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -79,8 +82,44 @@ impl<'env> ModuleTranslator<'env> {
             info!("translating module {}", self.module_env.get_id().name());
             self.writer
                 .set_location(self.module_env.get_module_idx(), Loc::default());
+            self.translate_synthetics();
             self.translate_structs();
             self.translate_functions();
+        }
+    }
+
+    fn translate_synthetics(&self) {
+        emitln!(
+            self.writer,
+            "\n\n// ** synthetics of module {}\n",
+            self.module_env.get_id().name()
+        );
+        let mut seen = BTreeSet::new();
+        for (syn, ty) in self.module_env.get_synthetics() {
+            if !seen.insert(syn.name.to_string()) {
+                self.module_env.error(
+                    syn.span,
+                    &format!("duplicate declaration of synthetic `{}`", syn.name),
+                    (),
+                );
+                continue;
+            }
+            if ty == &ERROR_TYPE {
+                continue;
+            }
+            if ty.is_reference() {
+                self.module_env.error(
+                    syn.span,
+                    &format!("synthetic `{}` cannot have reference type", syn.name),
+                    (),
+                );
+                continue;
+            }
+            let boogie_name = boogie_synthetic_name(&self.module_env, syn.name.as_str());
+            emitln!(
+                self.writer,
+                &boogie_declare_global(&self.module_env.env, &boogie_name, &ty)
+            );
         }
     }
 
@@ -92,8 +131,10 @@ impl<'env> ModuleTranslator<'env> {
             self.module_env.get_id().name()
         );
         for struct_env in self.module_env.get_structs() {
+            // Set the location to the PSEUDO module so we don't see locations of pack/unpack
+            // in execution traces.
             self.writer
-                .set_location(self.module_env.get_module_idx(), struct_env.get_loc());
+                .set_location(PSEUDO_PRELUDE_MODULE, Loc::default());
             self.translate_struct_type(&struct_env);
             if !struct_env.is_native() {
                 self.translate_struct_accessors(&struct_env);
@@ -154,6 +195,15 @@ impl<'env> ModuleTranslator<'env> {
                 type_value
             );
         }
+
+        // Emit invariant functions.
+        let spec_translator = SpecTranslator::new(
+            self.writer,
+            &struct_env.module_env,
+            struct_env.get_type_parameters(),
+            false,
+        );
+        spec_translator.translate_invariant_functions(&struct_env);
     }
 
     /// Translates struct accessors (pack/unpack).
@@ -170,15 +220,9 @@ impl<'env> ModuleTranslator<'env> {
             .join(", ");
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} Pack_{}({}) returns (_struct: Value)\n{{",
+            "procedure {{:inline 1}} Pack_{}(module_idx: int, func_idx: int, var_idx: int, code_idx: int, {}) returns (_struct: Value)\n{{",
             boogie_struct_name(struct_env),
-            if !args_str.is_empty() && !type_args_str.is_empty() {
-                format!("{}, {}", type_args_str, args_str)
-            } else if args_str.is_empty() {
-                type_args_str
-            } else {
-                args_str.clone()
-            }
+            separate(vec![type_args_str, args_str.clone()], ", ")
         );
         self.writer.indent();
         let mut fields_str = String::from("EmptyValueArray");
@@ -192,6 +236,23 @@ impl<'env> ModuleTranslator<'env> {
             fields_str = format!("ExtendValueArray({}, {})", fields_str, field_env.get_name());
         }
         emitln!(self.writer, "_struct := Vector({});", fields_str);
+
+        // Generate $DebugTrackLocal so we can see the constructed value before invariant
+        // evaluation may abort.
+        emitln!(
+            self.writer,
+            "if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }"
+        );
+
+        // Insert invariant code.
+        let spec_translator = SpecTranslator::new(
+            self.writer,
+            &struct_env.module_env,
+            struct_env.get_type_parameters(),
+            false,
+        );
+        spec_translator.emit_pack_invariants(struct_env, "_struct");
+
         self.writer.unindent();
         emitln!(self.writer, "}\n");
 
@@ -218,6 +279,16 @@ impl<'env> ModuleTranslator<'env> {
             );
             emit!(self.writer, &type_check);
         }
+
+        // Insert invariant checking code.
+        let spec_translator = SpecTranslator::new(
+            self.writer,
+            &struct_env.module_env,
+            struct_env.get_type_parameters(),
+            false,
+        );
+        spec_translator.emit_unpack_invariants(struct_env, "_struct");
+
         self.writer.unindent();
         emitln!(self.writer, "}\n");
     }
@@ -277,12 +348,14 @@ impl<'env> ModuleTranslator<'env> {
     }
 
     /// Translates one bytecode instruction.
-    fn translate_bytecode(
-        &self,
+    fn translate_bytecode<F: Fn(usize) -> usize>(
+        &'env self,
         func_env: &FunctionEnv<'_>,
         offset: u16,
         bytecode: &StacklessBytecode,
+        effective_dest_func: F,
         mutual_local_borrows: &BTreeSet<usize>,
+        update_invariant_on_release: &[GlobalType],
     ) {
         // Set location of this code in the CodeWriter.
         let loc = func_env.get_bytecode_loc(offset);
@@ -309,17 +382,58 @@ impl<'env> ModuleTranslator<'env> {
             )
         };
 
-        // Helper function to update debug info for mutual borrows.
+        // Helper function to update debug info for potential updates of references.
         let track_mutual_refs = || {
+            let mut res = vec![];
             for idx in mutual_local_borrows {
-                let update = self.track_local(
+                res.push(self.track_local(
                     func_env,
                     loc,
                     *idx,
                     &format!("GetLocal(__m, __frame + {})", idx),
-                );
-                if !update.is_empty() {
-                    emitln!(self.writer, &update)
+                ));
+            }
+            for (idx, Parameter(_, ty)) in func_env.get_parameters().iter().enumerate() {
+                if ty.is_mutual_reference() {
+                    // Add reference parameter because we also want to debug track them when
+                    // references are written.
+                    res.push(self.track_local(func_env, loc, idx, &func_env.get_local_name(idx)));
+                }
+            }
+            res.join("\n")
+        };
+
+        // Helper to save a borrowed value before mutation starts.
+        let save_borrowed_value = |dest: &usize| {
+            let dest_ty = self.get_local_type(func_env, *dest);
+            if let Some(idx) = update_invariant_on_release
+                .iter()
+                .position(|ty| ty == &dest_ty)
+            {
+                // Save the value before mutation happens.
+                let name = boogie_var_before_borrow(idx);
+                emitln!(self.writer, "{} := Dereference(__m, __t{});", name, dest);
+                emitln!(self.writer, "{}_ref := __t{};", name, dest);
+            }
+        };
+
+        // Helper to enforce the invariant of a borrowed value after mutation ended.
+        let enforce_borrowed_invariant = |ty: &GlobalType, idx: usize| {
+            let var_name = boogie_var_before_borrow(idx);
+            if let GlobalType::MutableReference(bt) = ty {
+                if let GlobalType::Struct(module_idx, struct_idx, _) = bt.as_ref() {
+                    let struct_env = func_env
+                        .module_env
+                        .env
+                        .get_module(*module_idx)
+                        .into_get_struct(struct_idx);
+                    emitln!(
+                        self.writer,
+                        "call ${}_update_inv({}, Dereference(__m, {}_ref));",
+                        boogie_struct_name(&struct_env),
+                        var_name,
+                        var_name
+                    );
                 }
             }
         };
@@ -400,10 +514,13 @@ impl<'env> ModuleTranslator<'env> {
             BorrowLoc(dest, src) => {
                 emitln!(
                     self.writer,
-                    "call __t{} := BorrowLoc(__frame + {});",
+                    "call __t{} := BorrowLoc(__frame + {}, {});",
                     dest,
-                    src
+                    src,
+                    boogie_type_value(func_env.module_env.env,
+                       &func_env.get_local_type(*src as usize))
                 );
+                save_borrowed_value(dest);
             }
             ReadRef(dest, src) => {
                 emitln!(self.writer, "call __tmp := ReadRef(__t{});", src);
@@ -418,13 +535,34 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &update_and_track_local(*dest, "__tmp"));
             }
             WriteRef(dest, src) => {
-                emitln!(
-                    self.writer,
-                    "call WriteRef(__t{}, GetLocal(__m, __frame + {}));",
-                    dest,
-                    src
-                );
-                track_mutual_refs();
+                // TODO: for invariants, without analysis of reaching definitions, we approximate the
+                // types a WriteRef can effect by _all_ structs defined in the compilation target. This
+                // should be replaced by a proper analysis.
+                let reaching_root_types = func_env.module_env.env.get_all_structs_with_invariants();
+                let write_ref = format!("call WriteRef(__t{}, GetLocal(__m, __frame + {}));\n{}", dest, src, track_mutual_refs());
+                let spec_translator = SpecTranslator::new(self.writer, &func_env.module_env, func_env.get_type_parameters(), false);
+                if self.module_env.env.options.invariant_model != InvariantModel::WriteRefBased
+                    || !spec_translator.needs_update_invariant_check(&reaching_root_types) {
+                    emitln!(self.writer, &write_ref);
+                } else {
+                    let target = format!("__t{}", dest);
+                    let before = boogie_invariant_target(true);
+                    let after = boogie_invariant_target(false);
+                    emitln!(
+                      self.writer,
+                      "{} := Dereference(__m, RootReference({}));",
+                      before,
+                      target
+                    );
+                    emitln!(self.writer, &write_ref);
+                    emitln!(
+                      self.writer,
+                      "{} := Dereference(__m, RootReference({}));",
+                      after,
+                      target
+                    );
+                    spec_translator.emit_update_invariant_check(&target, &before, &after, &reaching_root_types);
+                }
             }
             FreezeRef(dest, src) => emitln!(self.writer, "call __t{} := FreezeRef(__t{});", dest, src),
             Call(dests, callee_index, type_actuals, args) => {
@@ -500,11 +638,22 @@ impl<'env> ModuleTranslator<'env> {
                     emitln!(self.writer, s);
                 }
                 if callee_env.is_mutating() {
-                    track_mutual_refs();
+                    let s = track_mutual_refs();
+                    if !s.is_empty() {
+                        emitln!(self.writer, &s);
+                    }
                 }
             }
             Pack(dest, struct_def_index, type_actuals, fields) => {
                 let struct_env = func_env.module_env.get_struct(struct_def_index);
+                let effective_dest = effective_dest_func(*dest);
+                let track_args =
+                    if effective_dest < func_env.get_local_count() {
+                        format!("{}, {}, {}, {}", func_env.module_env.get_module_idx(),
+                                func_env.get_def_idx(), effective_dest_func(*dest), loc.start())
+                    } else {
+                        "0, 0, 0, 0".to_string()
+                    };
                 let args_str = func_env
                     .module_env
                     .get_type_actuals(*type_actuals)
@@ -518,11 +667,11 @@ impl<'env> ModuleTranslator<'env> {
                     .join(", ");
                 emitln!(
                     self.writer,
-                    "call __tmp := Pack_{}({});",
+                    "call __tmp := Pack_{}({}, {});",
                     boogie_struct_name(&struct_env),
+                    track_args,
                     args_str
                 );
-
                 emitln!(
                     self.writer,
                     &update_and_track_local(*dest, "__tmp")
@@ -550,7 +699,7 @@ impl<'env> ModuleTranslator<'env> {
                     "call {} := Unpack_{}(GetLocal(__m, __frame + {}));",
                     dests_str,
                     boogie_struct_name(struct_env),
-                    src
+                    src,
                 );
                 for s in &tmp_assignments {
                     emitln!(self.writer, s);
@@ -566,6 +715,7 @@ impl<'env> ModuleTranslator<'env> {
                     src,
                     boogie_field_name(field_env)
                 );
+                save_borrowed_value(dest);
             }
             Exists(dest, addr, struct_def_index, type_actuals) => {
                 let resource_type = boogie_struct_type_value(
@@ -597,6 +747,7 @@ impl<'env> ModuleTranslator<'env> {
                     resource_type,
                 );
                 emitln!(self.writer, propagate_abort);
+                save_borrowed_value(dest);
             }
             MoveToSender(src, struct_def_index, type_actuals) => {
                 let resource_type = boogie_struct_type_value(
@@ -645,6 +796,14 @@ impl<'env> ModuleTranslator<'env> {
                         emitln!(self.writer, "__ret{} := GetLocal(__m, __frame + {});", i, r);
                     }
                     emitln!(self.writer, &track_return(i));
+                }
+                // Enforce invariants for mutual borrows in this scope.
+                // TODO: this is a hack until we have lifetime analysis. In fact we should
+                // enforce whenever the lifetime of mutual borrow ends, which maybe way
+                // before the function returns. Also the variable may be overridden in the meantime,
+                // so we only currently enforce the invariant of the most recent borrow here.
+                for (idx, ty) in update_invariant_on_release.iter().enumerate() {
+                    enforce_borrowed_invariant(ty, idx);
                 }
                 emitln!(self.writer, "return;");
             }
@@ -932,7 +1091,13 @@ impl<'env> ModuleTranslator<'env> {
     /// Return string for the function specification.
     fn generate_function_spec(&self, func_env: &FunctionEnv<'_>) {
         emitln!(self.writer);
-        SpecTranslator::new(func_env, self.writer).translate();
+        SpecTranslator::new(
+            self.writer,
+            &func_env.module_env,
+            func_env.get_type_parameters(),
+            true,
+        )
+        .translate_conditions(func_env);
     }
 
     /// Return string for body of verify function, which is just a call to the
@@ -982,6 +1147,35 @@ impl<'env> ModuleTranslator<'env> {
     fn generate_inline_function_body(&self, func_env: &FunctionEnv<'_>) {
         let code = &self.stackless_bytecode[func_env.get_def_idx().0 as usize];
 
+        // Identify all the branching targets so we can insert labels in front of them. Also
+        // calculate mutual borrows.
+        let mut branching_targets = BTreeSet::new();
+        let mut mutual_local_borrows = BTreeSet::new();
+        let mut update_invariant_on_release = vec![];
+        for bytecode in code.code.iter() {
+            match bytecode {
+                Branch(target) | BrTrue(target, _) | BrFalse(target, _) => {
+                    branching_targets.insert(*target as usize);
+                }
+                BorrowLoc(dst, src) => {
+                    let ty = self.get_local_type(func_env, *dst);
+                    if ty.is_mutual_reference() {
+                        mutual_local_borrows.insert(*src as usize);
+                        if self.has_update_invariant_on_release(&ty) {
+                            update_invariant_on_release.push(ty)
+                        }
+                    }
+                }
+                BorrowGlobal(dst, ..) => {
+                    let ty = self.get_local_type(func_env, *dst);
+                    if ty.is_mutual_reference() && self.has_update_invariant_on_release(&ty) {
+                        update_invariant_on_release.push(ty)
+                    }
+                }
+                _ => {}
+            }
+        }
+
         // Be sure to set back location to the whole function definition as a default, otherwise
         // we may get unassigned code locations associated with condition locations.
         self.writer
@@ -1007,6 +1201,20 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "var __tmp: Value;");
         emitln!(self.writer, "var __frame: int;");
         emitln!(self.writer, "var __saved_m: Memory;");
+        if self.module_env.env.options.invariant_model == InvariantModel::WriteRefBased {
+            emitln!(
+                self.writer,
+                "var {}: Value;",
+                boogie_invariant_target(false)
+            );
+            emitln!(self.writer, "var {}: Value;", boogie_invariant_target(true));
+        } else {
+            for idx in 0..update_invariant_on_release.len() {
+                let name = boogie_var_before_borrow(idx);
+                emitln!(self.writer, "var {}: Value;", name);
+                emitln!(self.writer, "var {}_ref: Reference;", name);
+            }
+        }
 
         emitln!(self.writer, "\n// initialize function execution");
         emitln!(self.writer, "assume !__abort_flag;");
@@ -1041,24 +1249,6 @@ impl<'env> ModuleTranslator<'env> {
 
         emitln!(self.writer, "\n// bytecode translation starts here");
 
-        // Identify all the branching targets so we can insert labels in front of them. Also
-        // calculate mutual borrows.
-        let mut branching_targets = BTreeSet::new();
-        let mut mutual_local_borrows = BTreeSet::new();
-        for bytecode in code.code.iter() {
-            match bytecode {
-                Branch(target) | BrTrue(target, _) | BrFalse(target, _) => {
-                    branching_targets.insert(*target as usize);
-                }
-                BorrowLoc(dst, src) => {
-                    if self.get_local_type(func_env, *dst).is_mutual_reference() {
-                        mutual_local_borrows.insert(*src as usize);
-                    }
-                }
-                _ => {}
-            }
-        }
-
         // Generate bytecode
         for (offset, bytecode) in code.code.iter().enumerate() {
             // insert labels for branching targets
@@ -1067,7 +1257,41 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, "Label_{}:", offset);
                 self.writer.indent();
             }
-            self.translate_bytecode(func_env, offset as u16, bytecode, &mutual_local_borrows);
+            // Compute effective destination to enhance debug experience. This looks ahead
+            // at the next instructions to detect a simple aliasing via copy or move and use that
+            // destination as it might be a user variable whereas this instruction has a temporary
+            // destination introduced by stackless bytecode transformation.
+            // TODO: the stackless bytecode should optimize away unnecessary copy/moves, so we
+            // don't need this. The below transformation is only correct for stackless code
+            // of certain shape
+            let effective_dest_func = |dest: usize| -> usize {
+                if dest >= func_env.get_local_count() && offset + 1 < code.code.len() {
+                    if let Pack(temp_dest, ..) = &code.code[offset] {
+                        match &code.code[offset + 1] {
+                            MoveLoc(effective_dest, src) | CopyLoc(effective_dest, src) => {
+                                if *src as usize == *temp_dest {
+                                    return *effective_dest;
+                                }
+                            }
+                            StLoc(effective_dest, src) => {
+                                if *src == *temp_dest {
+                                    return *effective_dest as usize;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                dest
+            };
+            self.translate_bytecode(
+                func_env,
+                offset as u16,
+                bytecode,
+                effective_dest_func,
+                &mutual_local_borrows,
+                &update_invariant_on_release,
+            );
         }
 
         // Generate abort exit.
@@ -1099,6 +1323,28 @@ impl<'env> ModuleTranslator<'env> {
         self.module_env.globalize_signature(
             &self.stackless_bytecode[func_env.get_def_idx().0 as usize].local_types[local_idx],
         )
+    }
+
+    /// Determines whether this type has update invariants that shall be
+    /// enforced on mutual reference release.
+    fn has_update_invariant_on_release(&'env self, ty: &GlobalType) -> bool {
+        if self.module_env.env.options.invariant_model == InvariantModel::LifetimeBased {
+            if let GlobalType::MutableReference(bt) = &ty {
+                if let GlobalType::Struct(module_idx, struct_idx, _) = bt.as_ref() {
+                    let struct_env = self
+                        .module_env
+                        .env
+                        .get_module(*module_idx)
+                        .into_get_struct(struct_idx);
+                    if !struct_env.get_data_invariants().is_empty()
+                        || !struct_env.get_update_invariants().is_empty()
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// Updates a local, injecting debug information if available.
@@ -1155,4 +1401,9 @@ impl<'env> ModuleTranslator<'env> {
             )
         }
     }
+}
+
+/// Separates elements in vector, dropping empty ones.
+fn separate(elems: Vec<String>, sep: &str) -> String {
+    elems.iter().filter(|s| !s.is_empty()).join(sep)
 }

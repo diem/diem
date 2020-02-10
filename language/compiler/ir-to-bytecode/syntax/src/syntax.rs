@@ -1615,10 +1615,24 @@ fn parse_invariant_<'input>(
     } else {
         String::new()
     };
+    // Check whether this invariant has the assignment form `invariant target = <expr>;`
+    let target = if tokens.peek() == Tok::NameValue {
+        // There must always be some token following (e.g. ;), so we can force lookahead.
+        if tokens.lookahead()? == Tok::Equal {
+            let name = parse_name(tokens)?;
+            consume_token(tokens, Tok::Equal)?;
+            Some(name)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
     let condition = parse_spec_exp(tokens)?;
     Ok(Invariant_ {
         modifier,
-        condition,
+        target,
+        exp: condition,
     })
 }
 

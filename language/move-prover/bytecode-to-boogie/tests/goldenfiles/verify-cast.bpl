@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module CastBad
+
+
+
 // ** structs of module CastBad
 
 

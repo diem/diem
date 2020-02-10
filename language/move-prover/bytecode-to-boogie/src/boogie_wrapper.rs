@@ -3,10 +3,11 @@
 
 //! Wrapper around the boogie program. Allows to call boogie and analyze the output.
 
-use crate::cli::{abort_on_error, abort_with_error};
-use crate::code_writer::CodeWriter;
-use crate::driver::PSEUDO_PRELUDE_MODULE;
-use crate::env::{FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, ModuleIndex};
+use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
+use std::option::Option::None;
+use std::process::Command;
+
 use codespan::{
     ByteIndex, ByteOffset, ByteSpan, CodeMap, ColumnIndex, FileName, LineIndex, RawIndex,
 };
@@ -15,15 +16,17 @@ use codespan_reporting::{Diagnostic, Label, Severity};
 use itertools::Itertools;
 use log::warn;
 use log::{debug, error, info};
-use move_ir_types::ast::Loc;
 use num::BigInt;
 use pretty::RcDoc;
 use regex::Regex;
-use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::option::Option::None;
-use std::process::Command;
+
+use move_ir_types::ast::Loc;
 use vm::file_format::{FunctionDefinitionIndex, StructDefinitionIndex};
+
+use crate::cli::{abort_on_error, abort_with_error};
+use crate::code_writer::CodeWriter;
+use crate::driver::PSEUDO_PRELUDE_MODULE;
+use crate::env::{FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, ModuleIndex};
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a
 /// Wadler-style pretty printer. Our simple usage doesn't require any lifetime management.
@@ -51,10 +54,17 @@ pub struct BoogieOutput {
 pub type Position = (LineIndex, ColumnIndex);
 
 /// Kind of boogie error.
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum BoogieErrorKind {
     Compilation,
-    Verification,
+    Postcondition,
+    Assertion,
+}
+
+impl BoogieErrorKind {
+    fn from_verification(&self) -> bool {
+        self == &BoogieErrorKind::Assertion || self == &BoogieErrorKind::Postcondition
+    }
 }
 
 /// A boogie error.
@@ -62,8 +72,19 @@ pub struct BoogieError {
     pub kind: BoogieErrorKind,
     pub position: Position,
     pub message: String,
-    pub execution_trace: Vec<(Position, String)>,
+    pub execution_trace: Vec<(Position, TraceKind, String)>,
     pub model: Option<Model>,
+}
+
+/// The type of a trace.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum TraceKind {
+    Regular,
+    EnterFunction,
+    ExitFunction,
+    Aborted,
+    UpdateInvariant,
+    Pack,
 }
 
 impl<'env> BoogieWrapper<'env> {
@@ -137,8 +158,8 @@ impl<'env> BoogieWrapper<'env> {
         let (index, location) = self.get_locations(error.position);
 
         // Determine whether we report this error on the source
-        let on_source = error.kind == BoogieErrorKind::Verification
-            && self.to_proper_source_location(location).is_some();
+        let on_source =
+            error.kind.from_verification() && self.to_proper_source_location(location).is_some();
 
         // Create label (position information) for main error.
         let label = Label::new_primary(if on_source {
@@ -172,44 +193,69 @@ impl<'env> BoogieWrapper<'env> {
         );
 
         // Now add trace diagnostics.
-        if error.kind == BoogieErrorKind::Verification && !error.execution_trace.is_empty() {
+        if error.kind.from_verification() && !error.execution_trace.is_empty() {
             // Add trace information.
             let mut locals_shown = BTreeSet::new();
             let mut aborted = false;
-            let trace = error
+            let cleaned_trace = error
                 .execution_trace
                 .iter()
-                .filter_map(|(pos, msg)| {
+                .filter_map(|(pos, kind, msg)| {
                     // If trace entry has no source location or is from prelude, skip
                     let trace_location =
                         self.to_proper_source_location(self.get_locations(*pos).1)?;
-                    Some((pos, trace_location, msg))
+
+                    // If trace info is not about function code, skip.
+                    let module_emv = self.env.get_module(trace_location.0);
+                    if module_emv
+                        .get_enclosing_function(trace_location.1)
+                        .is_some()
+                    {
+                        Some((pos, trace_location, kind, msg))
+                    } else {
+                        // TODO: we may want to extend to track struct generated code.
+                        None
+                    }
                 })
-                .dedup_by(|(_, location1, _), (_, location2, msg2)| {
+                .dedup_by(|(_, location1, _, _), (_, location2, kind2, _)| {
                     // Removes consecutive entries which point to the same location if trace
                     // minimization is active.
                     self.env.options.minimize_execution_trace
                         && location1 == location2
-                        // Do not dedup the return trace entry. It may have the same location as
-                        // the entry trace info, but we need to display it.
-                        && !msg2.ends_with("$Return")
+                        // Only dedup regular trace infos.
+                        && *kind2 == &TraceKind::Regular
                 })
-                .filter_map(|(pos, (module_idx, loc), msg)| {
+                // Cut the trace after abort -- the remaining only proapagtes the abort up
+                // the call stack and isn't useful.
+                .filter_map(|(pos, (module_idx, loc), mut kind, msg)| {
+                    if aborted {
+                        return None;
+                    }
+                    let module_env = self.env.get_module(module_idx);
+                    aborted = if let Some(model) = &error.model {
+                        model
+                            .tracked_aborts
+                            .get(&(module_env.get_module_idx(), loc.start()))
+                            .is_some()
+                    } else {
+                        false
+                    };
+                    if aborted {
+                        kind = &TraceKind::Aborted
+                    }
+                    Some((pos, (module_idx, loc), kind, msg))
+                })
+                .collect_vec();
+
+            let n = cleaned_trace.len();
+            let trace = cleaned_trace
+                .into_iter()
+                .enumerate()
+                .map(|(i, (pos, (module_idx, loc), kind, msg))| {
                     if on_source {
-                        if aborted {
-                            return None;
-                        }
                         let module_env = self.env.get_module(module_idx);
                         let (source_file, source_pos) = module_env.get_position(loc);
-                        aborted = if let Some(model) = &error.model {
-                            model
-                                .tracked_aborts
-                                .get(&(module_env.get_module_idx(), loc.start()))
-                                .is_some()
-                        } else {
-                            false
-                        };
-                        Some(self.render_trace_info(
+                        self.render_trace_info(
                             source_file,
                             source_pos,
                             self.pretty_trace_info(
@@ -217,16 +263,17 @@ impl<'env> BoogieWrapper<'env> {
                                 loc,
                                 error.model.as_ref(),
                                 &mut locals_shown,
-                                aborted,
+                                *kind,
+                                i == n - 1,
                                 msg,
                             ),
-                        ))
+                        )
                     } else {
-                        Some(self.render_trace_info(
+                        self.render_trace_info(
                             self.env.options.output_path.clone(),
                             *pos,
                             PrettyDoc::text(format!("<boogie>: {}", msg)),
-                        ))
+                        )
                     }
                 })
                 .collect_vec();
@@ -279,26 +326,43 @@ impl<'env> BoogieWrapper<'env> {
         mut loc: Loc,
         model_opt: Option<&'env Model>,
         locals_shown: &mut BTreeSet<(CodeIndex, LocalDescriptor)>,
-        aborted: bool,
-        boogie_msg: &str,
+        kind: TraceKind,
+        is_last: bool,
+        _boogie_msg: &str,
     ) -> PrettyDoc {
         let mut has_info = false;
-        if let Some(func_env) = module_env.get_enclosing_function(loc) {
-            let func_name = func_env.get_name().to_string();
-            let mut func_display = func_name;
-            if aborted {
-                func_display = format!("{} (ABORTED)", func_display);
-            }
-            if boogie_msg.ends_with("$Entry") {
-                func_display = format!("{} (entry)", func_display);
+        let kind_tag = match kind {
+            TraceKind::EnterFunction => {
                 // Narrow location to the beginning of the function.
+                // Do not narrow location if this is the last trace entry --
+                // otherwise we wont show variables at this point.
                 loc = Loc::new(loc.start(), loc.start() + ByteOffset(1));
-            } else if boogie_msg.ends_with("$Return") {
-                func_display = format!("{} (exit)", func_display);
+                " (entry)"
+            }
+            TraceKind::ExitFunction => {
                 // Narrow location to the end of the function.
                 if loc.end().0 > 0 {
                     loc = Loc::new(loc.end() - ByteOffset(1), loc.end());
                 }
+                " (exit)"
+            }
+            TraceKind::Aborted => " (ABORTED)",
+            TraceKind::UpdateInvariant => " (invariant)",
+            TraceKind::Pack => " (pack)",
+            _ => "",
+        };
+        if let Some(func_env) = module_env.get_enclosing_function(loc) {
+            let func_name = func_env.get_name().to_string();
+            let func_display = format!("{}{}", func_name, kind_tag);
+            if is_last {
+                debug!("is last!");
+                // If this is the last trace entry, set the location to the end of the function.
+                // This ensures that all variables which haven't yet will be printed
+                let mut end = func_env.get_loc().end().to_usize();
+                if end > 0 {
+                    end -= 1;
+                }
+                loc = Loc::new(ByteIndex(end as u32), ByteIndex((end + 1) as u32));
             }
             let model_info = if let Some(model) = model_opt {
                 let displayed_info = model
@@ -319,13 +383,15 @@ impl<'env> BoogieWrapper<'env> {
             };
             if has_info {
                 PrettyDoc::text(func_display)
+                    // DEBUG
+                    // .append(PrettyDoc::text(format!(" ({}) ", loc)))
                     .append(PrettyDoc::hardline())
                     .append(model_info)
             } else {
                 PrettyDoc::text(func_display)
             }
         } else {
-            PrettyDoc::text("<unknown function>")
+            PrettyDoc::text(format!("<unknown function>{}", kind_tag))
         }
     }
 
@@ -358,8 +424,9 @@ impl<'env> BoogieWrapper<'env> {
     fn extract_verification_errors(&self, out: &str) -> Vec<BoogieError> {
         let model_region =
             Regex::new(r"(?m)^\*\*\* MODEL$(?P<mod>(?s:.)*?^\*\*\* END_MODEL$)").unwrap();
-        let verification_diag_start = Regex::new(r"(?m)^.*Error BP\d+:(?P<msg>.*)$").unwrap();
-        let verification_diag_cond =
+        let verification_diag_start =
+            Regex::new(r"(?m)^.*\((?P<line>\d+),(?P<col>\d+)\): Error BP\d+:(?P<msg>.*)$").unwrap();
+        let verification_diag_related =
             Regex::new(r"(?m)^.+\((?P<line>\d+),(?P<col>\d+)\): Related.*$").unwrap();
         let verification_diag_trace = Regex::new(r"(?m)^Execution trace:$").unwrap();
         let verification_diag_trace_entry =
@@ -381,35 +448,58 @@ impl<'env> BoogieWrapper<'env> {
             if let Some(cap) = verification_diag_start.captures(&out[at..]) {
                 let msg = cap.name("msg").unwrap().as_str();
                 at += cap.get(0).unwrap().end();
-                if let Some(cap) = verification_diag_cond.captures(&out[at..]) {
+                // Check whether there is a `Related` message which points to the pre/post condition.
+                // If so, this has the real position.
+                let (line, col) = if let Some(cap1) = verification_diag_related.captures(&out[at..])
+                {
+                    at += cap1.get(0).unwrap().end();
+                    let line = cap1.name("line").unwrap().as_str();
+                    let col = cap1.name("col").unwrap().as_str();
+                    (line, col)
+                } else {
                     let line = cap.name("line").unwrap().as_str();
                     let col = cap.name("col").unwrap().as_str();
-                    let mut trace = vec![];
-                    at += cap.get(0).unwrap().end();
-                    if let Some(m) = verification_diag_trace.find(&out[at..]) {
-                        at += m.end();
-                        while let Some(cap) = verification_diag_trace_entry.captures(&out[at..]) {
-                            let line = cap.name("line").unwrap().as_str();
-                            let col = cap.name("col").unwrap().as_str();
-                            let msg = cap.name("msg").unwrap().as_str();
-                            trace.push((make_position(line, col), msg.to_string()));
-                            at += cap.get(0).unwrap().end();
-                            if !out[at..].starts_with("\n  ") && !out[at..].starts_with("\r\n  ") {
-                                // Don't read further if this line does not start with an indent,
-                                // as all trace entries do. Otherwise we would match the trace entry
-                                // for the next error.
-                                break;
-                            }
+                    (line, col)
+                };
+                let mut trace = vec![];
+                if let Some(m) = verification_diag_trace.find(&out[at..]) {
+                    at += m.end();
+                    while let Some(cap) = verification_diag_trace_entry.captures(&out[at..]) {
+                        let line = cap.name("line").unwrap().as_str();
+                        let col = cap.name("col").unwrap().as_str();
+                        let msg = cap.name("msg").unwrap().as_str();
+                        let trace_kind = if msg.ends_with("$Entry") {
+                            TraceKind::EnterFunction
+                        } else if msg.ends_with("$Return") {
+                            TraceKind::ExitFunction
+                        } else if msg.contains("_update_inv$") {
+                            TraceKind::UpdateInvariant
+                        } else if msg.contains("$Pack_") {
+                            TraceKind::Pack
+                        } else {
+                            TraceKind::Regular
+                        };
+                        trace.push((make_position(line, col), trace_kind, msg.to_string()));
+                        at += cap.get(0).unwrap().end();
+                        if !out[at..].starts_with("\n  ") && !out[at..].starts_with("\r\n  ") {
+                            // Don't read further if this line does not start with an indent,
+                            // as all trace entries do. Otherwise we would match the trace entry
+                            // for the next error.
+                            break;
                         }
                     }
-                    errors.push(BoogieError {
-                        kind: BoogieErrorKind::Verification,
-                        position: make_position(line, col),
-                        message: msg.to_string(),
-                        execution_trace: trace,
-                        model,
-                    });
                 }
+                errors.push(BoogieError {
+                    kind: if msg.contains("assertion might not hold") {
+                        BoogieErrorKind::Assertion
+                    } else {
+                        BoogieErrorKind::Postcondition
+                    },
+                    position: make_position(line, col),
+                    message: msg.to_string(),
+                    execution_trace: trace,
+                    model,
+                });
             } else {
                 break;
             }
@@ -517,7 +607,14 @@ impl Model {
                     let (mark, code_idx) = Self::extract_abort_marker(env, k)?;
                     tracked_aborts.insert((mark.module_idx, code_idx), mark);
                 }
-
+                // DEBUG
+                // for ((_, byte_idx), values) in &tracked_locals {
+                //     info!("{} -> ", byte_idx);
+                //     for (var, val) in values {
+                //         info!("  {} -> {:?}", var.var_idx, val);
+                //     }
+                // }
+                // END DEBUG
                 let model = Model {
                     vars,
                     tracked_locals,
@@ -545,9 +642,14 @@ impl Model {
                 .extract_number()
                 .ok_or_else(Self::invalid_track_info)
                 .and_then(Self::index_range_check(module_env.get_function_count()))?;
+            let func_env = module_env.get_function(&FunctionDefinitionIndex(func_idx as u16));
             let var_idx = args[2]
                 .extract_number()
-                .ok_or_else(Self::invalid_track_info)?;
+                .ok_or_else(Self::invalid_track_info)
+                .and_then(Self::index_range_check(
+                    func_env.get_local_count() + func_env.get_return_count(),
+                ))?;
+
             let code_idx = args[3]
                 .extract_number()
                 .ok_or_else(Self::invalid_track_info)?;
@@ -607,9 +709,10 @@ impl Model {
             if idx < max {
                 Ok(idx)
             } else {
-                Err(ModelParseError::new(
-                    "invalid debug track info: index out of range",
-                ))
+                Err(ModelParseError::new(&format!(
+                    "invalid debug track info: index out of range (upper bound {}, got {})",
+                    max, idx
+                )))
             }
         }
     }

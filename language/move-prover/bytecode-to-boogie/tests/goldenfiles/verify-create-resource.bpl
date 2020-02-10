@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module TestSpecs
+
+
+
 // ** structs of module TestSpecs
 
 const unique TestSpecs_R: TypeName;
@@ -8,10 +12,16 @@ axiom TestSpecs_R_x == 0;
 function TestSpecs_R_type_value(): TypeValue {
     StructType(TestSpecs_R, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-procedure {:inline 1} Pack_TestSpecs_R(x: Value) returns (_struct: Value)
+function {:inline 1} $TestSpecs_R_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && IsValidU64(SelectField(__this, TestSpecs_R_x))
+}
+
+procedure {:inline 1} Pack_TestSpecs_R(module_idx: int, func_idx: int, var_idx: int, code_idx: int, x: Value) returns (_struct: Value)
 {
     assume IsValidU64(x);
     _struct := Vector(ExtendValueArray(EmptyValueArray, x));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestSpecs_R(_struct: Value) returns (x: Value)
@@ -71,7 +81,7 @@ Label_5:
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
-    call __tmp := Pack_TestSpecs_R(GetLocal(__m, __frame + 3));
+    call __tmp := Pack_TestSpecs_R(0, 0, 0, 0, GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call MoveToSender(TestSpecs_R_type_value(), GetLocal(__m, __frame + 4));

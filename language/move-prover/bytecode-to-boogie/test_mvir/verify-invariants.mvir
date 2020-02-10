@@ -1,0 +1,66 @@
+// Tests basic invariant functionality.
+
+module TestInvariants {
+
+    struct T {
+      i: u64,
+
+      // We must always have a value greater zero.
+      // Expecting one error from `invalid_T` tes`.
+      invariant {data} i > 0, //! This assertion might not hold.
+
+      // When we update via a reference, the new value must be greater than the old one.
+      // Expecting two errors from `invalid_T_update` and `invalid_T_update_indirectly` test.
+      invariant {update} i > old(i) //! This assertion might not hold.
+                                    //! This assertion might not hold.
+    }
+
+    public valid_T(): Self.T
+    ensures RET.i == 1
+    {
+      let t: Self.T;
+      t = T{i:1};
+      return move(t);
+    }
+
+    public invalid_T(): Self.T
+    ensures RET.i == 0
+    {
+      let t: Self.T;
+      t = T{i:0};
+      return move(t);
+    }
+
+    public valid_T_update(): Self.T
+    ensures RET.i == 3
+    {
+      let t: Self.T;
+      let r: &mut Self.T;
+      t = T{i:2};
+      r = &mut t;
+      *move(r) = T{i:3};
+      return move(t);
+    }
+
+    public invalid_T_update(): Self.T
+    ensures RET.i == 2
+    {
+      let t: Self.T;
+      let r: &mut Self.T;
+      t = T{i:2};
+      r = &mut t;
+      *move(r) = T{i:2};
+      return move(t);
+    }
+
+    public invalid_T_update_indirectly(): Self.T
+    ensures RET.i == 2
+    {
+      let t: Self.T;
+      let r: &mut Self.T;
+      t = T{i:2};
+      r = &mut t;
+      *&mut move(r).i = 2;
+      return move(t);
+    }
+}
