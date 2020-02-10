@@ -58,7 +58,7 @@ impl Address {
         assert!(result.len() >= 32);
         Self::try_from(&result[..]).map_err(|_| {
             format!(
-                "Address is {} bytes long; the maximum size is {} bytes",
+                "Address is {} bytes long. The maximum size is {} bytes",
                 result.len(),
                 ADDRESS_LENGTH
             )
