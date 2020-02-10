@@ -67,14 +67,16 @@ impl AccountAddress {
         };
 
         let len = result.len();
-        if len < ADDRESS_LENGTH {
-            let mut padding = Vec::with_capacity(ADDRESS_LENGTH);
-            padding.resize(ADDRESS_LENGTH - len, 0u8);
-            padding.append(&mut result);
-            result = padding;
-        }
+        let padded_result = if len < ADDRESS_LENGTH {
+            let mut padded = Vec::with_capacity(ADDRESS_LENGTH);
+            padded.resize(ADDRESS_LENGTH - len, 0u8);
+            padded.append(&mut result);
+            padded
+        } else {
+            result
+        };
 
-        AccountAddress::try_from(result)
+        AccountAddress::try_from(padded_result)
     }
 }
 
