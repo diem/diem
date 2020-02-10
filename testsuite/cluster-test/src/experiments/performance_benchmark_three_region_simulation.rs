@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::experiments::ExperimentParam;
+use crate::tx_emitter::EmitJobRequest;
 use crate::{
     cluster::Cluster,
     effects::{three_region_simulation_effects, Effect},
@@ -53,9 +54,13 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         );
         join_all(network_effects.iter().map(|e| e.activate())).await;
         let window = Duration::from_secs(240);
+        let emit_job_request = EmitJobRequest {
+            instances: self.cluster.validator_instances().clone(),
+            ..context.global_emit_job_request.clone()
+        };
         context
             .tx_emitter
-            .emit_txn_for(window, self.cluster.validator_instances().clone())
+            .emit_txn_for(window, emit_job_request)
             .await?;
         let buffer = Duration::from_secs(30);
         let end = unix_timestamp_now() - buffer;
