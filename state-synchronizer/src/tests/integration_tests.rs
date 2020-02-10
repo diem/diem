@@ -18,7 +18,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_logger::set_simple_logger;
-use libra_mempool::mocks::{mock_shared_mempool, MockSharedMempool};
+use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
     block_info::BlockInfo,
     crypto_proxies::{
@@ -324,7 +324,7 @@ impl SynchronizerEnv {
             MockExecutorProxy::new(handler, storage_proxy.clone()),
         );
         self.mempools
-            .push(mock_shared_mempool(Some(mempool_requests)));
+            .push(MockSharedMempool::new(Some(mempool_requests)));
         let client = synchronizer.create_client();
         self.synchronizers.push(synchronizer);
         self.clients.push(client);

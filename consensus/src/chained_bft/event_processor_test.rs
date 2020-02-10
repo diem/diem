@@ -179,7 +179,7 @@ impl NodeSetup {
         let proposal_generator = ProposalGenerator::new(
             author,
             block_store.clone(),
-            Box::new(MockTransactionManager::new()),
+            Box::new(MockTransactionManager::new(None)),
             time_service.clone(),
             1,
         );
@@ -195,6 +195,7 @@ impl NodeSetup {
             proposer_election,
             proposal_generator,
             safety_rules_manager.client(),
+            Box::new(MockTransactionManager::new(None)),
             network,
             storage.clone(),
             time_service,

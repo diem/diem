@@ -18,15 +18,16 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, executor::block_on, stream::StreamExt};
-use libra_config::config::ConsensusConfig;
 use libra_config::{
     config::{
+        ConsensusConfig,
         ConsensusProposerType::{self, FixedProposer, MultipleOrderedProposers, RotatingProposer},
         NodeConfig, SafetyRulesConfig,
     },
     generator::{self, ValidatorSwarm},
 };
 use libra_crypto::hash::CryptoHash;
+use libra_mempool::mocks::MockSharedMempool;
 use libra_types::crypto_proxies::{
     LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorSet, ValidatorVerifier,
 };
@@ -45,6 +46,7 @@ struct SMRNode {
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
     storage: Arc<MockStorage<TestPayload>>,
     state_sync: mpsc::UnboundedReceiver<Vec<usize>>,
+    shared_mempool: MockSharedMempool,
 }
 
 impl SMRNode {
@@ -68,6 +70,8 @@ impl SMRNode {
         playground.add_node(author, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
         let (state_sync_client, state_sync) = mpsc::unbounded();
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+        let shared_mempool = MockSharedMempool::new(None);
+        let consensus_to_mempool_sender = shared_mempool.consensus_sender.clone();
 
         let mut smr = ChainedBftSMR::new(
             network_sender,
@@ -80,7 +84,9 @@ impl SMRNode {
                 executor_with_reconfig,
             )),
             storage.clone(),
-            Box::new(MockTransactionManager::new()),
+            Box::new(MockTransactionManager::new(Some(
+                consensus_to_mempool_sender,
+            ))),
         );
 
         smr.start().expect("Failed to start SMR!");
@@ -91,6 +97,7 @@ impl SMRNode {
             commit_cb_receiver,
             storage,
             state_sync,
+            shared_mempool,
         }
     }
 

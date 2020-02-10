@@ -25,9 +25,7 @@ use network::{proto::Proposal, validator_network::ConsensusNetworkSender};
 use once_cell::sync::Lazy;
 use prost::Message as _;
 use safety_rules::{PersistentSafetyStorage, SafetyRules};
-use std::convert::TryFrom;
-use std::num::NonZeroUsize;
-use std::sync::Arc;
+use std::{convert::TryFrom, num::NonZeroUsize, sync::Arc};
 use tokio::runtime::Runtime;
 
 // This generates a proposal for round 1
@@ -122,7 +120,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let proposal_generator = ProposalGenerator::new(
         signer.author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new()),
+        Box::new(MockTransactionManager::new(None)),
         time_service.clone(),
         1,
     );
@@ -141,6 +139,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         proposer_election,
         proposal_generator,
         Box::new(safety_rules),
+        Box::new(MockTransactionManager::new(None)),
         network,
         storage,
         time_service,

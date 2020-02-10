@@ -6,7 +6,7 @@ use admission_control_proto::proto::admission_control::{
     admission_control_server::AdmissionControl, SubmitTransactionRequest,
 };
 use futures::executor::block_on;
-use libra_mempool::mocks::mock_shared_mempool;
+use libra_mempool::mocks::MockSharedMempool;
 use libra_proptest_helpers::ValueGenerator;
 use libra_prost_ext::MessageExt;
 use libra_types::transaction::SignedTransaction;
@@ -38,7 +38,7 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 /// service
 pub fn fuzzer(data: &[u8]) {
     // set up AC backed by SMP
-    let smp = mock_shared_mempool(None);
+    let smp = MockSharedMempool::new(None);
     let ac_service = AdmissionControlService::new(smp.ac_client, Arc::new(MockStorageReadClient));
 
     // parse SubmitTransactionRequest
