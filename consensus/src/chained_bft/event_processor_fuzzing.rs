@@ -23,8 +23,7 @@ use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, Val
 use network::validator_network::ConsensusNetworkSender;
 use once_cell::sync::Lazy;
 use safety_rules::{PersistentSafetyStorage, SafetyRules};
-use std::num::NonZeroUsize;
-use std::sync::Arc;
+use std::{num::NonZeroUsize, sync::Arc};
 use tokio::runtime::Runtime;
 
 // This generates a proposal for round 1
@@ -114,7 +113,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let proposal_generator = ProposalGenerator::new(
         signer.author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new()),
+        Box::new(MockTransactionManager::new(None)),
         time_service.clone(),
         1,
     );
@@ -134,6 +133,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         proposal_generator,
         Box::new(safety_rules),
         network,
+        Box::new(MockTransactionManager::new(None)),
         storage,
         time_service,
         validators,

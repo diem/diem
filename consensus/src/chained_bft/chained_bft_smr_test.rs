@@ -14,13 +14,8 @@ use crate::{
     consensus_provider::ConsensusProvider,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::{channel::mpsc, executor::block_on, prelude::*};
-use consensus_types::{
-    proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-    vote_msg::VoteMsg,
-};
-use futures::{channel::mpsc, executor::block_on, prelude::*, stream::StreamExt};
-use libra_config::config::ConsensusConfig;
+use consensus_types::vote_msg::VoteMsg;
+use futures::{channel::mpsc, executor::block_on, stream::StreamExt};
 use libra_config::{
     config::{
         ConsensusConfig,
@@ -30,6 +25,7 @@ use libra_config::{
     generator::{self, ValidatorSwarm},
 };
 use libra_crypto::hash::CryptoHash;
+use libra_mempool::mocks::MockSharedMempool;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet, ValidatorVerifier};
 use network::peer_manager::conn_status_channel;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
@@ -43,6 +39,7 @@ struct SMRNode {
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
     storage: Arc<MockStorage<TestPayload>>,
     state_sync: mpsc::UnboundedReceiver<Vec<usize>>,
+    shared_mempool: MockSharedMempool,
 }
 
 impl SMRNode {
@@ -66,6 +63,8 @@ impl SMRNode {
         playground.add_node(author, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
         let (state_sync_client, state_sync) = mpsc::unbounded();
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+        let shared_mempool = MockSharedMempool::new(None);
+        let consensus_to_mempool_sender = shared_mempool.consensus_sender.clone();
 
         let mut smr = ChainedBftSMR::new(
             network_sender,
@@ -78,7 +77,9 @@ impl SMRNode {
                 executor_with_reconfig,
             )),
             storage.clone(),
-            Box::new(MockTransactionManager::new()),
+            Box::new(MockTransactionManager::new(Some(
+                consensus_to_mempool_sender,
+            ))),
         );
 
         smr.start().expect("Failed to start SMR!");
@@ -89,6 +90,7 @@ impl SMRNode {
             commit_cb_receiver,
             storage,
             state_sync,
+            shared_mempool,
         }
     }
 
@@ -554,14 +556,12 @@ fn basic_state_sync() {
             .wait_for_messages(3, NetworkPlayground::proposals_only)
             .await;
 
-        // TODO check ACK from state sync
         let committed_txns = nodes[3]
             .state_sync
             .next()
             .await
             .expect("MockStateSync failed to be notified by a mempool committed txns");
         let max_block_size = ConsensusConfig::default().max_block_size as usize;
-        //        assert_eq!(nodes[3].mempool.get_committed_txns().len(), max_block_size);
         assert_eq!(committed_txns.len(), max_block_size);
     });
 }

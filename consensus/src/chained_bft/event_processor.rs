@@ -17,6 +17,7 @@ use crate::{
         },
     },
     counters,
+    state_replication::TxnManager,
     util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
@@ -44,8 +45,10 @@ use libra_types::{
 use network::proto::ConsensusMsg;
 
 use crate::chained_bft::network::IncomingBlockRetrievalRequest;
-use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
-use consensus_types::executed_block::ExecutedBlock;
+use consensus_types::{
+    block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
+    executed_block::ExecutedBlock,
+};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
@@ -150,6 +153,7 @@ pub struct EventProcessor<T> {
     proposal_generator: ProposalGenerator<T>,
     safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
     network: NetworkSender<T>,
+    txn_manager: Box<dyn TxnManager<Payload = T>>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     time_service: Arc<dyn TimeService>,
     // Cache of the last sent vote message.
@@ -166,6 +170,7 @@ impl<T: Payload> EventProcessor<T> {
         proposal_generator: ProposalGenerator<T>,
         safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
         network: NetworkSender<T>,
+        txn_manager: Box<dyn TxnManager<Payload = T>>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
         time_service: Arc<dyn TimeService>,
         validators: Arc<ValidatorVerifier>,
@@ -185,6 +190,7 @@ impl<T: Payload> EventProcessor<T> {
             proposer_election,
             proposal_generator,
             safety_rules,
+            txn_manager,
             network,
             storage,
             time_service,
@@ -840,8 +846,17 @@ impl<T: Payload> EventProcessor<T> {
                 return;
             }
         };
-        Self::update_counters_for_committed_blocks(blocks_to_commit);
-        // TODO notify mempool of rejected txns via txn_manager
+        Self::update_counters_for_committed_blocks(blocks_to_commit.clone());
+
+        // notify mempool of rejected txns via txn_manager
+        for committed in blocks_to_commit {
+            if let Some(payload) = committed.payload() {
+                let compute_result = committed.compute_result();
+                if let Err(e) = self.txn_manager.commit_txns(payload, &compute_result).await {
+                    error!("Failed to notify mempool of rejected txns: {:?}", e);
+                }
+            }
+        }
 
         if finality_proof.ledger_info().next_validator_set().is_some() {
             self.network

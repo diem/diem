@@ -5,8 +5,10 @@ use crate::state_replication::TxnManager;
 use anyhow::{format_err, Result};
 use executor::StateComputeResult;
 use futures::channel::{mpsc, oneshot};
-use libra_mempool::{ConsensusRequest, ConsensusResponse, TransactionExclusion};
-use libra_types::transaction::SignedTransaction;
+use libra_mempool::{
+    CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,
+};
+use libra_types::transaction::{SignedTransaction, TransactionStatus};
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -63,13 +65,34 @@ impl TxnManager for MempoolProxy {
     // Consensus notifies mempool of committed transactions that were rejected
     async fn commit_txns(
         &mut self,
-        _txns: &Self::Payload,
-        _compute_results: &StateComputeResult,
-        // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
-        _timestamp_usecs: u64,
+        txns: &Self::Payload,
+        compute_results: &StateComputeResult,
     ) -> Result<()> {
-        // TODO notify mempool of rejected txns here
-        unimplemented!();
+        let mut rejected_txns = vec![];
+        for (txn, status) in txns.iter().zip(compute_results.compute_status.iter()) {
+            if let TransactionStatus::Discard(_) = status {
+                rejected_txns.push(CommittedTransaction {
+                    sender: txn.sender(),
+                    sequence_number: txn.sequence_number(),
+                });
+            }
+        }
+
+        if rejected_txns.is_empty() {
+            return Ok(());
+        }
+
+        let (callback, callback_rcv) = oneshot::channel();
+        let req = ConsensusRequest::RejectNotification(rejected_txns, callback);
+
+        // send to shared mempool
+        self.consensus_to_mempool_sender.clone().try_send(req)?;
+
+        if let Err(e) = timeout(Duration::from_secs(1), callback_rcv).await {
+            Err(format_err!("[consensus] txn manager did not receive ACK for commit notification sent to mempool on time: {:?}", e))
+        } else {
+            Ok(())
+        }
     }
 
     fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>> {

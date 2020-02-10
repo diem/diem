@@ -3,4 +3,4 @@
 
 mod mock_shared_mempool;
 
-pub use mock_shared_mempool::{mock_shared_mempool, MockSharedMempool};
+pub use mock_shared_mempool::MockSharedMempool;
