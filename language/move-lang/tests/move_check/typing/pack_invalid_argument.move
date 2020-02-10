@@ -3,7 +3,7 @@ module M {
     struct Nat<T> { f: T }
     resource struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
 
-    t0(): R {
+    fun t0(): R {
         (S { f: false } : S);
 
         let s = S { f: 0 };

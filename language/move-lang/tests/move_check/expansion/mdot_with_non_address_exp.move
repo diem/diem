@@ -1,19 +1,19 @@
 address 0x1:
 
 module X {
-    bar() { }
+    fun bar() { }
 }
 module M {
 
-    foo() {
+    fun foo() {
         01::X::bar()
     }
 
-    bar() {
+    fun bar() {
         false::X::bar()
     }
 
-    baz() {
+    fun baz() {
         foo().bar().X::bar()
     }
 }

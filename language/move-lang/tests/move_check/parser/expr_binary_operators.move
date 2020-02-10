@@ -1,6 +1,6 @@
 use 0x0::Transaction;
 
-main() {
+fun main() {
     Transaction::assert(1 == 1, 101);
     Transaction::assert(2 != 3, 102);
     Transaction::assert((3 < 4) && !(3 < 3), 103);

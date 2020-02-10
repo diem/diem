@@ -3,7 +3,7 @@ module M {
     struct S {}
     struct Box<T> {}
 
-    t0() {
+    fun t0() {
         (0, S{}, R<u64> {});
         (0, S{}, Box<R<u64>> {});
         (0, S{}, Box {});

@@ -3,11 +3,11 @@ module M {
     struct C {}
     resource struct R {}
 
-    foo() {
+    fun foo() {
         ignore((abort 0: CupC<R>));
     }
 
-    ignore<T>(x: T) {
+    fun ignore<T>(x: T) {
 
     }
 

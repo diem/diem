@@ -10,7 +10,7 @@ module M {
         h: X2::S,
     }
 
-    foo(x: 0x1::X::S, y: X::S, z: X2::S): (0x1::X::S, X::S, X2::S) {
+    fun foo(x: 0x1::X::S, y: X::S, z: X2::S): (0x1::X::S, X::S, X2::S) {
         let a : 0x1::X::S = 0x1::X::foo();
         let b : X::S = X::foo();
         let c : X2::S = X2::foo();
@@ -20,5 +20,5 @@ module M {
 
 module X {
     struct S {}
-    public foo(): S { S{} }
+    public fun foo(): S { S{} }
 }

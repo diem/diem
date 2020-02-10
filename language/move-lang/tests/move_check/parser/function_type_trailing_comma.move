@@ -1,6 +1,6 @@
 module M {
-    fn<T,>() { } // Test a trailing comma in the type parameters
-    caller() {
+    fun fn<T,>() { } // Test a trailing comma in the type parameters
+    fun caller() {
         fn<u64,>()
     }
 }

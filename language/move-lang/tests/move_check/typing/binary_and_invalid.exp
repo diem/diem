@@ -84,13 +84,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_and_invalid.move:7:19 ───
+    ┌── tests/move_check/typing/binary_and_invalid.move:7:23 ───
     │
  12 │         r && r;
     │         ^ Invalid argument to '&&'
     ·
- 7 │     t0(x: u64, r: R, s: S) {
-    │                   - The type: '0x8675309::M::R'
+ 7 │     fun t0(x: u64, r: R, s: S) {
+    │                       - The type: '0x8675309::M::R'
     ·
  12 │         r && r;
     │         - Is not compatible with: 'bool'
@@ -98,13 +98,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_and_invalid.move:7:19 ───
+    ┌── tests/move_check/typing/binary_and_invalid.move:7:23 ───
     │
  12 │         r && r;
     │              ^ Invalid argument to '&&'
     ·
- 7 │     t0(x: u64, r: R, s: S) {
-    │                   - The type: '0x8675309::M::R'
+ 7 │     fun t0(x: u64, r: R, s: S) {
+    │                       - The type: '0x8675309::M::R'
     ·
  12 │         r && r;
     │         - Is not compatible with: 'bool'
@@ -112,13 +112,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_and_invalid.move:7:25 ───
+    ┌── tests/move_check/typing/binary_and_invalid.move:7:29 ───
     │
  13 │         s && s;
     │         ^ Invalid argument to '&&'
     ·
- 7 │     t0(x: u64, r: R, s: S) {
-    │                         - The type: '0x8675309::M::S'
+ 7 │     fun t0(x: u64, r: R, s: S) {
+    │                             - The type: '0x8675309::M::S'
     ·
  13 │         s && s;
     │         - Is not compatible with: 'bool'
@@ -126,13 +126,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_and_invalid.move:7:25 ───
+    ┌── tests/move_check/typing/binary_and_invalid.move:7:29 ───
     │
  13 │         s && s;
     │              ^ Invalid argument to '&&'
     ·
- 7 │     t0(x: u64, r: R, s: S) {
-    │                         - The type: '0x8675309::M::S'
+ 7 │     fun t0(x: u64, r: R, s: S) {
+    │                             - The type: '0x8675309::M::S'
     ·
  13 │         s && s;
     │         - Is not compatible with: 'bool'

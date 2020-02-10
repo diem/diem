@@ -1,13 +1,13 @@
 address 0x1:
 
 module A {
-    public foo() {
+    public fun foo() {
         0x1::B::foo()
     }
 }
 
 module B {
-    public foo() {
+    public fun foo() {
         0x1::A::foo()
     }
 }

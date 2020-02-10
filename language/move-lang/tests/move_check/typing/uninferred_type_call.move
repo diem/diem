@@ -1,7 +1,7 @@
 module M {
-    t() {
+    fun t() {
         foo()
     }
 
-    foo<T>() {}
+    fun foo<T>() {}
 }

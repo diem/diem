@@ -3,7 +3,7 @@ module M {
         f: bool
     }
 
-    t0(x: u64) {
+    fun t0(x: u64) {
         (-x: u64);
     }
 }

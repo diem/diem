@@ -1,5 +1,5 @@
 module M {
-    t0(cond: bool) {
+    fun t0(cond: bool) {
         while (cond) ();
         while (cond) (());
         while (cond) {};

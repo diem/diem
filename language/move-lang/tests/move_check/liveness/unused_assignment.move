@@ -1,20 +1,20 @@
 module M {
-    t0() {
+    fun t0() {
         let x = 0;
     }
 
-    t1() {
+    fun t1() {
         let x = 0;
         x = 0;
     }
 
-    t2(cond: bool) {
+    fun t2(cond: bool) {
         if (cond) {
             let x = 0;
         }
     }
 
-    t3(cond: bool) {
+    fun t3(cond: bool) {
         let x = 0;
         x;
         if (cond) {
@@ -22,7 +22,7 @@ module M {
         }
     }
 
-    t4(cond: bool) {
+    fun t4(cond: bool) {
         let x = 0;
         if (cond) {
             x = 1;
@@ -31,7 +31,7 @@ module M {
         }
     }
 
-    t5(cond: bool) {
+    fun t5(cond: bool) {
         let x;
         while (cond) {
             x = 0;

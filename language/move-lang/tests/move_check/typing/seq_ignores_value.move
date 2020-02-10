@@ -1,19 +1,19 @@
 module M {
     struct S {}
 
-    t0() {
+    fun t0() {
         ();
     }
 
-    t1() {
+    fun t1() {
         0;
     }
 
-    t2() {
+    fun t2() {
         (0, false, S{});
     }
 
-    t3() {
+    fun t3() {
         if (true) (0, false, S{}) else (0, false, S{});
     }
 }

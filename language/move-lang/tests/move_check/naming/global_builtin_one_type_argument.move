@@ -1,7 +1,7 @@
 module M {
     resource struct R {}
 
-    t() acquires R {
+    fun t() acquires R {
         let _ : bool = ::exists<R>(0x0);
         let () = ::move_to_sender<R>(R{});
         let _ : &R = ::borrow_global<R>(0x0);

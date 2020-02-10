@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/parser/function_params_missing.move:3:8 ───
+   ┌── tests/move_check/parser/function_params_missing.move:3:12 ───
    │
- 3 │     fn { }
-   │        ^ Unexpected '{'
+ 3 │     fun fn { }
+   │            ^ Unexpected '{'
    ·
- 3 │     fn { }
-   │        - Expected '('
+ 3 │     fun fn { }
+   │            - Expected '('
    │
 

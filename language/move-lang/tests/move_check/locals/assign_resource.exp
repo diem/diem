@@ -71,12 +71,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:33:11 ───
+    ┌── tests/move_check/locals/assign_resource.move:33:15 ───
     │
  34 │         x = y;
     │         ^ Invalid assignment to local 'x'
     ·
- 33 │     t5<T>(x: T, y: T): T {
-    │           - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+ 33 │     fun t5<T>(x: T, y: T): T {
+    │               - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
     │
 

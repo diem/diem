@@ -5,7 +5,7 @@ module M {
     }
     struct G<T> {}
 
-    t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+    fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
         (0 != 1: bool);
         (&0 != &1: bool);
         (true != false: bool);

@@ -3,7 +3,7 @@ module M {
     struct S {}
     resource struct B { s: S, r: R }
 
-    t1(b: B, bref: &B) {
+    fun t1(b: B, bref: &B) {
         (b.s: S);
         R{} = b.r;
 

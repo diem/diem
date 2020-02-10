@@ -3,7 +3,7 @@ module M {
     resource struct R {}
     resource struct B<T> {}
 
-    foo() acquires B<CupC<R>> {
+    fun foo() acquires B<CupC<R>> {
         abort 0
     }
 }

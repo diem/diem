@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/parser/extra_text_after_main.move:5:1 ───
    │
- 5 │ foo() {
+ 5 │ fun foo() {
    │ ^^^ Unexpected characters after end of main function
    │
 

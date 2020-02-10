@@ -5,8 +5,8 @@ error:
  8 │         r1(a);
     │         ^^^^^ Invalid call to '0x8675309::M::r1'
     ·
- 14 │     r1(a: address) acquires R1 {
-    │                             -- The call acquires '0x8675309::M::R1', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list
+ 14 │     fun r1(a: address) acquires R1 {
+    │                                 -- The call acquires '0x8675309::M::R1', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list
     │
 
 error: 

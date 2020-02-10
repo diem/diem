@@ -1,1 +1,1 @@
-native main();
+native fun main();

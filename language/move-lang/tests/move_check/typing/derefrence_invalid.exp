@@ -1,12 +1,12 @@
 error: 
 
-   ┌── tests/move_check/typing/derefrence_invalid.move:5:12 ───
+   ┌── tests/move_check/typing/derefrence_invalid.move:5:16 ───
    │
  6 │         (*x : bool);
    │               ^^^^ Invalid type annotation
    ·
- 5 │     t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
-   │            --- The type: 'u64'
+ 5 │     fun t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
+   │                --- The type: 'u64'
    ·
  6 │         (*x : bool);
    │               ---- Is not compatible with: 'bool'
@@ -28,13 +28,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/derefrence_invalid.move:5:38 ───
+   ┌── tests/move_check/typing/derefrence_invalid.move:5:42 ───
    │
  9 │         (*s: X);
    │              ^ Invalid type annotation
    ·
- 5 │     t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
-   │                                      - The type: '0x8675309::M::S'
+ 5 │     fun t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
+   │                                          - The type: '0x8675309::M::S'
    ·
  9 │         (*s: X);
    │              - Is not compatible with: '0x8675309::M::X'
@@ -84,13 +84,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/derefrence_invalid.move:5:53 ───
+    ┌── tests/move_check/typing/derefrence_invalid.move:5:57 ───
     │
  14 │         (*s_mut: X);
     │                  ^ Invalid type annotation
     ·
- 5 │     t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
-    │                                                     - The type: '0x8675309::M::S'
+ 5 │     fun t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
+    │                                                         - The type: '0x8675309::M::S'
     ·
  14 │         (*s_mut: X);
     │                  - Is not compatible with: '0x8675309::M::X'

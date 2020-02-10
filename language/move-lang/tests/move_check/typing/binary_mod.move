@@ -3,7 +3,7 @@ module M {
         f: u64
     }
 
-    t0(x: u64, r: R) {
+    fun t0(x: u64, r: R) {
         0 % 0;
         1 % 0;
         0 % 1;

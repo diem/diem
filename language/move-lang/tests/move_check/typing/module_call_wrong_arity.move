@@ -2,11 +2,11 @@
 address 0x1:
 
 module X {
-    public foo(): u64 { 0 }
-    public bar(x: u64): (address, u64) {
+    public fun foo(): u64 { 0 }
+    public fun bar(x: u64): (address, u64) {
         (0x0, x)
     }
-    public baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
+    public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
         (false, a, x)
     }
 }
@@ -15,15 +15,15 @@ module X {
 module M {
     use 0x1::X;
 
-    foo(): u64 { 0 }
-    bar(x: u64): (address, u64) {
+    fun foo(): u64 { 0 }
+    fun bar(x: u64): (address, u64) {
         (0x0, x)
     }
-    baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
+    fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
         (false, a, x)
     }
 
-    t0() {
+    fun t0() {
         X::foo(1);
         X::foo(1, 2);
         X::bar();
@@ -33,7 +33,7 @@ module M {
         X::baz(1, 2, 3);
     }
 
-    t1() {
+    fun t1() {
         foo(1);
         foo(1, 2);
         bar();

@@ -1,9 +1,9 @@
 error: 
 
-   ┌── tests/move_check/locals/use_after_move_loop.move:2:24 ───
+   ┌── tests/move_check/locals/use_after_move_loop.move:2:28 ───
    │
- 2 │       tmove1(cond: bool) {
-   │ ╭────────────────────────^
+ 2 │       fun tmove1(cond: bool) {
+   │ ╭────────────────────────────^
  3 │ │         let x = 0;
  4 │ │         loop { _ = move x };
  5 │ │     }

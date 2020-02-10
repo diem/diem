@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/parser/struct_missing_lbrace.move:2:14 ───
    │
- 3 │     f() {}
+ 3 │     fun f() {}
    │     ^ Expected '}'
    ·
  2 │     struct S { f: u64

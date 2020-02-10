@@ -84,7 +84,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:20 ───
+    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:24 ───
     │
  13 │         foo<U, u64>(t, 0);
     │         ^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
@@ -92,13 +92,13 @@ error:
  13 │         foo<U, u64>(t, 0);
     │             - The type: 'U'
     ·
- 12 │     t2<T, U, V>(t: T, u: U, v: V) {
-    │                    - Is not compatible with: 'T'
+ 12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
+    │                        - Is not compatible with: 'T'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:26 ───
+    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:30 ───
     │
  14 │         foo<V, T>(u, v);
     │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
@@ -106,13 +106,13 @@ error:
  14 │         foo<V, T>(u, v);
     │             - The type: 'V'
     ·
- 12 │     t2<T, U, V>(t: T, u: U, v: V) {
-    │                          - Is not compatible with: 'U'
+ 12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
+    │                              - Is not compatible with: 'U'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:32 ───
+    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:36 ───
     │
  14 │         foo<V, T>(u, v);
     │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
@@ -120,7 +120,7 @@ error:
  14 │         foo<V, T>(u, v);
     │                - The type: 'T'
     ·
- 12 │     t2<T, U, V>(t: T, u: U, v: V) {
-    │                                - Is not compatible with: 'V'
+ 12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
+    │                                    - Is not compatible with: 'V'
     │
 

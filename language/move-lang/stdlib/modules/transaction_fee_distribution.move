@@ -26,7 +26,7 @@ module TransactionFeeDistribution {
     // height in order to ensure that we don't try to pay more than once per-block. We also
     // encapsulate the withdrawal capability to the transaction fee account so that we can withdraw
     // the fees from this account from block metadata transactions.
-    public initialize() {
+    public fun initialize() {
         Transaction::assert(Transaction::sender() == 0xFEE, 0);
         move_to_sender(T {
             // last_epoch_paid: Epoch::get_current_epoch(),
@@ -37,7 +37,7 @@ module TransactionFeeDistribution {
 
     // TODO: This is public for now for testing purposes. However, in the future block metadata
     // transactions will call this and it will be marked as a private function.
-    public distribute_transaction_fees() acquires T {
+    public fun distribute_transaction_fees() acquires T {
         let distribution_resource = borrow_global_mut<T>(0xFEE);
         //current_epoch = Epoch::get_current_epoch();
 
@@ -74,7 +74,7 @@ module TransactionFeeDistribution {
     // particular, this means that if the number of validators does not evenly divide the
     // transaction fees collected, then there will be a remainder that is left in the transaction
     // fees pot to be distributed later.
-    per_validator_distribution_amount(amount_collected: u64, num_validators: u64): u64 {
+    fun per_validator_distribution_amount(amount_collected: u64, num_validators: u64): u64 {
         Transaction::assert(num_validators != 0, 0);
         let validator_payout = amount_collected / num_validators;
         Transaction::assert(validator_payout * num_validators <= amount_collected, 1);
@@ -86,7 +86,7 @@ module TransactionFeeDistribution {
     // any remainder (in the case that the number of validators does not
     // evenly divide the transaction fee pot) is distributed to the first
     // validator.
-    distribute_transaction_fees_internal(
+    fun distribute_transaction_fees_internal(
         collected_fees: LibraCoin::T,
         amount_to_distribute_per_validator: u64,
         num_validators: u64

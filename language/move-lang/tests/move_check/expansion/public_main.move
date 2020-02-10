@@ -1,2 +1,2 @@
-public main() {
+public fun main() {
 }

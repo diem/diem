@@ -22,13 +22,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/pack_reference.move:4:15 ───
+   ┌── tests/move_check/typing/pack_reference.move:4:19 ───
    │
  5 │         Box { f: r_imm };
    │                  ^^^^^ Invalid argument for field 'f' for '0x8675309::M::Box'
    ·
- 4 │     t0(r_imm: &u64, r_mut: &mut u64) {
-   │               ---- The type: '&u64'
+ 4 │     fun t0(r_imm: &u64, r_mut: &mut u64) {
+   │                   ---- The type: '&u64'
    ·
  5 │         Box { f: r_imm };
    │         ---------------- Is not compatible with: '_'
@@ -58,13 +58,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/pack_reference.move:4:28 ───
+   ┌── tests/move_check/typing/pack_reference.move:4:32 ───
    │
  6 │         Box { f: r_mut };
    │                  ^^^^^ Invalid argument for field 'f' for '0x8675309::M::Box'
    ·
- 4 │     t0(r_imm: &u64, r_mut: &mut u64) {
-   │                            -------- The type: '&mut u64'
+ 4 │     fun t0(r_imm: &u64, r_mut: &mut u64) {
+   │                                -------- The type: '&mut u64'
    ·
  6 │         Box { f: r_mut };
    │         ---------------- Is not compatible with: '_'

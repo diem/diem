@@ -1,13 +1,13 @@
 module M {
     struct S { f: u64, g: u64 }
-    id<T>(r: &T): &T {
+    fun id<T>(r: &T): &T {
         r
     }
-    id_mut<T>(r: &mut T): &mut T {
+    fun id_mut<T>(r: &mut T): &mut T {
         r
     }
 
-    t0(cond: bool, s: &mut S, other: &S,) {
+    fun t0(cond: bool, s: &mut S, other: &S,) {
         let f;
         if (cond) f = &s.f else f = &other.f;
         *s;
@@ -15,7 +15,7 @@ module M {
         *s;
     }
 
-    t1(cond: bool, s: &mut S) {
+    fun t1(cond: bool, s: &mut S) {
         let f;
         if (cond) f = &s.f else f = &s.g;
         *s;
@@ -23,7 +23,7 @@ module M {
         *s;
     }
 
-    t2(cond: bool, s: &mut S, other: &S) {
+    fun t2(cond: bool, s: &mut S, other: &S) {
         let x: &S;
         if (cond) x = copy s else x = other;
         *s;

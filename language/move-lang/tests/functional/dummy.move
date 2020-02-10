@@ -1,3 +1,3 @@
-main() {
+fun main() {
 
 }

@@ -2,7 +2,7 @@ module M {
     struct S { f: u64 }
     struct X { s: S }
 
-    t0() {
+    fun t0() {
         let u = 0;
         *u = 1;
 

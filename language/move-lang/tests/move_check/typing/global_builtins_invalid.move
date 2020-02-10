@@ -1,7 +1,7 @@
 module M {
     resource struct R {}
 
-    t0() acquires R {
+    fun t0() acquires R {
         let _ : bool = exists<R>();
         let () = move_to_sender<R>();
         let _ : &R = borrow_global<R>();
@@ -9,7 +9,7 @@ module M {
         let R {} = move_from<R>();
     }
 
-    t1() acquires R {
+    fun t1() acquires R {
         let _ : bool = exists<R>(0);
         let () = move_to_sender<R>(0);
         let () = move_to_sender(0);
@@ -18,7 +18,7 @@ module M {
         let R {} = move_from<R>(0);
     }
 
-    t2() acquires R {
+    fun t2() acquires R {
         let _ : bool = exists<R>(0x0, 0);
         let () = move_to_sender<R>(R{}, 0);
         let () = move_to_sender(R{}, 0);

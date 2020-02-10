@@ -1,3 +1,3 @@
 module M {
-    f() {}
+    fun f() {}
 // }

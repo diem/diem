@@ -8,18 +8,18 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/unresolved_type_no_args.move:3:12 ───
+   ┌── tests/move_check/naming/unresolved_type_no_args.move:3:16 ───
    │
- 3 │     foo(x: S): G {
-   │            ^ Unbound type 'S' in current scope
+ 3 │     fun foo(x: S): G {
+   │                ^ Unbound type 'S' in current scope
    │
 
 error: 
 
-   ┌── tests/move_check/naming/unresolved_type_no_args.move:3:16 ───
+   ┌── tests/move_check/naming/unresolved_type_no_args.move:3:20 ───
    │
- 3 │     foo(x: S): G {
-   │                ^ Unbound type 'G' in current scope
+ 3 │     fun foo(x: S): G {
+   │                    ^ Unbound type 'G' in current scope
    │
 
 error: 

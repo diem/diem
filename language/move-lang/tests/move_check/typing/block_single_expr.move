@@ -1,6 +1,6 @@
 module M {
     resource struct R {}
-    t0() {
+    fun t0() {
         ({ 0 } : u64);
         ({ &0 } : &u64);
         ({ &mut 0 } : &mut u64);

@@ -1,5 +1,5 @@
 module M {
-    t0(cond: bool) {
+    fun t0(cond: bool) {
         let x = 0;
         let x_ref = &mut x;
         if (cond) {
@@ -10,7 +10,7 @@ module M {
         *x_ref = 0;
     }
 
-    t1(cond: bool) {
+    fun t1(cond: bool) {
         let x = 0;
         let x_ref = &mut x;
         if (cond) {

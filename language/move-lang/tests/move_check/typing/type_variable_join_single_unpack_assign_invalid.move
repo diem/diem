@@ -1,11 +1,11 @@
 module M {
     struct Box<T> { f1: T, f2: T }
 
-    new<T>(): Box<T> {
+    fun new<T>(): Box<T> {
         abort 0
     }
 
-    t0() {
+    fun t0() {
         let f1;
         let f2;
         Box { f1, f2 } = new();

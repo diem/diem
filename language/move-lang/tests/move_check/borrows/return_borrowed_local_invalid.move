@@ -1,12 +1,12 @@
 module M {
     struct S { f: u64 }
-    id<T>(r: &T): &T {
+    fun id<T>(r: &T): &T {
         r
     }
-    id_mut<T>(r: &mut T): &mut T {
+    fun id_mut<T>(r: &mut T): &mut T {
         r
     }
-    t0(): (&mut u64, &u64, &mut u64, &u64, &mut u64, &u64, &mut u64, &u64) {
+    fun t0(): (&mut u64, &u64, &mut u64, &u64, &mut u64, &u64, &mut u64, &u64) {
         let v1 = 0;
         let v2 = 0;
         let v3 = 0;

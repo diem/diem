@@ -16,18 +16,18 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/unresolved_type_with_args.move:3:18 ───
+   ┌── tests/move_check/naming/unresolved_type_with_args.move:3:22 ───
    │
- 3 │     foo<T, U>(x: S<T>): G<T, U> {
-   │                  ^ Unbound type 'S' in current scope
+ 3 │     fun foo<T, U>(x: S<T>): G<T, U> {
+   │                      ^ Unbound type 'S' in current scope
    │
 
 error: 
 
-   ┌── tests/move_check/naming/unresolved_type_with_args.move:3:25 ───
+   ┌── tests/move_check/naming/unresolved_type_with_args.move:3:29 ───
    │
- 3 │     foo<T, U>(x: S<T>): G<T, U> {
-   │                         ^ Unbound type 'G' in current scope
+ 3 │     fun foo<T, U>(x: S<T>): G<T, U> {
+   │                             ^ Unbound type 'G' in current scope
    │
 
 error: 

@@ -1,19 +1,19 @@
 module M {
-    foo(s: Self::S): Self::S {
+    fun foo(s: Self::S): Self::S {
         let s = s;
         s
     }
 
-    bar(): Self::S {
+    fun bar(): Self::S {
         S {}
     }
 
-    baz() {
+    fun baz() {
         S {} = bar();
         Self::S {} = bar();
     }
 
-    bug() {
+    fun bug() {
         let S {} = bar();
         let Self::S {} = bar();
     }

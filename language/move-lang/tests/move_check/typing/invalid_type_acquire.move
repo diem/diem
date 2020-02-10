@@ -10,11 +10,11 @@ module M {
     struct S {}
     resource struct R<T> {v: T}
 
-    destroy<T>(v: T) {
+    fun destroy<T>(v: T) {
         move_to_sender(R { v })
     }
 
-    t0<T: resource>() acquires
+    fun t0<T: resource>() acquires
         T,
         u64,
         X::R,
@@ -22,11 +22,11 @@ module M {
     {
     }
 
-    any<T>(): T {
+    fun any<T>(): T {
         abort 0
     }
 
-    t1<T: resource>(a: address) {
+    fun t1<T: resource>(a: address) {
         destroy(move_from(a));
         destroy(move_from<T>(a));
         destroy(move_from<u64>(a));

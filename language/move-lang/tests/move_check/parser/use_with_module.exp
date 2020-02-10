@@ -6,6 +6,6 @@ error:
    │ ^^^^^^ Unexpected 'module'
    ·
  3 │ module M {
-   │ ------ Expected a name value
+   │ ------ Expected 'fun'
    │
 

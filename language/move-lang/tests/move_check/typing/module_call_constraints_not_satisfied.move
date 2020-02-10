@@ -4,29 +4,29 @@ module M {
     struct Box<T> {}
     struct Box3<T1, T2, T3> {}
 
-    both<R: resource, C: copyable>(r: R, c: C) {
+    fun both<R: resource, C: copyable>(r: R, c: C) {
         abort 0
     }
 
-    cpy<C: copyable>(c: C) {
+    fun cpy<C: copyable>(c: C) {
         abort 0
     }
 
-    rsrc<R: resource>(r: R) {
+    fun rsrc<R: resource>(r: R) {
         abort 0
     }
 
 
-    t0() {
+    fun t0() {
         both(S{}, Coin{});
         both(0, Coin{})
     }
 
-    t1<R: resource, C: copyable>() {
+    fun t1<R: resource, C: copyable>() {
         both(Box<C> {}, Box<R> {})
     }
 
-    t2<R: resource, C: copyable>() {
+    fun t2<R: resource, C: copyable>() {
         rsrc(Box3<C, C, C> {});
 
         cpy(Box3<R, C, C> {});
@@ -40,7 +40,7 @@ module M {
         cpy(Box3<R, R, R> {});
     }
 
-    t3<U, C: copyable>() {
+    fun t3<U, C: copyable>() {
         cpy(Box3<U, C, C> {});
         cpy(Box3<C, U, C> {});
         cpy(Box3<C, C, U> {});

@@ -44,24 +44,24 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/unary_neg_invalid.move:6:20 ───
+    ┌── tests/move_check/typing/unary_neg_invalid.move:6:24 ───
     │
  11 │         -r;
     │          ^ Invalid argument to '-'
     ·
- 6 │     t0(x: bool, r: R) {
-    │                    - Found: '0x8675309::M::R'. But the operation is not yet supported on any type
+ 6 │     fun t0(x: bool, r: R) {
+    │                        - Found: '0x8675309::M::R'. But the operation is not yet supported on any type
     │
 
 error: 
 
-    ┌── tests/move_check/typing/unary_neg_invalid.move:6:20 ───
+    ┌── tests/move_check/typing/unary_neg_invalid.move:6:24 ───
     │
  12 │         -r;
     │          ^ Invalid argument to '-'
     ·
- 6 │     t0(x: bool, r: R) {
-    │                    - Found: '0x8675309::M::R'. But the operation is not yet supported on any type
+ 6 │     fun t0(x: bool, r: R) {
+    │                        - Found: '0x8675309::M::R'. But the operation is not yet supported on any type
     │
 
 error: 

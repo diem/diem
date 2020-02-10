@@ -1,6 +1,6 @@
 module M {
 
-    t0() {
+    fun t0() {
         { let x = false; };
         (x: bool);
     }

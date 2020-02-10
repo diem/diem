@@ -6,6 +6,6 @@ error:
    │ ^ Unexpected end-of-file
    ·
  4 │ 
-   │ - Expected a name value
+   │ - Expected 'fun'
    │
 

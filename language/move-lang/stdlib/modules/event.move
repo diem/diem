@@ -30,7 +30,7 @@ module Event {
     // HandleIdGenerator is only going to be monotonically increased and there's no way to revert it or destroy it. Thus
     // such counter is going to give distinct value for each of the new event stream under each sender. And since we
     // hash it with the sender's address, the result is guaranteed to be globally unique.
-    fresh_guid(): bytearray acquires HandleIdGenerator {
+    fun fresh_guid(): bytearray acquires HandleIdGenerator {
         let sender = Transaction::sender();
 
         if (!exists<HandleIdGenerator>(sender))
@@ -47,23 +47,23 @@ module Event {
     }
 
     // Use the sender's HandleIdGenerator to generate a unique event handle that one can emit an event to.
-    public new_event_handle<T: copyable>(): Handle<T> acquires HandleIdGenerator {
+    public fun new_event_handle<T: copyable>(): Handle<T> acquires HandleIdGenerator {
         Handle { count: 0, guid: fresh_guid() }
     }
 
     // Emit an event with payload `msg` by using handle's key and counter. Will change the payload from bytearray to a
     // generic type parameter once we have generics.
-    public emit_event<T: copyable>(handle: &mut Handle<T>, msg: T) {
+    public fun emit_event<T: copyable>(handle: &mut Handle<T>, msg: T) {
         write_to_event_store<T>(handle.guid, handle.count, msg);
         handle.count = handle.count + 1
     }
 
     // Native procedure that writes to the actual event stream in Event store
     // This will replace the "native" portion of EmitEvent bytecode
-    native write_to_event_store<T: copyable>(guid: bytearray, count: u64, msg: T);
+    native fun write_to_event_store<T: copyable>(guid: bytearray, count: u64, msg: T);
 
     // Destroy a unique handle.
-    public destroy<T: copyable>(handle: Handle<T>) {
+    public fun destroy<T: copyable>(handle: Handle<T>) {
         let Handle { count: _, guid: _ } = handle;
     }
 

@@ -2,7 +2,7 @@ module M {
     struct S { f: u64 }
     resource struct R {}
 
-    t0(u: u64, cond: bool, addr: address) {
+    fun t0(u: u64, cond: bool, addr: address) {
         &0.f;
         &0.g;
         &u.value;

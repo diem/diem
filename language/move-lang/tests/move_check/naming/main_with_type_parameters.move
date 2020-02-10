@@ -1,3 +1,3 @@
-main<T>() {
+fun main<T>() {
 
 }

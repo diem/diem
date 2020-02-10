@@ -1,11 +1,11 @@
 module M {
     struct S {}
 
-    t0() {
+    fun t0() {
         let x: &mut u64 = &0;
     }
 
-    t1() {
+    fun t1() {
         let (x, y): (&mut u64, &mut u64);
         (x, y) = (&0, &0);
 

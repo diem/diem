@@ -1,40 +1,40 @@
 module M {
     resource struct R{}
 
-    t0() {
+    fun t0() {
         let r = R{};
         return ()
     }
 
-    t1(cond: bool) {
+    fun t1(cond: bool) {
         let r = R {};
         if (cond) { return () };
         R {} = r;
     }
 
-    t2(cond: bool) {
+    fun t2(cond: bool) {
         let r = R{};
         if (cond) {} else { return () };
         R {} = r;
     }
 
-    t3(cond: bool) {
+    fun t3(cond: bool) {
         let r = R {};
         while (cond) { return () };
         R {} = r;
     }
 
-    t4(cond: bool) {
+    fun t4(cond: bool) {
         let r = R{};
         loop { return () }
     }
 
-    t5() {
+    fun t5() {
         let x = &R{};
         return ()
     }
 
-    t6<T>(x: T) {
+    fun t6<T>(x: T) {
         return ()
     }
 }

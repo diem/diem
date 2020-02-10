@@ -3,7 +3,7 @@ module M {
         f: bool
     }
 
-    t0(x: bool, r: R) {
+    fun t0(x: bool, r: R) {
         -&0;
         -&1;
         -true;

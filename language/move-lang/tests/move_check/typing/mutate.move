@@ -1,6 +1,6 @@
 module M {
     struct S { f: u64 }
-    t0() {
+    fun t0() {
         *&mut 0 = 1;
         *&mut S{f:0}.f = 1;
         *foo(&mut 0) = 1;
@@ -10,7 +10,7 @@ module M {
         *&mut baz().f = 1;
     }
 
-    t1() {
+    fun t1() {
         let r = &mut S{ f: 0 };
         *r = S { f: 1 };
 
@@ -18,15 +18,15 @@ module M {
         *&mut r.f = 1;
     }
 
-    foo(x: &mut u64): &mut u64 {
+    fun foo(x: &mut u64): &mut u64 {
         x
     }
 
-    bar(s: &mut S): &mut S {
+    fun bar(s: &mut S): &mut S {
         s
     }
 
-    baz(): S {
+    fun baz(): S {
         S { f: 0 }
     }
 }

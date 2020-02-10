@@ -2,7 +2,7 @@ module M {
     resource struct R1 {}
     resource struct R2 {}
 
-    t1(a: address) acquires R2 {
+    fun t1(a: address) acquires R2 {
         borrow_global<R2>(a);
 
         r1(a);
@@ -11,7 +11,7 @@ module M {
         R1{} = move_from<R1>(a);
     }
 
-    r1(a: address) acquires R1 {
+    fun r1(a: address) acquires R1 {
         borrow_global<R1>(a);
     }
 }

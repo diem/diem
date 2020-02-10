@@ -5,7 +5,7 @@ module M {
     struct Generic<T> {
         g: T
     }
-    f() {
+    fun f() {
         let () = ();
         let (): () = ();
         // Test with whitespace between parenthesis.
@@ -24,7 +24,7 @@ module M {
         x3;
         x4;
     }
-    g(r: R, g: Generic<R>) {
+    fun g(r: R, g: Generic<R>) {
         let R { f } = copy r;
         let (R { f: f1 }, R { f: f2 }) = (copy r, move r);
         let Generic<R> { g: R { f: f3 } } = g;

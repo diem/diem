@@ -63,6 +63,7 @@ pub enum Tok {
     Pipe,
     PipePipe,
     RBrace,
+    Fun,
 }
 
 impl fmt::Display for Tok {
@@ -123,6 +124,7 @@ impl fmt::Display for Tok {
             Pipe => "|",
             PipePipe => "||",
             RBrace => "}",
+            Fun => "fun",
         };
         fmt::Display::fmt(s, formatter)
     }
@@ -342,6 +344,7 @@ fn get_name_token(name: &str) -> Tok {
         "copyable" => Tok::Copyable,
         "else" => Tok::Else,
         "false" => Tok::False,
+        "fun" => Tok::Fun,
         "if" => Tok::If,
         "let" => Tok::Let,
         "loop" => Tok::Loop,

@@ -1,5 +1,5 @@
 module M {
-    foo(): () {
+    fun foo(): () {
         let (): () = ();
         ();
         ()

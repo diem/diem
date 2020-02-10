@@ -2,7 +2,7 @@ module M {
     struct S {}
     resource struct R {}
 
-    t() {
+    fun t() {
         ((): ());
         (0: u64);
         (S{}: S);
