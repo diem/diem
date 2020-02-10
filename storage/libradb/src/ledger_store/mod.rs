@@ -225,6 +225,7 @@ impl LedgerStore {
         iter.seek(&start_version)?;
         Ok(TransactionInfoIter {
             inner: iter,
+            expected_next_version: start_version,
             end_version: start_version
                 .checked_add(num_transaction_infos)
                 .ok_or_else(|| format_err!("Too many transaction infos requested."))?,
@@ -343,17 +344,29 @@ impl HashReader for LedgerStore {
 
 pub struct TransactionInfoIter<'a> {
     inner: SchemaIterator<'a, TransactionInfoSchema>,
+    expected_next_version: Version,
     end_version: Version,
 }
 
 impl<'a> TransactionInfoIter<'a> {
     fn next_impl(&mut self) -> Result<Option<TransactionInfo>> {
-        match self.inner.next().transpose()? {
-            Some((version, transaction_info)) if version < self.end_version => {
-                Ok(Some(transaction_info))
-            }
-            _ => Ok(None),
+        if self.expected_next_version >= self.end_version {
+            return Ok(None);
         }
+
+        let ret = match self.inner.next().transpose()? {
+            Some((version, transaction_info)) => {
+                ensure!(
+                    version == self.expected_next_version,
+                    "Transaction info versions are not consecutive.",
+                );
+                self.expected_next_version += 1;
+                Some(transaction_info)
+            }
+            _ => None,
+        };
+
+        Ok(ret)
     }
 }
 
