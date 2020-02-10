@@ -56,22 +56,27 @@ impl AccountAddress {
     pub fn from_hex_literal(literal: &str) -> Result<Self> {
         ensure!(literal.starts_with("0x"), "literal must start with 0x.");
 
-        let mut hex_string = String::from(&literal[2..]);
-        if hex_string.len() % 2 != 0 {
-            hex_string.insert(0, '0');
-        }
+        let hex_len = literal.len() - 2;
+        let mut result = if hex_len % 2 != 0 {
+            let mut hex_str = String::with_capacity(hex_len + 1);
+            hex_str.push('0');
+            hex_str.push_str(&literal[2..]);
+            hex::decode(&hex_str)?
+        } else {
+            hex::decode(&literal[2..])?
+        };
 
-        let mut result = hex::decode(&hex_string)?;
         let len = result.len();
-        if len < ADDRESS_LENGTH {
-            result.reverse();
-            for _ in len..ADDRESS_LENGTH {
-                result.push(0);
-            }
-            result.reverse();
-        }
+        let padded_result = if len < ADDRESS_LENGTH {
+            let mut padded = Vec::with_capacity(ADDRESS_LENGTH);
+            padded.resize(ADDRESS_LENGTH - len, 0u8);
+            padded.append(&mut result);
+            padded
+        } else {
+            result
+        };
 
-        AccountAddress::try_from(result)
+        AccountAddress::try_from(padded_result)
     }
 }
 
