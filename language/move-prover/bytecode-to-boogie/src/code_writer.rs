@@ -65,9 +65,10 @@ impl CodeWriter {
     /// Sets the current location. This location will be associated with all subsequently written
     /// code so we can map back from the generated code to this location. If current module or loc
     /// is already the passed one, nothing will be updated, so it is ok to call this method
-    /// repeatedly with the same values.
-    pub fn set_location(&self, module: ModuleIndex, loc: Loc) {
+    /// repeatedly with the same values. Returns the old location.
+    pub fn set_location(&self, module: ModuleIndex, loc: Loc) -> (ModuleIndex, Loc) {
         let mut data = self.0.borrow_mut();
+        let old = (data.current_module, data.current_location);
         let code_at = ByteIndex(data.output.len() as u32);
         if data.current_module != module {
             data.output_module_map.insert(code_at, module);
@@ -77,6 +78,7 @@ impl CodeWriter {
             data.output_location_map.insert(code_at, loc);
             data.current_location = loc;
         }
+        old
     }
 
     /// Given a byte index in the written output, return the best approximation of the source

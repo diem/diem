@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module Test3
+
+
+
 // ** structs of module Test3
 
 const unique Test3_T: TypeName;
@@ -10,11 +14,18 @@ axiom Test3_T_g == 1;
 function Test3_T_type_value(): TypeValue {
     StructType(Test3_T, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), IntegerType()))
 }
-procedure {:inline 1} Pack_Test3_T(f: Value, g: Value) returns (_struct: Value)
+function {:inline 1} $Test3_T_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && IsValidU64(SelectField(__this, Test3_T_f))
+        && IsValidU64(SelectField(__this, Test3_T_g))
+}
+
+procedure {:inline 1} Pack_Test3_T(module_idx: int, func_idx: int, var_idx: int, code_idx: int, f: Value, g: Value) returns (_struct: Value)
 {
     assume IsValidU64(f);
     assume IsValidU64(g);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, f), g));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_Test3_T(_struct: Value) returns (f: Value, g: Value)
@@ -117,17 +128,17 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
-    call __tmp := Pack_Test3_T(GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 10));
+    call __tmp := Pack_Test3_T(0, 0, 1, 271, GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 10));
     __m := UpdateLocal(__m, __frame + 11, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 11));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(0, 0, 1, 267, __tmp);
 
-    call __t12 := BorrowLoc(__frame + 1);
+    call __t12 := BorrowLoc(__frame + 1, Test3_T_type_value());
 
     call x_ref := CopyOrMoveRef(__t12);
-    assume is#Vector(Dereference(__m, x_ref));
+    assume $Test3_T_is_well_formed(Dereference(__m, x_ref));
     assume $DebugTrackLocal(0, 0, 2, 290, Dereference(__m, x_ref));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));

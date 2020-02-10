@@ -7,6 +7,10 @@ function {:inline} number_in_range(x: Value): Value {
 }
 
 
+// ** synthetics of module TestSpecs
+
+
+
 // ** structs of module TestSpecs
 
 const unique TestSpecs_S: TypeName;
@@ -15,10 +19,16 @@ axiom TestSpecs_S_a == 0;
 function TestSpecs_S_type_value(): TypeValue {
     StructType(TestSpecs_S, ExtendTypeValueArray(EmptyTypeValueArray, AddressType()))
 }
-procedure {:inline 1} Pack_TestSpecs_S(a: Value) returns (_struct: Value)
+function {:inline 1} $TestSpecs_S_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && is#Address(SelectField(__this, TestSpecs_S_a))
+}
+
+procedure {:inline 1} Pack_TestSpecs_S(module_idx: int, func_idx: int, var_idx: int, code_idx: int, a: Value) returns (_struct: Value)
 {
     assume is#Address(a);
     _struct := Vector(ExtendValueArray(EmptyValueArray, a));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestSpecs_S(_struct: Value) returns (a: Value)
@@ -36,11 +46,18 @@ axiom TestSpecs_R_s == 1;
 function TestSpecs_R_type_value(): TypeValue {
     StructType(TestSpecs_R, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), TestSpecs_S_type_value()))
 }
-procedure {:inline 1} Pack_TestSpecs_R(x: Value, s: Value) returns (_struct: Value)
+function {:inline 1} $TestSpecs_R_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && IsValidU64(SelectField(__this, TestSpecs_R_x))
+        && $TestSpecs_S_is_well_formed(SelectField(__this, TestSpecs_R_s))
+}
+
+procedure {:inline 1} Pack_TestSpecs_R(module_idx: int, func_idx: int, var_idx: int, code_idx: int, x: Value, s: Value) returns (_struct: Value)
 {
     assume IsValidU64(x);
-    assume is#Vector(s);
+    assume $TestSpecs_S_is_well_formed(s);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, x), s));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestSpecs_R(_struct: Value) returns (x: Value, s: Value)
@@ -49,7 +66,7 @@ procedure {:inline 1} Unpack_TestSpecs_R(_struct: Value) returns (x: Value, s: V
     x := SelectField(_struct, TestSpecs_R_x);
     assume IsValidU64(x);
     s := SelectField(_struct, TestSpecs_R_s);
-    assume is#Vector(s);
+    assume $TestSpecs_S_is_well_formed(s);
 }
 
 
@@ -212,7 +229,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(r);
+    assume $TestSpecs_R_is_well_formed(r);
     __m := UpdateLocal(__m, __frame + 0, r);
     assume $DebugTrackLocal(0, 3, 0, 770, r);
 
@@ -255,7 +272,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(r);
+    assume $TestSpecs_R_is_well_formed(r);
     __m := UpdateLocal(__m, __frame + 0, r);
     assume $DebugTrackLocal(0, 4, 0, 879, r);
 
@@ -298,7 +315,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(r);
+    assume $TestSpecs_R_is_well_formed(r);
     __m := UpdateLocal(__m, __frame + 0, r);
     assume $DebugTrackLocal(0, 5, 0, 1000, r);
 
@@ -341,9 +358,8 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(SelectField(Dereference(__m, r), T
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(Dereference(__m, r));
-    assume IsValidReferenceParameter(__m, __local_counter, r);
-    assume is#Vector(Dereference(__m, r));
+    assume $TestSpecs_R_is_well_formed(Dereference(__m, r)) && IsValidReferenceParameter(__m, __local_counter, r);
+    assume $TestSpecs_R_is_well_formed(Dereference(__m, r));
     assume $DebugTrackLocal(0, 6, 0, 1152, Dereference(__m, r));
 
     // increase the local counter

@@ -304,8 +304,16 @@ function {:constructor} Global(t: TypeValue, a: Address): Location;
 function {:constructor} Local(i: int): Location;
 
 type {:datatype} Reference;
-function {:constructor} Reference(l: Location, p: Path): Reference;
+function {:constructor} Reference(l: Location, t: TypeValue, p: Path): Reference;
 const DefaultReference: Reference;
+
+function {:inline} RootReferenceType(r: Reference): TypeValue {
+  t#Reference(r)
+}
+
+function {:inline} RootReference(r: Reference): Reference {
+  Reference(l#Reference(r), t#Reference(r), EmptyPath)
+}
 
 function {:inline} IsValidReferenceParameter(m: Memory, local_counter: int, r: Reference): bool {
   // If the reference parameter is for a local, its index must be less than the current
@@ -375,18 +383,19 @@ function {:inline 1} ExistsResource(m: Memory, resource: TypeValue, addr: Addres
 
 // Obtains reference to the given resource.
 function {:inline 1} GetResourceReference(resource: TypeValue, addr: Address): Reference {
-    Reference(Global(resource, addr), EmptyPath)
+    Reference(Global(resource, addr), resource, EmptyPath)
 }
 
 // Obtains reference to local.
-function {:inline 1} GetLocalReference(frame_idx: int, idx: int): Reference {
-    Reference(Local(frame_idx + idx), EmptyPath)
+function {:inline 1} GetLocalReference(frame_idx: int, idx: int, t: TypeValue): Reference {
+    Reference(Local(frame_idx + idx), t, EmptyPath)
 }
 
 // Applies a field selection to the reference.
 function {:inline 1} SelectFieldFromRef(ref: Reference, field: FieldName): Reference {
     Reference(
       l#Reference(ref),
+      t#Reference(ref),
       Path(p#Path(p#Reference(ref))[size#Path(p#Reference(ref)) := field], size#Path(p#Reference(ref)) + 1)
     )
 }
@@ -466,12 +475,12 @@ procedure {:inline 1} BorrowGlobal(address: Value, ta: TypeValue) returns (dst: 
         __abort_flag := true;
         return;
     }
-    dst := Reference(l, EmptyPath);
+    dst := Reference(l, ta, EmptyPath);
 }
 
-procedure {:inline 1} BorrowLoc(l: int) returns (dst: Reference)
+procedure {:inline 1} BorrowLoc(l: int, t: TypeValue) returns (dst: Reference)
 {
-    dst := Reference(Local(l), EmptyPath);
+    dst := Reference(Local(l), t, EmptyPath);
 }
 
 procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Reference)
@@ -482,7 +491,7 @@ procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Re
     p := p#Reference(src);
     size := size#Path(p);
 	p := Path(p#Path(p)[size := f], size+1);
-    dst := Reference(l#Reference(src), p);
+    dst := Reference(l#Reference(src), t#Reference(src), p);
 }
 
 procedure {:inline 1} WriteRef(to: Reference, new_v: Value)
@@ -763,6 +772,10 @@ function {:inline} Vector_T_type_value(tv: TypeValue): TypeValue {
     VectorType(tv)
 }
 
+function {:inline} $Vector_T_is_well_formed(v: Value): bool {
+    is#Vector(v)
+}
+
 procedure {:inline 1} Vector_empty(ta: TypeValue) returns (v: Value) {
     v := mk_vector();
 }
@@ -846,7 +859,7 @@ procedure {:inline 1} Vector_borrow_mut(ta: TypeValue, src: Reference, index: Va
     p := p#Reference(src);
     size := size#Path(p);
 	p := Path(p#Path(p)[size := i_ind], size+1);
-    dst := Reference(l#Reference(src), p);
+    dst := Reference(l#Reference(src), t#Reference(src), p);
 }
 
 procedure {:inline 1} Vector_destroy_empty(ta: TypeValue, v: Value) {

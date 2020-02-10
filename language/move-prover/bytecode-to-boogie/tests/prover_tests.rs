@@ -69,3 +69,13 @@ fn verify_libra_account() {
         ],
     )
 }
+
+#[test]
+fn verify_invariants() {
+    test(VERIFY, &["test_mvir/verify-invariants.mvir"]);
+}
+
+#[test]
+fn verify_synthetics() {
+    test(VERIFY, &["test_mvir/verify-synthetics.mvir"]);
+}

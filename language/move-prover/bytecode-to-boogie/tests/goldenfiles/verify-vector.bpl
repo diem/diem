@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module VerifyVector
+
+
+
 // ** structs of module VerifyVector
 
 
@@ -37,7 +41,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 0, 243);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -50,7 +54,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 0, 278);
       goto Label_Abort;
     }
-    assume is#Vector(__t3);
+    assume $Vector_T_is_well_formed(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
@@ -119,7 +123,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 1, 561);
       goto Label_Abort;
     }
-    assume is#Vector(__t3);
+    assume $Vector_T_is_well_formed(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
@@ -132,7 +136,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 1, 596);
       goto Label_Abort;
     }
-    assume is#Vector(__t4);
+    assume $Vector_T_is_well_formed(__t4);
 
     __m := UpdateLocal(__m, __frame + 4, __t4);
 
@@ -140,7 +144,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 1, 1, 590, __tmp);
 
-    call __t5 := BorrowLoc(__frame + 0);
+    call __t5 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -152,7 +156,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     }
     assume $DebugTrackLocal(1, 1, 0, 625, GetLocal(__m, __frame + 0));
 
-    call __t7 := BorrowLoc(__frame + 0);
+    call __t7 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __t8 := Vector_pop_back(IntegerType(), __t7);
     if (__abort_flag) {
@@ -228,7 +232,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 2, 949);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -241,7 +245,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 2, 984);
       goto Label_Abort;
     }
-    assume is#Vector(__t3);
+    assume $Vector_T_is_well_formed(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
@@ -249,7 +253,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 2, 1, 978, __tmp);
 
-    call __t4 := BorrowLoc(__frame + 0);
+    call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -262,7 +266,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 2, 0, 1013, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 2, 1, 1013, GetLocal(__m, __frame + 1));
 
-    call __t6 := BorrowLoc(__frame + 1);
+    call __t6 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -337,7 +341,7 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 3, 1339);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -350,7 +354,7 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 3, 1374);
       goto Label_Abort;
     }
-    assume is#Vector(__t3);
+    assume $Vector_T_is_well_formed(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
@@ -358,7 +362,7 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 3, 1, 1368, __tmp);
 
-    call __t4 := BorrowLoc(__frame + 0);
+    call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -371,7 +375,7 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 3, 0, 1403, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 3, 1, 1403, GetLocal(__m, __frame + 1));
 
-    call __t6 := BorrowLoc(__frame + 0);
+    call __t6 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -384,7 +388,7 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 3, 0, 1447, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 3, 1, 1447, GetLocal(__m, __frame + 1));
 
-    call __t8 := BorrowLoc(__frame + 1);
+    call __t8 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -457,7 +461,7 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 4, 1771);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -470,7 +474,7 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 4, 1806);
       goto Label_Abort;
     }
-    assume is#Vector(__t3);
+    assume $Vector_T_is_well_formed(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
@@ -478,7 +482,7 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 4, 1, 1800, __tmp);
 
-    call __t4 := BorrowLoc(__frame + 0);
+    call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -491,7 +495,7 @@ ensures b#Boolean(Boolean(!IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 4, 0, 1835, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 4, 1, 1835, GetLocal(__m, __frame + 1));
 
-    call __t6 := BorrowLoc(__frame + 1);
+    call __t6 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -561,7 +565,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 5, 2169);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -574,7 +578,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 5, 2204);
       goto Label_Abort;
     }
-    assume is#Vector(__t3);
+    assume $Vector_T_is_well_formed(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
@@ -582,7 +586,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 5, 1, 2198, __tmp);
 
-    call __t4 := BorrowLoc(__frame + 0);
+    call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call Vector_reverse(IntegerType(), __t4);
     if (__abort_flag) {
@@ -656,7 +660,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 6, 2524);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -669,7 +673,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 6, 2559);
       goto Label_Abort;
     }
-    assume is#Vector(__t3);
+    assume $Vector_T_is_well_formed(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
@@ -677,7 +681,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 6, 1, 2553, __tmp);
 
-    call __t4 := BorrowLoc(__frame + 0);
+    call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -690,7 +694,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 6, 0, 2588, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 6, 1, 2588, GetLocal(__m, __frame + 1));
 
-    call __t6 := BorrowLoc(__frame + 0);
+    call __t6 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -703,7 +707,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 6, 0, 2632, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 6, 1, 2632, GetLocal(__m, __frame + 1));
 
-    call __t8 := BorrowLoc(__frame + 1);
+    call __t8 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -716,7 +720,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 6, 0, 2676, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 6, 1, 2676, GetLocal(__m, __frame + 1));
 
-    call __t10 := BorrowLoc(__frame + 1);
+    call __t10 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 11, __tmp);
@@ -729,7 +733,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 6, 0, 2720, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 6, 1, 2720, GetLocal(__m, __frame + 1));
 
-    call __t12 := BorrowLoc(__frame + 0);
+    call __t12 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call Vector_reverse(IntegerType(), __t12);
     if (__abort_flag) {
@@ -798,7 +802,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
       assume $DebugTrackAbort(1, 7, 3028);
       goto Label_Abort;
     }
-    assume is#Vector(__t1);
+    assume $Vector_T_is_well_formed(__t1);
 
     __m := UpdateLocal(__m, __frame + 1, __t1);
 
@@ -806,7 +810,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 0, __tmp);
     assume $DebugTrackLocal(1, 7, 0, 3022, __tmp);
 
-    call __t2 := BorrowLoc(__frame + 0);
+    call __t2 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
@@ -818,7 +822,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     }
     assume $DebugTrackLocal(1, 7, 0, 3057, GetLocal(__m, __frame + 0));
 
-    call __t4 := BorrowLoc(__frame + 0);
+    call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -880,7 +884,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
       assume $DebugTrackAbort(1, 8, 3346);
       goto Label_Abort;
     }
-    assume is#Vector(__t1);
+    assume $Vector_T_is_well_formed(__t1);
 
     __m := UpdateLocal(__m, __frame + 1, __t1);
 
@@ -888,7 +892,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 0, __tmp);
     assume $DebugTrackLocal(1, 8, 0, 3340, __tmp);
 
-    call __t2 := BorrowLoc(__frame + 0);
+    call __t2 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
@@ -900,7 +904,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     }
     assume $DebugTrackLocal(1, 8, 0, 3375, GetLocal(__m, __frame + 0));
 
-    call __t4 := BorrowLoc(__frame + 0);
+    call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -973,7 +977,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 9, 3688);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -986,7 +990,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 9, 3723);
       goto Label_Abort;
     }
-    assume is#Vector(__t3);
+    assume $Vector_T_is_well_formed(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
@@ -994,7 +998,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 9, 1, 3717, __tmp);
 
-    call __t4 := BorrowLoc(__frame + 0);
+    call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -1007,7 +1011,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 9, 0, 3752, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 9, 1, 3752, GetLocal(__m, __frame + 1));
 
-    call __t6 := BorrowLoc(__frame + 0);
+    call __t6 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -1020,7 +1024,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 9, 0, 3796, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 9, 1, 3796, GetLocal(__m, __frame + 1));
 
-    call __t8 := BorrowLoc(__frame + 1);
+    call __t8 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -1033,7 +1037,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 9, 0, 3840, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 9, 1, 3840, GetLocal(__m, __frame + 1));
 
-    call __t10 := BorrowLoc(__frame + 1);
+    call __t10 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 11, __tmp);
@@ -1046,7 +1050,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 9, 0, 3884, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 9, 1, 3884, GetLocal(__m, __frame + 1));
 
-    call __t12 := BorrowLoc(__frame + 0);
+    call __t12 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 13, __tmp);
@@ -1062,7 +1066,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 9, 0, 3928, GetLocal(__m, __frame + 0));
     assume $DebugTrackLocal(1, 9, 1, 3928, GetLocal(__m, __frame + 1));
 
-    call __t15 := BorrowLoc(__frame + 0);
+    call __t15 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 16, __tmp);
@@ -1138,7 +1142,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(i#Integer(__ret1) + i#Integer(
       assume $DebugTrackAbort(1, 10, 4252);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -1151,7 +1155,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(i#Integer(__ret1) + i#Integer(
       assume $DebugTrackAbort(1, 10, 4287);
       goto Label_Abort;
     }
-    assume is#Vector(__t3);
+    assume $Vector_T_is_well_formed(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
@@ -1159,7 +1163,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(i#Integer(__ret1) + i#Integer(
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 10, 1, 4281, __tmp);
 
-    call __t4 := BorrowLoc(__frame + 0);
+    call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -1171,7 +1175,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(i#Integer(__ret1) + i#Integer(
     }
     assume $DebugTrackLocal(1, 10, 0, 4316, GetLocal(__m, __frame + 0));
 
-    call __t6 := BorrowLoc(__frame + 0);
+    call __t6 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __t7 := Vector_length(IntegerType(), __t6);
     if (__abort_flag) {
@@ -1182,7 +1186,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(i#Integer(__ret1) + i#Integer(
 
     __m := UpdateLocal(__m, __frame + 7, __t7);
 
-    call __t8 := BorrowLoc(__frame + 1);
+    call __t8 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __t9 := Vector_length(IntegerType(), __t8);
     if (__abort_flag) {
@@ -1241,7 +1245,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(i#Integer(__ret0) + i#Integer(Integer(
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(v);
+    assume $Vector_T_is_well_formed(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 11, 0, 4491, v);
 
@@ -1249,7 +1253,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(i#Integer(__ret0) + i#Integer(Integer(
     __local_counter := __local_counter + 15;
 
     // bytecode translation starts here
-    call __t3 := BorrowLoc(__frame + 0);
+    call __t3 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __t4 := Vector_length(IntegerType(), __t3);
     if (__abort_flag) {
@@ -1264,7 +1268,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(i#Integer(__ret0) + i#Integer(Integer(
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 11, 1, 4628, __tmp);
 
-    call __t5 := BorrowLoc(__frame + 0);
+    call __t5 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -1276,7 +1280,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(i#Integer(__ret0) + i#Integer(Integer(
     }
     assume $DebugTrackLocal(1, 11, 0, 4665, GetLocal(__m, __frame + 0));
 
-    call __t7 := BorrowLoc(__frame + 0);
+    call __t7 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
@@ -1288,7 +1292,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(i#Integer(__ret0) + i#Integer(Integer(
     }
     assume $DebugTrackLocal(1, 11, 0, 4707, GetLocal(__m, __frame + 0));
 
-    call __t9 := BorrowLoc(__frame + 0);
+    call __t9 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(3);
     __m := UpdateLocal(__m, __frame + 10, __tmp);
@@ -1300,7 +1304,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(i#Integer(__ret0) + i#Integer(Integer(
     }
     assume $DebugTrackLocal(1, 11, 0, 4749, GetLocal(__m, __frame + 0));
 
-    call __t11 := BorrowLoc(__frame + 0);
+    call __t11 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __t12 := Vector_length(IntegerType(), __t11);
     if (__abort_flag) {
@@ -1356,7 +1360,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(v);
+    assume $Vector_T_is_well_formed(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 12, 0, 4891, v);
 
@@ -1401,7 +1405,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(v);
+    assume $Vector_T_is_well_formed(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 13, 0, 5056, v);
 
@@ -1409,7 +1413,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     __local_counter := __local_counter + 4;
 
     // bytecode translation starts here
-    call __t1 := BorrowLoc(__frame + 0);
+    call __t1 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call Vector_reverse(IntegerType(), __t1);
     if (__abort_flag) {
@@ -1418,7 +1422,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     }
     assume $DebugTrackLocal(1, 13, 0, 5149, GetLocal(__m, __frame + 0));
 
-    call __t2 := BorrowLoc(__frame + 0);
+    call __t2 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call Vector_reverse(IntegerType(), __t2);
     if (__abort_flag) {
@@ -1478,7 +1482,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(v);
+    assume $Vector_T_is_well_formed(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 14, 0, 5316, v);
 
@@ -1486,7 +1490,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     __local_counter := __local_counter + 18;
 
     // bytecode translation starts here
-    call __t2 := BorrowLoc(__frame + 0);
+    call __t2 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __t3 := Vector_length(IntegerType(), __t2);
     if (__abort_flag) {
@@ -1528,7 +1532,7 @@ Label_8:
     __tmp := GetLocal(__m, __frame + 9);
     if (!b#Boolean(__tmp)) { goto Label_19; }
 
-    call __t10 := BorrowLoc(__frame + 0);
+    call __t10 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 11, __tmp);
@@ -1556,7 +1560,7 @@ Label_8:
     goto Label_21;
 
 Label_19:
-    call __t15 := BorrowLoc(__frame + 0);
+    call __t15 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call Vector_reverse(IntegerType(), __t15);
     if (__abort_flag) {
@@ -1566,7 +1570,7 @@ Label_19:
     assume $DebugTrackLocal(1, 14, 0, 5647, GetLocal(__m, __frame + 0));
 
 Label_21:
-    call __t16 := BorrowLoc(__frame + 0);
+    call __t16 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call Vector_reverse(IntegerType(), __t16);
     if (__abort_flag) {
@@ -1614,7 +1618,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(v);
+    assume $Vector_T_is_well_formed(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 15, 0, 5864, v);
 
@@ -1622,7 +1626,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
     __local_counter := __local_counter + 6;
 
     // bytecode translation starts here
-    call __t1 := BorrowLoc(__frame + 0);
+    call __t1 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __t2 := Vector_is_empty(IntegerType(), __t1);
     if (__abort_flag) {
@@ -1650,7 +1654,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, old(v))));
       assume $DebugTrackAbort(1, 15, 6068);
       goto Label_Abort;
     }
-    assume is#Vector(__t4);
+    assume $Vector_T_is_well_formed(__t4);
 
     __m := UpdateLocal(__m, __frame + 4, __t4);
 
@@ -1701,7 +1705,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(v);
+    assume $Vector_T_is_well_formed(v);
     __m := UpdateLocal(__m, __frame + 0, v);
     assume $DebugTrackLocal(1, 16, 0, 6295, v);
 
@@ -1709,7 +1713,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     __local_counter := __local_counter + 7;
 
     // bytecode translation starts here
-    call __t1 := BorrowLoc(__frame + 0);
+    call __t1 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __t2 := Vector_is_empty(IntegerType(), __t1);
     if (__abort_flag) {
@@ -1723,7 +1727,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     __tmp := GetLocal(__m, __frame + 2);
     if (!b#Boolean(__tmp)) { goto Label_8; }
 
-    call __t3 := BorrowLoc(__frame + 0);
+    call __t3 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -1810,7 +1814,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 17, 6762);
       goto Label_Abort;
     }
-    assume is#Vector(__t3);
+    assume $Vector_T_is_well_formed(__t3);
 
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
@@ -1823,7 +1827,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 17, 6797);
       goto Label_Abort;
     }
-    assume is#Vector(__t4);
+    assume $Vector_T_is_well_formed(__t4);
 
     __m := UpdateLocal(__m, __frame + 4, __t4);
 
@@ -1831,7 +1835,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
     assume $DebugTrackLocal(1, 17, 2, 6791, __tmp);
 
-    call __t5 := BorrowLoc(__frame + 1);
+    call __t5 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -1844,7 +1848,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 17, 1, 6826, GetLocal(__m, __frame + 1));
     assume $DebugTrackLocal(1, 17, 2, 6826, GetLocal(__m, __frame + 2));
 
-    call __t7 := BorrowLoc(__frame + 2);
+    call __t7 := BorrowLoc(__frame + 2, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
@@ -1857,7 +1861,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 17, 1, 6870, GetLocal(__m, __frame + 1));
     assume $DebugTrackLocal(1, 17, 2, 6870, GetLocal(__m, __frame + 2));
 
-    call __t9 := BorrowLoc(__frame + 1);
+    call __t9 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 10, __tmp);
@@ -1873,12 +1877,12 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     assume $DebugTrackLocal(1, 17, 1, 6914, GetLocal(__m, __frame + 1));
     assume $DebugTrackLocal(1, 17, 2, 6914, GetLocal(__m, __frame + 2));
 
-    call __t12 := BorrowLoc(__frame + 2);
+    call __t12 := BorrowLoc(__frame + 2, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 13, __tmp);
 
-    call __t14 := BorrowLoc(__frame + 1);
+    call __t14 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 15, __tmp);
@@ -1957,7 +1961,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(7))));
       assume $DebugTrackAbort(1, 18, 7186);
       goto Label_Abort;
     }
-    assume is#Vector(__t1);
+    assume $Vector_T_is_well_formed(__t1);
 
     __m := UpdateLocal(__m, __frame + 1, __t1);
 
@@ -1965,7 +1969,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(7))));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
     assume $DebugTrackLocal(1, 18, 0, 7180, __tmp);
 
-    call __t2 := BorrowLoc(__frame + 0);
+    call __t2 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(7);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
@@ -1977,7 +1981,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, Integer(7))));
     }
     assume $DebugTrackLocal(1, 18, 0, 7215, GetLocal(__m, __frame + 0));
 
-    call __t4 := BorrowLoc(__frame + 0);
+    call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -2042,7 +2046,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
       assume $DebugTrackAbort(1, 19, 7482);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -2050,7 +2054,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 1, __tmp);
     assume $DebugTrackLocal(1, 19, 1, 7476, __tmp);
 
-    call __t3 := BorrowLoc(__frame + 1);
+    call __t3 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -2062,7 +2066,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     }
     assume $DebugTrackLocal(1, 19, 1, 7511, GetLocal(__m, __frame + 1));
 
-    call __t5 := BorrowLoc(__frame + 1);
+    call __t5 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -2129,7 +2133,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 20, 7775);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -2137,7 +2141,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
     assume $DebugTrackLocal(1, 20, 0, 7769, __tmp);
 
-    call __t3 := BorrowLoc(__frame + 0);
+    call __t3 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(7);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -2149,7 +2153,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     }
     assume $DebugTrackLocal(1, 20, 0, 7804, GetLocal(__m, __frame + 0));
 
-    call __t5 := BorrowLoc(__frame + 0);
+    call __t5 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -2159,8 +2163,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 20, 7852);
       goto Label_Abort;
     }
-    assume IsValidU64(Dereference(__m, __t7));
-    assume IsValidReferenceParameter(__m, __local_counter, __t7);
+    assume IsValidU64(Dereference(__m, __t7)) && IsValidReferenceParameter(__m, __local_counter, __t7);
 
 
 
@@ -2235,7 +2238,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
       assume $DebugTrackAbort(1, 21, 8135);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -2243,7 +2246,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     __m := UpdateLocal(__m, __frame + 0, __tmp);
     assume $DebugTrackLocal(1, 21, 0, 8129, __tmp);
 
-    call __t3 := BorrowLoc(__frame + 0);
+    call __t3 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(7);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -2255,7 +2258,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
     }
     assume $DebugTrackLocal(1, 21, 0, 8164, GetLocal(__m, __frame + 0));
 
-    call __t5 := BorrowLoc(__frame + 0);
+    call __t5 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -2265,8 +2268,7 @@ ensures old(b#Boolean(Boolean(true))) ==> __abort_flag;
       assume $DebugTrackAbort(1, 21, 8212);
       goto Label_Abort;
     }
-    assume IsValidU64(Dereference(__m, __t7));
-    assume IsValidReferenceParameter(__m, __local_counter, __t7);
+    assume IsValidU64(Dereference(__m, __t7)) && IsValidReferenceParameter(__m, __local_counter, __t7);
 
 
 
@@ -2338,7 +2340,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 22, 8496);
       goto Label_Abort;
     }
-    assume is#Vector(__t2);
+    assume $Vector_T_is_well_formed(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
@@ -2346,7 +2348,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
     assume $DebugTrackLocal(1, 22, 0, 8490, __tmp);
 
-    call __t3 := BorrowLoc(__frame + 0);
+    call __t3 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(7);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -2358,7 +2360,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
     }
     assume $DebugTrackLocal(1, 22, 0, 8525, GetLocal(__m, __frame + 0));
 
-    call __t5 := BorrowLoc(__frame + 0);
+    call __t5 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
@@ -2368,8 +2370,7 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, __ret1)));
       assume $DebugTrackAbort(1, 22, 8573);
       goto Label_Abort;
     }
-    assume IsValidU64(Dereference(__m, __t7));
-    assume IsValidReferenceParameter(__m, __local_counter, __t7);
+    assume IsValidU64(Dereference(__m, __t7)) && IsValidReferenceParameter(__m, __local_counter, __t7);
 
 
 

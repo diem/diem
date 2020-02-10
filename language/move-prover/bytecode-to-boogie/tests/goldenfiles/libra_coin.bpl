@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module LibraCoin
+
+
+
 // ** structs of module LibraCoin
 
 const unique LibraCoin_T: TypeName;
@@ -8,10 +12,16 @@ axiom LibraCoin_T_value == 0;
 function LibraCoin_T_type_value(): TypeValue {
     StructType(LibraCoin_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-procedure {:inline 1} Pack_LibraCoin_T(value: Value) returns (_struct: Value)
+function {:inline 1} $LibraCoin_T_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && IsValidU64(SelectField(__this, LibraCoin_T_value))
+}
+
+procedure {:inline 1} Pack_LibraCoin_T(module_idx: int, func_idx: int, var_idx: int, code_idx: int, value: Value) returns (_struct: Value)
 {
     assume IsValidU64(value);
     _struct := Vector(ExtendValueArray(EmptyValueArray, value));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_LibraCoin_T(_struct: Value) returns (value: Value)
@@ -27,10 +37,16 @@ axiom LibraCoin_MintCapability__dummy == 0;
 function LibraCoin_MintCapability_type_value(): TypeValue {
     StructType(LibraCoin_MintCapability, ExtendTypeValueArray(EmptyTypeValueArray, BooleanType()))
 }
-procedure {:inline 1} Pack_LibraCoin_MintCapability(_dummy: Value) returns (_struct: Value)
+function {:inline 1} $LibraCoin_MintCapability_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && is#Boolean(SelectField(__this, LibraCoin_MintCapability__dummy))
+}
+
+procedure {:inline 1} Pack_LibraCoin_MintCapability(module_idx: int, func_idx: int, var_idx: int, code_idx: int, _dummy: Value) returns (_struct: Value)
 {
     assume is#Boolean(_dummy);
     _struct := Vector(ExtendValueArray(EmptyValueArray, _dummy));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_LibraCoin_MintCapability(_struct: Value) returns (_dummy: Value)
@@ -46,10 +62,16 @@ axiom LibraCoin_MarketCap_total_value == 0;
 function LibraCoin_MarketCap_type_value(): TypeValue {
     StructType(LibraCoin_MarketCap, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-procedure {:inline 1} Pack_LibraCoin_MarketCap(total_value: Value) returns (_struct: Value)
+function {:inline 1} $LibraCoin_MarketCap_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && IsValidU64(SelectField(__this, LibraCoin_MarketCap_total_value))
+}
+
+procedure {:inline 1} Pack_LibraCoin_MarketCap(module_idx: int, func_idx: int, var_idx: int, code_idx: int, total_value: Value) returns (_struct: Value)
 {
     assume IsValidU64(total_value);
     _struct := Vector(ExtendValueArray(EmptyValueArray, total_value));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_LibraCoin_MarketCap(_struct: Value) returns (total_value: Value)
@@ -111,7 +133,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MintCapa
       assume $DebugTrackAbort(0, 0, 1408);
       goto Label_Abort;
     }
-    assume is#Vector(__t4);
+    assume $LibraCoin_T_is_well_formed(__t4);
 
     __m := UpdateLocal(__m, __frame + 4, __t4);
 
@@ -175,9 +197,8 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     assume IsValidU64(value);
     __m := UpdateLocal(__m, __frame + 0, value);
     assume $DebugTrackLocal(0, 1, 0, 1723, value);
-    assume is#Vector(Dereference(__m, capability));
-    assume IsValidReferenceParameter(__m, __local_counter, capability);
-    assume is#Vector(Dereference(__m, capability));
+    assume $LibraCoin_MintCapability_is_well_formed(Dereference(__m, capability)) && IsValidReferenceParameter(__m, __local_counter, capability);
+    assume $LibraCoin_MintCapability_is_well_formed(Dereference(__m, capability));
     assume $DebugTrackLocal(0, 1, 1, 1723, Dereference(__m, capability));
 
     // increase the local counter
@@ -229,7 +250,7 @@ Label_11:
     }
 
     call market_cap_ref := CopyOrMoveRef(__t13);
-    assume is#Vector(Dereference(__m, market_cap_ref));
+    assume $LibraCoin_MarketCap_is_well_formed(Dereference(__m, market_cap_ref));
     assume $DebugTrackLocal(0, 1, 2, 2898, Dereference(__m, market_cap_ref));
 
     call __t14 := CopyOrMoveRef(market_cap_ref);
@@ -263,10 +284,11 @@ Label_11:
 
     call WriteRef(__t21, GetLocal(__m, __frame + 19));
 
+
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 22, __tmp);
 
-    call __tmp := Pack_LibraCoin_T(GetLocal(__m, __frame + 22));
+    call __tmp := Pack_LibraCoin_T(0, 0, 0, 0, GetLocal(__m, __frame + 22));
     __m := UpdateLocal(__m, __frame + 23, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 23);
@@ -343,7 +365,7 @@ Label_7:
     call __tmp := LdTrue();
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call __tmp := Pack_LibraCoin_MintCapability(GetLocal(__m, __frame + 5));
+    call __tmp := Pack_LibraCoin_MintCapability(0, 0, 0, 0, GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call MoveToSender(LibraCoin_MintCapability_type_value(), GetLocal(__m, __frame + 6));
@@ -355,7 +377,7 @@ Label_7:
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    call __tmp := Pack_LibraCoin_MarketCap(GetLocal(__m, __frame + 7));
+    call __tmp := Pack_LibraCoin_MarketCap(0, 0, 0, 0, GetLocal(__m, __frame + 7));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call MoveToSender(LibraCoin_MarketCap_type_value(), GetLocal(__m, __frame + 8));
@@ -460,7 +482,7 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(__ret0, LibraCoin_T_value), Intege
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 0, __tmp);
 
-    call __tmp := Pack_LibraCoin_T(GetLocal(__m, __frame + 0));
+    call __tmp := Pack_LibraCoin_T(0, 0, 0, 0, GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 1);
@@ -497,9 +519,8 @@ ensures b#Boolean(Boolean(IsEqual(__ret0, SelectField(Dereference(__m, coin_ref)
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(Dereference(__m, coin_ref));
-    assume IsValidReferenceParameter(__m, __local_counter, coin_ref);
-    assume is#Vector(Dereference(__m, coin_ref));
+    assume $LibraCoin_T_is_well_formed(Dereference(__m, coin_ref)) && IsValidReferenceParameter(__m, __local_counter, coin_ref);
+    assume $LibraCoin_T_is_well_formed(Dereference(__m, coin_ref));
     assume $DebugTrackLocal(0, 5, 0, 4555, Dereference(__m, coin_ref));
 
     // increase the local counter
@@ -554,7 +575,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(coin);
+    assume $LibraCoin_T_is_well_formed(coin);
     __m := UpdateLocal(__m, __frame + 0, coin);
     assume $DebugTrackLocal(0, 6, 0, 4818, coin);
     assume IsValidU64(amount);
@@ -565,7 +586,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
     __local_counter := __local_counter + 8;
 
     // bytecode translation starts here
-    call __t3 := BorrowLoc(__frame + 0);
+    call __t3 := BorrowLoc(__frame + 0, LibraCoin_T_type_value());
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -575,7 +596,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(coin, LibraCoin_T_value)) < 
       assume $DebugTrackAbort(0, 6, 5045);
       goto Label_Abort;
     }
-    assume is#Vector(__t5);
+    assume $LibraCoin_T_is_well_formed(__t5);
 
     __m := UpdateLocal(__m, __frame + 5, __t5);
     assume $DebugTrackLocal(0, 6, 0, 5045, GetLocal(__m, __frame + 0));
@@ -644,9 +665,8 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(__m, coin_ref), 
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(Dereference(__m, coin_ref));
-    assume IsValidReferenceParameter(__m, __local_counter, coin_ref);
-    assume is#Vector(Dereference(__m, coin_ref));
+    assume $LibraCoin_T_is_well_formed(Dereference(__m, coin_ref)) && IsValidReferenceParameter(__m, __local_counter, coin_ref);
+    assume $LibraCoin_T_is_well_formed(Dereference(__m, coin_ref));
     assume $DebugTrackLocal(0, 7, 0, 5391, Dereference(__m, coin_ref));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
@@ -707,11 +727,13 @@ Label_11:
     call __t15 := BorrowField(__t14, LibraCoin_T_value);
 
     call WriteRef(__t15, GetLocal(__m, __frame + 13));
+    assume $LibraCoin_T_is_well_formed(Dereference(__m, coin_ref));
+    assume $DebugTrackLocal(0, 7, 0, 5814, Dereference(__m, coin_ref));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 16, __tmp);
 
-    call __tmp := Pack_LibraCoin_T(GetLocal(__m, __frame + 16));
+    call __tmp := Pack_LibraCoin_T(0, 0, 0, 0, GetLocal(__m, __frame + 16));
     __m := UpdateLocal(__m, __frame + 17, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 17);
@@ -751,10 +773,10 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(coin1, Lib
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(coin1);
+    assume $LibraCoin_T_is_well_formed(coin1);
     __m := UpdateLocal(__m, __frame + 0, coin1);
     assume $DebugTrackLocal(0, 8, 0, 6020, coin1);
-    assume is#Vector(coin2);
+    assume $LibraCoin_T_is_well_formed(coin2);
     __m := UpdateLocal(__m, __frame + 1, coin2);
     assume $DebugTrackLocal(0, 8, 1, 6020, coin2);
 
@@ -762,7 +784,7 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(coin1, Lib
     __local_counter := __local_counter + 5;
 
     // bytecode translation starts here
-    call __t2 := BorrowLoc(__frame + 0);
+    call __t2 := BorrowLoc(__frame + 0, LibraCoin_T_type_value());
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
@@ -823,11 +845,10 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(Dereference(__m, coin_ref));
-    assume IsValidReferenceParameter(__m, __local_counter, coin_ref);
-    assume is#Vector(Dereference(__m, coin_ref));
+    assume $LibraCoin_T_is_well_formed(Dereference(__m, coin_ref)) && IsValidReferenceParameter(__m, __local_counter, coin_ref);
+    assume $LibraCoin_T_is_well_formed(Dereference(__m, coin_ref));
     assume $DebugTrackLocal(0, 9, 0, 6465, Dereference(__m, coin_ref));
-    assume is#Vector(check);
+    assume $LibraCoin_T_is_well_formed(check);
     __m := UpdateLocal(__m, __frame + 1, check);
     assume $DebugTrackLocal(0, 9, 1, 6465, check);
 
@@ -875,6 +896,8 @@ ensures old(b#Boolean(Boolean(i#Integer(Integer(i#Integer(SelectField(Dereferenc
     call __t13 := BorrowField(__t12, LibraCoin_T_value);
 
     call WriteRef(__t13, GetLocal(__m, __frame + 11));
+    assume $LibraCoin_T_is_well_formed(Dereference(__m, coin_ref));
+    assume $DebugTrackLocal(0, 9, 0, 6823, Dereference(__m, coin_ref));
 
     return;
 
@@ -914,7 +937,7 @@ ensures old(b#Boolean(Boolean(!IsEqual(SelectField(coin, LibraCoin_T_value), Int
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(coin);
+    assume $LibraCoin_T_is_well_formed(coin);
     __m := UpdateLocal(__m, __frame + 0, coin);
     assume $DebugTrackLocal(0, 10, 0, 7117, coin);
 

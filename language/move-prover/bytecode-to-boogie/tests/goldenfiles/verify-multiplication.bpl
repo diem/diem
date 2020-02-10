@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module TestMultiplication
+
+
+
 // ** structs of module TestMultiplication
 
 

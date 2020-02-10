@@ -1,5 +1,9 @@
 
 
+// ** synthetics of module TestStruct
+
+
+
 // ** structs of module TestStruct
 
 const unique TestStruct_B: TypeName;
@@ -10,11 +14,18 @@ axiom TestStruct_B_val == 1;
 function TestStruct_B_type_value(): TypeValue {
     StructType(TestStruct_B, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, AddressType()), IntegerType()))
 }
-procedure {:inline 1} Pack_TestStruct_B(addr: Value, val: Value) returns (_struct: Value)
+function {:inline 1} $TestStruct_B_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && is#Address(SelectField(__this, TestStruct_B_addr))
+        && IsValidU64(SelectField(__this, TestStruct_B_val))
+}
+
+procedure {:inline 1} Pack_TestStruct_B(module_idx: int, func_idx: int, var_idx: int, code_idx: int, addr: Value, val: Value) returns (_struct: Value)
 {
     assume is#Address(addr);
     assume IsValidU64(val);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, addr), val));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestStruct_B(_struct: Value) returns (addr: Value, val: Value)
@@ -34,11 +45,18 @@ axiom TestStruct_A_b == 1;
 function TestStruct_A_type_value(): TypeValue {
     StructType(TestStruct_A, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), TestStruct_B_type_value()))
 }
-procedure {:inline 1} Pack_TestStruct_A(val: Value, b: Value) returns (_struct: Value)
+function {:inline 1} $TestStruct_A_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && IsValidU64(SelectField(__this, TestStruct_A_val))
+        && $TestStruct_B_is_well_formed(SelectField(__this, TestStruct_A_b))
+}
+
+procedure {:inline 1} Pack_TestStruct_A(module_idx: int, func_idx: int, var_idx: int, code_idx: int, val: Value, b: Value) returns (_struct: Value)
 {
     assume IsValidU64(val);
-    assume is#Vector(b);
+    assume $TestStruct_B_is_well_formed(b);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, val), b));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestStruct_A(_struct: Value) returns (val: Value, b: Value)
@@ -47,7 +65,7 @@ procedure {:inline 1} Unpack_TestStruct_A(_struct: Value) returns (val: Value, b
     val := SelectField(_struct, TestStruct_A_val);
     assume IsValidU64(val);
     b := SelectField(_struct, TestStruct_A_b);
-    assume is#Vector(b);
+    assume $TestStruct_B_is_well_formed(b);
 }
 
 const unique TestStruct_C: TypeName;
@@ -58,11 +76,18 @@ axiom TestStruct_C_b == 1;
 function TestStruct_C_type_value(): TypeValue {
     StructType(TestStruct_C, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), TestStruct_A_type_value()))
 }
-procedure {:inline 1} Pack_TestStruct_C(val: Value, b: Value) returns (_struct: Value)
+function {:inline 1} $TestStruct_C_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && IsValidU64(SelectField(__this, TestStruct_C_val))
+        && $TestStruct_A_is_well_formed(SelectField(__this, TestStruct_C_b))
+}
+
+procedure {:inline 1} Pack_TestStruct_C(module_idx: int, func_idx: int, var_idx: int, code_idx: int, val: Value, b: Value) returns (_struct: Value)
 {
     assume IsValidU64(val);
-    assume is#Vector(b);
+    assume $TestStruct_A_is_well_formed(b);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, val), b));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestStruct_C(_struct: Value) returns (val: Value, b: Value)
@@ -71,7 +96,7 @@ procedure {:inline 1} Unpack_TestStruct_C(_struct: Value) returns (val: Value, b
     val := SelectField(_struct, TestStruct_C_val);
     assume IsValidU64(val);
     b := SelectField(_struct, TestStruct_C_b);
-    assume is#Vector(b);
+    assume $TestStruct_A_is_well_formed(b);
 }
 
 const unique TestStruct_T: TypeName;
@@ -80,10 +105,16 @@ axiom TestStruct_T_x == 0;
 function TestStruct_T_type_value(): TypeValue {
     StructType(TestStruct_T, ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()))
 }
-procedure {:inline 1} Pack_TestStruct_T(x: Value) returns (_struct: Value)
+function {:inline 1} $TestStruct_T_is_well_formed(__this: Value): bool {
+    is#Vector(__this)
+        && IsValidU64(SelectField(__this, TestStruct_T_x))
+}
+
+procedure {:inline 1} Pack_TestStruct_T(module_idx: int, func_idx: int, var_idx: int, code_idx: int, x: Value) returns (_struct: Value)
 {
     assume IsValidU64(x);
     _struct := Vector(ExtendValueArray(EmptyValueArray, x));
+    if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
 
 procedure {:inline 1} Unpack_TestStruct_T(_struct: Value) returns (x: Value)
@@ -113,10 +144,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#Vector(a);
+    assume $TestStruct_A_is_well_formed(a);
     __m := UpdateLocal(__m, __frame + 0, a);
     assume $DebugTrackLocal(0, 0, 0, 252, a);
-    assume is#Vector(c);
+    assume $TestStruct_C_is_well_formed(c);
     __m := UpdateLocal(__m, __frame + 1, c);
     assume $DebugTrackLocal(0, 0, 1, 252, c);
 
@@ -225,7 +256,7 @@ Label_8:
     }
 
     call t_ref1 := CopyOrMoveRef(__t11);
-    assume is#Vector(Dereference(__m, t_ref1));
+    assume $TestStruct_T_is_well_formed(Dereference(__m, t_ref1));
     assume $DebugTrackLocal(0, 1, 2, 589, Dereference(__m, t_ref1));
 
     call __t12 := CopyOrMoveRef(t_ref1);
@@ -242,7 +273,7 @@ Label_8:
     }
 
     call t_ref2 := CopyOrMoveRef(__t14);
-    assume is#Vector(Dereference(__m, t_ref2));
+    assume $TestStruct_T_is_well_formed(Dereference(__m, t_ref2));
     assume $DebugTrackLocal(0, 1, 3, 663, Dereference(__m, t_ref2));
 
     call __t15 := CopyOrMoveRef(t_ref2);
@@ -254,7 +285,7 @@ Label_8:
 
     call __tmp := MoveFrom(GetLocal(__m, __frame + 16), TestStruct_T_type_value());
     __m := UpdateLocal(__m, __frame + 17, __tmp);
-    assume is#Vector(__t17);
+    assume $TestStruct_T_is_well_formed(__t17);
     if (__abort_flag) {
       assume $DebugTrackAbort(0, 1, 741);
       goto Label_Abort;
@@ -352,7 +383,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    call __tmp := Pack_TestStruct_B(GetLocal(__m, __frame + 7), GetLocal(__m, __frame + 8));
+    call __tmp := Pack_TestStruct_B(0, 2, 2, 1084, GetLocal(__m, __frame + 7), GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 9));
@@ -368,7 +399,7 @@ Label_7:
     call __tmp := LdConst(42);
     __m := UpdateLocal(__m, __frame + 11, __tmp);
 
-    call __tmp := Pack_TestStruct_B(GetLocal(__m, __frame + 10), GetLocal(__m, __frame + 11));
+    call __tmp := Pack_TestStruct_B(0, 2, 2, 1150, GetLocal(__m, __frame + 10), GetLocal(__m, __frame + 11));
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 12));
@@ -376,10 +407,10 @@ Label_7:
     assume $DebugTrackLocal(0, 2, 2, 1142, __tmp);
 
 Label_11:
-    call __t13 := BorrowLoc(__frame + 2);
+    call __t13 := BorrowLoc(__frame + 2, TestStruct_B_type_value());
 
     call var_b_ref := CopyOrMoveRef(__t13);
-    assume is#Vector(Dereference(__m, var_b_ref));
+    assume $TestStruct_B_is_well_formed(Dereference(__m, var_b_ref));
     assume $DebugTrackLocal(0, 2, 3, 1198, Dereference(__m, var_b_ref));
 
     call __t14 := CopyOrMoveRef(var_b_ref);
@@ -486,7 +517,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     call __tmp := LdConst(42);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    call __tmp := Pack_TestStruct_B(GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5));
+    call __tmp := Pack_TestStruct_B(0, 3, 2, 1513, GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));

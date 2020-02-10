@@ -79,11 +79,14 @@ pub type Condition = Spanned<Condition_>;
 /// An invariant over a resource.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Invariant_ {
-    // A free string (for now) which specifies the function of this invariant.
+    /// A free string (for now) which specifies the function of this invariant.
     pub modifier: String,
 
-    // A specification expressions
-    pub condition: SpecExp,
+    /// An optional synthetic variable to which the below expression is assigned to.
+    pub target: Option<String>,
+
+    /// A specification expression.
+    pub exp: SpecExp,
 }
 
 /// Invariant with span.

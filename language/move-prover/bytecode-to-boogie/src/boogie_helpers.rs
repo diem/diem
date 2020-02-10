@@ -3,7 +3,7 @@
 
 //! Helpers for emitting Boogie code.
 
-use crate::env::{FieldEnv, FunctionEnv, GlobalEnv, GlobalType, StructEnv};
+use crate::env::{FieldEnv, FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, StructEnv};
 use itertools::Itertools;
 use vm::file_format::StructDefinitionIndex;
 
@@ -14,12 +14,17 @@ pub fn boogie_struct_name(env: &StructEnv<'_>) -> String {
 
 /// Return boogie name of given field.
 pub fn boogie_field_name(env: &FieldEnv<'_>) -> String {
-    format!("{}_{}", boogie_struct_name(env.struct_env), env.get_name())
+    format!("{}_{}", boogie_struct_name(&env.struct_env), env.get_name())
 }
 
 /// Return boogie name of given function.
 pub fn boogie_function_name(env: &FunctionEnv<'_>) -> String {
     format!("{}_{}", env.module_env.get_id().name(), env.get_name())
+}
+
+/// Return boogie name of given function.
+pub fn boogie_synthetic_name(env: &ModuleEnv<'_>, name: &str) -> String {
+    format!("__{}_{}", env.get_id().name(), name)
 }
 
 /// Create boogie type value from signature token.
@@ -71,32 +76,73 @@ pub fn boogie_local_type(sig: &GlobalType) -> String {
     }
 }
 
-/// Create boogie type check assumption.
-pub fn boogie_type_check(env: &GlobalEnv, name: &str, sig: &GlobalType) -> String {
-    let mut params = name.to_string();
-    let mut ret = String::new();
-    let check = match sig {
-        GlobalType::U8 => "IsValidU8",
-        GlobalType::U64 => "IsValidU64",
-        GlobalType::U128 => "IsValidU128",
-        GlobalType::Bool => "is#Boolean",
-        GlobalType::Address => "is#Address",
-        GlobalType::ByteArray => "is#ByteArray",
-        // Only need to check Struct for top-level; fields will be checked as we extract them.
-        GlobalType::Struct(_, _, _) => "is#Vector",
+/// Create boogie type check boolean expression.
+pub fn boogie_type_check_expr(env: &GlobalEnv, name: &str, sig: &GlobalType) -> String {
+    let mut conds = vec![];
+    //let mut params = name.to_string();
+    //let mut ret = String::new();
+    match sig {
+        GlobalType::U8 => conds.push(format!("IsValidU8({})", name)),
+        GlobalType::U64 => conds.push(format!("IsValidU64({})", name)),
+        GlobalType::U128 => conds.push(format!("IsValidU128({})", name)),
+        GlobalType::Bool => conds.push(format!("is#Boolean({})", name)),
+        GlobalType::Address => conds.push(format!("is#Address({})", name)),
+        GlobalType::ByteArray => conds.push(format!("is#ByteArray({})", name)),
+        GlobalType::Struct(module_idx, struct_idx, _) => {
+            let struct_env = env.get_module(*module_idx).into_get_struct(struct_idx);
+            conds.push(format!(
+                "${}_is_well_formed({})",
+                boogie_struct_name(&struct_env),
+                name
+            ))
+        }
         GlobalType::Reference(rtype) | GlobalType::MutableReference(rtype) => {
-            let n = format!("Dereference(__m, {})", params);
-            ret = boogie_type_check(env, &n, rtype);
-            params = format!("__m, __local_counter, {}", params);
-            "IsValidReferenceParameter"
+            conds.push(boogie_type_check_expr(
+                env,
+                &format!("Dereference(__m, {})", name),
+                rtype,
+            ));
+            conds.push(format!(
+                "IsValidReferenceParameter(__m, __local_counter, {})",
+                name
+            ));
         }
         // Otherwise it is a type parameter which is opaque
-        GlobalType::TypeParameter(_) => "",
-    };
-    let ret2 = if check.is_empty() {
-        "".to_string()
+        GlobalType::TypeParameter(_) => {}
+    }
+    conds.iter().join(" && ")
+}
+
+/// Create boogie type check assumption. The result will be either an empty string or a
+/// newline-terminated assume statement.
+pub fn boogie_type_check(env: &GlobalEnv, name: &str, sig: &GlobalType) -> String {
+    let expr = boogie_type_check_expr(env, name, sig);
+    if !expr.is_empty() {
+        format!("assume {};\n", expr)
     } else {
-        format!("assume {}({});\n", check, params)
-    };
-    ret + &ret2
+        "".to_string()
+    }
+}
+
+/// Create boogie global variable with type constraint. No references allowed.
+pub fn boogie_declare_global(env: &GlobalEnv, name: &str, sig: &GlobalType) -> String {
+    assert!(!sig.is_reference());
+    format!(
+        "var {} : Value where {};",
+        name,
+        boogie_type_check_expr(env, name, sig)
+    )
+}
+
+/// Returns the name of the invariant target value.
+pub fn boogie_invariant_target(for_old: bool) -> String {
+    if for_old {
+        "__inv_target_old".to_string()
+    } else {
+        "__inv_target".to_string()
+    }
+}
+
+pub fn boogie_var_before_borrow(idx: usize) -> String {
+    format!("__before_borrow_{}", idx)
 }
