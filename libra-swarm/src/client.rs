@@ -50,7 +50,7 @@ impl InteractiveClient {
         // unless we convert it to an absolute path
         Self {
             client: Some(
-                Command::new(workspace_builder::get_bin("client"))
+                Command::new(workspace_builder::get_bin("cli"))
                     .current_dir(workspace_builder::workspace_root())
                     .arg("-p")
                     .arg(port.to_string())
@@ -91,7 +91,7 @@ impl InteractiveClient {
             /// from the client CLI. Comment the stdout/stderr lines below
             /// and enjoy pretty Matrix-style output.
             client: Some(
-                Command::new(workspace_builder::get_bin("client"))
+                Command::new(workspace_builder::get_bin("cli"))
                     .current_dir(workspace_builder::workspace_root())
                     .arg("-p")
                     .arg(port.to_string())
