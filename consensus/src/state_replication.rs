@@ -27,8 +27,6 @@ pub trait TxnManager: Send + Sync {
         &mut self,
         txns: &Self::Payload,
         compute_result: &StateComputeResult,
-        // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
-        timestamp_usecs: u64,
     ) -> Result<()>;
 
     /// Bypass the trait object non-clonable limit.

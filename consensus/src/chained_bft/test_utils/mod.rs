@@ -18,6 +18,7 @@ use tokio::runtime;
 
 mod mock_state_computer;
 mod mock_storage;
+#[cfg(any(test, feature = "fuzzing"))]
 mod mock_txn_manager;
 
 use consensus_types::block::block_test_utils::gen_test_certificate;

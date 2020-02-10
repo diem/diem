@@ -9,8 +9,10 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
-use consensus_types::block::block_test_utils::{certificate_for_genesis, gen_test_certificate};
-use consensus_types::block::Block;
+use consensus_types::block::{
+    block_test_utils::{certificate_for_genesis, gen_test_certificate},
+    Block,
+};
 use futures::executor::block_on;
 use libra_types::crypto_proxies::ValidatorSigner;
 use std::{
@@ -29,7 +31,7 @@ fn test_proposal_generation_empty_tree() {
     let mut proposal_generator = ProposalGenerator::new(
         signer.author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new()),
+        Box::new(MockTransactionManager::new(None)),
         Arc::new(SimulatedTimeService::new()),
         1,
     );
@@ -55,7 +57,7 @@ fn test_proposal_generation_parent() {
     let mut proposal_generator = ProposalGenerator::new(
         inserter.signer().author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new()),
+        Box::new(MockTransactionManager::new(None)),
         Arc::new(SimulatedTimeService::new()),
         1,
     );
@@ -96,7 +98,7 @@ fn test_old_proposal_generation() {
     let mut proposal_generator = ProposalGenerator::new(
         inserter.signer().author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new()),
+        Box::new(MockTransactionManager::new(None)),
         Arc::new(SimulatedTimeService::new()),
         1,
     );
@@ -115,7 +117,7 @@ fn test_empty_proposal_after_reconfiguration() {
     let mut proposal_generator = ProposalGenerator::new(
         inserter.signer().author(),
         block_store.clone(),
-        Box::new(MockTransactionManager::new()),
+        Box::new(MockTransactionManager::new(None)),
         Arc::new(SimulatedTimeService::new()),
         1,
     );

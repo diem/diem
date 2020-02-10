@@ -282,6 +282,7 @@ impl<T: Payload> EpochManager<T> {
             proposal_generator,
             safety_rules,
             network_sender,
+            self.txn_manager.clone(),
             self.storage.clone(),
             self.time_service.clone(),
             validators,

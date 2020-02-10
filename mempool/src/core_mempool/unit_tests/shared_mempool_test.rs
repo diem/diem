@@ -6,7 +6,7 @@ use crate::{
         unit_tests::common::{batch_add_signed_txn, TestTransaction},
         CoreMempool, TimelineState,
     },
-    mocks::mock_shared_mempool,
+    mocks::MockSharedMempool,
     shared_mempool::{
         start_shared_mempool, ConsensusRequest, SharedMempoolNotification, SyncEvent,
     },
@@ -436,7 +436,7 @@ fn test_broadcast_updated_transaction() {
 
 #[test]
 fn test_consensus_events_rejected_txns() {
-    let smp = mock_shared_mempool(None);
+    let smp = MockSharedMempool::new(None);
 
     // add txns 1, 2, 3, 4
     // txn 1: committed successfully
@@ -486,7 +486,7 @@ fn test_consensus_events_rejected_txns() {
 #[test]
 fn test_state_sync_events_committed_txns() {
     let (mut state_sync_sender, state_sync_events) = mpsc::channel(1_024);
-    let smp = mock_shared_mempool(Some(state_sync_events));
+    let smp = MockSharedMempool::new(Some(state_sync_events));
 
     // add txns 1, 2, 3, 4
     // txn 1: committed successfully
