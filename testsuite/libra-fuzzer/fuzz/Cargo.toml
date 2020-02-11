@@ -13,7 +13,7 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-libfuzzer-sys = { git = "https://github.com/rust-fuzz/libfuzzer-sys.git" }
+libfuzzer-sys = "0.2.0"
 libra-fuzzer = { path = "..", version = "0.1.0" }
 once_cell = "1.2.0"
 
