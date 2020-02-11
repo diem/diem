@@ -568,12 +568,16 @@ impl ClusterTestRunner {
             "Suite completed in {:?}",
             Instant::now().duration_since(suite_started)
         );
+        self.print_report();
+        Ok(())
+    }
+
+    pub fn print_report(&self) {
         let json_report =
             serde_json::to_string_pretty(&self.report).expect("Failed to serialize report to json");
         println!("====json-report-begin===");
         println!("{}", json_report);
         println!("====json-report-end===");
-        Ok(())
     }
 
     pub fn perf_run(&mut self) -> String {
@@ -584,7 +588,9 @@ impl ClusterTestRunner {
 
     pub fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> Result<()> {
         self.cleanup();
-        self.run_single_experiment(experiment)
+        self.run_single_experiment(experiment)?;
+        self.print_report();
+        Ok(())
     }
 
     pub fn run_single_experiment(&mut self, mut experiment: Box<dyn Experiment>) -> Result<()> {
