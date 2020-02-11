@@ -283,9 +283,9 @@ module VerifyVector {
         return (7, *move(y));
     }
 
-    // fails. 0 != 7
+    // succeeds. 0 != 7
     public test_borrow3() : u64 * u64
-    ensures RET(0) == RET(1) //! A postcondition might not hold on this return path.
+    ensures RET(0) != RET(1)
     {
         let ev1: Vector.T<u64>;
         let y : &u64;
@@ -294,4 +294,98 @@ module VerifyVector {
         y = Vector.borrow<u64>(&ev1, 0);
         return (0, *move(y));
     }
+
+    // succeeds.
+    public my_length1(v: Vector.T< u64>): u64
+    ensures vector_length(v) == RET(0)
+    // TODO: spec_translator cannot handle the following post-conditions
+    // ensures vector_length(v) + 1 == RET(0) // thread 'main' panicked at 'unexpected type', language/move-prover/bytecode-to-boogie/src/spec_translator.rs:343:18
+    // ensures vector_length(v) < RET(0) + 1 // thread 'main' panicked at 'unexpected type', language/move-prover/bytecode-to-boogie/src/spec_translator.rs:343:18
+    {
+        return Vector.length<u64>(&v);
+    }
+
+    // succeeds. standard vector method (without type parameter).
+    public my_length2(v: &Vector.T< u64>): u64
+    ensures vector_length(*v) == RET(0)
+    {
+        return Vector.length<u64>(copy(v));
+    }
+
+    // succeeds. standard vector method.
+    public my_length3<Element>(v: &Vector.T< Element>): u64
+    ensures vector_length(*v) == RET(0)
+    {
+        return Vector.length<Element>(copy(v));
+    }
+
+    // succeeds.
+    public my_get1(v: Vector.T<u64>, i: u64): u64
+    aborts_if i >= vector_length(v)
+    ensures RET(0) == vector_get(v, i)
+    {
+        return *Vector.borrow<u64>(&v, move(i));
+    }
+
+    // succeeds. standard vector method (without type parameter).
+    public my_get2(v: &Vector.T<u64>, i: u64): u64
+    aborts_if i >= vector_length(*v)
+    ensures RET(0) == vector_get(*v, i)
+    {
+        return *Vector.borrow<u64>(move(v), move(i));
+    }
+
+    // succeeds.
+    public my_get3(v: &Vector.T<u64>, i: u64): u64
+    aborts_if i >= vector_length(*v)
+    aborts_if vector_get(*v, i) == 0
+    ensures RET(0) + 1 == vector_get(*v, i)
+    {
+        return *Vector.borrow<u64>(move(v), move(i)) - 1;
+    }
+
+    // succeeds. standard vector method.
+    public my_get4<Element: unrestricted>(v: &Vector.T<Element>, i: u64): Element
+    aborts_if i >= vector_length(*v)
+    ensures RET(0) == vector_get(*v, i)
+    {
+        return *Vector.borrow<Element>(move(v), move(i));
+    }
+
+    // succeeds.
+    public my_set1(v: Vector.T<u64>, i: u64, e: u64) : Vector.T<u64>
+    aborts_if i >= vector_length(v)
+    ensures RET(0) == vector_update(v, i, e)
+    {
+        *(Vector.borrow_mut<u64>(&mut v, move(i))) = move(e);
+        return move(v);
+    }
+
+    // succeeds. standard vector method (without type parameter).
+    public my_set2(v: &mut Vector.T<u64>, i: u64, e: u64)
+    aborts_if i >= vector_length(*v)
+    ensures *v == vector_update(old(*v), i, e)
+    {
+        *(Vector.borrow_mut<u64>(move(v), move(i))) = move(e);
+        return;
+    }
+
+    // succeeds. standard vector method.
+    public my_set3<Element: unrestricted>(v: &mut Vector.T<Element>, i: u64, e: Element)
+    aborts_if i >= vector_length(*v)
+    ensures *v == vector_update(old(*v), i, e)
+    {
+        *(Vector.borrow_mut<Element>(move(v), move(i))) = move(e);
+        return;
+    }
+
+    // standard vector method (without type parameter).
+    public my_is_empty(v: &Vector.T<u64>): bool
+    // TODO: the following post-condition is not parsed.
+    // ensures RET(0) == (vector_length(*v) == 0) // mvir parsing errors: ParserError: Invalid token at 10411
+    {
+        return Vector.length<u64>(move(v)) == 0;
+    }
+
+    // TODO: to test composition of helper functions
 }
