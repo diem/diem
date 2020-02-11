@@ -400,13 +400,6 @@ where
         .with_label_values(&["request", "received"])
         .observe(req_data.len() as f64);
 
-    // Wait for dialer to half-close their side.
-    if substream.next().await.is_some() {
-        // Remote should never send more than one request; we'll consider this
-        // a protocol violation and ignore their request.
-        return Err(RpcError::UnexpectedRpcRequest);
-    };
-
     // Build the event and context we push up to upper layers for handling.
     let (res_tx, res_rx) = oneshot::channel();
     let notification = RpcNotification::RecvRpc(InboundRpcRequest {
@@ -416,6 +409,13 @@ where
     });
     // Forward request to upper layer.
     notification_tx.send(notification).await?;
+
+    // Wait for dialer to half-close their side.
+    if substream.next().await.is_some() {
+        // Remote should never send more than one request; we'll consider this
+        // a protocol violation and ignore their request.
+        return Err(RpcError::UnexpectedRpcRequest);
+    };
 
     // Wait for response from upper layer.
     let res_data = res_rx.await??;
