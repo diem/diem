@@ -17,6 +17,18 @@ pub static LIBRA_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
     .unwrap()
 });
 
+pub static LIBRA_NETWORK_PEER_INFO: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        // metric name
+        "libra_network_peer_info",
+        // metric description
+        "Libra network peer info",
+        // metric labels (dimensions)
+        &["role_type", "ip_address", "peer_id"]
+    )
+    .unwrap()
+});
+
 pub static LIBRA_NETWORK_DISCOVERY_NOTES: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
         // metric name

@@ -611,6 +611,13 @@ where
             counters::LIBRA_NETWORK_PEERS
                 .with_label_values(&[identity.role().as_str(), "connected"])
                 .inc();
+            counters::LIBRA_NETWORK_PEER_INFO
+                .with_label_values(&[
+                    identity.role().as_str(),
+                    &address.to_string(),
+                    &peer_id.short_str(),
+                ])
+                .inc();
         }
     }
 
@@ -632,6 +639,13 @@ where
         // update libra_network_peer counter
         counters::LIBRA_NETWORK_PEERS
             .with_label_values(&[identity.role().as_str(), "connected"])
+            .dec();
+        counters::LIBRA_NETWORK_PEER_INFO
+            .with_label_values(&[
+                identity.role().as_str(),
+                &addr.to_string(),
+                &peer_id.short_str(),
+            ])
             .dec();
         // Remove NetworkRequest sender from `active_peers`.
         self.active_peers.remove(&peer_id);
