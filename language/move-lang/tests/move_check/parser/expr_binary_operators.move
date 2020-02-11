@@ -11,9 +11,11 @@ fun main() {
     Transaction::assert((2 ^ 3) == 1, 108);
     Transaction::assert((1 | 2) == 3, 109);
     Transaction::assert((2 & 3) == 2, 110);
-    Transaction::assert((1 + 2) == 3, 111);
-    Transaction::assert((3 - 2) == 1, 112);
-    Transaction::assert((2 * 3) == 6, 113);
-    Transaction::assert((9 / 3) == 3, 114);
-    Transaction::assert((8 % 3) == 2, 115);
+    Transaction::assert((2 << 1) == 4, 111);
+    Transaction::assert((8 >> 2) == 2, 112);
+    Transaction::assert((1 + 2) == 3, 113);
+    Transaction::assert((3 - 2) == 1, 114);
+    Transaction::assert((2 * 3) == 6, 115);
+    Transaction::assert((9 / 3) == 3, 116);
+    Transaction::assert((8 % 3) == 2, 117);
 }

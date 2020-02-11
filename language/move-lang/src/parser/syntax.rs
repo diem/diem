@@ -94,6 +94,16 @@ fn consume_optional_token_with_loc<'input>(
     }
 }
 
+// While parsing a list and expecting a ">" token to mark the end, replace
+// a ">>" token with the expected ">". This handles the situation where there
+// are nested type parameters that result in two adjacent ">" tokens, e.g.,
+// "A<B<C>>".
+fn adjust_token<'input>(tokens: &mut Lexer<'input>, end_token: Tok) {
+    if tokens.peek() == Tok::GreaterGreater && end_token == Tok::Greater {
+        tokens.replace_token(Tok::Greater, 1);
+    }
+}
+
 // Parse a comma-separated list of items, including the specified starting and
 // ending tokens.
 fn parse_comma_list<'input, F, R>(
@@ -131,17 +141,19 @@ fn parse_comma_list_after_start<'input, F, R>(
 where
     F: Fn(&mut Lexer<'input>) -> Result<R, Error>,
 {
+    adjust_token(tokens, end_token);
     if match_token(tokens, end_token)? {
         return Ok(vec![]);
     }
     let mut v = vec![];
     loop {
-        if tokens.peek() == Tok::Comma || tokens.peek() == end_token {
+        if tokens.peek() == Tok::Comma {
             let current_loc = tokens.start_loc();
             let loc = make_loc(tokens.file_name(), current_loc, current_loc);
             return Err(vec![(loc, format!("Expected {}", item_description))]);
         }
         v.push(parse_list_item(tokens)?);
+        adjust_token(tokens, end_token);
         if match_token(tokens, end_token)? {
             break Ok(v);
         }
@@ -154,6 +166,7 @@ where
                 (loc2, format!("To match this '{}'", start_token)),
             ]);
         }
+        adjust_token(tokens, end_token);
         if match_token(tokens, end_token)? {
             break Ok(v);
         }
@@ -466,6 +479,7 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
 //          | <Value>
 //          | "(" Comma<Exp> ")"
 //          | "(" <Exp> ":" <Type> ")"
+//          | "(" <Exp> "as" <Type> ")"
 //          | "{" <Sequence>
 //          | <ModuleAccess> ("<" Comma<BaseType> ">")? "{" Comma<ExpField> "}"
 //          | <ModuleAccess> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
@@ -549,6 +563,7 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
 
         // "(" Comma<Exp> ")"
         // "(" <Exp> ":" <Type> ")"
+        // "(" <Exp> "as" <Type> ")"
         Tok::LParen => {
             let list_loc = tokens.start_loc();
             tokens.advance()?; // consume the LParen
@@ -562,6 +577,15 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                     let ty = parse_type(tokens)?;
                     consume_token(tokens, Tok::RParen)?;
                     Exp_::Annotate(Box::new(e), ty)
+                } else if match_token(tokens, Tok::As)? {
+                    let ty = parse_type(tokens)?;
+                    // FIXME: Exp_::Cast(Box::new(e), ty)
+                    // The extra let binding here is just to keep clippy from complaining
+                    // that this code is the same as above. Remove it when there is a Cast
+                    // expression (or whatever we end up calling it).
+                    let e = Exp_::Annotate(Box::new(e), ty);
+                    consume_token(tokens, Tok::RParen)?;
+                    e
                 } else {
                     if tokens.peek() != Tok::RParen {
                         consume_token(tokens, Tok::Comma)?;
@@ -758,11 +782,13 @@ fn get_precedence(token: Tok) -> u32 {
         Tok::Pipe => 5,
         Tok::Caret => 6,
         Tok::Amp => 7,
-        Tok::Plus => 8,
-        Tok::Minus => 8,
-        Tok::Star => 9,
-        Tok::Slash => 9,
-        Tok::Percent => 9,
+        Tok::LessLess => 8,
+        Tok::GreaterGreater => 8,
+        Tok::Plus => 9,
+        Tok::Minus => 9,
+        Tok::Star => 10,
+        Tok::Slash => 10,
+        Tok::Percent => 10,
         _ => 0, // anything else is not a binary operator
     }
 }
@@ -777,6 +803,7 @@ fn get_precedence(token: Tok) -> u32 {
 //          | "|"
 //          | "^"
 //          | "&"
+//          | "<<" | ">>"
 //          | "+" | "-"
 //          | "*" | "/" | "%"
 //
@@ -821,6 +848,8 @@ fn parse_binop_exp<'input>(
             Tok::Caret => BinOp_::Xor,
             Tok::Pipe => BinOp_::BitOr,
             Tok::Amp => BinOp_::BitAnd,
+            Tok::LessLess => BinOp_::BitOr, // BinOp_::BitShl, FIXME
+            Tok::GreaterGreater => BinOp_::BitOr, // BinOp_::BitShr, FIXME
             Tok::Plus => BinOp_::Add,
             Tok::Minus => BinOp_::Sub,
             Tok::Star => BinOp_::Mul,

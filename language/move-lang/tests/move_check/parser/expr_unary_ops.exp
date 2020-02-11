@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/expr_unary_ops.move:6:16 ───
+   │
+ 7 │         -v
+   │         ^^ Invalid argument to '-'
+   ·
+ 6 │     fun sub(v: u64): u64 {
+   │                --- Found: 'u64'. But the operation is not yet supported on any type
+   │
+
