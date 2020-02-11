@@ -96,7 +96,7 @@ use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
-use serde::{de, ser};
+use serde::{ser, Deserialize, Serialize};
 use std::{self, convert::AsRef, fmt};
 use tiny_keccak::Keccak;
 
@@ -109,7 +109,7 @@ mod hash_test;
 const SHORT_STRING_LENGTH: usize = 4;
 
 /// Output value of our hash function. Intentionally opaque for safety and modularity.
-#[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct HashValue {
     hash: [u8; HashValue::LENGTH],
@@ -260,41 +260,6 @@ impl HashValue {
     /// Parse a given hex string to a hash value.
     pub fn from_hex(hex_str: &str) -> Result<Self> {
         Self::from_slice(hex::decode(hex_str)?.as_slice())
-    }
-}
-
-// TODO(#1307)
-impl ser::Serialize for HashValue {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        serializer.serialize_bytes(&self.hash[..])
-    }
-}
-
-impl<'de> de::Deserialize<'de> for HashValue {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        struct HashValueVisitor;
-        impl<'de> de::Visitor<'de> for HashValueVisitor {
-            type Value = HashValue;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("HashValue in bytes")
-            }
-
-            fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<HashValue, E>
-            where
-                E: de::Error,
-            {
-                HashValue::from_slice(value).map_err(E::custom)
-            }
-        }
-
-        deserializer.deserialize_bytes(HashValueVisitor)
     }
 }
 
