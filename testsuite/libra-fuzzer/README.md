@@ -14,19 +14,19 @@ Install [`cargo-fuzz`](https://rust-fuzz.github.io/book/cargo-fuzz.html) if not 
 First, switch to the directory this README is in: `cd
 testsuite/libra_fuzzer`.
 
-To list out known fuzz targets, run `cargo run list`.
+To list out known fuzz targets, run `cargo run --bin libra-fuzzer list`.
 
 To be effective, fuzzing requires a corpus of existing inputs. This
 crate contains support for generating corpuses with `proptest`. Generate
-a corpus with `cargo run generate <target>`.
+a corpus with `cargo run --bin libra-fuzzer generate <target>`.
 
 Once a corpus has been generated, the fuzzer is ready to use, simply run:
 
 ```
-RUSTC_BOOTSTRAP=1 cargo run fuzz <target> -- --release --debug-assertions
+RUSTC_BOOTSTRAP=1 cargo run --bin libra-fuzzer fuzz <target> -- --release --debug-assertions
 ```
 
-For more options, run `cargo run -- --help`. Note that `RUSTC_BOOTSTRAP=1` is
+For more options, run `cargo run --bin libra-fuzzer -- --help`. Note that `RUSTC_BOOTSTRAP=1` is
 required as `cargo fuzz` uses unstable compiler flags.
 
 ### Adding a new target
@@ -37,7 +37,7 @@ creating a new type and implementing `FuzzTargetImpl` for it.
 For examples, see the existing implementations in `src/fuzz_targets/`.
 
 Remember to add your target to `ALL_TARGETS` in `src/fuzz_targets.rs`.
-Once that has been done, `cargo run list` should list your new target.
+Once that has been done, `cargo run --bin libra-fuzzer list` should list your new target.
 
 ### Debugging and testing artifacts
 
@@ -70,7 +70,7 @@ Running the following command (with your own artifact contained in a similar pat
 will run the fuzzer with your input.
 
 ```
-cargo run investigate -- -i artifacts/compiled_module/crash-5d7f403f
+cargo run --bin investigate -- -i artifacts/compiled_module/crash-5d7f403f
 ```
 
 This is helpful to investigate and debug a binary in order to find the root cause
