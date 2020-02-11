@@ -191,6 +191,7 @@ impl StorageService {
         let rust_req = storage_proto::GetAccountStateRangeProofRequest::try_from(req)?;
         let proof = self
             .db
+            .get_backup_handler()
             .get_account_state_range_proof(rust_req.rightmost_key, rust_req.version)?;
         let rust_resp = storage_proto::GetAccountStateRangeProofResponse::new(proof);
         Ok(rust_resp.into())
@@ -305,6 +306,7 @@ impl Storage for StorageService {
         let req = request.into_inner();
         let iter = self
             .db
+            .get_backup_handler()
             .get_account_iter(req.version)
             .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
 
