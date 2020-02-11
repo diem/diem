@@ -47,15 +47,15 @@ impl Address {
 
         let mut result = hex::decode(hex_string.as_str()).unwrap();
         let len = result.len();
-        if len < 32 {
+        if len < ADDRESS_LENGTH {
             result.reverse();
-            for _ in len..32 {
+            for _ in len..ADDRESS_LENGTH {
                 result.push(0);
             }
             result.reverse();
         }
 
-        assert!(result.len() >= 32);
+        assert!(result.len() >= ADDRESS_LENGTH);
         Self::try_from(&result[..]).map_err(|_| {
             format!(
                 "Address is {} bytes long. The maximum size is {} bytes",
