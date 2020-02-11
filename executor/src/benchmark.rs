@@ -7,6 +7,7 @@ use libra_crypto::{
     hash::{CryptoHash, HashValue},
     traits::{PrivateKey, SigningKey},
 };
+use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{association_address, AccountResource},
@@ -188,7 +189,10 @@ impl TransactionExecutor {
         let mut version = 0;
 
         while let Ok(transactions) = self.block_receiver.recv() {
-            version += transactions.len() as u64;
+            let num_txns = transactions.len();
+            version += num_txns as u64;
+
+            let execute_start = std::time::Instant::now();
 
             let output = self
                 .executor
@@ -198,6 +202,10 @@ impl TransactionExecutor {
                     &self.committed_trees,
                 )
                 .unwrap();
+
+            let execute_time = std::time::Instant::now().duration_since(execute_start);
+            let commit_start = std::time::Instant::now();
+
             let new_committed_trees = output.executed_trees().clone();
             let block_to_commit = (transactions, Arc::new(output));
 
@@ -226,6 +234,17 @@ impl TransactionExecutor {
                 .unwrap();
 
             self.committed_trees = new_committed_trees;
+
+            let commit_time = std::time::Instant::now().duration_since(commit_start);
+            let total_time = execute_time + commit_time;
+
+            info!(
+                "Version: {}. execute time: {} ms. commit time: {} ms. TPS: {}.",
+                version,
+                execute_time.as_millis(),
+                commit_time.as_millis(),
+                num_txns as u128 * 1_000_000_000 / total_time.as_nanos(),
+            );
         }
     }
 }
