@@ -35,10 +35,12 @@ pub enum Tok {
     Semicolon,
     Less,
     LessEqual,
+    LessLess,
     Equal,
     EqualEqual,
     Greater,
     GreaterEqual,
+    GreaterGreater,
     Caret,
     Abort,
     Acquires,
@@ -99,10 +101,12 @@ impl fmt::Display for Tok {
             Semicolon => ";",
             Less => "<",
             LessEqual => "<=",
+            LessLess => "<<",
             Equal => "=",
             EqualEqual => "==",
             Greater => ">",
             GreaterEqual => ">=",
+            GreaterGreater => ">>",
             Caret => "^",
             Abort => "abort",
             Acquires => "acquires",
@@ -201,6 +205,14 @@ impl<'input> Lexer<'input> {
         self.token = token;
         Ok(())
     }
+
+    // Replace the current token. The lexer will always match the longest token,
+    // but sometimes the parser will prefer to replace it with a shorter one,
+    // e.g., ">" instead of ">>".
+    pub fn replace_token(&mut self, token: Tok, len: usize) {
+        self.token = token;
+        self.cur_end = self.cur_start + len
+    }
 }
 
 // Find the next token and its length without changing the state of the lexer.
@@ -262,6 +274,8 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
         '<' => {
             if text.starts_with("<=") {
                 (Tok::LessEqual, 2)
+            } else if text.starts_with("<<") {
+                (Tok::LessLess, 2)
             } else {
                 (Tok::Less, 1)
             }
@@ -269,6 +283,8 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
         '>' => {
             if text.starts_with(">=") {
                 (Tok::GreaterEqual, 2)
+            } else if text.starts_with(">>") {
+                (Tok::GreaterGreater, 2)
             } else {
                 (Tok::Greater, 1)
             }
