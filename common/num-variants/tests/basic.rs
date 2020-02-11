@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 
 // TODO: There are no negative tests at the moment (e.g. deriving NumVariants on a struct or union).
-// Add some, possibly using compiletest-rs: https://github.com/laumann/compiletest-rs
+// Add some, possibly using trybuild: https://docs.rs/trybuild/1.0.21/trybuild/
 
 use num_variants::NumVariants;
 
