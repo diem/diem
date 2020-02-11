@@ -21,16 +21,17 @@ if [ ! -f Cargo.toml ]; then
     echo "Cargo.toml not found! Are you running this script in the right directory?"
 fi
 
-
-dependencies=$(awk 'x==1 {print } /\[dependencies\]/ {x=1}' Cargo.toml| grep -Ev '(^$|^\[.+\]$|version|default-features)'| grep -Eo '^\w+')
+# Here, awk attempts to capture the dependency names among the [(build-|dev-)dependencies]
+# blocks of the Cargo.toml
+dependencies=$(awk  'x==1 {print } /\[(build-|dev-)?dependencies\]/ {x=1} /^$/ {x=0}' Cargo.toml| grep -Ev '(^$|^\[.+\]$)'| grep -Eo '^\w+')
 echo "$dependencies"
 for i in $dependencies; do
     echo "testing removal of $i"
     cargo rm "$i";
-    cargo check --all-targets
+    cargo check --all-targets --all-features
     if (( $? == 0 )); then
         echo "removal succeeded, committing"
-        git commit -m "Removing $i" --all;
+        git commit --no-gpg-sign -m "Removing $i from $(basename `pwd`)" --all;
     else
         echo "removal failed, rolling back"
         git reset --hard
