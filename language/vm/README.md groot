@@ -15,7 +15,7 @@ metering logical abstraction is also defined there.
 
 The MoveVM is a stack machine with a static type system. The MoveVM honors
 the specification of the Move language through a mix of file format,
-verification (for reference [bytcode verifier README](https://github.com/libra/libra/blob/master/language/bytecode-verifier/README.md))
+verification (for reference [bytcode verifier README](https://github.com/libra1/libra2/blob/master/language/bytecode-verifier/README.md))
 and runtime constraints. The structure of the file format allows the
 definition of modules, types (resources and unrestricted types), and
 functions. Code is expressed via bytecode instructions, which may have
