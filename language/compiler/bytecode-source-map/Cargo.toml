@@ -12,7 +12,7 @@ bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
 move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
-codespan = { version = "0.2.1" }
+codespan = "0.2.1"
 codespan-reporting = "0.2.1"
 structopt = "0.3.2"
 serde = { version = "1", features = ["derive"] }

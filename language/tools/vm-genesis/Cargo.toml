@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 anyhow = "1.0"
-once_cell = "1.2.0"
+once_cell = "1.3.1"
 rand = "0.6.5"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
@@ -20,7 +20,7 @@ libra-config = { path = "../../../config", version = "0.1.0" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
-parity-multiaddr = "0.6.0"
+parity-multiaddr = "0.7.1"
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 transaction-builder = { path = "../../transaction-builder", version = "0.1.0"}
 vm = { path = "../../vm", version = "0.1.0" }

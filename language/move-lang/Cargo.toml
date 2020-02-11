@@ -8,11 +8,11 @@ edition = "2018"
 [dependencies]
 codespan = "0.5.0"
 codespan-reporting = "0.5.0"
-hex = "0.3.2"
+hex = "0.4.1"
 regex = "1.1.6"
 structopt = "0.3.3"
 difference = "2.0"
-petgraph = "0.4.13"
+petgraph = "0.5.0"
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 
 move-vm = { path = "../vm", package = "vm" }

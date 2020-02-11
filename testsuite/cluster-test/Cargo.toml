@@ -42,7 +42,7 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 generate-keypair = { path = "../../config/generate-keypair", version = "0.1.0" }
-hex = { version = "0.3.2", default-features = false }
+hex = { version = "0.4.1", default-features = false }
 
 futures = "0.3.0"
 tokio = { version = "0.2.8", features = ["full"] }

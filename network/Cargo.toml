@@ -12,10 +12,10 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-bytes = "0.5"
+bytes = "0.5.4"
 futures = "0.3.0"
-once_cell = "1.2.0"
-parity-multiaddr = "0.6.0"
+once_cell = "1.3.1"
+parity-multiaddr = "0.7.1"
 pin-project = "0.4.2"
 prost = "0.6"
 prometheus = { version = "0.7.0", default-features = false }

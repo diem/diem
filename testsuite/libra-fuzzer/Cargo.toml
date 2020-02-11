@@ -13,8 +13,8 @@ edition = "2018"
 anyhow = "1.0"
 byteorder = { version = "1.3.2", default-features = false }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-hex = { version = "0.3.2", default-features = false }
-once_cell = "1.2.0"
+hex = { version = "0.4.1", default-features = false }
+once_cell = "1.3.1"
 proptest = { version = "0.9.4", default-features = false }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
 libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }

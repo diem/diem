@@ -12,9 +12,9 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 get_if_addrs = { version = "0.5.3", default-features = false }
-hex = { version = "0.3.2", default-features = false }
+hex = { version = "0.4.1", default-features = false }
 mirai-annotations = "1.4.0"
-parity-multiaddr = { version = "0.6.0", default-features = false }
+parity-multiaddr = { version = "0.7.1", default-features = false }
 rand = "0.6.5"
 serde = { version = "1.0.99", features = ["rc"], default-features = false }
 slog = { version = "2.5.0", features = ["max_level_trace", "release_max_level_debug"] }

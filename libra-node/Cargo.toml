@@ -10,9 +10,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = "0.3"
+futures = "0.3.0"
 jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
-parity-multiaddr = "0.6.0"
+parity-multiaddr = "0.7.1"
 rayon = "1.2.0"
 structopt = "0.3.2"
 tokio = { version = "0.2.8", features = ["full"] }

@@ -10,5 +10,5 @@ publish = false
 edition = "2018"
 
 [dependencies]
-once_cell = "1.2.0"
+once_cell = "1.3.1"
 libra-logger = { path = "../logger", version = "0.1.0" }

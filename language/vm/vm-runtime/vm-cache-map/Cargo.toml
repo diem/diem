@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 chashmap = "2.2.2"
-typed-arena = "1.5.0"
+typed-arena = "2.0.1"
 
 [dev-dependencies]
 crossbeam = "0.7.2"

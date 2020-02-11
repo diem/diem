@@ -11,5 +11,5 @@ publish = false
 
 [dependencies]
 futures = "0.3.0"
-bytes = "0.5"
-once_cell = "1.2.0"
+bytes = "0.5.4"
+once_cell = "1.3.1"
