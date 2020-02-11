@@ -12,13 +12,12 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::spanned::Spanned;
 use syn::{
-    parse_macro_input, Attribute, Data, DeriveInput, Error, Lit, Meta, MetaNameValue, Result,
+    parse_macro_input, Attribute, Data, DeriveInput, Error, Meta, MetaList, NestedMeta, Result,
 };
 
 /// Derives an associated constant with the number of variants this enum has.
 ///
-/// The default constant name is `NUM_VARIANTS`. This can be customized with `#[num_variants =
-/// "FOO")]`.
+/// The default constant name is `NUM_VARIANTS`. This can be customized with `#[num_variants(FOO)]`.
 #[proc_macro_derive(NumVariants, attributes(num_variants))]
 pub fn derive_num_variants(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -30,7 +29,8 @@ pub fn derive_num_variants(input: proc_macro::TokenStream) -> proc_macro::TokenS
 
 fn derive_num_variants_impl(input: DeriveInput) -> Result<TokenStream> {
     let input_span = input.span();
-    let const_name = compute_const_name(input.attrs)?;
+    let const_name = compute_ident(input.attrs, "num_variants")?
+        .unwrap_or_else(|| Ident::new("NUM_VARIANTS", Span::call_site()));
 
     let name = input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -57,29 +57,44 @@ fn compute_num_variants(data: &Data, span: Span) -> Result<usize> {
     }
 }
 
-/// Computes the name of the constant.
-fn compute_const_name(attrs: Vec<Attribute>) -> Result<Ident> {
-    let mut const_names: Vec<_> = attrs
+/// Retrieves the name of an identifier specified through an attribute.
+fn compute_ident(attrs: Vec<Attribute>, attribute_name: &str) -> Result<Option<Ident>> {
+    let mut idents: Vec<_> = attrs
         .into_iter()
-        .filter(|attr| attr.path.is_ident("num_variants"))
-        .map(|attr| match attr.parse_meta() {
-            Ok(Meta::NameValue(MetaNameValue {
-                lit: Lit::Str(lit), ..
-            })) => Ok((attr.span(), lit.parse::<Ident>()?)),
-            _ => Err(Error::new(
-                attr.span(),
-                "must be of the form #[num_variants = \"FOO\"]",
-            )),
+        .filter(|attr| attr.path.is_ident(attribute_name))
+        .map(|attr| {
+            let err_fn = || {
+                Error::new(
+                    attr.span(),
+                    format!("must be of the form #[{}(FOO)]", attribute_name),
+                )
+            };
+            match attr.parse_meta() {
+                Ok(Meta::List(MetaList { nested, .. })) => {
+                    if nested.len() == 1 {
+                        match nested.first().unwrap() {
+                            NestedMeta::Meta(nested) => match nested.path().get_ident() {
+                                Some(ident) => Ok((attr.span(), ident.clone())),
+                                None => Err(err_fn()),
+                            },
+                            _ => Err(err_fn()),
+                        }
+                    } else {
+                        Err(err_fn())
+                    }
+                }
+                _ => Err(err_fn()),
+            }
         })
         .collect::<Result<_>>()?;
-    // There should only be zero or one constant names.
 
-    match const_names.len() {
-        0 => Ok(Ident::new("NUM_VARIANTS", Span::call_site())),
-        1 => Ok(const_names.remove(0).1),
+    // There should only be zero or one constant names.
+    match idents.len() {
+        0 => Ok(None),
+        1 => Ok(Some(idents.remove(0).1)),
         _ => Err(Error::new(
-            const_names.remove(1).0,
-            "#[num_variants] attribute used multiple times",
+            idents.remove(1).0,
+            format!("#[{}] used multiple times", attribute_name),
         )),
     }
 }

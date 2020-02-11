@@ -805,7 +805,7 @@ impl CodeUnit {
 #[derive(Clone, Hash, Eq, NumVariants, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
-#[num_variants = "NUM_INSTRUCTIONS"]
+#[num_variants(NUM_INSTRUCTIONS)]
 pub enum Bytecode {
     /// Pop and discard the value at the top of the stack.
     /// The value on the stack must be an unrestricted type.

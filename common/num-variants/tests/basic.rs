@@ -19,7 +19,7 @@ enum BasicEnum {
 enum ZeroEnum {}
 
 #[derive(NumVariants)]
-#[num_variants = "CUSTOM_NAME"]
+#[num_variants(CUSTOM_NAME)]
 enum CustomName {
     Foo,
     Bar,
