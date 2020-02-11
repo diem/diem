@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-backtrace = "0.3.37"
+backtrace = "0.3.44"
 toml = "0.5.3"
 
 libra-logger = { path = "../logger", version = "0.1.0" }

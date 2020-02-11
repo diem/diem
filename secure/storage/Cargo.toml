@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-base64 = "0.9.3"
+base64 = "0.11.0"
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }

@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 mirai-annotations = "1.4.0"
-petgraph = "0.4"
+petgraph = "0.5.0"
 
 vm = { path = "../vm", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }

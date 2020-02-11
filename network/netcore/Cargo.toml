@@ -10,12 +10,12 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bytes = "0.5"
+bytes = "0.5.4"
 futures = { version = "0.3.0", features = ["io-compat", "compat"] }
-futures_01 = { version = "0.1.28", package = "futures" }
-parity-multiaddr = { version = "0.6.0", default-features = false }
+futures_01 = { version = "0.1.29", package = "futures" }
+parity-multiaddr = { version = "0.7.1", default-features = false }
 pin-project = "0.4.2"
 tokio = { version = "0.2.8", features = ["full"] }
-yamux = { version = "0.2.1", default-features = false }
+yamux = { version = "0.2.2", default-features = false }
 
 memsocket = { path = "../memsocket", version = "0.1.0" }
