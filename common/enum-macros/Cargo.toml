@@ -1,5 +1,5 @@
 [package]
-name = "num-variants"
+name = "enum-macros"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 edition = "2018"

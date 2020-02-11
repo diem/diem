@@ -16,7 +16,7 @@ members = [
     "common/logger",
     "common/metrics",
     "common/nibble",
-    "common/num-variants",
+    "common/enum-macros",
     "common/proptest-helpers",
     "common/prost-ext",
     "common/temppath",

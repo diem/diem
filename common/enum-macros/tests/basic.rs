@@ -6,7 +6,7 @@
 // TODO: There are no negative tests at the moment (e.g. deriving NumVariants on a struct or union).
 // Add some, possibly using trybuild: https://docs.rs/trybuild/1.0.21/trybuild/
 
-use num_variants::NumVariants;
+use enum_macros::NumVariants;
 
 #[derive(NumVariants)]
 enum BasicEnum {

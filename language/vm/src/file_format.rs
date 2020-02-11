@@ -30,6 +30,7 @@ use crate::{
     access::ModuleAccess, check_bounds::BoundsChecker, internals::ModuleIndex, IndexKind,
     SignatureTokenKind,
 };
+use enum_macros::NumVariants;
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
@@ -38,7 +39,6 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use mirai_annotations::*;
-use num_variants::NumVariants;
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};

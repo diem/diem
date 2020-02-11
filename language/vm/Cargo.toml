@@ -20,11 +20,11 @@ proptest-derive = { version = "0.1.1", optional = true }
 ref-cast = "1.0"
 serde = { version = "1", features = ["derive"] }
 
+enum-macros = { path = "../../common/enum-macros", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
 libra-types = { path = "../../types", version = "0.1.0" }
-num-variants = { path = "../../common/num-variants", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9"
