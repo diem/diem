@@ -33,6 +33,7 @@ members = [
     "crypto/crypto-derive",
     "executor",
     "language/move-lang",
+    "language/move-lang/stdlib",
     "language/benchmarks",
     "language/borrow-graph",
     "language/bytecode-verifier",

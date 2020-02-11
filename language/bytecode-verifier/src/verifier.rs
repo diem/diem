@@ -549,3 +549,20 @@ fn verify_function_visibility_and_type(
     }
     errors
 }
+
+/// Batch verify a list of modules and panic on any error. The modules should be topologically
+/// sorted in their dependency order.
+pub fn batch_verify_modules(modules: Vec<CompiledModule>) -> Vec<VerifiedModule> {
+    let mut verified_modules = vec![];
+    for module in modules.into_iter() {
+        let verified_module = VerifiedModule::new(module).expect("stdlib module failed to verify");
+        let verification_errors = verify_module_dependencies(&verified_module, &verified_modules);
+        for e in &verification_errors {
+            println!("{:?} at {:?}", e, verified_module.self_id());
+        }
+        assert!(verification_errors.is_empty());
+
+        verified_modules.push(verified_module);
+    }
+    verified_modules
+}

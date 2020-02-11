@@ -2778,6 +2778,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-lang-stdlib"
+version = "0.1.0"
+dependencies = [
+ "bytecode-verifier 0.1.0",
+ "datatest-stable 0.1.0",
+ "libra-types 0.1.0",
+ "move-lang 0.0.1",
+ "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm 0.1.0",
+]
+
+[[package]]
 name = "multimap"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5640,6 +5652,7 @@ dependencies = [
  "libra-proptest-helpers 0.1.0",
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
+ "move-lang-stdlib 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",

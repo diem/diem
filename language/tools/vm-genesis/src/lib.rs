@@ -111,9 +111,22 @@ pub fn encode_genesis_transaction_with_validator(
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
 ) -> SignatureCheckedTransaction {
-    // Compile the needed stdlib modules.
-    let modules = stdlib_modules();
+    encode_genesis_transaction_with_validator_and_modules(
+        private_key,
+        public_key,
+        validator_set,
+        discovery_set,
+        stdlib_modules(),
+    )
+}
 
+pub fn encode_genesis_transaction_with_validator_and_modules(
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    validator_set: ValidatorSet,
+    discovery_set: DiscoverySet,
+    stdlib_modules: &'static [VerifiedModule],
+) -> SignatureCheckedTransaction {
     // create a MoveVM
     let mut move_vm = MoveVM::new();
 
@@ -131,7 +144,7 @@ pub fn encode_genesis_transaction_with_validator(
     // This step is needed because we are creating the main accounts and we are calling
     // code to create those. However, code lives under an account but we have none.
     // So we are pushing code into the VM blindly in order to create the main accounts.
-    for module in modules {
+    for module in stdlib_modules {
         move_vm.cache_module(module.clone());
     }
 
@@ -153,7 +166,7 @@ pub fn encode_genesis_transaction_with_validator(
                 &discovery_set,
             );
             reconfigure(&move_vm, &gas_schedule, &mut interpreter_context);
-            publish_stdlib(&mut interpreter_context, modules);
+            publish_stdlib(&mut interpreter_context, stdlib_modules);
 
             verify_genesis_write_set(interpreter_context.events(), &validator_set, &discovery_set);
             ChangeSet::new(

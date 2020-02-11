@@ -32,6 +32,6 @@ pub use stack_usage_verifier::StackUsageVerifier;
 pub use struct_defs::RecursiveStructDefChecker;
 pub use unused_entries::UnusedEntryChecker;
 pub use verifier::{
-    verify_main_signature, verify_module_dependencies, verify_script_dependencies, VerifiedModule,
-    VerifiedScript,
+    batch_verify_modules, verify_main_signature, verify_module_dependencies,
+    verify_script_dependencies, VerifiedModule, VerifiedScript,
 };
