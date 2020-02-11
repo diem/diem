@@ -6,6 +6,9 @@ use consensus_types::common::{Payload, Round};
 use libra_secure_storage::VaultStorage;
 use libra_types::crypto_proxies::ValidatorSigner;
 
+/// A test for verifying VaultStorage properly supports the SafetyRule backend.  This test
+/// depends on running Vault, which can be done by using the provided docker run script in
+/// `docker/vault/run.sh`
 #[ignore]
 #[test]
 fn test() {

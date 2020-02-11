@@ -4,6 +4,9 @@
 use crate::{tests::suite, vault::VaultStorage};
 use crate::{Capability, Error, Identity, Permission, Policy, Storage, Value};
 
+/// A test for verifying VaultStorage properly implements the LibraSecureStorage API. This test
+/// depends on running Vault, which can be done by using the provided docker run script in
+/// `docker/vault/run.sh`
 #[ignore]
 #[test]
 fn vault() {
