@@ -82,13 +82,13 @@
 //!
 //! ### Fixed and Variable Length Sequences
 //!
-//! Sequences can be made of up of any LCS supported types (even complex structures) but all
-//! elements in the sequence must be of the same type. If the length of a sequence is fixed and
-//! well known then LCS represents this as just the concatenation of the serialized form of each
-//! individual element in the sequence. If the length of the sequence can be variable, then the
-//! serialized sequence is length prefixed with a 32-bit unsigned integer indicating the number of
-//! elements in the sequence. All variable length sequences must be `MAX_SEQUENCE_LENGTH` elements
-//! long or less.
+//! Sequences can be made up of any LCS supported types (even complex structures) but all elements
+//! in the sequence must be of the same type. If the length of a sequence is fixed and well known
+//! then LCS represents this as just the concatenation of the serialized form of each individual
+//! element in the sequence. If the length of the sequence can be variable, then the serialized
+//! sequence is length prefixed with a 32-bit unsigned integer indicating the number of elements in
+//! the sequence. All variable length sequences must be `MAX_SEQUENCE_LENGTH` elements long or
+//! less.
 //!
 //! ```rust
 //! # use libra_canonical_serialization::{Result, to_bytes};
