@@ -11,19 +11,80 @@ jobs:
     name: Build images and run cluster test
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v1
-    - name: Setup env
-      run: |
-        echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
-    - name: Build, tag and push images
-      run: |
-        docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary
-    - name: Launch cluster test
-      run: |
-        JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
-        ./scripts/cti \
-          --marker land \
-          --tag dev_$LIBRA_GIT_REV \
-          --report report.json \
-          --run bench \
-          -- --duration 60
+      - uses: actions/checkout@v1
+      - name: Setup env
+        run: |
+          echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
+      - name: Build, tag and push images
+        run: |
+          docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary
+      - name: Launch cluster test
+        run: |
+          JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
+          ./scripts/cti \
+            --marker land \
+            --tag dev_$LIBRA_GIT_REV \
+            --report report.json \
+            --run bench
+      - name: Post test results on PR
+        if: always()
+        uses: actions/github-script@0.4.0
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            // Find the number of the pull request that trigggers this push
+            const pulls = await github.pulls.list(
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: "open",
+                sort: "updated",
+              }
+            );
+            let pr_num = 0;
+            for (const pull of pulls.data) {
+              if (pull.head.sha === context.sha) {
+                pr_num = pull.number;
+                break;
+                }
+            }
+            if (pr_num === 0) {
+              console.warn("Did not find original pull request. -\\_(O_o)_/-");
+              return;
+            }
+            // Read and check cluster test results
+            let should_fail = false;
+            let body;
+            const fsp = require('fs').promises;
+            try {
+              data = await fsp.readFile('report.json', 'utf-8');
+              var result = JSON.parse(data);
+              // TODO - set P/F based on metrics TPS, latency
+              body = `Cluster Test Result
+            \`\`\`
+            ${result.text}
+            \`\`\`
+            `;
+            } catch (err) {
+              if (err.code === 'ENOENT') {
+                body = "Cluster Test failed - no test report found.";
+              } else {
+                body = "Cluster Test failed - test report processing failed.";
+              }
+              body += " See https://github.com/libra/libra/actions/runs/${{github.run_id}}";
+              // Post comment on PR then fail this workflow
+              should_fail = true;
+            }
+            // Post test result on original pull request
+            await github.issues.createComment(
+                {
+                  issue_number: pr_num,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: body,
+                }
+            );
+            // Fail the workflow if test fails or perf regresses
+            if (should_fail) {
+              throw "Land-blocking test failed";
+            }
