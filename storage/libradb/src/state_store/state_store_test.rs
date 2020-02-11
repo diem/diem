@@ -246,7 +246,9 @@ proptest! {
 
         // Test iterator at each version.
         for i in 0..kvs.len() {
-            let actual_values = db.get_account_iter(i as Version)
+            let actual_values = db
+                .get_backup_handler()
+                .get_account_iter(i as Version)
                 .unwrap()
                 .collect::<Result<Vec<_>>>()
                 .unwrap();

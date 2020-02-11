@@ -46,7 +46,7 @@ use crate::{
 };
 use anyhow::{ensure, Result};
 use itertools::{izip, zip_eq};
-use jellyfish_merkle::{iterator::JellyfishMerkleIterator, restore::JellyfishMerkleRestore};
+use jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_logger::prelude::*;
 use libra_metrics::OpMetrics;
@@ -775,30 +775,8 @@ impl LibraDB {
         BackupHandler::new(
             Arc::clone(&self.ledger_store),
             Arc::clone(&self.transaction_store),
-        )
-    }
-
-    /// Gets an iterator which can yield all accounts in the state tree.
-    pub fn get_account_iter(
-        &self,
-        version: Version,
-    ) -> Result<Box<dyn Iterator<Item = Result<(HashValue, AccountStateBlob)>> + Send>> {
-        let iterator = JellyfishMerkleIterator::new(
             Arc::clone(&self.state_store),
-            version,
-            HashValue::zero(),
-        )?;
-        Ok(Box::new(iterator))
-    }
-
-    /// Gets the proof that proves a range of accounts.
-    pub fn get_account_state_range_proof(
-        &self,
-        rightmost_key: HashValue,
-        version: Version,
-    ) -> Result<SparseMerkleRangeProof> {
-        self.state_store
-            .get_account_state_range_proof(rightmost_key, version)
+        )
     }
 
     pub fn restore_account_state(
