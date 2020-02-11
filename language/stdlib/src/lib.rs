@@ -7,7 +7,7 @@ pub mod stdlib;
 pub mod transaction_scripts;
 
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
-use bytecode_verifier::{verify_module_dependencies, VerifiedModule};
+use bytecode_verifier::{batch_verify_modules, VerifiedModule};
 use ir_to_bytecode::compiler::compile_module;
 use libra_types::{account_address::AccountAddress, account_config};
 use move_ir_types::ast::Loc;
@@ -44,19 +44,9 @@ pub fn build_stdlib(address: AccountAddress) -> (Vec<VerifiedModule>, SourceMap<
         let (compiled_module, source_map) =
             compile_module(address, (*module_def).clone(), &stdlib_modules)
                 .expect("stdlib module failed to compile");
-        let verified_module =
-            VerifiedModule::new(compiled_module).expect("stdlib module failed to verify");
-
-        let verification_errors = verify_module_dependencies(&verified_module, &stdlib_modules);
-        // Fail if the module doesn't verify
-        for e in &verification_errors {
-            println!("{:?}", e);
-        }
-        assert!(verification_errors.is_empty());
-
-        stdlib_modules.push(verified_module);
+        stdlib_modules.push(compiled_module);
         stdlib_source_maps.push(source_map)
     }
 
-    (stdlib_modules, stdlib_source_maps)
+    (batch_verify_modules(stdlib_modules), stdlib_source_maps)
 }
