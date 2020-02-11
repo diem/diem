@@ -243,7 +243,7 @@ impl TransactionExecutor {
                 version,
                 execute_time.as_millis(),
                 commit_time.as_millis(),
-                num_txns as u128 * 1_000_000 / total_time.as_micros(),
+                num_txns as u128 * 1_000_000_000 / total_time.as_nanos(),
             );
         }
     }
