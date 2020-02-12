@@ -4,6 +4,7 @@
 use crate::spec_language_ast::{Condition, Invariant, SyntheticDefinition};
 use anyhow::Result;
 use codespan::{ByteIndex, Span};
+use derive_more::Display;
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
@@ -18,7 +19,8 @@ use std::{
 };
 
 /// Generic wrapper that keeps file locations for any ast-node
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, Display, Eq, PartialEq, Default)]
+#[display(fmt = "{}", value)]
 pub struct Spanned<T> {
     /// The file location
     pub span: Loc,
@@ -73,12 +75,13 @@ pub struct Script {
 //**************************************************************************************************
 
 /// Newtype for a name of a module
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Display, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct ModuleName(Identifier);
 
 /// Newtype of the address + the module name
 /// `addr.m`
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Display, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[display(fmt = "{:?}.{}", address, name)]
 pub struct QualifiedModuleIdent {
     /// Name for the module. Will be unique among modules published under the same address
     pub name: ModuleName,
@@ -129,14 +132,14 @@ pub struct ImportDefinition {
 //**************************************************************************************************
 
 /// Newtype for a variable/local
-#[derive(Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
+#[derive(Debug, Display, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
 pub struct Var_(Identifier);
 
 /// The type of a variable with a location
 pub type Var = Spanned<Var_>;
 
 /// New type that represents a type variable. Used to declare type formals & reference them.
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Hash)]
 pub struct TypeVar_(Identifier);
 
 /// The type of a type variable with a location.
@@ -192,7 +195,8 @@ pub enum Type {
 
 /// Identifier for a struct definition. Tells us where to look in the storage layer to find the
 /// code associated with the interface
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Display, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[display(fmt = "{}.{}", module, name)]
 pub struct QualifiedStructIdent {
     /// Module name and address in which the struct is contained
     pub module: ModuleName,
@@ -211,7 +215,7 @@ pub type Field = Spanned<Field_>;
 pub type Fields<T> = Vec<(Field, T)>;
 
 /// Newtype for the name of a struct
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Display, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct StructName(Identifier);
 
 /// A Move struct
@@ -247,7 +251,7 @@ pub enum StructDefinitionFields {
 //**************************************************************************************************
 
 /// Newtype for the name of a function
-#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Clone)]
+#[derive(Debug, Display, Eq, Hash, Ord, PartialEq, PartialOrd, Clone)]
 pub struct FunctionName(Identifier);
 
 /// The signature of a function
@@ -287,7 +291,8 @@ pub enum FunctionBody {
 }
 
 /// A Move function/procedure
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Display, Clone)]
+#[display(fmt = "{} ({})", signature, body)]
 pub struct Function_ {
     /// The visibility (public or internal)
     pub visibility: FunctionVisibility,
@@ -1115,21 +1120,6 @@ impl Iterator for Block_ {
 // Display
 //**************************************************************************************************
 
-impl<T> fmt::Display for Spanned<T>
-where
-    T: fmt::Display,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
-
-impl fmt::Display for TypeVar_ {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 impl fmt::Display for Kind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -1179,18 +1169,6 @@ impl fmt::Display for ImportDefinition {
     }
 }
 
-impl fmt::Display for ModuleName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl fmt::Display for QualifiedModuleIdent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}.{}", self.address, self.name)
-    }
-}
-
 impl fmt::Display for ModuleDefinition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Module({}, ", self.name)?;
@@ -1219,24 +1197,6 @@ impl fmt::Display for StructDefinition_ {
             StructDefinitionFields::Native => writeln!(f, "{{native}}")?,
         }
         write!(f, ")")
-    }
-}
-
-impl fmt::Display for Function_ {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} ({})", self.signature, self.body)
-    }
-}
-
-impl fmt::Display for StructName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl fmt::Display for FunctionName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 
@@ -1283,12 +1243,6 @@ impl fmt::Display for FunctionSignature {
     }
 }
 
-impl fmt::Display for QualifiedStructIdent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}", self.module, self.name)
-    }
-}
-
 fn format_type_actuals(tys: &[Type]) -> String {
     if tys.is_empty() {
         "".to_string()
@@ -1324,12 +1278,6 @@ impl fmt::Display for Type {
             }
             Type::TypeParameter(s) => write!(f, "{}", s),
         }
-    }
-}
-
-impl fmt::Display for Var_ {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 

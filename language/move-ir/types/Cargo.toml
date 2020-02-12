@@ -13,6 +13,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 codespan = { version = "0.2.1", features = ["serialization"] }
+derive_more = { version = "0.99.2", default-features = false, features = ["display"] }
 hex = "0.3.2"
 libra-types = { path = "../../../types", version = "0.1.0" }
 once_cell = "1.2.0"
