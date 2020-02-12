@@ -23,7 +23,6 @@ pub static GENESIS_WRITE_SET: Lazy<WriteSet> = Lazy::new(|| {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.pop();
     path.push("tools/vm-genesis/genesis/genesis.blob");
-
     load_genesis(path)
 });
 

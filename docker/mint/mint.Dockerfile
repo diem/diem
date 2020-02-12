@@ -33,6 +33,7 @@ RUN mkdir -p /opt/libra/bin  /libra/client/data/wallet/
 
 COPY --from=builder /libra/target/release/cli /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
+COPY --from=builder /libra/language/stdlib/modules /libra/language/stdlib/modules
 COPY docker/mint/server.py /opt/libra/bin
 COPY docker/mint/docker-run.sh /opt/libra/bin
 

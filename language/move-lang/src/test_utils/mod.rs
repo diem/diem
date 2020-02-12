@@ -7,10 +7,10 @@ pub struct StringError(String);
 
 pub const SENDER: &str = "0x8675309";
 
-pub const STD_LIB_DIR: &str = "stdlib/modules";
+pub const STD_LIB_DIR: &str = "../stdlib/modules";
 pub const FUNCTIONAL_TEST_DIR: &str = "tests/functional";
 pub const MOVE_CHECK_DIR: &str = "tests/move_check";
-pub const STD_LIB_TRANSACTION_SCRIPTS_DIR: &str = "stdlib/transaction_scripts";
+pub const STD_LIB_TRANSACTION_SCRIPTS_DIR: &str = "../stdlib/transaction_scripts";
 pub const PATH_TO_IR_TESTS: &str = "../ir-testsuite/tests";
 
 pub const MIGRATION_SUB_DIR: &str = "translated_ir_tests";

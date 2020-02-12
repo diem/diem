@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-use ir_to_bytecode::compiler::compile_program;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
 use libra_types::{
@@ -12,49 +11,14 @@ use libra_types::{
     byte_array::ByteArray,
     transaction::{Script, Transaction, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
-use move_ir_types::ast;
-use once_cell::sync::Lazy;
 use std::{collections::HashSet, iter::FromIterator};
-use stdlib::{
-    stdlib_modules,
-    transaction_scripts::{
-        ADD_VALIDATOR_TXN_BODY, CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY,
-        PEER_TO_PEER_TRANSFER_TXN_BODY, PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY,
-        REGISTER_VALIDATOR_TXN_BODY, REMOVE_VALIDATOR_TXN_BODY, ROTATE_AUTHENTICATION_KEY_TXN_BODY,
-        ROTATE_CONSENSUS_PUBKEY_TXN_BODY,
-    },
+use stdlib::transaction_scripts::{
+    ADD_VALIDATOR_TXN, CREATE_ACCOUNT_TXN, MINT_TXN, PEER_TO_PEER_TRANSFER_TXN,
+    PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN, REGISTER_VALIDATOR_TXN, REMOVE_VALIDATOR_TXN,
+    ROTATE_AUTHENTICATION_KEY_TXN, ROTATE_CONSENSUS_PUBKEY_TXN,
 };
 #[cfg(any(test, feature = "fuzzing"))]
-use vm::file_format::Bytecode;
-
-pub static ADD_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| compile_script(&ADD_VALIDATOR_TXN_BODY));
-static PEER_TO_PEER_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY));
-static PEER_TO_PEER_WITH_METADATA_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compile_script(&PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY));
-static CREATE_ACCOUNT_TXN: Lazy<Vec<u8>> = Lazy::new(|| compile_script(&CREATE_ACCOUNT_TXN_BODY));
-pub static REGISTER_VALIDATOR_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compile_script(&REGISTER_VALIDATOR_TXN_BODY));
-pub static REMOVE_VALIDATOR_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compile_script(&REMOVE_VALIDATOR_TXN_BODY));
-static ROTATE_AUTHENTICATION_KEY_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compile_script(&ROTATE_AUTHENTICATION_KEY_TXN_BODY));
-pub static ROTATE_CONSENSUS_PUBKEY_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compile_script(&ROTATE_CONSENSUS_PUBKEY_TXN_BODY));
-static MINT_TXN: Lazy<Vec<u8>> = Lazy::new(|| compile_script(&MINT_TXN_BODY));
-
-fn compile_script(body: &ast::Program) -> Vec<u8> {
-    let compiled_program =
-        compile_program(AccountAddress::default(), body.clone(), stdlib_modules())
-            .unwrap()
-            .0;
-    let mut script_bytes = vec![];
-    compiled_program
-        .script
-        .serialize(&mut script_bytes)
-        .unwrap();
-    script_bytes
-}
+use vm::file_format::{Bytecode, CompiledScript};
 
 /// Encode a program adding `new_validator` to the pending validator set. Fails if the
 /// `new_validator` address is already in the validator set, already in the pending valdiator set,
@@ -70,7 +34,7 @@ pub fn encode_add_validator_script(new_validator: &AccountAddress) -> Script {
 /// account at the recipient address or if the sender's balance is lower than `amount`.
 pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script {
     Script::new(
-        PEER_TO_PEER_TXN.clone(),
+        PEER_TO_PEER_TRANSFER_TXN.clone(),
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U64(amount),
@@ -87,7 +51,7 @@ pub fn encode_transfer_with_metadata_script(
     metadata: Vec<u8>,
 ) -> Script {
     Script::new(
-        PEER_TO_PEER_WITH_METADATA_TXN.clone(),
+        PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN.clone(),
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U64(amount),
@@ -104,15 +68,9 @@ pub fn encode_transfer_script_with_padding(
     amount: u64,
     padding_size: u64,
 ) -> Script {
-    let mut script_mut = compile_program(
-        AccountAddress::default(),
-        PEER_TO_PEER_TRANSFER_TXN_BODY.clone(),
-        stdlib_modules(),
-    )
-    .unwrap()
-    .0
-    .script
-    .into_inner();
+    let mut script_mut = CompiledScript::deserialize(&PEER_TO_PEER_TRANSFER_TXN)
+        .unwrap()
+        .into_inner();
     script_mut
         .main
         .code
@@ -225,9 +183,9 @@ pub fn encode_block_prologue_script(block_metadata: BlockMetadata) -> Transactio
 pub fn get_transaction_name(code: &[u8]) -> String {
     if code == &ADD_VALIDATOR_TXN[..] {
         return "add_validator_transaction".to_string();
-    } else if code == &PEER_TO_PEER_TXN[..] {
+    } else if code == &PEER_TO_PEER_TRANSFER_TXN[..] {
         return "peer_to_peer_transaction".to_string();
-    } else if code == &PEER_TO_PEER_WITH_METADATA_TXN[..] {
+    } else if code == &PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN[..] {
         return "peer_to_peer_with_metadata_transaction".to_string();
     } else if code == &CREATE_ACCOUNT_TXN[..] {
         return "create_account_transaction".to_string();
@@ -247,8 +205,8 @@ pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
     vec![
         ADD_VALIDATOR_TXN.clone(),
         MINT_TXN.clone(),
-        PEER_TO_PEER_TXN.clone(),
-        PEER_TO_PEER_WITH_METADATA_TXN.clone(),
+        PEER_TO_PEER_TRANSFER_TXN.clone(),
+        PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN.clone(),
         REMOVE_VALIDATOR_TXN.clone(),
         REGISTER_VALIDATOR_TXN.clone(),
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),

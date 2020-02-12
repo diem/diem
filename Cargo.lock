@@ -2947,18 +2947,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "move-lang-stdlib"
-version = "0.1.0"
-dependencies = [
- "bytecode-verifier 0.1.0",
- "datatest-stable 0.1.0",
- "libra-types 0.1.0",
- "move-lang 0.0.1",
- "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "vm 0.1.0",
-]
-
-[[package]]
 name = "move-vm-types"
 version = "0.1.0"
 dependencies = [
@@ -4854,11 +4842,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "stdlib"
 version = "0.1.0"
 dependencies = [
- "bytecode-source-map 0.1.0",
  "bytecode-verifier 0.1.0",
- "ir-to-bytecode 0.1.0",
+ "datatest-stable 0.1.0",
  "libra-types 0.1.0",
- "move-ir-types 0.1.0",
+ "move-lang 0.0.1",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -5828,12 +5815,9 @@ dependencies = [
 name = "transaction-builder"
 version = "0.1.0"
 dependencies = [
- "ir-to-bytecode 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-types 0.1.0",
- "move-ir-types 0.1.0",
- "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "vm 0.1.0",
 ]
@@ -6077,7 +6061,6 @@ dependencies = [
  "libra-proptest-helpers 0.1.0",
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
- "move-lang-stdlib 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",

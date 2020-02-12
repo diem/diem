@@ -3,50 +3,67 @@
 
 #![forbid(unsafe_code)]
 
-pub mod stdlib;
 pub mod transaction_scripts;
 
-use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use bytecode_verifier::{batch_verify_modules, VerifiedModule};
-use ir_to_bytecode::compiler::compile_module;
-use libra_types::{account_address::AccountAddress, account_config};
-use move_ir_types::ast::Loc;
+use move_lang::{move_compile, shared::Address, to_bytecode::translate::CompiledUnit};
 use once_cell::sync::Lazy;
+use std::path::PathBuf;
 
-static ANNOTATED_STDLIB: Lazy<(Vec<VerifiedModule>, SourceMap<Loc>)> =
-    Lazy::new(|| build_stdlib(account_config::CORE_CODE_ADDRESS));
+pub const STD_LIB_DIR: &str = "modules";
+pub const MOVE_EXTENSION: &str = "move";
 
-/// Returns a reference to the standard library, compiled with the
-/// [default address](account_config::CORE_CODE_ADDRESS).
+static MOVELANG_STDLIB: Lazy<Vec<VerifiedModule>> = Lazy::new(build_stdlib);
+
+/// Returns a reference to the standard library built by move-lang compiler, compiled with the
+/// [default address](account_config::core_code_address).
 ///
 /// The order the modules are presented in is important: later modules depend on earlier ones.
 pub fn stdlib_modules() -> &'static [VerifiedModule] {
-    &*ANNOTATED_STDLIB.0
+    &*MOVELANG_STDLIB
 }
 
-/// Returns a reference to the source maps for the standard library.
-///
-/// The order of the modules returned in this follows the same order as the modules returned in the
-/// stdlib_modules.
-pub fn stdlib_source_map() -> &'static [ModuleSourceMap<Loc>] {
-    &*ANNOTATED_STDLIB.1
+pub fn stdlib_files() -> Vec<String> {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push(STD_LIB_DIR);
+    let dirfiles = datatest_stable::utils::iterate_directory(&path);
+    dirfiles
+        .flat_map(|path| {
+            if path.extension()?.to_str()? == MOVE_EXTENSION {
+                path.into_os_string().into_string().ok()
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>()
 }
 
-/// Builds and returns a copy of the standard library with this address as the self address.
-///
-/// A copy of the stdlib built with the [default address](account_config::CORE_CODE_ADDRESS) is
-/// available through [`stdlib_modules`].
-pub fn build_stdlib(address: AccountAddress) -> (Vec<VerifiedModule>, SourceMap<Loc>) {
-    let mut stdlib_modules = vec![];
-    let mut stdlib_source_maps = vec![];
+pub fn build_stdlib() -> Vec<VerifiedModule> {
+    let (_, compiled_units) =
+        move_compile(&stdlib_files(), &[], Some(Address::LIBRA_CORE)).unwrap();
+    batch_verify_modules(
+        compiled_units
+            .into_iter()
+            .map(|compiled_unit| match compiled_unit {
+                CompiledUnit::Module(_, m) => m,
+                CompiledUnit::Script(_, _) => panic!("Unexpected Script in stdlib"),
+            })
+            .collect(),
+    )
+}
 
-    for module_def in stdlib::module_defs() {
-        let (compiled_module, source_map) =
-            compile_module(address, (*module_def).clone(), &stdlib_modules)
-                .expect("stdlib module failed to compile");
-        stdlib_modules.push(compiled_module);
-        stdlib_source_maps.push(source_map)
-    }
-
-    (batch_verify_modules(stdlib_modules), stdlib_source_maps)
+pub fn compile_script(source_file_str: String) -> Vec<u8> {
+    let (_, mut compiled_program) = move_compile(
+        &[source_file_str],
+        &stdlib_files(),
+        Some(Address::LIBRA_CORE),
+    )
+    .unwrap();
+    let mut script_bytes = vec![];
+    assert!(compiled_program.len() == 1);
+    match compiled_program.pop().unwrap() {
+        CompiledUnit::Module(_, _) => panic!("Unexpected module when compiling script"),
+        CompiledUnit::Script(_, s) => s.serialize(&mut script_bytes).unwrap(),
+    };
+    script_bytes
 }

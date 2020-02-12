@@ -28,6 +28,7 @@ RUN mkdir -p /opt/libra/bin /opt/libra/etc /opt/libra/data/common
 COPY docker/safety-rules/docker-run-dynamic.sh /
 COPY --from=builder /libra/target/release/safety-rules /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
+COPY --from=builder /libra/language/stdlib/modules /libra/language/stdlib/modules
 
 ENV RUST_BACKTRACE 1
 CMD /docker-run-dynamic.sh

@@ -34,7 +34,6 @@ members = [
     "executor",
     "json-rpc",
     "language/move-lang",
-    "language/move-lang/stdlib",
     "language/benchmarks",
     "language/borrow-graph",
     "language/bytecode-verifier",

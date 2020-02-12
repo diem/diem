@@ -6,7 +6,6 @@
 use bytecode_verifier::VerifiedModule;
 use libra_config::{config::PersistableConfig, generator};
 use libra_types::transaction::Transaction;
-use move_lang_stdlib::move_lang_stdlib_modules;
 use std::{fs::File, io::prelude::*};
 use stdlib::stdlib_modules;
 use transaction_builder::default_config;
@@ -17,7 +16,6 @@ use vm_genesis::{
 
 const CONFIG_LOCATION: &str = "genesis/vm_config.toml";
 const GENESIS_LOCATION: &str = "genesis/genesis.blob";
-const MOVELANG_GENESIS_LOCATION: &str = "genesis/movelang_genesis.blob";
 
 /// Generate the genesis blob used by the Libra blockchain
 fn generate_genesis_blob(stdlib_modules: &'static [VerifiedModule]) -> Vec<u8> {
@@ -49,11 +47,6 @@ fn main() {
 
     let mut file = File::create(GENESIS_LOCATION).unwrap();
     file.write_all(&generate_genesis_blob(stdlib_modules()))
-        .unwrap();
-
-    let mut movelang_file = File::create(MOVELANG_GENESIS_LOCATION).unwrap();
-    movelang_file
-        .write_all(&generate_genesis_blob(move_lang_stdlib_modules()))
         .unwrap();
 }
 

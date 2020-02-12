@@ -28,6 +28,7 @@ RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY docker/install-tools.sh /root
 COPY --from=builder /libra/target/release/libra-node /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
+COPY --from=builder /libra/language/stdlib/modules /libra/language/stdlib/modules
 
 # Admission control
 EXPOSE 8000
