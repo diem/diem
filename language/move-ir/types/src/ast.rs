@@ -152,13 +152,16 @@ pub type TypeVar = Spanned<TypeVar_>;
 // TODO: This enum is completely equivalent to vm::file_format::Kind.
 //       Should we just use vm::file_format::Kind or replace both with a common one?
 /// The kind of a type. Analogous to `vm::file_format::Kind`.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone)]
 pub enum Kind {
     /// Represents the super set of all types.
+    #[display(fmt = "all")]
     All,
     /// `Resource` types must follow move semantics and various resource safety rules.
+    #[display(fmt = "resource")]
     Resource,
     /// `Unrestricted` types do not need to follow the `Resource` rules.
+    #[display(fmt = "unrestricted")]
     Unrestricted,
 }
 
@@ -167,25 +170,34 @@ pub enum Kind {
 //**************************************************************************************************
 
 /// The type of a single value
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Display, PartialEq, Clone)]
 pub enum Type {
     /// `address`
+    #[display(fmt = "address")]
     Address,
     /// `u8`
+    #[display(fmt = "u8")]
     U8,
     /// `u64`
+    #[display(fmt = "u64")]
     U64,
     /// `u128`
+    #[display(fmt = "u128")]
     U128,
     /// `bool`
+    #[display(fmt = "bool")]
     Bool,
     /// `bytearray`
+    #[display(fmt = "bytearray")]
     ByteArray,
     /// A module defined struct
+    #[display(fmt = "{}{}", _0, _1)]
     Struct(QualifiedStructIdent, TypeActuals),
     /// A reference type, the bool flag indicates whether the reference is mutable
+    #[display(fmt = "&{}{}", "if *_0 { \"mut \" } else { \"\" }", _1)]
     Reference(bool, Box<Type>),
     /// A type parameter
+    #[display(fmt = "{}", _0)]
     TypeParameter(TypeVar_),
 }
 
@@ -325,39 +337,55 @@ pub type Function = Spanned<Function_>;
 
 /// Builtin "function"-like operators that often have a signature not expressable in the
 /// type system and/or have access to some runtime/storage context
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Display, PartialEq, Clone)]
 pub enum Builtin {
     /// Check if there is a struct object (`StructName` resolved by current module) associated with
     /// the given address
+    #[display(fmt = "exists<{}{}>", _0, _1)]
     Exists(StructName, TypeActuals),
     /// Get a reference to the resource(`StructName` resolved by current module) associated
     /// with the given address
+    #[display(
+        fmt = "borrow_global{}<{}{}>",
+        "if *_0 { \"_mut\" } else { \"\" }",
+        _1,
+        _2
+    )]
     BorrowGlobal(bool, StructName, TypeActuals),
     /// Returns the address of the current transaction's sender
+    #[display(fmt = "get_txn_sender")]
     GetTxnSender,
 
     /// Remove a resource of the given type from the account with the given address
+    #[display(fmt = "move_from<{}{}>", _0, _1)]
     MoveFrom(StructName, TypeActuals),
     /// Publish an instantiated struct object into sender's account.
+    #[display(fmt = "move_to_sender<{}{}>", _0, _1)]
     MoveToSender(StructName, TypeActuals),
 
     /// Convert a mutable reference into an immutable one
+    #[display(fmt = "freeze")]
     Freeze,
 
     /// Cast an integer into u8.
+    #[display(fmt = "to_u8")]
     ToU8,
     /// Cast an integer into u64.
+    #[display(fmt = "to_u64")]
     ToU64,
     /// Cast an integer into u128.
+    #[display(fmt = "to_u128")]
     ToU128,
 }
 
 /// Enum for different function calls
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Display, PartialEq, Clone)]
 pub enum FunctionCall_ {
     /// functions defined in the host environment
+    #[display(fmt = "{}", _0)]
     Builtin(Builtin),
     /// The call of a module defined procedure
+    #[display(fmt = "{}.{}{}", module, name, type_actuals)]
     ModuleFunctionCall {
         module: ModuleName,
         name: FunctionName,
@@ -481,55 +509,74 @@ pub type CopyableVal = Spanned<CopyableVal_>;
 pub type ExpFields = Fields<Exp>;
 
 /// Enum for unary operators
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Display, Clone, PartialEq)]
 pub enum UnaryOp {
     /// Boolean negation
+    #[display(fmt = "!")]
     Not,
 }
 
 /// Enum for binary operators
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Display, Clone, PartialEq)]
 pub enum BinOp {
     // u64 ops
     /// `+`
+    #[display(fmt = "+")]
     Add,
     /// `-`
+    #[display(fmt = "-")]
     Sub,
     /// `*`
+    #[display(fmt = "*")]
     Mul,
     /// `%`
+    #[display(fmt = "%")]
     Mod,
     /// `/`
+    #[display(fmt = "/")]
     Div,
     /// `|`
+    #[display(fmt = "|")]
     BitOr,
     /// `&`
+    #[display(fmt = "&")]
     BitAnd,
     /// `^`
+    #[display(fmt = "^")]
     Xor,
     /// `<<`
+    #[display(fmt = "<<")]
     Shl,
     /// `>>`
+    #[display(fmt = ">>")]
     Shr,
 
     // Bool ops
     /// `&&`
+    #[display(fmt = "&&")]
     And,
     /// `||`
+    #[display(fmt = "||")]
     Or,
 
     // Compare Ops
     /// `==`
+    #[display(fmt = "==")]
     Eq,
     /// `!=`
+    #[display(fmt = "!=")]
     Neq,
     /// `<`
+    #[display(fmt = "<")]
     Lt,
     /// `>`
+    #[display(fmt = ">")]
     Gt,
     /// `<=`
+    #[display(fmt = "<=")]
     Le,
     /// `>=`
+    #[display(fmt = ">=")]
     Ge,
 }
 
@@ -1153,20 +1200,6 @@ impl Iterator for Block_ {
 // Display
 //**************************************************************************************************
 
-impl fmt::Display for Kind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Kind::All => "all",
-                Kind::Resource => "resource",
-                Kind::Unrestricted => "unrestricted",
-            }
-        )
-    }
-}
-
 impl fmt::Display for ScriptOrModule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use ScriptOrModule::*;
@@ -1298,56 +1331,6 @@ fn format_type_formals(formals: &[(TypeVar, Kind)]) -> String {
     }
 }
 
-impl fmt::Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Type::U8 => write!(f, "u8"),
-            Type::U64 => write!(f, "u64"),
-            Type::U128 => write!(f, "u128"),
-            Type::Bool => write!(f, "bool"),
-            Type::Address => write!(f, "address"),
-            Type::ByteArray => write!(f, "bytearray"),
-            Type::Struct(ident, tys) => write!(f, "{}{}", ident, tys),
-            Type::Reference(is_mutable, t) => {
-                write!(f, "&{}{}", if *is_mutable { "mut " } else { "" }, t)
-            }
-            Type::TypeParameter(s) => write!(f, "{}", s),
-        }
-    }
-}
-
-impl fmt::Display for Builtin {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Builtin::Exists(t, tys) => write!(f, "exists<{}{}>", t, tys),
-            Builtin::BorrowGlobal(mut_, t, tys) => {
-                let mut_flag = if *mut_ { "_mut" } else { "" };
-                write!(f, "borrow_global{}<{}{}>", mut_flag, t, tys)
-            }
-            Builtin::GetTxnSender => write!(f, "get_txn_sender"),
-            Builtin::MoveFrom(t, tys) => write!(f, "move_from<{}{}>", t, tys),
-            Builtin::MoveToSender(t, tys) => write!(f, "move_to_sender<{}{}>", t, tys),
-            Builtin::Freeze => write!(f, "freeze"),
-            Builtin::ToU8 => write!(f, "to_u8"),
-            Builtin::ToU64 => write!(f, "to_u64"),
-            Builtin::ToU128 => write!(f, "to_u128"),
-        }
-    }
-}
-
-impl fmt::Display for FunctionCall_ {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FunctionCall_::Builtin(fun) => write!(f, "{}", fun),
-            FunctionCall_::ModuleFunctionCall {
-                module,
-                name,
-                type_actuals,
-            } => write!(f, "{}.{}{}", module, name, type_actuals),
-        }
-    }
-}
-
 impl fmt::Display for LValue_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -1458,51 +1441,6 @@ impl fmt::Display for CopyableVal_ {
             CopyableVal_::ByteArray(v) => write!(f, "{}", v),
             CopyableVal_::Address(v) => write!(f, "0x{}", hex::encode(&v)),
         }
-    }
-}
-
-impl fmt::Display for UnaryOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                UnaryOp::Not => "!",
-            }
-        )
-    }
-}
-
-impl fmt::Display for BinOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                BinOp::Add => "+",
-                BinOp::Sub => "-",
-                BinOp::Mul => "*",
-                BinOp::Mod => "%",
-                BinOp::Div => "/",
-                BinOp::BitOr => "|",
-                BinOp::BitAnd => "&",
-                BinOp::Xor => "^",
-                BinOp::Shl => "<<",
-                BinOp::Shr => ">>",
-
-                // Bool ops
-                BinOp::Or => "||",
-                BinOp::And => "&&",
-
-                // Compare Ops
-                BinOp::Eq => "==",
-                BinOp::Neq => "!=",
-                BinOp::Lt => "<",
-                BinOp::Gt => ">",
-                BinOp::Le => "<=",
-                BinOp::Ge => ">=",
-            }
-        )
     }
 }
 
