@@ -171,6 +171,7 @@ impl Mempool {
     /// `batch_size` - size of requested block
     /// `seen_txns` - transactions that were sent to Consensus but were not committed yet
     ///  Mempool should filter out such transactions
+    #[allow(clippy::explicit_counter_loop)]
     pub(crate) fn get_block(
         &mut self,
         batch_size: u64,
@@ -184,9 +185,11 @@ impl Mempool {
         // but can't be executed before first txn. Once observed, such txn will be saved in
         // `skipped` DS and rechecked once it's ancestor becomes available
         let mut skipped = HashSet::new();
-
+        let seen_size = seen.len();
+        let mut txn_walked = 0usize;
         // iterate over the queue of transactions based on gas price
         'main: for txn in self.transactions.iter_queue() {
+            txn_walked += 1;
             if seen.contains(&TxnPointer::from(txn)) {
                 continue;
             }
@@ -218,11 +221,14 @@ impl Mempool {
                 skipped.insert(TxnPointer::from(txn));
             }
         }
+        let result_size = result.len();
         // convert transaction pointers to real values
         let block: Vec<_> = result
             .into_iter()
             .filter_map(|(address, seq)| self.transactions.get(&address, seq))
             .collect();
+        debug!("mempool::get_block: seen_consensus={}, walked={}, seen_after={}, result_size={}, block_size={}",
+               seen_size, txn_walked, seen.len(), result_size, block.len());
         for transaction in &block {
             self.log_latency(
                 transaction.sender(),
