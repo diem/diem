@@ -9,7 +9,7 @@ use libra_crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
     ValidKey,
 };
-use libra_logger::prelude::*;
+use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use netcore::{
     multiplexing::{yamux::Yamux, StreamMultiplexer},

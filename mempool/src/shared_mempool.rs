@@ -30,6 +30,7 @@ use libra_mempool_shared_proto::proto::mempool_status::{
     MempoolAddTransactionStatus as MempoolAddTransactionStatusProto,
     MempoolAddTransactionStatusCode,
 };
+use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
     account_address::AccountAddress,
     proto::types::{SignedTransaction as SignedTransactionProto, VmStatus as VmStatusProto},

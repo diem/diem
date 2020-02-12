@@ -52,6 +52,7 @@ use libra_crypto::{
     HashValue, Signature,
 };
 use libra_logger::prelude::*;
+use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{crypto_proxies::ValidatorSigner as Signer, PeerId};
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::SmallRng, FromEntropy, Rng};

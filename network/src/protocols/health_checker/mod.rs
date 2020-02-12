@@ -35,6 +35,7 @@ use futures::{
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
 use libra_logger::prelude::*;
+use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use rand::{rngs::SmallRng, seq::SliceRandom, FromEntropy, Rng};
 use serde::{Deserialize, Serialize};
