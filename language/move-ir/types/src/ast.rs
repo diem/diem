@@ -519,6 +519,8 @@ pub enum BinOp {
     Le,
     /// `>=`
     Ge,
+    /// '..'  only used in specs
+    Subrange,
 }
 
 /// Enum for all expressions
@@ -1551,6 +1553,7 @@ impl fmt::Display for BinOp {
                 BinOp::Gt => ">",
                 BinOp::Le => "<=",
                 BinOp::Ge => ">=",
+                BinOp::Subrange => "..",
             }
         )
     }

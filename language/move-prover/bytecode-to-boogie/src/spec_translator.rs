@@ -11,7 +11,7 @@ use num::{BigInt, Num};
 
 use libra_types::account_address::AccountAddress;
 use move_ir_types::ast::{BinOp, CopyableVal_, Field_, Loc, QualifiedStructIdent, Type};
-use move_ir_types::spec_language_ast::{Condition_, SpecExp, StorageLocation};
+use move_ir_types::spec_language_ast::{Condition_, FieldOrIndex, SpecExp, StorageLocation};
 
 use crate::boogie_helpers::{
     boogie_field_name, boogie_struct_name, boogie_struct_type_value, boogie_synthetic_name,
@@ -758,6 +758,10 @@ impl<'env> SpecTranslator<'env> {
             BinOp::Ge => {
                 self.translate_op_helper(">=", &operand_type, GlobalType::Bool, left, right)
             }
+            BinOp::Subrange => {
+                // TODO(DD): Figure out what to do here.
+                unimplemented!("Subrange is not yet implemented in spec_translator.rs");
+            }
         }
     }
 
@@ -834,17 +838,25 @@ impl<'env> SpecTranslator<'env> {
                 format!("Address({})", self.translate_account_address(addr)),
                 GlobalType::Address,
             ),
-            StorageLocation::AccessPath { base, fields } => {
+            StorageLocation::AccessPath {
+                base,
+                fields_and_indices,
+            } => {
                 let BoogieExpr(mut res, mut t) = self.translate_location_as_value(base);
                 // If the type of the location is a reference, dref it now.
                 if let GlobalType::Reference(vt) | GlobalType::MutableReference(vt) = t {
                     res = format!("Dereference(__m, {})", res);
                     t = *vt;
                 }
-                for f in fields {
-                    let (s, tf) = self.translate_field_access(&t, f);
-                    res = format!("SelectField({}, {})", res, s);
-                    t = tf;
+                for f_or_i in fields_and_indices {
+                    if let FieldOrIndex::Field(f) = f_or_i {
+                        let (s, tf) = self.translate_field_access(&t, f);
+                        res = format!("SelectField({}, {})", res, s);
+                        t = tf;
+                    } else {
+                        // TODO: Implement vector index.  For now, generates illegal Boogie.
+                        res = format!("Unimplemented vector index. AST = {:?}", f_or_i);
+                    }
                 }
                 BoogieExpr(res, t)
             }
@@ -882,12 +894,21 @@ impl<'env> SpecTranslator<'env> {
                     GlobalType::Reference(Box::new(t)),
                 )
             }
-            StorageLocation::AccessPath { base, fields } => {
+            StorageLocation::AccessPath {
+                base,
+                fields_and_indices,
+            } => {
                 let BoogieExpr(mut res, mut t) = self.translate_location_as_reference(base);
-                for f in fields {
-                    let (s, tf) = self.translate_field_access(&t, f);
-                    res = format!("SelectFieldFromRef({}, {})", res, s);
-                    t = tf;
+                for f_or_i in fields_and_indices {
+                    if let FieldOrIndex::Field(f) = f_or_i {
+                        let (s, tf) = self.translate_field_access(&t, f);
+                        res = format!("SelectFieldFromRef({}, {})", res, s);
+                        t = tf;
+                    } else {
+                        // TODO: Generate code for vector indexing
+                        res = format!("Unimplemented vector indexing. AST = {:?}", f_or_i);
+                        // unimplemented!("Index StorageLocation not yet implemented.");
+                    }
                 }
                 BoogieExpr(res, t)
             }

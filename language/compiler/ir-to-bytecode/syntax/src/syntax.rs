@@ -282,16 +282,17 @@ fn get_precedence(token: &Tok) -> u32 {
         Tok::Greater => 4,
         Tok::LessEqual => 4,
         Tok::GreaterEqual => 4,
-        Tok::Pipe => 5,
-        Tok::Caret => 6,
-        Tok::Amp => 7,
-        Tok::LessLess => 8,
-        Tok::GreaterGreater => 8,
-        Tok::Plus => 9,
-        Tok::Minus => 9,
-        Tok::Star => 10,
-        Tok::Slash => 10,
-        Tok::Percent => 10,
+        Tok::PeriodPeriod => 5,
+        Tok::Pipe => 6,
+        Tok::Caret => 7,
+        Tok::Amp => 8,
+        Tok::LessLess => 9,
+        Tok::GreaterGreater => 9,
+        Tok::Plus => 10,
+        Tok::Minus => 10,
+        Tok::Star => 11,
+        Tok::Slash => 11,
+        Tok::Percent => 11,
         _ => 0, // anything else is not a binary operator
     }
 }
@@ -1403,18 +1404,28 @@ fn parse_storage_location<'input>(
         _ => StorageLocation::Formal(parse_name(tokens)?),
     };
 
-    // parsed the storage location base. now parse its fields (if any)
-    let mut fields = vec![];
-    while tokens.peek() == Tok::Period {
-        tokens.advance()?;
-        fields.push(parse_field(tokens)?.value);
+    // parsed the storage location base. now parse its fields and indices (if any)
+    let mut fields_and_indices = vec![];
+    loop {
+        let tok = tokens.peek();
+        if tok == Tok::Period {
+            tokens.advance()?;
+            fields_and_indices.push(FieldOrIndex::Field(parse_field(tokens)?.value));
+        } else if tok == Tok::LSquare {
+            tokens.advance()?;
+            let index_exp = parse_spec_exp(tokens)?;
+            fields_and_indices.push(FieldOrIndex::Index(index_exp));
+            consume_token(tokens, Tok::RSquare)?;
+        } else {
+            break;
+        }
     }
-    if fields.is_empty() {
+    if fields_and_indices.is_empty() {
         Ok(base)
     } else {
         Ok(StorageLocation::AccessPath {
             base: Box::new(base),
-            fields,
+            fields_and_indices,
         })
     }
 }
@@ -1540,6 +1551,7 @@ fn parse_rhs_of_spec_exp<'input>(
                 Tok::Star => BinOp::Mul,
                 Tok::Slash => BinOp::Div,
                 Tok::Percent => BinOp::Mod,
+                Tok::PeriodPeriod => BinOp::Subrange,
                 _ => panic!("Unexpected token that is not a binary operator"),
             };
             result = SpecExp::Binop(Box::new(result), op, Box::new(rhs))

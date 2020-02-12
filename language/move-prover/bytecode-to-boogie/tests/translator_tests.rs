@@ -35,11 +35,6 @@ fn test_struct() {
 }
 
 #[test]
-fn test_aborts_if() {
-    test(VERIFY, &["test_mvir/test-aborts-if.mvir"]);
-}
-
-#[test]
 fn test_access_path() {
     test(
         &["--native-stubs"],
