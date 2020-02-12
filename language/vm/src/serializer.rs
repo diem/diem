@@ -142,7 +142,7 @@ fn checked_serialize_table(
         bail!(
             "binary size ({}) cannot exceed {}",
             binary.len(),
-            usize::max_value(),
+            u32::max_value(),
         );
     }
     Ok(())
