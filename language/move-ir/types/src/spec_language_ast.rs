@@ -7,6 +7,13 @@ use libra_types::identifier::Identifier;
 
 /// AST for the Move Prover specification language.
 
+// .foo or [x + 1]
+#[derive(PartialEq, Debug, Clone)]
+pub enum FieldOrIndex {
+    Field(Field_),
+    Index(SpecExp),
+}
+
 /// A location that can store a value
 #[derive(PartialEq, Debug, Clone)]
 pub enum StorageLocation {
@@ -18,10 +25,10 @@ pub enum StorageLocation {
         type_actuals: Vec<Type>,
         address: Box<StorageLocation>,
     },
-    /// An access path rooted at `base` with nonempty offsets in `fields`
+    /// An access path rooted at `base` with nonempty offsets in `fields_or_indices`
     AccessPath {
         base: Box<StorageLocation>,
-        fields: Vec<Field_>,
+        fields_and_indices: Vec<FieldOrIndex>,
     },
     /// Sender address for the current transaction
     TxnSenderAddress,
@@ -53,7 +60,6 @@ pub enum SpecExp {
     Not(Box<SpecExp>),
     /// Binary operators also suported by Move
     Binop(Box<SpecExp>, BinOp, Box<SpecExp>),
-    // TODO: binary operators not supported by Move like implies and iff
     /// Value of expression evaluated in the state before function enter.
     Old(Box<SpecExp>),
     /// Call to a helper function.

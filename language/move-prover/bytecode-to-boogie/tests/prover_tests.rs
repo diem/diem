@@ -40,6 +40,11 @@ fn verify_ref_param() {
 }
 
 #[test]
+fn test_aborts_if() {
+    test(VERIFY, &["test_mvir/test-aborts-if.mvir"]);
+}
+
+#[test]
 fn verify_vector() {
     test(
         VERIFY,

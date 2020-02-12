@@ -1165,6 +1165,11 @@ fn compile_expression(
                     push_instr!(exp.span, Bytecode::Ge);
                     vec_deque![InferredType::Bool]
                 }
+                BinOp::Subrange => {
+                    // TODO (DD): Realized that I needed to do this late in the game.
+                    //   Considering implementing subrange without using BinOp
+                    unreachable!("Subrange operators should only appear in specification ASTs.");
+                }
             }
         }
         Exp_::Dereference(e) => {
