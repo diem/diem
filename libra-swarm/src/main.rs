@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::config::{NodeConfig, RoleType};
+use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
 use libra_swarm::{client, swarm::LibraSwarm};
 use libra_temppath::TempPath;
 use std::path::Path;
@@ -36,6 +36,8 @@ fn main() {
     let args = Args::from_args();
     let num_nodes = args.num_nodes;
     let num_full_nodes = args.num_full_nodes;
+    let mut dev_config = NodeConfig::default();
+    dev_config.vm_config.publishing_options = VMPublishingOption::Open;
 
     libra_logger::init_for_e2e_testing();
 
@@ -43,8 +45,8 @@ fn main() {
         num_nodes,
         RoleType::Validator,
         args.config_dir.clone(),
-        None, /* template config */
-        None, /* upstream_config_dir */
+        Some(dev_config.clone()), /* template config */
+        None,                     /* upstream_config_dir */
     )
     .expect("Failed to configure validator swarm");
 
@@ -53,8 +55,8 @@ fn main() {
             LibraSwarm::configure_swarm(
                 num_full_nodes,
                 RoleType::FullNode,
-                None, /* config dir */
-                None, /* template config */
+                None,             /* config dir */
+                Some(dev_config), /* template config */
                 Some(String::from(
                     validator_swarm
                         .dir
