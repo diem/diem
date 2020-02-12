@@ -20,7 +20,7 @@ fn failed_transaction_cleanup_test() {
     libra_vm.load_gas_schedule(&data_cache);
 
     let mut txn_data = TransactionMetadata::default();
-    txn_data.sender = sender.address().clone();
+    txn_data.sender = *sender.address();
     txn_data.max_gas_amount = GasUnits::new(100_000);
     txn_data.gas_unit_price = GasPrice::new(2);
 
