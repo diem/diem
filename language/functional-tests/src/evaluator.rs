@@ -560,11 +560,15 @@ pub fn eval<TComp: Compiler>(
     // Set up a fake executor with the genesis block and create the accounts.
     let mut exec = if config.validator_set.is_empty() {
         // use the default validator set. this uses a precomputed validator set and is cheap
-        FakeExecutor::from_genesis_with_options(VMPublishingOption::Open)
+        FakeExecutor::custom_genesis(TComp::stdlib(), None, VMPublishingOption::Open)
     } else {
         // use custom validator set. this requires dynamically generating a new genesis tx and
         // is thus more expensive.
-        FakeExecutor::from_validator_set(config.validator_set.clone(), VMPublishingOption::Open)
+        FakeExecutor::custom_genesis(
+            TComp::stdlib(),
+            Some(config.validator_set.clone()),
+            VMPublishingOption::Open,
+        )
     };
     for data in config.accounts.values() {
         exec.add_account_data(&data);

@@ -22,7 +22,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use stdlib::stdlib_modules;
+use stdlib::{stdlib_modules, StdLibOptions};
 use structopt::StructOpt;
 use vm::file_format::CompiledModule;
 
@@ -141,7 +141,7 @@ fn main() {
         } else if args.no_stdlib {
             vec![]
         } else {
-            stdlib_modules().to_vec()
+            stdlib_modules(StdLibOptions::Staged).to_vec()
         }
     };
 

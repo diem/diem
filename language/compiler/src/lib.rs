@@ -21,7 +21,7 @@ use libra_types::{
 };
 use move_ir_types::ast::Loc;
 use std::mem;
-use stdlib::stdlib_modules;
+use stdlib::{stdlib_modules, StdLibOptions};
 use vm::file_format::{CompiledModule, CompiledProgram, CompiledScript};
 
 /// An API for the compiler. Supports setting custom options.
@@ -140,7 +140,7 @@ impl Compiler {
         if self.skip_stdlib_deps {
             extra_deps
         } else {
-            let mut deps = stdlib_modules().to_vec();
+            let mut deps = stdlib_modules(StdLibOptions::Staged).to_vec();
             deps.extend(extra_deps);
             deps
         }

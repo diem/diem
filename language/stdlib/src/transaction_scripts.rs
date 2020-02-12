@@ -1,85 +1,74 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use ir_to_bytecode::parser::parse_program;
-use move_ir_types::ast::Program;
+use crate::{compile_script, use_staged, MOVE_EXTENSION, STAGED_EXTENSION, TRANSACTION_SCRIPTS};
+use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
+use std::path::PathBuf;
 
-/// Returns the source code for the add validator transaction script
-pub fn add_validator() -> &'static str {
-    include_str!("../transaction_scripts/add_validator.mvir")
+// Encodes the absolute path for the transaction scripts directory.
+static TXN_SCRIPTS_DIR: Lazy<PathBuf> = Lazy::new(|| {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push(PathBuf::from(TRANSACTION_SCRIPTS));
+    path
+});
+
+/// We include the compiled transaction scripts as binaries since the docker files do not copy any
+/// source files over. This could then cause issues when the client wishes to use a pre-packaged
+/// transaction script.
+const STAGED_TXN_SCRIPTS_DIR: Dir = include_dir!("staged/transaction_scripts");
+
+fn compiled_script(script_name: &str) -> Vec<u8> {
+    if use_staged() {
+        from_staged(script_name)
+    } else {
+        from_current_source(script_name)
+    }
 }
 
-/// Returns the source code for peer-to-peer transaction script.
-pub fn peer_to_peer() -> &'static str {
-    include_str!("../transaction_scripts/peer_to_peer_transfer.mvir")
+fn from_staged(script_name: &str) -> Vec<u8> {
+    let mut path = PathBuf::from(script_name);
+    path.set_extension(STAGED_EXTENSION);
+    STAGED_TXN_SCRIPTS_DIR
+        .get_file(path)
+        .unwrap()
+        .contents()
+        .to_vec()
 }
 
-/// Returns the source code for peer-to-peer transaction script with metadata.
-pub fn peer_to_peer_with_metadata() -> &'static str {
-    include_str!("../transaction_scripts/peer_to_peer_transfer_with_metadata.mvir")
+// Prepends the directory for the transaction scripts, adds the move file suffix to the given
+// source file locatio, and then compiles this.
+fn from_current_source(script_name: &str) -> Vec<u8> {
+    let mut path = TXN_SCRIPTS_DIR.clone();
+    path.push(PathBuf::from(script_name));
+    path.set_extension(MOVE_EXTENSION);
+    let final_path = path.into_os_string().into_string().unwrap();
+    compile_script(final_path)
 }
 
-/// Returns the source code for create-account transaction script.
-pub fn create_account() -> &'static str {
-    include_str!("../transaction_scripts/create_account.mvir")
-}
+pub static ADD_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("add_validator"));
 
-/// Returns the source code for the register validator transaction script
-pub fn register_validator() -> &'static str {
-    include_str!("../transaction_scripts/register_validator.mvir")
-}
+pub static PEER_TO_PEER_TRANSFER_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compiled_script("peer_to_peer_transfer"));
 
-/// Returns the source code for the remove validator transaction script
-pub fn remove_validator() -> &'static str {
-    include_str!("../transaction_scripts/remove_validator.mvir")
-}
+pub static PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compiled_script("peer_to_peer_transfer_with_metadata"));
 
-/// Returns the source code for the rotate-consensus-pubkey script.
-pub fn rotate_consensus_pubkey() -> &'static str {
-    include_str!("../transaction_scripts/rotate_consensus_pubkey.mvir")
-}
+pub static CREATE_ACCOUNT_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("create_account"));
 
-/// Returns the source code for the rotate-key transaction script.
-pub fn rotate_key() -> &'static str {
-    include_str!("../transaction_scripts/rotate_authentication_key.mvir")
-}
+pub static REGISTER_VALIDATOR_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compiled_script("register_validator"));
 
-/// Returns the source code for the mint transaction script.
-pub fn mint() -> &'static str {
-    include_str!("../transaction_scripts/mint.mvir")
-}
+pub static REMOVE_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("remove_validator"));
 
-/// Returns the source code for the block prologue script
-pub fn block_prologue() -> &'static str {
-    include_str!("../transaction_scripts/block_prologue.mvir")
-}
+pub static ROTATE_CONSENSUS_PUBKEY_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compiled_script("rotate_consensus_pubkey"));
 
-pub static ADD_VALIDATOR_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(add_validator()).unwrap());
+pub static ROTATE_AUTHENTICATION_KEY_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| compiled_script("rotate_authentication_key"));
 
-pub static PEER_TO_PEER_TRANSFER_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(peer_to_peer()).unwrap());
+pub static MINT_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("mint"));
 
-pub static PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(peer_to_peer_with_metadata()).unwrap());
+pub static BLOCK_PROLOGUE_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("block_prologue"));
 
-pub static CREATE_ACCOUNT_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(create_account()).unwrap());
-
-pub static REGISTER_VALIDATOR_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(register_validator()).unwrap());
-
-pub static REMOVE_VALIDATOR_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(remove_validator()).unwrap());
-
-pub static ROTATE_CONSENSUS_PUBKEY_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(rotate_consensus_pubkey()).unwrap());
-
-pub static ROTATE_AUTHENTICATION_KEY_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(rotate_key()).unwrap());
-
-pub static MINT_TXN_BODY: Lazy<Program> = Lazy::new(|| parse_program(mint()).unwrap());
-
-pub static BLOCK_PROLOGUE_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(block_prologue()).unwrap());
+pub static EMPTY_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("empty_script"));

@@ -7,27 +7,27 @@ use crate::unit_tests::testutils::{
 
 #[test]
 fn compile_native_hash() {
-    let code = include_str!("../../../stdlib/modules/hash.mvir");
+    let code = include_str!("../ir_stdlib/modules/hash.mvir");
     let _compiled_module = compile_module_string(&code).unwrap();
 }
 
 #[test]
 fn compile_libra_coin() {
-    let code = include_str!("../../../stdlib/modules/libra_coin.mvir");
+    let code = include_str!("../ir_stdlib/modules/libra_coin.mvir");
     let _compiled_module = compile_module_string(&code).unwrap();
 }
 
 #[test]
 fn compile_account_module() {
-    let address_util_code = include_str!("../../../stdlib/modules/address_util.mvir");
-    let u64_util_code = include_str!("../../../stdlib/modules/u64_util.mvir");
-    let bytearray_util_code = include_str!("../../../stdlib/modules/bytearray_util.mvir");
+    let address_util_code = include_str!("../ir_stdlib/modules/address_util.mvir");
+    let u64_util_code = include_str!("../ir_stdlib/modules/u64_util.mvir");
+    let bytearray_util_code = include_str!("../ir_stdlib/modules/bytearray_util.mvir");
 
-    let hash_code = include_str!("../../../stdlib/modules/hash.mvir");
-    let coin_code = include_str!("../../../stdlib/modules/libra_coin.mvir");
-    let time_code = include_str!("../../../stdlib/modules/libra_time.mvir");
-    let ttl_code = include_str!("../../../stdlib/modules/libra_transaction_timeout.mvir");
-    let account_code = include_str!("../../../stdlib/modules/libra_account.mvir");
+    let hash_code = include_str!("../ir_stdlib/modules/hash.mvir");
+    let coin_code = include_str!("../ir_stdlib/modules/libra_coin.mvir");
+    let time_code = include_str!("../ir_stdlib/modules/libra_time.mvir");
+    let ttl_code = include_str!("../ir_stdlib/modules/libra_transaction_timeout.mvir");
+    let account_code = include_str!("../ir_stdlib/modules/libra_account.mvir");
 
     let address_util_module = compile_module_string(address_util_code).unwrap();
     let u64_util_module = compile_module_string(u64_util_code).unwrap();
@@ -54,24 +54,24 @@ fn compile_account_module() {
 
 #[test]
 fn compile_create_account_script() {
-    let code = include_str!("../../../stdlib/transaction_scripts/create_account.mvir");
+    let code = include_str!("../ir_stdlib/transaction_scripts/create_account.mvir");
     let _compiled_script = compile_script_string_with_stdlib(code).unwrap();
 }
 
 #[test]
 fn compile_mint_script() {
-    let code = include_str!("../../../stdlib/transaction_scripts/mint.mvir");
+    let code = include_str!("../ir_stdlib/transaction_scripts/mint.mvir");
     let _compiled_script = compile_script_string_with_stdlib(code).unwrap();
 }
 
 #[test]
 fn compile_rotate_authentication_key_script() {
-    let code = include_str!("../../../stdlib/transaction_scripts/rotate_authentication_key.mvir");
+    let code = include_str!("../ir_stdlib/transaction_scripts/rotate_authentication_key.mvir");
     let _compiled_script = compile_script_string_with_stdlib(code).unwrap();
 }
 
 #[test]
 fn compile_peer_to_peer_transfer_script() {
-    let code = include_str!("../../../stdlib/transaction_scripts/peer_to_peer_transfer.mvir");
+    let code = include_str!("../ir_stdlib/transaction_scripts/peer_to_peer_transfer.mvir");
     let _compiled_script = compile_script_string_with_stdlib(code).unwrap();
 }
