@@ -56,7 +56,7 @@ pub struct Context<'a> {
     prometheus: &'a Prometheus,
     cluster: &'a Cluster,
     report: &'a mut SuiteReport,
-    global_emit_job_request: &'a mut EmitJobRequest,
+    global_emit_job_request: &'a mut Option<EmitJobRequest>,
 }
 
 impl<'a> Context<'a> {
@@ -65,7 +65,7 @@ impl<'a> Context<'a> {
         prometheus: &'a Prometheus,
         cluster: &'a Cluster,
         report: &'a mut SuiteReport,
-        emit_job_request: &'a mut EmitJobRequest,
+        emit_job_request: &'a mut Option<EmitJobRequest>,
     ) -> Self {
         Context {
             tx_emitter,

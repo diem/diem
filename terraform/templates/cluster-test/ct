@@ -86,6 +86,6 @@ trap "echo Terminating on SIGHUP; docker rm -f $CONTAINER >/dev/null" SIGHUP
 VARS="-e RUST_LOG -e VERBOSE -e RUST_BACKTRACE -e SLACK_CHANGELOG_URL"
 
 # This could in theory fail due to concurrency, but it seem unlikely
-docker run $VARS -v /libra_rsa:/libra_rsa --name $CONTAINER --rm $DOCKER_IMAGE $* &
+docker run --ulimit nofile=98304:98304 $VARS -v /libra_rsa:/libra_rsa --name $CONTAINER --rm $DOCKER_IMAGE $* &
 
 wait $!
