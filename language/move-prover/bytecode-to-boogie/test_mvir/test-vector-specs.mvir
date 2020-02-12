@@ -34,7 +34,7 @@ module VerifyVector {
     public test_empty3() : Vector.T<u64> * Vector.T<u64>
     // TODO: next spec crashes because vec indices don't generate boogie yet.
     // spec should succeed
-    // ensures RET(0)[0] == RET(1)[0]
+    // ensures RET(0)[0] == RET(1)[0]  // inserts nonsense in boogie file
     {
         let ev1: Vector.T<u64>;
         let ev2: Vector.T<u64>;
@@ -48,8 +48,8 @@ module VerifyVector {
     //succeeds. [1,2] != [1].
     public test_empty4() : Vector.T<u64> * Vector.T<u64>
     // TODO: next spec crashes because vec indices don't generate boogie yet.
-    // spec should fail
-    // ensures RET(0)[0..1][1] == RET(1)[0]
+    // spec should succeed
+    // ensures RET(0)[0..1] == RET(0)
     {
         let ev1: Vector.T<u64>;
         let ev2: Vector.T<u64>;
@@ -64,6 +64,7 @@ module VerifyVector {
     //succeeds. [1] != [0].
     public test_empty5() : Vector.T<u64> * Vector.T<u64>
     ensures RET(0) != RET(1)
+    // ensures RET(0)[0 := 0] != RET(1)  // will cause nonsense in boogie file.
     {
         let ev1: Vector.T<u64>;
         let ev2: Vector.T<u64>;

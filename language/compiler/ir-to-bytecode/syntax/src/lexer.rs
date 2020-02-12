@@ -29,6 +29,7 @@ pub enum Tok {
     Period,
     Slash,
     Colon,
+    ColonEqual,
     Semicolon,
     Less,
     LessEqual,
@@ -329,7 +330,13 @@ fn find_token(
             }
         }
         '/' => (Tok::Slash, 1),
-        ':' => (Tok::Colon, 1),
+        ':' => {
+            if text.starts_with(":=") {
+                (Tok::ColonEqual, 2) // spec update
+            } else {
+                (Tok::Colon, 1)
+            }
+        }
         ';' => (Tok::Semicolon, 1),
         '^' => (Tok::Caret, 1),
         '{' => (Tok::LBrace, 1),

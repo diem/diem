@@ -52,6 +52,8 @@ pub enum GlobalType {
     Reference(Box<GlobalType>),
     MutableReference(Box<GlobalType>),
     TypeParameter(TypeParameterIndex),
+    // TODO: Separate, so we can't make References, etc. to these.
+    Subrange, // spec type only.
 }
 
 impl GlobalType {

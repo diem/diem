@@ -60,6 +60,8 @@ pub enum SpecExp {
     Not(Box<SpecExp>),
     /// Binary operators also suported by Move
     Binop(Box<SpecExp>, BinOp, Box<SpecExp>),
+    /// Update expr (i := 1 inside [])
+    Update(Box<SpecExp>, Box<SpecExp>),
     /// Value of expression evaluated in the state before function enter.
     Old(Box<SpecExp>),
     /// Call to a helper function.
