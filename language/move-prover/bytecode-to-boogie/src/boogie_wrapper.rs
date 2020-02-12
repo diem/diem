@@ -355,7 +355,6 @@ impl<'env> BoogieWrapper<'env> {
             let func_name = func_env.get_name().to_string();
             let func_display = format!("{}{}", func_name, kind_tag);
             if is_last {
-                debug!("is last!");
                 // If this is the last trace entry, set the location to the end of the function.
                 // This ensures that all variables which haven't yet will be printed
                 let mut end = func_env.get_loc().end().to_usize();

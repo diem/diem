@@ -110,7 +110,7 @@ pub fn boogie_type_check_expr(env: &GlobalEnv, name: &str, sig: &GlobalType) -> 
         // Otherwise it is a type parameter which is opaque
         GlobalType::TypeParameter(_) => {}
     }
-    conds.iter().join(" && ")
+    conds.iter().filter(|s| !s.is_empty()).join(" && ")
 }
 
 /// Create boogie type check assumption. The result will be either an empty string or a
