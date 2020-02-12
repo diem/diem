@@ -483,8 +483,11 @@ fn kind(ast_k: &ast::Kind) -> Kind {
     }
 }
 
-fn compile_types(context: &mut Context, tys: &[Type]) -> Result<Vec<SignatureToken>> {
-    tys.iter()
+fn compile_types<'a>(
+    context: &mut Context,
+    tys: impl IntoIterator<Item = &'a Type>,
+) -> Result<Vec<SignatureToken>> {
+    tys.into_iter()
         .map(|ty| compile_type(context, ty))
         .collect::<Result<_>>()
 }

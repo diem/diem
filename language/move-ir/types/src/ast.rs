@@ -182,11 +182,18 @@ pub enum Type {
     /// `bytearray`
     ByteArray,
     /// A module defined struct
-    Struct(QualifiedStructIdent, Vec<Type>),
+    Struct(QualifiedStructIdent, TypeActuals),
     /// A reference type, the bool flag indicates whether the reference is mutable
     Reference(bool, Box<Type>),
     /// A type parameter
     TypeParameter(TypeVar_),
+}
+
+/// A list of actual types.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct TypeActuals {
+    /// The actual types.
+    pub actuals: Vec<Type>,
 }
 
 //**************************************************************************************************
@@ -322,17 +329,17 @@ pub type Function = Spanned<Function_>;
 pub enum Builtin {
     /// Check if there is a struct object (`StructName` resolved by current module) associated with
     /// the given address
-    Exists(StructName, Vec<Type>),
+    Exists(StructName, TypeActuals),
     /// Get a reference to the resource(`StructName` resolved by current module) associated
     /// with the given address
-    BorrowGlobal(bool, StructName, Vec<Type>),
+    BorrowGlobal(bool, StructName, TypeActuals),
     /// Returns the address of the current transaction's sender
     GetTxnSender,
 
     /// Remove a resource of the given type from the account with the given address
-    MoveFrom(StructName, Vec<Type>),
+    MoveFrom(StructName, TypeActuals),
     /// Publish an instantiated struct object into sender's account.
-    MoveToSender(StructName, Vec<Type>),
+    MoveToSender(StructName, TypeActuals),
 
     /// Convert a mutable reference into an immutable one
     Freeze,
@@ -354,7 +361,7 @@ pub enum FunctionCall_ {
     ModuleFunctionCall {
         module: ModuleName,
         name: FunctionName,
-        type_actuals: Vec<Type>,
+        type_actuals: TypeActuals,
     },
 }
 /// The type for a function call and its location
@@ -379,7 +386,7 @@ pub enum Cmd_ {
     /// `l_1, ..., l_n = e`
     Assign(Vec<LValue>, Exp),
     /// `n { f_1: x_1, ... , f_j: x_j  } = e`
-    Unpack(StructName, Vec<Type>, Fields<Var>, Box<Exp>),
+    Unpack(StructName, TypeActuals, Fields<Var>, Box<Exp>),
     /// `abort e`
     Abort(Option<Box<Exp>>),
     /// `return e_1, ... , e_j`
@@ -542,7 +549,7 @@ pub enum Exp_ {
     /// Returns a fresh `StructInstance` whose type and kind (resource or otherwise)
     /// as the current struct class (i.e., the class of the method we're currently executing).
     /// `n { f_1: e_1, ... , f_j: e_j }`
-    Pack(StructName, Vec<Type>, ExpFields),
+    Pack(StructName, TypeActuals, ExpFields),
     /// `&e.f`, `&mut e.f`
     Borrow {
         /// mutable or not
@@ -690,7 +697,7 @@ impl ModuleDefinition {
 
 impl Type {
     /// Creates a new struct type
-    pub fn r#struct(ident: QualifiedStructIdent, type_actuals: Vec<Type>) -> Type {
+    pub fn r#struct(ident: QualifiedStructIdent, type_actuals: TypeActuals) -> Type {
         Type::Struct(ident, type_actuals)
     }
 
@@ -717,6 +724,23 @@ impl Type {
     /// Creates a new bytearray type
     pub fn bytearray() -> Type {
         Type::ByteArray
+    }
+}
+
+impl TypeActuals {
+    /// Creates a new instance with the given types.
+    pub fn new(actuals: Vec<Type>) -> Self {
+        Self { actuals }
+    }
+
+    /// Returns true if there are no actuals.
+    pub fn is_empty(&self) -> bool {
+        self.actuals.is_empty()
+    }
+
+    /// Returns an iterator over the actuals.
+    pub fn iter<'a>(&'a self) -> ::std::slice::Iter<'a, Type> {
+        self.actuals.iter()
     }
 }
 
@@ -907,7 +931,7 @@ impl TypeVar_ {
 
 impl FunctionCall_ {
     /// Creates a `FunctionCall::ModuleFunctionCall` variant
-    pub fn module_call(module: ModuleName, name: FunctionName, type_actuals: Vec<Type>) -> Self {
+    pub fn module_call(module: ModuleName, name: FunctionName, type_actuals: TypeActuals) -> Self {
         FunctionCall_::ModuleFunctionCall {
             module,
             name,
@@ -1013,7 +1037,7 @@ impl Exp_ {
     }
 
     /// Creates a new pack/struct-instantiation `Exp` with no location information
-    pub fn instantiate(n: StructName, tys: Vec<Type>, s: ExpFields) -> Exp {
+    pub fn instantiate(n: StructName, tys: TypeActuals, s: ExpFields) -> Exp {
         Spanned::no_loc(Exp_::Pack(n, tys, s))
     }
 
@@ -1105,6 +1129,15 @@ impl<T> Spanned<T> {
             value,
             span: Span::default(),
         }
+    }
+}
+
+impl<'a> IntoIterator for &'a TypeActuals {
+    type IntoIter = ::std::slice::Iter<'a, Type>;
+    type Item = &'a Type;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
@@ -1243,11 +1276,13 @@ impl fmt::Display for FunctionSignature {
     }
 }
 
-fn format_type_actuals(tys: &[Type]) -> String {
-    if tys.is_empty() {
-        "".to_string()
-    } else {
-        format!("<{}>", intersperse(tys, ", "))
+impl fmt::Display for TypeActuals {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_empty() {
+            Ok(())
+        } else {
+            write!(f, "<{}>", intersperse(&self.actuals, ", "))
+        }
     }
 }
 
@@ -1272,7 +1307,7 @@ impl fmt::Display for Type {
             Type::Bool => write!(f, "bool"),
             Type::Address => write!(f, "address"),
             Type::ByteArray => write!(f, "bytearray"),
-            Type::Struct(ident, tys) => write!(f, "{}{}", ident, format_type_actuals(tys)),
+            Type::Struct(ident, tys) => write!(f, "{}{}", ident, tys),
             Type::Reference(is_mutable, t) => {
                 write!(f, "&{}{}", if *is_mutable { "mut " } else { "" }, t)
             }
@@ -1284,22 +1319,14 @@ impl fmt::Display for Type {
 impl fmt::Display for Builtin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Builtin::Exists(t, tys) => write!(f, "exists<{}{}>", t, format_type_actuals(tys)),
+            Builtin::Exists(t, tys) => write!(f, "exists<{}{}>", t, tys),
             Builtin::BorrowGlobal(mut_, t, tys) => {
                 let mut_flag = if *mut_ { "_mut" } else { "" };
-                write!(
-                    f,
-                    "borrow_global{}<{}{}>",
-                    mut_flag,
-                    t,
-                    format_type_actuals(tys)
-                )
+                write!(f, "borrow_global{}<{}{}>", mut_flag, t, tys)
             }
             Builtin::GetTxnSender => write!(f, "get_txn_sender"),
-            Builtin::MoveFrom(t, tys) => write!(f, "move_from<{}{}>", t, format_type_actuals(tys)),
-            Builtin::MoveToSender(t, tys) => {
-                write!(f, "move_to_sender<{}{}>", t, format_type_actuals(tys))
-            }
+            Builtin::MoveFrom(t, tys) => write!(f, "move_from<{}{}>", t, tys),
+            Builtin::MoveToSender(t, tys) => write!(f, "move_to_sender<{}{}>", t, tys),
             Builtin::Freeze => write!(f, "freeze"),
             Builtin::ToU8 => write!(f, "to_u8"),
             Builtin::ToU64 => write!(f, "to_u64"),
@@ -1316,13 +1343,7 @@ impl fmt::Display for FunctionCall_ {
                 module,
                 name,
                 type_actuals,
-            } => write!(
-                f,
-                "{}.{}{}",
-                module,
-                name,
-                format_type_actuals(type_actuals)
-            ),
+            } => write!(f, "{}.{}{}", module, name, type_actuals),
         }
     }
 }
@@ -1351,7 +1372,7 @@ impl fmt::Display for Cmd_ {
                 f,
                 "{}{} {{ {} }} = {}",
                 n,
-                format_type_actuals(tys),
+                tys,
                 bindings
                     .iter()
                     .fold(String::new(), |acc, (field, var)| format!(
@@ -1496,7 +1517,7 @@ impl fmt::Display for Exp_ {
                 f,
                 "{}{}{{{}}}",
                 n,
-                format_type_actuals(tys),
+                tys,
                 s.iter().fold(String::new(), |acc, (field, op)| format!(
                     "{} {} : {},",
                     acc, field, op,

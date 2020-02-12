@@ -10,7 +10,7 @@ use itertools::Itertools;
 use num::{BigInt, Num};
 
 use libra_types::account_address::AccountAddress;
-use move_ir_types::ast::{BinOp, CopyableVal_, Field_, Loc, QualifiedStructIdent, Type};
+use move_ir_types::ast::{BinOp, CopyableVal_, Field_, Loc, QualifiedStructIdent, TypeActuals};
 use move_ir_types::spec_language_ast::{Condition_, SpecExp, StorageLocation};
 
 use crate::boogie_helpers::{
@@ -923,7 +923,7 @@ impl<'env> SpecTranslator<'env> {
     fn translate_resource_type(
         &self,
         id: &QualifiedStructIdent,
-        type_actuals: &[Type],
+        type_actuals: &TypeActuals,
     ) -> (String, GlobalType) {
         let resource_type = self.module_env.translate_struct_ast_type(
             *self.current_loc.borrow(),

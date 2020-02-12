@@ -12,7 +12,7 @@ use num::{BigInt, Num};
 use bytecode_source_map::source_map::ModuleSourceMap;
 use bytecode_verifier::VerifiedModule;
 use libra_types::{identifier::IdentStr, identifier::Identifier, language_storage::ModuleId};
-use move_ir_types::ast::{Loc, QualifiedStructIdent, Type, TypeVar_};
+use move_ir_types::ast::{Loc, QualifiedStructIdent, Type, TypeActuals, TypeVar_};
 use move_ir_types::spec_language_ast::{Condition, Invariant, SyntheticDefinition};
 use vm::access::ModuleAccess;
 use vm::file_format::{
@@ -667,7 +667,7 @@ impl<'env> ModuleEnv<'env> {
         &self,
         loc: Loc,
         ident: &QualifiedStructIdent,
-        actuals: &[Type],
+        actuals: &TypeActuals,
         type_params: &[TypeParameter],
     ) -> GlobalType {
         let struct_name = ident.name.as_inner();

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Spanned, Type};
+use crate::ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Spanned, Type, TypeActuals};
 use libra_types::account_address::AccountAddress;
 use libra_types::identifier::Identifier;
 
@@ -15,7 +15,7 @@ pub enum StorageLocation {
     /// A resource of type `type_` stored in global storage at `address`
     GlobalResource {
         type_: QualifiedStructIdent,
-        type_actuals: Vec<Type>,
+        type_actuals: TypeActuals,
         address: Box<StorageLocation>,
     },
     /// An access path rooted at `base` with nonempty offsets in `fields`
@@ -42,7 +42,7 @@ pub enum SpecExp {
     /// Lifting the Move exists operator to a storage location
     GlobalExists {
         type_: QualifiedStructIdent,
-        type_actuals: Vec<Type>,
+        type_actuals: TypeActuals,
         address: StorageLocation,
     },
     /// Dereference of a storage location (written *s)

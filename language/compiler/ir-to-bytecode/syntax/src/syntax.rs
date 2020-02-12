@@ -427,7 +427,7 @@ fn parse_borrow_field_<'input>(
         let start_loc = tokens.start_loc();
         let name = parse_name(tokens)?;
         let end_loc = tokens.previous_end_loc();
-        let type_actuals: Vec<Type> = vec![];
+        let type_actuals = TypeActuals::default();
         spanned(
             start_loc,
             end_loc,
@@ -559,7 +559,7 @@ fn parse_field_exp<'input>(
 fn parse_pack_<'input>(
     tokens: &mut Lexer<'input>,
     name: &str,
-    type_actuals: Vec<Type>,
+    type_actuals: TypeActuals,
 ) -> Result<Exp_, ParseError<usize, anyhow::Error>> {
     consume_token(tokens, Tok::LBrace)?;
     let fs = parse_comma_list(tokens, &[Tok::RBrace], parse_field_exp, true)?;
@@ -842,7 +842,7 @@ fn parse_assign_<'input>(
 fn parse_unpack_<'input>(
     tokens: &mut Lexer<'input>,
     name: &str,
-    type_actuals: Vec<Type>,
+    type_actuals: TypeActuals,
 ) -> Result<Cmd_, ParseError<usize, anyhow::Error>> {
     consume_token(tokens, Tok::LBrace)?;
     let bindings = parse_comma_list(tokens, &[Tok::RBrace], parse_field_bindings, true)?;
@@ -866,7 +866,7 @@ fn parse_cmd_<'input>(
             // NameAndTypeActuals (with no type_actuals) for an unpack.
             if tokens.lookahead()? == Tok::LBrace {
                 let name = parse_name(tokens)?;
-                parse_unpack_(tokens, &name, vec![])
+                parse_unpack_(tokens, &name, TypeActuals::default())
             } else {
                 parse_assign_(tokens)
             }
@@ -1228,14 +1228,14 @@ fn parse_type_formal<'input>(
 
 fn parse_type_actuals<'input>(
     tokens: &mut Lexer<'input>,
-) -> Result<Vec<Type>, ParseError<usize, anyhow::Error>> {
+) -> Result<TypeActuals, ParseError<usize, anyhow::Error>> {
     let tys = if tokens.peek() == Tok::Less {
         tokens.advance()?; // consume the "<"
         let list = parse_comma_list(tokens, &[Tok::Greater], parse_type, true)?;
         consume_token(tokens, Tok::Greater)?;
-        list
+        TypeActuals::new(list)
     } else {
-        vec![]
+        TypeActuals::default()
     };
     Ok(tys)
 }
@@ -1272,7 +1272,7 @@ fn parse_name_and_type_formals<'input>(
 
 fn parse_name_and_type_actuals<'input>(
     tokens: &mut Lexer<'input>,
-) -> Result<(String, Vec<Type>), ParseError<usize, anyhow::Error>> {
+) -> Result<(String, TypeActuals), ParseError<usize, anyhow::Error>> {
     let mut has_types = false;
     let n = if tokens.peek() == Tok::NameBeginTyValue {
         has_types = true;
@@ -1283,9 +1283,9 @@ fn parse_name_and_type_actuals<'input>(
     let tys = if has_types {
         let list = parse_comma_list(tokens, &[Tok::Greater], parse_type, true)?;
         consume_token(tokens, Tok::Greater)?;
-        list
+        TypeActuals::new(list)
     } else {
-        vec![]
+        TypeActuals::default()
     };
     Ok((n, tys))
 }

@@ -130,6 +130,7 @@ impl<'a> ModuleGenerator<'a> {
                     // NB: Relying on randomness for termination here
                     init!(num_typ_params, self.base_type(ty_param_context))
                 };
+                let ty_instants = TypeActuals::new(ty_instants);
                 let struct_ident = {
                     let struct_name = struct_def.name;
                     let module_name = ModuleName::module_self();
