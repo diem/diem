@@ -41,6 +41,7 @@ use consensus_types::{
 };
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
+use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier},
     transaction::TransactionStatus,

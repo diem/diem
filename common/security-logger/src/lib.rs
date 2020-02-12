@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::error;
 use backtrace::Backtrace;
+use libra_logger::error;
 use rand::{rngs::SmallRng, FromEntropy, Rng};
 use serde::Serialize;
 use std::fmt::{self, Debug};
@@ -78,7 +78,7 @@ pub enum SecurityEvent {
 ///
 /// # Example:
 /// ```rust
-/// use libra_logger::prelude::*;
+/// use libra_security_logger::{security_log, SecurityEvent};
 /// use std::fmt::Debug;
 ///
 /// #[derive(Debug)]
@@ -121,7 +121,7 @@ pub fn security_log(event: SecurityEvent) -> SecurityLog {
 }
 
 impl SecurityLog {
-    pub(crate) fn new(event: SecurityEvent) -> Self {
+    fn new(event: SecurityEvent) -> Self {
         SecurityLog {
             event,
             error: None,

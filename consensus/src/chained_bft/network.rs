@@ -19,6 +19,7 @@ use consensus_types::{
 };
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_logger::prelude::*;
+use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::{ValidatorChangeProof, ValidatorVerifier},

@@ -25,7 +25,6 @@ extern crate slog;
 mod collector_serializer;
 mod glog_format;
 mod kv_categorizer;
-mod security;
 mod simple_logger;
 
 use crate::kv_categorizer::ErrorCategorizer;
@@ -42,7 +41,6 @@ use std::sync::Mutex;
 
 /// Logger prelude which includes all logging macros.
 pub mod prelude {
-    pub use crate::security::{security_log, SecurityEvent};
     pub use slog::{slog_crit, slog_debug, slog_error, slog_info, slog_trace, slog_warn};
     pub use slog_scope::{crit, debug, error, info, trace, warn};
 }

@@ -20,6 +20,7 @@ members = [
     "common/num-variants",
     "common/proptest-helpers",
     "common/prost-ext",
+    "common/security-logger",
     "common/temppath",
     "common/util",
     "common/workspace-builder",
