@@ -270,29 +270,36 @@ fn parse_copyable_val<'input>(
 // binary operators, this returns a value of zero so that they will be
 // below the minimum value and will mark the end of the binary expression
 // for the code in parse_rhs_of_binary_exp.
+// Precedences are not sequential to make it easier to add new binops without
+// renumbering everything.
 fn get_precedence(token: &Tok) -> u32 {
     match token {
         // Reserved minimum precedence value is 1 (specified in parse_exp_)
+        // TODO
+        // Tok::EqualEqualGreater may not work right,
+        // since parse_spec_exp calls parse_rhs_of_spec_exp
+        // with min_prec = 1.  So parse_spec_expr will stop parsing instead of reading ==>
         Tok::EqualEqualGreater => 1,
-        Tok::PipePipe => 2,
-        Tok::AmpAmp => 3,
-        Tok::EqualEqual => 4,
-        Tok::ExclaimEqual => 4,
-        Tok::Less => 4,
-        Tok::Greater => 4,
-        Tok::LessEqual => 4,
-        Tok::GreaterEqual => 4,
-        Tok::PeriodPeriod => 5,
-        Tok::Pipe => 6,
-        Tok::Caret => 7,
-        Tok::Amp => 8,
-        Tok::LessLess => 9,
-        Tok::GreaterGreater => 9,
-        Tok::Plus => 10,
-        Tok::Minus => 10,
-        Tok::Star => 11,
-        Tok::Slash => 11,
-        Tok::Percent => 11,
+        Tok::ColonEqual => 3,
+        Tok::PipePipe => 5,
+        Tok::AmpAmp => 10,
+        Tok::EqualEqual => 15,
+        Tok::ExclaimEqual => 15,
+        Tok::Less => 15,
+        Tok::Greater => 15,
+        Tok::LessEqual => 15,
+        Tok::GreaterEqual => 15,
+        Tok::PeriodPeriod => 20,
+        Tok::Pipe => 25,
+        Tok::Caret => 30,
+        Tok::Amp => 35,
+        Tok::LessLess => 40,
+        Tok::GreaterGreater => 40,
+        Tok::Plus => 45,
+        Tok::Minus => 45,
+        Tok::Star => 50,
+        Tok::Slash => 50,
+        Tok::Percent => 50,
         _ => 0, // anything else is not a binary operator
     }
 }
@@ -1413,6 +1420,7 @@ fn parse_storage_location<'input>(
             fields_and_indices.push(FieldOrIndex::Field(parse_field(tokens)?.value));
         } else if tok == Tok::LSquare {
             tokens.advance()?;
+            // Index expr can be ordinary expr, subrange, or update.
             let index_exp = parse_spec_exp(tokens)?;
             fields_and_indices.push(FieldOrIndex::Index(index_exp));
             consume_token(tokens, Tok::RSquare)?;
@@ -1526,6 +1534,8 @@ fn parse_rhs_of_spec_exp<'input>(
             rhs = parse_rhs_of_spec_exp(tokens, rhs, this_prec + 1)?;
             next_tok_prec = get_precedence(&tokens.peek());
         }
+        // TODO: Should we treat ==> like a normal BinOp?
+        // TODO: Implement IFF
         if op_token == Tok::EqualEqualGreater {
             // Syntactic sugar: p ==> c ~~~> !p || c
             result = SpecExp::Binop(
@@ -1533,6 +1543,9 @@ fn parse_rhs_of_spec_exp<'input>(
                 BinOp::Or,
                 Box::new(rhs),
             );
+        } else if op_token == Tok::ColonEqual {
+            // it's an update expr
+            result = SpecExp::Update(Box::new(result), Box::new(rhs))
         } else {
             let op = match op_token {
                 Tok::EqualEqual => BinOp::Eq,

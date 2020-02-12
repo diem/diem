@@ -912,6 +912,10 @@ impl ModelValue {
             GlobalType::Reference(bt) | GlobalType::MutableReference(bt) => {
                 Some(PrettyDoc::text("&").append(self.pretty(env, model, &*bt)?))
             }
+            GlobalType::Subrange => {
+                // TODO (DD) *** Not sure how to do this. Need to extract subrange from model?
+                Some(PrettyDoc::text("Unimplemented subrange lb..ub"))
+            }
             GlobalType::TypeParameter(_) => {
                 // The value of a generic cannot be easily displayed because we do not know the
                 // actual type unless we parse it out from the model (via the type value parameter)

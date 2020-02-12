@@ -636,6 +636,19 @@ impl<'env> SpecTranslator<'env> {
                 let right = self.translate_expr(right);
                 self.translate_binop(op, left, right)
             }
+            SpecExp::Update(ind, new_val) => {
+                let BoogieExpr(ind, t_ind) = self.translate_expr(ind);
+                self.require_type(t_ind, &GlobalType::Bool);
+                let BoogieExpr(new_val, t_nv) = self.translate_expr(new_val);
+                self.require_type(t_nv, &GlobalType::Bool);
+                BoogieExpr(
+                    format!(
+                        "Unimplemented array update: AST ind: {:?}, AST new_val: {:?}",
+                        ind, new_val
+                    ),
+                    GlobalType::Subrange,
+                )
+            }
             SpecExp::Old(expr) => {
                 if *self.in_old.borrow() {
                     self.error("cannot nest `old(_)`", self.error_exp())
@@ -759,8 +772,7 @@ impl<'env> SpecTranslator<'env> {
                 self.translate_op_helper(">=", &operand_type, GlobalType::Bool, left, right)
             }
             BinOp::Subrange => {
-                // TODO(DD): Figure out what to do here.
-                unimplemented!("Subrange is not yet implemented in spec_translator.rs");
+                self.translate_op_helper("..", &GlobalType::U64, GlobalType::Subrange, left, right)
             }
         }
     }

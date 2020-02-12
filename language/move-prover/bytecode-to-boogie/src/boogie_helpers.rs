@@ -41,6 +41,8 @@ pub fn boogie_type_value(env: &GlobalEnv, sig: &GlobalType) -> String {
         GlobalType::Struct(module_idx, struct_idx, args) => {
             boogie_struct_type_value(env, *module_idx, struct_idx, args)
         }
+        // TODO: Need a boogie type for subrange?
+        GlobalType::Subrange => "Unimplemented boogie subrange".to_string(),
     }
 }
 
@@ -106,6 +108,11 @@ pub fn boogie_type_check_expr(env: &GlobalEnv, name: &str, sig: &GlobalType) -> 
                 "IsValidReferenceParameter(__m, __local_counter, {})",
                 name
             ));
+        }
+        // TODO: IsValidSubrange in Boogie should check that args are U64's.
+        // Ok if lb > ub -- subrange is empty in that case.
+        GlobalType::Subrange => {
+            format!("IsValidSubrange({})", name);
         }
         // Otherwise it is a type parameter which is opaque
         GlobalType::TypeParameter(_) => {}
