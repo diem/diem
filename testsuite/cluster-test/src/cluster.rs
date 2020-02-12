@@ -141,15 +141,17 @@ impl Cluster {
         self.validator_instances.choose(&mut rnd).unwrap().clone()
     }
 
-    pub fn validator_instances(&self) -> &Vec<Instance> {
+    pub fn validator_instances(&self) -> &[Instance] {
+        &self.validator_instances
+    }
+    pub fn fullnode_instances(&self) -> &[Instance] {
         &self.validator_instances
     }
 
-    pub fn get_all_instances(&self) -> Vec<Instance> {
-        let mut all_instances: Vec<Instance> = vec![];
-        all_instances.append(&mut self.validator_instances.clone());
-        all_instances.append(&mut self.fullnode_instances.clone());
-        all_instances
+    pub fn all_instances(&self) -> impl Iterator<Item = &Instance> {
+        self.validator_instances
+            .iter()
+            .chain(self.fullnode_instances.iter())
     }
 
     pub fn into_validator_instances(self) -> Vec<Instance> {

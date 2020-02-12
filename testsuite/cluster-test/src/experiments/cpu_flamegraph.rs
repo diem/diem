@@ -61,7 +61,7 @@ impl Experiment for CpuFlamegraph {
         let buffer = Duration::from_secs(60);
         let tx_emitter_duration = 2 * buffer + Duration::from_secs(self.duration_secs as u64);
         let emit_job_request = EmitJobRequest {
-            instances: context.cluster.validator_instances().clone(),
+            instances: context.cluster.validator_instances().to_vec(),
             ..context.global_emit_job_request.clone()
         };
         let emit_future = context

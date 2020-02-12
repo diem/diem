@@ -43,7 +43,7 @@ impl ExperimentParam for RebootRandomValidatorsParams {
             );
         }
         let mut instances = Vec::with_capacity(self.count);
-        let mut all_instances = cluster.validator_instances().clone();
+        let mut all_instances = cluster.validator_instances().to_vec();
         let mut rnd = rand::thread_rng();
         for _i in 0..self.count {
             let instance = all_instances.remove(rnd.gen_range(0, all_instances.len()));
