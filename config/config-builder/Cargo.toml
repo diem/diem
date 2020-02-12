@@ -20,7 +20,6 @@ thiserror = "1.0"
 
 libra-config = { path = "..", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-generate-keypair = { path = "../generate-keypair", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }

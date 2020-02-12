@@ -38,17 +38,16 @@ prometheus = { version = "0.7.0", default-features = false }
 
 proptest = { version = "0.9.4", optional = true }
 libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
-storage-service = { path = "../storage/storage-service" }
+storage-service = { path = "../storage/storage-service", version = "0.1.0", optional = true }
 
 [dev-dependencies]
 channel = { path = "../common/channel", version = "0.1.0" }
 parity-multiaddr = { version = "0.7.1", default-features = false }
 rand = "0.6.5"
-storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 
 [build-dependencies]
 tonic-build = "0.1"
 
 [features]
 default = []
-fuzzing = ["libra-types/fuzzing", "storage-service/fuzzing"]
+fuzzing = ["libra-types/fuzzing", "storage-service", "storage-service/fuzzing"]

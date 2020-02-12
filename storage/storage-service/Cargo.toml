@@ -22,11 +22,11 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libradb = { path = "../libradb", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
-storage-client = { path = "../storage-client", version = "0.1.0" }
 storage-proto = { path = "../storage-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 rand = "0.6.5"
 proptest = { version = "0.9.2", optional = true }
+storage-client = { path = "../storage-client", version = "0.1.0", optional = true }
 
 [dev-dependencies]
 itertools = "0.8.0"
@@ -35,4 +35,4 @@ proptest = "0.9.2"
 
 [features]
 default = []
-fuzzing = ["proptest", "libradb/fuzzing"]
+fuzzing = ["proptest", "storage-client", "libradb/fuzzing"]

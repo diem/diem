@@ -27,9 +27,6 @@ libra-temppath = { path = "../../common/temppath/", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 mirai-annotations = "1.5.0"
 
-[dev-dependencies]
-libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-
 [features]
 default = []
 fuzzing = ["libra-types/fuzzing"]

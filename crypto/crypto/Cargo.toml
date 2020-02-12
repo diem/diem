@@ -26,7 +26,6 @@ proptest-derive = { version = "0.1.0", optional = true }
 rand = "0.6.5"
 serde = { version = "1.0.96", features = ["derive"] }
 sha2 = "0.8.0"
-sha3 = "0.8.2"
 static_assertions = { version = "1.0.0", optional = true }
 thiserror = "1.0"
 threshold_crypto = "0.3"
@@ -44,6 +43,7 @@ proptest = "0.9.1"
 proptest-derive = "0.1.0"
 ripemd160 = "0.8.0"
 criterion = "0.3"
+sha3 = "0.8.2"
 
 [features]
 default = ["std", "u64_backend"]

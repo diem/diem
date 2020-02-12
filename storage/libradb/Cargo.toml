@@ -34,9 +34,9 @@ libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
 schemadb = { path = "../schemadb", version = "0.1.0" }
 storage-proto = { path = "../storage-proto", version = "0.1.0" }
-libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
+libra-temppath = { path = "../../common/temppath", version = "0.1.0", optional = true }
 
 [dev-dependencies]
 proptest = "0.9.2"
@@ -45,4 +45,4 @@ libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.
 
 [features]
 default = []
-fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-crypto/fuzzing", "jellyfish-merkle/fuzzing", "libra-types/fuzzing"]
+fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-temppath", "libra-crypto/fuzzing", "jellyfish-merkle/fuzzing", "libra-types/fuzzing"]

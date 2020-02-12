@@ -39,21 +39,16 @@ dependencies = [
  "admission-control-proto 0.1.0",
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "assert_matches 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "bounded-executor 0.1.0",
  "bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "channel 0.1.0",
- "executable-helpers 0.1.0",
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
  "libra-mempool 0.1.0",
  "libra-mempool-shared-proto 0.1.0",
- "libra-metrics 0.1.0",
  "libra-proptest-helpers 0.1.0",
  "libra-prost-ext 0.1.0",
  "libra-types 0.1.0",
- "network 0.1.0",
  "num_cpus 1.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -388,14 +383,12 @@ name = "bytecode-source-map"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "bytecode-verifier 0.1.0",
  "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
  "move-ir-types 0.1.0",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
 
@@ -737,7 +730,6 @@ name = "config-builder"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "generate-keypair 0.1.0",
  "hex 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
@@ -790,7 +782,6 @@ dependencies = [
  "schemadb 0.1.0",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
- "siphasher 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "state-synchronizer 0.1.0",
  "storage-client 0.1.0",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1296,7 +1287,6 @@ dependencies = [
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
- "libra-prost-ext 0.1.0",
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1893,7 +1883,6 @@ dependencies = [
  "libra-types 0.1.0",
  "move-ir-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "regex 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2744,9 +2733,7 @@ dependencies = [
 name = "network"
 version = "0.1.0"
 dependencies = [
- "admission-control-proto 0.1.0",
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "bounded-executor 0.1.0",
  "bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "channel 0.1.0",
  "criterion 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4163,11 +4150,6 @@ dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "term 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
-
-[[package]]
-name = "siphasher"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "slab"
@@ -6248,7 +6230,6 @@ dependencies = [
 "checksum shlex 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7fdf1b9db47230893d76faad238fd6097fd6d6a9245cd7a4d90dbd639536bbd2"
 "checksum signal-hook-registry 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "94f478ede9f64724c5d173d7bb56099ec3e2d9fc2774aac65d34b8b890405f41"
 "checksum simplelog 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)" = "05a3e303ace6adb0a60a9e9e2fbc6a33e1749d1e43587e2125f7efa9c5e107c5"
-"checksum siphasher 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "83da420ee8d1a89e640d0948c646c1c088758d3a3c538f943bfa97bdac17929d"
 "checksum slab 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 "checksum slog 2.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1cc9c640a4adbfbcc11ffb95efe5aa7af7309e002adab54b185507dbf2377b99"
 "checksum slog-async 2.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "78ca925b180da88ccc595cbe4a3d378d79cb49fe5906c2cbc2488eaf700913ee"
