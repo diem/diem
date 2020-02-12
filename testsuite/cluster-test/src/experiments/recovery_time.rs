@@ -58,7 +58,10 @@ impl Experiment for RecoveryTime {
         context
             .tx_emitter
             .mint_accounts(
-                &EmitJobRequest::for_instances(context.cluster.validator_instances().to_vec()),
+                &EmitJobRequest::for_instances(
+                    context.cluster.validator_instances().to_vec(),
+                    context.global_emit_job_request,
+                ),
                 self.params.num_accounts_to_mint as usize,
             )
             .await?;

@@ -207,6 +207,7 @@ impl Experiment for MultiRegionSimulation {
                 let job = emitter
                     .start_job(EmitJobRequest::for_instances(
                         context.cluster.validator_instances().to_vec(),
+                        context.global_emit_job_request,
                     ))
                     .await
                     .expect("Failed to start emit job");
