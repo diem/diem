@@ -589,14 +589,6 @@ impl Script {
         Script { imports, main }
     }
 
-    /// Accessor for the body of the 'main' procedure
-    pub fn body(&self) -> &Block_ {
-        match self.main.body {
-            FunctionBody::Move { ref code, .. } => &code,
-            FunctionBody::Native => panic!("main() can't be native"),
-        }
-    }
-
     /// Return a vector of `ModuleId` for the external dependencies.
     pub fn get_external_deps(&self) -> Vec<ModuleId> {
         get_external_deps(self.imports.as_slice())
@@ -1081,17 +1073,6 @@ fn parse_identifier(s: Box<str>) -> Result<Identifier> {
 //**************************************************************************************************
 // Trait impls
 //**************************************************************************************************
-
-impl Iterator for Script {
-    type Item = Statement;
-
-    fn next(&mut self) -> Option<Statement> {
-        match self.main.value.body {
-            FunctionBody::Move { ref mut code, .. } => code.stmts.pop_front(),
-            FunctionBody::Native => panic!("main() cannot be native code"),
-        }
-    }
-}
 
 impl PartialEq for Script {
     fn eq(&self, other: &Script) -> bool {
