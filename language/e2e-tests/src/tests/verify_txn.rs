@@ -4,8 +4,7 @@
 use crate::{
     account::AccountData,
     assert_prologue_disparity, assert_prologue_parity, assert_status_eq,
-    common_transactions::*,
-    compile::{compile_module_with_address, compile_script},
+    compile::compile_module_with_address,
     executor::{test_all_genesis_default, FakeExecutor},
     transaction_status_eq,
 };
@@ -22,6 +21,7 @@ use libra_types::{
     },
     vm_error::{StatusCode, StatusType, VMStatus},
 };
+use stdlib::transaction_scripts::{EMPTY_TXN, PEER_TO_PEER_TRANSFER_TXN};
 use transaction_builder::encode_transfer_script;
 use vm::gas_schedule::{self, GasAlgebra};
 
@@ -132,7 +132,7 @@ fn verify_simple_payment() {
 
         // Create a new transaction that has the exact right sequence number.
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args.clone(),
             10, // this should be programmable but for now is 1 more than the setup
             100_000,
@@ -143,7 +143,7 @@ fn verify_simple_payment() {
         // Create a new transaction that has the bad auth key.
         let txn = sender.account().create_signed_txn_with_args_and_sender(
             *receiver.address(),
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args.clone(),
             10, // this should be programmable but for now is 1 more than the setup
             100_000,
@@ -157,7 +157,7 @@ fn verify_simple_payment() {
 
         // Create a new transaction that has a old sequence number.
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args.clone(),
             1,
             100_000,
@@ -171,7 +171,7 @@ fn verify_simple_payment() {
 
         // Create a new transaction that has a too new sequence number.
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args.clone(),
             11,
             100_000,
@@ -187,7 +187,7 @@ fn verify_simple_payment() {
 
         // Create a new transaction that doesn't have enough balance to pay for gas.
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args.clone(),
             10,
             1_000_000,
@@ -207,7 +207,7 @@ fn verify_simple_payment() {
         // Create a new transaction from a bogus account that doesn't exist
         let bogus_account = AccountData::new(100_000, 10);
         let txn = bogus_account.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args.clone(),
             10,
             10_000,
@@ -229,7 +229,7 @@ fn verify_simple_payment() {
         // the errors one-by-one to make sure that we are both catching all of them, and
         // that we are doing so in the specified order.
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args.clone(),
             10,
             1_000_000,
@@ -244,7 +244,7 @@ fn verify_simple_payment() {
         // Note: We can't test this at the moment since MIN_PRICE_PER_GAS_UNIT is set to 0 for
         // testnet. Uncomment this test once we have a non-zero MIN_PRICE_PER_GAS_UNIT.
         // let txn = sender.account().create_signed_txn_with_args(
-        //     PEER_TO_PEER.clone(),
+        //     PEER_TO_PEER_TRANSFER_TXN.clone(),
         //     args.clone(),
         //     10,
         //     1_000_000,
@@ -258,7 +258,7 @@ fn verify_simple_payment() {
         // );
 
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args.clone(),
             10,
             1,
@@ -271,7 +271,7 @@ fn verify_simple_payment() {
         );
 
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args.clone(),
             10,
             gas_schedule::MIN_TRANSACTION_GAS_UNITS.get() - 1,
@@ -284,7 +284,7 @@ fn verify_simple_payment() {
         );
 
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args,
             10,
             gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
@@ -297,7 +297,7 @@ fn verify_simple_payment() {
         );
 
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES],
             10,
             gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
@@ -315,7 +315,7 @@ fn verify_simple_payment() {
         args.push(TransactionArgument::Address(*receiver.address()));
 
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             args,
             10,
             100_000,
@@ -331,7 +331,7 @@ fn verify_simple_payment() {
 
         // Create a new transaction that has no argument.
         let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
+            PEER_TO_PEER_TRANSFER_TXN.clone(),
             vec![],
             10,
             100_000,
@@ -355,7 +355,7 @@ pub fn test_whitelist() {
         let sender = AccountData::new(1_000_000, 10);
         executor.add_account_data(&sender);
 
-        let random_script = compile_script("main() {return;}");
+        let random_script = EMPTY_TXN.clone();
         let txn =
             sender
                 .account()
@@ -377,7 +377,7 @@ pub fn test_arbitrary_script_execution() {
     let sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
 
-    let random_script = compile_script("main() {return;}");
+    let random_script = EMPTY_TXN.clone();
     let txn = sender
         .account()
         .create_signed_txn_with_args(random_script, vec![], 10, 100_000, 1);

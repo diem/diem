@@ -31,7 +31,7 @@ use once_cell::sync::Lazy;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
 use std::str::FromStr;
-use stdlib::stdlib_modules;
+use stdlib::{stdlib_modules, StdLibOptions};
 use vm::{
     access::ModuleAccess,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
@@ -116,7 +116,7 @@ pub fn encode_genesis_transaction_with_validator(
         public_key,
         validator_set,
         discovery_set,
-        stdlib_modules(),
+        stdlib_modules(StdLibOptions::Staged), // Must use staged stdlib
     )
 }
 
@@ -125,7 +125,7 @@ pub fn encode_genesis_transaction_with_validator_and_modules(
     public_key: Ed25519PublicKey,
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
-    stdlib_modules: &'static [VerifiedModule],
+    stdlib_modules: &[VerifiedModule],
 ) -> SignatureCheckedTransaction {
     // create a MoveVM
     let move_vm = MoveVM::new();

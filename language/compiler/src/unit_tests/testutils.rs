@@ -8,7 +8,7 @@ use ir_to_bytecode::{
     parser::{parse_module, parse_program},
 };
 use libra_types::{account_address::AccountAddress, vm_error::VMStatus};
-use stdlib::stdlib_modules;
+use stdlib::{stdlib_modules, StdLibOptions};
 use vm::{
     access::ScriptAccess,
     file_format::{CompiledModule, CompiledScript},
@@ -152,7 +152,7 @@ pub fn compile_script_string_with_stdlib(code: &str) -> Result<CompiledScript> {
 }
 
 fn stdlib() -> Vec<CompiledModule> {
-    stdlib_modules()
+    stdlib_modules(StdLibOptions::Staged)
         .iter()
         .map(|m| m.clone().into_inner())
         .collect()

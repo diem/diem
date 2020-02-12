@@ -69,7 +69,7 @@ pub fn test(flags: &[&str], sources: &[&str]) {
 /// Helper to create a path to an mvir source in the standard library.
 #[allow(dead_code)]
 pub fn std_mvir(b: &str) -> String {
-    format!("../../stdlib/modules/{}.mvir", b)
+    format!("../../compiler/src/ir_stdlib/modules/{}.mvir", b)
 }
 
 /// Helper to create a path to a verified mvir source of the standard library.

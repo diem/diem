@@ -7,6 +7,7 @@ use functional_tests::{
     testsuite,
 };
 use libra_types::account_address::AccountAddress as LibraAddress;
+use move_bytecode_verifier::{batch_verify_modules, VerifiedModule};
 use move_lang::{
     move_compile_no_report,
     shared::Address,
@@ -70,6 +71,21 @@ impl Compiler for MoveSourceCompiler {
                 ScriptOrModule::Module(compiled_module)
             }
         })
+    }
+
+    fn stdlib() -> Option<Vec<VerifiedModule>> {
+        let (_, compiled_units) =
+            move_compile_no_report(&stdlib_files(), &[], Some(Address::LIBRA_CORE)).unwrap();
+        Some(batch_verify_modules(
+            compiled_units
+                .unwrap()
+                .into_iter()
+                .map(|compiled_unit| match compiled_unit {
+                    CompiledUnit::Module(_, m) => m,
+                    CompiledUnit::Script(_, _) => panic!("Unexpected Script in stdlib"),
+                })
+                .collect(),
+        ))
     }
 }
 

@@ -14,6 +14,7 @@ use ir_to_bytecode::{
 use libra_types::account_address::AccountAddress;
 use move_ir_types::ast;
 use std::path::Path;
+use stdlib::{stdlib_modules, StdLibOptions};
 
 struct IRCompiler {
     deps: Vec<VerifiedModule>,
@@ -50,10 +51,17 @@ impl Compiler for IRCompiler {
             }
         })
     }
+
+    // Use the default genesis
+    fn stdlib() -> Option<Vec<VerifiedModule>> {
+        None
+    }
 }
 
 fn run_test(path: &Path) -> datatest_stable::Result<()> {
-    let compiler = IRCompiler::new(stdlib::stdlib_modules().to_vec());
+    // The IR tests always run with the staged stdlib
+    let stdlib = stdlib_modules(StdLibOptions::Staged);
+    let compiler = IRCompiler::new(stdlib.to_vec());
     testsuite::functional_tests(compiler, path)
 }
 

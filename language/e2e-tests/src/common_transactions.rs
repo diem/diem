@@ -3,25 +3,16 @@
 
 //! Support for encoding transactions for common situations.
 
-use crate::{account::Account, compile::compile_script, gas_costs};
+use crate::{account::Account, gas_costs};
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     transaction::{SignedTransaction, TransactionArgument},
 };
-use once_cell::sync::Lazy;
-use stdlib::transaction_scripts;
-use transaction_builder::{ADD_VALIDATOR_TXN, REGISTER_VALIDATOR_TXN};
-
-/// A serialized transaction to create a new account.
-pub static CREATE_ACCOUNT: Lazy<Vec<u8>> = Lazy::new(create_account);
-/// A serialized transaction to mint new funds.
-pub static MINT: Lazy<Vec<u8>> = Lazy::new(mint);
-/// A serialized transaction to transfer coin from one account to another (possibly new)
-/// one.
-pub static PEER_TO_PEER: Lazy<Vec<u8>> = Lazy::new(peer_to_peer);
-/// A serialized transaction to change the keys for an account.
-pub static ROTATE_KEY: Lazy<Vec<u8>> = Lazy::new(rotate_key);
+use stdlib::transaction_scripts::{
+    ADD_VALIDATOR_TXN, CREATE_ACCOUNT_TXN, MINT_TXN, PEER_TO_PEER_TRANSFER_TXN,
+    REGISTER_VALIDATOR_TXN, ROTATE_AUTHENTICATION_KEY_TXN,
+};
 
 /// Returns a transaction to add a new validator
 pub fn add_validator_txn(
@@ -53,7 +44,7 @@ pub fn create_account_txn(
     args.push(TransactionArgument::U64(initial_amount));
 
     sender.create_signed_txn_with_args(
-        CREATE_ACCOUNT.clone(),
+        CREATE_ACCOUNT_TXN.clone(),
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
@@ -75,7 +66,7 @@ pub fn peer_to_peer_txn(
 
     // get a SignedTransaction
     sender.create_signed_txn_with_args(
-        PEER_TO_PEER.clone(),
+        PEER_TO_PEER_TRANSFER_TXN.clone(),
         args,
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas
@@ -121,7 +112,7 @@ pub fn rotate_key_txn(
         new_key_hash.to_vec(),
     ))];
     sender.create_signed_txn_with_args(
-        ROTATE_KEY.clone(),
+        ROTATE_AUTHENTICATION_KEY_TXN.clone(),
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
@@ -142,26 +133,10 @@ pub fn mint_txn(
 
     // get a SignedTransaction
     sender.create_signed_txn_with_args(
-        MINT.clone(),
+        MINT_TXN.clone(),
         args,
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas
         1,                       // this is a default for gas
     )
-}
-
-fn create_account() -> Vec<u8> {
-    compile_script(transaction_scripts::create_account())
-}
-
-fn mint() -> Vec<u8> {
-    compile_script(transaction_scripts::mint())
-}
-
-fn peer_to_peer() -> Vec<u8> {
-    compile_script(transaction_scripts::peer_to_peer())
-}
-
-fn rotate_key() -> Vec<u8> {
-    compile_script(transaction_scripts::rotate_key())
 }

@@ -27,7 +27,6 @@ transaction-builder = { path = "../../transaction-builder", version = "0.1.0"}
 vm = { path = "../../vm", version = "0.1.0" }
 vm-cache-map = { path = "../../vm/vm-runtime/vm-cache-map", version = "0.1.0" }
 vm-runtime = { path = "../../vm/vm-runtime", version = "0.1.0" }
-move-lang-stdlib = { path = "../../move-lang/stdlib" }
 
 [dev-dependencies]
 proptest = "0.9.3"

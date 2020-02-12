@@ -24,6 +24,7 @@ use std::{
     time::Instant,
     u64,
 };
+use stdlib::env_stdlib_modules;
 use structopt::StructOpt;
 use vm::{
     access::ModuleAccess,
@@ -160,7 +161,7 @@ fn stack_instructions(options: &Opt) {
 
     // create a set of modules to work with on top of stdlib.
     // The root module is the module based upon how we generate modules.
-    let mut modules = ::stdlib::stdlib_modules().to_vec();
+    let mut modules = env_stdlib_modules().to_vec();
     let (root, mut callee_modules) = generate_padded_modules(3, options.num_iters as usize);
     modules.append(&mut callee_modules);
     let module_id = root.self_id();

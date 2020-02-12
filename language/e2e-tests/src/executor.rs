@@ -7,7 +7,11 @@ use crate::{
     account::{Account, AccountData},
     data_store::{FakeDataStore, GENESIS_WRITE_SET},
 };
-use libra_config::config::{VMConfig, VMPublishingOption};
+use bytecode_verifier::VerifiedModule;
+use libra_config::{
+    config::{VMConfig, VMPublishingOption},
+    generator,
+};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -20,6 +24,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
+use stdlib::{stdlib_modules, StdLibOptions};
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
 use vm_runtime::{LibraVM, VMExecutor, VMVerifier};
@@ -100,31 +105,43 @@ impl FakeExecutor {
         Self::from_genesis(&GENESIS_WRITE_SET, Some(publishing_options))
     }
 
-    pub fn from_validator_set(
-        validator_set: ValidatorSet,
-        publishing_options: VMPublishingOption,
-    ) -> Self {
-        let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
-        let genesis_write_set = match vm_genesis::encode_genesis_transaction_with_validator(
-            &GENESIS_KEYPAIR.0,
-            GENESIS_KEYPAIR.1.clone(),
-            validator_set,
-            discovery_set,
-        )
-        .payload()
-        {
-            TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
-            _ => panic!("Expected writeset txn in genesis txn"),
-        };
-        Self::from_genesis(&genesis_write_set, Some(publishing_options))
-    }
-
     /// Creates an executor in which no genesis state has been applied yet.
     pub fn no_genesis() -> Self {
         FakeExecutor {
             config: VMConfig::default(),
             data_store: FakeDataStore::default(),
         }
+    }
+
+    /// Creates fresh genesis from the stdlib modules passed in. If none are passed in the staged
+    /// genesis write set is used.
+    pub fn custom_genesis(
+        genesis_modules: Option<Vec<VerifiedModule>>,
+        validator_set: Option<ValidatorSet>,
+        publishing_options: VMPublishingOption,
+    ) -> Self {
+        let genesis_write_set = if genesis_modules.is_none() && validator_set.is_none() {
+            GENESIS_WRITE_SET.clone()
+        } else {
+            let validator_set = validator_set
+                .unwrap_or_else(|| generator::validator_swarm_for_testing(10).validator_set);
+            let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
+            let stdlib_modules =
+                genesis_modules.unwrap_or_else(|| stdlib_modules(StdLibOptions::Staged).to_vec());
+            match vm_genesis::encode_genesis_transaction_with_validator_and_modules(
+                &GENESIS_KEYPAIR.0,
+                GENESIS_KEYPAIR.1.clone(),
+                validator_set,
+                discovery_set,
+                &stdlib_modules,
+            )
+            .payload()
+            {
+                TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
+                _ => panic!("Expected writeset txn in genesis txn"),
+            }
+        };
+        Self::from_genesis(&genesis_write_set, Some(publishing_options))
     }
 
     /// Creates a number of [`Account`] instances all with the same balance and sequence number,
