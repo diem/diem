@@ -39,8 +39,12 @@ pub struct Yamux<TSocket> {
     inner: yamux::Connection<Compat<TSocket>>,
 }
 
-const MAX_BUFFER_SIZE: u32 = 8 * 1024 * 1024; // 8MB
-const RECEIVE_WINDOW: u32 = 4 * 1024 * 1024; // 4MB
+// Receive window is kept at 16MB. This ensures that the window size is large enough to accomodate
+// the full RPC request or response which is sent as a framed message using length delimited codec.
+// The default LengthDelimitedCodec accomodates a message of size 8 MiB and the frame header.
+const RECEIVE_WINDOW: u32 = 16 * 1024 * 1024; // 16 MiB
+const MAX_BUFFER_SIZE: usize = 32 * 1024 * 1024; // 32 MiB
+const MAX_CONCURRENT_STREAMS: usize = 100;
 
 impl<TSocket> Yamux<TSocket>
 where
@@ -48,17 +52,11 @@ where
 {
     pub fn new(socket: TSocket, mode: Mode) -> Self {
         let mut config = yamux::Config::default();
-        // Use OnRead mode instead of OnReceive mode to provide back pressure to the sending side.
-        // Caveat: the OnRead mode has the risk of deadlock, where both sides send data larger than
-        // receive window and don't read before finishing writes. But it doesn't apply to our use
-        // cases. Some of our streams are unidirectional, where only one end writes data, e.g.,
-        // Direct Send. Some of our streams are bidirectional, but only one end write data at a
-        // time, e.g., RPC. Some of our streams may write at the same time, but the frames are
-        // shorter than the receive window, e.g., protocol negotiation.
-        config.set_window_update_mode(yamux::WindowUpdateMode::OnRead);
-        // Because OnRead mode increases the RTT of window update, bigger buffer size and receive
-        // window size perform better.
-        config.set_max_buffer_size(MAX_BUFFER_SIZE as usize);
+        // OnReceive window update mode ensures that sender is unblocked as long as we have space
+        // in our receive buffer to accept more data.
+        config.set_window_update_mode(yamux::WindowUpdateMode::OnReceive);
+        config.set_max_num_streams(MAX_CONCURRENT_STREAMS);
+        config.set_max_buffer_size(MAX_BUFFER_SIZE);
         config
             .set_receive_window(RECEIVE_WINDOW)
             .expect("Invalid receive window size");
