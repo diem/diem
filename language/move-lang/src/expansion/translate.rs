@@ -233,6 +233,7 @@ fn module(
     let functions = functions(context, &name, pfunctions);
     let used_aliases = context.clear_aliases();
     let (uses, unused_aliases) = check_aliases(context, used_aliases, alias_map);
+    let is_source_module = is_source_module && !fake_natives::is_fake_native(&current_module);
     let def = E::ModuleDefinition {
         uses,
         unused_aliases,

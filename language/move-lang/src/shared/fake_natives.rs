@@ -1,6 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use super::*;
+use crate::parser::ast::ModuleIdent;
+
 /// 'Native' functions that are actually bytecode isntructions
 
 //**************************************************************************************************
@@ -19,4 +22,8 @@ pub mod transaction {
     pub const PUBLIC_KEY: &str = "public_key";
     /// 'Inlined' during hlir::translate
     pub const ASSERT: &str = "assert";
+}
+
+pub fn is_fake_native(mident: &ModuleIdent) -> bool {
+    mident.0.value.address == Address::LIBRA_CORE && mident.0.value.name.value() == transaction::MOD
 }

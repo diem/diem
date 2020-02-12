@@ -72,7 +72,11 @@ module LibraAccount {
     }
 
     // Save an account to a given address if the address does not have an account resource yet
-    native fun save_account(addr: address, account: Self::T);
+    fun save_account(addr: address, account: Self::T) {
+        // FIXME this cant be native struct handle for Self::T is mismatched with
+        // the native dispatch
+        abort 0
+    }
 
     // Deposits the `to_deposit` coin into the `payee`'s account
     public fun deposit(payee: address, to_deposit: LibraCoin::T) acquires T {
