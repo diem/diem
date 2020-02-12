@@ -54,9 +54,12 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         );
         join_all(network_effects.iter().map(|e| e.activate())).await;
         let window = Duration::from_secs(240);
-        let emit_job_request = EmitJobRequest {
-            instances: self.cluster.validator_instances().to_vec(),
-            ..context.global_emit_job_request.clone()
+        let emit_job_request = match context.global_emit_job_request {
+            Some(global_emit_job_request) => EmitJobRequest {
+                instances: context.cluster.validator_instances().to_vec(),
+                ..global_emit_job_request.clone()
+            },
+            None => EmitJobRequest::for_instances(context.cluster.validator_instances().to_vec()),
         };
         context
             .tx_emitter

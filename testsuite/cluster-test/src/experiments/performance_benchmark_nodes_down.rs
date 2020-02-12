@@ -104,11 +104,14 @@ impl Experiment for PerformanceBenchmarkNodesDown {
             .collect();
         let futures = stop_effects.iter().map(|e| e.activate());
         join_all(futures).await;
-        let buffer = Duration::from_secs(30);
+        let buffer = Duration::from_secs(60);
         let window = self.duration + buffer * 2;
-        let emit_job_request = EmitJobRequest {
-            instances: self.up_instances.clone(),
-            ..context.global_emit_job_request.clone()
+        let emit_job_request = match context.global_emit_job_request {
+            Some(global_emit_job_request) => EmitJobRequest {
+                instances: self.up_instances.clone(),
+                ..global_emit_job_request.clone()
+            },
+            None => EmitJobRequest::for_instances(self.up_instances.clone()),
         };
         let stats = context
             .tx_emitter

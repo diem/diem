@@ -95,11 +95,23 @@ pub struct EmitJobRequest {
 
 impl EmitJobRequest {
     pub fn for_instances(instances: Vec<Instance>) -> Self {
-        Self {
-            instances,
-            accounts_per_client: 10,
-            threads_per_ac: None,
-            thread_params: EmitThreadParams::default(),
+        if instances.len() == 100 {
+            Self {
+                instances,
+                accounts_per_client: 16,
+                threads_per_ac: Some(2),
+                thread_params: EmitThreadParams {
+                    wait_millis: 0,
+                    wait_committed: true,
+                },
+            }
+        } else {
+            Self {
+                instances,
+                accounts_per_client: 10,
+                threads_per_ac: None,
+                thread_params: EmitThreadParams::default(),
+            }
         }
     }
 }

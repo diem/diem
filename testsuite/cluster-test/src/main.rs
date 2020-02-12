@@ -560,9 +560,10 @@ impl ClusterTestRunner {
         let suite_started = Instant::now();
         for experiment in suite.experiments {
             let experiment_name = format!("{}", experiment);
-            self.run_single_experiment(experiment).map_err(move |e| {
-                format_err!("Experiment `{}` failed: `{}`", experiment_name, e)
-            })?;
+            self.run_single_experiment(experiment, None)
+                .map_err(move |e| {
+                    format_err!("Experiment `{}` failed: `{}`", experiment_name, e)
+                })?;
             thread::sleep(self.experiment_interval);
         }
         info!(
@@ -589,12 +590,16 @@ impl ClusterTestRunner {
 
     pub fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> Result<()> {
         self.cleanup();
-        self.run_single_experiment(experiment)?;
+        self.run_single_experiment(experiment, Some(self.global_emit_job_request.clone()))?;
         self.print_report();
         Ok(())
     }
 
-    pub fn run_single_experiment(&mut self, mut experiment: Box<dyn Experiment>) -> Result<()> {
+    pub fn run_single_experiment(
+        &mut self,
+        mut experiment: Box<dyn Experiment>,
+        mut global_emit_job_request: Option<EmitJobRequest>,
+    ) -> Result<()> {
         let events = self.logs.recv_all();
         if let Err(s) =
             self.health_check_runner
@@ -622,7 +627,7 @@ impl ClusterTestRunner {
             &self.prometheus,
             &self.cluster,
             &mut self.report,
-            &mut self.global_emit_job_request,
+            &mut global_emit_job_request,
         );
         {
             let logs = &mut self.logs;

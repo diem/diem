@@ -60,9 +60,12 @@ impl Experiment for CpuFlamegraph {
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {
         let buffer = Duration::from_secs(60);
         let tx_emitter_duration = 2 * buffer + Duration::from_secs(self.duration_secs as u64);
-        let emit_job_request = EmitJobRequest {
-            instances: context.cluster.validator_instances().to_vec(),
-            ..context.global_emit_job_request.clone()
+        let emit_job_request = match context.global_emit_job_request {
+            Some(global_emit_job_request) => EmitJobRequest {
+                instances: context.cluster.validator_instances().to_vec(),
+                ..global_emit_job_request.clone()
+            },
+            None => EmitJobRequest::for_instances(context.cluster.validator_instances().to_vec()),
         };
         let emit_future = context
             .tx_emitter
