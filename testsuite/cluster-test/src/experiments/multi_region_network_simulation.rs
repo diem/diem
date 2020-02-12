@@ -206,7 +206,7 @@ impl Experiment for MultiRegionSimulation {
             for cross_region_latency in &self.params.cross_region_latencies {
                 let job = emitter
                     .start_job(EmitJobRequest::for_instances(
-                        context.cluster.validator_instances().clone(),
+                        context.cluster.validator_instances().to_vec(),
                     ))
                     .await
                     .expect("Failed to start emit job");

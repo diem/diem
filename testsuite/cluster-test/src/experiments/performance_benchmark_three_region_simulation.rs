@@ -42,9 +42,9 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         let (us_west, us_east) = us.split_n_validators_random(40);
         let network_effects = three_region_simulation_effects(
             (
-                us_west.validator_instances().clone(),
-                us_east.validator_instances().clone(),
-                euro.validator_instances().clone(),
+                us_west.validator_instances().to_vec(),
+                us_east.validator_instances().to_vec(),
+                euro.validator_instances().to_vec(),
             ),
             (
                 Duration::from_millis(60), // us_east<->eu one way delay
@@ -55,7 +55,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         join_all(network_effects.iter().map(|e| e.activate())).await;
         let window = Duration::from_secs(240);
         let emit_job_request = EmitJobRequest {
-            instances: self.cluster.validator_instances().clone(),
+            instances: self.cluster.validator_instances().to_vec(),
             ..context.global_emit_job_request.clone()
         };
         context

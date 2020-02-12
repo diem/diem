@@ -63,7 +63,7 @@ impl DeploymentManager {
     }
 
     pub fn update_all_services(&self) -> Result<()> {
-        for instance in &self.cluster.get_all_instances() {
+        for instance in self.cluster.all_instances() {
             let mut request = UpdateServiceRequest::default();
             request.cluster = Some(self.aws.workspace().clone());
             request.force_new_deployment = Some(true);

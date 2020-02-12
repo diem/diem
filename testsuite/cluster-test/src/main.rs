@@ -353,8 +353,9 @@ impl ClusterUtil {
             aws.workspace(),
         );
         info!(
-            "Discovered {} peers in {} workspace",
+            "Discovered {} validators and {} fns in {} workspace",
             cluster.validator_instances().len(),
+            cluster.fullnode_instances().len(),
             aws.workspace()
         );
         Self {
@@ -365,14 +366,14 @@ impl ClusterUtil {
     }
 
     pub fn discovery(&self) {
-        for instance in self.cluster.validator_instances() {
+        for instance in self.cluster.all_instances() {
             println!("{} {}", instance.peer_name(), instance.ip());
         }
     }
 
     pub fn pssh(&self, cmd: Vec<String>) {
         let mut runtime = Runtime::new().unwrap();
-        let futures = self.cluster.validator_instances().iter().map(|x| {
+        let futures = self.cluster.all_instances().map(|x| {
             x.run_cmd_tee_err(&cmd).map(move |r| {
                 if let Err(e) = r {
                     warn!("Failed on {}: {}", x, e)
@@ -823,8 +824,7 @@ impl ClusterTestRunner {
         info!("Will use suffix {} for log rotation", suffix);
         let jobs = self
             .cluster
-            .validator_instances()
-            .iter()
+            .all_instances()
             .map(|instance| Self::wipe_instance(log_file, &suffix, instance));
         self.runtime.block_on(join_all(jobs));
         info!("Done");
@@ -847,7 +847,7 @@ impl ClusterTestRunner {
     }
 
     fn reboot(&mut self) {
-        let futures = self.cluster.validator_instances().iter().map(|instance| {
+        let futures = self.cluster.all_instances().map(|instance| {
             async move {
                 let reboot = Reboot::new(instance.clone());
                 reboot
@@ -867,7 +867,7 @@ impl ClusterTestRunner {
     }
 
     fn cleanup(&mut self) {
-        let futures = self.cluster.validator_instances().iter().map(|instance| {
+        let futures = self.cluster.all_instances().map(|instance| {
             async move {
                 RemoveNetworkEffects::new(instance.clone())
                     .apply()
@@ -897,10 +897,8 @@ impl ClusterTestRunner {
 
     fn make_stop_effects(&self) -> Vec<StopContainer> {
         self.cluster
-            .validator_instances()
-            .clone()
-            .into_iter()
-            .map(StopContainer::new)
+            .all_instances()
+            .map(|x| StopContainer::new(x.clone()))
             .collect()
     }
 }
