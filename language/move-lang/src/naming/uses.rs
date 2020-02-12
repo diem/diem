@@ -32,9 +32,8 @@ pub fn verify(errors: &mut Errors, modules: &mut UniqueMap<ModuleIdent, N::Modul
                 .into_iter()
                 .filter(|m| imm_modules.get(m).unwrap().is_source_module.is_some())
                 .cloned()
-                .enumerate()
                 .collect::<Vec<_>>();
-            for (order, mident) in ordering {
+            for (order, mident) in ordering.into_iter().rev().enumerate() {
                 modules.get_mut(&mident).unwrap().is_source_module = Some(order)
             }
         }

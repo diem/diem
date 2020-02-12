@@ -60,7 +60,10 @@ module Event {
 
     // Native procedure that writes to the actual event stream in Event store
     // This will replace the "native" portion of EmitEvent bytecode
-    native fun write_to_event_store<T: copyable>(guid: bytearray, count: u64, msg: T);
+    fun write_to_event_store<T: copyable>(guid: bytearray, count: u64, msg: T) {
+        // FIXME native was moved to account
+        abort 0
+    }
 
     // Destroy a unique handle.
     public fun destroy<T: copyable>(handle: Handle<T>) {
