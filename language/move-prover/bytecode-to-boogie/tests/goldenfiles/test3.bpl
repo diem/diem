@@ -272,6 +272,7 @@ Label_28:
     call __tmp := LdConst(42);
     __m := UpdateLocal(__m, __frame + 41, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 0, 719); }
     goto Label_Abort;
 
 Label_52:
@@ -293,6 +294,7 @@ Label_52:
     call __tmp := LdConst(42);
     __m := UpdateLocal(__m, __frame + 46, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 0, 749); }
     goto Label_Abort;
 
 Label_59:
@@ -317,6 +319,7 @@ Label_60:
     call __tmp := LdConst(42);
     __m := UpdateLocal(__m, __frame + 51, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 0, 790); }
     goto Label_Abort;
 
 Label_67:
@@ -338,6 +341,7 @@ Label_67:
     call __tmp := LdConst(42);
     __m := UpdateLocal(__m, __frame + 56, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 0, 820); }
     goto Label_Abort;
 
 Label_74:

@@ -1010,7 +1010,18 @@ impl<'env> ModuleTranslator<'env> {
                     bytecode
                 );
             }
-            Abort(_) => emitln!(self.writer, "goto Label_Abort;"),
+            Abort(_) => {
+                // Below we introduce a dummy `if` for $DebugTrackAbort to ensure boogie creates
+                // a execution trace entry for this statement.
+                emitln!(
+                    self.writer,
+                    "if (true) {{ assume $DebugTrackAbort({}, {}, {}); }}",
+                    func_env.module_env.get_module_idx(),
+                    func_env.get_def_idx(),
+                    loc.start(),
+                );
+                emitln!(self.writer, "goto Label_Abort;")
+            },
             GetGasRemaining(idx) => {
                 emitln!(self.writer, "call __tmp := GetGasRemaining();");
                 emitln!(self.writer, &update_and_track_local(*idx, "__tmp"));

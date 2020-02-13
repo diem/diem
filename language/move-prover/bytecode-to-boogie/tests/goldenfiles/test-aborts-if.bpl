@@ -61,6 +61,7 @@ ensures old(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y)))) ==> __abort_flag;
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 0, 177); }
     goto Label_Abort;
 
 Label_7:
@@ -161,6 +162,7 @@ ensures old(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y)))) ==> __abort_flag;
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 2, 600); }
     goto Label_Abort;
 
 Label_5:
@@ -228,6 +230,7 @@ ensures old(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> __abort_flag;
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 3, 860); }
     goto Label_Abort;
 
 Label_7:
@@ -295,6 +298,7 @@ ensures old(b#Boolean(Boolean(i#Integer(x) <= i#Integer(y)))) ==> __abort_flag;
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 4, 1090); }
     goto Label_Abort;
 
 Label_7:
@@ -362,6 +366,7 @@ ensures old(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> __abort_flag;
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 5, 1334); }
     goto Label_Abort;
 
 Label_7:
@@ -429,6 +434,7 @@ ensures old(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> __abort_flag;
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 6, 1597); }
     goto Label_Abort;
 
 Label_7:
@@ -501,6 +507,7 @@ ensures old(b#Boolean(Boolean(i#Integer(x) < i#Integer(y)))) ==> __abort_flag;
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 7, 1874); }
     goto Label_Abort;
 
 Label_7:
@@ -588,6 +595,7 @@ ensures old(b#Boolean(Boolean(i#Integer(x) > i#Integer(y))) || b#Boolean(Boolean
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 8, 2439); }
     goto Label_Abort;
 
 Label_7:

@@ -199,6 +199,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
+    if (true) { assume $DebugTrackAbort(6, 0, 1320); }
     goto Label_Abort;
 
 Label_7:
@@ -1432,6 +1433,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
+    if (true) { assume $DebugTrackAbort(8, 1, 1788); }
     goto Label_Abort;
 
 Label_9:
@@ -1546,6 +1548,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
+    if (true) { assume $DebugTrackAbort(8, 2, 2371); }
     goto Label_Abort;
 
 Label_7:
@@ -1878,6 +1881,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(10);
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
+    if (true) { assume $DebugTrackAbort(8, 7, 3795); }
     goto Label_Abort;
 
 Label_11:
@@ -2134,6 +2138,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
+    if (true) { assume $DebugTrackAbort(8, 10, 4985); }
     goto Label_Abort;
 
 Label_10:
@@ -2233,6 +2238,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
+    if (true) { assume $DebugTrackAbort(9, 0, 406); }
     goto Label_Abort;
 
 Label_7:
@@ -2364,6 +2370,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(5001);
     __m := UpdateLocal(__m, __frame + 14, __tmp);
 
+    if (true) { assume $DebugTrackAbort(9, 1, 1347); }
     goto Label_Abort;
 
 Label_16:
@@ -2393,6 +2400,7 @@ Label_17:
     call __tmp := LdConst(5001);
     __m := UpdateLocal(__m, __frame + 21, __tmp);
 
+    if (true) { assume $DebugTrackAbort(9, 1, 1492); }
     goto Label_Abort;
 
 Label_26:
@@ -2556,6 +2564,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
+    if (true) { assume $DebugTrackAbort(10, 0, 394); }
     goto Label_Abort;
 
 Label_7:
@@ -2642,6 +2651,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
+    if (true) { assume $DebugTrackAbort(10, 1, 752); }
     goto Label_Abort;
 
 Label_7:
@@ -3304,6 +3314,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(7);
     __m := UpdateLocal(__m, __frame + 13, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 2, 4453); }
     goto Label_Abort;
 
 Label_10:
@@ -3622,6 +3633,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 5, 6909); }
     goto Label_Abort;
 
 Label_9:
@@ -3810,6 +3822,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 7, 8108); }
     goto Label_Abort;
 
 Label_13:
@@ -4292,6 +4305,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 13, 11386); }
     goto Label_Abort;
 
 Label_9:
@@ -4451,6 +4465,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 15, 12638); }
     goto Label_Abort;
 
 Label_11:
@@ -5366,6 +5381,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(5);
     __m := UpdateLocal(__m, __frame + 15, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 29, 18100); }
     goto Label_Abort;
 
 Label_8:
@@ -5414,6 +5430,7 @@ Label_8:
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 25, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 29, 18446); }
     goto Label_Abort;
 
 Label_21:
@@ -5475,6 +5492,7 @@ Label_21:
     call __tmp := LdConst(6);
     __m := UpdateLocal(__m, __frame + 37, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 29, 18811); }
     goto Label_Abort;
 
 Label_38:
@@ -5508,6 +5526,7 @@ Label_38:
     call __tmp := LdConst(3);
     __m := UpdateLocal(__m, __frame + 45, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 29, 19064); }
     goto Label_Abort;
 
 Label_49:
@@ -5529,6 +5548,7 @@ Label_49:
     call __tmp := LdConst(4);
     __m := UpdateLocal(__m, __frame + 50, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 29, 19141); }
     goto Label_Abort;
 
 Label_56:
@@ -5553,6 +5573,7 @@ Label_56:
     call __tmp := LdConst(7);
     __m := UpdateLocal(__m, __frame + 54, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 29, 19243); }
     goto Label_Abort;
 
 Label_62:
@@ -5707,6 +5728,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(6);
     __m := UpdateLocal(__m, __frame + 23, __tmp);
 
+    if (true) { assume $DebugTrackAbort(11, 30, 20204); }
     goto Label_Abort;
 
 Label_20:

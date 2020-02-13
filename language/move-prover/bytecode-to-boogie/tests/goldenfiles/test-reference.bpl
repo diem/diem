@@ -165,6 +165,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     call __tmp := LdConst(42);
     __m := UpdateLocal(__m, __frame + 11, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 1, 427); }
     goto Label_Abort;
 
 Label_16:

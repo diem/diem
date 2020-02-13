@@ -260,6 +260,7 @@ Label_11:
     call __tmp := LdConst(42);
     __m := UpdateLocal(__m, __frame + 22, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 2, 359); }
     goto Label_Abort;
 
 Label_27:

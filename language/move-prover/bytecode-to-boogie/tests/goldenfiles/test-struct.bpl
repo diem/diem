@@ -243,6 +243,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(42);
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 1, 576); }
     goto Label_Abort;
 
 Label_8:
@@ -449,6 +450,7 @@ Label_11:
     call __tmp := LdConst(42);
     __m := UpdateLocal(__m, __frame + 22, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 2, 1328); }
     goto Label_Abort;
 
 Label_26:
@@ -557,6 +559,7 @@ ensures old(b#Boolean(Boolean(false))) ==> __abort_flag;
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 14, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 3, 1610); }
     goto Label_Abort;
 
 Label_15:
