@@ -87,7 +87,7 @@ pub fn fuzzer(data: &[u8]) {
                     let data = req.data;
                     let res_tx = req.res_tx;
                     assert_eq!(protocol.as_ref(), MOCK_PROTOCOL_ID);
-                    res_tx.send(Ok(data)).unwrap();
+                    let _ = res_tx.send(Ok(data));
                 }
             }
         }
