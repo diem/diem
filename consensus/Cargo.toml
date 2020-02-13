@@ -33,6 +33,7 @@ prometheus = { version = "0.7.0", default-features = false }
 proptest = { version = "0.9.4", optional = true }
 
 channel = { path = "../common/channel", version = "0.1.0" }
+crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }
 consensus-types = { path = "consensus-types", version = "0.1.0", default-features = false }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
