@@ -237,6 +237,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 11, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 1, 2784); }
     goto Label_Abort;
 
 Label_11:
@@ -359,6 +360,7 @@ ensures old(b#Boolean(Boolean(!IsEqual(Address(TxnSenderAddress(__txn)), Address
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 2, 3875); }
     goto Label_Abort;
 
 Label_7:
@@ -706,6 +708,7 @@ ensures old(b#Boolean(Boolean(i#Integer(SelectField(Dereference(__m, coin_ref), 
     call __tmp := LdConst(10);
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 7, 5774); }
     goto Label_Abort;
 
 Label_11:
@@ -973,6 +976,7 @@ ensures old(b#Boolean(Boolean(!IsEqual(SelectField(coin, LibraCoin_T_value), Int
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 10, 7282); }
     goto Label_Abort;
 
 Label_10:

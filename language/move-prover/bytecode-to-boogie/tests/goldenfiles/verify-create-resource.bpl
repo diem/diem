@@ -75,6 +75,7 @@ ensures old(b#Boolean(ExistsResource(__m, TestSpecs_R_type_value(), a#Address(Ad
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 0, 240); }
     goto Label_Abort;
 
 Label_5:
@@ -141,6 +142,7 @@ ensures old(b#Boolean(ExistsResource(__m, TestSpecs_R_type_value(), a#Address(Ad
     call __tmp := LdConst(1);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
+    if (true) { assume $DebugTrackAbort(0, 1, 533); }
     goto Label_Abort;
 
 Label_5:
