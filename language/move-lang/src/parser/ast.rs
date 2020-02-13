@@ -311,7 +311,7 @@ pub enum Exp_ {
     Copy(Var),
     // n
     Name(Name),
-    // .n(e)
+    // ::n(e)
     GlobalCall(Name, Option<Vec<SingleType>>, Spanned<Vec<Exp>>),
 
     // f(earg,*)

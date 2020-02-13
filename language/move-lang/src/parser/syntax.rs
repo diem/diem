@@ -488,9 +488,7 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
 
 // Parse an expression term:
 //      Term =
-//          "move" <Var>
-//          | "copy" <Var>
-//          | "break"
+//          "break"
 //          | "continue"
 //          | <Name>
 //          | <Value>
@@ -503,16 +501,6 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
 fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
     let term = match tokens.peek() {
-        Tok::Move => {
-            tokens.advance()?;
-            Exp_::Move(parse_var(tokens)?)
-        }
-
-        Tok::Copy => {
-            tokens.advance()?;
-            Exp_::Copy(parse_var(tokens)?)
-        }
-
         Tok::Break => {
             tokens.advance()?;
             Exp_::Break
@@ -713,10 +701,10 @@ fn parse_call_args<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<Vec<Exp
 //          "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
 //          | "while" "(" <Exp> ")" <Exp>
 //          | "loop" <Exp>
-//          | <UnaryExp> "=" <Exp>
 //          | "return" <Exp>
 //          | "abort" <Exp>
 //          | <BinOpExp>
+//          | <UnaryExp> "=" <Exp>
 fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
     let exp = match tokens.peek() {
@@ -802,7 +790,8 @@ fn get_precedence(token: Tok) -> u32 {
 
 // Parse a binary operator expression:
 //      BinOpExp =
-//          <UnaryExp> <BinOp> <BinOpExp>
+//          <BinOpExp> <BinOp> <BinOpExp>
+//          | <UnaryExp>
 //      BinOp = (listed from lowest to highest precedence)
 //          "||"
 //          | "&&"
@@ -879,6 +868,8 @@ fn parse_binop_exp<'input>(
 //          | "&mut" <UnaryExp>
 //          | "&" <UnaryExp>
 //          | "*" <UnaryExp>
+//          | "move" <Var>
+//          | "copy" <Var>
 //          | <DotChain>
 fn parse_unary_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
@@ -911,6 +902,14 @@ fn parse_unary_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             tokens.advance()?;
             let e = parse_unary_exp(tokens)?;
             Exp_::Dereference(Box::new(e))
+        }
+        Tok::Move => {
+            tokens.advance()?;
+            Exp_::Move(parse_var(tokens)?)
+        }
+        Tok::Copy => {
+            tokens.advance()?;
+            Exp_::Copy(parse_var(tokens)?)
         }
         _ => {
             return parse_dot_chain(tokens);

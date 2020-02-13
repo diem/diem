@@ -7,7 +7,7 @@ module M {
 
     public fun value(this: &T) : u64 {
         //borrow of move
-        let f = move this.v;
+        let f = (move this).v;
         f
     }
 }
