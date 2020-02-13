@@ -92,7 +92,7 @@ locals {
 
 variable "validator_type" {
   description = "EC2 instance type of validator instances"
-  default     = "c5d.large"
+  default     = "c5.large"
 }
 
 variable "validator_ebs_size" {
@@ -200,4 +200,9 @@ variable "safety_rules_image_tag" {
   type        = string
   description = "Docker image tag to use for safety-rules"
   default     = "latest"
+}
+
+variable "restore_vol_id" {
+  default     = ""
+  description = "volume id to restore validator data from"
 }
