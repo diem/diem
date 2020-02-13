@@ -261,7 +261,7 @@ impl Driver {
     }
 
     /// Creates a BoogieWrapper which allows to call boogie and analyze results.
-    pub fn new_boogie_wrapper<'env>(&'env self) -> BoogieWrapper<'env> {
+    pub fn new_boogie_wrapper(&self) -> BoogieWrapper<'_> {
         BoogieWrapper {
             env: &self.env,
             writer: &self.writer,

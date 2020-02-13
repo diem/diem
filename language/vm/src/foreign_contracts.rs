@@ -10,7 +10,7 @@ pub mod types {
     pub mod byte_array {
         pub struct ByteArray(Vec<u8>);
         impl ByteArray {
-            pub fn as_bytes<'a>(_self: &'a ByteArray) -> &'a [u8] {
+            pub fn as_bytes(_self: &ByteArray) -> &[u8] {
                 &_self.0
             }
             pub fn new(buf: Vec<u8>) -> Self {
