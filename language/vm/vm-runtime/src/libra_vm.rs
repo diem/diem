@@ -294,6 +294,8 @@ impl LibraVM {
         })
     }
 
+    /// Generates a transaction output for a transaction that encountered errors during the
+    /// execution process. This is public for now only for tests.
     pub fn failed_transaction_cleanup(
         &self,
         error_code: VMStatus,
