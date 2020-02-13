@@ -52,7 +52,7 @@ pub struct PerformanceBenchmarkNodesDown {
     duration: Duration,
 }
 
-pub const DEFAULT_BENCH_DURATION: u64 = 180;
+pub const DEFAULT_BENCH_DURATION: u64 = 120;
 
 impl PerformanceBenchmarkNodesDownParams {
     pub fn new_nodes_down(num_nodes_down: usize) -> Self {
@@ -153,7 +153,7 @@ impl Experiment for PerformanceBenchmarkNodesDown {
     }
 
     fn deadline(&self) -> Duration {
-        Duration::from_secs(480)
+        Duration::from_secs(600)
     }
 }
 
