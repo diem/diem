@@ -8,8 +8,8 @@ resource "aws_elasticsearch_domain" "logging" {
   }
 
   ebs_options {
-      ebs_enabled = true
-      volume_size = var.elastic_storage_size
+    ebs_enabled = true
+    volume_size = var.elastic_storage_size
   }
 
   snapshot_options {
@@ -18,7 +18,7 @@ resource "aws_elasticsearch_domain" "logging" {
 }
 
 data "aws_iam_policy_document" "logging" {
-  count     = var.enable_logstash ? 1 : 0
+  count      = var.enable_logstash ? 1 : 0
   depends_on = [aws_instance.validator]
   statement {
     actions = [
@@ -38,7 +38,7 @@ data "aws_iam_policy_document" "logging" {
       test     = "IpAddress"
       variable = "aws:SourceIp"
 
-      values = concat(["199.201.64.0/22",],aws_instance.validator.*.public_ip)
+      values = concat(["199.201.64.0/22", ], aws_instance.validator.*.public_ip)
     }
   }
 }
