@@ -90,7 +90,10 @@ pub struct Function {
 //**************************************************************************************************
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum BaseType_ {
+    // TODO this can be removed after the type system rework
+    UnresolvedError,
     Param(TParam),
     Apply(Kind, TypeName, Vec<BaseType>),
 }
@@ -198,6 +201,8 @@ pub enum UnannotatedExp_ {
 
     Borrow(bool, Box<Exp>, Field),
     BorrowLocal(bool, Var),
+
+    Unreachable,
 
     UnresolvedError,
 }
@@ -315,6 +320,10 @@ impl BaseType_ {
         match self {
             BaseType_::Apply(k, _, _) => k.clone(),
             BaseType_::Param(TParam { kind, .. }) => kind.clone(),
+            BaseType_::UnresolvedError => panic!(
+                "ICE unresolved error has no kind. \
+                 Should only exist in dead code that should not be analyzed"
+            ),
         }
     }
 }
@@ -519,6 +528,7 @@ impl AstDebug for FunctionSignature {
 impl AstDebug for BaseType_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
+            BaseType_::UnresolvedError => w.write("_|_"),
             BaseType_::Param(tp) => tp.ast_debug(w),
             BaseType_::Apply(k, m, ss) => {
                 w.annotate(
@@ -734,6 +744,7 @@ impl AstDebug for UnannotatedExp_ {
                 w.write(&format!("{}", v));
             }
             E::UnresolvedError => w.write("_|_"),
+            E::Unreachable => w.write("unreachable"),
         }
     }
 }

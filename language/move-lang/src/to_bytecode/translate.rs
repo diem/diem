@@ -634,6 +634,7 @@ fn base_type(context: &mut Context, sp!(_, bt_): G::BaseType) -> Result<F::Signa
     use F::SignatureToken as ST;
     use G::BaseType_ as B;
     Ok(match bt_ {
+        B::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Address))), _) => ST::Address,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U64))), _) => ST::U64,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bool))), _) => ST::Bool,
@@ -833,6 +834,7 @@ fn exp_(
     let ty = e.ty;
     let sp!(eloc, e_) = e.exp;
     match e_ {
+        E::Unreachable => panic!("ICE should not compile dead code"),
         E::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
         E::Unit => (),
         E::Value(v) => {

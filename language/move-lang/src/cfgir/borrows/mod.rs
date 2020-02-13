@@ -263,6 +263,8 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
             .iter()
             .flat_map(|item| exp_list_item(context, item))
             .collect(),
+
+        E::Unreachable => panic!("ICE should not analyze dead code"),
     }
 }
 

@@ -229,6 +229,8 @@ fn exp(context: &mut Context, parent_e: &Exp) {
         E::Pack(_, _, fields) => fields.iter().for_each(|(_, _, e)| exp(context, e)),
 
         E::ExpList(es) => es.iter().for_each(|item| exp_list_item(context, item)),
+
+        E::Unreachable => panic!("ICE should not analyze dead code"),
     }
 }
 

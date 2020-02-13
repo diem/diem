@@ -153,6 +153,8 @@ mod count {
             E::Pack(_, _, fields) => fields.iter().for_each(|(_, _, e)| exp(context, e)),
 
             E::ExpList(es) => es.iter().for_each(|item| exp_list_item(context, item)),
+
+            E::Unreachable => panic!("ICE should not analyze dead code"),
         }
     }
 
@@ -206,6 +208,8 @@ mod count {
             E::ModuleCall(mcall) => can_subst_exp_module_call(mcall),
             E::ExpList(es) => es.iter().all(|i| can_subst_exp_item(i)),
             E::Pack(_, _, fields) => fields.iter().all(|(_, _, e)| can_subst_exp_single(e)),
+
+            E::Unreachable => panic!("ICE should not analyze dead code"),
         }
     }
 
@@ -371,6 +375,8 @@ mod eliminate {
             E::Pack(_, _, fields) => fields.iter_mut().for_each(|(_, _, e)| exp(context, e)),
 
             E::ExpList(es) => es.iter_mut().for_each(|item| exp_list_item(context, item)),
+
+            E::Unreachable => panic!("ICE should not analyze dead code"),
         }
     }
 
