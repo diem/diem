@@ -20,4 +20,4 @@ tokio-util = { version = "0.2", features = ["codec"] }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 memsocket = { path = "../memsocket", version = "0.1.0" }
 netcore = { path = "../netcore", version = "0.1.0" }
-noise = { path = "../noise", version = "0.1.0" }
+noise = { path = "../noise", version = "0.1.0", features = ["testing"] }

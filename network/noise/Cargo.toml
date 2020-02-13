@@ -18,3 +18,7 @@ libra-logger = { path = "../../common/logger", version = "0.1.0" }
 
 [dev-dependencies]
 memsocket = { path = "../memsocket", version = "0.1.0" }
+
+[features]
+default = []
+testing = []

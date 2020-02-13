@@ -625,7 +625,7 @@ where
 mod test {
     use crate::{
         socket::{Handshake, NoiseSocket, MAX_PAYLOAD_LENGTH},
-        NOISE_IX_PARAMETER,
+        NOISE_PARAMETER,
     };
     use futures::{
         executor::block_on,
@@ -643,7 +643,7 @@ mod test {
         ),
         snow::error::Error,
     > {
-        let parameters: NoiseParams = NOISE_IX_PARAMETER.parse().expect("Invalid protocol name");
+        let parameters: NoiseParams = NOISE_PARAMETER.parse().expect("Invalid protocol name");
 
         let dialer_keypair = Builder::new(parameters.clone()).generate_keypair()?;
         let listener_keypair = Builder::new(parameters.clone()).generate_keypair()?;
