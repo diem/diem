@@ -36,12 +36,12 @@ EOF
 
 {% if enable_logrotate %}
 cat > /etc/logrotate.d/libra <<EOF
-${log_path} {
-	daily
-	size 100M
+${host_log_path} {
+	size 500M
 	rotate 100
 	compress
 	delaycompress
+	copytruncate
 }
 EOF
 {% end %}
