@@ -3,7 +3,7 @@ module A {
 
     public fun t(changed: bool, s: &mut S) {
         if (changed) {
-            foo(&mut move s.value);
+            foo(&mut (move s).value);
         }
     }
 
