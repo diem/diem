@@ -152,6 +152,9 @@ function {:inline} ReverseValueArray(a: ValueArray): ValueArray {
         l#ValueArray(a)
     )
 }
+function {:inline} SliceValueArray(a: ValueArray, i: int, j: int): ValueArray { // return the sliced vector of a for the range [i, j)
+    ValueArray((lambda k:int :: if k < j-i then v#ValueArray(a)[i+k] else DefaultValue), j-i)
+}
 function {:inline} ExtendValueArray(a: ValueArray, elem: Value): ValueArray {
     ValueArray(v#ValueArray(a)[l#ValueArray(a) := elem], l#ValueArray(a) + 1)
 }
@@ -292,8 +295,15 @@ function {:inline} reverse_vector(v: Value): Value {
 function {:inline} update_vector(v: Value, i: int, elem: Value): Value {
     Vector(UpdateValueArray(v#Vector(v), i, elem))
 }
+function {:inline} select_vector(v: Value, i: int) : Value {
+    vmap(v)[i]
+}
 function {:inline} swap_vector(v: Value, i: int, j: int): Value {
     Vector(SwapValueArray(v#Vector(v), i, j))
+}
+function {:inline} slice_vector(v: Value, i: int, j: int) : Value {
+    Vector(SliceValueArray(v#Vector(v), i, j))
+
 }
 
 // ============================================================================================

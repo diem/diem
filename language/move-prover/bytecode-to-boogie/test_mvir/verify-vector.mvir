@@ -297,65 +297,71 @@ module VerifyVector {
 
     // succeeds.
     public my_length1(v: Vector.T< u64>): u64
-    ensures vector_length(v) == RET(0)
+    ensures len(v) == RET(0)
     // TODO: spec_translator cannot handle the following post-conditions
-    // ensures vector_length(v) + 1 == RET(0) // thread 'main' panicked at 'unexpected type', language/move-prover/bytecode-to-boogie/src/spec_translator.rs:343:18
-    // ensures vector_length(v) < RET(0) + 1 // thread 'main' panicked at 'unexpected type', language/move-prover/bytecode-to-boogie/src/spec_translator.rs:343:18
+        // error: unknown result type of helper function; cannot use in operation
+        // error: incompatible types: expected `tv65534`, found `IntegerType()`
+        // ensures len(v) + 1 == RET(0)
+        // ensures len(v) < RET(0) + 1
     {
         return Vector.length<u64>(&v);
     }
 
     // succeeds. standard vector method (without type parameter).
     public my_length2(v: &Vector.T< u64>): u64
-    ensures vector_length(*v) == RET(0)
+    ensures len(*v) == RET(0)
     {
         return Vector.length<u64>(copy(v));
     }
 
     // succeeds. standard vector method.
     public my_length3<Element>(v: &Vector.T< Element>): u64
-    ensures vector_length(*v) == RET(0)
+    ensures len(*v) == RET(0)
     {
         return Vector.length<Element>(copy(v));
     }
 
     // succeeds.
     public my_get1(v: Vector.T<u64>, i: u64): u64
-    aborts_if i >= vector_length(v)
-    ensures RET(0) == vector_get(v, i)
+    aborts_if i >= len(v)
+    //ensures RET(0) == vector_get(v, i)
+    ensures RET(0) == v[i]
     {
         return *Vector.borrow<u64>(&v, move(i));
     }
 
     // succeeds. standard vector method (without type parameter).
     public my_get2(v: &Vector.T<u64>, i: u64): u64
-    aborts_if i >= vector_length(*v)
-    ensures RET(0) == vector_get(*v, i)
+    aborts_if i >= len(*v)
+    //ensures RET(0) == vector_get(*v, i)
+    ensures RET(0) == v[i]
     {
         return *Vector.borrow<u64>(move(v), move(i));
     }
 
     // succeeds.
     public my_get3(v: &Vector.T<u64>, i: u64): u64
-    aborts_if i >= vector_length(*v)
-    aborts_if vector_get(*v, i) == 0
-    ensures RET(0) + 1 == vector_get(*v, i)
+    aborts_if i >= len(*v)
+    //aborts_if vector_get(*v, i) == 0
+    aborts_if v[i] == 0
+    ensures RET(0) + 1 == v[i]
     {
         return *Vector.borrow<u64>(move(v), move(i)) - 1;
     }
 
     // succeeds. standard vector method.
     public my_get4<Element: unrestricted>(v: &Vector.T<Element>, i: u64): Element
-    aborts_if i >= vector_length(*v)
-    ensures RET(0) == vector_get(*v, i)
+    aborts_if i >= len(*v)
+    //ensures RET(0) == vector_get(*v, i)
+    ensures RET(0) == v[i]
     {
         return *Vector.borrow<Element>(move(v), move(i));
     }
 
     // succeeds.
     public my_set1(v: Vector.T<u64>, i: u64, e: u64) : Vector.T<u64>
-    aborts_if i >= vector_length(v)
-    ensures RET(0) == vector_update(v, i, e)
+    aborts_if i >= len(v)
+    ensures RET(0) == v[i := e]
     {
         *(Vector.borrow_mut<u64>(&mut v, move(i))) = move(e);
         return move(v);
@@ -363,8 +369,8 @@ module VerifyVector {
 
     // succeeds. standard vector method (without type parameter).
     public my_set2(v: &mut Vector.T<u64>, i: u64, e: u64)
-    aborts_if i >= vector_length(*v)
-    ensures *v == vector_update(old(*v), i, e)
+    aborts_if i >= len(*v)
+    ensures *v == old(v[i:=e])
     {
         *(Vector.borrow_mut<u64>(move(v), move(i))) = move(e);
         return;
@@ -372,8 +378,9 @@ module VerifyVector {
 
     // succeeds. standard vector method.
     public my_set3<Element: unrestricted>(v: &mut Vector.T<Element>, i: u64, e: Element)
-    aborts_if i >= vector_length(*v)
-    ensures *v == vector_update(old(*v), i, e)
+    aborts_if i >= len(*v)
+    ensures *v == old(v[i:=e])
+    //ensures *v == old(*v)[i:=e] // mvir parsing errors: ParserError: Invalid token at 11189
     {
         *(Vector.borrow_mut<Element>(move(v), move(i))) = move(e);
         return;
@@ -387,5 +394,95 @@ module VerifyVector {
         return Vector.length<u64>(move(v)) == 0;
     }
 
-    // TODO: to test composition of helper functions
+    public test_slice1() : Vector.T<u64> * Vector.T<u64>
+    ensures RET(0) == RET(1)[1..3]
+    ensures RET(0) != RET(1)[0..2]
+    ensures RET(0) == RET(1)[4..6]
+    ensures RET(0)[0..2] == RET(1)[4..6]
+    ensures RET(0)[1..2] == RET(1)[2..3]
+    ensures RET(1)[1..3] == RET(1)[4..6]
+    {
+        let ev1: Vector.T<u64>;
+        let ev2: Vector.T<u64>;
+        ev1 = Vector.empty<u64>();
+        ev2 = Vector.empty<u64>();
+        Vector.push_back<u64>(&mut ev1, 1);
+        Vector.push_back<u64>(&mut ev1, 2);
+
+        Vector.push_back<u64>(&mut ev2, 0);
+        Vector.push_back<u64>(&mut ev2, 1);
+        Vector.push_back<u64>(&mut ev2, 2);
+        Vector.push_back<u64>(&mut ev2, 3);
+        Vector.push_back<u64>(&mut ev2, 1);
+        Vector.push_back<u64>(&mut ev2, 2);
+        return (move(ev1), move(ev2)); // return ([1,2], [1,2,3,1,2])
+    }
+
+    // succeeds.
+    public my_push_back1(v: &mut Vector.T<u64>, e: u64)
+    aborts_if e == 9223372036854775807
+    ensures len(*v) == len(old(*v)) + 1
+    ensures v[len(*v)-1] == e + 1
+    {
+        let x : u64;
+        x = move(e) + 1;
+        Vector.push_back<u64>(move(v), move(x));
+        return;
+    }
+
+    // succeeds.
+    public my_push_back2(v: &mut Vector.T<u64>, e: u64)
+    aborts_if e == 9223372036854775807
+    ensures len(*v) == len(old(*v)) + 2
+    ensures v[len(*v)-1] == e
+    ensures v[len(*v)-2] == e+1
+    ensures old(*v) == v[0..len(*v)-2]
+    {
+        Vector.push_back<u64>(copy(v), copy(e)+1);
+        Vector.push_back<u64>(move(v), move(e));
+        return;
+    }
+
+    // succeeds. standard vector method (without type parameter).
+    public my_push_back3(v: &mut Vector.T<u64>, e: u64)
+    ensures len(*v) == len(old(*v)) + 1
+    ensures v[len(*v)-1] == e
+    ensures old(*v) == v[0..len(*v)-1]
+    {
+        Vector.push_back<u64>(move(v), move(e));
+        return;
+    }
+
+    // succeeds. standard vector method.
+    public my_push_back4<Element>(v: &mut Vector.T<Element>, e: Element)
+    ensures len(*v) == len(old(*v)) + 1
+    ensures v[len(*v)-1] == e
+    ensures old(*v) == v[0..len(*v)-1]
+    {
+        Vector.push_back<Element>(move(v), move(e));
+        return;
+    }
+
+    // succeeds. standard vector method (without type parameter).
+    public pop_back1(v: &mut Vector.T<u64>): u64
+    aborts_if len(*v) == 0
+    ensures len(*v) == old(len(*v)) - 1
+    ensures old(v[len(*v)-1]) == RET(0)
+    ensures *v == old(v[0..len(*v)-1])
+    {
+        return Vector.pop_back<u64>(move(v));
+    }
+
+    // succeeds. standard vector method.
+    public pop_back2<Element>(v: &mut Vector.T<Element>): Element
+    aborts_if len(*v) == 0
+    ensures len(*v) == old(len(*v)) - 1
+    ensures RET(0) == old(v[len(*v)-1])
+    ensures *v == old(v[0..len(*v)-1])
+    {
+        return Vector.pop_back<Element>(move(v));
+    }
+
+    // TODO: specifying the following vector methods: swap, append, remove_unstable
+    // NOTE: the current spec language cannot specify the following vector methods: reverse, contains
 }

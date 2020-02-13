@@ -5,6 +5,11 @@
 module VerifyVector {
     import 0x0.Vector;
 
+    struct T {
+        x: u128,
+        y: u64,
+    }
+
     // succeeds. [] == [].
     public test_empty1() : Vector.T<u64> * Vector.T<u64>
     ensures RET(0) == RET(1)
@@ -31,10 +36,17 @@ module VerifyVector {
     }
 
     // succeeds. [1] == [1]
-    public test_empty3() : Vector.T<u64> * Vector.T<u64>
+    public test_empty3(v : &Vector.T<u64>) : Vector.T<u64> * Vector.T<u64>
     // TODO: next spec crashes because vec indices don't generate boogie yet.
     // spec should succeed
-    // ensures RET(0)[0] == RET(1)[0]  // inserts nonsense in boogie file
+    // ensures RET(0)[0] == RET(1)[0] // working!
+    // ensures RET(0)[0] + 1 == 2 // type error!
+    // ensures t.x + 1 == 0 // Struct(1, StructDefinitionIndex(0), [])
+//    ensures RET(0)[0] + 1 == 1 + 1 // Struct(0, StructDefinitionIndex(0), [U64])
+//    ensures v[0] == 0
+    ensures v[1:=7][1] - 1 == 6
+    ensures v[1..2] == v[1..2]
+    //ensures v == v[1 := 3]
     {
         let ev1: Vector.T<u64>;
         let ev2: Vector.T<u64>;
@@ -292,9 +304,9 @@ module VerifyVector {
         return (7, *move(y));
     }
 
-    // fails. 0 != 7
+    // success. 0 != 7
     public test_borrow3() : u64 * u64
-    ensures RET(0) == RET(1) //! A postcondition might not hold on this return path.
+    ensures RET(0) != RET(1)
     {
         let ev1: Vector.T<u64>;
         let y : &u64;
