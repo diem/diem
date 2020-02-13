@@ -16,11 +16,11 @@ itertools = "0.8.0"
 rand = "0.6.5"
 regex = { version = "1.3.0", default-features = false, features = ["std", "perf"] }
 reqwest = { version="0.10.1", features=["blocking", "json", "rustls-tls"], default_features = false }
-rusoto_core = {version = "0.41.0", features=["rustls"], default_features = false}
-rusoto_ec2 = {version = "0.41.0", features=["rustls"], default_features = false}
-rusoto_ecr = {version = "0.41.0", features=["rustls"], default_features = false}
-rusoto_ecs = {version = "0.41.0", features=["rustls"], default_features = false}
-rusoto_s3 = {version = "0.41.0", features=["rustls"], default_features = false}
+rusoto_core = {version = "0.42.0", features=["rustls"], default_features = false}
+rusoto_ec2 = {version = "0.42.0", features=["rustls"], default_features = false}
+rusoto_ecr = {version = "0.42.0", features=["rustls"], default_features = false}
+rusoto_ecs = {version = "0.42.0", features=["rustls"], default_features = false}
+rusoto_s3 = {version = "0.42.0", features=["rustls"], default_features = false}
 serde_json = "1.0"
 termion = "1.5.3"
 serde = { version = "1.0.89", features = ["derive"] }
