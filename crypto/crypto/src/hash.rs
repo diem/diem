@@ -98,7 +98,7 @@ use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
 use serde::{de, ser};
 use std::{self, convert::AsRef, fmt};
-use tiny_keccak::Keccak;
+use tiny_keccak::{Hasher, Sha3};
 
 const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
 
@@ -175,7 +175,7 @@ impl HashValue {
     /// Convenience function to compute a sha3-256 HashValue of the buffer. It will handle hasher
     /// creation, data feeding and finalization.
     pub fn from_sha3_256(buffer: &[u8]) -> Self {
-        let mut sha3 = Keccak::new_sha3_256();
+        let mut sha3 = Sha3::v256();
         sha3.update(buffer);
         HashValue::from_keccak(sha3)
     }
@@ -185,7 +185,7 @@ impl HashValue {
     where
         I: IntoIterator<Item = &'a [u8]>,
     {
-        let mut sha3 = Keccak::new_sha3_256();
+        let mut sha3 = Sha3::v256();
         for buffer in buffers {
             sha3.update(buffer);
         }
@@ -196,7 +196,7 @@ impl HashValue {
         &mut self.hash[..]
     }
 
-    fn from_keccak(state: Keccak) -> Self {
+    fn from_keccak(state: Sha3) -> Self {
         let mut hash = Self::zero();
         state.finalize(hash.as_ref_mut());
         hash
@@ -447,7 +447,7 @@ pub trait CryptoHasher: Default {
 /// * Only used internally within this crate
 #[derive(Clone)]
 pub struct DefaultHasher {
-    state: Keccak,
+    state: Sha3,
 }
 
 impl CryptoHasher for DefaultHasher {
@@ -466,7 +466,7 @@ impl CryptoHasher for DefaultHasher {
 impl Default for DefaultHasher {
     fn default() -> Self {
         DefaultHasher {
-            state: Keccak::new_sha3_256(),
+            state: Sha3::v256(),
         }
     }
 }
@@ -474,7 +474,7 @@ impl Default for DefaultHasher {
 impl DefaultHasher {
     /// initialize a new hasher with a specific salt
     pub fn new_with_salt(typename: &[u8]) -> Self {
-        let mut state = Keccak::new_sha3_256();
+        let mut state = Sha3::v256();
         if !typename.is_empty() {
             let mut salt = typename.to_vec();
             salt.extend_from_slice(LIBRA_HASH_SUFFIX);
