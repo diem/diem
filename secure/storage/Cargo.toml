@@ -18,7 +18,7 @@ libra-secure-time = { path = "../time", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libra-vault-client = { path = "vault", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-rand = "0.6.5"
+rand = "0.7.3"
 serde = { version = "1.0.106", features = ["rc"], default-features = false }
 serde_json = "1.0.51"
 thiserror = "1.0"
@@ -26,7 +26,7 @@ toml = { version = "0.5.3", default-features = false }
 
 [dev-dependencies]
 libra-config = { path = "../../config", version = "0.1.0" }
-rand = "0.6.5"
+rand = "0.7.3"
 
 [features]
 fuzzing = ["libra-crypto/fuzzing"]

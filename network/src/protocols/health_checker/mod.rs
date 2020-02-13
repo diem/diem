@@ -37,7 +37,7 @@ use futures::{
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
-use rand::{rngs::SmallRng, seq::SliceRandom, FromEntropy, Rng};
+use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
 

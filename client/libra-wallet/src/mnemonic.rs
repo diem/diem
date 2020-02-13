@@ -12,7 +12,7 @@ use anyhow::Result;
 use libra_temppath::TempPath;
 use mirai_annotations::*;
 #[cfg(test)]
-use rand::rngs::EntropyRng;
+use rand::rngs::OsRng;
 #[cfg(test)]
 use rand::RngCore;
 use sha2::{Digest, Sha256};
@@ -453,7 +453,7 @@ const WORDS: [&str; 2048] = [
 
 #[test]
 fn test_roundtrip_mnemonic() {
-    let mut rng = EntropyRng::new();
+    let mut rng = OsRng;
     let mut buf = [0u8; 32];
     rng.fill_bytes(&mut buf[..]);
     let file = TempPath::new();

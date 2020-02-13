@@ -38,7 +38,7 @@ storage-proto = { path = "../../storage/storage-proto", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9.6"
-rand = "0.6.5"
+rand = "0.7.3"
 rusty-fork = "0.2.1"
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }

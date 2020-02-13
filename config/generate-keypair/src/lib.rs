@@ -24,7 +24,7 @@ pub fn create_faucet_key_file(output_file: &str) -> KeyPair<Ed25519PrivateKey, E
         panic!("Specified output file path is a directory");
     }
 
-    let mut seed_rng = OsRng::new().expect("can't access OsRng");
+    let mut seed_rng = OsRng;
     let mut rng = rand::rngs::StdRng::from_seed(seed_rng.gen());
 
     let private_key = Ed25519PrivateKey::generate(&mut rng);

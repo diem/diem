@@ -55,7 +55,7 @@ use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
-use rand::{rngs::SmallRng, FromEntropy, Rng};
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::max,

@@ -189,7 +189,7 @@ impl AuthenticationKey {
 
     /// Create a random authentication key. For testing only
     pub fn random() -> Self {
-        let mut rng = OsRng::new().expect("can't access OsRng");
+        let mut rng = OsRng;
         let buf: [u8; Self::LENGTH] = rng.gen();
         AuthenticationKey::new(buf)
     }
