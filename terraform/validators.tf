@@ -120,7 +120,7 @@ data "template_file" "user_data" {
 
   vars = {
     ecs_cluster      = aws_ecs_cluster.testnet.name
-    log_path         = var.log_path
+    host_log_path    = "/data/libra/libra.log"
     enable_logrotate = var.log_to_file || var.enable_logstash
   }
 }
