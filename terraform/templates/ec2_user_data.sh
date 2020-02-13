@@ -36,14 +36,16 @@ EOF
 
 {% if enable_logrotate %}
 cat > /etc/logrotate.d/libra <<EOF
+hourly
 ${host_log_path} {
-	size 500M
+	maxsize 500M
 	rotate 100
 	compress
 	delaycompress
 	copytruncate
 }
 EOF
+sudo mv /etc/cron.daily/logrotate /etc/cron.hourly/
 {% end %}
 
 yum -y install ngrep tcpdump perf gdb nmap-ncat strace htop sysstat tc git
