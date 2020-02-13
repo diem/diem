@@ -145,7 +145,7 @@ impl Cluster {
         &self.validator_instances
     }
     pub fn fullnode_instances(&self) -> &[Instance] {
-        &self.validator_instances
+        &self.fullnode_instances
     }
 
     pub fn all_instances(&self) -> impl Iterator<Item = &Instance> {

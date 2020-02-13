@@ -57,6 +57,7 @@ pub struct Context<'a> {
     cluster: &'a Cluster,
     report: &'a mut SuiteReport,
     global_emit_job_request: &'a mut Option<EmitJobRequest>,
+    emit_to_validator: bool,
 }
 
 impl<'a> Context<'a> {
@@ -66,6 +67,7 @@ impl<'a> Context<'a> {
         cluster: &'a Cluster,
         report: &'a mut SuiteReport,
         emit_job_request: &'a mut Option<EmitJobRequest>,
+        emit_to_validator: bool,
     ) -> Self {
         Context {
             tx_emitter,
@@ -73,6 +75,7 @@ impl<'a> Context<'a> {
             cluster,
             report,
             global_emit_job_request: emit_job_request,
+            emit_to_validator,
         }
     }
 }

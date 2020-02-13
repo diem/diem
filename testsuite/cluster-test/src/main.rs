@@ -120,6 +120,12 @@ struct Args {
     //stop_experiment options
     #[structopt(long, default_value = "10")]
     max_stopped: usize,
+
+    #[structopt(
+        long,
+        help = "Whether transactions should be submitted to validators or full nodes"
+    )]
+    pub emit_to_validator: Option<bool>,
 }
 
 pub fn main() {
@@ -288,6 +294,7 @@ struct ClusterTestRunner {
     github: GitHub,
     report: SuiteReport,
     global_emit_job_request: EmitJobRequest,
+    emit_to_validator: bool,
 }
 
 fn parse_host_port(s: &str) -> Result<(String, u32)> {
@@ -467,6 +474,11 @@ impl ClusterTestRunner {
                 wait_committed: !args.burst,
             },
         };
+        let emit_to_validator = if cluster.fullnode_instances().is_empty() {
+            true
+        } else {
+            args.emit_to_validator.unwrap_or(false)
+        };
         Self {
             logs,
             cluster,
@@ -481,6 +493,7 @@ impl ClusterTestRunner {
             github,
             report,
             global_emit_job_request,
+            emit_to_validator,
         }
     }
 
@@ -628,6 +641,7 @@ impl ClusterTestRunner {
             &self.cluster,
             &mut self.report,
             &mut global_emit_job_request,
+            self.emit_to_validator,
         );
         {
             let logs = &mut self.logs;

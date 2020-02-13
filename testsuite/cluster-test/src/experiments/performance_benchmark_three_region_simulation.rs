@@ -38,8 +38,11 @@ impl ExperimentParam for PerformanceBenchmarkThreeRegionSimulationParams {
 #[async_trait]
 impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
-        let (us, euro) = self.cluster.split_n_validators_random(80);
-        let (us_west, us_east) = us.split_n_validators_random(40);
+        let num_nodes = self.cluster.validator_instances().len();
+        let split_country_num = ((num_nodes as f64) * 0.8) as usize;
+        let split_region_num = split_country_num / 2;
+        let (us, euro) = self.cluster.split_n_validators_random(split_country_num);
+        let (us_west, us_east) = us.split_n_validators_random(split_region_num);
         let network_effects = three_region_simulation_effects(
             (
                 us_west.validator_instances().to_vec(),
@@ -54,10 +57,17 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         );
         join_all(network_effects.iter().map(|e| e.activate())).await;
         let window = Duration::from_secs(240);
-        let emit_job_request = EmitJobRequest::for_instances(
-            context.cluster.validator_instances().to_vec(),
-            context.global_emit_job_request,
-        );
+        let emit_job_request = if context.emit_to_validator {
+            EmitJobRequest::for_instances(
+                context.cluster.validator_instances().to_vec(),
+                context.global_emit_job_request,
+            )
+        } else {
+            EmitJobRequest::for_instances(
+                context.cluster.fullnode_instances().to_vec(),
+                context.global_emit_job_request,
+            )
+        };
         context
             .tx_emitter
             .emit_txn_for(window, emit_job_request)
