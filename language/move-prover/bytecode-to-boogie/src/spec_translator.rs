@@ -636,19 +636,10 @@ impl<'env> SpecTranslator<'env> {
                 let right = self.translate_expr(right);
                 self.translate_binop(op, left, right)
             }
-            SpecExp::Update(ind, new_val) => {
-                let BoogieExpr(ind, t_ind) = self.translate_expr(ind);
-                self.require_type(t_ind, &GlobalType::Bool);
-                let BoogieExpr(new_val, t_nv) = self.translate_expr(new_val);
-                self.require_type(t_nv, &GlobalType::Bool);
-                BoogieExpr(
-                    format!(
-                        "Unimplemented array update: AST ind: {:?}, AST new_val: {:?}",
-                        ind, new_val
-                    ),
-                    GlobalType::Subrange,
-                )
-            }
+            SpecExp::Update(_, _) => self.error(
+                "Vector update operator (:=) should not be used here",
+                self.error_exp(),
+            ),
             SpecExp::Old(expr) => {
                 if *self.in_old.borrow() {
                     self.error("cannot nest `old(_)`", self.error_exp())
@@ -663,16 +654,23 @@ impl<'env> SpecTranslator<'env> {
                     }
                 }
             }
-            SpecExp::Call(name, exprs) => BoogieExpr(
-                format!(
-                    "{}({})",
-                    name,
-                    exprs.iter().map(|e| self.translate_expr(e).0).join(", ")
+            SpecExp::Call(name, exprs) => match name.as_str() {
+                "len" => BoogieExpr(
+                    format!(
+                        "Integer(vlen({}))",
+                        exprs.iter().map(|e| self.translate_expr(e).0).join(", ")
+                    ),
+                    GlobalType::U64,
                 ),
-                // We currently do not have a way to know the return type (and expected argument
-                // types) of a helper function.
-                UNKNOWN_TYPE,
-            ),
+                _ => BoogieExpr(
+                    format!(
+                        "{}({})",
+                        name,
+                        exprs.iter().map(|e| self.translate_expr(e).0).join(", ")
+                    ),
+                    UNKNOWN_TYPE,
+                ),
+            },
         }
     }
 
@@ -860,14 +858,51 @@ impl<'env> SpecTranslator<'env> {
                     res = format!("Dereference(__m, {})", res);
                     t = *vt;
                 }
+
                 for f_or_i in fields_and_indices {
-                    if let FieldOrIndex::Field(f) = f_or_i {
-                        let (s, tf) = self.translate_field_access(&t, f);
-                        res = format!("SelectField({}, {})", res, s);
-                        t = tf;
-                    } else {
-                        // TODO: Implement vector index.  For now, generates illegal Boogie.
-                        res = format!("Unimplemented vector index. AST = {:?}", f_or_i);
+                    match f_or_i {
+                        FieldOrIndex::Field(f) => {
+                            let (s, tf) = self.translate_field_access(&t, f);
+                            res = format!("SelectField({}, {})", res, s);
+                            t = tf;
+                        }
+                        FieldOrIndex::Index(i) => {
+                            match i {
+                                SpecExp::Update(ind, val) => {
+                                    let BoogieExpr(idx, _t_ind) = self.translate_expr(&ind);
+                                    let BoogieExpr(val, _t_val) = self.translate_expr(&val);
+                                    // TODO: raise an error if t_ind is not an integer type (u8, u64, u128)
+                                    // TODO: raise an error if t_val is not an Element type
+                                    res = format!(
+                                        "update_vector({}, i#Integer({}), {})",
+                                        res, idx, val
+                                    );
+                                    // t does not change.
+                                }
+                                SpecExp::Binop(left, BinOp::Subrange, right) => {
+                                    let BoogieExpr(left, _t_left) = self.translate_expr(&left);
+                                    let BoogieExpr(right, _t_right) = self.translate_expr(&right);
+                                    // TODO: raise an error if t_left is not an integer type (u8, u64, u128)
+                                    // TODO: raise an error if t_right is not an integer type (u8, u64, u128)
+                                    res = format!(
+                                        "slice_vector({}, i#Integer({}), i#Integer({}))",
+                                        res, left, right
+                                    );
+                                }
+                                _ => {
+                                    let BoogieExpr(s, _ti) = self.translate_expr(&i);
+                                    // TODO: raise an error if _ti is not an integer type (u8, u64, u128)
+                                    res = format!("select_vector({}, i#Integer({}))", res, s);
+                                    if let GlobalType::Struct(_, _, vt) = &mut t {
+                                        // vt should be a vector with a single element.
+                                        t = match vt.pop() {
+                                            Some(vt) => vt,
+                                            None => t, // TODO: raise an error if None
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 BoogieExpr(res, t)
@@ -912,14 +947,16 @@ impl<'env> SpecTranslator<'env> {
             } => {
                 let BoogieExpr(mut res, mut t) = self.translate_location_as_reference(base);
                 for f_or_i in fields_and_indices {
-                    if let FieldOrIndex::Field(f) = f_or_i {
-                        let (s, tf) = self.translate_field_access(&t, f);
-                        res = format!("SelectFieldFromRef({}, {})", res, s);
-                        t = tf;
-                    } else {
-                        // TODO: Generate code for vector indexing
-                        res = format!("Unimplemented vector indexing. AST = {:?}", f_or_i);
-                        // unimplemented!("Index StorageLocation not yet implemented.");
+                    match f_or_i {
+                        FieldOrIndex::Field(f) => {
+                            let (s, tf) = self.translate_field_access(&t, f);
+                            res = format!("SelectFieldFromRef({}, {})", res, s);
+                            t = tf;
+                        }
+                        FieldOrIndex::Index(_i) => {
+                            // TODO: Generate code for vector indexing
+                            res = format!("Unimplemented vector indexing. AST = {:?}", f_or_i);
+                        }
                     }
                 }
                 BoogieExpr(res, t)
