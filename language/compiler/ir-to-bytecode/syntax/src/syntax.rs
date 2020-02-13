@@ -2088,40 +2088,40 @@ fn parse_script_or_module<'input>(
     }
 }
 
-pub fn parse_cmd_string<'input>(
-    input: &'input str,
+pub fn parse_cmd_string(
+    input: &str,
 ) -> Result<Cmd_, ParseError<usize, anyhow::Error>> {
     let mut tokens = Lexer::new(input);
     tokens.advance()?;
     parse_cmd_(&mut tokens)
 }
 
-pub fn parse_module_string<'input>(
-    input: &'input str,
+pub fn parse_module_string(
+    input: &str,
 ) -> Result<ModuleDefinition, ParseError<usize, anyhow::Error>> {
     let mut tokens = Lexer::new(input);
     tokens.advance()?;
     parse_module(&mut tokens)
 }
 
-pub fn parse_program_string<'input>(
-    input: &'input str,
+pub fn parse_program_string(
+    input: &str,
 ) -> Result<Program, ParseError<usize, anyhow::Error>> {
     let mut tokens = Lexer::new(input);
     tokens.advance()?;
     parse_program(&mut tokens)
 }
 
-pub fn parse_script_string<'input>(
-    input: &'input str,
+pub fn parse_script_string(
+    input: &str,
 ) -> Result<Script, ParseError<usize, anyhow::Error>> {
     let mut tokens = Lexer::new(input);
     tokens.advance()?;
     parse_script(&mut tokens)
 }
 
-pub fn parse_script_or_module_string<'input>(
-    input: &'input str,
+pub fn parse_script_or_module_string(
+    input: &str,
 ) -> Result<ScriptOrModule, ParseError<usize, anyhow::Error>> {
     let mut tokens = Lexer::new(input);
     tokens.advance()?;

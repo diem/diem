@@ -223,8 +223,8 @@ where
         }
     }
 
-    async fn handle_network_event<'a>(
-        &'a mut self,
+    async fn handle_network_event(
+        &mut self,
         event: Result<Event<DiscoveryMsg>, NetworkError>,
     ) {
         trace!("Network event::{:?}", event);

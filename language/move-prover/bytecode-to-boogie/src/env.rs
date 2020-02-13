@@ -259,7 +259,7 @@ impl GlobalEnv {
     }
 
     /// Gets a module by index.
-    pub fn get_module<'env>(&'env self, idx: usize) -> ModuleEnv<'env> {
+    pub fn get_module(&self, idx: usize) -> ModuleEnv<'_> {
         let module_data = &self.module_data[idx];
         ModuleEnv {
             env: self,
@@ -268,7 +268,7 @@ impl GlobalEnv {
     }
 
     /// Returns an iterator for all modules in the environment.
-    pub fn get_modules<'env>(&'env self) -> impl Iterator<Item = ModuleEnv<'env>> {
+    pub fn get_modules(&self) -> impl Iterator<Item = ModuleEnv<'_>> {
         self.module_data.iter().map(move |module_data| ModuleEnv {
             env: self,
             data: module_data,
@@ -276,7 +276,7 @@ impl GlobalEnv {
     }
 
     /// Returns an iterator for all bytecode modules in the environment.
-    pub fn get_bytecode_modules<'env>(&'env self) -> impl Iterator<Item = &'env VerifiedModule> {
+    pub fn get_bytecode_modules(&self) -> impl Iterator<Item = &VerifiedModule> {
         self.module_data
             .iter()
             .map(|module_data| &module_data.module)
