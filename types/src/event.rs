@@ -46,7 +46,7 @@ impl EventKey {
     #[cfg(feature = "fuzzing")]
     /// Create a random event key for testing
     pub fn random() -> Self {
-        let mut rng = OsRng::new().expect("can't access OsRng");
+        let mut rng = OsRng;
         let salt = rng.next_u64();
         EventKey::new_from_address(&AccountAddress::random(), salt)
     }

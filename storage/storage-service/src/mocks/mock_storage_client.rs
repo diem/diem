@@ -256,7 +256,7 @@ fn get_mock_txn_data(
     start_seq: u64,
     end_seq: u64,
 ) -> Vec<libra_types::proto::types::Transaction> {
-    let mut seed_rng = OsRng::new().expect("can't access OsRng");
+    let mut seed_rng = OsRng;
     let seed_buf: [u8; 32] = seed_rng.gen();
     let mut rng = StdRng::from_seed(seed_buf);
     let priv_key = Ed25519PrivateKey::generate(&mut rng);

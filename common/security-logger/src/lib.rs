@@ -3,7 +3,7 @@
 
 use backtrace::Backtrace;
 use libra_logger::error;
-use rand::{rngs::SmallRng, FromEntropy, Rng};
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 use serde::Serialize;
 use std::fmt::{self, Debug};
 

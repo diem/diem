@@ -42,7 +42,7 @@ impl NoiseConfig {
 
     /// Create a new NoiseConfig with an ephemeral static key.
     #[cfg(feature = "testing")]
-    pub fn new_random(rng: &mut (impl rand::RngCore + rand::CryptoRng)) -> Self {
+    pub fn new_random(rng: &mut (impl rand_core::RngCore + rand_core::CryptoRng)) -> Self {
         let parameters: NoiseParams = NOISE_PARAMETER.parse().expect("Invalid protocol name");
         let key = x25519::PrivateKey::for_test(rng);
         Self { key, parameters }

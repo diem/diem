@@ -34,7 +34,7 @@ impl AccountAddress {
     pub const DEFAULT: Self = Self([0u8; AccountAddress::LENGTH]);
 
     pub fn random() -> Self {
-        let mut rng = OsRng::new().expect("can't access OsRng");
+        let mut rng = OsRng;
         let buf: [u8; Self::LENGTH] = rng.gen();
         AccountAddress::new(buf)
     }

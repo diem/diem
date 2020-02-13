@@ -15,7 +15,7 @@ parity-multiaddr = { version = "0.8.0", default-features = false }
 tokio = { version = "0.2.13", features = ["full"] }
 tokio-util = { version = "0.3", features = ["codec"] }
 
-rand = "0.6.5"
+rand = "0.7.3"
 libra-crypto = { path = "../../crypto/crypto" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

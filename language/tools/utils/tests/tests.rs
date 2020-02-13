@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::VerifiedModule;
-use rand::{rngs::StdRng, FromEntropy};
+use rand::{rngs::StdRng, SeedableRng};
 use utils::module_generation::{generate_module, ModuleGeneratorOptions};
 
 #[test]
