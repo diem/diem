@@ -1,6 +1,6 @@
 locals {
   total_num_fullnodes = var.num_fullnodes * var.num_fullnode_networks
-  fullnode_command = var.log_to_file ? jsonencode(["bash", "-c", "/docker-run-dynamic-fullnode.sh >> /opt/libra/data/libra.log 2>&1"]) : jsonencode(["bash", "-c", "/docker-run-dynamic-fullnode.sh"])
+  fullnode_command    = var.log_to_file ? jsonencode(["bash", "-c", "/docker-run-dynamic-fullnode.sh >> /opt/libra/data/libra.log 2>&1"]) : jsonencode(["bash", "-c", "/docker-run-dynamic-fullnode.sh"])
 }
 
 resource "aws_instance" "fullnode" {
@@ -42,27 +42,27 @@ data "template_file" "fullnode_ecs_task_definition" {
   template = file("templates/fullnode.json")
 
   vars = {
-    image            = local.image_repo
-    image_version    = local.image_version
-    cpu              = local.cpu_by_instance[var.validator_type]
-    mem              = local.mem_by_instance[var.validator_type]
+    image         = local.image_repo
+    image_version = local.image_version
+    cpu           = local.cpu_by_instance[var.validator_type]
+    mem           = local.mem_by_instance[var.validator_type]
 
-    cfg_listen_addr  = element(aws_instance.fullnode.*.private_ip, count.index)
+    cfg_listen_addr    = element(aws_instance.fullnode.*.private_ip, count.index)
     cfg_num_validators = var.cfg_num_validators_override == 0 ? var.num_validators : var.cfg_num_validators_override
-    cfg_seed         = var.config_seed
+    cfg_seed           = var.config_seed
 
-    cfg_seed_peer_ip = element(aws_instance.validator.*.private_ip, count.index % var.num_fullnode_networks)
+    cfg_seed_peer_ip   = element(aws_instance.validator.*.private_ip, count.index % var.num_fullnode_networks)
     cfg_fullnode_index = (count.index % var.num_fullnodes)
-    cfg_num_fullnodes = var.num_fullnodes
-    cfg_fullnode_seed = var.fullnode_seed
+    cfg_num_fullnodes  = var.num_fullnodes
+    cfg_fullnode_seed  = var.fullnode_seed
 
-    fullnode_id      = count.index
-    log_level        = var.validator_log_level
-    log_group        = var.cloudwatch_logs ? aws_cloudwatch_log_group.testnet.name : ""
-    log_region       = var.region
-    log_prefix       = "fullnode-${count.index}"
-    capabilities     = jsonencode(var.validator_linux_capabilities)
-    command          = local.fullnode_command
+    fullnode_id  = count.index
+    log_level    = var.validator_log_level
+    log_group    = var.cloudwatch_logs ? aws_cloudwatch_log_group.testnet.name : ""
+    log_region   = var.region
+    log_prefix   = "fullnode-${count.index}"
+    capabilities = jsonencode(var.validator_linux_capabilities)
+    command      = local.fullnode_command
   }
 }
 

@@ -59,8 +59,8 @@ resource "aws_instance" "cluster-test-runner" {
   iam_instance_profile = "${aws_iam_instance_profile.cluster-test-runner.name}"
 
   root_block_device {
-      volume_type = "gp2"
-      volume_size = 1024
+    volume_type = "gp2"
+    volume_size = 1024
   }
 }
 
