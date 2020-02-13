@@ -209,6 +209,8 @@ pub enum UnannotatedExp_ {
     Borrow(bool, Box<Exp>, Field),
     BorrowLocal(bool, Var),
 
+    Unreachable,
+
     UnresolvedError,
 }
 pub type UnannotatedExp = Spanned<UnannotatedExp_>;
@@ -696,6 +698,7 @@ impl AstDebug for UnannotatedExp_ {
                 w.write(&format!("{}", v));
             }
             E::UnresolvedError => w.write("_|_"),
+            E::Unreachable => w.write("unreachable"),
         }
     }
 }

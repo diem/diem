@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/liveness/loop_weirdness.move:9:36 ───
+   │
+ 9 │                 if (my_local >= 0) { break; };
+   │                                    ^^^^^^^^^^ Unreachable code. This statement (and any following statements) will not be executed. In some cases, this will result in unused resource values.
+   │
+

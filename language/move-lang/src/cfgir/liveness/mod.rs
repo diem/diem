@@ -158,6 +158,8 @@ fn exp(state: &mut LivenessState, parent_e: &Exp) {
         E::Pack(_, _, fields) => fields.iter().for_each(|(_, _, e)| exp(state, e)),
 
         E::ExpList(es) => es.iter().for_each(|item| exp_list_item(state, item)),
+
+        E::Unreachable => panic!("ICE should not analyze dead code"),
     }
 }
 
@@ -358,6 +360,8 @@ mod last_usage {
                 .iter_mut()
                 .rev()
                 .for_each(|item| exp_list_item(context, item)),
+
+            E::Unreachable => panic!("ICE should not analyze dead code"),
         }
     }
 
@@ -421,8 +425,7 @@ fn build_forward_intersections(
             let mut states = cfg
                 .predecessors(*lbl)
                 .iter()
-                .flat_map(|pred| final_invariants.get(pred))
-                .map(|state| &state.0);
+                .map(|pred| &final_invariants.get(pred).unwrap().0);
             let intersection = states
                 .next()
                 .map(|init| states.fold(init.clone(), |acc, s| &acc & s))

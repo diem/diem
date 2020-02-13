@@ -239,7 +239,7 @@ fn base_type(context: &Context, sp!(loc, nb_): H::BaseType) -> G::BaseType {
     let b_ = match nb_ {
         HB::Apply(k, n, nbs) => GB::Apply(k, n, base_types(context, nbs)),
         HB::Param(tp) => GB::Param(tp),
-        HB::UnresolvedError => panic!("ICE UnresolvedError should only have appeared on ret/abort"),
+        HB::UnresolvedError => GB::UnresolvedError,
     };
     sp(loc, b_)
 }
@@ -330,7 +330,14 @@ fn block_(context: &mut Context, cur_label: &mut Label, blocks: H::Block) -> Bas
 
     for sp!(loc, stmt_) in blocks {
         match stmt_ {
-            S::Command(c) => basic_block.push_back(command(context, c)),
+            S::Command(c) => {
+                let cmd = command(context, c);
+                let is_terminal = cmd.value.is_terminal();
+                basic_block.push_back(cmd);
+                if is_terminal {
+                    finish_block!(next_label: context.new_label());
+                }
+            }
             S::IfElse {
                 cond: hcond,
                 if_block,
@@ -506,6 +513,7 @@ fn exp_(context: &Context, he: H::Exp) -> G::Exp {
             assert!(context.has_errors());
             E::UnresolvedError
         }
+        HE::Unreachable => E::Unreachable,
     };
     G::exp(ty, sp(loc, e_))
 }
