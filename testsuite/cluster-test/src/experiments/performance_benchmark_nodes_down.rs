@@ -33,11 +33,6 @@ pub struct PerformanceBenchmarkNodesDownParams {
     )]
     pub num_nodes_down: usize,
     #[structopt(
-        long,
-        help = "Whether cluster test should run against validators or full nodes"
-    )]
-    pub is_fullnode: bool,
-    #[structopt(
     long,
     default_value = Box::leak(format!("{}", DEFAULT_BENCH_DURATION).into_boxed_str()),
     help = "Duration of an experiment in seconds"
@@ -58,7 +53,6 @@ impl PerformanceBenchmarkNodesDownParams {
     pub fn new_nodes_down(num_nodes_down: usize) -> Self {
         Self {
             num_nodes_down,
-            is_fullnode: false,
             duration: DEFAULT_BENCH_DURATION,
         }
     }
@@ -67,24 +61,12 @@ impl PerformanceBenchmarkNodesDownParams {
 impl ExperimentParam for PerformanceBenchmarkNodesDownParams {
     type E = PerformanceBenchmarkNodesDown;
     fn build(self, cluster: &Cluster) -> Self::E {
-        if self.is_fullnode {
-            let (down_instances, up_instances) =
-                cluster.split_n_fullnodes_random(self.num_nodes_down);
-            Self::E {
-                down_instances: down_instances.into_fullnode_instances(),
-                up_instances: up_instances.into_fullnode_instances(),
-                num_nodes_down: self.num_nodes_down,
-                duration: Duration::from_secs(self.duration),
-            }
-        } else {
-            let (down_instances, up_instances) =
-                cluster.split_n_validators_random(self.num_nodes_down);
-            Self::E {
-                down_instances: down_instances.into_validator_instances(),
-                up_instances: up_instances.into_validator_instances(),
-                num_nodes_down: self.num_nodes_down,
-                duration: Duration::from_secs(self.duration),
-            }
+        let (down_instances, up_instances) = cluster.split_n_validators_random(self.num_nodes_down);
+        Self::E {
+            down_instances: down_instances.into_validator_instances(),
+            up_instances: up_instances.into_validator_instances(),
+            num_nodes_down: self.num_nodes_down,
+            duration: Duration::from_secs(self.duration),
         }
     }
 }
@@ -106,10 +88,17 @@ impl Experiment for PerformanceBenchmarkNodesDown {
         join_all(futures).await;
         let buffer = Duration::from_secs(60);
         let window = self.duration + buffer * 2;
-        let emit_job_request = EmitJobRequest::for_instances(
-            self.up_instances.clone(),
-            context.global_emit_job_request,
-        );
+        let emit_job_request = if context.emit_to_validator {
+            EmitJobRequest::for_instances(
+                self.up_instances.clone(),
+                context.global_emit_job_request,
+            )
+        } else {
+            EmitJobRequest::for_instances(
+                context.cluster.fullnode_instances().to_vec(),
+                context.global_emit_job_request,
+            )
+        };
         let stats = context
             .tx_emitter
             .emit_txn_for(window, emit_job_request)
