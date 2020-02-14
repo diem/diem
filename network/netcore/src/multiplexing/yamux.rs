@@ -124,8 +124,7 @@ where
                             .send(Err(io::Error::new(
                                 io::ErrorKind::BrokenPipe,
                                 "Connection closed",
-                            ))
-                                as io::Result<Self::Substream>)
+                            )))
                             .await;
                         return;
                     }
