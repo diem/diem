@@ -37,7 +37,7 @@ use tokio::runtime::Runtime;
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> Runtime {
-    let rt = tokio::runtime::Builder::new()
+    let mut rt = tokio::runtime::Builder::new()
         .threaded_scheduler()
         .enable_all()
         .thread_name("tokio-storage")
@@ -51,6 +51,23 @@ pub fn start_storage_service(config: &NodeConfig) -> Runtime {
             .add_service(StorageServer::new(storage_service))
             .serve(config.storage.address),
     );
+
+    let addr = format!("http://{}", config.storage.address);
+    let mut server_available = false;
+    for _i in 0..50 {
+        if rt
+            .block_on(
+                storage_proto::proto::storage::storage_client::StorageClient::connect(addr.clone()),
+            )
+            .is_ok()
+        {
+            server_available = true;
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    assert!(server_available, "Failed to start storage service.");
+
     rt
 }
 
