@@ -28,7 +28,7 @@ pub trait Control {
     /// The type of substreams opened by this Multiplexer.
     ///
     /// Must implement both AsyncRead and AsyncWrite.
-    type Substream: AsyncRead + AsyncWrite + Send + Debug + Unpin;
+    type Substream: AsyncRead + AsyncWrite + Send + Unpin;
 
     /// Requests that a new Substream be opened on the underlying connection.
     async fn open_stream(&mut self) -> io::Result<Self::Substream>;
