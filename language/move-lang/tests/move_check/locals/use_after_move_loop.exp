@@ -1,17 +1,5 @@
 error: 
 
-   ┌── tests/move_check/locals/use_after_move_loop.move:2:28 ───
-   │
- 2 │       fun tmove1(cond: bool) {
-   │ ╭────────────────────────────^
- 3 │ │         let x = 0;
- 4 │ │         loop { _ = move x };
- 5 │ │     }
-   │ ╰─────^ Unreachable code. This statement (and any following statements) will not be executed. In some cases, this will result in unused resource values.
-   │
-
-error: 
-
    ┌── tests/move_check/locals/use_after_move_loop.move:4:20 ───
    │
  4 │         loop { _ = move x };
@@ -19,6 +7,14 @@ error:
    ·
  4 │         loop { _ = move x };
    │                    ------ The local might not have a value due to this position. The local must be assigned a value before being used
+   │
+
+error: 
+
+   ┌── tests/move_check/locals/use_after_move_loop.move:4:28 ───
+   │
+ 4 │         loop { _ = move x };
+   │                            ^ Unreachable code. This statement (and any following statements) will not be executed. In some cases, this will result in unused resource values.
    │
 
 error: 

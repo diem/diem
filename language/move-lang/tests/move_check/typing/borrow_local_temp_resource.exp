@@ -1,13 +1,9 @@
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_temp_resource.move:5:14 ───
+   ┌── tests/move_check/typing/borrow_local_temp_resource.move:6:10 ───
    │
- 5 │       fun t0() {
-   │ ╭──────────────^
- 6 │ │         &R{};
- 7 │ │         &mut R{};
- 8 │ │     }
-   │ ╰─────^ Invalid return
+ 7 │         &mut R{};
+   │                 ^ Invalid return
    ·
  6 │         &R{};
    │          --- The resource is created but not used. The resource must be consumed before the function returns
@@ -15,14 +11,10 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_temp_resource.move:5:14 ───
+   ┌── tests/move_check/typing/borrow_local_temp_resource.move:7:14 ───
    │
- 5 │       fun t0() {
-   │ ╭──────────────^
- 6 │ │         &R{};
- 7 │ │         &mut R{};
- 8 │ │     }
-   │ ╰─────^ Invalid return
+ 7 │         &mut R{};
+   │                 ^ Invalid return
    ·
  7 │         &mut R{};
    │              --- The resource is created but not used. The resource must be consumed before the function returns

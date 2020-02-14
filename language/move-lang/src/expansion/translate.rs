@@ -598,14 +598,20 @@ fn module_access(
 // TODO Support uses inside functions. AliasMap will become an accumulator
 
 fn sequence(context: &mut Context, loc: Loc, seq: P::Sequence) -> E::Sequence {
-    let (pitems, _, pfinal_item) = seq;
+    let (pitems, maybe_last_semicolon_loc, pfinal_item) = seq;
     let mut items: VecDeque<E::SequenceItem> = pitems
         .into_iter()
         .map(|item| sequence_item(context, item))
         .collect();
     let final_e_opt = pfinal_item.map(|item| exp_(context, item));
     let final_e = match final_e_opt {
-        None => sp(loc, E::Exp_::Unit),
+        None => {
+            let last_semicolon_loc = match maybe_last_semicolon_loc {
+                Some(l) => l,
+                None => loc,
+            };
+            sp(last_semicolon_loc, E::Exp_::Unit)
+        }
         Some(e) => e,
     };
     let final_item = sp(final_e.loc, E::SequenceItem_::Seq(final_e));
