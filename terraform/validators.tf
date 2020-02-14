@@ -159,7 +159,7 @@ resource "aws_instance" "validator" {
   user_data                   = local.user_data
 
   dynamic "ebs_block_device" {
-    for_each = contains(local.ebs_types, split(var.validator_type, ".")[0]) ? [0] : []
+    for_each = contains(local.ebs_types, split(".", var.validator_type)[0]) ? [0] : []
     content {
       device_name = "/dev/xvdb"
       volume_type = "io1"
