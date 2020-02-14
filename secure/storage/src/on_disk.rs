@@ -10,12 +10,13 @@ use std::{
     path::PathBuf,
 };
 
-/// InMemoryStorage represents a key value store that is purely in memory and intended for single
-/// threads (or must be wrapped by a Arc<RwLock<>>). This provides no permission checks and simply
-/// is a proof of concept to unblock building of applications without more complex data stores.
-/// Internally, it retains all data, which means that it must make copies of all key material which
-/// violates the Libra code base. It violates it because the anticipation is that data stores would
-/// securely handle key material. This should not be used in production.
+/// OnDiskStorage represents a key value store that is persisted to the local filesystem and is
+/// intended for single threads (or must be wrapped by a Arc<RwLock<>>). This provides no permission
+/// checks and simply offers a proof of concept to unblock building of applications without more
+/// complex data stores. Internally, it reads and writes all data to a file, which means that it
+/// must make copies of all key material which violates the Libra code base. It violates it because
+/// the anticipation is that data stores would securely handle key material. This should not be used
+/// in production.
 pub struct OnDiskStorage {
     file_path: PathBuf,
     temp_path: TempPath,
