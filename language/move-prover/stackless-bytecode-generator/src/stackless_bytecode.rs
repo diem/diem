@@ -108,3 +108,62 @@ pub enum StacklessBytecode {
     Abort(TempIndex), // abort t
     NoOp,
 }
+
+impl StacklessBytecode {
+    pub fn is_unconditional_branch(&self) -> bool {
+        match self {
+            StacklessBytecode::Ret(_)
+            | StacklessBytecode::Abort(_)
+            | StacklessBytecode::Branch(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_conditional_branch(&self) -> bool {
+        match self {
+            StacklessBytecode::BrFalse(_, _) | StacklessBytecode::BrTrue(_, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_branch(&self) -> bool {
+        self.is_conditional_branch() || self.is_unconditional_branch()
+    }
+
+    /// Return the destination of branching if self is a branching instruction
+    pub fn branch_dest(&self) -> Option<&CodeOffset> {
+        match self {
+            StacklessBytecode::BrFalse(offset, _)
+            | StacklessBytecode::BrTrue(offset, _)
+            | StacklessBytecode::Branch(offset) => Some(offset),
+            _ => None,
+        }
+    }
+
+    /// Return the successor offsets of this instruction
+    pub fn get_successors(pc: CodeOffset, code: &[StacklessBytecode]) -> Vec<CodeOffset> {
+        let bytecode = &code[pc as usize];
+        let mut v = vec![];
+
+        if let Some(offset) = bytecode.branch_dest() {
+            v.push(*offset);
+        }
+
+        let next_pc = pc + 1;
+        if next_pc >= code.len() as CodeOffset {
+            return v;
+        }
+
+        if !bytecode.is_unconditional_branch() && !v.contains(&next_pc) {
+            // avoid duplicates
+            v.push(next_pc);
+        }
+
+        // always give successors in ascending order
+        if v.len() > 1 && v[0] > v[1] {
+            v.swap(0, 1);
+        }
+
+        v
+    }
+}
