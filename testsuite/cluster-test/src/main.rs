@@ -474,11 +474,12 @@ impl ClusterTestRunner {
                 wait_committed: !args.burst,
             },
         };
-        let emit_to_validator = if cluster.fullnode_instances().is_empty() {
-            true
-        } else {
-            args.emit_to_validator.unwrap_or(false)
-        };
+        let emit_to_validator =
+            if cluster.fullnode_instances().len() < cluster.validator_instances().len() {
+                true
+            } else {
+                args.emit_to_validator.unwrap_or(false)
+            };
         Self {
             logs,
             cluster,
