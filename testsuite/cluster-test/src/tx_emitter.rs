@@ -36,7 +36,6 @@ use libra_types::{
 use rand::{
     prelude::ThreadRng,
     rngs::{EntropyRng, StdRng},
-    seq::IteratorRandom,
     seq::SliceRandom,
     Rng, SeedableRng,
 };
@@ -44,6 +43,7 @@ use slog_scope::{debug, info};
 use tokio::runtime::Runtime;
 
 use std::cmp::{max, min};
+use std::collections::HashMap;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -318,22 +318,30 @@ impl SubmissionThread {
     async fn run(mut self) -> Vec<AccountData> {
         let wait = Duration::from_millis(self.params.wait_millis);
         let mut rng = ThreadRng::default();
+        let mut ready_accounts = self.accounts;
+        let mut pending_accounts = vec![];
+        let instance = self.instance;
+        let mut submit_map = HashMap::new();
         while !self.stop.load(Ordering::Relaxed) {
-            let requests = self.gen_requests(&mut rng);
-            let num_requests = requests.len();
-            for request in requests {
+            println!("Pending {}, ready {}", ready_accounts.len(), pending_accounts.len());
+            let new_requests =
+                Self::gen_requests(&self.all_addresses[..], &mut ready_accounts, &mut rng);
+            println!("Generated {} requests", new_requests.len());
+            for (account, request) in new_requests {
+                submit_map.insert(account.address, Instant::now());
+                pending_accounts.push(account);
                 self.stats.submitted.fetch_add(1, Ordering::Relaxed);
                 let wait_util = Instant::now() + wait;
                 let resp = self.client.submit_transaction(request).await;
                 match resp {
                     Err(e) => {
-                        info!("[{}] Failed to submit request: {:?}", self.instance, e);
+                        info!("[{}] Failed to submit request: {:?}", instance, e);
                     }
                     Ok(r) => {
                         let r = SubmitTransactionResponse::try_from(r)
                             .expect("Failed to parse SubmitTransactionResponse");
                         if !is_accepted(&r) {
-                            info!("[{}] Request declined: {:?}", self.instance, r);
+                            info!("[{}] Request declined: {:?}", instance, r);
                         }
                     }
                 }
@@ -341,44 +349,68 @@ impl SubmissionThread {
                 if wait_util > now {
                     thread::sleep(wait_util - now);
                 } else {
-                    debug!("[{}] Thread won't sleep", self.instance);
+                    debug!("[{}] Thread won't sleep", instance);
                 }
             }
             if self.params.wait_committed {
-                if let Err(uncommitted) =
-                    wait_for_accounts_sequence(&mut self.client, &mut self.accounts).await
-                {
-                    self.stats
-                        .committed
-                        .fetch_add((num_requests - uncommitted.len()) as u64, Ordering::Relaxed);
+                match query_and_split_ready(&mut self.client, &mut pending_accounts).await {
+                    Err(e) => info!("Query sequence failed on {}: {}", instance, e),
+                    Ok(mut ready) => {
+                        self.stats
+                            .committed
+                            .fetch_add(ready.len() as u64, Ordering::Relaxed);
+                        ready_accounts.append(&mut ready)
+                    }
+                }
+                let mut expired_accounts = split_expired(&submit_map, &mut pending_accounts);
+                if !expired_accounts.is_empty() {
+                    let num_expired = expired_accounts.len();
+                    info!("{} transactions expired", num_expired);
                     self.stats
                         .expired
-                        .fetch_add(uncommitted.len() as u64, Ordering::Relaxed);
-                    info!(
-                        "[{}] Transactions were not committed before expiration: {:?}",
-                        self.instance, uncommitted
-                    );
-                } else {
-                    self.stats
-                        .committed
-                        .fetch_add(num_requests as u64, Ordering::Relaxed);
+                        .fetch_add(num_expired as u64, Ordering::Relaxed);
+                    ready_accounts.append(&mut expired_accounts);
                 }
+                thread::sleep(Duration::from_millis(100));
+            //                if let Err(uncommitted) =
+            //                    wait_for_accounts_sequence(&mut self.client, &mut pending_accounts).await
+            //                {
+            //                    self.stats
+            //                        .committed
+            //                        .fetch_add((num_new_requests - uncommitted.len()) as u64, Ordering::Relaxed);
+            //                    self.stats
+            //                        .expired
+            //                        .fetch_add(uncommitted.len() as u64, Ordering::Relaxed);
+            //                    info!(
+            //                        "[{}] Transactions were not committed before expiration: {:?}",
+            //                        instance, uncommitted
+            //                    );
+            //                } else {
+            //                    self.stats
+            //                        .committed
+            //                        .fetch_add(num_new_requests as u64, Ordering::Relaxed);
+            //                }
+            } else {
+                ready_accounts.append(&mut pending_accounts);
             }
         }
-        self.accounts
+        ready_accounts
     }
 
-    fn gen_requests(&mut self, rng: &mut ThreadRng) -> Vec<SubmitTransactionRequest> {
-        let batch_size = max(MAX_TXN_BATCH_SIZE, self.accounts.len());
-        let accounts = self.accounts.iter_mut().choose_multiple(rng, batch_size);
-        let mut requests = Vec::with_capacity(accounts.len());
-        for sender in accounts {
-            let receiver = self
-                .all_addresses
+    fn gen_requests(
+        all_addresses: &[AccountAddress],
+        accounts: &mut Vec<AccountData>,
+        rng: &mut ThreadRng,
+    ) -> Vec<(AccountData, SubmitTransactionRequest)> {
+        let batch_size = min(MAX_TXN_BATCH_SIZE, accounts.len());
+        let senders = accounts.split_off(batch_size);
+        let mut requests = Vec::with_capacity(senders.len());
+        for mut sender in senders {
+            let receiver = all_addresses
                 .choose(rng)
                 .expect("all_addresses can't be empty");
-            let request = gen_transfer_txn_request(sender, receiver, 1);
-            requests.push(request);
+            let request = gen_transfer_txn_request(&mut sender, receiver, 1);
+            requests.push((sender, request));
         }
         requests
     }
@@ -412,6 +444,56 @@ async fn wait_for_accounts_sequence(
         thread::sleep(Duration::from_millis(100));
     }
     Ok(())
+}
+
+async fn query_and_split_ready(
+    client: &mut AdmissionControlClientAsync,
+    accounts: &mut Vec<AccountData>,
+) -> Result<Vec<AccountData>> {
+    let addresses: Vec<_> = accounts.iter().map(|d| d.address).collect();
+    let sequence_numbers = query_sequence_numbers(client, &addresses).await?;
+    Ok(split_ready(accounts, &sequence_numbers))
+}
+
+/// Splits off ready accounts into separate vector and keep non-ready accounts in source vector
+/// Note - this fn uses swap_remove to effectively remove from source vector,
+/// as a consequence accounts in this vector are also shuffled
+fn split_ready(accounts: &mut Vec<AccountData>, sequence_numbers: &[u64]) -> Vec<AccountData> {
+    let mut ready_idx = vec![];
+    for (i, account) in accounts.iter().enumerate() {
+        if sequence_numbers[i] == account.sequence_number {
+            ready_idx.push(i);
+        }
+    }
+    let mut ready = vec![];
+    for i in ready_idx {
+        ready.push(accounts.swap_remove(i));
+    }
+    ready
+}
+
+fn split_expired(
+    submit_map: &HashMap<AccountAddress, Instant>,
+    accounts: &mut Vec<AccountData>,
+) -> Vec<AccountData> {
+    let mut expired_idx = vec![];
+    let now = Instant::now();
+    let expiration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64);
+    for (i, account) in accounts.iter().enumerate() {
+        let submitted_at = submit_map
+            .get(&account.address)
+            .expect("Submission timestamp not found");
+        if now.duration_since(*submitted_at) > expiration {
+            expired_idx.push(i);
+        }
+    }
+    let mut expired = vec![];
+    for i in expired_idx {
+        let mut expired_account = accounts.swap_remove(i);
+        expired_account.sequence_number -= 1; // (!) This assumes we always have only 1 pending txn
+        expired.push(expired_account);
+    }
+    expired
 }
 
 fn is_sequence_equal(accounts: &[AccountData], sequence_numbers: &[u64]) -> bool {
