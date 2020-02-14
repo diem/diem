@@ -16,16 +16,13 @@ use futures::{
     channel::mpsc,
     io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
-    stream::{Stream, StreamExt},
 };
-use std::{fmt::Debug, io, pin::Pin};
+use std::{fmt::Debug, io};
 use yamux;
 
 /// Re-export `Mode` and `Stream` from the yamux crate
 pub use yamux::Mode;
 pub use yamux::Stream as StreamHandle;
-
-type BoxStream<'a, T> = Pin<Box<dyn Stream<Item = T> + 'a + Send>>;
 
 const YAMUX_PROTOCOL_NAME: &[u8] = b"/yamux/1.0.0";
 
@@ -107,7 +104,7 @@ where
 {
     type Substream = StreamHandle;
     type Control = YamuxControl;
-    type Listener = BoxStream<'static, io::Result<StreamHandle>>;
+    type Listener = mpsc::UnboundedReceiver<io::Result<Self::Substream>>;
 
     async fn start(self) -> (Self::Listener, Self::Control) {
         let control = self.connection.control();
@@ -143,7 +140,7 @@ where
         };
         // Run the IO future on the executor which drives this connection.
         tokio::spawn(f);
-        (rx.boxed(), YamuxControl { inner: control })
+        (rx, YamuxControl { inner: control })
     }
 }
 
