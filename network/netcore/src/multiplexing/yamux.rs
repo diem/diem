@@ -154,7 +154,6 @@ mod test {
         Control, StreamMultiplexer,
     };
     use futures::{
-        executor::block_on,
         future::join,
         io::{AsyncReadExt, AsyncWriteExt},
         stream::StreamExt,
@@ -163,7 +162,7 @@ mod test {
     use memsocket::MemorySocket;
     use std::io;
 
-    #[tokio::test(core_threads = 2)]
+    #[tokio::test]
     async fn substream_within_substream() -> io::Result<()> {
         let (dialer, listener) = MemorySocket::new_pair();
         let msg = b"Too fast too furious";
@@ -230,13 +229,13 @@ mod test {
             result
         };
 
-        let (dialer_result, listener_result) = block_on(join(dialer, listener));
+        let (dialer_result, listener_result) = join(dialer, listener).await;
         dialer_result?;
         listener_result?;
         Ok(())
     }
 
-    #[tokio::test(core_threads = 2)]
+    #[tokio::test]
     async fn open_substream() -> io::Result<()> {
         ::libra_logger::try_init_for_testing();
         let (dialer, listener) = MemorySocket::new_pair();
@@ -282,13 +281,13 @@ mod test {
             result
         };
 
-        let (dialer_result, listener_result) = block_on(join(dialer, listener));
+        let (dialer_result, listener_result) = join(dialer, listener).await;
         dialer_result?;
         listener_result?;
         Ok(())
     }
 
-    #[tokio::test(core_threads = 2)]
+    #[tokio::test]
     async fn close() -> io::Result<()> {
         ::libra_logger::try_init_for_testing();
         let (dialer, listener) = MemorySocket::new_pair();
@@ -352,13 +351,13 @@ mod test {
             result
         };
 
-        let (dialer_result, listener_result) = block_on(join(dialer, listener));
+        let (dialer_result, listener_result) = join(dialer, listener).await;
         dialer_result?;
         listener_result?;
         Ok(())
     }
 
-    #[tokio::test(core_threads = 2)]
+    #[tokio::test]
     async fn close_connection() -> io::Result<()> {
         ::libra_logger::try_init_for_testing();
         let (dialer, listener) = MemorySocket::new_pair();
@@ -383,13 +382,13 @@ mod test {
             result
         };
 
-        let (dialer_result, listener_result) = block_on(join(dialer, listener));
+        let (dialer_result, listener_result) = join(dialer, listener).await;
         dialer_result?;
         listener_result?;
         Ok(())
     }
 
-    #[tokio::test(core_threads = 2)]
+    #[tokio::test]
     async fn send_big_message() -> io::Result<()> {
         #[allow(non_snake_case)]
         let MiB: usize = 1 << 20;
@@ -438,7 +437,7 @@ mod test {
             result
         };
 
-        let (dialer_result, listener_result) = block_on(join(dialer, listener));
+        let (dialer_result, listener_result) = join(dialer, listener).await;
         dialer_result?;
         listener_result?;
         Ok(())

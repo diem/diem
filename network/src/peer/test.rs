@@ -185,7 +185,7 @@ async fn assert_peer_disconnected_event<TSubstream>(
     }
 }
 
-#[tokio::test(core_threads = 2)]
+#[tokio::test]
 async fn peer_open_substream() {
     ::libra_logger::try_init_for_testing();
     let (
@@ -225,12 +225,12 @@ async fn peer_open_substream() {
         assert_eq!(buf, b"hello world");
     };
     tokio::spawn(peer.start());
-    block_on(join(server, client));
+    join(server, client).await;
 }
 
 // Test that if two peers request to open a substream with each other simultaneously that
 // we won't deadlock.
-#[tokio::test(core_threads = 2)]
+#[tokio::test]
 async fn peer_open_substream_simultaneous() {
     ::libra_logger::try_init_for_testing();
     let (
@@ -287,7 +287,7 @@ async fn peer_open_substream_simultaneous() {
     tokio::spawn(peer_a.start());
     tokio::spawn(peer_b.start());
 
-    block_on(test);
+    test.await;
 }
 
 #[tokio::test]
@@ -315,7 +315,7 @@ async fn peer_disconnect_request() {
     join(test, peer.start()).await;
 }
 
-#[tokio::test(core_threads = 2)]
+#[tokio::test]
 async fn peer_disconnect_connection_lost() {
     libra_logger::try_init_for_testing();
     let (
@@ -337,7 +337,7 @@ async fn peer_disconnect_connection_lost() {
         )
         .await;
     };
-    block_on(join(test, peer.start()));
+    join(test, peer.start()).await;
 }
 
 #[tokio::test]
