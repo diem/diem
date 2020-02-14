@@ -233,6 +233,7 @@ async fn sync_with_peers<'a>(
 
             if !transactions.is_empty() {
                 counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(transactions.len() as i64);
+                debug!("[shared mempool] broadcasting to upstream peer {:?} txns: {:?}", peer_id, transactions.len());
 
                 let mut msg = MempoolSyncMsg::default();
                 msg.peer_id = peer_id.into();
@@ -305,6 +306,8 @@ where
             if let Ok((sequence_number, balance)) = account_states[idx] {
                 if t.sequence_number() >= sequence_number {
                     return Some((t, sequence_number, balance));
+                } else {
+                    debug!("[shared mempool] received old seq num txn");
                 }
             } else {
                 // failed to get transaction
@@ -380,6 +383,7 @@ async fn process_client_transaction_submission<V>(
             ));
         }
         Some(txn) => {
+            debug!("[shared mempool] adding txn from client");
             let mut statuses =
                 process_incoming_transactions(smp.clone(), vec![txn], TimelineState::NotReady)
                     .await;
@@ -639,7 +643,10 @@ async fn inbound_network_task<V>(
                                 let smp_clone = smp.clone();
                                 let timeline_state = match node_config.is_upstream_peer(peer_id, network_id) {
                                     true => TimelineState::NonQualified,
-                                    false => TimelineState::NotReady,
+                                    false => {
+                                        debug!("[shared mempool] received broadcast from downstream peer, size {:?}", transactions.len());
+                                        TimelineState::NotReady
+                                    },
                                 };
                                 bounded_executor
                                     .spawn(process_transaction_broadcast(
