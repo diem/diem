@@ -195,7 +195,7 @@ pub const NO_TYPE_ACTUALS: LocalsSignatureIndex = LocalsSignatureIndex(0);
 // HANDLES:
 // Handles are structs that accompany opcodes that need references: a type reference,
 // or a function reference (a field reference being available only within the module that
-// defrines the field can be a definition).
+// defines the field can be a definition).
 // Handles refer to both internal and external "entities" and are embedded as indexes
 // in the instruction stream.
 // Handles define resolution. Resolution is assumed to be by (name, signature)
