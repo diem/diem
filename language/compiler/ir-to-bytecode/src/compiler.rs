@@ -136,6 +136,7 @@ enum InferredType {
     U128,
     ByteArray,
     Address,
+    Vector(Box<InferredType>),
     Struct(StructHandleIndex),
     Reference(Box<InferredType>),
     MutableReference(Box<InferredType>),
@@ -153,13 +154,14 @@ impl InferredType {
             S::U128 => I::U128,
             S::ByteArray => I::ByteArray,
             S::Address => I::Address,
+            S::Vector(s_inner) => I::Vector(Box::new(Self::from_signature_token(s_inner))),
             S::Struct(si, _) => I::Struct(*si),
             S::Reference(s_inner) => {
-                let i_inner = Self::from_signature_token(&*s_inner);
+                let i_inner = Self::from_signature_token(s_inner);
                 I::Reference(Box::new(i_inner))
             }
             S::MutableReference(s_inner) => {
-                let i_inner = Self::from_signature_token(&*s_inner);
+                let i_inner = Self::from_signature_token(s_inner);
                 I::MutableReference(Box::new(i_inner))
             }
             S::TypeParameter(s_inner) => I::TypeParameter(s_inner.to_string()),
@@ -175,6 +177,7 @@ impl InferredType {
             InferredType::U128 => bail!("no struct type for U128"),
             InferredType::ByteArray => bail!("no struct type for ByteArray"),
             InferredType::Address => bail!("no struct type for Address"),
+            InferredType::Vector(_) => bail!("no struct type for vector"),
             InferredType::Reference(inner) | InferredType::MutableReference(inner) => {
                 inner.get_struct_handle()
             }
@@ -497,6 +500,9 @@ fn compile_type(context: &mut Context, ty: &Type) -> Result<SignatureToken> {
         Type::U128 => SignatureToken::U128,
         Type::Bool => SignatureToken::Bool,
         Type::ByteArray => SignatureToken::ByteArray,
+        Type::Vector(inner_type) => {
+            SignatureToken::Vector(Box::new(compile_type(context, inner_type)?))
+        }
         Type::Reference(is_mutable, inner_type) => {
             let inner_token = Box::new(compile_type(context, inner_type)?);
             if *is_mutable {

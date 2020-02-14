@@ -22,6 +22,7 @@ pub enum TypeTag {
     U128,
     ByteArray,
     Address,
+    Vector(Box<TypeTag>),
     Struct(StructTag),
 }
 

@@ -4,8 +4,8 @@
 use crate::{
     naming::ast::{BuiltinTypeName, BuiltinTypeName_, TParam, TypeName, TypeName_},
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ResourceLoc, StructName,
-        UnaryOp, Value, Var,
+        BinOp, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc,
+        StructName, UnaryOp, Value, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -234,22 +234,44 @@ pub enum ExpListItem {
 //**************************************************************************************************
 
 impl BaseType_ {
-    pub fn builtin(loc: Loc, b_: BuiltinTypeName_) -> BaseType {
-        let kind = sp(loc, b_.kind());
+    pub fn builtin(loc: Loc, b_: BuiltinTypeName_, ty_args: Vec<BaseType>) -> BaseType {
+        use BuiltinTypeName_::*;
+
+        let kind = match b_ {
+            U8 | U64 | U128 | Bool | Address | Bytearray => sp(loc, Kind_::Unrestricted),
+            Vector => {
+                assert!(
+                    ty_args.len() == 1,
+                    "ICE vector should have exactly 1 type argument."
+                );
+                ty_args[0].value.kind()
+            }
+        };
         let n = sp(loc, TypeName_::Builtin(sp(loc, b_)));
-        sp(loc, BaseType_::Apply(kind, n, vec![]))
+        sp(loc, BaseType_::Apply(kind, n, ty_args))
+    }
+
+    pub fn kind(&self) -> Kind {
+        match self {
+            BaseType_::Apply(k, _, _) => k.clone(),
+            BaseType_::Param(TParam { kind, .. }) => kind.clone(),
+            BaseType_::UnresolvedError => panic!(
+                "ICE unresolved error has no kind. \
+                 Should only exist in dead code that should not be analyzed"
+            ),
+        }
     }
 
     pub fn bool(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::Bool)
+        Self::builtin(loc, BuiltinTypeName_::Bool, vec![])
     }
 
     pub fn address(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::Address)
+        Self::builtin(loc, BuiltinTypeName_::Address, vec![])
     }
 
     pub fn u64(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::U64)
+        Self::builtin(loc, BuiltinTypeName_::U64, vec![])
     }
 }
 

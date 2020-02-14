@@ -393,6 +393,7 @@ impl StDefnMaterializeState {
                 self.struct_handles[struct_handle_index.0 as usize].is_nominal_resource
                     || targs.iter().any(|t| self.contains_nominal_resource(t))
             }
+            Vector(targ) => self.contains_nominal_resource(targ),
             Reference(token) | MutableReference(token) => self.contains_nominal_resource(token),
             Bool | U8 | U64 | U128 | ByteArray | Address | TypeParameter(_) => false,
         }

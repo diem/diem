@@ -6,36 +6,32 @@
 // test_mvir/verify-vector.mvir uses this.
 
 module Vector {
-
-  // Vector containing data of type Item.
-  native struct T<Element>;
-
-  native public empty<Element>(): Self.T<Element>;
+  native public empty<Element>(): vector<Element>;
 
   // Return the length of the vector.
-  native public length<Element>(v: &Self.T<Element>): u64;
+  native public length<Element>(v: &vector<Element>): u64;
 
   // Acquire an immutable reference to the ith element of the vector.
-  native public borrow<Element>(v: &Self.T<Element>, i: u64): &Element;
+  native public borrow<Element>(v: &vector<Element>, i: u64): &Element;
 
   // Add an element to the end of the vector.
-  native public push_back<Element>(v: &mut Self.T<Element>, e: Element);
+  native public push_back<Element>(v: &mut vector<Element>, e: Element);
 
   // Get mutable reference to the ith element in the vector, abort if out of bound.
-  native public borrow_mut<Element>(v: &mut Self.T<Element>, idx: u64): &mut Element;
+  native public borrow_mut<Element>(v: &mut vector<Element>, idx: u64): &mut Element;
 
   // Pop an element from the end of vector, abort if the vector is empty.
-  native public pop_back<Element>(v: &mut Self.T<Element>): Element;
+  native public pop_back<Element>(v: &mut vector<Element>): Element;
 
   // Destroy the vector, abort if not empty.
-  native public destroy_empty<Element>(v: Self.T<Element>);
+  native public destroy_empty<Element>(v: vector<Element>);
 
   // Swaps the elements at the `i`th and `j`th indices in the vector.
   // Aborts if either index is out of bounds.
-  native public swap<Element>(v: &mut Self.T<Element>, i: u64, j: u64);
+  native public swap<Element>(v: &mut vector<Element>, i: u64, j: u64);
 
   // Reverses the order of the elements in the vector in place.
-  public reverse<Element>(v: &mut Self.T<Element>) {
+  public reverse<Element>(v: &mut vector<Element>) {
       let front_index: u64;
       let back_index: u64;
       let len: u64;
@@ -60,7 +56,7 @@ module Vector {
   }
 
   // Moves all of the elements of the `other` vector into the `lhs` vector.
-  public append<Element>(lhs: &mut Self.T<Element>, other: Self.T<Element>) {
+  public append<Element>(lhs: &mut vector<Element>, other: vector<Element>) {
 
       Self.reverse<Element>(&mut other);
 
@@ -76,25 +72,25 @@ module Vector {
   }
 
   // Return true if the vector has no elements
-  public is_empty<Element>(v: &Self.T<Element>): bool {
+  public is_empty<Element>(v: &vector<Element>): bool {
     return Self.length<Element>(move(v)) == 0;
   }
 
   // Return the `i`th element of the vector. Only available for vectors that contain unrestricted
   // values.
-  public get<Element: unrestricted>(v: &Self.T<Element>, i: u64): Element {
+  public get<Element: unrestricted>(v: &vector<Element>, i: u64): Element {
     return *Self.borrow<Element>(move(v), move(i));
   }
 
   // Replace the `i`th element of the vector with the value `v`. Only available for vectors that
   // contain unrestricted values.
-  public set<Element: unrestricted>(v: &mut Self.T<Element>, i: u64, e: Element) {
+  public set<Element: unrestricted>(v: &mut vector<Element>, i: u64, e: Element) {
     *(Self.borrow_mut<Element>(move(v), move(i))) = move(e);
     return;
   }
 
   // Return true if `e` is in the vector `v`
-  public contains<Element>(v: &Self.T<Element>, e: &Element): bool {
+  public contains<Element>(v: &vector<Element>, e: &Element): bool {
     let len: u64;
     let i: u64;
 
@@ -116,7 +112,7 @@ module Vector {
   // Note: this may violate any ordering invariant that has been established for the vector (e.g.,
   // sorting).
   // Aborts if `i` is out of bounds.
-  public remove_unstable<Element>(v: &mut Self.T<Element>, i: u64): Element {
+  public remove_unstable<Element>(v: &mut vector<Element>, i: u64): Element {
     let last_index: u64;
 
     if (Self.is_empty<Element>(freeze(copy(v)))) {

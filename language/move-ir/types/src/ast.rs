@@ -178,6 +178,8 @@ pub enum Type {
     Bool,
     /// `bytearray`
     ByteArray,
+    /// `vector`
+    Vector(Box<Type>),
     /// A module defined struct
     Struct(QualifiedStructIdent, Vec<Type>),
     /// A reference type, the bool flag indicates whether the reference is mutable
@@ -1339,6 +1341,7 @@ impl fmt::Display for Type {
             Type::Bool => write!(f, "bool"),
             Type::Address => write!(f, "address"),
             Type::ByteArray => write!(f, "bytearray"),
+            Type::Vector(ty) => write!(f, "vector<{}>", ty),
             Type::Struct(ident, tys) => write!(f, "{}{}", ident, format_type_actuals(tys)),
             Type::Reference(is_mutable, t) => {
                 write!(f, "&{}{}", if *is_mutable { "mut " } else { "" }, t)

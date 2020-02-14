@@ -64,6 +64,11 @@ fn derive_type_tag(
         U64 => Ok(TypeTag::U64),
         U128 => Ok(TypeTag::U128),
         ByteArray => Ok(TypeTag::ByteArray),
+        Vector(ty) => Ok(TypeTag::Vector(Box::new(derive_type_tag(
+            module,
+            type_actual_tags,
+            ty,
+        )?))),
         TypeParameter(idx) => type_actual_tags
             .get(*idx as usize)
             .ok_or_else(|| {

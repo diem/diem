@@ -20,8 +20,8 @@ module GasSchedule {
     }
 
     resource T {
-        instruction_schedule: Vector.T<Self.Cost>,
-        native_schedule: Vector.T<Self.Cost>,
+        instruction_schedule: vector<Self.Cost>,
+        native_schedule: vector<Self.Cost>,
     }
 
     // Initialize the table under the association account

@@ -614,6 +614,9 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
                         Self::new(self.module, token).contains_nominal_resource(type_formals)
                     })
             }
+            SignatureToken::Vector(ty) => {
+                SignatureTokenView::new(self.module, ty).contains_nominal_resource(type_formals)
+            }
             SignatureToken::Reference(_)
             | SignatureToken::MutableReference(_)
             | SignatureToken::Bool

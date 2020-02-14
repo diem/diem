@@ -670,6 +670,10 @@ fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Signat
             SerializedType::U128 => Ok(SignatureToken::U128),
             SerializedType::BYTEARRAY => Ok(SignatureToken::ByteArray),
             SerializedType::ADDRESS => Ok(SignatureToken::Address),
+            SerializedType::VECTOR => {
+                let ty = load_signature_token(cursor)?;
+                Ok(SignatureToken::Vector(Box::new(ty)))
+            }
             SerializedType::REFERENCE => {
                 let ref_token = load_signature_token(cursor)?;
                 Ok(SignatureToken::Reference(Box::new(ref_token)))
@@ -1113,6 +1117,7 @@ impl SerializedType {
             0x8 => Ok(SerializedType::STRUCT),
             0x9 => Ok(SerializedType::BYTEARRAY),
             0xA => Ok(SerializedType::TYPE_PARAMETER),
+            0xB => Ok(SerializedType::VECTOR),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }

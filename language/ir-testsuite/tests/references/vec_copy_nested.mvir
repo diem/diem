@@ -49,8 +49,8 @@ module DeepCopy {
     }
 
     public test_vector() {
-        let v1: Vector.T<u64>;
-        let v2: Vector.T<u64>;
+        let v1: vector<u64>;
+        let v2: vector<u64>;
 
         v1 = Vector.empty<u64>();
         Vector.push_back<u64>(&mut v1, 0);
@@ -65,8 +65,8 @@ module DeepCopy {
     }
 
     public test_vector_to_struct() {
-        let v1: Vector.T<Self.Config>;
-        let v2: Vector.T<Self.Config>;
+        let v1: vector<Self.Config>;
+        let v2: vector<Self.Config>;
         let c1: Self.Config;
         let c2: Self.Config;
         let r1: &mut Self.Config;

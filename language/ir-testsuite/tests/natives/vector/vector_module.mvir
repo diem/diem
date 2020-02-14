@@ -1,10 +1,10 @@
 module M {
     import 0x0.LibraCoin;
     import 0x0.Vector;
-    resource Coins { f: Vector.T<LibraCoin.T> }
+    resource Coins { f: vector<LibraCoin.T> }
 
     public new() {
-        let coin_vec: Vector.T<LibraCoin.T>;
+        let coin_vec: vector<LibraCoin.T>;
         let coins: Self.Coins;
         coin_vec = Vector.empty<LibraCoin.T>();
         coins = Coins { f: move(coin_vec)};
@@ -15,7 +15,7 @@ module M {
 
     public put_coin(coin: LibraCoin.T) acquires Coins {
         let coins_ref: &mut Self.Coins;
-        let v_ref: &mut Vector.T<LibraCoin.T>;
+        let v_ref: &mut vector<LibraCoin.T>;
 
         coins_ref = borrow_global_mut<Coins>(get_txn_sender());
         v_ref = &mut move(coins_ref).f;
@@ -25,7 +25,7 @@ module M {
 
     public get_value(i: u64): u64 acquires Coins {
         let coins_ref: &Self.Coins;
-        let v_ref: &Vector.T<LibraCoin.T>;
+        let v_ref: &vector<LibraCoin.T>;
         let coin_ref: &LibraCoin.T;
 
         coins_ref = borrow_global<Coins>(get_txn_sender());
@@ -37,7 +37,7 @@ module M {
 
     public pop(): LibraCoin.T acquires Coins {
         let coins_ref: &mut Self.Coins;
-        let v_ref: &mut Vector.T<LibraCoin.T>;
+        let v_ref: &mut vector<LibraCoin.T>;
 
         coins_ref = borrow_global_mut<Coins>(get_txn_sender());
         v_ref = &mut move(coins_ref).f;

@@ -14,16 +14,16 @@ module LibraSystem {
     }
 
     struct ValidatorSetChangeEvent {
-        new_validator_set: Vector.T<Self.ValidatorInfo>,
+        new_validator_set: vector<Self.ValidatorInfo>,
     }
 
     resource ValidatorSet {
         // The current validator set. Updated only at epoch boundaries via reconfiguration.
-        validators: Vector.T<Self.ValidatorInfo>,
+        validators: vector<Self.ValidatorInfo>,
         // List of validators to add at the next reconfiguration.
-        additions: Vector.T<address>,
+        additions: vector<address>,
         // List of validators to removal at the next reconfiguration. Disjoint with additions.
-        removals: Vector.T<address>,
+        removals: vector<address>,
         // Handle where validator set change events are emitted
         change_events: LibraAccount.EventHandle<Self.ValidatorSetChangeEvent>,
     }
@@ -37,12 +37,12 @@ module LibraSystem {
     }
 
     struct DiscoverySetChangeEvent {
-        new_discovery_set: Vector.T<Self.DiscoveryInfo>,
+        new_discovery_set: vector<Self.DiscoveryInfo>,
     }
 
     resource DiscoverySet {
         // The current discovery set. Updated only at epoch boundaries via reconfiguration.
-        discovery_set: Vector.T<Self.DiscoveryInfo>,
+        discovery_set: vector<Self.DiscoveryInfo>,
         // Handle where discovery set change events are emitted
         change_events: LibraAccount.EventHandle<Self.DiscoverySetChangeEvent>,
     }
@@ -219,7 +219,7 @@ module LibraSystem {
         return Vector.length<Self.ValidatorInfo>(&move(validator_set_ref).validators);
     }
 
-   is_validator_(addr: &address, validators_vec_ref: &Vector.T<Self.ValidatorInfo>): bool {
+   is_validator_(addr: &address, validators_vec_ref: &vector<Self.ValidatorInfo>): bool {
         let size: u64;
         let i: u64;
         let validator_info_ref: &Self.ValidatorInfo;
@@ -258,7 +258,7 @@ module LibraSystem {
     // Only callable by the Association address
     public add_validator(account_address: address) acquires ValidatorSet {
         let validator_set_ref: &mut Self.ValidatorSet;
-        let validator_set_additions: &mut Vector.T<address>;
+        let validator_set_additions: &mut vector<address>;
 
         // Only the Association can add new validators
         assert(get_txn_sender() == 0xA550C18, 1);
@@ -437,12 +437,12 @@ module LibraSystem {
     //     passed to the executor
     reconfigure() acquires ValidatorSet, DiscoverySet {
         let validator_set_ref: &mut Self.ValidatorSet;
-        let additions_ref: &mut Vector.T<address>;
-        let removals_ref: &mut Vector.T<address>;
-        let validators_vec_ref: &mut Vector.T<Self.ValidatorInfo>;
+        let additions_ref: &mut vector<address>;
+        let removals_ref: &mut vector<address>;
+        let validators_vec_ref: &mut vector<Self.ValidatorInfo>;
         let validator_info_ref: &mut Self.ValidatorInfo;
         let discovery_set_ref: &mut Self.DiscoverySet;
-        let discovery_vec_ref: &mut Vector.T<Self.DiscoveryInfo>;
+        let discovery_vec_ref: &mut vector<Self.DiscoveryInfo>;
         let discovery_info_ref: &mut Self.DiscoveryInfo;
         let addr: address;
         let to_remove_index: u64;
@@ -588,7 +588,7 @@ module LibraSystem {
 
     // Get the ValidatorInfo for the ith validator
     public get_ith_validator_info(i: u64): Self.ValidatorInfo acquires ValidatorSet {
-      let validators_vec_ref: &Vector.T<Self.ValidatorInfo>;
+      let validators_vec_ref: &vector<Self.ValidatorInfo>;
 
       validators_vec_ref = &borrow_global<ValidatorSet>(0x1D8).validators;
       assert(copy(i) < Vector.length<Self.ValidatorInfo>(copy(validators_vec_ref)), 3);
@@ -613,7 +613,7 @@ module LibraSystem {
 
     // Get the DiscoveryInfo for the ith validator
     public get_ith_discovery_info(i: u64): Self.DiscoveryInfo acquires DiscoverySet {
-        let discovery_vec_ref: &Vector.T<Self.DiscoveryInfo>;
+        let discovery_vec_ref: &vector<Self.DiscoveryInfo>;
 
         discovery_vec_ref = &borrow_global<DiscoverySet>(0xD15C0).discovery_set;
         assert(copy(i) < Vector.length<Self.DiscoveryInfo>(copy(discovery_vec_ref)), 4);
@@ -723,7 +723,7 @@ module LibraSystem {
 
     // Get the index of the validator with address `addr` in `validators`.
     // Aborts if `addr` is not the address of any validator
-    public get_validator_index(validators: &Vector.T<Self.ValidatorInfo>, addr: address): u64 {
+    public get_validator_index(validators: &vector<Self.ValidatorInfo>, addr: address): u64 {
         let i: u64;
         let len: u64;
 

@@ -16,11 +16,11 @@ module ValidatorSet {
     }
 
     struct ChangeEvent {
-        new_validator_set: Vector::T<ValidatorInfo>,
+        new_validator_set: vector<ValidatorInfo>,
     }
 
     resource struct T {
-        validators: Vector::T<ValidatorInfo>,
+        validators: vector<ValidatorInfo>,
         change_events: Event::Handle<ChangeEvent>,
     }
 

@@ -2,14 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{hash, primitive_helpers, signature};
-use crate::{
-    native_structs::dispatch::resolve_native_struct,
-    values::{vector, Value},
-};
+use crate::values::{vector, Value};
 use libra_types::{
-    account_address::AccountAddress,
     account_config::CORE_CODE_ADDRESS,
-    identifier::{IdentStr, Identifier},
+    identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
     vm_error::{StatusCode, VMStatus},
 };
@@ -222,46 +218,23 @@ impl NativeFunction {
             Self::BytearrayConcat => simple!(vec![ByteArray, ByteArray], vec![ByteArray]),
             Self::VectorLength => simple!(
                 vec![Kind::All],
-                vec![Reference(Box::new(tstruct(
-                    CORE_CODE_ADDRESS,
-                    "Vector",
-                    "T",
-                    vec![TypeParameter(0)]
-                )))],
+                vec![Reference(Box::new(Vector(Box::new(TypeParameter(0)))))],
                 vec![U64]
             ),
             Self::VectorEmpty => simple!(
                 vec![Kind::All],
                 vec![],
-                vec![tstruct(
-                    CORE_CODE_ADDRESS,
-                    "Vector",
-                    "T",
-                    vec![TypeParameter(0)]
-                )]
+                vec![Vector(Box::new(TypeParameter(0)))]
             ),
             Self::VectorBorrow => simple!(
                 vec![Kind::All],
-                vec![
-                    Reference(Box::new(tstruct(
-                        CORE_CODE_ADDRESS,
-                        "Vector",
-                        "T",
-                        vec![TypeParameter(0)]
-                    ))),
-                    U64
-                ],
+                vec![Reference(Box::new(Vector(Box::new(TypeParameter(0))))), U64],
                 vec![Reference(Box::new(TypeParameter(0)))]
             ),
             Self::VectorBorrowMut => simple!(
                 vec![Kind::All],
                 vec![
-                    MutableReference(Box::new(tstruct(
-                        CORE_CODE_ADDRESS,
-                        "Vector",
-                        "T",
-                        vec![TypeParameter(0)]
-                    ))),
+                    MutableReference(Box::new(Vector(Box::new(TypeParameter(0))))),
                     U64
                 ],
                 vec![MutableReference(Box::new(TypeParameter(0)))]
@@ -269,45 +242,27 @@ impl NativeFunction {
             Self::VectorPushBack => simple!(
                 vec![Kind::All],
                 vec![
-                    MutableReference(Box::new(tstruct(
-                        CORE_CODE_ADDRESS,
-                        "Vector",
-                        "T",
-                        vec![TypeParameter(0)]
-                    ))),
+                    MutableReference(Box::new(Vector(Box::new(TypeParameter(0))))),
                     TypeParameter(0),
                 ],
                 vec![]
             ),
             Self::VectorPopBack => simple!(
                 vec![Kind::All],
-                vec![MutableReference(Box::new(tstruct(
-                    CORE_CODE_ADDRESS,
-                    "Vector",
-                    "T",
-                    vec![TypeParameter(0)]
-                )))],
+                vec![MutableReference(Box::new(Vector(Box::new(TypeParameter(
+                    0
+                )))))],
                 vec![TypeParameter(0)]
             ),
             Self::VectorDestroyEmpty => simple!(
                 vec![Kind::All],
-                vec![tstruct(
-                    CORE_CODE_ADDRESS,
-                    "Vector",
-                    "T",
-                    vec![TypeParameter(0)]
-                )],
+                vec![Vector(Box::new(TypeParameter(0)))],
                 vec![]
             ),
             Self::VectorSwap => simple!(
                 vec![Kind::All],
                 vec![
-                    MutableReference(Box::new(tstruct(
-                        CORE_CODE_ADDRESS,
-                        "Vector",
-                        "T",
-                        vec![TypeParameter(0)]
-                    ))),
+                    MutableReference(Box::new(Vector(Box::new(TypeParameter(0))))),
                     U64,
                     U64,
                 ],
@@ -331,22 +286,6 @@ impl NativeFunction {
             }
         })
     }
-}
-
-/// Helper for finding native struct handle index.
-fn tstruct(
-    addr: AccountAddress,
-    module_name: &str,
-    function_name: &str,
-    args: Vec<SignatureToken>,
-) -> SignatureToken {
-    let id = ModuleId::new(addr, Identifier::new(module_name).unwrap());
-    let native_struct =
-        resolve_native_struct(&id, &Identifier::new(function_name).unwrap()).unwrap();
-    let idx = native_struct.expected_index;
-    // TODO assert kinds match
-    assert_eq!(args.len(), native_struct.expected_type_formals.len());
-    SignatureToken::Struct(idx, args)
 }
 
 /// Helper for finding non-native struct handle index

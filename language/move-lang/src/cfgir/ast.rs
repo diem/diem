@@ -298,22 +298,33 @@ impl UnannotatedExp_ {
 }
 
 impl BaseType_ {
-    pub fn builtin(loc: Loc, b_: BuiltinTypeName_) -> BaseType {
-        let kind = sp(loc, b_.kind());
+    pub fn builtin(loc: Loc, b_: BuiltinTypeName_, ty_args: Vec<BaseType>) -> BaseType {
+        use BuiltinTypeName_::*;
+
+        let kind = match b_ {
+            U8 | U64 | U128 | Bool | Address | Bytearray => sp(loc, Kind_::Unrestricted),
+            Vector => {
+                assert!(
+                    ty_args.len() == 1,
+                    "ICE vector should have exactly 1 type argument."
+                );
+                ty_args[0].value.kind()
+            }
+        };
         let n = sp(loc, TypeName_::Builtin(sp(loc, b_)));
-        sp(loc, BaseType_::Apply(kind, n, vec![]))
+        sp(loc, BaseType_::Apply(kind, n, ty_args))
     }
 
     pub fn bool(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::Bool)
+        Self::builtin(loc, BuiltinTypeName_::Bool, vec![])
     }
 
     pub fn address(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::Address)
+        Self::builtin(loc, BuiltinTypeName_::Address, vec![])
     }
 
     pub fn u64(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::U64)
+        Self::builtin(loc, BuiltinTypeName_::U64, vec![])
     }
 
     pub fn kind(&self) -> Kind {

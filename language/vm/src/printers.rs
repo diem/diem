@@ -583,6 +583,11 @@ fn display_signature_token<T: TableAccess>(
         SignatureToken::U128 => write!(f, "U128"),
         SignatureToken::ByteArray => write!(f, "ByteArray"),
         SignatureToken::Address => write!(f, "Address"),
+        SignatureToken::Vector(ty) => {
+            write!(f, "Vector<")?;
+            display_signature_token(ty, tables, f)?;
+            write!(f, ">")
+        }
         SignatureToken::Struct(idx, types) => {
             display_struct_handle(tables.get_struct_at(*idx).unwrap(), tables, f)?;
             display_type_actuals(&types, tables, f)

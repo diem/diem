@@ -582,6 +582,10 @@ impl<'a> Context<'a> {
             | x @ SignatureToken::ByteArray
             | x @ SignatureToken::Address
             | x @ SignatureToken::TypeParameter(_) => x,
+            SignatureToken::Vector(inner) => {
+                let correct_inner = self.reindex_signature_token(dep, *inner)?;
+                SignatureToken::Vector(Box::new(correct_inner))
+            }
             SignatureToken::Reference(inner) => {
                 let correct_inner = self.reindex_signature_token(dep, *inner)?;
                 SignatureToken::Reference(Box::new(correct_inner))

@@ -14,7 +14,7 @@ main() {
   let number_of_validators: u64;
   let index: u64;
   let addr: address;
-  let balances: Vector.T<u64>;
+  let balances: vector<u64>;
   let old_balance: u64;
   let new_balance: u64;
 

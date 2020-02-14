@@ -67,6 +67,9 @@ impl Resolver {
             | SignatureToken::ByteArray
             | SignatureToken::Address
             | SignatureToken::TypeParameter(_) => Ok(sig_token.clone()),
+            SignatureToken::Vector(ty) => Ok(SignatureToken::Vector(Box::new(
+                self.import_signature_token(dependency, ty)?,
+            ))),
             SignatureToken::Struct(sh_idx, types) => {
                 let struct_handle = dependency.struct_handle_at(*sh_idx);
                 let defining_module_handle = dependency.module_handle_at(struct_handle.module);

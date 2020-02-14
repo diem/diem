@@ -273,6 +273,10 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
                     .to_string();
                 format!("{}{}", name, formatted_instantiation)
             }
+            SignatureToken::Vector(sig_tok) => format!(
+                "vector<{}>",
+                self.disassemble_sig_tok(*sig_tok, type_param_context)?
+            ),
             SignatureToken::Reference(sig_tok) => format!(
                 "&{}",
                 self.disassemble_sig_tok(*sig_tok, type_param_context)?

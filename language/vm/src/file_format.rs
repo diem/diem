@@ -502,6 +502,8 @@ pub enum SignatureToken {
     ByteArray,
     /// Address, a 32 bytes immutable type.
     Address,
+    /// Vector
+    Vector(Box<SignatureToken>),
     /// MOVE user type, resource or unrestricted
     Struct(StructHandleIndex, Vec<SignatureToken>),
     /// Reference to a type.
@@ -545,7 +547,7 @@ impl Arbitrary for SignatureToken {
     }
 }
 
-impl ::std::fmt::Debug for SignatureToken {
+impl std::fmt::Debug for SignatureToken {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         match self {
             SignatureToken::Bool => write!(f, "Bool"),
@@ -554,6 +556,7 @@ impl ::std::fmt::Debug for SignatureToken {
             SignatureToken::U128 => write!(f, "U128"),
             SignatureToken::ByteArray => write!(f, "ByteArray"),
             SignatureToken::Address => write!(f, "Address"),
+            SignatureToken::Vector(boxed) => write!(f, "Vector({:?})", boxed),
             SignatureToken::Struct(idx, types) => write!(f, "Struct({:?}, {:?})", idx, types),
             SignatureToken::Reference(boxed) => write!(f, "Reference({:?})", boxed),
             SignatureToken::MutableReference(boxed) => write!(f, "MutableReference({:?})", boxed),
@@ -605,7 +608,7 @@ impl SignatureToken {
         match self {
             Reference(_) => SignatureTokenKind::Reference,
             MutableReference(_) => SignatureTokenKind::MutableReference,
-            Bool | U8 | U64 | U128 | ByteArray | Address | Struct(_, _) => {
+            Bool | U8 | U64 | U128 | ByteArray | Address | Struct(_, _) | Vector(_) => {
                 SignatureTokenKind::Value
             }
             // TODO: This is a temporary hack to please the verifier. SignatureTokenKind will soon
@@ -623,7 +626,7 @@ impl SignatureToken {
         match self {
             Struct(sh_idx, _) => Some(*sh_idx),
             Reference(token) | MutableReference(token) => token.struct_index(),
-            Bool | U8 | U64 | U128 | ByteArray | Address | TypeParameter(_) => None,
+            Bool | U8 | U64 | U128 | ByteArray | Address | Vector(_) | TypeParameter(_) => None,
         }
     }
 
@@ -632,7 +635,9 @@ impl SignatureToken {
         use SignatureToken::*;
         match self {
             Bool | U8 | U64 | U128 | ByteArray | Address => true,
-            Struct(_, _) | Reference(_) | MutableReference(_) | TypeParameter(_) => false,
+            Struct(_, _) | Reference(_) | Vector(_) | MutableReference(_) | TypeParameter(_) => {
+                false
+            }
         }
     }
 
@@ -644,6 +649,7 @@ impl SignatureToken {
             Bool
             | ByteArray
             | Address
+            | Vector(_)
             | Struct(_, _)
             | Reference(_)
             | MutableReference(_)
@@ -714,6 +720,7 @@ impl SignatureToken {
             U128 => U128,
             ByteArray => ByteArray,
             Address => Address,
+            Vector(ty) => Vector(Box::new(ty.substitute(tys))),
             Struct(idx, actuals) => Struct(
                 *idx,
                 actuals
@@ -743,6 +750,8 @@ impl SignatureToken {
 
             // To get the kind of a type parameter, we lookup its constraint in the formals.
             TypeParameter(idx) => type_formals[*idx as usize],
+
+            Vector(ty) => Self::kind((struct_handles, type_formals), ty),
 
             Struct(idx, tys) => {
                 // Get the struct handle at idx. Note the index could be out of bounds.
