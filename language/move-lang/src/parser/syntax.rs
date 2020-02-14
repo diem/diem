@@ -367,6 +367,9 @@ fn parse_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList, Error
 //          <Address>
 //          | "true"
 //          | "false"
+//          | <U8>
+//          | <U64>
+//          | <U128>
 fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
     let start_loc = tokens.start_loc();
     let val = match tokens.peek() {
@@ -381,6 +384,33 @@ fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
         Tok::False => {
             tokens.advance()?;
             Value_::Bool(false)
+        }
+        Tok::U8Value => {
+            let mut s = tokens.content();
+            if s.ends_with("u8") {
+                s = &s[..s.len() - 2]
+            }
+            let i = u8::from_str(s).unwrap();
+            tokens.advance()?;
+            Value_::U8(i)
+        }
+        Tok::U64Value => {
+            let mut s = tokens.content();
+            if s.ends_with("u64") {
+                s = &s[..s.len() - 3]
+            }
+            let i = u64::from_str(s).unwrap();
+            tokens.advance()?;
+            Value_::U64(i)
+        }
+        Tok::U128Value => {
+            let mut s = tokens.content();
+            if s.ends_with("u128") {
+                s = &s[..s.len() - 4]
+            }
+            let i = u128::from_str(s).unwrap();
+            tokens.advance()?;
+            Value_::U128(i)
         }
         _ => unreachable!("parse_value called with invalid token"),
     };
@@ -530,7 +560,10 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             }
         }
 
-        Tok::True | Tok::False => Exp_::Value(parse_value(tokens)?),
+        Tok::True | Tok::False | Tok::U8Value | Tok::U64Value | Tok::U128Value => {
+            Exp_::Value(parse_value(tokens)?)
+        }
+
         Tok::NumValue => {
             let i = match u128::from_str(tokens.content()) {
                 Ok(i) => i,

@@ -12,6 +12,9 @@ pub enum Tok {
     EOF,
     AddressValue,
     NumValue,
+    U8Value,
+    U64Value,
+    U128Value,
     NameValue,
     Exclaim,
     ExclaimEqual,
@@ -73,6 +76,9 @@ impl fmt::Display for Tok {
             EOF => "[end-of-file]",
             AddressValue => "[Address]",
             NumValue => "[Num]",
+            U8Value => "[U8]",
+            U64Value => "[U64]",
+            U128Value => "[U128]",
             NameValue => "[Name]",
             Exclaim => "!",
             ExclaimEqual => "!=",
@@ -216,7 +222,7 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
                     (Tok::AddressValue, 2 + hex_len)
                 }
             } else {
-                (Tok::NumValue, get_decimal_digits_len(&text))
+                get_decimal_number(&text)
             }
         }
         'A'..='Z' | 'a'..='z' | '_' => {
@@ -313,14 +319,24 @@ fn get_name_len(text: &str) -> usize {
         .unwrap_or_else(|| text.len())
 }
 
-// Return the length of the substring containing characters in [0-9].
-fn get_decimal_digits_len(text: &str) -> usize {
-    text.chars()
+fn get_decimal_number(text: &str) -> (Tok, usize) {
+    let len = text
+        .chars()
         .position(|c| match c {
             '0'..='9' => false,
             _ => true,
         })
-        .unwrap_or_else(|| text.len())
+        .unwrap_or_else(|| text.len());
+    let rest = &text[len..];
+    if rest.starts_with("u8") {
+        (Tok::U8Value, len + 2)
+    } else if rest.starts_with("u64") {
+        (Tok::U64Value, len + 3)
+    } else if rest.starts_with("u128") {
+        (Tok::U128Value, len + 4)
+    } else {
+        (Tok::NumValue, len)
+    }
 }
 
 // Return the length of the substring containing characters in [0-9a-fA-F].
