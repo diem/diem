@@ -10,6 +10,7 @@ mod policy;
 mod storage;
 mod value;
 mod vault;
+mod aws;
 
 pub use crate::{
     error::Error,

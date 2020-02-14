@@ -1,0 +1,13 @@
+[package]
+name = "libra-secure-storage-aws"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+repository = "https://github.com/libra/libra"
+description = "Libra's Persistent, Secure Storage implemted using AWS SecretsManager"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+rusoto_secretsmanager = {version = "0.42.0", default-features = false, features=["rustls"]}
