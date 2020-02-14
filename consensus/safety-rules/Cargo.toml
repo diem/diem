@@ -22,7 +22,7 @@ workspace-builder = { path = "../../common/workspace-builder", version = "0.1.0"
 
 [dev-dependencies]
 criterion = "0.3"
-rand = { version = "0.6.5", default-features = false }
+rand = { version = "0.7.3", default-features = false }
 tempfile = "3.1.0"
 
 [[bench]]

@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0"
 hex = { version = "0.4.1", default-features = false }
 parity-multiaddr = { version = "0.7.1", default-features = false }
-rand = "0.6.5"
+rand = "0.7.3"
 serde = { version = "1.0.99", default-features = false }
 structopt = "0.3.2"
 thiserror = "1.0"

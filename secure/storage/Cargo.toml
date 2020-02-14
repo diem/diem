@@ -22,7 +22,7 @@ toml = { version = "0.5.3", default-features = false }
 
 [dev-dependencies]
 libra-config = { path = "../../config", version = "0.1.0" }
-rand = "0.6.5"
+rand = "0.7.3"
 
 [features]
 fuzzing = ["libra-crypto/fuzzing"]

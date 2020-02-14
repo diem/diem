@@ -95,7 +95,7 @@ use mirai_annotations::*;
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use rand::{rngs::EntropyRng, Rng};
+use rand::{rngs::OsRng, Rng};
 use serde::{de, ser};
 use std::{self, convert::AsRef, fmt};
 use tiny_keccak::Keccak;
@@ -161,7 +161,7 @@ impl HashValue {
 
     /// Create a cryptographically random instance.
     pub fn random() -> Self {
-        let mut rng = EntropyRng::new();
+        let mut rng = OsRng;
         let hash: [u8; HashValue::LENGTH] = rng.gen();
         HashValue { hash }
     }

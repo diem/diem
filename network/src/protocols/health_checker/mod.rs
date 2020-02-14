@@ -30,7 +30,7 @@ use futures::{
 };
 use libra_logger::prelude::*;
 use libra_types::PeerId;
-use rand::{rngs::SmallRng, seq::SliceRandom, FromEntropy, Rng};
+use rand::{rngs::SmallRng, seq::SliceRandom, SeedableRng, Rng};
 use std::{collections::HashMap, time::Duration};
 
 #[cfg(test)]

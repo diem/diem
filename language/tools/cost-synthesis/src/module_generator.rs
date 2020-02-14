@@ -8,7 +8,7 @@
 //! generated -- any function bodies that are generated are simply non-semantic sequences of
 //! instructions to check BrTrue, BrFalse, and Branch instructions.
 use bytecode_verifier::VerifiedModule;
-use rand::{rngs::StdRng, FromEntropy};
+use rand::{rngs::StdRng, SeedableRng};
 use utils::module_generation::{generate_verified_modules, ModuleGeneratorOptions};
 
 pub fn generate_padded_modules(

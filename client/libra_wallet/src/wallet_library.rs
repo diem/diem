@@ -23,7 +23,7 @@ use libra_types::{
     account_address::AccountAddress,
     transaction::{helpers::TransactionSigner, RawTransaction, SignedTransaction},
 };
-use rand::{rngs::EntropyRng, Rng};
+use rand::{rngs::OsRng, Rng};
 use std::{collections::HashMap, path::Path};
 
 /// WalletLibrary contains all the information needed to recreate a particular wallet
@@ -39,7 +39,7 @@ impl WalletLibrary {
     /// empty WalletLibrary from that Mnemonic
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let mut rng = EntropyRng::new();
+        let mut rng = OsRng;
         let data: [u8; 32] = rng.gen();
         let mnemonic = Mnemonic::mnemonic(&data).unwrap();
         Self::new_from_mnemonic(mnemonic)

@@ -58,7 +58,7 @@
 
 use crate::{hkdf::Hkdf, traits::*};
 use libra_crypto_derive::{Deref, DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
-use rand::{rngs::EntropyRng, RngCore};
+use rand::{rngs::OsRng, RngCore};
 use sha2::Sha256;
 use std::{convert::TryFrom, ops::Deref};
 use x25519_dalek;
@@ -155,7 +155,7 @@ impl X25519StaticPrivateKey {
         )
     }
 
-    /// Generates a random keypair `(PrivateKey, PublicKey)` by combining the output of `EntropyRng`
+    /// Generates a random keypair `(PrivateKey, PublicKey)` by combining the output of `OsRng`
     /// with a user-provided seed. This concatenated seed is used as the seed to HKDF (RFC 5869).
     ///
     /// Similarly to `derive_keypair_from_seed` the user provides the following inputs:
@@ -170,7 +170,7 @@ impl X25519StaticPrivateKey {
         seed: &[u8],
         app_info: Option<&[u8]>,
     ) -> (X25519StaticPrivateKey, X25519StaticPublicKey) {
-        let mut rng = EntropyRng::new();
+        let mut rng = OsRng;
         let mut seed_from_rng = [0u8; X25519_PRIVATE_KEY_LENGTH];
         rng.fill_bytes(&mut seed_from_rng);
 

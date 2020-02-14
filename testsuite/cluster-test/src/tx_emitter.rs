@@ -35,7 +35,7 @@ use libra_types::{
 };
 use rand::{
     prelude::ThreadRng,
-    rngs::{EntropyRng, StdRng},
+    rngs::{OsRng, StdRng},
     seq::IteratorRandom,
     seq::SliceRandom,
     Rng, SeedableRng,
@@ -528,7 +528,7 @@ fn gen_random_account(rng: &mut StdRng) -> AccountData {
 }
 
 fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
-    let seed: [u8; 32] = EntropyRng::new().gen();
+    let seed: [u8; 32] = OsRng.gen();
     let mut rng = StdRng::from_seed(seed);
     (0..num_accounts)
         .map(|_| gen_random_account(&mut rng))

@@ -43,7 +43,7 @@ storage-service = { path = "../storage/storage-service", version = "0.1.0", opti
 [dev-dependencies]
 channel = { path = "../common/channel", version = "0.1.0" }
 parity-multiaddr = { version = "0.7.1", default-features = false }
-rand = "0.6.5"
+rand = "0.7.3"
 
 [build-dependencies]
 tonic-build = "0.1"

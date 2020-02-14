@@ -34,7 +34,7 @@ impl AccountAddress {
     }
 
     pub fn random() -> Self {
-        let mut rng = OsRng::new().expect("can't access OsRng");
+        let mut rng = OsRng;
         let buf: [u8; 32] = rng.gen();
         AccountAddress::new(buf)
     }

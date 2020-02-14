@@ -16,4 +16,4 @@ typed-arena = "2.0.1"
 [dev-dependencies]
 crossbeam = "0.7.2"
 proptest = "0.9.4"
-rand = "0.6.5"
+rand = "0.7.3"

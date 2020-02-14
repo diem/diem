@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-rand = "0.6.5"
+rand = "0.7.3"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 ir-to-bytecode = { path = "../../compiler/ir-to-bytecode", version = "0.1.0" }

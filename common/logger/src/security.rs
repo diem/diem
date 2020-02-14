@@ -3,7 +3,7 @@
 
 use super::error;
 use backtrace::Backtrace;
-use rand::{rngs::SmallRng, FromEntropy, Rng};
+use rand::{rngs::SmallRng, SeedableRng, Rng};
 use serde::Serialize;
 use std::fmt::Debug;
 

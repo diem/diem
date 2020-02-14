@@ -39,7 +39,7 @@ pub struct Account {
 impl Account {
     /// Create a new Account. The account is a logical entity at this point
     pub fn new() -> Self {
-        let mut seed_rng = OsRng::new().expect("can't access OsRng");
+        let mut seed_rng = OsRng;
         let seed_buf: [u8; 32] = seed_rng.gen();
         let mut rng = StdRng::from_seed(seed_buf);
         let (privkey, pubkey) = compat::generate_keypair(&mut rng);

@@ -27,7 +27,7 @@ libra-nibble = { path = "../../common/nibble", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]
-rand = "0.6.5"
+rand = "0.7.3"
 proptest = "0.9.2"
 proptest-derive = "0.1.2"
 

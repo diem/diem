@@ -56,7 +56,7 @@ use libra_logger::prelude::*;
 use libra_types::{crypto_proxies::ValidatorSigner as Signer, PeerId};
 use parity_multiaddr::Multiaddr;
 use prost::Message;
-use rand::{rngs::SmallRng, FromEntropy, Rng};
+use rand::{rngs::SmallRng, SeedableRng, Rng};
 use std::{
     cmp::max,
     collections::{HashMap, HashSet},
