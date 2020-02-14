@@ -109,6 +109,7 @@ impl<'a> InstantiationLoopChecker<'a> {
                 TypeParameter(idx) => {
                     type_params.insert(*idx);
                 }
+                Vector(ty) => rec(type_params, ty),
                 Reference(ty) | MutableReference(ty) => rec(type_params, ty),
                 Struct(_, tys) => {
                     for ty in tys {

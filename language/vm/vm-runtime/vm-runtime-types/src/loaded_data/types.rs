@@ -14,6 +14,7 @@ pub enum Type {
     U128,
     ByteArray,
     Address,
+    Vector(Box<Type>),
     Struct(StructDef),
     Reference(Box<Type>),
     MutableReference(Box<Type>),
@@ -23,7 +24,6 @@ pub enum Type {
 #[cfg(feature = "fuzzing")]
 pub mod prop {
     use super::*;
-    use crate::native_structs::NativeStructType;
     use proptest::{collection::vec, prelude::*};
 
     impl Type {
@@ -52,9 +52,9 @@ pub mod prop {
             let leaf = Self::single_value_strategy();
             leaf.prop_recursive(depth, desired_size, expected_branch_size, |inner| {
                 prop_oneof![
-                    inner.clone().prop_map(|layout| Struct(StructDef::Native(
-                        NativeStructType::new_vec(layout)
-                    ))),
+                    inner
+                        .clone()
+                        .prop_map(|layout| Type::Vector(Box::new(layout))),
                     vec(inner, 0..10).prop_map(|defs| Struct(StructDef::new(defs))),
                 ]
             })

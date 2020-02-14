@@ -910,8 +910,9 @@ impl ModelValue {
                 };
                 Some(PrettyDoc::text(format!("<bytearray {}>", display)))
             }
+            GlobalType::Vector(param) => self.pretty_vector(env, model, param),
             GlobalType::Struct(module_idx, struct_idx, params) => {
-                self.pretty_struct_or_vector(env, model, *module_idx, *struct_idx, &params)
+                self.pretty_struct(env, model, *module_idx, *struct_idx, &params)
             }
             GlobalType::Reference(bt) | GlobalType::MutableReference(bt) => {
                 Some(PrettyDoc::text("&").append(self.pretty(env, model, &*bt)?))
@@ -930,8 +931,38 @@ impl ModelValue {
         }
     }
 
-    /// Pretty prints a struct or vector.
-    pub fn pretty_struct_or_vector(
+    /// Pretty prints the body of a struct or vector, enclosed in braces.
+    pub fn pretty_vec_or_struct_body(entries: Vec<PrettyDoc>) -> PrettyDoc {
+        PrettyDoc::text("{")
+            .append(
+                PrettyDoc::line_()
+                    .append(PrettyDoc::intersperse(
+                        entries,
+                        PrettyDoc::text(",").append(PrettyDoc::line()),
+                    ))
+                    .nest(2)
+                    .group(),
+            )
+            .append(PrettyDoc::text("}"))
+    }
+
+    /// Pretty prints a vector.
+    pub fn pretty_vector(
+        &self,
+        env: &GlobalEnv,
+        model: &Model,
+        param: &GlobalType,
+    ) -> Option<PrettyDoc> {
+        let values = self.extract_vector(model)?;
+        let entries = values
+            .iter()
+            .map(|v| v.pretty_or_raw(env, model, param))
+            .collect_vec();
+        Some(PrettyDoc::text("Vector").append(Self::pretty_vec_or_struct_body(entries)))
+    }
+
+    /// Pretty prints a struct.
+    pub fn pretty_struct(
         &self,
         env: &GlobalEnv,
         model: &Model,
@@ -943,42 +974,25 @@ impl ModelValue {
         let module_env = env.get_module(module_idx);
         let struct_env = module_env.get_struct(struct_idx);
         let values = self.extract_vector(model)?;
-        let entries = if struct_env.is_vector() {
-            values
-                .iter()
-                .map(|v| v.pretty_or_raw(env, model, &params[0]))
-                .collect_vec()
-        } else {
-            struct_env
-                .get_fields()
-                .enumerate()
-                .map(|(i, f)| {
-                    let ty = f.get_type().instantiate(params);
-                    let v = if i < values.len() { &values[i] } else { &error };
-                    let vp = v.pretty_or_raw(env, model, &ty);
-                    PrettyDoc::text(f.get_name().as_str().to_string())
-                        .append(PrettyDoc::text(" ="))
-                        .append(PrettyDoc::line().append(vp).nest(2).group())
-                })
-                .collect_vec()
-        };
+        let entries = struct_env
+            .get_fields()
+            .enumerate()
+            .map(|(i, f)| {
+                let ty = f.get_type().instantiate(params);
+                let v = if i < values.len() { &values[i] } else { &error };
+                let vp = v.pretty_or_raw(env, model, &ty);
+                PrettyDoc::text(f.get_name().as_str().to_string())
+                    .append(PrettyDoc::text(" ="))
+                    .append(PrettyDoc::line().append(vp).nest(2).group())
+            })
+            .collect_vec();
         Some(
             PrettyDoc::text(format!(
                 "{}.{}",
                 struct_env.module_env.get_id().name(),
                 struct_env.get_name()
             ))
-            .append(PrettyDoc::text("{"))
-            .append(
-                PrettyDoc::line_()
-                    .append(PrettyDoc::intersperse(
-                        entries,
-                        PrettyDoc::text(",").append(PrettyDoc::line()),
-                    ))
-                    .nest(2)
-                    .group(),
-            )
-            .append(PrettyDoc::text("}")),
+            .append(Self::pretty_vec_or_struct_body(entries)),
         )
     }
 }

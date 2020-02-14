@@ -1,7 +1,7 @@
 import 0x0.Vector;
 
 main() {
-  let vec: Vector.T<u64>;
+  let vec: vector<u64>;
   let zero: u64;
   let one: u64;
   let two: u64;
@@ -45,7 +45,7 @@ main() {
 import 0x0.Vector;
 // remove on empty vector should fail
 main() {
-  let vec: Vector.T<u64>;
+  let vec: vector<u64>;
 
   vec = Vector.empty<u64>();
   _  = Vector.swap_remove<u64>(&mut vec, 0);
@@ -59,7 +59,7 @@ main() {
 import 0x0.Vector;
 // remove on out-of-bounds index should fail
 main() {
-  let vec: Vector.T<u64>;
+  let vec: vector<u64>;
 
   vec = Vector.empty<u64>();
   Vector.push_back<u64>(&mut vec, 0);

@@ -10,7 +10,6 @@
 use crate::{file_format::*, file_format_common::*};
 use anyhow::{bail, Result};
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
-use std::ops::Deref;
 
 impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the
@@ -482,6 +481,10 @@ fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) ->
         SignatureToken::U128 => binary.push(SerializedType::U128 as u8)?,
         SignatureToken::ByteArray => binary.push(SerializedType::BYTEARRAY as u8)?,
         SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8)?,
+        SignatureToken::Vector(boxed_token) => {
+            binary.push(SerializedType::VECTOR as u8)?;
+            serialize_signature_token(binary, boxed_token)?;
+        }
         SignatureToken::Struct(idx, types) => {
             binary.push(SerializedType::STRUCT as u8)?;
             write_u16_as_uleb128(binary, idx.0)?;
@@ -489,11 +492,11 @@ fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) ->
         }
         SignatureToken::Reference(boxed_token) => {
             binary.push(SerializedType::REFERENCE as u8)?;
-            serialize_signature_token(binary, boxed_token.deref())?;
+            serialize_signature_token(binary, boxed_token)?;
         }
         SignatureToken::MutableReference(boxed_token) => {
             binary.push(SerializedType::MUTABLE_REFERENCE as u8)?;
-            serialize_signature_token(binary, boxed_token.deref())?;
+            serialize_signature_token(binary, boxed_token)?;
         }
         SignatureToken::TypeParameter(idx) => {
             binary.push(SerializedType::TYPE_PARAMETER as u8)?;

@@ -5,9 +5,7 @@ use crate::loaded_data::types::Type;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum NativeStructTag {
-    Vector = 0,
-}
+pub enum NativeStructTag {}
 
 // TODO: Clean this up when we promote Vector to a primitive type.
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
@@ -19,12 +17,6 @@ pub struct NativeStructType {
 impl NativeStructType {
     pub fn new(tag: NativeStructTag, type_actuals: Vec<Type>) -> Self {
         Self { tag, type_actuals }
-    }
-    pub fn new_vec(ty: Type) -> Self {
-        Self {
-            tag: NativeStructTag::Vector,
-            type_actuals: vec![ty],
-        }
     }
 
     pub fn type_actuals(&self) -> &[Type] {

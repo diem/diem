@@ -34,8 +34,9 @@ pub fn boogie_type_value(env: &GlobalEnv, sig: &GlobalType) -> String {
         GlobalType::U8 | GlobalType::U64 | GlobalType::U128 => "IntegerType()".to_string(),
         GlobalType::ByteArray => "ByteArrayType()".to_string(),
         GlobalType::Address => "AddressType()".to_string(),
+        GlobalType::Vector(t) => format!("Vector_T_type_value({})", boogie_type_value(env, t)),
         GlobalType::Reference(t) | GlobalType::MutableReference(t) => {
-            format!("ReferenceType({})", boogie_type_value(env, &*t))
+            format!("ReferenceType({})", boogie_type_value(env, t))
         }
         GlobalType::TypeParameter(index) => format!("tv{}", index),
         GlobalType::Struct(module_idx, struct_idx, args) => {
@@ -90,6 +91,7 @@ pub fn boogie_type_check_expr(env: &GlobalEnv, name: &str, sig: &GlobalType) -> 
         GlobalType::Bool => conds.push(format!("is#Boolean({})", name)),
         GlobalType::Address => conds.push(format!("is#Address({})", name)),
         GlobalType::ByteArray => conds.push(format!("is#ByteArray({})", name)),
+        GlobalType::Vector(_) => conds.push(format!("$Vector_T_is_well_formed({})", name)),
         GlobalType::Struct(module_idx, struct_idx, _) => {
             let struct_env = env.get_module(*module_idx).into_get_struct(*struct_idx);
             conds.push(format!(

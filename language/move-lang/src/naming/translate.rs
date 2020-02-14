@@ -615,10 +615,9 @@ fn base_type(context: &mut Context, ty: E::SingleType) -> N::BaseType {
                 NB::Apply(resource_opt, tn, base_types(context, tys))
             }
             Some(RT::BuiltinType) => {
+                let ty_args = base_types(context, tys);
                 let bn_ = N::BuiltinTypeName_::resolve(&n.value).unwrap();
-                let kind_ = bn_.kind();
-                let tn = sp(loc, NN::Builtin(sp(loc, bn_)));
-                NB::Apply(Some(sp(loc, kind_)), tn, base_types(context, tys))
+                NB::builtin_(loc, bn_, ty_args)
             }
             Some(RT::TParam(_, tp)) => {
                 if !tys.is_empty() {

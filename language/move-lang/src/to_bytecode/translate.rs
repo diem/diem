@@ -641,6 +641,13 @@ fn base_type(context: &mut Context, sp!(_, bt_): G::BaseType) -> Result<F::Signa
 
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bool))), _) => ST::Bool,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bytearray))), _) => ST::ByteArray,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Vector))), mut args) => {
+            assert!(
+                args.len() == 1,
+                "ICE vector must have exactly 1 type argument"
+            );
+            ST::Vector(Box::new(base_type(context, args.pop().unwrap())?))
+        }
         B::Apply(_, sp!(_, TN::ModuleType(m, s)), tys) => {
             let idx = context.struct_handle_index(&m, &s)?;
             let tokens = base_types(context, tys)?;

@@ -39,7 +39,6 @@ use codespan_reporting::{
     termcolor::{ColorChoice, StandardStream},
     Diagnostic, Label, Severity,
 };
-use libra_types::account_address::AccountAddress;
 use std::fs;
 
 /// # Types
@@ -58,6 +57,7 @@ pub enum GlobalType {
     U128,
     ByteArray,
     Address,
+    Vector(Box<GlobalType>),
     Struct(ModuleIndex, StructDefinitionIndex, Vec<GlobalType>),
     Reference(Box<GlobalType>),
     MutableReference(Box<GlobalType>),
@@ -574,11 +574,12 @@ impl<'env> ModuleEnv<'env> {
             SignatureToken::U128 => GlobalType::U128,
             SignatureToken::ByteArray => GlobalType::ByteArray,
             SignatureToken::Address => GlobalType::Address,
+            SignatureToken::Vector(t) => GlobalType::Vector(Box::new(self.globalize_signature(t))),
             SignatureToken::Reference(t) => {
-                GlobalType::Reference({ Box::new(self.globalize_signature(&*t)) })
+                GlobalType::Reference({ Box::new(self.globalize_signature(t)) })
             }
             SignatureToken::MutableReference(t) => {
-                GlobalType::MutableReference({ Box::new(self.globalize_signature(&*t)) })
+                GlobalType::MutableReference({ Box::new(self.globalize_signature(t)) })
             }
             SignatureToken::TypeParameter(index) => GlobalType::TypeParameter(*index),
             SignatureToken::Struct(handle_idx, args) => {
@@ -654,15 +655,18 @@ impl<'env> ModuleEnv<'env> {
             Type::U128 => GlobalType::U128,
             Type::Bool => GlobalType::Bool,
             Type::ByteArray => GlobalType::ByteArray,
+            Type::Vector(bt) => {
+                GlobalType::Vector(Box::new(self.translate_ast_type(loc, bt, type_params)))
+            }
             Type::Reference(is_mut, bt) => {
                 if *is_mut {
                     GlobalType::MutableReference(Box::new(self.translate_ast_type(
                         loc,
-                        &*bt,
+                        bt,
                         type_params,
                     )))
                 } else {
-                    GlobalType::Reference(Box::new(self.translate_ast_type(loc, &*bt, type_params)))
+                    GlobalType::Reference(Box::new(self.translate_ast_type(loc, bt, type_params)))
                 }
             }
             Type::TypeParameter(param) => {
@@ -821,13 +825,6 @@ impl<'env> StructEnv<'env> {
     pub fn is_native(&self) -> bool {
         let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
         def.field_information == StructFieldInformation::Native
-    }
-
-    /// Determines whether this struct is the well-known vector type.
-    pub fn is_vector(&self) -> bool {
-        let name = self.module_env.get_id().name();
-        let addr = self.module_env.get_id().address();
-        name.as_str() == "Vector" && addr == &AccountAddress::from_hex_literal("0x0").unwrap()
     }
 
     /// Determines whether this struct is a resource type.

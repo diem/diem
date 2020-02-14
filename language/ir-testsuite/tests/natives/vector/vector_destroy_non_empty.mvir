@@ -2,7 +2,7 @@
 import 0x0.Vector;
 
 main() {
-    let v: Vector.T<u64>;
+    let v: vector<u64>;
     v = Vector.empty<u64>();
     Vector.push_back<u64>(&mut v, 42);
     Vector.destroy_empty<u64>(move(v));

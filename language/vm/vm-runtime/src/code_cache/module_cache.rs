@@ -219,6 +219,11 @@ impl<'alloc> VMModuleCache<'alloc> {
             SignatureToken::ByteArray => Ok(Type::ByteArray),
             SignatureToken::Address => Ok(Type::Address),
             SignatureToken::TypeParameter(idx) => Ok(type_context.get_type(*idx)?),
+            SignatureToken::Vector(sub_tok) => {
+                let inner_ty =
+                    self.resolve_signature_token(module, sub_tok, type_context, data_view)?;
+                Ok(Type::Vector(Box::new(inner_ty)))
+            }
             SignatureToken::Struct(sh_idx, tys) => {
                 let ctx = {
                     let mut ctx = vec![];

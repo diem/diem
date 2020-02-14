@@ -2,7 +2,7 @@ module M {
   import 0x0.Vector;
 
   public empty() {
-    let v: Vector.T<u64>;
+    let v: vector<u64>;
 
     v = Vector.empty<u64>();
     assert(Vector.is_empty<u64>(&v), 100);
@@ -12,7 +12,7 @@ module M {
   }
 
   public push_back_and_borrow() {
-    let v: Vector.T<u64>;
+    let v: vector<u64>;
 
     v = Vector.empty<u64>();
     Vector.push_back<u64>(&mut v, 7);

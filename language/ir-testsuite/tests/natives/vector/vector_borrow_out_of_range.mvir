@@ -1,6 +1,6 @@
 import 0x0.Vector;
 main() {
-    let v: Vector.T<u64>;
+    let v: vector<u64>;
     let value_ref: &u64;
 
     v = Vector.empty<u64>();

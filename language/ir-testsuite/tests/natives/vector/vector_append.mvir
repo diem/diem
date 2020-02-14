@@ -1,8 +1,8 @@
 import 0x0.Vector;
 
 main() {
-  let vec: Vector.T<u64>;
-  let other_vec: Vector.T<u64>;
+  let vec: vector<u64>;
+  let other_vec: vector<u64>;
 
   vec = Vector.empty<u64>();
   other_vec = Vector.empty<u64>();

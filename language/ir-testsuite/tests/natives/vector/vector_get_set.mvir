@@ -2,7 +2,7 @@ import 0x0.Vector;
 
 // get and set work as expected for a vector full of ints
 main() {
-  let vec: Vector.T<u64>;
+  let vec: vector<u64>;
 
   vec = Vector.empty<u64>();
   Vector.push_back<u64>(&mut vec, 0);

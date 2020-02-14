@@ -1,6 +1,6 @@
 module M {
     import 0x0.Vector;
-    public foo(v: Vector.T<u64>) {
+    public foo(v: vector<u64>) {
         return;
     }
 }
@@ -9,7 +9,7 @@ module M {
 import 0x0.Vector;
 import {{default}}.M;
 main() {
-    let v: Vector.T<u64>;
+    let v: vector<u64>;
     let contents_ref: &mut u64;
     v = Vector.empty<u64>();
     Vector.push_back<u64>(&mut v, 7);

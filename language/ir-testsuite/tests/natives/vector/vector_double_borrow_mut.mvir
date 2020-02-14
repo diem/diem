@@ -1,7 +1,7 @@
 import 0x0.Vector;
 import {{default}}.M;
 main() {
-    let v: Vector.T<u64>;
+    let v: vector<u64>;
     let contents_ref: &mut u64;
     let contents_ref_2: &mut u64;
     v = Vector.empty<u64>();

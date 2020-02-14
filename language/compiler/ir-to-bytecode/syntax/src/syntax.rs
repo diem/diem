@@ -1173,6 +1173,14 @@ fn parse_type<'input>(
             tokens.advance()?;
             Type::ByteArray
         }
+        Tok::Vector => {
+            tokens.advance()?;
+            consume_token(tokens, Tok::Less)?;
+            let ty = parse_type(tokens)?;
+            adjust_token(tokens, &[Tok::Greater])?;
+            consume_token(tokens, Tok::Greater)?;
+            Type::Vector(Box::new(ty))
+        }
         Tok::DotNameValue => {
             let s = parse_qualified_struct_ident(tokens)?;
             let tys = parse_type_actuals(tokens)?;

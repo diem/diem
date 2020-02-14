@@ -532,6 +532,7 @@ where
                 });
                 Value::struct_(Struct::pack(values))
             }
+            SignatureToken::Vector(_) => unimplemented!(),
             SignatureToken::TypeParameter(_) => unimplemented!(),
         }
     }

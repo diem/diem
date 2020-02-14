@@ -288,6 +288,7 @@ fn check_signature_no_refs(
             vec![VMStatus::new(StatusCode::INVALID_SIGNATURE_TOKEN)
                 .with_message("reference not allowed".to_string())]
         }
+        Vector(ty) => check_signature_no_refs(context, ty),
         Struct(idx, type_actuals) => {
             let sh = &struct_handles[idx.0 as usize];
             check_generic_instance(context, &sh.type_formals, type_actuals)

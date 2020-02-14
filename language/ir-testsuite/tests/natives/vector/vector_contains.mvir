@@ -1,7 +1,7 @@
 import 0x0.Vector;
 
 main() {
-  let vec: Vector.T<u64>;
+  let vec: vector<u64>;
   let zero: u64;
   let one: u64;
   let two: u64;

@@ -102,6 +102,7 @@ pub enum Tok {
     U8,
     U64,
     U128,
+    Vector,
     Unrestricted,
     While,
     LBrace,
@@ -241,6 +242,7 @@ fn find_token(
                         }
                     }
                     Some('<') => match name {
+                        "vector" => (Tok::Vector, len),
                         "borrow_global" => (Tok::BorrowGlobal, len + 1),
                         "borrow_global_mut" => (Tok::BorrowGlobalMut, len + 1),
                         "exists" => (Tok::Exists, len + 1),
