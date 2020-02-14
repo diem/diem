@@ -37,7 +37,7 @@ use tokio::runtime::Runtime;
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> Runtime {
-    let rt = tokio::runtime::Builder::new()
+    let mut rt = tokio::runtime::Builder::new()
         .threaded_scheduler()
         .enable_all()
         .thread_name("tokio-storage")
@@ -51,7 +51,21 @@ pub fn start_storage_service(config: &NodeConfig) -> Runtime {
             .add_service(StorageServer::new(storage_service))
             .serve(config.storage.address),
     );
-    rt
+
+    let addr = format!("http://{}", config.storage.address);
+    for _i in 0..100 {
+        if rt
+            .block_on(
+                storage_proto::proto::storage::storage_client::StorageClient::connect(addr.clone()),
+            )
+            .is_ok()
+        {
+            return rt;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+
+    panic!("Failed to start storage service.");
 }
 
 /// The implementation of the storage [GRPC](http://grpc.io) service.
