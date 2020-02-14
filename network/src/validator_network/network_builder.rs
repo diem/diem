@@ -366,8 +366,8 @@ impl NetworkBuilder {
         let max_connection_delay_ms = self.max_connection_delay_ms;
         let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
         let (pm_reqs_tx, pm_conn_mgr_notifs_rx) = self.add_connection_event_listener();
-        let f = async move {
-            let conn_mgr = ConnectivityManager::new(
+        let conn_mgr = self.executor.enter(|| {
+            ConnectivityManager::new(
                 trusted_peers,
                 interval(Duration::from_millis(connectivity_check_interval_ms)).fuse(),
                 PeerManagerRequestSender::new(pm_reqs_tx),
@@ -375,10 +375,9 @@ impl NetworkBuilder {
                 conn_mgr_reqs_rx,
                 ExponentialBackoff::from_millis(2).factor(1000),
                 max_connection_delay_ms,
-            );
-            conn_mgr.start().await
-        };
-        self.executor.spawn(f);
+            )
+        });
+        self.executor.spawn(conn_mgr.start());
 
         // We start the discovery module only if the network is permissioned.
         // Note: We use the `enable_remote_authentication` flag as a proxy for whether we need to run the
@@ -400,8 +399,8 @@ impl NetworkBuilder {
         let trusted_peers = self.trusted_peers.clone();
         let role = self.role;
         let discovery_interval_ms = self.discovery_interval_ms;
-        let f = async move {
-            let discovery = Discovery::new(
+        let discovery = self.executor.enter(|| {
+            Discovery::new(
                 peer_id,
                 role,
                 addrs,
@@ -412,10 +411,9 @@ impl NetworkBuilder {
                 discovery_network_tx,
                 discovery_network_rx,
                 conn_mgr_reqs_tx,
-            );
-            discovery.start().await
-        };
-        self.executor.spawn(f);
+            )
+        });
+        self.executor.spawn(discovery.start());
         debug!("Started discovery protocol actor");
         self
     }
@@ -427,17 +425,16 @@ impl NetworkBuilder {
         let ping_interval_ms = self.ping_interval_ms;
         let ping_timeout_ms = self.ping_timeout_ms;
         let ping_failures_tolerated = self.ping_failures_tolerated;
-        let f = async move {
-            let health_checker = HealthChecker::new(
+        let health_checker = self.executor.enter(|| {
+            HealthChecker::new(
                 interval(Duration::from_millis(ping_interval_ms)).fuse(),
                 hc_network_tx,
                 hc_network_rx,
                 Duration::from_millis(ping_timeout_ms),
                 ping_failures_tolerated,
-            );
-            health_checker.start().await
-        };
-        self.executor.spawn(f);
+            )
+        });
+        self.executor.spawn(health_checker.start());
         debug!("Started health checker");
         self
     }
