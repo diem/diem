@@ -66,12 +66,12 @@ pub struct RawTransaction {
     // never be included.
     // A transaction that doesn't expire is represented by a very large value like
     // u64::max_value().
+    // It is a timestamp measured as seconds from Epoch
     #[serde(serialize_with = "serialize_duration")]
     #[serde(deserialize_with = "deserialize_duration")]
     expiration_time: Duration,
 }
 
-// TODO(#1307)
 fn serialize_duration<S>(d: &Duration, serializer: S) -> std::result::Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
