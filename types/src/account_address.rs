@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, Error, Result};
-use bech32::{Bech32, FromBase32, ToBase32};
+use bech32::{FromBase32, ToBase32};
 use bytes::Bytes;
 use hex;
 use libra_crypto::{
@@ -77,6 +77,21 @@ impl AccountAddress {
         };
 
         AccountAddress::try_from(padded_result)
+    }
+
+    pub fn from_bech32_literal(literal: &str) -> Result<Self> {
+        ensure!(
+            literal.starts_with(LIBRA_NETWORK_ID_SHORT),
+            "literal must start with {}",
+            LIBRA_NETWORK_ID_SHORT
+        );
+        let data = bech32::decode(&literal).unwrap().1;
+        let hash = Vec::from_base32(data.as_slice())?;
+        AccountAddress::try_from(hash.as_slice())
+    }
+
+    pub fn to_bech32_literal(&self) -> String {
+        bech32::encode(LIBRA_NETWORK_ID_SHORT, self.to_vec().to_base32()).unwrap()
     }
 }
 
@@ -192,16 +207,6 @@ impl TryFrom<String> for AccountAddress {
     }
 }
 
-impl TryFrom<Bech32> for AccountAddress {
-    type Error = Error;
-
-    fn try_from(encoded_input: Bech32) -> Result<AccountAddress> {
-        let base32_hash = encoded_input.data();
-        let hash = Vec::from_base32(&base32_hash)?;
-        AccountAddress::try_from(&hash[..])
-    }
-}
-
 impl FromStr for AccountAddress {
     type Err = Error;
 
@@ -209,15 +214,6 @@ impl FromStr for AccountAddress {
         assert!(!s.is_empty());
         let bytes_out = ::hex::decode(s)?;
         AccountAddress::try_from(bytes_out.as_slice())
-    }
-}
-
-impl TryFrom<AccountAddress> for Bech32 {
-    type Error = Error;
-
-    fn try_from(addr: AccountAddress) -> Result<Bech32> {
-        let base32_hash = addr.0.to_base32();
-        bech32::Bech32::new(LIBRA_NETWORK_ID_SHORT.into(), base32_hash).map_err(Into::into)
     }
 }
 

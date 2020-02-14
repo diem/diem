@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
-use bech32::Bech32;
 use hex::FromHex;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use proptest::prelude::*;
@@ -77,12 +76,12 @@ fn test_bech32() {
             .expect("You must provide a valid Hex format")[..],
     )
     .expect("Address is not a valid hex format");
-    let bech32 = Bech32::try_from(address).unwrap();
+    let bech32 = address.to_bech32_literal();
     assert_eq!(
         bech32.to_string(),
         "lb1y6damel59sj5wec8sg0tgn2uu0rvneg2wa858h0tc4y55s58p2nqjyd2lr".to_string()
     );
-    let bech32_address = AccountAddress::try_from(bech32)
+    let bech32_address = AccountAddress::from_bech32_literal(&bech32)
         .expect("The provided input string is not a valid bech32 format");
     assert_eq!(
         address.as_ref().to_vec(),
@@ -107,8 +106,8 @@ proptest! {
 
     #[test]
     fn test_address_bech32_roundtrip(addr in any::<AccountAddress>()) {
-        let b = Bech32::try_from(addr).unwrap();
-        let addr2 = AccountAddress::try_from(b).expect("Address::from_bech32 should work");
+        let b = addr.to_bech32_literal();
+        let addr2 = AccountAddress::from_bech32_literal(&b).expect("Address::from_bech32_literal should work");
         prop_assert_eq!(addr, addr2);
     }
 
