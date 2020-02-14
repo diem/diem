@@ -53,22 +53,19 @@ pub fn start_storage_service(config: &NodeConfig) -> Runtime {
     );
 
     let addr = format!("http://{}", config.storage.address);
-    let mut server_available = false;
-    for _i in 0..50 {
+    for _i in 0..100 {
         if rt
             .block_on(
                 storage_proto::proto::storage::storage_client::StorageClient::connect(addr.clone()),
             )
             .is_ok()
         {
-            server_available = true;
-            break;
+            return rt;
         }
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        std::thread::sleep(std::time::Duration::from_millis(50));
     }
-    assert!(server_available, "Failed to start storage service.");
 
-    rt
+    panic!("Failed to start storage service.");
 }
 
 /// The implementation of the storage [GRPC](http://grpc.io) service.
