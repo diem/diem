@@ -33,7 +33,10 @@ use libra_types::{
     account_address::AccountAddress,
     proto::types::{SignedTransaction as SignedTransactionProto, VmStatus as VmStatusProto},
     transaction::SignedTransaction,
-    vm_error::{StatusCode::RESOURCE_DOES_NOT_EXIST, VMStatus},
+    vm_error::{
+        StatusCode::{RESOURCE_DOES_NOT_EXIST, SEQUENCE_NUMBER_TOO_OLD},
+        VMStatus,
+    },
     PeerId,
 };
 use network::{
@@ -297,7 +300,6 @@ where
     )
     .await;
 
-    // eagerly filter out transactions that were already committed
     let transactions: Vec<_> = transactions
         .into_iter()
         .enumerate()
@@ -305,6 +307,10 @@ where
             if let Ok((sequence_number, balance)) = account_states[idx] {
                 if t.sequence_number() >= sequence_number {
                     return Some((t, sequence_number, balance));
+                } else {
+                    statuses.push(Status::VmStatus(VmStatusProto::from(VMStatus::new(
+                        SEQUENCE_NUMBER_TOO_OLD,
+                    ))));
                 }
             } else {
                 // failed to get transaction
@@ -385,7 +391,7 @@ async fn process_client_transaction_submission<V>(
                     .await;
             log_txn_process_results(statuses.clone(), None);
             if statuses.is_empty() {
-                error!("[shared mempool] unexpected error happened");
+                error!("[shared mempool] missing status for client transaction submission");
             } else {
                 response.status = Some(statuses.remove(0));
             }
