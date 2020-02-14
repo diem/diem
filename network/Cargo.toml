@@ -42,6 +42,7 @@ libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0
 [dev-dependencies]
 criterion = "0.3.0"
 socket-bench-server = { path = "socket-bench-server", version = "0.1.0" }
+noise = { path = "noise", version = "0.1.0", features = ["testing"] }
 
 [build-dependencies]
 prost-build = "0.6"
@@ -53,7 +54,6 @@ fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing"]
 [[bench]]
 name = "socket_muxer_bench"
 harness = false
-default = ["testing"]
 
 [[bench]]
 name = "network_bench"
