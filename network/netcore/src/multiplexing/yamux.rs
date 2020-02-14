@@ -108,13 +108,13 @@ where
 
     async fn start(self) -> (Self::Listener, Self::Control) {
         let control = self.connection.control();
-        let mut connection = self.connection;
         let (mut tx, rx) = mpsc::unbounded();
-        // Our library wraps calls to `next_stream` in a future and runs the future on this static
+        // Our library wraps calls to `next_stream` in a future and runs the future on the current
         // tokio runtime. That way, users of our yamux library don't need to worry about the
         // unintuitive need for polling for new inbound substreams even if they only need to open
         // outbound substreams or perform IO on existing susbstreams.
-        let f = async move {
+        let stream_listener = async move {
+            let mut connection = self.connection;
             loop {
                 let maybe_substream = connection.next_stream().await.transpose();
                 match maybe_substream {
@@ -129,16 +129,19 @@ where
                         return;
                     }
                     Some(Ok(substream)) => {
-                        if tx.send(Ok(substream)).await.is_err() {
-                            // Failed to notify about new inbound substream.
-                            return;
-                        }
+                        // Failure to notify about new inbound substream could happen because
+                        // our end of the connection is not interested in receiving inbound
+                        // substreams. Instead of breaking out and forcefully dropping the
+                        // connection, we simply respect the wishes of the client and fail
+                        // silently.
+                        // TODO: Add logging through a logging facade.
+                        let _ = tx.send(Ok(substream)).await;
                     }
                 }
             }
         };
         // Run the IO future on the executor which drives this connection.
-        tokio::spawn(f);
+        tokio::spawn(stream_listener);
         (rx, YamuxControl { inner: control })
     }
 }
