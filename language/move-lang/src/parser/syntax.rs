@@ -432,6 +432,7 @@ fn parse_sequence_item<'input>(tokens: &mut Lexer<'input>) -> Result<SequenceIte
 // does consume the closing right brace.
 fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error> {
     let mut seq: Vec<SequenceItem> = vec![];
+    let mut last_semicolon_loc = None;
     let mut eopt = None;
     while tokens.peek() != Tok::RBrace {
         let item = parse_sequence_item(tokens)?;
@@ -450,10 +451,11 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
             break;
         }
         seq.push(item);
+        last_semicolon_loc = Some(current_token_loc(&tokens));
         consume_token(tokens, Tok::Semicolon)?;
     }
     tokens.advance()?; // consume the RBrace
-    Ok((seq, Box::new(eopt)))
+    Ok((seq, last_semicolon_loc, Box::new(eopt)))
 }
 
 //**************************************************************************************************

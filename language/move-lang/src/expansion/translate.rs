@@ -598,7 +598,7 @@ fn module_access(
 // TODO Support uses inside functions. AliasMap will become an accumulator
 
 fn sequence(context: &mut Context, loc: Loc, seq: P::Sequence) -> E::Sequence {
-    let (pitems, pfinal_item) = seq;
+    let (pitems, _, pfinal_item) = seq;
     let mut items: VecDeque<E::SequenceItem> = pitems
         .into_iter()
         .map(|item| sequence_item(context, item))
