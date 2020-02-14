@@ -359,7 +359,8 @@ pub type Exp = Spanned<Exp_>;
 
 // { e1; ... ; en }
 // { e1; ... ; en; }
-pub type Sequence = (Vec<SequenceItem>, Box<Option<Exp>>);
+// The Loc field holds the source location of the final semicolon, if there is one.
+pub type Sequence = (Vec<SequenceItem>, Option<Loc>, Box<Option<Exp>>);
 #[derive(Debug, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum SequenceItem_ {
@@ -777,9 +778,9 @@ impl AstDebug for ModuleAccess_ {
     }
 }
 
-impl AstDebug for (Vec<SequenceItem>, Box<Option<Exp>>) {
+impl AstDebug for (Vec<SequenceItem>, Option<Loc>, Box<Option<Exp>>) {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let (seq, last_e) = self;
+        let (seq, _, last_e) = self;
         w.semicolon(seq, |w, item| item.ast_debug(w));
         if !seq.is_empty() {
             w.writeln(";")
