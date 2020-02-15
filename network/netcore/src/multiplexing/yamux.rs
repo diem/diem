@@ -13,11 +13,19 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::{
-    channel::mpsc,
+    channel::{mpsc, oneshot},
+    future::FutureExt,
     io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
+    stream::Stream,
 };
-use std::{fmt::Debug, io};
+use std::{
+    fmt::Debug,
+    io,
+    pin::Pin,
+    sync::Arc,
+    task::{Context, Poll},
+};
 use yamux;
 
 /// Re-export `Mode` and `Stream` from the yamux crate
@@ -76,6 +84,7 @@ where
 #[derive(Clone)]
 pub struct YamuxControl {
     inner: yamux::Control,
+    _drop_tx: Arc<oneshot::Sender<()>>,
 }
 
 #[async_trait]
@@ -97,6 +106,29 @@ impl Control for YamuxControl {
     }
 }
 
+pub struct StreamListener<Substream: Send> {
+    listener: mpsc::UnboundedReceiver<io::Result<Substream>>,
+    _drop_tx: Arc<oneshot::Sender<()>>,
+}
+
+impl<Substream> Stream for StreamListener<Substream>
+where
+    Substream: Send,
+{
+    type Item = io::Result<Substream>;
+
+    fn poll_next(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
+        match Pin::new(&mut self.listener).poll_next(context) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Ready(Some(Err(e))) => {
+                Poll::Ready(Some(Err(io::Error::new(io::ErrorKind::Other, e))))
+            }
+            Poll::Ready(Some(Ok(substream))) => Poll::Ready(Some(Ok(substream))),
+        }
+    }
+}
+
 #[async_trait]
 impl<TSocket> StreamMultiplexer for Yamux<TSocket>
 where
@@ -104,7 +136,7 @@ where
 {
     type Substream = StreamHandle;
     type Control = YamuxControl;
-    type Listener = mpsc::UnboundedReceiver<io::Result<Self::Substream>>;
+    type Listener = StreamListener<Self::Substream>;
 
     async fn start(self) -> (Self::Listener, Self::Control) {
         let control = self.connection.control();
@@ -113,36 +145,64 @@ where
         // tokio runtime. That way, users of our yamux library don't need to worry about the
         // unintuitive need for polling for new inbound substreams even if they only need to open
         // outbound substreams or perform IO on existing susbstreams.
+
+        // We create a oneshot channel to decide when to forcefully terminate the connection. This
+        // is triggered if the user drops both the Listener and Control handles returned by this
+        // function.
+        let (drop_tx, drop_rx): (oneshot::Sender<()>, _) = oneshot::channel();
+        let drop_tx = Arc::new(drop_tx);
         let stream_listener = async move {
+            let mut drop_rx = drop_rx.fuse();
             let mut connection = self.connection;
             loop {
-                let maybe_substream = connection.next_stream().await.transpose();
-                match maybe_substream {
-                    None | Some(Err(_)) => {
-                        // Ignore error.
-                        let _ = tx
-                            .send(Err(io::Error::new(
-                                io::ErrorKind::BrokenPipe,
-                                "Connection closed",
-                            )))
-                            .await;
-                        return;
+                // We use `select_biased` to ensure all inbound messages are processed before we
+                // close our end of the connection.
+                futures::select_biased! {
+                  maybe_substream = connection.next_stream().fuse() => {
+                    let maybe_substream = maybe_substream.transpose();
+                    match maybe_substream {
+                        None | Some(Err(_)) => {
+                            // Ignore error.
+                            let _ = tx
+                                .send(Err(io::Error::new(
+                                    io::ErrorKind::BrokenPipe,
+                                    "Connection closed",
+                                )))
+                                .await;
+                            return;
+                        }
+                        Some(Ok(substream)) => {
+                            // Failure to notify about new inbound substream could happen because
+                            // our end of the connection is not interested in receiving inbound
+                            // substreams. Instead of breaking out and forcefully dropping the
+                            // connection, we simply respect the wishes of the client and fail
+                            // silently.
+                            // TODO: Add logging through a logging facade.
+                            let _ = tx.send(Ok(substream)).await;
+                        }
                     }
-                    Some(Ok(substream)) => {
-                        // Failure to notify about new inbound substream could happen because
-                        // our end of the connection is not interested in receiving inbound
-                        // substreams. Instead of breaking out and forcefully dropping the
-                        // connection, we simply respect the wishes of the client and fail
-                        // silently.
-                        // TODO: Add logging through a logging facade.
-                        let _ = tx.send(Ok(substream)).await;
-                    }
+                  },
+                  _ = drop_rx => {
+                    // Both listener and control handles must have been dropped if we have reached
+                    // here. In this case, we forcefully terminate the connection by dropping.
+                    drop(connection);
+                    return;
+                  }
                 }
             }
         };
         // Run the IO future on the executor which drives this connection.
         tokio::spawn(stream_listener);
-        (rx, YamuxControl { inner: control })
+        (
+            StreamListener {
+                listener: rx,
+                _drop_tx: drop_tx.clone(),
+            },
+            YamuxControl {
+                inner: control,
+                _drop_tx: drop_tx,
+            },
+        )
     }
 }
 
@@ -169,21 +229,21 @@ mod test {
 
         let dialer = async move {
             let muxer = Yamux::new(dialer, Mode::Client);
-            let (_listener, mut control) = muxer.start().await;
+            let (_listener_outer, mut control_outer) = muxer.start().await;
             // Open outer substream.
-            let substream = control.open_stream().await?;
+            let substream = control_outer.open_stream().await?;
             // Create multiplexer over substream.
             let muxer = Yamux::new(substream, Mode::Client);
-            let (mut stream_listener, mut control) = muxer.start().await;
+            let (mut listener_inner, mut control_inner) = muxer.start().await;
             // Open new inner outbound substream over outer substream.
-            let mut substream = control.open_stream().await?;
+            let mut substream = control_inner.open_stream().await?;
             // Send data over inner substream.
             substream.write_all(msg).await?;
             substream.flush().await?;
             // We have to close the substream to unblock the read end if it uses `read_to_end`.
             substream.close().await?;
             // Listen for new inbound inner substreams over outer substream.
-            let mut substream = stream_listener
+            let mut substream = listener_inner
                 .next()
                 .await
                 .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no substream"))??;
@@ -198,17 +258,17 @@ mod test {
 
         let listener = async move {
             let muxer = Yamux::new(listener, Mode::Server);
-            let (mut stream_listener, _control) = muxer.start().await;
+            let (mut listener_outer, _control_outer) = muxer.start().await;
             // Listen for inbound outer substream.
-            let substream = stream_listener
+            let substream = listener_outer
                 .next()
                 .await
                 .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no substream"))??;
             // Create multiplexer over substream.
             let muxer = Yamux::new(substream, Mode::Server);
-            let (mut stream_listener, mut control) = muxer.start().await;
+            let (mut listener_inner, mut control_inner) = muxer.start().await;
             // Listen for inbound inner substream over outer substream.
-            let mut substream = stream_listener
+            let mut substream = listener_inner
                 .next()
                 .await
                 .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no substream"))??;
@@ -217,7 +277,7 @@ mod test {
             substream.read_to_end(&mut buf).await?;
             assert_eq!(buf, msg);
             // Open new inner outbound substream over outer substream.
-            let mut substream = control.open_stream().await?;
+            let mut substream = control_inner.open_stream().await?;
             // Send data over inner substream.
             substream.write_all(msg2).await?;
             substream.flush().await?;
@@ -381,6 +441,50 @@ mod test {
             result
         };
 
+        let (dialer_result, listener_result) = join(dialer, listener).await;
+        dialer_result?;
+        listener_result?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn drop_connection() -> io::Result<()> {
+        let (dialer, listener) = MemorySocket::new_pair();
+        let msg = b"Words of Radiance";
+
+        let dialer = async move {
+            let muxer = Yamux::new(dialer, Mode::Client);
+            // Dropping the listener. We should still be able to open outbound substreams.
+            let (_, mut control) = muxer.start().await;
+            let mut substream = control.open_stream().await.map_err(|e| {
+                error!("{:?}", e);
+                e
+            })?;
+            substream.write_all(msg).await?;
+            substream.flush().await?;
+            // We have to close the substream to unblock the read end if it uses `read_to_end`.
+            substream.close().await?;
+            // Drop the control. This should forcefully terminate the connection.
+            drop(control);
+            // Force return type of the async block
+            let result: io::Result<()> = Ok(());
+            result
+        };
+
+        let listener = async move {
+            let muxer = Yamux::new(listener, Mode::Server);
+            let (mut stream_listener, _control) = muxer.start().await;
+            let mut substream = stream_listener
+                .next()
+                .await
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no substream"))??;
+            let mut buf = Vec::new();
+            substream.read_to_end(&mut buf).await?;
+            assert_eq!(buf, msg);
+            assert!(stream_listener.next().await.unwrap().is_err());
+            let result: io::Result<()> = Ok(());
+            result
+        };
         let (dialer_result, listener_result) = join(dialer, listener).await;
         dialer_result?;
         listener_result?;

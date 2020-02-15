@@ -61,5 +61,11 @@ pub trait StreamMultiplexer: Debug + Send + Sync {
     /// A stream of new [`Substreams`](StreamMultiplexer::Substream) opened by the remote side.
     type Listener: Stream<Item = io::Result<<Self::Control as Control>::Substream>> + Send + Unpin;
 
+    /// `start` initiates and perpetuates IO on the connection and returns two handles. The first
+    /// handle is of type [`Self::Listener`](StreamMultiplexer::Listener) and provides a stream of
+    /// inbound substreams. The second handle provides the connection controller which should
+    /// implement the [`Control`](Control) trait allowing opening of outbound substreams and
+    /// closing the connection. If both the listener handle and all the control handles are
+    /// dropped, the connection is forcefully terminated.
     async fn start(self) -> (Self::Listener, Self::Control);
 }

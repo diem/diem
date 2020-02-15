@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use futures::{
-    future::Future,
+    future::{self, Future},
     io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::{Stream, StreamExt},
@@ -109,6 +109,8 @@ pub fn build_memsocket_dual_muxed_transport() -> impl Transport<Output = impl St
                     // Wait for inbound client substream.
                     substream = listener.next().await.unwrap().unwrap();
                 }
+                // Spawn listener to avoid closing the underlying connection.
+                tokio::spawn(listener.for_each(|_| future::ready(())));
                 Yamux::upgrade_connection(substream, origin).await
             }
         })
