@@ -739,7 +739,10 @@ impl CommonSerializer {
         binary.push(self.table_count)?;
 
         let start_offset;
-        if let Some(table_count_op) = self.table_count.checked_mul(9) {
+        if let Some(table_count_op) = self
+            .table_count
+            .checked_mul(BinaryConstants::TABLE_HEADER_SIZE)
+        {
             if let Some(checked_start_offset) =
                 check_index_in_binary(binary.len())?.checked_add(u32::from(table_count_op))
             {

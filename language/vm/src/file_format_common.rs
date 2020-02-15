@@ -27,7 +27,7 @@ impl BinaryConstants {
     pub const HEADER_SIZE: usize = BinaryConstants::LIBRA_MAGIC_SIZE + 3;
     /// A (Table Type, Start Offset, Byte Count) size, which is 1 byte for the type and
     /// 4 bytes for the offset/count.
-    pub const TABLE_HEADER_SIZE: u32 = size_of::<u32>() as u32 * 2 + 1;
+    pub const TABLE_HEADER_SIZE: u8 = size_of::<u32>() as u8 * 2 + 1;
 }
 
 /// Constants for table types in the binary.
