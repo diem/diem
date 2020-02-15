@@ -61,6 +61,8 @@ mod compiled_module;
 mod consensus_proposal;
 mod inbound_rpc_protocol;
 mod inner_signed_transaction;
+mod network_noise_initiator;
+mod network_noise_responder;
 mod signed_transaction;
 mod sparse_merkle_proof;
 mod vm_value;
@@ -77,6 +79,8 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(consensus_proposal::ConsensusProposal::default()),
         Box::new(admission_control::AdmissionControlSubmitTransactionRequest::default()),
         Box::new(inbound_rpc_protocol::RpcInboundRequest::default()),
+        Box::new(network_noise_initiator::NetworkNoiseInitiator::default()),
+        Box::new(network_noise_responder::NetworkNoiseResponder::default()),
     ];
     targets
         .into_iter()
