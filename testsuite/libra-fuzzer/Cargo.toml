@@ -31,6 +31,7 @@ network = { path = "../../network", version = "0.1.0", features = ["fuzzing"] }
 vm = { path = "../../language/vm", version = "0.1.0", features = ["fuzzing"] }
 vm-runtime-types = { path = "../../language/vm/vm-runtime/vm-runtime-types", version = "0.1.0", features = ["fuzzing"] }
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", features = ["fuzzing"] }
+noise = { path = "../../network/noise", features = ["fuzzing"]}
 
 [dev-dependencies]
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }

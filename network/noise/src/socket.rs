@@ -16,6 +16,11 @@ use std::{
     task::{Context, Poll},
 };
 
+// Fuzzer for Noise
+#[cfg(any(feature = "fuzzing", test))]
+#[path = "noise_fuzzing.rs"]
+pub mod noise_fuzzing;
+
 const MAX_PAYLOAD_LENGTH: usize = u16::max_value() as usize; // 65535
 
 // The maximum number of bytes that we can buffer is 16 bytes less than u16::max_value() because

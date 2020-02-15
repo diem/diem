@@ -18,6 +18,8 @@ use snow::{self, params::NoiseParams, Keypair};
 use std::io;
 
 mod socket;
+#[cfg(any(feature = "fuzzing", test))]
+pub use self::socket::noise_fuzzing;
 
 pub use self::socket::NoiseSocket;
 use libra_crypto::ValidKey;

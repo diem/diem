@@ -17,7 +17,7 @@ use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use tonic::Request;
 
 #[test]
-fn test_fuzzer() {
+fn test_admission_control_fuzzer() {
     let mut gen = ValueGenerator::new();
     let data = generate_corpus(&mut gen);
     fuzzer(&data);
