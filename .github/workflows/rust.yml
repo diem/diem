@@ -1,0 +1,67 @@
+---
+name: Rust
+
+on: [pull_request]
+
+jobs:
+  rust_lint:
+    name: rust_lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install clippy and rustfmt
+        run: rustup component add clippy rustfmt
+      - name: Lint
+        run: cargo x lint
+      - name: Clippy
+        run: cargo xclippy --workspace --all-targets
+      - name: Format
+        run: cargo fmt -- --check
+
+  rust_build_release_smoke_test:
+    name: rust_build_release_and_smoke_test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Build release
+        run: RUST_BACKTRACE=1 cargo build --release
+      - name: Smoke Test
+        run: scripts/smoke-test-swarm-cluster.sh
+
+  rust_build_dev_e2e_test:
+    name: rust_build_dev_and_e2e_test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Build dev
+        run: RUST_BACKTRACE=1 cargo build
+      - name: Build libra-swarm
+        run: RUST_BACKTRACE=1 cargo build -p libra-swarm
+      - name: Build cluster-test
+        run: RUST_BACKTRACE=1 cargo build -p cluster-test
+      - name: Build fuzzer
+        run: RUST_BACKTRACE=1 cargo build -p libra-fuzzer
+      - name: Build language benchmark
+        run: RUST_BACKTRACE=1 cargo build -p language_benchmarks
+      - name: Build bytecode-to-boogie
+        run: RUST_BACKTRACE=1 cargo build -p bytecode-to-boogie
+      - name: Build cost-synthesis
+        run: RUST_BACKTRACE=1 cargo build -p cost-synthesis
+      - name: Build test-generation
+        run: RUST_BACKTRACE=1 cargo build -p test-generation
+      - name: End-to-End tests
+        run: RUST_BACKTRACE=1 cargo x test --package testsuite -- --test-threads 1
+
+  rust_unit_test:
+    name: rust_unit_test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Unit tests
+        run: |
+          RUST_BACKTRACE=1 cargo x test --unit
+      - name: Cryptography unit tests with the formally verified backend
+        run: |
+          cd crypto/crypto && \
+          RUST_BACKTRACE=1 cargo test \
+            --features='std fiat_u64_backend fuzzing' --no-default-features
