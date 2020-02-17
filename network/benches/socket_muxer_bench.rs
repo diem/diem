@@ -39,7 +39,8 @@
 
 use bytes::{Bytes, BytesMut};
 use criterion::{
-    criterion_group, criterion_main, Bencher, Criterion, ParameterizedBenchmark, Throughput,
+    criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
+    PlotConfiguration, Throughput,
 };
 use futures::{
     executor::block_on,
@@ -449,6 +450,7 @@ fn socket_muxer_bench(c: &mut Criterion) {
         .warm_up_time(Duration::from_secs(2))
         .measurement_time(Duration::from_secs(2))
         .sample_size(10)
+        .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic))
         .throughput(|msg_len| {
             let msg_len = *msg_len as u32;
             let num_msgs = SENDS_PER_ITER as u32;
