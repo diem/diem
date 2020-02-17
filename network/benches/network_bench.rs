@@ -10,7 +10,8 @@
 
 use core::str::FromStr;
 use criterion::{
-    criterion_group, criterion_main, Bencher, Criterion, ParameterizedBenchmark, Throughput,
+    criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
+    PlotConfiguration, Throughput,
 };
 use futures::{
     channel::mpsc,
@@ -339,6 +340,7 @@ fn network_crate_benchmark(c: &mut Criterion) {
         ParameterizedBenchmark::new("direct_send", direct_send_bench, msg_lens)
             .with_function("rpc", rpc_bench)
             .sample_size(10)
+            .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic))
             .throughput(|msg_len| Throughput::Bytes(((*msg_len as u32) * NUM_MSGS).into())),
     );
 }
