@@ -42,7 +42,7 @@ storage-service = { path = "../storage/storage-service", version = "0.1.0", opti
 
 [dev-dependencies]
 channel = { path = "../common/channel", version = "0.1.0" }
-parity-multiaddr = { version = "0.7.1", default-features = false }
+parity-multiaddr = { version = "0.7.2", default-features = false }
 rand = "0.6.5"
 
 [build-dependencies]

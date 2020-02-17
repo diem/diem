@@ -15,7 +15,7 @@ bytes = "0.5.4"
 futures = { version = "0.3.4", features = ["io-compat", "compat"] }
 futures_01 = { version = "0.1.29", package = "futures" }
 memsocket = { path = "../memsocket", version = "0.1.0" }
-parity-multiaddr = { version = "0.7.1", default-features = false }
+parity-multiaddr = { version = "0.7.2", default-features = false }
 pin-project = "0.4.2"
 tokio = { version = "0.2.8", features = ["full"] }
 yamux = { version = "0.4.2", default-features = false }

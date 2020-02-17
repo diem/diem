@@ -736,7 +736,7 @@ dependencies = [
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
  "libra-types 0.1.0",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -773,7 +773,7 @@ dependencies = [
  "num-derive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2053,7 +2053,7 @@ dependencies = [
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
  "mirai-annotations 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2174,7 +2174,7 @@ dependencies = [
  "mirai-annotations 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "network 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2242,7 +2242,7 @@ dependencies = [
  "libra-metrics 0.1.0",
  "libra-types 0.1.0",
  "network 0.1.0",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "state-synchronizer 0.1.0",
  "storage-client 0.1.0",
@@ -2351,7 +2351,7 @@ dependencies = [
  "mirai-annotations 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_enum 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2722,7 +2722,7 @@ dependencies = [
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
  "memsocket 0.1.0",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "pin-project 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "yamux 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2748,7 +2748,7 @@ dependencies = [
  "netcore 0.1.0",
  "noise 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "pin-project 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2972,7 +2972,7 @@ dependencies = [
 
 [[package]]
 name = "parity-multiaddr"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arrayref 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4300,7 +4300,7 @@ dependencies = [
  "memsocket 0.1.0",
  "netcore 0.1.0",
  "noise 0.1.0",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-util 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4362,7 +4362,7 @@ dependencies = [
  "libra-types 0.1.0",
  "network 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5538,7 +5538,7 @@ dependencies = [
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6145,7 +6145,7 @@ dependencies = [
 "checksum openssl-probe 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "77af24da69f9d9341038eba93a073b1fdaaa1b788221b00a69bce9e762cb32de"
 "checksum owning_ref 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "cdf84f41639e037b484f93433aa3897863b561ed65c6e59c7073d7c561710f37"
 "checksum pairing 0.14.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ceda21136251c6d5a422d3d798d8ac22515a6e8d3521bb60c59a8349d36d0d57"
-"checksum parity-multiaddr 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "80878c27f90dd162d3143333d672e80b194d6b080f05c83440e3dfda42e409f2"
+"checksum parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)" = "26df883298bc3f4e92528b4c5cc9f806b791955b136da3e5e939ed9de0fd958b"
 "checksum parity-multihash 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b11f42bbd3a021c5061b77154bd3334d5a57e1a03eb162de0b962681cc25800d"
 "checksum parking_lot 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "92e98c49ab0b7ce5b222f2cc9193fc4efe11c6d0bd4f648e374684a6857b1cfc"
 "checksum parking_lot 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)" = "149d8f5b97f3c1133e3cfcd8886449959e856b557ff281e292b733d7c69e005e"
