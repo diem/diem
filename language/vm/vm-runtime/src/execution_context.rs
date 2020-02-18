@@ -36,7 +36,7 @@ pub trait InterpreterContext {
         def: StructDef,
     ) -> VMResult<(bool, AbstractMemorySize<GasCarrier>)>;
 
-    fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalValue>;
+    fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&GlobalValue>;
 
     fn push_event(&mut self, event: ContractEvent);
 
@@ -110,7 +110,7 @@ impl<T: ChainState> InterpreterContext for T {
         })
     }
 
-    fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalValue> {
+    fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&GlobalValue> {
         match self.load_data(ap, def) {
             Ok(Some((_, g))) => Ok(g),
             Ok(None) => Err(
