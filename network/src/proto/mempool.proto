@@ -5,9 +5,6 @@ syntax = "proto3";
 
 package mempool;
 
-/* MempoolSyncMsg represents the messages exchanging between validators to keep
- * transactions in sync. The proto definition provides the spec on the wire so
- * that others can implement their mempool service in various languages.
- * Mempool service is responsible for sending and receiving MempoolSyncMsg
- * across validators. */
+/* MempoolSyncMsg represents the messages exchanging between nodes to keep
+ * transactions in sync. */
 message MempoolSyncMsg { bytes message = 1; }
