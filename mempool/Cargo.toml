@@ -17,27 +17,29 @@ futures = "0.3.0"
 once_cell = "1.3.1"
 lru-cache = "0.1.1"
 prost = "0.6"
+serde = { version = "1.0.99", default-features = false }
 tokio = { version = "0.2.8", features = ["full"] }
 tonic = "0.1"
 ttl_cache = "0.5.1"
 
 admission-control-proto = { path = "../admission_control/admission-control-proto", version = "0.1.0" }
-channel = { path = "../common/channel", version = "0.1.0" }
-libra-mempool-shared-proto = { path = "mempool-shared-proto", version = "0.1.0" }
 bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
+channel = { path = "../common/channel", version = "0.1.0" }
+lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../config", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-mempool-shared-proto = { path = "mempool-shared-proto", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
 mirai-annotations = "1.5.0"
 network = { path = "../network", version = "0.1.0" }
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
-libra-types = { path = "../types", version = "0.1.0" }
-vm-validator = { path = "../vm-validator", version = "0.1.0" }
 prometheus = { version = "0.7.0", default-features = false }
+vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
-proptest = { version = "0.9.4", optional = true }
 libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
+proptest = { version = "0.9.4", optional = true }
 storage-service = { path = "../storage/storage-service", version = "0.1.0", optional = true }
 
 [dev-dependencies]

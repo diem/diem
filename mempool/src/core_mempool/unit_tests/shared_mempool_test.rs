@@ -8,7 +8,8 @@ use crate::{
     },
     mocks::MockSharedMempool,
     shared_mempool::{
-        start_shared_mempool, ConsensusRequest, SharedMempoolNotification, SyncEvent,
+        start_shared_mempool, ConsensusRequest, MempoolSyncMsg, SharedMempoolNotification,
+        SyncEvent,
     },
     CommitNotification, CommittedTransaction,
 };
@@ -29,7 +30,6 @@ use network::{
         conn_status_channel, ConnectionStatusNotification, PeerManagerNotification,
         PeerManagerRequest,
     },
-    proto::MempoolSyncMsg,
     validator_network::{MempoolNetworkEvents, MempoolNetworkSender},
     DisconnectReason, ProtocolId,
 };
@@ -37,7 +37,6 @@ use parity_multiaddr::Multiaddr;
 use prost::Message;
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
     num::NonZeroUsize,
     sync::{Arc, Mutex},
     time::Duration,
@@ -156,9 +155,9 @@ impl SharedMempoolNetwork {
 
         match network_req {
             PeerManagerRequest::SendMessage(peer_id, msg) => {
-                let mut sync_msg = MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
-                let transaction =
-                    SignedTransaction::try_from(sync_msg.transactions.pop().unwrap()).unwrap();
+                let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
+                let mut sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
+                let transaction = sync_msg.transactions.pop().unwrap();
                 // send it to peer
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 receiver_network_notif_tx

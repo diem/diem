@@ -21,8 +21,6 @@ mod health_checker {
     include!(concat!(env!("OUT_DIR"), "/health_checker.rs"));
 }
 
-use ::libra_types::proto::types;
-
 pub use self::{
     consensus::ConsensusMsg,
     health_checker::{

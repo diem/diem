@@ -85,12 +85,6 @@ mod tests {
     use parity_multiaddr::Multiaddr;
     use std::num::NonZeroUsize;
 
-    fn new_test_sync_msg(peer_id: PeerId) -> MempoolSyncMsg {
-        let mut mempool_msg = MempoolSyncMsg::default();
-        mempool_msg.peer_id = peer_id.into();
-        mempool_msg
-    }
-
     // Direct send messages should get deserialized through the
     // `MempoolNetworkEvents` stream.
     #[test]
@@ -101,7 +95,7 @@ mod tests {
         let mut stream = MempoolNetworkEvents::new(mempool_rx, control_notifs_rx);
 
         let peer_id = PeerId::random();
-        let mempool_msg = new_test_sync_msg(peer_id);
+        let mempool_msg = MempoolSyncMsg::default();
         let network_msg = Message {
             protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
             mdata: mempool_msg.clone().to_bytes().unwrap(),
@@ -145,7 +139,7 @@ mod tests {
         let mut sender = MempoolNetworkSender::new(network_reqs_tx);
 
         let peer_id = PeerId::random();
-        let mempool_msg = new_test_sync_msg(peer_id);
+        let mempool_msg = MempoolSyncMsg::default();
         let expected_network_msg = Message {
             protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
             mdata: mempool_msg.clone().to_bytes().unwrap(),

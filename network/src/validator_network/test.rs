@@ -15,19 +15,10 @@ use crate::{
 use futures::{future::join, StreamExt};
 use libra_config::config::RoleType;
 use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, traits::ValidKey, x25519};
-use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    proto::types::SignedTransaction,
-    test_helpers::transaction_test_helpers::get_test_signed_txn,
-    PeerId,
-};
+use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{
-    collections::HashMap,
-    convert::{TryFrom, TryInto},
-    time::Duration,
-};
+use std::{collections::HashMap, convert::TryFrom, time::Duration};
 use tokio::runtime::Runtime;
 
 #[test]
@@ -148,15 +139,6 @@ fn test_mempool_sync() {
     let _dialer_addr = network_builder.build();
 
     // The dialer dials the listener and sends a mempool sync message
-    let mut mempool_msg = MempoolSyncMsg::default();
-    mempool_msg.peer_id = dialer_peer_id.into();
-    let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
-    let keypair = compat::generate_keypair(&mut rng);
-    let txn: SignedTransaction = get_test_signed_txn(sender, 0, &keypair.0, keypair.1, None)
-        .try_into()
-        .unwrap();
-    mempool_msg.transactions.push(txn.clone());
-
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
         match dialer_mp_net_events.next().await.unwrap().unwrap() {
@@ -168,7 +150,7 @@ fn test_mempool_sync() {
 
         // Dialer sends a mempool sync message
         dialer_mp_net_sender
-            .send_to(listener_peer_id, mempool_msg)
+            .send_to(listener_peer_id, MempoolSyncMsg::default())
             .unwrap();
     };
 
@@ -186,10 +168,7 @@ fn test_mempool_sync() {
         match listener_mp_net_events.next().await.unwrap().unwrap() {
             Event::Message((peer_id, msg)) => {
                 assert_eq!(peer_id, dialer_peer_id);
-                let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
-                assert_eq!(msg.peer_id, dialer_peer_id_bytes);
-                let transactions: Vec<SignedTransaction> = msg.transactions;
-                assert_eq!(transactions, vec![txn]);
+                assert_eq!(msg, MempoolSyncMsg::default());
             }
             event => panic!("Unexpected event {:?}", event),
         }
@@ -287,15 +266,6 @@ fn test_unauthenticated_remote_mempool_sync() {
     let _dialer_addr = network_builder.build();
 
     // The dialer dials the listener and sends a mempool sync message
-    let mut mempool_msg = MempoolSyncMsg::default();
-    mempool_msg.peer_id = dialer_peer_id.into();
-    let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
-    let keypair = compat::generate_keypair(&mut rng);
-    let txn: SignedTransaction = get_test_signed_txn(sender, 0, &keypair.0, keypair.1, None)
-        .try_into()
-        .unwrap();
-    mempool_msg.transactions.push(txn.clone());
-
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
         match dialer_mp_net_events.next().await.unwrap().unwrap() {
@@ -307,7 +277,7 @@ fn test_unauthenticated_remote_mempool_sync() {
 
         // Dialer sends a mempool sync message
         dialer_mp_net_sender
-            .send_to(listener_peer_id, mempool_msg)
+            .send_to(listener_peer_id, MempoolSyncMsg::default())
             .unwrap();
     };
 
@@ -325,10 +295,7 @@ fn test_unauthenticated_remote_mempool_sync() {
         match listener_mp_net_events.next().await.unwrap().unwrap() {
             Event::Message((peer_id, msg)) => {
                 assert_eq!(peer_id, dialer_peer_id);
-                let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
-                assert_eq!(msg.peer_id, dialer_peer_id_bytes);
-                let transactions: Vec<SignedTransaction> = msg.transactions;
-                assert_eq!(transactions, vec![txn]);
+                assert_eq!(msg, MempoolSyncMsg::default());
             }
             event => panic!("Unexpected event {:?}", event),
         }
