@@ -29,10 +29,7 @@ pub struct MockTransactionManager {
 
 impl MockTransactionManager {
     pub fn new(consensus_to_mempool_sender: Option<mpsc::Sender<ConsensusRequest>>) -> Self {
-        let mempool_proxy = match consensus_to_mempool_sender {
-            Some(sender) => Some(MempoolProxy::new(sender)),
-            None => None,
-        };
+        let mempool_proxy = consensus_to_mempool_sender.map(MempoolProxy::new);
         Self {
             next_val: Arc::new(AtomicUsize::new(0)),
             rejected_txns: vec![],

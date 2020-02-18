@@ -61,11 +61,7 @@ impl TestConfig {
     }
 
     pub fn temp_dir(&self) -> Option<&Path> {
-        if let Some(temp_dir) = self.temp_dir.as_ref() {
-            Some(temp_dir.path())
-        } else {
-            None
-        }
+        self.temp_dir.as_ref().map(|temp_dir| temp_dir.path())
     }
 }
 

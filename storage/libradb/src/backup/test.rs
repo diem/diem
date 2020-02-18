@@ -23,12 +23,11 @@ proptest! {
 
         let expected: Vec<_> = input
             .iter()
-            .map(|(txns_to_commit, _ledger_info_with_sigs)| {
+            .flat_map(|(txns_to_commit, _ledger_info_with_sigs)| {
                 txns_to_commit
                     .iter()
                     .map(|txn_to_commit| txn_to_commit.transaction().clone())
             })
-            .flatten()
             .collect();
         prop_assert_eq!(expected.len() as u64, cur_ver);
 
