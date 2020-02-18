@@ -1,4 +1,4 @@
 main() {
 }
 
-// check: INVALID_FALL_THROUGH
+// check: EMPTY_CODE_UNIT
