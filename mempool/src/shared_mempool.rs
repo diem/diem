@@ -60,11 +60,14 @@ use vm_validator::vm_validator::{get_account_state, TransactionValidation, VMVal
 /// state of last sync with peer
 /// `timeline_id` is position in log of ready transactions
 /// `is_alive` - is connection healthy
+/// `network_id` - ID of the mempool network that this peer belongs to
+/// `request_id` - ID of the most recent `BroadcastTransactionsRequest` sent
 #[derive(Clone)]
 struct PeerSyncState {
     timeline_id: u64,
     is_alive: bool,
     network_id: PeerId,
+    request_id: u64,
 }
 
 /// stores only peers that receive txns from this node
@@ -165,8 +168,12 @@ pub struct TransactionExclusion {
 
 /// Container for exchanging transactions with other Mempools
 #[derive(Serialize, Deserialize)]
-pub struct MempoolSyncMsg {
-    pub transactions: Vec<SignedTransaction>,
+pub enum MempoolSyncMsg {
+    BroadcastTransactionsRequest(
+        u64,                    // request ID
+        Vec<SignedTransaction>, // transactions
+    ),
+    BroadcastTransactionsResponse(u64), // ID of corresponding request for this response
 }
 
 fn notify_subscribers(
@@ -196,6 +203,7 @@ fn new_peer(peer_info: &Mutex<PeerInfo>, peer_id: PeerId, network_id: PeerId) {
             timeline_id: 0,
             is_alive: true,
             network_id,
+            request_id: 0,
         })
         .is_alive = true;
 }
@@ -209,6 +217,36 @@ fn lost_peer(peer_info: &Mutex<PeerInfo>, peer_id: PeerId) {
     {
         state.is_alive = false;
     }
+}
+
+fn send_mempool_sync_msg(
+    msg: MempoolSyncMsg,
+    recipient: PeerId,
+    mut network_sender: MempoolNetworkSender,
+) -> Result<()> {
+    let mut sync_msg = network::proto::MempoolSyncMsg::default();
+    sync_msg.message = match lcs::to_bytes(&msg) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            warn!(
+                "[shared mempool] unable to serialize mempool sync msg: {}",
+                e
+            );
+            return Err(format_err!(
+                "[shared mempool] unable to serialize MempoolSyncMsg: {}",
+                e
+            ));
+        }
+    };
+
+    // Since this is a direct-send, this will only error if the network
+    // module has unexpectedly crashed or shutdown.
+    network_sender.send_to(recipient, sync_msg).map_err(|e| {
+        format_err!(
+            "[shared mempool] failed to direct-send mempool sync message: {}",
+            e
+        )
+    })
 }
 
 /// sync routine
@@ -241,25 +279,27 @@ async fn sync_with_peers<'a>(
             if !transactions.is_empty() {
                 counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(transactions.len() as i64);
 
-                let mut msg = network::proto::MempoolSyncMsg::default();
-                msg.message = match lcs::to_bytes(&MempoolSyncMsg { transactions }) {
-                    Ok(bytes) => bytes,
-                    Err(e) => {
-                        warn!("[shared mempool] unable to serialize transactions: {}", e);
-                        return;
-                    }
-                };
-
-                // Since this is a direct-send, this will only error if the network
-                // module has unexpectedly crashed or shutdown.
-                let network_sender = network_senders.get_mut(&peer_state.network_id).unwrap();
-                network_sender
-                    .clone()
-                    .send_to(peer_id, msg)
-                    .expect("[shared mempool] failed to direct-send mempool sync message");
+                let network_sender = network_senders
+                    .get_mut(&peer_state.network_id)
+                    .expect("[shared mempool] missign network sender")
+                    .clone();
+                if let Err(e) = send_mempool_sync_msg(
+                    MempoolSyncMsg::BroadcastTransactionsRequest(
+                        peer_state.request_id,
+                        transactions,
+                    ),
+                    peer_id,
+                    network_sender,
+                ) {
+                    error!(
+                        "[shared mempool] error broadcasting transations to peer {}: {}",
+                        peer_id, e
+                    );
+                } else {
+                    // only update state for successful sends
+                    state_updates.push((peer_id, new_timeline_id));
+                }
             }
-
-            state_updates.push((peer_id, new_timeline_id));
         }
     }
 
@@ -268,9 +308,10 @@ async fn sync_with_peers<'a>(
         .lock()
         .expect("[shared mempool] failed to acquire peer_info lock");
     for (peer_id, new_timeline_id) in state_updates {
-        peer_info
-            .entry(peer_id)
-            .and_modify(|t| t.timeline_id = new_timeline_id);
+        peer_info.entry(peer_id).and_modify(|t| {
+            t.timeline_id = new_timeline_id;
+            t.request_id += 1;
+        });
     }
 }
 
@@ -447,15 +488,33 @@ fn log_txn_process_results(results: Vec<Status>, sender: Option<PeerId>) {
 }
 
 async fn process_transaction_broadcast<V>(
-    smp: SharedMempool<V>,
+    mut smp: SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
+    request_id: u64,
     timeline_state: TimelineState,
     peer_id: PeerId,
+    network_id: PeerId,
 ) where
     V: TransactionValidation,
 {
+    let network_sender = smp
+        .network_senders
+        .get_mut(&network_id)
+        .expect("[shared mempool] missing network sender")
+        .clone();
     let results = process_incoming_transactions(smp, transactions, timeline_state).await;
     log_txn_process_results(results, Some(peer_id));
+    // send back ACK
+    if let Err(e) = send_mempool_sync_msg(
+        MempoolSyncMsg::BroadcastTransactionsResponse(request_id),
+        peer_id,
+        network_sender,
+    ) {
+        error!(
+            "[shared mempool] failed to send ACK back to peer {}: {}",
+            peer_id, e
+        );
+    }
 }
 
 /// This task handles [`SyncEvent`], which is periodically emitted for us to
@@ -646,22 +705,31 @@ async fn inbound_network_task<V>(
                                         continue;
                                     }
                                 };
-                                counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
-                                    .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
-                                    .inc_by(msg.transactions.len() as i64);
-                                let smp_clone = smp.clone();
-                                let timeline_state = match node_config.is_upstream_peer(peer_id, network_id) {
-                                    true => TimelineState::NonQualified,
-                                    false => TimelineState::NotReady,
+                                match msg {
+                                    MempoolSyncMsg::BroadcastTransactionsRequest(request_id, transactions) => {
+                                        counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
+                                            .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
+                                            .inc_by(transactions.len() as i64);
+                                        let smp_clone = smp.clone();
+                                        let timeline_state = match node_config.is_upstream_peer(peer_id, network_id) {
+                                            true => TimelineState::NonQualified,
+                                            false => TimelineState::NotReady,
+                                        };
+                                        bounded_executor
+                                            .spawn(process_transaction_broadcast(
+                                                smp_clone,
+                                                transactions,
+                                                request_id,
+                                                timeline_state,
+                                                peer_id,
+                                                network_id,
+                                            ))
+                                            .await;
+                                    }
+                                    MempoolSyncMsg::BroadcastTransactionsResponse(id) => {
+                                        // TODO impl ACK-triggered activity (clean out ACKed txns)
+                                    }
                                 };
-                                bounded_executor
-                                    .spawn(process_transaction_broadcast(
-                                        smp_clone,
-                                        msg.transactions,
-                                        timeline_state,
-                                        peer_id
-                                    ))
-                                    .await;
                             }
                             _ => {
                                 security_log(SecurityEvent::InvalidNetworkEventMP)

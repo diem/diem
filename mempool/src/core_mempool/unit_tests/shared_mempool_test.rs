@@ -140,7 +140,7 @@ impl SharedMempoolNetwork {
         }
     }
 
-    /// deliveres next message from given node to it's peer
+    /// delivers next broadcast message from given node to its peer
     fn deliver_message(&mut self, peer: &PeerId) -> (SignedTransaction, PeerId) {
         // emulate timer tick
         self.timers
@@ -153,11 +153,12 @@ impl SharedMempoolNetwork {
         let network_reqs_rx = self.network_reqs_rxs.get_mut(peer).unwrap();
         let network_req = block_on(network_reqs_rx.next()).unwrap();
 
-        match network_req {
-            PeerManagerRequest::SendMessage(peer_id, msg) => {
-                let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
-                let mut sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
-                let transaction = sync_msg.transactions.pop().unwrap();
+        if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
+            let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
+            let sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
+
+            if let MempoolSyncMsg::BroadcastTransactionsRequest(_id, mut transactions) = sync_msg {
+                let transaction = transactions.pop().unwrap();
                 // send it to peer
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 receiver_network_notif_tx
@@ -179,9 +180,46 @@ impl SharedMempoolNetwork {
                 let mempool = self.mempools.get(&peer_id).unwrap();
                 let block = mempool.lock().unwrap().get_block(100, HashSet::new());
                 assert!(block.iter().any(|t| t == &transaction));
+
+                // deliver ACK for this request
+                self.deliver_response(&peer_id);
                 (transaction, peer_id)
+            } else {
+                panic!("did not receive expected BroadcastTransactionsRequest");
             }
-            _ => panic!("peer {:?} didn't broadcast transaction", peer),
+        } else {
+            panic!("peer {:?} didn't broadcast transaction", peer)
+        }
+    }
+
+    /// delivers broadcast ACK from `peer`
+    fn deliver_response(&mut self, peer: &PeerId) {
+        let network_reqs_rx = self.network_reqs_rxs.get_mut(peer).unwrap();
+        let network_req = block_on(network_reqs_rx.next()).unwrap();
+
+        if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
+            let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
+            let sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
+
+            if let MempoolSyncMsg::BroadcastTransactionsResponse(_id) = sync_msg {
+                // send it to peer
+                let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
+                receiver_network_notif_tx
+                    .push(
+                        (
+                            *peer,
+                            ProtocolId::from_static(
+                                network::validator_network::MEMPOOL_DIRECT_SEND_PROTOCOL,
+                            ),
+                        ),
+                        PeerManagerNotification::RecvMessage(*peer, msg),
+                    )
+                    .unwrap();
+            } else {
+                panic!("did not receive expected broadcast ACK");
+            }
+        } else {
+            panic!("peer {:?} did not ACK broadcast", peer);
         }
     }
 
