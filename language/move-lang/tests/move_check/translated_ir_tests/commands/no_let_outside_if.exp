@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/no_let_outside_if.move:3:9 ───
+   │
+ 3 │         y = 5;
+   │         ^ Invalid assignment. Unbound local 'y'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/no_let_outside_if.move:5:9 ───
+   │
+ 5 │         y = 0;
+   │         ^ Invalid assignment. Unbound local 'y'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/no_let_outside_if.move:7:30 ───
+   │
+ 7 │     0x0::Transaction::assert(y == 5, 42);
+   │                              ^ Invalid local usage. Unbound local 'y'
+   │
+

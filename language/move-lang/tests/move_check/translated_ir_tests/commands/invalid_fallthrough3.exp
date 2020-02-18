@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/invalid_fallthrough3.move:4:3 ───
+   │
+ 4 │   x = 7;
+   │   ^^^^^ Unreachable code. This statement (and any following statements) will not be executed. In some cases, this will result in unused resource values.
+   │
+

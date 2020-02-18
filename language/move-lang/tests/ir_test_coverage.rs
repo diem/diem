@@ -40,5 +40,5 @@ fn translated_test_exists(subdir: &str, name_str: &str) -> bool {
         stem.pop().unwrap();
     });
     let stem_str = &stem;
-    translated_ir_test_name(false, subdir, stem_str).is_some()
+    translated_ir_test_name(false, subdir, stem_str).is_none()
 }

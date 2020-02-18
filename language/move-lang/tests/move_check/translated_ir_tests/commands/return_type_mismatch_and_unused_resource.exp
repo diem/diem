@@ -1,0 +1,22 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/return_type_mismatch_and_unused_resource.move:5:13 ───
+   │
+ 7 │         false
+   │         ^^^^^ Invalid return
+   ·
+ 5 │         let x = X {};
+   │             - The local 'x' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/commands/return_type_mismatch_and_unused_resource.move:12:17 ───
+    │
+ 13 │         r
+    │         ^ Invalid return. Local 'u' is still being borrowed.
+    ·
+ 12 │         let r = &u;
+    │                 -- It is still being borrowed by this reference
+    │
+

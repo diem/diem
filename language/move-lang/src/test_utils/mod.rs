@@ -18,7 +18,7 @@ pub const TODO_EXTENSION: &str = "move_TODO";
 pub const MOVE_EXTENSION: &str = "move";
 pub const IR_EXTENSION: &str = "mvir";
 
-pub const COMPLETED_DIRECTORIES: &[&str; 0] = &[];
+pub const COMPLETED_DIRECTORIES: &[&str; 2] = &["borrow_tests", "commands"];
 
 pub fn stdlib_files() -> Vec<String> {
     let dirfiles = datatest_stable::utils::iterate_directory(Path::new(STD_LIB_DIR));

@@ -172,6 +172,21 @@ impl Context {
         self.locals.add(var, status).unwrap();
     }
 
+    pub fn is_current_module(&self, m: &ModuleIdent) -> bool {
+        match &self.current_module {
+            Some(curm) => curm == m,
+            None => false,
+        }
+    }
+
+    pub fn is_current_function(&self, m: &ModuleIdent, f: &FunctionName) -> bool {
+        self.is_current_module(m)
+            && match &self.current_function {
+                Some(curf) => curf == f,
+                _ => false,
+            }
+    }
+
     fn module_info(&self, m: &ModuleIdent) -> &ModuleInfo {
         self.modules
             .get(m)

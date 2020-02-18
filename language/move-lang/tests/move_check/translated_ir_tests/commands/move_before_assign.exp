@@ -1,0 +1,19 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/move_before_assign.move:2:9 ───
+   │
+ 2 │     let x;
+   │         ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/move_before_assign.move:2:9 ───
+   │
+ 3 │     let y = move x;
+   │             ^^^^^^ Invalid move. Local 'x' was declared but could not infer the type. Try annotating the type here
+   ·
+ 2 │     let x;
+   │         - Local declared but not assigned here
+   │
+
