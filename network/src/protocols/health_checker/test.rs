@@ -84,9 +84,9 @@ async fn expect_ping(
         ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)
     );
 
-    let req_msg = HealthCheckerMsg::decode(req_data.as_ref()).unwrap();
-    match req_msg.message {
-        Some(HealthCheckerMsg_oneof::Ping(ping_msg)) => (ping_msg, res_tx),
+    let req_msg = crate::proto::HealthCheckerMsg::decode(req_data.as_ref()).unwrap();
+    match lcs::from_bytes(&req_msg.message).unwrap() {
+        HealthCheckerMsg::Ping(ping) => (ping, res_tx),
         _ => panic!("Unexpected HealthCheckerMsg: {:?}", req_msg),
     }
 }
@@ -94,12 +94,9 @@ async fn expect_ping(
 async fn expect_ping_send_ok(
     network_reqs_rx: &mut libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
 ) {
-    let (ping_msg, res_tx) = expect_ping(network_reqs_rx).await;
-    let pong_msg = Pong {
-        nonce: ping_msg.nonce,
-    };
-    let res_msg_enum = HealthCheckerMsg {
-        message: Some(HealthCheckerMsg_oneof::Pong(pong_msg)),
+    let (ping, res_tx) = expect_ping(network_reqs_rx).await;
+    let res_msg_enum = crate::proto::HealthCheckerMsg {
+        message: lcs::to_bytes(&HealthCheckerMsg::Pong(Pong(ping.0))).unwrap(),
     };
     let res_data = res_msg_enum.to_bytes().unwrap();
     res_tx.send(Ok(res_data)).unwrap();
@@ -123,12 +120,12 @@ async fn expect_ping_timeout(
 
 async fn send_inbound_ping(
     peer_id: PeerId,
-    ping_msg: Ping,
+    ping: u32,
     network_notifs_tx: &mut libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
 ) -> oneshot::Receiver<Result<Bytes, RpcError>> {
     let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
-    let req_msg_enum = HealthCheckerMsg {
-        message: Some(HealthCheckerMsg_oneof::Ping(ping_msg)),
+    let req_msg_enum = crate::proto::HealthCheckerMsg {
+        message: lcs::to_bytes(&HealthCheckerMsg::Ping(Ping(ping))).unwrap(),
     };
     let data = req_msg_enum.to_bytes().unwrap();
     let (res_tx, res_rx) = oneshot::channel();
@@ -155,9 +152,9 @@ async fn send_inbound_ping(
 
 async fn expect_pong(res_rx: oneshot::Receiver<Result<Bytes, RpcError>>) {
     let res_data = res_rx.await.unwrap().unwrap();
-    let res_msg = HealthCheckerMsg::decode(res_data.as_ref()).unwrap();
-    match res_msg.message {
-        Some(HealthCheckerMsg_oneof::Pong(_)) => {}
+    let res_msg = crate::proto::HealthCheckerMsg::decode(res_data.as_ref()).unwrap();
+    match lcs::from_bytes(&res_msg.message).unwrap() {
+        HealthCheckerMsg::Pong(_) => {}
         _ => panic!("Unexpected HealthCheckerMsg: {:?}", res_msg),
     }
 }
@@ -230,8 +227,7 @@ fn inbound() {
         send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
 
         // Receive ping from peer.
-        let ping_msg = Ping { nonce: 0 };
-        let res_rx = send_inbound_ping(peer_id, ping_msg, &mut network_notifs_tx).await;
+        let res_rx = send_inbound_ping(peer_id, 0, &mut network_notifs_tx).await;
 
         // HealthChecker should respond with a pong.
         expect_pong(res_rx).await;
