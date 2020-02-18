@@ -12,20 +12,18 @@ use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::*,
+    hash::ACCUMULATOR_PLACEHOLDER_HASH,
     test_utils::TEST_SEED,
     x25519,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
-    HashValue,
 };
 use libra_logger::set_simple_logger;
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
-    block_info::BlockInfo,
     crypto_proxies::{
         random_validator_verifier, LedgerInfoWithSignatures, ValidatorChangeProof,
         ValidatorPublicKeys, ValidatorSet, ValidatorSigner,
     },
-    ledger_info::LedgerInfo,
     proof::TransactionListProof,
     transaction::TransactionListWithProof,
     waypoint::Waypoint,
@@ -40,7 +38,7 @@ use network::{
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, RwLock,
@@ -203,20 +201,9 @@ impl SynchronizerEnv {
     }
 
     fn genesis_li(validators: &[ValidatorPublicKeys]) -> LedgerInfoWithSignatures {
-        LedgerInfoWithSignatures::new(
-            LedgerInfo::new(
-                BlockInfo::new(
-                    0,
-                    0,
-                    HashValue::zero(),
-                    HashValue::zero(),
-                    0,
-                    0,
-                    Some(ValidatorSet::new(validators.to_owned())),
-                ),
-                HashValue::zero(),
-            ),
-            BTreeMap::new(),
+        LedgerInfoWithSignatures::genesis(
+            *ACCUMULATOR_PLACEHOLDER_HASH,
+            ValidatorSet::new(validators.to_vec()),
         )
     }
 

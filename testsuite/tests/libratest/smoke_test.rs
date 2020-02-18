@@ -934,7 +934,7 @@ fn test_client_waypoints() {
     );
 
     // Verify that a client with the wrong waypoint is not going to be able to connect to the chain.
-    let bad_li = LedgerInfo::new(BlockInfo::genesis(), HashValue::zero());
+    let bad_li = LedgerInfo::new(BlockInfo::empty(), HashValue::zero());
     let bad_waypoint = Waypoint::new(&bad_li).unwrap();
     let mut client_with_bad_waypoint = env.get_validator_ac_client(1, Some(bad_waypoint));
     assert!(client_with_bad_waypoint

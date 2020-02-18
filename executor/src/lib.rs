@@ -17,7 +17,7 @@ use libra_config::config::{NodeConfig, VMConfig};
 use libra_crypto::{
     hash::{
         CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher,
-        ACCUMULATOR_PLACEHOLDER_HASH, PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
+        ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
@@ -26,11 +26,10 @@ use libra_types::{
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
-    block_info::{BlockInfo, Round},
+    block_info::Round,
     contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
     crypto_proxies::ValidatorSet,
-    ledger_info::LedgerInfo,
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
@@ -42,7 +41,7 @@ use once_cell::sync::Lazy;
 use scratchpad::{ProofRead, SparseMerkleTree};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{hash_map, BTreeMap, HashMap, HashSet},
+    collections::{hash_map, HashMap, HashSet},
     convert::TryFrom,
     marker::PhantomData,
     sync::Arc,
@@ -360,21 +359,14 @@ where
             .execute_block(genesis_txns.clone(), &pre_genesis_trees, &pre_genesis_trees)
             .expect("Failed to execute genesis block.");
 
+        let validator_set = output
+            .validators()
+            .clone()
+            .expect("Genesis transaction must emit a validator set.");
+
         let root_hash = output.accu_root();
-        let ledger_info = LedgerInfo::new(
-            BlockInfo::new(
-                GENESIS_EPOCH,
-                GENESIS_ROUND,
-                *PRE_GENESIS_BLOCK_ID,
-                root_hash,
-                0,
-                0,
-                output.validators().clone(),
-            ),
-            HashValue::zero(),
-        );
-        let ledger_info_with_sigs =
-            LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ BTreeMap::new());
+        let ledger_info_with_sigs = LedgerInfoWithSignatures::genesis(root_hash, validator_set);
+
         self.commit_blocks(
             vec![(genesis_txns, Arc::new(output))],
             ledger_info_with_sigs,

@@ -69,6 +69,10 @@ impl<PublicKey: VerifyingKey> ValidatorSet<PublicKey> {
         ValidatorSet(payload)
     }
 
+    pub fn empty() -> Self {
+        ValidatorSet::new(Vec::new())
+    }
+
     pub fn change_event_key() -> EventKey {
         EventKey::new_from_address(&account_config::validator_set_address(), 2)
     }
