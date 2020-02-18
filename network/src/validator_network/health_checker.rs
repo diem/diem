@@ -7,7 +7,7 @@ use crate::{
     counters,
     error::NetworkError,
     peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
-    proto::{HealthCheckerMsg, HealthCheckerMsg_oneof, Ping, Pong},
+    proto::HealthCheckerMsg,
     protocols::rpc::error::RpcError,
     validator_network::network_builder::NetworkBuilder,
     validator_network::{NetworkEvents, NetworkSender},
@@ -68,28 +68,16 @@ impl HealthCheckerNetworkSender {
     ///
     /// The rpc request can be canceled at any point by dropping the returned
     /// future.
-    pub async fn ping(
+    pub async fn send_rpc(
         &mut self,
         recipient: PeerId,
-        req_msg: Ping,
+        req_msg: HealthCheckerMsg,
         timeout: Duration,
-    ) -> Result<Pong, RpcError> {
+    ) -> Result<HealthCheckerMsg, RpcError> {
         let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
-        let req_msg_enum = HealthCheckerMsg {
-            message: Some(HealthCheckerMsg_oneof::Ping(req_msg)),
-        };
-
-        let res_msg_enum = self
-            .inner
-            .unary_rpc(recipient, protocol, req_msg_enum, timeout)
-            .await?;
-
-        if let Some(HealthCheckerMsg_oneof::Pong(response)) = res_msg_enum.message {
-            Ok(response)
-        } else {
-            // TODO: context
-            Err(RpcError::InvalidRpcResponse)
-        }
+        self.inner
+            .unary_rpc(recipient, protocol, req_msg, timeout)
+            .await
     }
 
     pub async fn disconnect_peer(&mut self, peer_id: PeerId) -> Result<(), NetworkError> {
@@ -120,11 +108,8 @@ mod tests {
         let mut stream = HealthCheckerNetworkEvents::new(network_reqs_rx, control_notifs_rx);
 
         // build rpc request
-        let req_msg = Ping { nonce: 1234 };
-        let req_msg_enum = HealthCheckerMsg {
-            message: Some(HealthCheckerMsg_oneof::Ping(req_msg)),
-        };
-        let req_data = req_msg_enum.clone().to_bytes().unwrap();
+        let req_msg = HealthCheckerMsg::default();
+        let req_data = req_msg.clone().to_bytes().unwrap();
 
         let (res_tx, _) = oneshot::channel();
         let rpc_req = InboundRpcRequest {
@@ -148,7 +133,7 @@ mod tests {
 
         // request should be properly deserialized
         let (res_tx, _) = oneshot::channel();
-        let expected_event = Event::RpcRequest((peer_id, req_msg_enum, res_tx));
+        let expected_event = Event::RpcRequest((peer_id, req_msg, res_tx));
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, expected_event);
     }
@@ -162,15 +147,12 @@ mod tests {
 
         // send ping rpc request
         let peer_id = PeerId::random();
-        let req_msg = Ping { nonce: 1234 };
-        let f_res_msg = sender.ping(peer_id, req_msg.clone(), Duration::from_secs(5));
+        let req_msg = HealthCheckerMsg::default();
+        let f_res_msg = sender.send_rpc(peer_id, req_msg, Duration::from_secs(5));
 
         // build rpc response
-        let res_msg = Pong { nonce: 1234 };
-        let res_msg_enum = HealthCheckerMsg {
-            message: Some(HealthCheckerMsg_oneof::Pong(res_msg.clone())),
-        };
-        let res_data = res_msg_enum.to_bytes().unwrap();
+        let res_msg = HealthCheckerMsg::default();
+        let res_data = res_msg.to_bytes().unwrap();
 
         // the future response
         let f_recv = async move {
@@ -180,11 +162,8 @@ mod tests {
                     assert_eq!(req.protocol.as_ref(), HEALTH_CHECKER_RPC_PROTOCOL);
 
                     // check request deserializes
-                    let req_msg_enum = HealthCheckerMsg::decode(req.data.as_ref()).unwrap();
-                    assert_eq!(
-                        req_msg_enum.message,
-                        Some(HealthCheckerMsg_oneof::Ping(req_msg))
-                    );
+                    let req_msg = HealthCheckerMsg::decode(req.data.as_ref()).unwrap();
+                    assert_eq!(req_msg, HealthCheckerMsg::default(),);
 
                     // remote replies with some response message
                     req.res_tx.send(Ok(res_data)).unwrap();

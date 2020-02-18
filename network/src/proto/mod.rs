@@ -23,9 +23,7 @@ mod health_checker {
 
 pub use self::{
     consensus::ConsensusMsg,
-    health_checker::{
-        health_checker_msg::Message as HealthCheckerMsg_oneof, HealthCheckerMsg, Ping, Pong,
-    },
+    health_checker::HealthCheckerMsg,
     mempool::MempoolSyncMsg,
     network::{
         identity_msg::Role as IdentityMsg_Role, DiscoveryMsg, FullNodePayload, IdentityMsg, Note,
