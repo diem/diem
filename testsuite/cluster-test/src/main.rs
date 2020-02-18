@@ -100,11 +100,11 @@ struct Args {
     changelog: Option<Vec<String>>,
 
     // emit_tx options
-    #[structopt(long, default_value = "10")]
+    #[structopt(long, default_value = "16")]
     accounts_per_client: usize,
     #[structopt(long)]
     threads_per_ac: Option<usize>,
-    #[structopt(long, default_value = "50")]
+    #[structopt(long, default_value = "0")]
     wait_millis: u64,
     #[structopt(long)]
     burst: bool,
