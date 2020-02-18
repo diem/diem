@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{crypto_proxies::ValidatorSet, transaction::Version};
-use libra_crypto::hash::HashValue;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use libra_crypto::hash::{HashValue, PRE_GENESIS_BLOCK_ID};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,12 @@ use std::fmt::{Display, Formatter};
 /// The round of a block is a consensus-internal counter, which starts with 0 and increases
 /// monotonically.
 pub type Round = u64;
+
+// Constants for the initial genesis block.
+pub const GENESIS_EPOCH: u64 = 0;
+pub const GENESIS_ROUND: Round = 0;
+pub const GENESIS_VERSION: Version = 0;
+pub const GENESIS_TIMESTAMP_USECS: u64 = 0;
 
 /// This structure contains all the information needed for tracking a block
 /// without having access to the block or its execution output state. It
@@ -69,6 +75,7 @@ impl BlockInfo {
         }
     }
 
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn random(round: Round) -> Self {
         Self {
             epoch: 1,
@@ -81,17 +88,34 @@ impl BlockInfo {
         }
     }
 
-    #[cfg(any(test, feature = "fuzzing"))]
-    pub fn genesis() -> Self {
+    /// Create a new genesis block. The genesis block is effectively the
+    /// blockchain state after executing the initial genesis transaction.
+    ///
+    /// * `genesis_state_root_hash` - the state tree root hash after executing the
+    /// initial genesis transaction.
+    ///
+    /// * `validator_set` - the initial validator set, configured when generating
+    /// the genesis transaction itself and emitted after executing the genesis
+    /// transaction. Using this genesis block means transitioning to a new epoch
+    /// (GENESIS_EPOCH + 1) with this `validator_set`.
+    pub fn genesis(genesis_state_root_hash: HashValue, validator_set: ValidatorSet) -> Self {
         Self {
-            epoch: 0,
-            round: 0,
-            id: HashValue::zero(),
-            executed_state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
-            version: 0,
-            timestamp_usecs: 0,
-            next_validator_set: Some(ValidatorSet::new(vec![])),
+            epoch: GENESIS_EPOCH,
+            round: GENESIS_ROUND,
+            // We use `PRE_GENESIS_BLOCK_ID` as the parent of the genesis block.
+            id: *PRE_GENESIS_BLOCK_ID,
+            executed_state_id: genesis_state_root_hash,
+            version: GENESIS_VERSION,
+            timestamp_usecs: GENESIS_TIMESTAMP_USECS,
+            next_validator_set: Some(validator_set),
         }
+    }
+
+    /// Create a mock genesis `BlockInfo` with an empty state tree and empty
+    /// validator set.
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn mock_genesis() -> Self {
+        Self::genesis(*ACCUMULATOR_PLACEHOLDER_HASH, ValidatorSet::empty())
     }
 
     pub fn epoch(&self) -> u64 {

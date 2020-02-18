@@ -142,7 +142,7 @@ where
 {
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn make_genesis_block() -> Self {
-        Self::make_genesis_block_from_ledger_info(&LedgerInfo::genesis())
+        Self::make_genesis_block_from_ledger_info(&LedgerInfo::mock_genesis())
     }
 
     /// Construct new genesis block for next epoch deterministically from the end-epoch LedgerInfo

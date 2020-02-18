@@ -55,7 +55,7 @@ impl<T: Payload> MockStorage<T> {
     pub fn new(shared_storage: Arc<MockSharedStorage<T>>) -> Self {
         MockStorage {
             shared_storage,
-            storage_ledger: Mutex::new(LedgerInfo::genesis()),
+            storage_ledger: Mutex::new(LedgerInfo::mock_genesis()),
         }
     }
 
@@ -248,7 +248,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage {
     }
 
     async fn recover_from_ledger(&self) -> LedgerRecoveryData<T> {
-        LedgerRecoveryData::new(LedgerInfo::genesis(), ValidatorSet::new(vec![]))
+        LedgerRecoveryData::new(LedgerInfo::mock_genesis(), ValidatorSet::new(vec![]))
     }
 
     async fn start(&self) -> LivenessStorageData<T> {
@@ -257,7 +257,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage {
             self.recover_from_ledger().await,
             vec![],
             vec![],
-            &LedgerInfo::genesis(),
+            &LedgerInfo::mock_genesis(),
             ExecutedTrees::new_empty(),
             None,
         ) {

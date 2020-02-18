@@ -3,7 +3,7 @@
 
 use cli::client_proxy::ClientProxy;
 use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
-use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, HashValue, SigningKey};
+use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, SigningKey};
 use libra_logger::prelude::*;
 use libra_swarm::swarm::LibraNode;
 use libra_swarm::swarm::LibraSwarm;
@@ -11,7 +11,6 @@ use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress,
     account_config::association_address,
-    block_info::BlockInfo,
     ledger_info::LedgerInfo,
     transaction::{TransactionArgument, TransactionPayload},
     waypoint::Waypoint,
@@ -934,7 +933,7 @@ fn test_client_waypoints() {
     );
 
     // Verify that a client with the wrong waypoint is not going to be able to connect to the chain.
-    let bad_li = LedgerInfo::new(BlockInfo::genesis(), HashValue::zero());
+    let bad_li = LedgerInfo::mock_genesis();
     let bad_waypoint = Waypoint::new(&bad_li).unwrap();
     let mut client_with_bad_waypoint = env.get_validator_ac_client(1, Some(bad_waypoint));
     assert!(client_with_bad_waypoint

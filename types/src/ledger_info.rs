@@ -65,6 +65,20 @@ impl LedgerInfo {
         }
     }
 
+    /// Create a new LedgerInfo at genesis with the given genesis state and
+    /// initial validator set.
+    pub fn genesis(genesis_state_root_hash: HashValue, validator_set: ValidatorSet) -> Self {
+        Self::new(
+            BlockInfo::genesis(genesis_state_root_hash, validator_set),
+            HashValue::zero(),
+        )
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn mock_genesis() -> Self {
+        Self::new(BlockInfo::mock_genesis(), HashValue::zero())
+    }
+
     /// The `BlockInfo` of a committed block.
     pub fn commit_info(&self) -> &BlockInfo {
         &self.commit_info
@@ -107,12 +121,6 @@ impl LedgerInfo {
 
     pub fn set_consensus_data_hash(&mut self, consensus_data_hash: HashValue) {
         self.consensus_data_hash = consensus_data_hash;
-    }
-
-    /// To bootstrap the system until we execute and commit the genesis txn before start.
-    #[cfg(any(test, feature = "fuzzing"))]
-    pub fn genesis() -> Self {
-        Self::new(BlockInfo::genesis(), HashValue::zero())
     }
 }
 
@@ -199,6 +207,20 @@ impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
             ledger_info,
             signatures,
         }
+    }
+
+    /// Create a new `LedgerInfoWithSignatures` at genesis with the given genesis
+    /// state and initial validator set.
+    ///
+    /// Note that the genesis `LedgerInfoWithSignatures` is unsigned. Validators
+    /// and FullNodes are configured with the same genesis transaction and generate
+    /// an identical genesis `LedgerInfoWithSignatures` independently. In contrast,
+    /// Clients will likely use a waypoint generated from the genesis `LedgerInfo`.
+    pub fn genesis(genesis_state_root_hash: HashValue, validator_set: ValidatorSet) -> Self {
+        Self::new(
+            LedgerInfo::genesis(genesis_state_root_hash, validator_set),
+            BTreeMap::new(),
+        )
     }
 
     pub fn ledger_info(&self) -> &LedgerInfo {
