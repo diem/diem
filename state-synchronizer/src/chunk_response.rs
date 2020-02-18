@@ -1,11 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Error, Result};
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use libra_types::transaction::{TransactionListWithProof, Version};
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 use std::fmt;
 
 /// The response can carry different LedgerInfo types depending on whether the verification
@@ -90,23 +88,5 @@ impl fmt::Display for GetChunkResponse {
             "[ChunkResponse: response li: {}, txns: {}]",
             response_li_repr, txns_repr,
         )
-    }
-}
-
-impl TryFrom<network::proto::GetChunkResponse> for GetChunkResponse {
-    type Error = Error;
-
-    fn try_from(proto: network::proto::GetChunkResponse) -> Result<Self> {
-        Ok(lcs::from_bytes(&proto.bytes)?)
-    }
-}
-
-impl TryFrom<GetChunkResponse> for network::proto::GetChunkResponse {
-    type Error = Error;
-
-    fn try_from(chunk_response: GetChunkResponse) -> Result<Self> {
-        Ok(Self {
-            bytes: lcs::to_bytes(&chunk_response)?,
-        })
     }
 }
