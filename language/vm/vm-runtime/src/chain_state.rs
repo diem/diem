@@ -22,15 +22,27 @@ use vm_runtime_types::{loaded_data::struct_def::StructDef, values::GlobalValue};
 
 /// Trait that describes what Move bytecode runtime expects from the Libra blockchain.
 pub trait ChainState {
+    // ---
     // Gas operations
+    // ---
+
     fn deduct_gas(&mut self, amount: GasUnits<GasCarrier>) -> VMResult<()>;
     fn remaining_gas(&self) -> GasUnits<GasCarrier>;
 
-    // StateStore operations. Ideally the api should look like:
-    // fn read_data(&self, ap: &AccessPath) -> VMResult<Vec<u8>>;
-    // fn write_data(&mut self, ap: &AccessPath, data: Vec<u8>) -> VMResult<()>;
-    // However this is not implementable due to the current implementation of MoveVM: data are
-    // organized as a tree of GlobalRefs.
+    // ---
+    // StateStore operations
+    // ---
+
+    // An alternative for these APIs might look like:
+    //
+    //   fn read_data(&self, ap: &AccessPath) -> VMResult<Vec<u8>>;
+    //   fn write_data(&mut self, ap: &AccessPath, data: Vec<u8>) -> VMResult<()>;
+    //
+    // However, this would make the Move VM responsible for deserialization -- in particular,
+    // caching deserialized results leads to a big performance improvement. But this directly
+    // conflicts with the goal of the Move VM to be as stateless as possible. Hence the burden of
+    // deserialization (and caching) is placed on the implementer of this trait.
+
     /// Get a mutable reference to a resource stored on chain.
     fn load_data(
         &mut self,
@@ -50,6 +62,10 @@ pub trait ChainState {
     /// Check if this module exists on chain.
     // TODO: Can we get rid of this api with the loader refactor?
     fn exists_module(&self, key: &ModuleId) -> bool;
+
+    // ---
+    // EventStore operations
+    // ---
 
     /// Emit an event to the EventStore
     fn emit_event(&mut self, event: ContractEvent);
