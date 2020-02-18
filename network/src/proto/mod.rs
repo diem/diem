@@ -33,8 +33,5 @@ pub use self::{
         identity_msg::Role as IdentityMsg_Role, DiscoveryMsg, FullNodePayload, IdentityMsg, Note,
         PeerInfo, SignedFullNodePayload, SignedPeerInfo,
     },
-    state_synchronizer::{
-        state_synchronizer_msg::Message as StateSynchronizerMsg_oneof, GetChunkRequest,
-        GetChunkResponse, StateSynchronizerMsg,
-    },
+    state_synchronizer::StateSynchronizerMsg,
 };

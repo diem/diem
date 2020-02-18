@@ -80,7 +80,6 @@ mod tests {
     use super::*;
     use crate::{
         peer_manager::{conn_status_channel, PeerManagerNotification, PeerManagerRequest},
-        proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg_oneof},
         protocols::direct_send::Message,
         utils::MessageExt,
         validator_network::Event,
@@ -97,11 +96,7 @@ mod tests {
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let mut sender = StateSynchronizerSender::new(network_reqs_tx);
         let peer_id = PeerId::random();
-
-        // Create GetChunkRequest and embed in StateSynchronizerMsg.
-        let chunk_request = GetChunkRequest::default();
-        let mut send_msg = StateSynchronizerMsg::default();
-        send_msg.message = Some(StateSynchronizerMsg_oneof::ChunkRequest(chunk_request));
+        let send_msg = StateSynchronizerMsg::default();
 
         // Send msg to network layer.
         sender.send_to(peer_id, send_msg.clone()).unwrap();
@@ -131,11 +126,7 @@ mod tests {
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let mut stream = StateSynchronizerEvents::new(state_sync_rx, control_notifs_rx);
         let peer_id = PeerId::random();
-
-        // Create GetChunkResponse and embed in StateSynchronizerMsg.
-        let chunk_response = GetChunkResponse::default();
-        let mut state_sync_msg = StateSynchronizerMsg::default();
-        state_sync_msg.message = Some(StateSynchronizerMsg_oneof::ChunkResponse(chunk_response));
+        let state_sync_msg = StateSynchronizerMsg::default();
 
         // mock receiving request.
         let event = PeerManagerNotification::RecvMessage(
