@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/pop_positive.move:2:18 ───
+   │
+ 7 │         (_, _) = three();
+   │         ^^^^^^ Invalid list-assignment. The list-assignment expected 2 argument(s) but got 3
+   ·
+ 2 │     fun three(): (u64, u64, u64) {
+   │                  --------------- Found 3 arguments here
+   │
+

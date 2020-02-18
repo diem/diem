@@ -178,10 +178,7 @@ fn exp_list_item(
 }
 
 fn is_current_function(context: &Context, call: &T::ModuleCall) -> bool {
-    match (&context.current_module, &context.current_function) {
-        (Some(m), Some(f)) => m == &call.module && f == &call.name,
-        _ => false,
-    }
+    context.is_current_function(&call.module, &call.name)
 }
 
 fn builtin_function(

@@ -744,7 +744,6 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             }
         }
         NE::Pack(m, n, ty_args_opt, nfields) => {
-            let current_module = context.current_module.clone().unwrap();
             let (bt, targs) = core::make_struct_type(context, eloc, &m, &n, ty_args_opt);
             let typed_nfields =
                 add_field_types(context, eloc, "argument", &m, &n, targs.clone(), nfields);
@@ -760,13 +759,13 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 );
                 (idx, (fty, arg))
             });
-            if m != current_module {
-                let msg = "Currently, all structs can only be instantiated in module that they \
-                           were declared";
-                context.error(vec![
-                    (eloc, format!("Invalid instantiation of '{}::{}'", &m, &n)),
-                    (current_module.loc(), msg.into()),
-                ])
+            if !context.is_current_module(&m) {
+                let msg = format!(
+                    "Invalid instantiation of '{}::{}'.\n\
+                     All structs can only be constructed in the module in which they are declared",
+                    &m, &n,
+                );
+                context.error(vec![(eloc, msg)])
             }
             (Type_::base(bt), TE::Pack(m, n, targs, tfields))
         }
@@ -1028,7 +1027,6 @@ fn bind(
             TB::Var(var, None)
         }
         NB::Unpack(m, n, ty_args_opt, fields) => {
-            let current_module = &context.current_module.clone().unwrap();
             let (bt, targs) = core::make_struct_type(context, loc, &m, &n, ty_args_opt);
             let ref_mut: Option<bool>;
             if let Some(ty) = ty_opt {
@@ -1058,11 +1056,13 @@ fn bind(
                 let tb = bind(context, declared, nb, Some(nb_ty));
                 (idx, (fty, tb))
             });
-            if &m != current_module {
-                let bmsg = format!("Invalid deconstruction binding of '{}::{}'", &m, &n);
-                let dmsg = "Currently, all structs can only be deconstructed in module that they \
-                            were declared";
-                context.error(vec![(loc, bmsg), (current_module.loc(), dmsg.into())])
+            if !context.is_current_module(&m) {
+                let msg = format!(
+                    "Invalid deconstruction binding of '{}::{}'.\n All \
+                     structs can only be deconstructed in the module in which they are declared",
+                    &m, &n,
+                );
+                context.error(vec![(loc, msg)])
             }
             match ref_mut {
                 None => TB::Unpack(m, n, targs, tfields),
@@ -1197,9 +1197,7 @@ fn assign(
         }
 
         NA::Unpack(m, n, ty_args_opt, fields) => {
-            let current_module = &context.current_module.clone().unwrap();
-            let (bt, targs) =
-                core::make_struct_type(context, aloc, current_module, &n, ty_args_opt);
+            let (bt, targs) = core::make_struct_type(context, aloc, &m, &n, ty_args_opt);
             let (lhs, ref_mut) = match &rvalue_ty.value {
                 SingleType_::Ref(mut_, _) => (
                     Type_::single(sp(aloc, SingleType_::Ref(*mut_, bt))),
@@ -1215,15 +1213,8 @@ fn assign(
                 &lhs,
                 rhs,
             );
-            let typed_fields = add_field_types(
-                context,
-                aloc,
-                "assignment",
-                current_module,
-                &n,
-                targs.clone(),
-                fields,
-            );
+            let typed_fields =
+                add_field_types(context, aloc, "assignment", &m, &n, targs.clone(), fields);
             let tfields = typed_fields.map(|_, (idx, (fty, na))| {
                 let fixed_fty = match ref_mut {
                     None => SingleType_::base(fty.clone()),
@@ -1232,11 +1223,13 @@ fn assign(
                 let tb = assign(context, assigned, na, fixed_fty);
                 (idx, (fty, tb))
             });
-            if &m != current_module {
-                let amsg = format!("Invalid deconstruction assignment of '{}::{}'", &m, &n);
-                let dmsg = "Currently, all structs can only be deconstructed in module that they \
-                            were declared";
-                context.error(vec![(aloc, amsg), (current_module.loc(), dmsg.into())])
+            if !context.is_current_module(&m) {
+                let msg = format!(
+                    "Invalid deconstruction assignment of '{}::{}'.\nAll \
+                     structs can only be deconstructed in the module in which they are declared",
+                    &m, &n,
+                );
+                context.error(vec![(aloc, msg)])
             }
             match ref_mut {
                 None => TA::Unpack(m, n, targs, tfields),
