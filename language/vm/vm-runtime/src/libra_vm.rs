@@ -7,7 +7,6 @@ use crate::{
     data_cache::{BlockDataCache, RemoteCache},
     move_vm::MoveVM,
     system_module_names::*,
-    system_txn::block_metadata_processor::process_block_metadata,
     VMExecutor, VMVerifier,
 };
 use libra_config::config::{VMConfig, VMPublishingOption};
@@ -15,6 +14,7 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
+    account_config::CORE_CODE_ADDRESS,
     block_metadata::BlockMetadata,
     byte_array::ByteArray,
     transaction::{
@@ -356,6 +356,53 @@ impl LibraVM {
         )
     }
 
+    fn process_block_prologue(
+        &self,
+        remote_cache: &mut BlockDataCache<'_>,
+        block_metadata: BlockMetadata,
+    ) -> VMResult<TransactionOutput> {
+        // TODO: How should we setup the metadata here? A couple of thoughts here:
+        // 1. We might make the txn_data to be poisoned so that reading anything will result in a panic.
+        // 2. The most important consideration is figuring out the sender address.  Having a notion of a
+        //    "null address" (probably 0x0...0) that is prohibited from containing modules or resources
+        //    might be useful here.
+        // 3. We set the max gas to a big number just to get rid of the potential out of gas error.
+        let mut txn_data = TransactionMetadata::default();
+        txn_data.sender = CORE_CODE_ADDRESS;
+        txn_data.max_gas_amount = GasUnits::new(std::u64::MAX);
+
+        let mut interpreter_context =
+            TransactionExecutionContext::new(txn_data.max_gas_amount(), remote_cache);
+        // TODO: We might need a non zero cost table here so that we can at least bound the execution
+        //       time by a reasonable amount.
+        let gas_schedule = CostTable::zero();
+
+        if let Ok((id, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
+            let args = vec![
+                Value::u64(timestamp),
+                Value::byte_array(id),
+                Value::byte_array(previous_vote),
+                Value::address(proposer),
+            ];
+            self.move_vm.execute_function(
+                &LIBRA_SYSTEM_MODULE,
+                &BLOCK_PROLOGUE,
+                &gas_schedule,
+                &mut interpreter_context,
+                &txn_data,
+                args,
+            )?
+        } else {
+            return Err(VMStatus::new(StatusCode::MALFORMED));
+        };
+        interpreter_context
+            .get_transaction_output(&txn_data, VMStatus::new(StatusCode::EXECUTED))
+            .map(|output| {
+                remote_cache.push_write_set(output.write_set());
+                output
+            })
+    }
+
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_prologue<T: ChainState>(
@@ -437,9 +484,7 @@ impl LibraVM {
                     result.append(&mut outs);
                 }
                 TransactionBlock::BlockPrologue(block_metadata) => {
-                    result.push(self.move_vm.execute_runtime(|runtime| {
-                        process_block_metadata(block_metadata, runtime, &mut data_cache)
-                    })?)
+                    result.push(self.process_block_prologue(&mut data_cache, block_metadata)?)
                 }
                 TransactionBlock::WriteSet(change_set) => result.push(
                     self.check_change_set(&change_set, state_view)

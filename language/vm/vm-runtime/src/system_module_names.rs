@@ -66,3 +66,5 @@ pub static SAVE_ACCOUNT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("save_account").unwrap());
 pub static PROLOGUE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("prologue").unwrap());
 pub static EPILOGUE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unwrap());
+pub static BLOCK_PROLOGUE: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("block_prologue").unwrap());
