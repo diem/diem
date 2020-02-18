@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
-use bech32::Bech32;
 use hex::FromHex;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use proptest::prelude::*;
@@ -71,27 +70,6 @@ fn test_ref() {
 }
 
 #[test]
-fn test_bech32() {
-    let address = AccountAddress::try_from(
-        &Vec::from_hex("269bdde7f42c25476707821eb44d5ce3c6c9e50a774f43ddebc5494a42870aa6")
-            .expect("You must provide a valid Hex format")[..],
-    )
-    .expect("Address is not a valid hex format");
-    let bech32 = Bech32::try_from(address).unwrap();
-    assert_eq!(
-        bech32.to_string(),
-        "lb1y6damel59sj5wec8sg0tgn2uu0rvneg2wa858h0tc4y55s58p2nqjyd2lr".to_string()
-    );
-    let bech32_address = AccountAddress::try_from(bech32)
-        .expect("The provided input string is not a valid bech32 format");
-    assert_eq!(
-        address.as_ref().to_vec(),
-        bech32_address.as_ref().to_vec(),
-        "The two addresses do not match",
-    );
-}
-
-#[test]
 fn test_address_from_proto_invalid_length() {
     let bytes = vec![1; 123];
     assert!(AccountAddress::try_from(&bytes[..]).is_err());
@@ -102,13 +80,6 @@ proptest! {
     fn test_address_string_roundtrip(addr in any::<AccountAddress>()) {
         let s = String::from(&addr);
         let addr2 = AccountAddress::try_from(s).expect("roundtrip to string should work");
-        prop_assert_eq!(addr, addr2);
-    }
-
-    #[test]
-    fn test_address_bech32_roundtrip(addr in any::<AccountAddress>()) {
-        let b = Bech32::try_from(addr).unwrap();
-        let addr2 = AccountAddress::try_from(b).expect("Address::from_bech32 should work");
         prop_assert_eq!(addr, addr2);
     }
 
