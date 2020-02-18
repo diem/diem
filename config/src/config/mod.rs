@@ -173,11 +173,10 @@ impl NodeConfig {
             state_sync: self.state_sync.clone(),
             storage: self.storage.clone(),
             test: None,
-            validator_network: if let Some(n) = &self.validator_network {
-                Some(n.clone_for_template())
-            } else {
-                None
-            },
+            validator_network: self
+                .validator_network
+                .as_ref()
+                .map(|n| n.clone_for_template()),
             vm_config: self.vm_config.clone(),
         }
     }

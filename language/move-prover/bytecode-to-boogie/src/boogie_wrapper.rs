@@ -735,7 +735,7 @@ impl Model {
         let range = (module_idx, func_env.get_loc().start())..(module_idx, loc.end());
         self.tracked_locals
             .range(range)
-            .map(|(idx, vars)| {
+            .flat_map(|(idx, vars)| {
                 let mut res = vec![];
                 for (var, val) in vars {
                     if locals_shown.insert((*idx, var.clone())) {
@@ -744,7 +744,6 @@ impl Model {
                 }
                 res
             })
-            .flatten()
             .collect_vec()
     }
 }

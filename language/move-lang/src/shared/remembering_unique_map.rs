@@ -110,13 +110,10 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         iter: impl Iterator<Item = Option<(K, V)>>,
     ) -> Option<Result<RememberingUniqueMap<K, V>, (K::Key, K::Loc, K::Loc)>> {
         let map_res = UniqueMap::maybe_from_opt_iter(iter)?;
-        Some(match map_res {
-            Ok(map) => Ok(RememberingUniqueMap {
-                map,
-                gotten_keys: BTreeSet::new(),
-            }),
-            Err(e) => Err(e),
-        })
+        Some(map_res.map(|map| RememberingUniqueMap {
+            map,
+            gotten_keys: BTreeSet::new(),
+        }))
     }
 
     pub fn maybe_from_iter(

@@ -459,8 +459,7 @@ where
         let mut blocks_txns = vec![];
         for (txn, txn_data) in blocks
             .iter()
-            .map(|block| itertools::zip_eq(&block.0, block.1.transaction_data()))
-            .flatten()
+            .flat_map(|block| itertools::zip_eq(&block.0, block.1.transaction_data()))
         {
             if let TransactionStatus::Keep(_) = txn_data.status() {
                 txns_to_keep.push((

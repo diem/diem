@@ -118,10 +118,9 @@ impl<'txn> TransactionDataCache<'txn> {
             Some(bytes) => Ok(bytes.clone()),
             None => {
                 let ap = AccessPath::from(module);
-                self.data_cache.get(&ap).and_then(|data| match data {
-                    Some(bytes) => Ok(bytes),
-                    None => Err(VMStatus::new(StatusCode::LINKER_ERROR)),
-                })
+                self.data_cache
+                    .get(&ap)
+                    .and_then(|data| data.ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR)))
             }
         }
     }
