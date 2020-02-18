@@ -39,14 +39,12 @@ use libra_types::{
     },
     PeerId,
 };
-use network::{
-    proto::MempoolSyncMsg,
-    validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender},
-};
+use network::validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender};
+use serde::{Deserialize, Serialize};
 use std::{
     cmp,
     collections::{HashMap, HashSet},
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     ops::Deref,
     pin::Pin,
     sync::{Arc, Mutex},
@@ -165,6 +163,12 @@ pub struct TransactionExclusion {
     pub sequence_number: u64,
 }
 
+/// Container for exchanging transactions with other Mempools
+#[derive(Serialize, Deserialize)]
+pub struct MempoolSyncMsg {
+    pub transactions: Vec<SignedTransaction>,
+}
+
 fn notify_subscribers(
     event: SharedMempoolNotification,
     subscribers: &[UnboundedSender<SharedMempoolNotification>],
@@ -237,12 +241,14 @@ async fn sync_with_peers<'a>(
             if !transactions.is_empty() {
                 counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(transactions.len() as i64);
 
-                let mut msg = MempoolSyncMsg::default();
-                msg.peer_id = peer_id.into();
-                msg.transactions = transactions
-                    .into_iter()
-                    .map(|txn| txn.try_into().unwrap())
-                    .collect();
+                let mut msg = network::proto::MempoolSyncMsg::default();
+                msg.message = match lcs::to_bytes(&MempoolSyncMsg { transactions }) {
+                    Ok(bytes) => bytes,
+                    Err(e) => {
+                        warn!("[shared mempool] unable to serialize transactions: {}", e);
+                        return;
+                    }
+                };
 
                 // Since this is a direct-send, this will only error if the network
                 // module has unexpectedly crashed or shutdown.
@@ -633,15 +639,16 @@ async fn inbound_network_task<V>(
                                 counters::SHARED_MEMPOOL_EVENTS
                                     .with_label_values(&["message".to_string().deref()])
                                     .inc();
-                                let transactions: Vec<_> = msg
-                                    .transactions
-                                    .clone()
-                                    .into_iter()
-                                    .filter_map(|txn| convert_txn_from_proto(txn))
-                                    .collect();
+                                let msg: MempoolSyncMsg = match lcs::from_bytes(&msg.message) {
+                                    Ok(msg) => msg,
+                                    Err(e) => {
+                                        warn!("Unable to deserialize message from {}: {:?}", peer_id, msg);
+                                        continue;
+                                    }
+                                };
                                 counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
                                     .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
-                                    .inc_by(transactions.len() as i64);
+                                    .inc_by(msg.transactions.len() as i64);
                                 let smp_clone = smp.clone();
                                 let timeline_state = match node_config.is_upstream_peer(peer_id, network_id) {
                                     true => TimelineState::NonQualified,
@@ -650,7 +657,7 @@ async fn inbound_network_task<V>(
                                 bounded_executor
                                     .spawn(process_transaction_broadcast(
                                         smp_clone,
-                                        transactions,
+                                        msg.transactions,
                                         timeline_state,
                                         peer_id
                                     ))
