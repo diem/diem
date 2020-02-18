@@ -3,5 +3,5 @@ fun main() {
         loop break;
         break
     };
-    ()
+    if (true) () else ()
 }

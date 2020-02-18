@@ -4,18 +4,16 @@
 //! This module implements the checker for verifying correctness of function bodies.
 //! The overall verification is split between stack_usage_verifier.rs and
 //! abstract_interpreter.rs. CodeUnitVerifier simply orchestrates calls into these two files.
-use crate::control_flow_graph::VMControlFlowGraph;
+use crate::{
+    acquires_list_verifier::AcquiresVerifier, control_flow_graph::VMControlFlowGraph,
+    stack_usage_verifier::StackUsageVerifier, type_memory_safety::TypeAndMemorySafetyAnalysis,
+};
 use libra_types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::{append_err_info, VMResult},
+    errors::{append_err_info, err_at_offset, VMResult},
     file_format::{CompiledModule, FunctionDefinition},
     IndexKind,
-};
-
-use crate::{
-    acquires_list_verifier::AcquiresVerifier, stack_usage_verifier::StackUsageVerifier,
-    type_memory_safety::TypeAndMemorySafetyAnalysis,
 };
 
 pub struct CodeUnitVerifier<'a> {
@@ -41,12 +39,15 @@ impl<'a> CodeUnitVerifier<'a> {
         let code = &function_definition.code.code;
 
         // Check to make sure that the bytecode vector ends with a branching instruction.
-        if let Some(bytecode) = code.last() {
-            if !bytecode.is_unconditional_branch() {
-                return Err(VMStatus::new(StatusCode::INVALID_FALL_THROUGH));
+        match code.last() {
+            None => return Err(VMStatus::new(StatusCode::EMPTY_CODE_UNIT)),
+            Some(bytecode) if !bytecode.is_unconditional_branch() => {
+                return Err(err_at_offset(
+                    StatusCode::INVALID_FALL_THROUGH,
+                    code.len() - 1,
+                ))
             }
-        } else {
-            return Err(VMStatus::new(StatusCode::INVALID_FALL_THROUGH));
+            Some(_) => (),
         }
         self.verify_function_inner(function_definition, &VMControlFlowGraph::new(code))
     }

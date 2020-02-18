@@ -521,6 +521,7 @@ dependencies = [
  "move-core-types 0.1.0",
  "petgraph 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stdlib 0.1.0",
  "vm 0.1.0",
 ]
 
