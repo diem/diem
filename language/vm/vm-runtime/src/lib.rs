@@ -113,7 +113,6 @@ pub mod foreign_contracts;
 #[macro_use]
 pub mod gas_meter;
 mod libra_vm;
-mod system_txn;
 #[cfg(test)]
 mod unit_tests;
 
