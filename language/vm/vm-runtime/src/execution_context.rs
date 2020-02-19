@@ -60,7 +60,7 @@ impl<T: ChainState> InterpreterContext for T {
     ) -> VMResult<()> {
         // a resource can be written to an AccessPath if the data does not exists or
         // it was deleted (MoveFrom)
-        let can_write = match self.load_data(ap, def.clone()) {
+        let can_write = match self.borrow_resource(ap, def.clone()) {
             Ok(None) => true,
             Ok(Some(_)) => false,
             Err(e) => match e.major_status {
@@ -82,16 +82,16 @@ impl<T: ChainState> InterpreterContext for T {
     }
 
     fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Value> {
-        let root_ref = match self.load_data(ap, def) {
-            Ok(gref) => gref,
+        let root_value = match ChainState::move_resource_from(self, ap, def) {
+            Ok(g) => g,
             Err(e) => {
                 warn!("[VM] (MoveFrom) Error reading data for {}: {:?}", ap, e);
                 return Err(e);
             }
         };
 
-        match root_ref.take() {
-            Some((_layout, global_val)) => Ok(Value::struct_(global_val.into_owned_struct()?)),
+        match root_value {
+            Some(global_val) => Ok(Value::struct_(global_val.into_owned_struct()?)),
             None => Err(
                 vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
                     .with_sub_status(sub_status::DRE_GLOBAL_ALREADY_BORROWED),
@@ -104,15 +104,15 @@ impl<T: ChainState> InterpreterContext for T {
         ap: &AccessPath,
         def: StructDef,
     ) -> VMResult<(bool, AbstractMemorySize<GasCarrier>)> {
-        Ok(match self.load_data(ap, def) {
-            Ok(Some((_, gref))) => (true, gref.size()),
+        Ok(match self.borrow_resource(ap, def) {
+            Ok(Some(gref)) => (true, gref.size()),
             Ok(None) | Err(_) => (false, AbstractMemorySize::new(0)),
         })
     }
 
     fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&GlobalValue> {
-        match self.load_data(ap, def) {
-            Ok(Some((_, g))) => Ok(g),
+        match self.borrow_resource(ap, def) {
+            Ok(Some(g)) => Ok(g),
             Ok(None) => Err(
                 // TODO: wrong status code?
                 vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
