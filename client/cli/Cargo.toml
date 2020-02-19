@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0"
 chrono = "0.4.7"
 tonic = "0.1"
-hex = "0.4.1"
+hex = "0.4.2"
 itertools = "0.8.0"
 proptest = { version = "0.9.2", optional = true }
 rustyline = "6.0.0"

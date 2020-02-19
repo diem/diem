@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 codespan = "0.5.0"
 codespan-reporting = "0.5.0"
-hex = "0.4.1"
+hex = "0.4.2"
 regex = "1.1.6"
 structopt = "0.3.3"
 difference = "2.0"
