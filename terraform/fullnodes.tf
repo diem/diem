@@ -11,7 +11,7 @@ resource "aws_instance" "fullnode" {
     aws_subnet.testnet.*.id,
     count.index % length(data.aws_availability_zones.available.names),
   )
-  depends_on                  = [aws_main_route_table_association.testnet, aws_iam_role_policy_attachment.ecs_extra]
+  depends_on                  = [aws_main_route_table_association.testnet, aws_iam_role_policy.ecs_extra]
   vpc_security_group_ids      = [aws_security_group.validator.id]
   associate_public_ip_address = local.instance_public_ip
   key_name                    = aws_key_pair.libra.key_name
