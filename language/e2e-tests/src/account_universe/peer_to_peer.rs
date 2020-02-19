@@ -125,7 +125,7 @@ impl AUTransactionGen for P2PNewReceiverGen {
         &self,
         universe: &mut AccountUniverse,
     ) -> (SignedTransaction, (TransactionStatus, u64)) {
-        let sender = universe.pick(&self.sender).1;
+        let sender = universe.pick(self.sender).1;
 
         // Create a new, nonexistent account for the receiver.
         let txn = peer_to_peer_txn(

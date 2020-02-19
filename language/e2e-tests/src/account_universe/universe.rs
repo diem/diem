@@ -160,7 +160,7 @@ impl AccountUniverse {
     }
 
     /// Picks an account using the provided `Index` as a source of randomness.
-    pub fn pick(&mut self, index: &Index) -> (usize, &mut AccountCurrent) {
+    pub fn pick(&mut self, index: Index) -> (usize, &mut AccountCurrent) {
         let idx = self.picker.pick(index);
         (idx, &mut self.accounts[idx])
     }
@@ -185,7 +185,7 @@ impl AccountPicker {
         }
     }
 
-    fn pick(&mut self, index: &Index) -> usize {
+    fn pick(&mut self, index: Index) -> usize {
         match self {
             AccountPicker::Unlimited(num_accounts) => index.index(*num_accounts),
             AccountPicker::Limited(remaining) => {

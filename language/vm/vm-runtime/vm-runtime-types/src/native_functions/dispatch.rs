@@ -110,7 +110,7 @@ decl_native_function_enum! {
 impl NativeFunction {
     /// Given the vector of aguments, it executes the native function.
     pub fn dispatch(
-        &self,
+        self,
         t: Vec<TypeTag>,
         v: VecDeque<Value>,
         c: &CostTable,
@@ -143,7 +143,7 @@ impl NativeFunction {
 
     /// The number of arguments to the native function,
     /// It is checked at publishing of the module that this matches the expected signature.
-    pub fn num_args(&self) -> usize {
+    pub fn num_args(self) -> usize {
         match self {
             Self::HashSha2_256 => 1,
             Self::HashSha3_256 => 1,
@@ -169,7 +169,7 @@ impl NativeFunction {
     /// It should NOT be generally inspected outside of it's declaring module as the various
     /// struct handle indexes are not remapped into the local context.
     pub fn signature<T: ModuleAccess>(
-        &self,
+        self,
         m: Option<&ModuleView<T>>,
     ) -> Option<FunctionSignature> {
         let res = self.signature_(m)?;
@@ -181,7 +181,7 @@ impl NativeFunction {
         Some(res)
     }
 
-    fn signature_<T: ModuleAccess>(&self, m: Option<&ModuleView<T>>) -> Option<FunctionSignature> {
+    fn signature_<T: ModuleAccess>(self, m: Option<&ModuleView<T>>) -> Option<FunctionSignature> {
         use SignatureToken::*;
         macro_rules! simple {
             ($args:expr, $ret:expr) => {{

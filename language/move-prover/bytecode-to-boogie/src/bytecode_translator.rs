@@ -426,7 +426,7 @@ impl<'env> ModuleTranslator<'env> {
                         .module_env
                         .env
                         .get_module(*module_idx)
-                        .into_get_struct(struct_idx);
+                        .into_get_struct(*struct_idx);
                     emitln!(
                         self.writer,
                         "call ${}_update_inv({}, Dereference(__m, {}_ref));",
@@ -567,8 +567,8 @@ impl<'env> ModuleTranslator<'env> {
             FreezeRef(dest, src) => emitln!(self.writer, "call __t{} := FreezeRef(__t{});", dest, src),
             Call(dests, callee_index, type_actuals, args) => {
                 let (callee_module_env, callee_def_idx) =
-                    self.module_env.get_callee_info(callee_index);
-                let callee_env = callee_module_env.get_function(&callee_def_idx);
+                    self.module_env.get_callee_info(*callee_index);
+                let callee_env = callee_module_env.get_function(callee_def_idx);
                 let mut dest_str = String::new();
                 let mut args_str = String::new();
                 let mut dest_type_assumptions = vec![];
@@ -645,7 +645,7 @@ impl<'env> ModuleTranslator<'env> {
                 }
             }
             Pack(dest, struct_def_index, type_actuals, fields) => {
-                let struct_env = func_env.module_env.get_struct(struct_def_index);
+                let struct_env = func_env.module_env.get_struct(*struct_def_index);
                 let effective_dest = effective_dest_func(*dest);
                 let track_args =
                     if effective_dest < func_env.get_local_count() {
@@ -678,7 +678,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
             }
             Unpack(dests, struct_def_index, _, src) => {
-                let struct_env = &func_env.module_env.get_struct(struct_def_index);
+                let struct_env = &func_env.module_env.get_struct(*struct_def_index);
                 let mut dests_str = String::new();
                 let mut tmp_assignments = vec![];
                 for dest in dests.iter() {
@@ -706,8 +706,8 @@ impl<'env> ModuleTranslator<'env> {
                 }
             }
             BorrowField(dest, src, field_def_index) => {
-                let struct_env = self.module_env.get_struct_of_field(field_def_index);
-                let field_env = &struct_env.get_field(field_def_index);
+                let struct_env = self.module_env.get_struct_of_field(*field_def_index);
+                let field_env = &struct_env.get_field(*field_def_index);
                 emitln!(
                     self.writer,
                     "call __t{} := BorrowField(__t{}, {});",
@@ -721,7 +721,7 @@ impl<'env> ModuleTranslator<'env> {
                 let resource_type = boogie_struct_type_value(
                     self.module_env.env,
                     self.module_env.get_module_idx(),
-                    struct_def_index,
+                    *struct_def_index,
                     &self.module_env.get_type_actuals(*type_actuals),
                 );
                 emitln!(
@@ -736,7 +736,7 @@ impl<'env> ModuleTranslator<'env> {
                 let resource_type = boogie_struct_type_value(
                     self.module_env.env,
                     self.module_env.get_module_idx(),
-                    struct_def_index,
+                    *struct_def_index,
                     &self.module_env.get_type_actuals(*type_actuals),
                 );
                 emitln!(
@@ -753,7 +753,7 @@ impl<'env> ModuleTranslator<'env> {
                 let resource_type = boogie_struct_type_value(
                     self.module_env.env,
                     self.module_env.get_module_idx(),
-                    struct_def_index,
+                    *struct_def_index,
                     &self.module_env.get_type_actuals(*type_actuals),
                 );
                 emitln!(
@@ -768,7 +768,7 @@ impl<'env> ModuleTranslator<'env> {
                 let resource_type = boogie_struct_type_value(
                     self.module_env.env,
                     self.module_env.get_module_idx(),
-                    struct_def_index,
+                    *struct_def_index,
                     &self.module_env.get_type_actuals(*type_actuals),
                 );
                 emitln!(
@@ -855,7 +855,7 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &update_and_track_local(*dest, "__tmp"));
             }
             LdAddr(idx, addr_idx) => {
-                let addr_int = self.module_env.get_address(addr_idx);
+                let addr_int = self.module_env.get_address(*addr_idx);
                 emitln!(self.writer, "call __tmp := LdAddr({});", addr_int);
                 emitln!(self.writer, &update_and_track_local(*idx, "__tmp"));
             }
@@ -1346,7 +1346,7 @@ impl<'env> ModuleTranslator<'env> {
                         .module_env
                         .env
                         .get_module(*module_idx)
-                        .into_get_struct(struct_idx);
+                        .into_get_struct(*struct_idx);
                     if !struct_env.get_data_invariants().is_empty()
                         || !struct_env.get_update_invariants().is_empty()
                     {

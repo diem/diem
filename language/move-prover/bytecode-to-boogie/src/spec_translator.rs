@@ -525,7 +525,7 @@ impl<'env> SpecTranslator<'env> {
             let boogie_type = boogie_struct_type_value(
                 self.module_env.env,
                 struct_env.module_env.get_module_idx(),
-                &struct_env.get_def_idx(),
+                struct_env.get_def_idx(),
                 &[],
             );
             emitln!(
@@ -569,7 +569,7 @@ impl<'env> SpecTranslator<'env> {
                         .module_env
                         .env
                         .get_module(*module_idx)
-                        .into_get_struct(struct_idx);
+                        .into_get_struct(*struct_idx);
                     if p(&struct_env) {
                         Some(struct_env)
                     } else {
@@ -1004,7 +1004,7 @@ impl<'env> SpecTranslator<'env> {
         // Verify the type is actually a resource.
         if let GlobalType::Struct(module_idx, struct_idx, _) = &resource_type {
             let module_env = self.module_env.env.get_module(*module_idx);
-            let struct_env = module_env.get_struct(struct_idx);
+            let struct_env = module_env.get_struct(*struct_idx);
             if !struct_env.is_resource() {
                 self.error(
                     &format!("type `{}` is not a resource", struct_env.get_name()),
@@ -1040,7 +1040,7 @@ impl<'env> SpecTranslator<'env> {
         }
         if let GlobalType::Struct(module_index, struct_index, _actuals) = sig {
             let module_env = self.module_env.env.get_module(*module_index);
-            let struct_env = module_env.get_struct(&struct_index);
+            let struct_env = module_env.get_struct(*struct_index);
             if let Some(field_env) = struct_env.find_field(field.name()) {
                 (
                     boogie_field_name(&field_env),

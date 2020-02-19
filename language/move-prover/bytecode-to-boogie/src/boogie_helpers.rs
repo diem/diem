@@ -39,7 +39,7 @@ pub fn boogie_type_value(env: &GlobalEnv, sig: &GlobalType) -> String {
         }
         GlobalType::TypeParameter(index) => format!("tv{}", index),
         GlobalType::Struct(module_idx, struct_idx, args) => {
-            boogie_struct_type_value(env, *module_idx, struct_idx, args)
+            boogie_struct_type_value(env, *module_idx, *struct_idx, args)
         }
         // TODO: Need a boogie type for subrange?
         GlobalType::Subrange => "Unimplemented boogie subrange".to_string(),
@@ -50,7 +50,7 @@ pub fn boogie_type_value(env: &GlobalEnv, sig: &GlobalType) -> String {
 pub fn boogie_struct_type_value(
     env: &GlobalEnv,
     module_idx: usize,
-    struct_idx: &StructDefinitionIndex,
+    struct_idx: StructDefinitionIndex,
     args: &[GlobalType],
 ) -> String {
     let module_env = env.get_module(module_idx);
@@ -91,7 +91,7 @@ pub fn boogie_type_check_expr(env: &GlobalEnv, name: &str, sig: &GlobalType) -> 
         GlobalType::Address => conds.push(format!("is#Address({})", name)),
         GlobalType::ByteArray => conds.push(format!("is#ByteArray({})", name)),
         GlobalType::Struct(module_idx, struct_idx, _) => {
-            let struct_env = env.get_module(*module_idx).into_get_struct(struct_idx);
+            let struct_env = env.get_module(*module_idx).into_get_struct(*struct_idx);
             conds.push(format!(
                 "${}_is_well_formed({})",
                 boogie_struct_name(&struct_env),

@@ -472,7 +472,7 @@ impl Kind {
 
     /// Helper function to determine the kind of a struct instance by taking the kind of a type
     /// actual and join it with the existing partial result.
-    pub fn join(self, other: &Kind) -> Kind {
+    pub fn join(self, other: Kind) -> Kind {
         match (self, other) {
             (Kind::All, _) | (_, Kind::All) => Kind::All,
             (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
@@ -766,7 +766,7 @@ impl SignatureToken {
                 //       whole, and thus `all`.
                 //   - If none of the type actuals is `all`, then the struct is a resource if
                 //     and only if one of the type actuals is `resource`.
-                kinds.iter().fold(Kind::Unrestricted, Kind::join)
+                kinds.iter().cloned().fold(Kind::Unrestricted, Kind::join)
             }
         }
     }

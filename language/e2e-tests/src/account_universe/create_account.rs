@@ -34,7 +34,7 @@ impl AUTransactionGen for CreateAccountGen {
         &self,
         universe: &mut AccountUniverse,
     ) -> (SignedTransaction, (TransactionStatus, u64)) {
-        let sender = universe.pick(&self.sender).1;
+        let sender = universe.pick(self.sender).1;
 
         let txn = create_account_txn(
             sender.account(),

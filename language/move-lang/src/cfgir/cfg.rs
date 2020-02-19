@@ -323,7 +323,7 @@ impl AstDebug for BlockCFG<'_> {
         w.writeln("--BlockCFG--");
         ast_debug_cfg(
             w,
-            start,
+            *start,
             blocks,
             successor_map.iter(),
             predecessor_map.iter(),
@@ -342,7 +342,7 @@ impl AstDebug for ReverseBlockCFG<'_> {
         w.writeln("--ReverseBlockCFG--");
         ast_debug_cfg(
             w,
-            start,
+            *start,
             blocks,
             successor_map.iter(),
             predecessor_map.iter(),
@@ -352,7 +352,7 @@ impl AstDebug for ReverseBlockCFG<'_> {
 
 fn ast_debug_cfg<'a>(
     w: &mut AstWriter,
-    start: &Label,
+    start: Label,
     blocks: &Blocks,
     successor_map: impl Iterator<Item = (&'a Label, &'a BTreeSet<Label>)>,
     predecessor_map: impl Iterator<Item = (&'a Label, &'a BTreeSet<Label>)>,
