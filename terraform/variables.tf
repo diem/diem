@@ -2,6 +2,11 @@ variable "region" {
   default = "us-west-2"
 }
 
+variable "iam_path" {
+  default     = "/testnet/"
+  description = "Path to use when naming IAM objects"
+}
+
 variable "ssh_pub_key" {
   type        = string
   description = "SSH public key for EC2 instance access"

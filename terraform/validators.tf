@@ -135,7 +135,7 @@ locals {
 }
 
 resource "aws_ebs_snapshot" "restore_snapshot" {
-  count = var.restore_vol_id == "" ? 0 : 1
+  count     = var.restore_vol_id == "" ? 0 : 1
   volume_id = var.restore_vol_id
 
   tags = {
@@ -151,7 +151,7 @@ resource "aws_instance" "validator" {
     aws_subnet.testnet.*.id,
     count.index % length(data.aws_availability_zones.available.names),
   )
-  depends_on                  = [aws_main_route_table_association.testnet, aws_iam_role_policy_attachment.ecs_extra]
+  depends_on                  = [aws_main_route_table_association.testnet, aws_iam_role_policy.ecs_extra]
   vpc_security_group_ids      = [aws_security_group.validator.id]
   associate_public_ip_address = local.instance_public_ip
   key_name                    = aws_key_pair.libra.key_name
