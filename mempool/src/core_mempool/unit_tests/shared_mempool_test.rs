@@ -23,7 +23,7 @@ use futures::{
     sink::SinkExt,
     StreamExt,
 };
-use libra_config::config::{NetworkConfig, NodeConfig};
+use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     peer_manager::{
@@ -58,8 +58,59 @@ struct SharedMempoolNetwork {
     timers: HashMap<PeerId, UnboundedSender<SyncEvent>>,
 }
 
+// start a shared mempool for a node `peer_id` with config `config`
+// and add it to `smp` network
+fn init_single_shared_mempool(smp: &mut SharedMempoolNetwork, peer_id: PeerId, config: NodeConfig) {
+    let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
+    let (network_reqs_tx, network_reqs_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let (network_notifs_tx, network_notifs_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let (conn_status_tx, conn_status_rx) = conn_status_channel::new();
+    let network_sender = MempoolNetworkSender::new(network_reqs_tx);
+    let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_status_rx);
+    let (sender, subscriber) = unbounded();
+    let (timer_sender, timer_receiver) = unbounded();
+    let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
+    let network_handles = vec![(peer_id, network_sender, network_events)];
+    let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
+    let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
+
+    let runtime = Builder::new()
+        .thread_name("shared-mem-")
+        .threaded_scheduler()
+        .enable_all()
+        .build()
+        .expect("[shared mempool] failed to create runtime");
+    start_shared_mempool(
+        runtime.handle(),
+        &config,
+        Arc::clone(&mempool),
+        network_handles,
+        ac_endpoint_receiver,
+        consensus_events,
+        state_sync_events,
+        Arc::new(MockStorageReadClient),
+        Arc::new(MockVMValidator),
+        vec![sender],
+        Some(timer_receiver.map(|_| SyncEvent).boxed()),
+    );
+
+    smp.mempools.insert(peer_id, mempool);
+    smp.network_reqs_rxs.insert(peer_id, network_reqs_rx);
+    smp.network_notifs_txs.insert(peer_id, network_notifs_tx);
+    smp.network_conn_event_notifs_txs
+        .insert(peer_id, conn_status_tx);
+    smp.subscribers.insert(peer_id, subscriber);
+    smp.timers.insert(peer_id, timer_sender);
+    smp.runtimes.insert(peer_id, runtime);
+}
+
 impl SharedMempoolNetwork {
-    fn bootstrap_validator_network(validator_nodes_count: u32) -> (Self, Vec<PeerId>) {
+    fn bootstrap_validator_network(
+        validator_nodes_count: u32,
+        broadcast_batch_size: usize,
+    ) -> (Self, Vec<PeerId>) {
         let mut smp = Self::default();
         let mut peers = vec![];
 
@@ -69,54 +120,35 @@ impl SharedMempoolNetwork {
             validator_network_config.peer_id = peer_id;
             let mut config = NodeConfig::random();
             config.validator_network = Some(validator_network_config);
-            config.mempool.shared_mempool_batch_size = 1;
+            config.mempool.shared_mempool_batch_size = broadcast_batch_size;
 
-            let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-            let (network_reqs_tx, network_reqs_rx) =
-                libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-            let (network_notifs_tx, network_notifs_rx) =
-                libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-            let (conn_status_tx, conn_status_rx) = conn_status_channel::new();
-            let network_sender = MempoolNetworkSender::new(network_reqs_tx);
-            let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_status_rx);
-            let (sender, subscriber) = unbounded();
-            let (timer_sender, timer_receiver) = unbounded();
-            let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
-            let network_handles = vec![(peer_id, network_sender, network_events)];
-            let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
-            let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
-
-            let runtime = Builder::new()
-                .thread_name("shared-mem-")
-                .threaded_scheduler()
-                .enable_all()
-                .build()
-                .expect("[shared mempool] failed to create runtime");
-            start_shared_mempool(
-                runtime.handle(),
-                &config,
-                Arc::clone(&mempool),
-                network_handles,
-                ac_endpoint_receiver,
-                consensus_events,
-                state_sync_events,
-                Arc::new(MockStorageReadClient),
-                Arc::new(MockVMValidator),
-                vec![sender],
-                Some(timer_receiver.map(|_| SyncEvent).boxed()),
-            );
+            init_single_shared_mempool(&mut smp, peer_id, config);
 
             peers.push(peer_id);
-            smp.mempools.insert(peer_id, mempool);
-            smp.network_reqs_rxs.insert(peer_id, network_reqs_rx);
-            smp.network_notifs_txs.insert(peer_id, network_notifs_tx);
-            smp.network_conn_event_notifs_txs
-                .insert(peer_id, conn_status_tx);
-            smp.subscribers.insert(peer_id, subscriber);
-            smp.timers.insert(peer_id, timer_sender);
-            smp.runtimes.insert(peer_id, runtime);
         }
         (smp, peers)
+    }
+
+    /// creates a shared mempool network of one full node and one validator
+    /// returns the newly created SharedMempoolNetwork, and the ID of validator and full node, in that order
+    fn bootstrap_vfn_network(broadcast_batch_size: usize) -> (Self, PeerId, PeerId) {
+        let mut smp = Self::default();
+
+        // validator
+        let validator = PeerId::random();
+        let mut config = NodeConfig::random();
+        config.mempool.shared_mempool_batch_size = broadcast_batch_size;
+        init_single_shared_mempool(&mut smp, validator, config);
+
+        // full node
+        let full_node = PeerId::random();
+        let mut fn_config = NodeConfig::random();
+        fn_config.base.role = RoleType::FullNode;
+        fn_config.mempool.shared_mempool_batch_size = broadcast_batch_size;
+        fn_config.state_sync.upstream_peers.upstream_peers = vec![validator];
+        init_single_shared_mempool(&mut smp, full_node, fn_config);
+
+        (smp, validator, full_node)
     }
 
     fn add_txns(&mut self, peer_id: &PeerId, txns: Vec<TestTransaction>) {
@@ -140,8 +172,8 @@ impl SharedMempoolNetwork {
         }
     }
 
-    /// delivers next broadcast message from given node to its peer
-    fn deliver_message(&mut self, peer: &PeerId) -> (SignedTransaction, PeerId) {
+    /// delivers next broadcast message from `peer`
+    fn deliver_message(&mut self, peer: &PeerId) -> (Vec<SignedTransaction>, PeerId) {
         // emulate timer tick
         self.timers
             .get(peer)
@@ -157,8 +189,9 @@ impl SharedMempoolNetwork {
             let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
             let sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
 
-            if let MempoolSyncMsg::BroadcastTransactionsRequest(_id, mut transactions) = sync_msg {
-                let transaction = transactions.pop().unwrap();
+            if let MempoolSyncMsg::BroadcastTransactionsRequest((_start, _end), transactions) =
+                sync_msg
+            {
                 // send it to peer
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 receiver_network_notif_tx
@@ -179,11 +212,13 @@ impl SharedMempoolNetwork {
                 // verify transaction was inserted into Mempool
                 let mempool = self.mempools.get(&peer_id).unwrap();
                 let block = mempool.lock().unwrap().get_block(100, HashSet::new());
-                assert!(block.iter().any(|t| t == &transaction));
+                for txn in transactions.iter() {
+                    assert!(block.contains(txn));
+                }
 
                 // deliver ACK for this request
                 self.deliver_response(&peer_id);
-                (transaction, peer_id)
+                (transactions, peer_id)
             } else {
                 panic!("did not receive expected BroadcastTransactionsRequest");
             }
@@ -201,7 +236,7 @@ impl SharedMempoolNetwork {
             let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
             let sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
 
-            if let MempoolSyncMsg::BroadcastTransactionsResponse(_id) = sync_msg {
+            if let MempoolSyncMsg::BroadcastTransactionsResponse(_start, _end) = sync_msg {
                 // send it to peer
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 receiver_network_notif_tx
@@ -215,6 +250,9 @@ impl SharedMempoolNetwork {
                         PeerManagerNotification::RecvMessage(*peer, msg),
                     )
                     .unwrap();
+
+                // await ACK delivery
+                self.wait_for_event(&peer_id, SharedMempoolNotification::ACK);
             } else {
                 panic!("did not receive expected broadcast ACK");
             }
@@ -237,7 +275,7 @@ impl SharedMempoolNetwork {
 
 #[test]
 fn test_basic_flow() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(
         &peer_a,
@@ -256,14 +294,14 @@ fn test_basic_flow() {
 
     for seq in 0..3 {
         // A attempts to send message
-        let transaction = smp.deliver_message(&peer_a).0;
-        assert_eq!(transaction.sequence_number(), seq);
+        let transactions = smp.deliver_message(&peer_a).0;
+        assert_eq!(transactions.get(0).unwrap().sequence_number(), seq);
     }
 }
 
 #[test]
 fn test_metric_cache_ignore_shared_txns() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
 
     let txns = vec![
@@ -295,7 +333,7 @@ fn test_metric_cache_ignore_shared_txns() {
 
 #[test]
 fn test_interruption_in_sync() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(3);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(3, 1);
     let (peer_a, peer_b, peer_c) = (
         peers.get(0).unwrap(),
         peers.get(1).unwrap(),
@@ -337,12 +375,12 @@ fn test_interruption_in_sync() {
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 1, 1)]);
     let (txn, peer_id) = smp.deliver_message(&peer_a);
     assert_eq!(peer_id, *peer_c);
-    assert_eq!(txn.sequence_number(), 1);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
 
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 2, 1)]);
     let (txn, peer_id) = smp.deliver_message(&peer_a);
     assert_eq!(peer_id, *peer_c);
-    assert_eq!(txn.sequence_number(), 2);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 2);
 
     // A reconnects to B
     smp.send_connection_event(
@@ -353,12 +391,12 @@ fn test_interruption_in_sync() {
     // B should receive transaction 2
     let (txn, peer_id) = smp.deliver_message(&peer_a);
     assert_eq!(peer_id, *peer_b);
-    assert_eq!(txn.sequence_number(), 1);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
 }
 
 #[test]
 fn test_ready_transactions() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(
         &peer_a,
@@ -375,14 +413,14 @@ fn test_ready_transactions() {
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 1, 1)]);
     // txn1 unlocked txn2. Now all transactions can go through in correct order
     let txn = &smp.deliver_message(&peer_a).0;
-    assert_eq!(txn.sequence_number(), 1);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
     let txn = &smp.deliver_message(&peer_a).0;
-    assert_eq!(txn.sequence_number(), 2);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 2);
 }
 
 #[test]
 fn test_broadcast_self_transactions() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 1)]);
 
@@ -404,12 +442,15 @@ fn test_broadcast_self_transactions() {
 
     // verify that A will receive only second transaction from B
     let (txn, _) = smp.deliver_message(&peer_b);
-    assert_eq!(txn.sender(), TestTransaction::get_address(1));
+    assert_eq!(
+        txn.get(0).unwrap().sender(),
+        TestTransaction::get_address(1)
+    );
 }
 
 #[test]
 fn test_broadcast_dependencies() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     // Peer A has transactions with sequence numbers 0 and 2
     smp.add_txns(
@@ -433,15 +474,15 @@ fn test_broadcast_dependencies() {
     smp.deliver_message(&peer_a);
     // now B can broadcast 1
     let txn = smp.deliver_message(&peer_b).0;
-    assert_eq!(txn.sequence_number(), 1);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
     // now A can broadcast 2
     let txn = smp.deliver_message(&peer_a).0;
-    assert_eq!(txn.sequence_number(), 2);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 2);
 }
 
 #[test]
 fn test_broadcast_updated_transaction() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2);
+    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
 
     // Peer A has a transaction with sequence number 0 and gas price 1
@@ -459,16 +500,16 @@ fn test_broadcast_updated_transaction() {
 
     // B receives 0
     let txn = smp.deliver_message(&peer_a).0;
-    assert_eq!(txn.sequence_number(), 0);
-    assert_eq!(txn.gas_unit_price(), 1);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
+    assert_eq!(txn.get(0).unwrap().gas_unit_price(), 1);
 
     // Update the gas price of the transaction with sequence 0 after B has already received 0
     smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 5)]);
 
     // trigger send from A to B and check B has updated gas price for sequence 0
     let txn = smp.deliver_message(&peer_a).0;
-    assert_eq!(txn.sequence_number(), 0);
-    assert_eq!(txn.gas_unit_price(), 5);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
+    assert_eq!(txn.get(0).unwrap().gas_unit_price(), 5);
 }
 
 #[test]
@@ -572,4 +613,81 @@ fn test_state_sync_events_committed_txns() {
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 1);
     assert!(timeline.contains(&kept_txn));
+}
+
+#[test]
+fn test_broadcast_ack_single_account_single_peer() {
+    let batch_size = 3;
+    let (mut smp, validator, full_node) = SharedMempoolNetwork::bootstrap_vfn_network(3);
+
+    // add txns to FN
+    // txns from single account
+    let mut all_txns = vec![];
+    for i in 0..10 {
+        all_txns.push(TestTransaction::new(1, i, 1));
+    }
+    smp.add_txns(&full_node, all_txns.clone());
+
+    // FN discovers new peer V
+    smp.send_connection_event(
+        &full_node,
+        ConnectionStatusNotification::NewPeer(validator, Multiaddr::empty()),
+    );
+
+    // deliver messages until FN mempool is empty
+    let mut remaining_txn_index = batch_size;
+    while remaining_txn_index < all_txns.len() + 1 {
+        // deliver message
+        let (_transactions, recipient) = smp.deliver_message(&full_node);
+        assert_eq!(validator, recipient);
+
+        // check that txns on FN have been GC'ed
+        let mempool = smp.mempools.get(&full_node).unwrap();
+        let block = mempool.lock().unwrap().get_block(100, HashSet::new());
+        let remaining_txns = &all_txns[remaining_txn_index..];
+        assert_eq!(block.len(), remaining_txns.len());
+        for txn in remaining_txns {
+            assert!(block.contains(&txn.make_signed_transaction_with_max_gas_amount(5)));
+        }
+
+        // update remaining txn index
+        if remaining_txn_index == all_txns.len() {
+            remaining_txn_index += batch_size;
+        } else {
+            remaining_txn_index = std::cmp::min(remaining_txn_index + batch_size, all_txns.len());
+        }
+    }
+}
+
+#[test]
+fn test_broadcast_ack_multiple_accounts_single_peer() {
+    let (mut smp, validator, full_node) = SharedMempoolNetwork::bootstrap_vfn_network(3);
+
+    let all_txns = vec![
+        TestTransaction::new(0, 0, 1),
+        TestTransaction::new(0, 1, 1),
+        TestTransaction::new(1, 0, 1),
+        TestTransaction::new(1, 1, 1),
+        TestTransaction::new(0, 2, 1),
+    ];
+    smp.add_txns(&full_node, all_txns.clone());
+
+    // full node discovers new validator peer
+    smp.send_connection_event(
+        &full_node,
+        ConnectionStatusNotification::NewPeer(validator, Multiaddr::empty()),
+    );
+
+    // deliver message
+    let (_transactions, recipient) = smp.deliver_message(&full_node);
+    assert_eq!(validator, recipient);
+
+    // check that txns have been GC'ed
+    let mempool = smp.mempools.get(&full_node).unwrap();
+    let remaining_txns = &all_txns[3..];
+    let block = mempool.lock().unwrap().get_block(100, HashSet::new());
+    assert_eq!(remaining_txns.len(), block.len());
+    for txn in remaining_txns {
+        assert!(block.contains(&txn.make_signed_transaction_with_max_gas_amount(5)));
+    }
 }

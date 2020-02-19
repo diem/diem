@@ -61,13 +61,11 @@ use vm_validator::vm_validator::{get_account_state, TransactionValidation, VMVal
 /// `timeline_id` is position in log of ready transactions
 /// `is_alive` - is connection healthy
 /// `network_id` - ID of the mempool network that this peer belongs to
-/// `request_id` - ID of the most recent `BroadcastTransactionsRequest` sent
 #[derive(Clone)]
 struct PeerSyncState {
     timeline_id: u64,
     is_alive: bool,
     network_id: PeerId,
-    request_id: u64,
 }
 
 /// stores only peers that receive txns from this node
@@ -84,6 +82,7 @@ pub enum SharedMempoolNotification {
     Sync,
     PeerStateChange,
     NewTransactions,
+    ACK,
 }
 
 /// Struct that owns all dependencies required by shared mempool routines
@@ -170,10 +169,16 @@ pub struct TransactionExclusion {
 #[derive(Serialize, Deserialize)]
 pub enum MempoolSyncMsg {
     BroadcastTransactionsRequest(
-        u64,                    // request ID
+        (
+            u64, // timeline ID that is lower than the first txn in this broadcast's transactions
+            u64, // last timeline ID in this broadcast's transactions
+        ),
         Vec<SignedTransaction>, // transactions
     ),
-    BroadcastTransactionsResponse(u64), // ID of corresponding request for this response
+    BroadcastTransactionsResponse(
+        u64, // first timeline ID of corresponding request for this response
+        u64, // last timeline ID of corresponding request for this response
+    ),
 }
 
 fn notify_subscribers(
@@ -203,7 +208,6 @@ fn new_peer(peer_info: &Mutex<PeerInfo>, peer_id: PeerId, network_id: PeerId) {
             timeline_id: 0,
             is_alive: true,
             network_id,
-            request_id: 0,
         })
         .is_alive = true;
 }
@@ -270,7 +274,6 @@ async fn sync_with_peers<'a>(
     for (peer_id, peer_state) in peer_info_copy.into_iter() {
         if peer_state.is_alive {
             let timeline_id = peer_state.timeline_id;
-
             let (transactions, new_timeline_id) = mempool
                 .lock()
                 .expect("[shared mempool] failed to acquire mempool lock")
@@ -285,7 +288,7 @@ async fn sync_with_peers<'a>(
                     .clone();
                 if let Err(e) = send_mempool_sync_msg(
                     MempoolSyncMsg::BroadcastTransactionsRequest(
-                        peer_state.request_id,
+                        (timeline_id, new_timeline_id),
                         transactions,
                     ),
                     peer_id,
@@ -310,7 +313,6 @@ async fn sync_with_peers<'a>(
     for (peer_id, new_timeline_id) in state_updates {
         peer_info.entry(peer_id).and_modify(|t| {
             t.timeline_id = new_timeline_id;
-            t.request_id += 1;
         });
     }
 }
@@ -490,7 +492,8 @@ fn log_txn_process_results(results: Vec<Status>, sender: Option<PeerId>) {
 async fn process_transaction_broadcast<V>(
     mut smp: SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
-    request_id: u64,
+    start_id: u64,
+    end_id: u64,
     timeline_state: TimelineState,
     peer_id: PeerId,
     network_id: PeerId,
@@ -506,13 +509,37 @@ async fn process_transaction_broadcast<V>(
     log_txn_process_results(results, Some(peer_id));
     // send back ACK
     if let Err(e) = send_mempool_sync_msg(
-        MempoolSyncMsg::BroadcastTransactionsResponse(request_id),
+        MempoolSyncMsg::BroadcastTransactionsResponse(start_id, end_id),
         peer_id,
         network_sender,
     ) {
         error!(
             "[shared mempool] failed to send ACK back to peer {}: {}",
             peer_id, e
+        );
+    }
+}
+
+fn process_broadcast_ack<V>(smp: SharedMempool<V>, start_id: u64, end_id: u64, is_validator: bool)
+where
+    V: TransactionValidation,
+{
+    if is_validator {
+        return;
+    }
+    if start_id < end_id {
+        let mut mempool = smp
+            .mempool
+            .lock()
+            .expect("[shared mempool] failed to acquire mempool lock");
+
+        for txn in mempool.timeline_range(start_id, end_id).iter() {
+            mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+        }
+    } else {
+        warn!(
+            "[shared mempool] ACK with invalid broadcast range {} to {}",
+            start_id, end_id
         );
     }
 }
@@ -649,6 +676,7 @@ async fn inbound_network_task<V>(
         .map(|(network_id, events)| events.map(move |e| (network_id, e)))
         .collect();
     let mut events = select_all(smp_events).fuse();
+    let is_validator = node_config.base.role.is_validator();
 
     // Use a BoundedExecutor to restrict only `workers_available` concurrent
     // worker tasks that can process incoming transactions.
@@ -706,7 +734,7 @@ async fn inbound_network_task<V>(
                                     }
                                 };
                                 match msg {
-                                    MempoolSyncMsg::BroadcastTransactionsRequest(request_id, transactions) => {
+                                    MempoolSyncMsg::BroadcastTransactionsRequest((start_id, end_id), transactions) => {
                                         counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
                                             .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
                                             .inc_by(transactions.len() as i64);
@@ -719,15 +747,17 @@ async fn inbound_network_task<V>(
                                             .spawn(process_transaction_broadcast(
                                                 smp_clone,
                                                 transactions,
-                                                request_id,
+                                                start_id,
+                                                end_id,
                                                 timeline_state,
                                                 peer_id,
                                                 network_id,
                                             ))
                                             .await;
                                     }
-                                    MempoolSyncMsg::BroadcastTransactionsResponse(id) => {
-                                        // TODO impl ACK-triggered activity (clean out ACKed txns)
+                                    MempoolSyncMsg::BroadcastTransactionsResponse(start_id, end_id) => {
+                                        process_broadcast_ack(smp.clone(), start_id, end_id, is_validator);
+                                        notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
                                     }
                                 };
                             }
