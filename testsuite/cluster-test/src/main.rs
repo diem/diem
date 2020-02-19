@@ -126,6 +126,14 @@ struct Args {
         help = "Whether transactions should be submitted to validators or full nodes"
     )]
     pub emit_to_validator: Option<bool>,
+
+    // Flags when run inside Kubernetes cluster.
+    #[structopt(long, parse(try_from_str), default_value = "false")]
+    pub k8s: bool,
+    #[structopt(long, default_value = "0")]
+    pub k8s_fullnodes_per_validator: u32,
+    #[structopt(long, parse(try_from_str), default_value = "30")]
+    pub k8s_num_validators: u32,
 }
 
 pub fn main() {
@@ -346,19 +354,25 @@ impl BasicSwarmUtil {
 
 impl ClusterUtil {
     pub fn setup(args: &Args) -> Self {
-        let aws = Aws::new();
-        let cluster = Cluster::discover(&aws).expect("Failed to discover cluster");
+        let aws = Aws::new(args.k8s);
+        let cluster = if args.k8s {
+            Cluster::k8s().unwrap()
+        } else {
+            Cluster::discover(&aws).expect("Failed to discover cluster")
+        };
         let cluster = if args.peers.is_empty() {
             cluster
         } else {
             cluster.validator_sub_cluster(args.peers.clone())
         };
-        let prometheus = Prometheus::new(
+        let prometheus_ip = if args.k8s {
+            "libra-testnet-prometheus-server.default.svc.cluster.local"
+        } else {
             cluster
                 .prometheus_ip()
-                .expect("Failed to discover prometheus ip in aws"),
-            aws.workspace(),
-        );
+                .expect("Failed to discover prometheus ip in aws")
+        };
+        let prometheus = Prometheus::new(prometheus_ip, aws.workspace(), args.k8s);
         info!(
             "Discovered {} validators and {} fns in {} workspace",
             cluster.validator_instances().len(),
@@ -456,12 +470,14 @@ impl ClusterTestRunner {
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
             .ok();
         let tx_emitter = TxEmitter::new(&cluster);
-        let prometheus = Prometheus::new(
+        let prometheus_ip = if args.k8s {
+            "libra-testnet-prometheus-server.default.svc.cluster.local"
+        } else {
             cluster
                 .prometheus_ip()
-                .expect("Failed to discover prometheus ip in aws"),
-            &workspace,
-        );
+                .expect("Failed to discover prometheus ip in aws")
+        };
+        let prometheus = Prometheus::new(prometheus_ip, &workspace, args.k8s);
         let github = GitHub::new();
         let report = SuiteReport::new();
         let runtime = Runtime::new().expect("Failed to create tokio runtime");

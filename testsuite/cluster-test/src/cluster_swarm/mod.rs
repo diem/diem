@@ -141,3 +141,47 @@ pub trait ClusterSwarm {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm};
+    use slog::{o, Drain};
+    use std::env;
+
+    use tokio::runtime::Runtime;
+
+    fn setup_log() {
+        if env::var("RUST_LOG").is_err() {
+            env::set_var("RUST_LOG", "debug");
+        }
+        let decorator = slog_term::PlainDecorator::new(std::io::stdout());
+        let drain = slog_term::CompactFormat::new(decorator).build().fuse();
+        let drain = slog_envlogger::new(drain);
+        let drain = std::sync::Mutex::new(drain).fuse();
+        let logger = slog::Logger::root(drain, o!());
+        let logger_guard = slog_scope::set_global_logger(logger);
+        std::mem::forget(logger_guard);
+    }
+
+    #[test]
+    fn it_works() {
+        setup_log();
+        let mut rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            let cs = ClusterSwarmKube::new().await.unwrap();
+            cs.delete_validator_and_fullnode_set(2, 2).await.unwrap();
+            cs.create_validator_and_fullnode_set(2, 2, "master", true)
+                .await
+                .unwrap();
+            //            cs.upsert_fullnode(0, 1, 0, 2, "master", true)
+            //                .await
+            //                .unwrap();
+            //            cs.upsert_fullnode(0, 1, 1, 2, "master", true)
+            //                .await
+            //                .unwrap();
+            //            cs.delete_validator_set(4).await.unwrap();
+            //            tokio::time::delay_for(Duration::from_secs(30)).await;
+            //            cs.create_validator_set(4, "master", false).await.unwrap();
+        });
+    }
+}

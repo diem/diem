@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: clustertest
+spec:
+  nodeSelector:
+    nodeType: utilities
+  restartPolicy: Never
+  serviceAccountName: clustertest
+  containers:
+    - name: main
+      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:kush_25503478
+      imagePullPolicy: Always
+      env:
+        - name: RUST_BACKTRACE
+          value: "1"
+        - name: THREADS_PER_AC
+          value: "3"
+      command:
+      - 'cluster-test'
+      - '--threads-per-ac=2'
+      - '--accounts-per-client=10'
+      - '--wait-millis=30'
+      - '--burst=1'
+      - '--run=bench'
+      - '--k8s=true'

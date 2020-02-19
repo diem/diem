@@ -13,6 +13,7 @@ pub struct Prometheus {
     url: Url,
     client: reqwest::blocking::Client,
     public_url: Url,
+    k8s: bool,
 }
 
 pub struct MatrixResponse {
@@ -24,10 +25,16 @@ pub struct TimeSeries {
 }
 
 impl Prometheus {
-    pub fn new(ip: &str, workspace: &str) -> Self {
-        let url = format!("http://{}:9091", ip)
-            .parse()
-            .expect("Failed to parse prometheus url");
+    pub fn new(ip: &str, workspace: &str, k8s: bool) -> Self {
+        let url = if k8s {
+            format!("http://{}:80", ip)
+                .parse()
+                .expect("Failed to parse prometheus url")
+        } else {
+            format!("http://{}:9091", ip)
+                .parse()
+                .expect("Failed to parse prometheus url")
+        };
         let public_url = format!("http://prometheus.{}.aws.hlw3truzy4ls.com:9091", workspace)
             .parse()
             .expect("Failed to parse prometheus public url");
@@ -36,6 +43,7 @@ impl Prometheus {
             url,
             client,
             public_url,
+            k8s,
         }
     }
 
@@ -55,10 +63,16 @@ impl Prometheus {
         end: &Duration,
         step: u64,
     ) -> Result<MatrixResponse> {
+        let proxy_prefix = if self.k8s {
+            ""
+        } else {
+            "api/datasources/proxy/1/"
+        };
         let url = self
             .url
             .join(&format!(
-                "api/datasources/proxy/1/api/v1/query_range?query={}&start={}&end={}&step={}",
+                "{}api/v1/query_range?query={}&start={}&end={}&step={}",
+                proxy_prefix,
                 query,
                 start.as_secs(),
                 end.as_secs(),

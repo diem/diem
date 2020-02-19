@@ -24,9 +24,13 @@ pub struct Aws {
 }
 
 impl Aws {
-    pub fn new() -> Self {
+    pub fn new(k8s: bool) -> Self {
         let ec2 = Ec2Client::new(Region::UsWest2);
-        let workspace = discover_workspace(&ec2);
+        let workspace = if k8s {
+            "k8s".to_string()
+        } else {
+            discover_workspace(&ec2)
+        };
         Self {
             workspace,
             ec2,
