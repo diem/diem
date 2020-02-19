@@ -8,19 +8,20 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    account_config,
+    account_config::CORE_CODE_ADDRESS,
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, TypeTag},
     vm_error::{StatusCode, VMStatus},
 };
-use once_cell::sync::Lazy;
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use vm::{
+    access::ModuleAccess,
     errors::VMResult,
     file_format::{FunctionSignature, Kind, SignatureToken, StructHandleIndex},
     gas_schedule::{
         AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, NativeCostIndex,
     },
+    views::ModuleView,
 };
 
 /// Result of a native function execution that requires charges for execution cost.
@@ -58,62 +59,266 @@ impl NativeResult {
     }
 }
 
-/// Struct representing the expected definition for a native function.
-pub struct NativeFunction {
-    /// Given the vector of aguments, it executes the native function.
-    pub dispatch: fn(Vec<TypeTag>, VecDeque<Value>, &CostTable) -> VMResult<NativeResult>,
-    /// The signature as defined in it's declaring module.
-    /// It should NOT be generally inspected outside of it's declaring module as the various
-    /// struct handle indexes are not remapped into the local context.
-    pub expected_signature: FunctionSignature,
-}
-
-impl NativeFunction {
-    /// Returns the number of arguments to the native function, derived from the expected signature.
-    pub fn num_args(&self) -> usize {
-        self.expected_signature.arg_types.len()
-    }
-}
-
-/// Looks up the expected native function definition from the module id (address and module) and
-/// function name where it was expected to be declared.
-pub fn resolve_native_function(
-    module: &ModuleId,
-    function_name: &IdentStr,
-) -> Option<&'static NativeFunction> {
-    NATIVE_FUNCTION_MAP.get(module)?.get(function_name)
-}
-
 pub fn native_gas(table: &CostTable, key: NativeCostIndex, size: usize) -> GasUnits<GasCarrier> {
     let gas_amt = table.native_cost(key);
     let memory_size = AbstractMemorySize::new(size as GasCarrier);
     gas_amt.total().mul(memory_size)
 }
 
-macro_rules! add {
-    ($m:ident, $addr:expr, $module:expr, $name:expr, $dis:expr, $args:expr, $ret:expr) => {{
-        add!($m, $addr, $module, $name, $dis, vec![], $args, $ret)
-    }};
-    ($m:ident, $addr:expr, $module:expr, $name:expr, $dis:expr, $kinds:expr, $args:expr, $ret:expr) => {{
-        let expected_signature = FunctionSignature {
-            return_types: $ret,
-            arg_types: $args,
-            type_formals: $kinds,
-        };
-        let f = NativeFunction {
-            dispatch: $dis,
-            expected_signature,
-        };
-        let id = ModuleId::new($addr, Identifier::new($module).unwrap());
-        let old = $m
-            .entry(id)
-            .or_insert_with(HashMap::new)
-            .insert(Identifier::new($name).unwrap(), f);
-        assert!(old.is_none());
-    }};
+macro_rules! decl_native_function_enum {
+    {$($variant:ident = $pat:pat),*} => {
+        /// Enum representing a native function known by the VM
+        #[derive(Debug, Clone, Copy)]
+        pub enum NativeFunction {
+            $($variant,)*
+        }
+
+        impl NativeFunction {
+            /// Looks up the expected native function definition from the module id
+            // (address and module) and function name where it was expected to be declared.
+            pub fn resolve(module: &ModuleId, function_name: &IdentStr) -> Option<Self> {
+                let case = (module.address(), module.name().as_str(), function_name.as_str());
+                match case {
+                    $($pat => Some(Self::$variant), )*
+                    _ => None
+                }
+            }
+        }
+    }
 }
 
-/// Helper for finding expected struct handle index.
+decl_native_function_enum! {
+    HashSha2_256 = (&CORE_CODE_ADDRESS, "Hash", "sha2_256"),
+    HashSha3_256 = (&CORE_CODE_ADDRESS, "Hash", "sha3_256"),
+    SigED25519Verify = (&CORE_CODE_ADDRESS, "Signature", "ed25519_verify"),
+    SigED25519ThresholdVerify = (&CORE_CODE_ADDRESS, "Signature", "ed25519_threshold_verify"),
+    AddrUtilToBytes = (&CORE_CODE_ADDRESS, "AddressUtil", "address_to_bytes"),
+    U64UtilToBytes = (&CORE_CODE_ADDRESS, "U64Util", "u64_to_bytes"),
+    BytearrayConcat = (&CORE_CODE_ADDRESS, "BytearrayUtil", "bytearray_concat"),
+    VectorLength = (&CORE_CODE_ADDRESS, "Vector", "length"),
+    VectorEmpty = (&CORE_CODE_ADDRESS, "Vector", "empty"),
+    VectorBorrow = (&CORE_CODE_ADDRESS, "Vector", "borrow"),
+    VectorBorrowMut = (&CORE_CODE_ADDRESS, "Vector", "borrow_mut"),
+    VectorPushBack = (&CORE_CODE_ADDRESS, "Vector", "push_back"),
+    VectorPopBack = (&CORE_CODE_ADDRESS, "Vector", "pop_back"),
+    VectorDestroyEmpty = (&CORE_CODE_ADDRESS, "Vector", "destroy_empty"),
+    VectorSwap = (&CORE_CODE_ADDRESS, "Vector", "swap"),
+    AccountWriteEvent = (&CORE_CODE_ADDRESS, "LibraAccount", "write_to_event_store"),
+    AccountSaveAccount = (&CORE_CODE_ADDRESS, "LibraAccount", "save_account")
+}
+
+impl NativeFunction {
+    /// Given the vector of aguments, it executes the native function.
+    pub fn dispatch(
+        &self,
+        t: Vec<TypeTag>,
+        v: VecDeque<Value>,
+        c: &CostTable,
+    ) -> VMResult<NativeResult> {
+        match self {
+            Self::HashSha2_256 => hash::native_sha2_256(t, v, c),
+            Self::HashSha3_256 => hash::native_sha3_256(t, v, c),
+            Self::SigED25519Verify => signature::native_ed25519_signature_verification(t, v, c),
+            Self::SigED25519ThresholdVerify => {
+                signature::native_ed25519_threshold_signature_verification(t, v, c)
+            }
+            Self::AddrUtilToBytes => primitive_helpers::native_address_to_bytes(t, v, c),
+            Self::U64UtilToBytes => primitive_helpers::native_u64_to_bytes(t, v, c),
+            Self::BytearrayConcat => primitive_helpers::native_bytearray_concat(t, v, c),
+            Self::VectorLength => vector::native_length(t, v, c),
+            Self::VectorEmpty => vector::native_empty(t, v, c),
+            Self::VectorBorrow => vector::native_borrow(t, v, c),
+            Self::VectorBorrowMut => vector::native_borrow(t, v, c),
+            Self::VectorPushBack => vector::native_push_back(t, v, c),
+            Self::VectorPopBack => vector::native_pop(t, v, c),
+            Self::VectorDestroyEmpty => vector::native_destroy_empty(t, v, c),
+            Self::VectorSwap => vector::native_swap(t, v, c),
+            Self::AccountWriteEvent => Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                "write_to_event_store does not have a native implementation".to_string(),
+            )),
+            Self::AccountSaveAccount => Err(VMStatus::new(StatusCode::UNREACHABLE)
+                .with_message("save_account does not have a native implementation".to_string())),
+        }
+    }
+
+    /// The number of arguments to the native function,
+    /// It is checked at publishing of the module that this matches the expected signature.
+    pub fn num_args(&self) -> usize {
+        match self {
+            Self::HashSha2_256 => 1,
+            Self::HashSha3_256 => 1,
+            Self::SigED25519Verify => 3,
+            Self::SigED25519ThresholdVerify => 4,
+            Self::AddrUtilToBytes => 1,
+            Self::U64UtilToBytes => 1,
+            Self::BytearrayConcat => 2,
+            Self::VectorLength => 1,
+            Self::VectorEmpty => 0,
+            Self::VectorBorrow => 2,
+            Self::VectorBorrowMut => 2,
+            Self::VectorPushBack => 2,
+            Self::VectorPopBack => 1,
+            Self::VectorDestroyEmpty => 1,
+            Self::VectorSwap => 3,
+            Self::AccountWriteEvent => 3,
+            Self::AccountSaveAccount => 2,
+        }
+    }
+
+    /// The signature as defined in it's declaring module.
+    /// It should NOT be generally inspected outside of it's declaring module as the various
+    /// struct handle indexes are not remapped into the local context.
+    pub fn signature<T: ModuleAccess>(
+        &self,
+        m: Option<&ModuleView<T>>,
+    ) -> Option<FunctionSignature> {
+        let res = self.signature_(m)?;
+        assert!(
+            self.num_args() == res.arg_types.len(),
+            "Invalid native function declaration. Declared number of args does not match produced \
+             signature"
+        );
+        Some(res)
+    }
+
+    fn signature_<T: ModuleAccess>(&self, m: Option<&ModuleView<T>>) -> Option<FunctionSignature> {
+        use SignatureToken::*;
+        macro_rules! simple {
+            ($args:expr, $ret:expr) => {{
+                simple!(vec![], $args, $ret)
+            }};
+            ($kinds:expr, $args:expr, $ret:expr) => {{
+                FunctionSignature {
+                    return_types: $ret,
+                    arg_types: $args,
+                    type_formals: $kinds,
+                }
+            }};
+        }
+        Some(match self {
+            Self::HashSha2_256 => simple!(vec![ByteArray], vec![ByteArray]),
+            Self::HashSha3_256 => simple!(vec![ByteArray], vec![ByteArray]),
+            Self::SigED25519Verify => simple!(vec![ByteArray, ByteArray, ByteArray], vec![Bool]),
+            Self::SigED25519ThresholdVerify => {
+                simple!(vec![ByteArray, ByteArray, ByteArray, ByteArray], vec![U64])
+            }
+            Self::AddrUtilToBytes => simple!(vec![Address], vec![ByteArray]),
+            Self::U64UtilToBytes => simple!(vec![U64], vec![ByteArray]),
+            Self::BytearrayConcat => simple!(vec![ByteArray, ByteArray], vec![ByteArray]),
+            Self::VectorLength => simple!(
+                vec![Kind::All],
+                vec![Reference(Box::new(tstruct(
+                    CORE_CODE_ADDRESS,
+                    "Vector",
+                    "T",
+                    vec![TypeParameter(0)]
+                )))],
+                vec![U64]
+            ),
+            Self::VectorEmpty => simple!(
+                vec![Kind::All],
+                vec![],
+                vec![tstruct(
+                    CORE_CODE_ADDRESS,
+                    "Vector",
+                    "T",
+                    vec![TypeParameter(0)]
+                )]
+            ),
+            Self::VectorBorrow => simple!(
+                vec![Kind::All],
+                vec![
+                    Reference(Box::new(tstruct(
+                        CORE_CODE_ADDRESS,
+                        "Vector",
+                        "T",
+                        vec![TypeParameter(0)]
+                    ))),
+                    U64
+                ],
+                vec![Reference(Box::new(TypeParameter(0)))]
+            ),
+            Self::VectorBorrowMut => simple!(
+                vec![Kind::All],
+                vec![
+                    MutableReference(Box::new(tstruct(
+                        CORE_CODE_ADDRESS,
+                        "Vector",
+                        "T",
+                        vec![TypeParameter(0)]
+                    ))),
+                    U64
+                ],
+                vec![MutableReference(Box::new(TypeParameter(0)))]
+            ),
+            Self::VectorPushBack => simple!(
+                vec![Kind::All],
+                vec![
+                    MutableReference(Box::new(tstruct(
+                        CORE_CODE_ADDRESS,
+                        "Vector",
+                        "T",
+                        vec![TypeParameter(0)]
+                    ))),
+                    TypeParameter(0),
+                ],
+                vec![]
+            ),
+            Self::VectorPopBack => simple!(
+                vec![Kind::All],
+                vec![MutableReference(Box::new(tstruct(
+                    CORE_CODE_ADDRESS,
+                    "Vector",
+                    "T",
+                    vec![TypeParameter(0)]
+                )))],
+                vec![TypeParameter(0)]
+            ),
+            Self::VectorDestroyEmpty => simple!(
+                vec![Kind::All],
+                vec![tstruct(
+                    CORE_CODE_ADDRESS,
+                    "Vector",
+                    "T",
+                    vec![TypeParameter(0)]
+                )],
+                vec![]
+            ),
+            Self::VectorSwap => simple!(
+                vec![Kind::All],
+                vec![
+                    MutableReference(Box::new(tstruct(
+                        CORE_CODE_ADDRESS,
+                        "Vector",
+                        "T",
+                        vec![TypeParameter(0)]
+                    ))),
+                    U64,
+                    U64,
+                ],
+                vec![]
+            ),
+            Self::AccountWriteEvent => simple!(
+                vec![Kind::Unrestricted],
+                vec![ByteArray, U64, TypeParameter(0)],
+                vec![]
+            ),
+            Self::AccountSaveAccount => {
+                let type_formals = vec![];
+                let t_idx = struct_handle_idx(m?, "T")?;
+                let arg_types = vec![Address, Struct(t_idx, vec![])];
+                let return_types = vec![];
+                FunctionSignature {
+                    type_formals,
+                    arg_types,
+                    return_types,
+                }
+            }
+        })
+    }
+}
+
+/// Helper for finding native struct handle index.
 fn tstruct(
     addr: AccountAddress,
     module_name: &str,
@@ -129,254 +334,16 @@ fn tstruct(
     SignatureToken::Struct(idx, args)
 }
 
-type NativeFunctionMap = HashMap<ModuleId, HashMap<Identifier, NativeFunction>>;
-
-static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
-    use SignatureToken::*;
-    let mut m: NativeFunctionMap = HashMap::new();
-    let addr = account_config::CORE_CODE_ADDRESS;
-    // Hash
-    add!(
-        m,
-        addr,
-        "Hash",
-        "sha2_256",
-        hash::native_sha2_256,
-        vec![ByteArray],
-        vec![ByteArray]
-    );
-    add!(
-        m,
-        addr,
-        "Hash",
-        "sha3_256",
-        hash::native_sha3_256,
-        vec![ByteArray],
-        vec![ByteArray]
-    );
-    // Signature
-    add!(
-        m,
-        addr,
-        "Signature",
-        "ed25519_verify",
-        signature::native_ed25519_signature_verification,
-        vec![ByteArray, ByteArray, ByteArray],
-        vec![Bool]
-    );
-    add!(
-        m,
-        addr,
-        "Signature",
-        "ed25519_threshold_verify",
-        signature::native_ed25519_threshold_signature_verification,
-        vec![ByteArray, ByteArray, ByteArray, ByteArray],
-        vec![U64]
-    );
-    // AddressUtil
-    add!(
-        m,
-        addr,
-        "AddressUtil",
-        "address_to_bytes",
-        primitive_helpers::native_address_to_bytes,
-        vec![Address],
-        vec![ByteArray]
-    );
-    // U64Util
-    add!(
-        m,
-        addr,
-        "U64Util",
-        "u64_to_bytes",
-        primitive_helpers::native_u64_to_bytes,
-        vec![U64],
-        vec![ByteArray]
-    );
-    // BytearrayUtil
-    add!(
-        m,
-        addr,
-        "BytearrayUtil",
-        "bytearray_concat",
-        primitive_helpers::native_bytearray_concat,
-        vec![ByteArray, ByteArray],
-        vec![ByteArray]
-    );
-    // Vector
-    add!(
-        m,
-        addr,
-        "Vector",
-        "length",
-        vector::native_length,
-        vec![Kind::All],
-        vec![Reference(Box::new(tstruct(
-            addr,
-            "Vector",
-            "T",
-            vec![TypeParameter(0)]
-        )))],
-        vec![U64]
-    );
-    add!(
-        m,
-        addr,
-        "Vector",
-        "empty",
-        vector::native_empty,
-        vec![Kind::All],
-        vec![],
-        vec![tstruct(addr, "Vector", "T", vec![TypeParameter(0)]),]
-    );
-    add!(
-        m,
-        addr,
-        "Vector",
-        "borrow",
-        vector::native_borrow,
-        vec![Kind::All],
-        vec![
-            Reference(Box::new(tstruct(
-                addr,
-                "Vector",
-                "T",
-                vec![TypeParameter(0)]
-            ))),
-            U64
-        ],
-        vec![Reference(Box::new(TypeParameter(0)))]
-    );
-    add!(
-        m,
-        addr,
-        "Vector",
-        "borrow_mut",
-        vector::native_borrow,
-        vec![Kind::All],
-        vec![
-            MutableReference(Box::new(tstruct(
-                addr,
-                "Vector",
-                "T",
-                vec![TypeParameter(0)]
-            ))),
-            U64
-        ],
-        vec![MutableReference(Box::new(TypeParameter(0)))]
-    );
-    add!(
-        m,
-        addr,
-        "Vector",
-        "push_back",
-        vector::native_push_back,
-        vec![Kind::All],
-        vec![
-            MutableReference(Box::new(tstruct(
-                addr,
-                "Vector",
-                "T",
-                vec![TypeParameter(0)]
-            ))),
-            TypeParameter(0),
-        ],
-        vec![]
-    );
-    add!(
-        m,
-        addr,
-        "Vector",
-        "pop_back",
-        vector::native_pop,
-        vec![Kind::All],
-        vec![MutableReference(Box::new(tstruct(
-            addr,
-            "Vector",
-            "T",
-            vec![TypeParameter(0)]
-        )))],
-        vec![TypeParameter(0)]
-    );
-    add!(
-        m,
-        addr,
-        "Vector",
-        "destroy_empty",
-        vector::native_destroy_empty,
-        vec![Kind::All],
-        vec![tstruct(addr, "Vector", "T", vec![TypeParameter(0)])],
-        vec![]
-    );
-    add!(
-        m,
-        addr,
-        "Vector",
-        "swap",
-        vector::native_swap,
-        vec![Kind::All],
-        vec![
-            MutableReference(Box::new(tstruct(
-                addr,
-                "Vector",
-                "T",
-                vec![TypeParameter(0)]
-            ))),
-            U64,
-            U64,
-        ],
-        vec![]
-    );
-
-    //
-    // TODO: both API bolow are directly implemented in the interepreter as we lack a
-    // good mechanism to expose certain API to native functions.
-    // Specifically we need access to some frame information (e.g. type instantiations) and
-    // access to the data store.
-    // Maybe marking native functions in a certain way (e.g `system` or similar) may
-    // be a way for the VM to force a given argument to the native implementation.
-    // Alternative models are fine too...
-    //
-
-    // Event
-    add!(
-        m,
-        addr,
-        "LibraAccount",
-        "write_to_event_store",
-        |_, _, _| {
-            Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
-                "write_to_event_store does not have a native implementation".to_string(),
-            ))
-        },
-        vec![Kind::Unrestricted],
-        vec![ByteArray, U64, TypeParameter(0)],
-        vec![]
-    );
-    // LibraAccount
-    add!(
-        m,
-        addr,
-        "LibraAccount",
-        "save_account",
-        |_, _, _| {
-            Err(VMStatus::new(StatusCode::UNREACHABLE)
-                .with_message("save_account does not have a native implementation".to_string()))
-        },
-        vec![
-            Address,
-            // this is LibraAccount.T which happens to be the first struct handle in the
-            // binary.
-            // TODO: current plan is to rework the description of the native function
-            // by using the binary directly and have functions that fetch the arguments
-            // go through the signature for extra verification. That is the plan if perf
-            // and the model look good.
-            Struct(StructHandleIndex::new(0), vec![]),
-        ],
-        vec![]
-    );
-    m
-});
+/// Helper for finding non-native struct handle index
+fn struct_handle_idx<T: ModuleAccess>(m: &ModuleView<T>, name: &str) -> Option<StructHandleIndex> {
+    m.struct_handles().enumerate().find_map(|(idx, handle)| {
+        if handle.name().as_str() == name {
+            Some(StructHandleIndex::new(idx as u16))
+        } else {
+            None
+        }
+    })
+}
 
 #[macro_export]
 macro_rules! pop_arg {

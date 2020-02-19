@@ -46,7 +46,7 @@ use vm::{
 };
 use vm_runtime_types::{
     loaded_data::{struct_def::StructDef, types::Type},
-    native_functions::dispatch::resolve_native_function,
+    native_functions::dispatch::NativeFunction,
     type_context::TypeContext,
     values::{IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
 };
@@ -708,7 +708,7 @@ impl<'txn> Interpreter<'txn> {
         let module = function.module();
         let module_id = module.self_id();
         let function_name = function.name();
-        let native_function = resolve_native_function(&module_id, function_name)
+        let native_function = NativeFunction::resolve(&module_id, function_name)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         if module_id == *ACCOUNT_MODULE && function_name == EMIT_EVENT_NAME.as_ident_str() {
             self.call_emit_event(context, type_actual_tags, type_actuals)
@@ -730,7 +730,7 @@ impl<'txn> Interpreter<'txn> {
                 arguments.push_front(self.operand_stack.pop()?);
             }
             let result =
-                (native_function.dispatch)(type_actual_tags, arguments, self.gas_schedule)?;
+                native_function.dispatch(type_actual_tags, arguments, self.gas_schedule)?;
             gas!(consume: context, result.cost)?;
             result.result.and_then(|values| {
                 for value in values {
