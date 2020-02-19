@@ -62,7 +62,7 @@ pub enum BoogieErrorKind {
 }
 
 impl BoogieErrorKind {
-    fn from_verification(self) -> bool {
+    fn is_from_verification(self) -> bool {
         self == BoogieErrorKind::Assertion || self == BoogieErrorKind::Postcondition
     }
 }
@@ -159,7 +159,7 @@ impl<'env> BoogieWrapper<'env> {
 
         // Determine whether we report this error on the source
         let on_source =
-            error.kind.from_verification() && self.to_proper_source_location(location).is_some();
+            error.kind.is_from_verification() && self.to_proper_source_location(location).is_some();
 
         // Create label (position information) for main error.
         let label = Label::new_primary(if on_source {
@@ -193,7 +193,7 @@ impl<'env> BoogieWrapper<'env> {
         );
 
         // Now add trace diagnostics.
-        if error.kind.from_verification() && !error.execution_trace.is_empty() {
+        if error.kind.is_from_verification() && !error.execution_trace.is_empty() {
             // Add trace information.
             let mut locals_shown = BTreeSet::new();
             let mut aborted = false;
