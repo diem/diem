@@ -33,23 +33,14 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             // Find the number of the pull request that trigggers this push
-            const pulls = await github.pulls.list(
-              {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                state: "open",
-                sort: "updated",
-              }
-            );
             let pr_num = 0;
-            for (const pull of pulls.data) {
-              if (pull.head.sha === context.sha) {
-                pr_num = pull.number;
-                break;
-                }
-            }
-            if (pr_num === 0) {
-              console.warn("Did not find original pull request. -\\_(O_o)_/-");
+            let commit_message = context.payload.head_commit.message;
+            let re = /.*[^]Closes:\s\#(\d+)[^]Approved\sby:\s\w+$/;
+            if (re.test(commit_message)) {
+              let match = re.exec(commit_message);
+              pr_num = match[1];
+            } else {
+              console.warn("Did not find pull request num in commit message. -\\_(O_o)_/-");
               return;
             }
             // Read and check cluster test results
