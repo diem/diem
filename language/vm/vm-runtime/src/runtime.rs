@@ -1,21 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::identifier::{create_access_path, resource_storage_key};
+use crate::identifier::resource_storage_key;
 use crate::loaded_data::function::FunctionRef;
 use crate::{
     code_cache::{module_cache::VMModuleCache, script_cache::ScriptCache},
-    data_cache::RemoteCache,
     execution_context::InterpreterContext,
     interpreter::Interpreter,
     loaded_data::{function::FunctionReference, loaded_module::LoadedModule},
-    system_module_names::GAS_SCHEDULE_MODULE,
 };
 use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
-use libra_types::vm_error::sub_status;
+use libra_types::language_storage::StructTag;
 use libra_types::{
-    account_config,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
@@ -24,7 +21,7 @@ use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
     file_format::{FunctionHandleIndex, FunctionSignature, SignatureToken, StructDefinitionIndex},
-    gas_schedule::{CostTable, GAS_SCHEDULE_NAME},
+    gas_schedule::CostTable,
     transaction_metadata::TransactionMetadata,
     CompiledModule, IndexKind,
 };
@@ -56,41 +53,6 @@ impl<'alloc> VMRuntime<'alloc> {
             code_cache: VMModuleCache::new(allocator),
             script_cache: ScriptCache::new(allocator),
         }
-    }
-
-    pub fn load_gas_schedule(
-        &self,
-        context: &dyn InterpreterContext,
-        data_view: &dyn RemoteCache,
-    ) -> VMResult<CostTable> {
-        let address = account_config::association_address();
-        let gas_module = self
-            .code_cache
-            .get_loaded_module(&GAS_SCHEDULE_MODULE, context)
-            .map_err(|_| {
-                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
-                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_MODULE)
-            })?;
-
-        let gas_struct_def_idx = gas_module.get_struct_def_index(&GAS_SCHEDULE_NAME)?;
-        let struct_tag = resource_storage_key(gas_module, *gas_struct_def_idx, vec![]);
-        let access_path = create_access_path(&address, struct_tag);
-
-        let data_blob = data_view
-            .get(&access_path)
-            .map_err(|_| {
-                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
-                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_RESOURCE)
-            })?
-            .ok_or_else(|| {
-                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
-                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_RESOURCE)
-            })?;
-        let table: CostTable = lcs::from_bytes(&data_blob).map_err(|_| {
-            VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
-                .with_sub_status(sub_status::GSE_UNABLE_TO_DESERIALIZE)
-        })?;
-        Ok(table)
     }
 
     pub(crate) fn publish_module(
@@ -184,6 +146,22 @@ impl<'alloc> VMRuntime<'alloc> {
 
     pub fn cache_module(&self, module: VerifiedModule) {
         self.code_cache.cache_module(module);
+    }
+
+    pub fn resolve_struct_tag_by_name(
+        &self,
+        module_id: &ModuleId,
+        name: &Identifier,
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<StructTag> {
+        let gas_module = self.code_cache.get_loaded_module(&module_id, context)?;
+
+        let gas_struct_def_idx = gas_module.get_struct_def_index(&name)?;
+        Ok(resource_storage_key(
+            gas_module,
+            *gas_struct_def_idx,
+            vec![],
+        ))
     }
 
     pub fn resolve_struct_def_by_name(
