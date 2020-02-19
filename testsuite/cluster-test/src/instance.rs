@@ -14,6 +14,7 @@ pub struct Instance {
     peer_name: String,
     ip: String,
     ac_port: u32,
+    k8s_node: String,
 }
 
 impl Instance {
@@ -22,6 +23,16 @@ impl Instance {
             peer_name,
             ip,
             ac_port,
+            k8s_node: "".to_string(),
+        }
+    }
+
+    pub fn new_k8s(peer_name: String, ip: String, ac_port: u32, k8s_node: String) -> Instance {
+        Instance {
+            peer_name,
+            ip,
+            ac_port,
+            k8s_node,
         }
     }
 
@@ -130,6 +141,10 @@ impl Instance {
 
     pub fn ac_port(&self) -> u32 {
         self.ac_port
+    }
+
+    pub fn k8s_node(&self) -> &String {
+        &self.k8s_node
     }
 }
 

@@ -22,6 +22,7 @@ rusoto_ecr = {version = "0.42.0", features=["rustls"], default_features = false}
 rusoto_ecs = {version = "0.42.0", features=["rustls"], default_features = false}
 rusoto_s3 = {version = "0.42.0", features=["rustls"], default_features = false}
 serde_json = "1.0"
+serde_yaml = "0.8.11"
 termion = "1.5.3"
 serde = { version = "1.0.89", features = ["derive"] }
 structopt = "0.3.2"
@@ -47,3 +48,6 @@ hex = { version = "0.4.1", default-features = false }
 futures = "0.3.0"
 tokio = { version = "0.2.8", features = ["full"] }
 async-trait = "0.1.24"
+
+kube = { version = "0.25.0", features = ["openapi"] }
+k8s-openapi = { version = "0.7.1", default-features = false, features = ["v1_15"] }

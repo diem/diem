@@ -3,6 +3,7 @@
 
 pub mod aws;
 pub mod cluster;
+pub mod cluster_swarm;
 pub mod deployment;
 pub mod effects;
 pub mod experiments;
