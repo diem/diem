@@ -8,6 +8,4 @@ allowed = [
     "clippy::new_without_default",
     # Deriving Arbitrary often causes this warning to show up.
     "clippy::unit_arg",
-    # Whitelist for now since it seems like the futures::select! macro has an issue with this
-    "clippy::unnecessary-mut-passed",
 ]
