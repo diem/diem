@@ -720,12 +720,25 @@ fn parse_call_args<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<Vec<Exp
     Ok(spanned(tokens.file_name(), start_loc, end_loc, args))
 }
 
+// Return true if the current token is one that might occur after an Exp.
+// This is needed, for example, to check for the optional Exp argument to
+// a return (where "return" is itself an Exp).
+fn at_end_of_exp<'input>(tokens: &mut Lexer<'input>) -> bool {
+    match tokens.peek() {
+        // These are the tokens that can occur after an Exp. If the grammar
+        // changes, we need to make sure that these are kept up to date and that
+        // none of these tokens can occur at the beginning of an Exp.
+        Tok::Else | Tok::RBrace | Tok::RParen | Tok::Comma | Tok::Colon | Tok::Semicolon => true,
+        _ => false,
+    }
+}
+
 // Parse an expression:
 //      Exp =
 //          "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
 //          | "while" "(" <Exp> ")" <Exp>
 //          | "loop" <Exp>
-//          | "return" <Exp>
+//          | "return" <Exp>?
 //          | "abort" <Exp>
 //          | <BinOpExp>
 //          | <UnaryExp> "=" <Exp>
@@ -760,7 +773,19 @@ fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
         }
         Tok::Return => {
             tokens.advance()?;
-            let e = Box::new(parse_exp(tokens)?);
+            let e = if at_end_of_exp(tokens) {
+                // If the return value expression is not present, construct a default
+                // unit value (with the same source location as the return keyword).
+                let default_value = spanned(
+                    tokens.file_name(),
+                    start_loc,
+                    tokens.previous_end_loc(),
+                    Exp_::Unit,
+                );
+                Box::new(default_value)
+            } else {
+                Box::new(parse_exp(tokens)?)
+            };
             Exp_::Return(e)
         }
         Tok::Abort => {
