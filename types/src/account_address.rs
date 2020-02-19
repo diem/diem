@@ -21,7 +21,7 @@ const SHORT_STRING_LENGTH: usize = 4;
 
 /// A struct that represents an account address.
 /// Currently Public Key is used.
-#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Copy, CryptoHasher)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy, CryptoHasher)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountAddress([u8; ADDRESS_LENGTH]);
 
@@ -29,6 +29,11 @@ impl AccountAddress {
     pub const fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
         AccountAddress(address)
     }
+
+    pub const DEFAULT: Self = Self([
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0,
+    ]);
 
     pub fn random() -> Self {
         let mut rng = OsRng::new().expect("can't access OsRng");
@@ -74,6 +79,12 @@ impl AccountAddress {
         };
 
         AccountAddress::try_from(padded_result)
+    }
+}
+
+impl Default for AccountAddress {
+    fn default() -> AccountAddress {
+        AccountAddress::DEFAULT
     }
 }
 

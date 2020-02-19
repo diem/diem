@@ -39,7 +39,7 @@ pub fn validator_set_struct_name() -> &'static IdentStr {
 pub fn validator_set_tag() -> StructTag {
     StructTag {
         name: validator_set_struct_name().to_owned(),
-        address: account_config::core_code_address(),
+        address: account_config::CORE_CODE_ADDRESS,
         module: validator_set_module_name().to_owned(),
         type_params: vec![],
     }

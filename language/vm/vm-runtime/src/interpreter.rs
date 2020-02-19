@@ -19,7 +19,7 @@ use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::core_code_address,
+    account_config::CORE_CODE_ADDRESS,
     byte_array::ByteArray,
     contract_event::ContractEvent,
     event::EventKey,
@@ -791,7 +791,7 @@ impl<'txn> Interpreter<'txn> {
         let account_module = runtime.get_loaded_module(&ACCOUNT_MODULE, context)?;
         let account_resource = self.operand_stack.pop_as::<Struct>()?;
         let address = self.operand_stack.pop_as::<AccountAddress>()?;
-        if address == core_code_address() {
+        if address == CORE_CODE_ADDRESS {
             return Err(VMStatus::new(StatusCode::CREATE_NULL_ACCOUNT));
         }
         self.save_account(runtime, context, account_module, address, account_resource)

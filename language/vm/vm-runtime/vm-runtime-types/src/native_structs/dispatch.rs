@@ -62,7 +62,7 @@ type NativeStructMap = HashMap<ModuleId, HashMap<Identifier, NativeStruct>>;
 
 static NATIVE_STRUCT_MAP: Lazy<NativeStructMap> = Lazy::new(|| {
     let mut m: NativeStructMap = HashMap::new();
-    let addr = account_config::core_code_address();
+    let addr = account_config::CORE_CODE_ADDRESS;
     add!(
         m,
         addr,

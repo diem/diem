@@ -9,49 +9,49 @@ use once_cell::sync::Lazy;
 /// The ModuleId for the Account module
 pub static ACCOUNT_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
-        account_config::core_code_address(),
+        account_config::CORE_CODE_ADDRESS,
         Identifier::new("LibraAccount").unwrap(),
     )
 });
 /// The ModuleId for the LibraTransactionTimeout module
 pub static LIBRA_TRANSACTION_TIMEOUT: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
-        account_config::core_code_address(),
+        account_config::CORE_CODE_ADDRESS,
         Identifier::new("LibraTransactionTimeout").unwrap(),
     )
 });
 /// The ModuleId for the LibraCoin module
 pub static COIN_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
-        account_config::core_code_address(),
+        account_config::CORE_CODE_ADDRESS,
         Identifier::new("LibraCoin").unwrap(),
     )
 });
 /// The ModuleId for the Event
 pub static EVENT_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
-        account_config::core_code_address(),
+        account_config::CORE_CODE_ADDRESS,
         Identifier::new("Event").unwrap(),
     )
 });
 /// The ModuleId for the validator config
 pub static VALIDATOR_CONFIG_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
-        account_config::core_code_address(),
+        account_config::CORE_CODE_ADDRESS,
         Identifier::new("ValidatorConfig").unwrap(),
     )
 });
 /// The ModuleId for the libra system module
 pub static LIBRA_SYSTEM_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
-        account_config::core_code_address(),
+        account_config::CORE_CODE_ADDRESS,
         Identifier::new("LibraSystem").unwrap(),
     )
 });
 /// The ModuleId for the gas schedule module
 pub static GAS_SCHEDULE_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
-        account_config::core_code_address(),
+        account_config::CORE_CODE_ADDRESS,
         Identifier::new("GasSchedule").unwrap(),
     )
 });

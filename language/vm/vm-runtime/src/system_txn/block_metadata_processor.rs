@@ -8,7 +8,7 @@ use crate::{
 };
 use libra_types::transaction::TransactionStatus;
 use libra_types::{
-    account_config::core_code_address,
+    account_config::CORE_CODE_ADDRESS,
     block_metadata::BlockMetadata,
     identifier::Identifier,
     transaction::TransactionOutput,
@@ -36,7 +36,7 @@ pub(crate) fn process_block_metadata(
     //    might be useful here.
     // 3. We set the max gas to a big number just to get rid of the potential out of gas error.
     let mut txn_data = TransactionMetadata::default();
-    txn_data.sender = core_code_address();
+    txn_data.sender = CORE_CODE_ADDRESS;
     txn_data.max_gas_amount = GasUnits::new(std::u64::MAX);
 
     let mut interpreter_context =
