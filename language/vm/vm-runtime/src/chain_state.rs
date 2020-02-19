@@ -43,15 +43,22 @@ pub trait ChainState {
     // conflicts with the goal of the Move VM to be as stateless as possible. Hence the burden of
     // deserialization (and caching) is placed on the implementer of this trait.
 
-    /// Get a mutable reference to a resource stored on chain.
-    fn load_data(
+    /// Get the serialized format of a `CompiledModule` from chain given a `ModuleId`.
+    fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>>;
+
+    /// Get a reference to a resource stored on chain.
+    fn borrow_resource(
         &mut self,
         ap: &AccessPath,
         def: StructDef,
-    ) -> VMResult<&mut Option<(StructDef, GlobalValue)>>;
+    ) -> VMResult<Option<&GlobalValue>>;
 
-    /// Get the serialized format of a `CompiledModule` from chain given a `ModuleId`.
-    fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>>;
+    /// Transfer ownership of a resource stored on chain to the VM.
+    fn move_resource_from(
+        &mut self,
+        ap: &AccessPath,
+        def: StructDef,
+    ) -> VMResult<Option<GlobalValue>>;
 
     /// Publish a module to be stored on chain.
     fn publish_module(&mut self, module_id: ModuleId, module: Vec<u8>) -> VMResult<()>;
@@ -154,12 +161,24 @@ impl<'txn> ChainState for TransactionExecutionContext<'txn> {
         self.gas_left
     }
 
-    fn load_data(
+    fn borrow_resource(
         &mut self,
         ap: &AccessPath,
         def: StructDef,
-    ) -> VMResult<&mut Option<(StructDef, GlobalValue)>> {
-        self.data_view.load_data(ap, def)
+    ) -> VMResult<Option<&GlobalValue>> {
+        let map_entry = self.data_view.load_data(ap, def)?;
+        Ok(map_entry.as_ref().map(|(_, g)| g))
+    }
+
+    fn move_resource_from(
+        &mut self,
+        ap: &AccessPath,
+        def: StructDef,
+    ) -> VMResult<Option<GlobalValue>> {
+        let map_entry = self.data_view.load_data(ap, def)?;
+        // .take() means that the entry is removed from the data map -- this marks the
+        // access path for deletion.
+        Ok(map_entry.take().map(|(_, g)| g))
     }
 
     fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>> {
@@ -227,12 +246,20 @@ impl<'txn> ChainState for SystemExecutionContext<'txn> {
         self.0.gas_left()
     }
 
-    fn load_data(
+    fn borrow_resource(
         &mut self,
         ap: &AccessPath,
         def: StructDef,
-    ) -> VMResult<&mut Option<(StructDef, GlobalValue)>> {
-        self.0.load_data(ap, def)
+    ) -> VMResult<Option<&GlobalValue>> {
+        self.0.borrow_resource(ap, def)
+    }
+
+    fn move_resource_from(
+        &mut self,
+        ap: &AccessPath,
+        def: StructDef,
+    ) -> VMResult<Option<GlobalValue>> {
+        self.0.move_resource_from(ap, def)
     }
 
     fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>> {
