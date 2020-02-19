@@ -10,5 +10,5 @@ publish = false
 edition = "2018"
 
 [dependencies]
-hex = "0.4.1"
+hex = "0.4.2"
 rand = "0.6.5"
