@@ -147,15 +147,15 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
 
     fn struct_type_info(
         &self,
-        struct_idx: &StructDefinitionIndex,
-        types_idx: &LocalsSignatureIndex,
+        struct_idx: StructDefinitionIndex,
+        types_idx: LocalsSignatureIndex,
     ) -> Result<(String, String)> {
-        let struct_definition = self.get_struct_def(*struct_idx)?;
+        let struct_definition = self.get_struct_def(struct_idx)?;
         let struct_source_map = self
             .source_mapper
             .source_map
-            .get_struct_source_map(*struct_idx)?;
-        let locals_signature = self.source_mapper.bytecode.locals_signature_at(*types_idx);
+            .get_struct_source_map(struct_idx)?;
+        let locals_signature = self.source_mapper.bytecode.locals_signature_at(types_idx);
         let type_arguments = locals_signature
             .0
             .iter()
@@ -352,37 +352,37 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
                 Ok(format!("ImmBorrowField[{}]({}: {})", field_idx, name, ty))
             }
             Bytecode::Pack(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(struct_idx, types_idx)?;
+                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
                 Ok(format!("Pack[{}]({}{})", struct_idx, name, ty_params))
             }
             Bytecode::Unpack(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(struct_idx, types_idx)?;
+                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
                 Ok(format!("Unpack[{}]({}{})", struct_idx, name, ty_params))
             }
             Bytecode::Exists(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(struct_idx, types_idx)?;
+                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
                 Ok(format!("Exists[{}]({}{})", struct_idx, name, ty_params))
             }
             Bytecode::MutBorrowGlobal(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(struct_idx, types_idx)?;
+                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
                 Ok(format!(
                     "MutBorrowGlobal[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
             }
             Bytecode::ImmBorrowGlobal(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(struct_idx, types_idx)?;
+                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
                 Ok(format!(
                     "ImmBorrowGlobal[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
             }
             Bytecode::MoveFrom(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(struct_idx, types_idx)?;
+                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
                 Ok(format!("MoveFrom[{}]({}{})", struct_idx, name, ty_params))
             }
             Bytecode::MoveToSender(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(struct_idx, types_idx)?;
+                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
                 Ok(format!(
                     "MoveToSender[{}]({}{})",
                     struct_idx, name, ty_params

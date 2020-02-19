@@ -437,7 +437,7 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Gets a FunctionEnv by index.
-    pub fn get_function(&'env self, idx: &FunctionDefinitionIndex) -> FunctionEnv<'env> {
+    pub fn get_function(&'env self, idx: FunctionDefinitionIndex) -> FunctionEnv<'env> {
         let data = &self.data.function_data[idx.0 as usize];
         FunctionEnv {
             module_env: self.clone(),
@@ -485,10 +485,10 @@ impl<'env> ModuleEnv<'env> {
     /// for which the `func_env` contains a reference.
     pub fn get_callee_info(
         &'env self,
-        idx: &FunctionHandleIndex,
+        idx: FunctionHandleIndex,
     ) -> (ModuleEnv<'env>, FunctionDefinitionIndex) {
         let view =
-            FunctionHandleView::new(&self.data.module, self.data.module.function_handle_at(*idx));
+            FunctionHandleView::new(&self.data.module, self.data.module.function_handle_at(idx));
         let module_env = self
             .env
             .find_module(&view.module_id())
@@ -516,7 +516,7 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Gets a StructEnv by index.
-    pub fn get_struct(&'env self, idx: &StructDefinitionIndex) -> StructEnv<'env> {
+    pub fn get_struct(&'env self, idx: StructDefinitionIndex) -> StructEnv<'env> {
         let data = &self.data.struct_data[idx.0 as usize];
         StructEnv {
             module_env: self.clone(),
@@ -525,7 +525,7 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Gets a StructEnv by index.
-    pub fn into_get_struct(self, idx: &StructDefinitionIndex) -> StructEnv<'env> {
+    pub fn into_get_struct(self, idx: StructDefinitionIndex) -> StructEnv<'env> {
         let data = &self.data.struct_data[idx.0 as usize];
         StructEnv {
             module_env: self,
@@ -540,9 +540,9 @@ impl<'env> ModuleEnv<'env> {
 
     /// Gets the struct declaring a field specified by FieldDefinitionIndex,
     /// as it is globally unique for this module.
-    pub fn get_struct_of_field(&'env self, idx: &FieldDefinitionIndex) -> StructEnv<'env> {
+    pub fn get_struct_of_field(&'env self, idx: FieldDefinitionIndex) -> StructEnv<'env> {
         let field_view =
-            FieldDefinitionView::new(&self.data.module, self.data.module.field_def_at(*idx));
+            FieldDefinitionView::new(&self.data.module, self.data.module.field_def_at(idx));
         let struct_name = field_view.member_of().name();
         self.find_struct(struct_name).expect("struct undefined")
     }
@@ -606,7 +606,7 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Converts an address pool index for this module into a number representing the address.
-    pub fn get_address(&self, idx: &AddressPoolIndex) -> BigInt {
+    pub fn get_address(&self, idx: AddressPoolIndex) -> BigInt {
         let addr = &self.data.module.address_pool()[idx.0 as usize];
         BigInt::from_str_radix(&addr.to_string(), 16).unwrap()
     }
@@ -840,9 +840,9 @@ impl<'env> StructEnv<'env> {
     }
 
     /// Gets a field by its definition index.
-    pub fn get_field(&'env self, idx: &FieldDefinitionIndex) -> FieldEnv<'env> {
+    pub fn get_field(&'env self, idx: FieldDefinitionIndex) -> FieldEnv<'env> {
         for data in &self.data.field_data {
-            if data.def_idx == *idx {
+            if data.def_idx == idx {
                 return FieldEnv {
                     struct_env: self.clone(),
                     data,

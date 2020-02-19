@@ -251,8 +251,8 @@ impl Subst {
         self.tvars.insert(tvar, bt);
     }
 
-    pub fn get(&self, tvar: &TVar) -> Option<&BaseType> {
-        self.tvars.get(tvar)
+    pub fn get(&self, tvar: TVar) -> Option<&BaseType> {
+        self.tvars.get(&tvar)
     }
 
     pub fn new_num_var(&mut self, loc: Loc) -> TVar {
@@ -263,14 +263,14 @@ impl Subst {
 
     pub fn set_num_var(&mut self, tvar: TVar, loc: Loc) {
         self.num_vars.entry(tvar).or_insert(loc);
-        if let Some(sp!(_, BaseType_::Var(next))) = self.get(&tvar) {
+        if let Some(sp!(_, BaseType_::Var(next))) = self.get(tvar) {
             let next = *next;
             self.set_num_var(next, loc)
         }
     }
 
-    pub fn is_num_var(&self, tvar: &TVar) -> bool {
-        self.num_vars.contains_key(tvar)
+    pub fn is_num_var(&self, tvar: TVar) -> bool {
+        self.num_vars.contains_key(&tvar)
     }
 }
 
@@ -322,10 +322,10 @@ fn error_format_base_(sp!(_, b_): &BaseType, subst: &Subst, nested: bool) -> Str
             format!("{}{}", n, tys_str)
         }
         Param(tp) => tp.debug.value.to_string(),
-        Var(id) => match subst.get(id) {
+        Var(id) => match subst.get(*id) {
             Some(t) => error_format_base_(t, subst, nested),
-            None if nested && subst.is_num_var(id) => "{integer}".to_string(),
-            None if subst.is_num_var(id) => return "integer".to_string(),
+            None if nested && subst.is_num_var(*id) => "{integer}".to_string(),
+            None if subst.is_num_var(*id) => return "integer".to_string(),
             None => "_".to_string(),
         },
         Anything => "_".to_string(),
@@ -876,7 +876,7 @@ pub fn unfold_type_single(subst: &Subst, sp!(loc, s_): SingleType) -> SingleType
 pub fn unfold_type_base(subst: &Subst, sp!(loc, b_): BaseType) -> BaseType {
     use BaseType_::*;
     match b_ {
-        Var(i) => match subst.get(&i) {
+        Var(i) => match subst.get(i) {
             None => sp(loc, Anything),
             Some(inner) => unfold_type_base(subst, inner.clone()),
         },
@@ -1265,7 +1265,7 @@ pub fn join_base_type(
             }
         }
         (sp!(loc, Var(id)), other) | (other, sp!(loc, Var(id))) => {
-            if subst.get(id).is_none() {
+            if subst.get(*id).is_none() {
                 match bind_tvar(&mut subst, *loc, *id, other.clone()) {
                     Err(()) => Err(TypingError::Incompatible(
                         Box::new(Type_::base(sp(*loc, Var(*id)))),
@@ -1312,11 +1312,11 @@ fn join_tvar(
     use BaseType_::*;
     let last_id1 = forward_tvar(&subst, id1);
     let last_id2 = forward_tvar(&subst, id2);
-    let ty1 = match subst.get(&last_id1) {
+    let ty1 = match subst.get(last_id1) {
         None => sp(loc1, Anything),
         Some(t) => t.clone(),
     };
-    let ty2 = match subst.get(&last_id2) {
+    let ty2 = match subst.get(last_id2) {
         None => sp(loc2, Anything),
         Some(t) => t.clone(),
     };
@@ -1337,7 +1337,7 @@ fn join_tvar(
     subst.insert(last_id2, sp(loc2, Var(new_tvar)));
 
     let (mut subst, new_ty) = join_base_type(subst, &ty1, &ty2)?;
-    match subst.get(&new_tvar) {
+    match subst.get(new_tvar) {
         Some(sp!(tloc, _)) => Err(TypingError::RecursiveType(*tloc)),
         None => match bind_tvar(&mut subst, loc1, new_tvar, new_ty) {
             Ok(()) => Ok((subst, sp(loc1, Var(new_tvar)))),
@@ -1360,7 +1360,7 @@ fn join_tvar(
 }
 
 fn forward_tvar(subst: &Subst, id: TVar) -> TVar {
-    match subst.get(&id) {
+    match subst.get(id) {
         Some(sp!(_, BaseType_::Var(next))) => forward_tvar(subst, *next),
         Some(_) | None => id,
     }
@@ -1368,7 +1368,7 @@ fn forward_tvar(subst: &Subst, id: TVar) -> TVar {
 
 fn bind_tvar(subst: &mut Subst, loc: Loc, tvar: TVar, ty: BaseType) -> Result<(), ()> {
     // check not necessary for soundness but improves error message structure
-    if !check_num_tvar(&subst, loc, &tvar, &ty) {
+    if !check_num_tvar(&subst, loc, tvar, &ty) {
         return Err(());
     }
     match &ty.value {
@@ -1378,20 +1378,20 @@ fn bind_tvar(subst: &mut Subst, loc: Loc, tvar: TVar, ty: BaseType) -> Result<()
     Ok(())
 }
 
-fn check_num_tvar(subst: &Subst, loc: Loc, tvar: &TVar, ty: &BaseType) -> bool {
+fn check_num_tvar(subst: &Subst, loc: Loc, tvar: TVar, ty: &BaseType) -> bool {
     !subst.is_num_var(tvar) || check_num_tvar_(subst, loc, tvar, ty)
 }
 
-fn check_num_tvar_(subst: &Subst, loc: Loc, tvar: &TVar, ty: &BaseType) -> bool {
+fn check_num_tvar_(subst: &Subst, loc: Loc, tvar: TVar, ty: &BaseType) -> bool {
     use BaseType_ as B;
     match &ty.value {
         B::Anything => true,
         B::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, bt))), _) => bt.is_numeric(),
 
         B::Var(v) if subst.tvars.contains_key(v) => {
-            check_num_tvar_(subst, loc, tvar, subst.get(v).unwrap())
+            check_num_tvar_(subst, loc, tvar, subst.get(*v).unwrap())
         }
-        B::Var(v) => subst.is_num_var(v),
+        B::Var(v) => subst.is_num_var(*v),
         _ => false,
     }
 }

@@ -116,7 +116,7 @@ pub enum Tok {
 impl Tok {
     /// Return true if the given token is the beginning of a specification directive for the Move
     /// prover
-    pub fn is_spec_directive(&self) -> bool {
+    pub fn is_spec_directive(self) -> bool {
         match self {
             Tok::Ensures | Tok::Requires | Tok::SucceedsIf | Tok::AbortsIf => true,
             _ => false,

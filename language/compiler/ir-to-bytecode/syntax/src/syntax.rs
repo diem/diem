@@ -272,7 +272,7 @@ fn parse_copyable_val<'input>(
 // for the code in parse_rhs_of_binary_exp.
 // Precedences are not sequential to make it easier to add new binops without
 // renumbering everything.
-fn get_precedence(token: &Tok) -> u32 {
+fn get_precedence(token: Tok) -> u32 {
     match token {
         // Reserved minimum precedence value is 1 (specified in parse_exp_)
         // TODO
@@ -315,7 +315,7 @@ fn parse_rhs_of_binary_exp<'input>(
     min_prec: u32,
 ) -> Result<Exp, ParseError<usize, anyhow::Error>> {
     let mut result = lhs;
-    let mut next_tok_prec = get_precedence(&tokens.peek());
+    let mut next_tok_prec = get_precedence(tokens.peek());
 
     // Continue parsing binary expressions as long as they have they
     // specified minimum precedence.
@@ -328,10 +328,10 @@ fn parse_rhs_of_binary_exp<'input>(
         // If the next token is another binary operator with a higher
         // precedence, then recursively parse that expression as the RHS.
         let this_prec = next_tok_prec;
-        next_tok_prec = get_precedence(&tokens.peek());
+        next_tok_prec = get_precedence(tokens.peek());
         if this_prec < next_tok_prec {
             rhs = parse_rhs_of_binary_exp(tokens, rhs, this_prec + 1)?;
-            next_tok_prec = get_precedence(&tokens.peek());
+            next_tok_prec = get_precedence(tokens.peek());
         }
 
         let op = match op_token {
@@ -1516,7 +1516,7 @@ fn parse_rhs_of_spec_exp<'input>(
     min_prec: u32,
 ) -> Result<SpecExp, ParseError<usize, anyhow::Error>> {
     let mut result = lhs;
-    let mut next_tok_prec = get_precedence(&tokens.peek());
+    let mut next_tok_prec = get_precedence(tokens.peek());
 
     // Continue parsing binary expressions as long as they have they
     // specified minimum precedence.
@@ -1529,10 +1529,10 @@ fn parse_rhs_of_spec_exp<'input>(
         // If the next token is another binary operator with a higher
         // precedence, then recursively parse that expression as the RHS.
         let this_prec = next_tok_prec;
-        next_tok_prec = get_precedence(&tokens.peek());
+        next_tok_prec = get_precedence(tokens.peek());
         if this_prec < next_tok_prec {
             rhs = parse_rhs_of_spec_exp(tokens, rhs, this_prec + 1)?;
-            next_tok_prec = get_precedence(&tokens.peek());
+            next_tok_prec = get_precedence(tokens.peek());
         }
         // TODO: Should we treat ==> like a normal BinOp?
         // TODO: Implement IFF

@@ -322,6 +322,7 @@ const RETRIEVAL_MAX_EXP: u32 = 4;
 
 /// Returns exponentially increasing timeout with
 /// limit of RETRIEVAL_INITIAL_TIMEOUT*(2^RETRIEVAL_MAX_EXP)
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn retrieval_timeout(deadline: &Instant, attempt: u32) -> Option<Duration> {
     assert!(attempt > 0, "retrieval_timeout attempt can't be 0");
     let exp = RETRIEVAL_MAX_EXP.min(attempt - 1); // [0..RETRIEVAL_MAX_EXP]

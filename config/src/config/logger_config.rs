@@ -28,6 +28,7 @@ impl Default for LoggerConfig {
     }
 }
 
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn serialize_filter_level<S>(filter_level: &FilterLevel, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,

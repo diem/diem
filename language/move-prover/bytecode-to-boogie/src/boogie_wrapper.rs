@@ -62,8 +62,8 @@ pub enum BoogieErrorKind {
 }
 
 impl BoogieErrorKind {
-    fn from_verification(&self) -> bool {
-        self == &BoogieErrorKind::Assertion || self == &BoogieErrorKind::Postcondition
+    fn from_verification(self) -> bool {
+        self == BoogieErrorKind::Assertion || self == BoogieErrorKind::Postcondition
     }
 }
 
@@ -641,7 +641,7 @@ impl Model {
                 .extract_number()
                 .ok_or_else(Self::invalid_track_info)
                 .and_then(Self::index_range_check(module_env.get_function_count()))?;
-            let func_env = module_env.get_function(&FunctionDefinitionIndex(func_idx as u16));
+            let func_env = module_env.get_function(FunctionDefinitionIndex(func_idx as u16));
             let var_idx = args[2]
                 .extract_number()
                 .ok_or_else(Self::invalid_track_info)
@@ -936,7 +936,7 @@ impl ModelValue {
     ) -> Option<PrettyDoc> {
         let error = ModelValue::error();
         let module_env = env.get_module(module_idx);
-        let struct_env = module_env.get_struct(&struct_idx);
+        let struct_env = module_env.get_struct(struct_idx);
         let values = self.extract_vector(model)?;
         let entries = if struct_env.is_vector() {
             values

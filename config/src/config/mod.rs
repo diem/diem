@@ -107,11 +107,11 @@ pub enum RoleType {
 }
 
 impl RoleType {
-    pub fn is_validator(&self) -> bool {
-        *self == RoleType::Validator
+    pub fn is_validator(self) -> bool {
+        self == RoleType::Validator
     }
 
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             RoleType::Validator => "validator",
             RoleType::FullNode => "full_node",

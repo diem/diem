@@ -13,11 +13,11 @@ impl Nonce {
         Self(n)
     }
 
-    pub fn is(&self, n: usize) -> bool {
+    pub fn is(self, n: usize) -> bool {
         self.0 == n
     }
 
-    pub fn inner(&self) -> usize {
+    pub fn inner(self) -> usize {
         self.0
     }
 }
