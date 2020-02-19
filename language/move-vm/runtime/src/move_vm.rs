@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chain_state::ChainState, execution_context::InterpreterContext,
-    loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
+    interpreter_context::InterpreterContext, loaded_data::loaded_module::LoadedModule,
+    runtime::VMRuntime,
 };
 use bytecode_verifier::VerifiedModule;
 use libra_types::{
@@ -12,7 +12,7 @@ use libra_types::{
 };
 use move_vm_cache::Arena;
 use move_vm_definition::MoveVMImpl;
-use move_vm_types::{loaded_data::struct_def::StructDef, values::Value};
+use move_vm_types::{chain_state::ChainState, loaded_data::struct_def::StructDef, values::Value};
 use vm::{errors::VMResult, gas_schedule::CostTable, transaction_metadata::TransactionMetadata};
 
 rental! {

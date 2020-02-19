@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Frame transition rules for the execution stack.
-use vm::file_format::{Bytecode, FunctionDefinitionIndex};
-use vm_runtime::{
+use move_vm_runtime::{
     interpreter::InterpreterForCostSynthesis,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
     },
 };
+use vm::file_format::{Bytecode, FunctionDefinitionIndex};
 
 fn should_push_frame(instr: &Bytecode) -> bool {
     *instr == Bytecode::Ret

@@ -16,6 +16,12 @@ use cost_synthesis::{
 };
 use language_e2e_tests::data_store::FakeDataStore;
 use libra_types::vm_error::StatusCode;
+use move_vm_runtime::{
+    interpreter::InterpreterForCostSynthesis,
+    loaded_data::function::{FunctionRef, FunctionReference},
+    MoveVM,
+};
+use move_vm_state::execution_context::SystemExecutionContext;
 use move_vm_types::{native_functions::hash, values::Value};
 use std::{
     collections::{HashMap, VecDeque},
@@ -34,12 +40,6 @@ use vm::{
     },
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     transaction_metadata::TransactionMetadata,
-};
-use vm_runtime::{
-    chain_state::SystemExecutionContext,
-    interpreter::InterpreterForCostSynthesis,
-    loaded_data::function::{FunctionRef, FunctionReference},
-    move_vm::MoveVM,
 };
 
 #[derive(Debug, StructOpt)]

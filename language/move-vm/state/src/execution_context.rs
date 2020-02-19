@@ -1,81 +1,33 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    counters::*,
-    data_cache::{RemoteCache, TransactionDataCache},
-};
+use crate::data_cache::{RemoteCache, TransactionDataCache};
 use libra_types::{
     access_path::AccessPath,
     contract_event::ContractEvent,
     language_storage::ModuleId,
-    transaction::{TransactionOutput, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
-use move_vm_types::{loaded_data::struct_def::StructDef, values::GlobalValue};
+use move_vm_types::{
+    chain_state::ChainState, loaded_data::struct_def::StructDef, values::GlobalValue,
+};
 use vm::{
     errors::VMResult,
     gas_schedule::{GasAlgebra, GasCarrier, GasUnits},
-    transaction_metadata::TransactionMetadata,
 };
 
-/// Trait that describes what Move bytecode runtime expects from the Libra blockchain.
-pub trait ChainState {
-    // ---
-    // Gas operations
-    // ---
+/// An `ExecutionContext` represents mutable state that is retained in-memory between invocations of
+/// the Move VM.
+pub trait ExecutionContext {
+    /// Returns the list of events emmitted during execution.
+    fn events(&self) -> &[ContractEvent];
 
-    fn deduct_gas(&mut self, amount: GasUnits<GasCarrier>) -> VMResult<()>;
-    fn remaining_gas(&self) -> GasUnits<GasCarrier>;
+    /// Generates a `WriteSet` as a result of an execution.
+    fn make_write_set(&mut self) -> VMResult<WriteSet>;
 
-    // ---
-    // StateStore operations
-    // ---
-
-    // An alternative for these APIs might look like:
-    //
-    //   fn read_data(&self, ap: &AccessPath) -> VMResult<Vec<u8>>;
-    //   fn write_data(&mut self, ap: &AccessPath, data: Vec<u8>) -> VMResult<()>;
-    //
-    // However, this would make the Move VM responsible for deserialization -- in particular,
-    // caching deserialized results leads to a big performance improvement. But this directly
-    // conflicts with the goal of the Move VM to be as stateless as possible. Hence the burden of
-    // deserialization (and caching) is placed on the implementer of this trait.
-
-    /// Get the serialized format of a `CompiledModule` from chain given a `ModuleId`.
-    fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>>;
-
-    /// Get a reference to a resource stored on chain.
-    fn borrow_resource(
-        &mut self,
-        ap: &AccessPath,
-        def: StructDef,
-    ) -> VMResult<Option<&GlobalValue>>;
-
-    /// Transfer ownership of a resource stored on chain to the VM.
-    fn move_resource_from(
-        &mut self,
-        ap: &AccessPath,
-        def: StructDef,
-    ) -> VMResult<Option<GlobalValue>>;
-
-    /// Publish a module to be stored on chain.
-    fn publish_module(&mut self, module_id: ModuleId, module: Vec<u8>) -> VMResult<()>;
-
-    /// Publish a resource to be stored on chain.
-    fn publish_resource(&mut self, ap: &AccessPath, g: (StructDef, GlobalValue)) -> VMResult<()>;
-
-    /// Check if this module exists on chain.
-    // TODO: Can we get rid of this api with the loader refactor?
-    fn exists_module(&self, key: &ModuleId) -> bool;
-
-    // ---
-    // EventStore operations
-    // ---
-
-    /// Emit an event to the EventStore
-    fn emit_event(&mut self, event: ContractEvent);
+    /// Clears all the in-memory writes local to this execution.
+    fn clear(&mut self);
 }
 
 /// A TransactionExecutionContext holds the mutable data that needs to be persisted from one
@@ -99,41 +51,20 @@ impl<'txn> TransactionExecutionContext<'txn> {
             data_view: TransactionDataCache::new(data_cache),
         }
     }
+}
 
-    /// Clear all the writes local to this execution.
-    pub fn clear(&mut self) {
-        self.data_view.clear();
-        self.event_data.clear();
-    }
-
-    /// Return the list of events emitted during execution.
-    pub fn events(&self) -> &[ContractEvent] {
+impl<'txn> ExecutionContext for TransactionExecutionContext<'txn> {
+    fn events(&self) -> &[ContractEvent] {
         &self.event_data
     }
 
-    /// Generate a `WriteSet` as a result of an execution.
-    pub fn make_write_set(&mut self) -> VMResult<WriteSet> {
+    fn make_write_set(&mut self) -> VMResult<WriteSet> {
         self.data_view.make_write_set()
     }
 
-    pub fn get_transaction_output(
-        &mut self,
-        txn_data: &TransactionMetadata,
-        status: VMStatus,
-    ) -> VMResult<TransactionOutput> {
-        let gas_used: u64 = txn_data
-            .max_gas_amount()
-            .sub(self.gas_left)
-            .mul(txn_data.gas_unit_price())
-            .get();
-        let write_set = self.make_write_set()?;
-        record_stats!(observe | TXN_TOTAL_GAS_USAGE | gas_used);
-        Ok(TransactionOutput::new(
-            write_set,
-            self.events().to_vec(),
-            gas_used,
-            TransactionStatus::Keep(status),
-        ))
+    fn clear(&mut self) {
+        self.data_view.clear();
+        self.event_data.clear();
     }
 }
 
@@ -203,28 +134,19 @@ impl<'txn> SystemExecutionContext<'txn> {
     pub fn new(data_cache: &'txn dyn RemoteCache, gas_left: GasUnits<GasCarrier>) -> Self {
         SystemExecutionContext(TransactionExecutionContext::new(gas_left, data_cache))
     }
+}
 
-    /// Clear all the writes local to this execution.
-    pub fn clear(&mut self) {
-        self.0.clear()
-    }
-
-    /// Return the list of events emitted during execution.
-    pub fn events(&self) -> &[ContractEvent] {
+impl<'txn> ExecutionContext for SystemExecutionContext<'txn> {
+    fn events(&self) -> &[ContractEvent] {
         self.0.events()
     }
 
-    /// Generate a `WriteSet` as a result of an execution.
-    pub fn make_write_set(&mut self) -> VMResult<WriteSet> {
+    fn make_write_set(&mut self) -> VMResult<WriteSet> {
         self.0.make_write_set()
     }
 
-    pub fn get_transaction_output(
-        &mut self,
-        txn_data: &TransactionMetadata,
-        status: VMStatus,
-    ) -> VMResult<TransactionOutput> {
-        self.0.get_transaction_output(txn_data, status)
+    fn clear(&mut self) {
+        self.0.clear()
     }
 }
 

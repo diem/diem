@@ -73,9 +73,9 @@ visible to subsequent transactions within each block.
 * The transaction flow is implemented in the [`process_txn`](./src/process_txn.rs)
   module.
 * Code caching logic and policies are defined under the [code
-  cache](./src/code_cache/) directory.
+  cache](../../move-vm/runtime/src/code_cache/) directory.
 * Runtime loaded code and the type system view for the runtime is defined
-  under the [loaded data](./src/loaded_data/) directory.
+  under the [loaded data](src/loaded_data/) directory.
 * The data representation of values, and logic for write set generation can
   be found under the [value](./src/value.rs) and [data
   cache](./src/data_cache.rs) files.

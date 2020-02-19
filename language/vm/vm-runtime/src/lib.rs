@@ -101,8 +101,6 @@
 //! ```
 
 #[macro_use]
-extern crate rental;
-#[macro_use]
 extern crate mirai_annotations;
 #[macro_use]
 mod counters;
@@ -110,21 +108,10 @@ mod counters;
 #[cfg(feature = "mirai-contracts")]
 pub mod foreign_contracts;
 
-#[macro_use]
-pub mod gas_meter;
 mod libra_vm;
 #[cfg(test)]
 mod unit_tests;
 
-pub mod chain_state;
-pub mod code_cache;
-pub mod data_cache;
-pub mod execution_context;
-pub mod identifier;
-pub mod interpreter;
-pub mod loaded_data;
-pub mod move_vm;
-pub mod runtime;
 pub mod system_module_names;
 
 pub use libra_vm::LibraVM;

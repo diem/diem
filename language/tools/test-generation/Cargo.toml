@@ -38,4 +38,3 @@ libra-types = { path = "../../../types", version = "0.1.0" }
 
 [features]
 mirai-contracts = []
-default = ["vm-runtime/instruction_synthesis"]

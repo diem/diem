@@ -21,6 +21,8 @@ libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
 move-vm-cache = { path = "../../move-vm/cache", version = "0.1.0" }
+move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0"}
+move-vm-state = { path = "../../move-vm/state", version = "0.1.0"}
 move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 parity-multiaddr = "0.7.2"
 stdlib = { path = "../../stdlib", version = "0.1.0" }

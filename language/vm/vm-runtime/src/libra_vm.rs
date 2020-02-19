@@ -1,15 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chain_state::{ChainState, SystemExecutionContext, TransactionExecutionContext},
-    counters::*,
-    data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
-    identifier::create_access_path,
-    move_vm::MoveVM,
-    system_module_names::*,
-    VMExecutor, VMVerifier,
-};
+use crate::{counters::*, system_module_names::*, VMExecutor, VMVerifier};
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -25,7 +17,13 @@ use libra_types::{
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::WriteSet,
 };
-use move_vm_types::values::Value;
+use move_vm_runtime::MoveVM;
+use move_vm_state::{
+    data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
+    execution_context::{ExecutionContext, SystemExecutionContext, TransactionExecutionContext},
+};
+use move_vm_types::identifier::create_access_path;
+use move_vm_types::{chain_state::ChainState, values::Value};
 use rayon::prelude::*;
 use std::sync::Arc;
 use vm::{
@@ -327,8 +325,11 @@ impl LibraVM {
             let mut gas_free_ctx = SystemExecutionContext::from(ctx);
             self.run_epilogue(&mut gas_free_ctx, txn_data)
                 .and_then(|_| {
-                    gas_free_ctx
-                        .get_transaction_output(txn_data, VMStatus::new(StatusCode::EXECUTED))
+                    get_transaction_output(
+                        &mut gas_free_ctx,
+                        txn_data,
+                        VMStatus::new(StatusCode::EXECUTED),
+                    )
                 })
         })
         .unwrap_or_else(|err| {
@@ -349,7 +350,7 @@ impl LibraVM {
         match TransactionStatus::from(error_code) {
             TransactionStatus::Keep(status) => self
                 .run_epilogue(&mut gas_free_ctx, txn_data)
-                .and_then(|_| gas_free_ctx.get_transaction_output(txn_data, status))
+                .and_then(|_| get_transaction_output(&mut gas_free_ctx, txn_data, status))
                 .unwrap_or_else(discard_error_output),
             TransactionStatus::Discard(status) => discard_error_output(status),
         }
@@ -437,12 +438,15 @@ impl LibraVM {
         } else {
             return Err(VMStatus::new(StatusCode::MALFORMED));
         };
-        interpreter_context
-            .get_transaction_output(&txn_data, VMStatus::new(StatusCode::EXECUTED))
-            .map(|output| {
-                remote_cache.push_write_set(output.write_set());
-                output
-            })
+        get_transaction_output(
+            &mut interpreter_context,
+            &txn_data,
+            VMStatus::new(StatusCode::EXECUTED),
+        )
+        .map(|output| {
+            remote_cache.push_write_set(output.write_set());
+            output
+        })
     }
 
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
@@ -749,6 +753,26 @@ fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
             TransactionArgument::U8Vector(v) => Value::vector_u8(v),
         })
         .collect()
+}
+
+fn get_transaction_output(
+    ctx: &mut (impl ChainState + ExecutionContext),
+    txn_data: &TransactionMetadata,
+    status: VMStatus,
+) -> VMResult<TransactionOutput> {
+    let gas_used: u64 = txn_data
+        .max_gas_amount()
+        .sub(ctx.remaining_gas())
+        .mul(txn_data.gas_unit_price())
+        .get();
+    let write_set = ctx.make_write_set()?;
+    record_stats!(observe | TXN_TOTAL_GAS_USAGE | gas_used);
+    Ok(TransactionOutput::new(
+        write_set,
+        ctx.events().to_vec(),
+        gas_used,
+        TransactionStatus::Keep(status),
+    ))
 }
 
 #[test]
