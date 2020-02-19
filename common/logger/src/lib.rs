@@ -90,7 +90,9 @@ where
 /// ugly, but it works.
 static TESTING_ENVLOGGER_GUARD: Lazy<GlobalLoggerGuard> = Lazy::new(|| {
     if ::std::env::var("RUST_LOG").is_ok() {
-        set_global_logger(false /* async */, None /* chan_size */)
+        let logger = set_global_logger(false /* async */, None /* chan_size */);
+        slog_stdlog::init().expect("failed to setup slog as log facade back-end");
+        logger
     } else {
         let logger = Logger::root(Discard, o!());
         slog_scope::set_global_logger(logger)

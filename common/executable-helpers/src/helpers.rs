@@ -50,6 +50,7 @@ pub fn setup_executable(
     // We need to drop the global logger guard first before resetting it.
     _logger = None;
     let logger = set_default_global_logger(no_logging, &config.logger);
+    slog_stdlog::init().expect("failed to setup slog as log facade back-end");
     for network in &config.full_node_networks {
         setup_metrics(network.peer_id, &config);
     }
