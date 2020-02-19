@@ -5,11 +5,7 @@
 //!
 //! Currently, the information shared as part of this protocol includes the peer identity and a
 //! list of protocols supported by the peer.
-use crate::{
-    proto::{IdentityMsg, IdentityMsg_Role},
-    utils::MessageExt,
-    ProtocolId,
-};
+use crate::ProtocolId;
 use bytes::BytesMut;
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use libra_config::config::RoleType;
@@ -19,13 +15,13 @@ use netcore::{
     negotiate::{negotiate_inbound, negotiate_outbound_interactive},
     transport::ConnectionOrigin,
 };
-use prost::Message;
-use std::{convert::TryInto, io};
+use serde::{Deserialize, Serialize};
+use std::io;
 
 const IDENTITY_PROTOCOL_NAME: &[u8] = b"/identity/0.1.0";
 
 /// The Identity of a node
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Identity {
     peer_id: PeerId,
     role: RoleType,
@@ -79,48 +75,25 @@ where
 
     assert_eq!(proto, IDENTITY_PROTOCOL_NAME);
 
-    // Build Identity Message
-    let mut msg = IdentityMsg::default();
-    msg.supported_protocols = own_identity
-        .supported_protocols()
-        .iter()
-        .map(|proto_id| proto_id.to_vec())
-        .collect();
-    msg.peer_id = own_identity.peer_id().into();
-    msg.set_role(if own_identity.role() == RoleType::Validator {
-        IdentityMsg_Role::Validator
-    } else {
-        IdentityMsg_Role::FullNode
-    });
-
     // Send serialized message to peer.
-    let bytes = msg
-        .to_bytes()
-        .expect("writing protobuf failed; should never happen");
-    write_u16frame(&mut socket, bytes.as_ref()).await?;
+    let msg = lcs::to_bytes(own_identity).map_err(|e| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Failed to serialize identity msg: {}", e),
+        )
+    })?;
+    write_u16frame(&mut socket, &msg).await?;
     socket.flush().await?;
 
     // Read an IdentityMsg from the Remote
     let mut response = BytesMut::new();
     read_u16frame(&mut socket, &mut response).await?;
-    let response = IdentityMsg::decode(response.as_ref()).map_err(|e| {
+    let identity = lcs::from_bytes(&response).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             format!("Failed to parse identity msg: {}", e),
         )
     })?;
-    let role = if response.role() == IdentityMsg_Role::Validator {
-        RoleType::Validator
-    } else {
-        RoleType::FullNode
-    };
-    let peer_id = response.peer_id.try_into().expect("Invalid PeerId");
-    let supported_protocols = response
-        .supported_protocols
-        .into_iter()
-        .map(Into::into)
-        .collect();
-    let identity = Identity::new(peer_id, supported_protocols, role);
     Ok((identity, socket))
 }
 

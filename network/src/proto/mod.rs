@@ -26,8 +26,7 @@ pub use self::{
     health_checker::HealthCheckerMsg,
     mempool::MempoolSyncMsg,
     network::{
-        identity_msg::Role as IdentityMsg_Role, DiscoveryMsg, FullNodePayload, IdentityMsg, Note,
-        PeerInfo, SignedFullNodePayload, SignedPeerInfo,
+        DiscoveryMsg, FullNodePayload, Note, PeerInfo, SignedFullNodePayload, SignedPeerInfo,
     },
     state_synchronizer::StateSynchronizerMsg,
 };

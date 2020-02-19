@@ -62,14 +62,3 @@ message Note {
 // The discovery message sent by a peer consists of notes for all the peers the
 // sending peer knows about.
 message DiscoveryMsg { repeated Note notes = 1; }
-
-// Identity message exchanged as part of the Identity protocol.
-message IdentityMsg {
-  enum Role {
-    VALIDATOR = 0;
-    FULL_NODE = 1;
-  }
-  bytes peer_id = 1;
-  repeated bytes supported_protocols = 2;
-  Role role = 3;
-}
