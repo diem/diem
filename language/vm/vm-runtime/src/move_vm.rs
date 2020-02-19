@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chain_state::ChainState, data_cache::RemoteCache, execution_context::InterpreterContext,
-    loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
+    chain_state::ChainState, data_cache::RemoteCache, loaded_data::loaded_module::LoadedModule,
+    runtime::VMRuntime,
 };
 use bytecode_verifier::VerifiedModule;
 use libra_types::identifier::Identifier;
@@ -92,14 +92,14 @@ impl MoveVM {
         self.0.rent_mut(|runtime| runtime.cache_module(module))
     }
 
-    pub fn resolve_struct_def_by_name(
+    pub fn resolve_struct_def_by_name<S: ChainState>(
         &self,
         module_id: &ModuleId,
         name: &Identifier,
-        context: &mut dyn InterpreterContext,
+        chain_state: &mut S,
     ) -> VMResult<StructDef> {
         self.0
-            .rent(|runtime| runtime.resolve_struct_def_by_name(module_id, name, context))
+            .rent(|runtime| runtime.resolve_struct_def_by_name(module_id, name, chain_state))
     }
 
     pub fn load_gas_schedule<S: ChainState>(
