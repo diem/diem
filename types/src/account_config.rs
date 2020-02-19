@@ -54,9 +54,7 @@ pub fn received_event_name() -> &'static IdentStr {
     &*RECEIVED_EVENT_NAME
 }
 
-pub fn core_code_address() -> AccountAddress {
-    AccountAddress::default()
-}
+pub const CORE_CODE_ADDRESS: AccountAddress = AccountAddress::DEFAULT;
 
 pub fn association_address() -> AccountAddress {
     AccountAddress::from_hex_literal("0xA550C18")
@@ -80,7 +78,7 @@ pub fn discovery_set_address() -> AccountAddress {
 
 pub fn account_struct_tag() -> StructTag {
     StructTag {
-        address: core_code_address(),
+        address: CORE_CODE_ADDRESS,
         module: account_module_name().to_owned(),
         name: account_struct_name().to_owned(),
         type_params: vec![],
@@ -89,7 +87,7 @@ pub fn account_struct_tag() -> StructTag {
 
 pub fn sent_payment_tag() -> StructTag {
     StructTag {
-        address: core_code_address(),
+        address: CORE_CODE_ADDRESS,
         module: account_module_name().to_owned(),
         name: sent_event_name().to_owned(),
         type_params: vec![],
@@ -98,7 +96,7 @@ pub fn sent_payment_tag() -> StructTag {
 
 pub fn received_payment_tag() -> StructTag {
     StructTag {
-        address: core_code_address(),
+        address: CORE_CODE_ADDRESS,
         module: account_module_name().to_owned(),
         name: received_event_name().to_owned(),
         type_params: vec![],

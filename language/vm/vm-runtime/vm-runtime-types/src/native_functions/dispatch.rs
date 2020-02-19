@@ -134,7 +134,7 @@ type NativeFunctionMap = HashMap<ModuleId, HashMap<Identifier, NativeFunction>>;
 static NATIVE_FUNCTION_MAP: Lazy<NativeFunctionMap> = Lazy::new(|| {
     use SignatureToken::*;
     let mut m: NativeFunctionMap = HashMap::new();
-    let addr = account_config::core_code_address();
+    let addr = account_config::CORE_CODE_ADDRESS;
     // Hash
     add!(
         m,

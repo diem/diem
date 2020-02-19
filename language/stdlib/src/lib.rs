@@ -14,10 +14,10 @@ use move_ir_types::ast::Loc;
 use once_cell::sync::Lazy;
 
 static ANNOTATED_STDLIB: Lazy<(Vec<VerifiedModule>, SourceMap<Loc>)> =
-    Lazy::new(|| build_stdlib(account_config::core_code_address()));
+    Lazy::new(|| build_stdlib(account_config::CORE_CODE_ADDRESS));
 
 /// Returns a reference to the standard library, compiled with the
-/// [default address](account_config::core_code_address).
+/// [default address](account_config::CORE_CODE_ADDRESS).
 ///
 /// The order the modules are presented in is important: later modules depend on earlier ones.
 pub fn stdlib_modules() -> &'static [VerifiedModule] {
@@ -34,7 +34,7 @@ pub fn stdlib_source_map() -> &'static [ModuleSourceMap<Loc>] {
 
 /// Builds and returns a copy of the standard library with this address as the self address.
 ///
-/// A copy of the stdlib built with the [default address](account_config::core_code_address) is
+/// A copy of the stdlib built with the [default address](account_config::CORE_CODE_ADDRESS) is
 /// available through [`stdlib_modules`].
 pub fn build_stdlib(address: AccountAddress) -> (Vec<VerifiedModule>, SourceMap<Loc>) {
     let mut stdlib_modules = vec![];

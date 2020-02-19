@@ -17,8 +17,8 @@ use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::{
-        association_address, core_code_address, AccountResource, ACCOUNT_RECEIVED_EVENT_PATH,
-        ACCOUNT_SENT_EVENT_PATH,
+        association_address, AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
+        CORE_CODE_ADDRESS,
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
@@ -566,7 +566,7 @@ impl ClientProxy {
         let paths: Vec<AccessPath> = serde_json::from_str(str::from_utf8(&output.stdout)?)?;
         let mut dependencies = vec![];
         for path in paths {
-            if path.address != core_code_address() {
+            if path.address != CORE_CODE_ADDRESS {
                 if let (Some(blob), _) = self.client.get_account_blob(path.address)? {
                     let account_state = AccountState::try_from(&blob)?;
                     if let Some(code) = account_state.get(&path.path) {

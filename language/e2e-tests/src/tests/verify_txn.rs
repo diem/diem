@@ -14,7 +14,7 @@ use compiler::Compiler;
 use libra_config::config::{NodeConfig, VMPublishingOption};
 use libra_crypto::ed25519::*;
 use libra_types::{
-    account_config::core_code_address,
+    account_config::CORE_CODE_ADDRESS,
     test_helpers::transaction_test_helpers,
     transaction::{
         Script, TransactionArgument, TransactionPayload, TransactionStatus,
@@ -58,7 +58,7 @@ fn verify_reserved_sender() {
         let (private_key, public_key) = compat::generate_keypair(None);
         let program = encode_transfer_script(sender.address(), 100);
         let signed_txn = transaction_test_helpers::get_test_signed_txn(
-            core_code_address(),
+            CORE_CODE_ADDRESS,
             0,
             &private_key,
             public_key,

@@ -31,7 +31,7 @@ pub fn discovery_set_struct_name() -> &'static IdentStr {
 pub fn discovery_set_tag() -> StructTag {
     StructTag {
         name: discovery_set_struct_name().to_owned(),
-        address: account_config::core_code_address(),
+        address: account_config::CORE_CODE_ADDRESS,
         module: discovery_set_module_name().to_owned(),
         type_params: vec![],
     }
