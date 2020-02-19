@@ -12,13 +12,12 @@ use libra_types::{
     language_storage::ModuleId,
 };
 use move_lang::{shared::Address, to_bytecode::translate::CompiledUnit};
+use move_vm_runtime::MoveVM;
+use move_vm_state::{data_cache::BlockDataCache, execution_context::TransactionExecutionContext};
 use std::path::PathBuf;
 use vm::{
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     transaction_metadata::TransactionMetadata,
-};
-use vm_runtime::{
-    chain_state::TransactionExecutionContext, data_cache::BlockDataCache, move_vm::MoveVM,
 };
 
 /// Entry point for the bench, provide a function name to invoke in Module Bench in bench.move.

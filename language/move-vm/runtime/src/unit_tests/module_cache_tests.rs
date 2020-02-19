@@ -3,9 +3,7 @@
 
 use super::*;
 use crate::{
-    chain_state::{SystemExecutionContext, TransactionExecutionContext},
     code_cache::module_cache::VMModuleCache,
-    data_cache::{BlockDataCache, RemoteCache},
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
@@ -22,6 +20,10 @@ use libra_types::{
     vm_error::{StatusCode, StatusType},
 };
 use move_vm_cache::Arena;
+use move_vm_state::{
+    data_cache::{BlockDataCache, RemoteCache},
+    execution_context::{SystemExecutionContext, TransactionExecutionContext},
+};
 use move_vm_types::loaded_data::{struct_def::StructDef, types::Type};
 use std::collections::HashMap;
 use vm::{

@@ -3,7 +3,7 @@
 //! Cache for modules published on chain.
 
 use crate::{
-    execution_context::InterpreterContext,
+    interpreter_context::InterpreterContext,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,

@@ -1,5 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+
 //! A bunch of helper functions to fetch the storage key for move resources and values.
 
 use libra_types::{

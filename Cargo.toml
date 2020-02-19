@@ -60,6 +60,8 @@ members = [
     "language/move-prover/test-utils",
     "language/move-prover/stackless-bytecode-generator",
     "language/move-vm/cache",
+    "language/move-vm/runtime",
+    "language/move-vm/state",
     "language/move-vm/types",
     "language/stdlib",
     "language/vm",

@@ -25,7 +25,12 @@ use libra_types::{
     identifier::Identifier,
     transaction::{ChangeSet, RawTransaction, SignatureCheckedTransaction},
 };
-use move_vm_types::values::Value;
+use move_vm_runtime::MoveVM;
+use move_vm_state::{
+    data_cache::BlockDataCache,
+    execution_context::{ExecutionContext, TransactionExecutionContext},
+};
+use move_vm_types::{chain_state::ChainState, values::Value};
 use once_cell::sync::Lazy;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
@@ -36,12 +41,7 @@ use vm::{
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
-use vm_runtime::{
-    chain_state::{ChainState, TransactionExecutionContext},
-    data_cache::BlockDataCache,
-    move_vm::MoveVM,
-    system_module_names::*,
-};
+use vm_runtime::system_module_names::*;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];

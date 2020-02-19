@@ -7,6 +7,8 @@ use libra_types::{
     account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
     language_storage::ModuleId,
 };
+use move_vm_runtime::{loaded_data::loaded_module::LoadedModule, MoveVM};
+use move_vm_state::execution_context::SystemExecutionContext;
 use move_vm_types::{loaded_data::struct_def::StructDef, loaded_data::types::Type, values::*};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
@@ -17,9 +19,6 @@ use vm::{
         StructFieldInformation, StructHandleIndex, TableIndex,
     },
 };
-use vm_runtime::chain_state::SystemExecutionContext;
-use vm_runtime::loaded_data::loaded_module::LoadedModule;
-use vm_runtime::move_vm::MoveVM;
 
 /// A wrapper around state that is used to generate random valid inhabitants for types.
 pub struct RandomInhabitor<'txn> {

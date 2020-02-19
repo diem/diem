@@ -4,15 +4,14 @@
 #[cfg(any(test, feature = "instruction_synthesis"))]
 use crate::move_vm::MoveVM;
 use crate::{
-    execution_context::InterpreterContext,
     gas,
-    identifier::{create_access_path, resource_storage_key},
+    interpreter_context::InterpreterContext,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
     },
     runtime::VMRuntime,
-    system_module_names::{EMIT_EVENT_NAME, SAVE_ACCOUNT_NAME},
+    special_names::{EMIT_EVENT_NAME, SAVE_ACCOUNT_NAME},
 };
 use libra_logger::prelude::*;
 use libra_types::{
@@ -26,6 +25,7 @@ use libra_types::{
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
+use move_vm_types::identifier::{create_access_path, resource_storage_key};
 use move_vm_types::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_functions::dispatch::NativeFunction,
@@ -167,6 +167,8 @@ impl<'txn> Interpreter<'txn> {
         let txn_size = txn_data.transaction_size();
         // The callers of this function verify the transaction before executing it. Transaction
         // verification ensures the following condition.
+        // TODO: This is enforced by Libra but needs to be enforced by other callers of the Move VM
+        // as well.
         assume!(txn_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.

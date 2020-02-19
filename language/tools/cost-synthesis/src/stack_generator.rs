@@ -15,6 +15,10 @@ use libra_types::{
     identifier::Identifier,
     language_storage::ModuleId,
 };
+use move_vm_runtime::{
+    interpreter::InterpreterForCostSynthesis, loaded_data::loaded_module::LoadedModule, MoveVM,
+};
+use move_vm_state::execution_context::{ExecutionContext, SystemExecutionContext};
 use move_vm_types::values::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
@@ -29,10 +33,6 @@ use vm::{
         NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
-};
-use vm_runtime::{
-    chain_state::SystemExecutionContext, interpreter::InterpreterForCostSynthesis,
-    loaded_data::loaded_module::LoadedModule, move_vm::MoveVM,
 };
 
 /// Specifies the data to be applied to the execution stack for the next valid stack state.

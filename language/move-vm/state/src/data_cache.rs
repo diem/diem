@@ -80,7 +80,8 @@ impl<'block> RemoteCache for BlockDataCache<'block> {
     }
 }
 
-pub(crate) struct RemoteStorage<'a>(&'a dyn StateView);
+/// Adapter to convert a `StateView` into a `RemoteCache`.
+pub struct RemoteStorage<'a>(&'a dyn StateView);
 
 impl<'a> RemoteStorage<'a> {
     pub fn new(state_store: &'a dyn StateView) -> Self {

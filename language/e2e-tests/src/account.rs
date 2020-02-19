@@ -13,6 +13,7 @@ use libra_types::{
         RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionPayload,
     },
 };
+use move_vm_types::identifier::create_access_path;
 use move_vm_types::{
     loaded_data::{struct_def::StructDef, types::Type},
     values::{Struct, Value},
@@ -20,7 +21,6 @@ use move_vm_types::{
 use rand::{Rng, SeedableRng};
 use std::time::Duration;
 use vm_genesis::GENESIS_KEYPAIR;
-use vm_runtime::identifier::create_access_path;
 
 // TTL is 86400s. Initial time was set to 0.
 pub const DEFAULT_EXPIRATION_TIME: u64 = 40_000;

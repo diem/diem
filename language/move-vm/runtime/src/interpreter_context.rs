@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chain_state::ChainState;
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
@@ -10,6 +9,7 @@ use libra_types::{
     vm_error::{sub_status, StatusCode},
 };
 use move_vm_types::{
+    chain_state::ChainState,
     loaded_data::struct_def::StructDef,
     values::{GlobalValue, Struct, Value},
 };

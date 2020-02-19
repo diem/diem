@@ -4,7 +4,7 @@
 
 use crate::{
     code_cache::module_cache::load_and_verify_module_id,
-    execution_context::InterpreterContext,
+    interpreter_context::InterpreterContext,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
