@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chain_state::ChainState, data_cache::RemoteCache, loaded_data::loaded_module::LoadedModule,
-    runtime::VMRuntime,
+    chain_state::ChainState, loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
 };
 use bytecode_verifier::VerifiedModule;
 use libra_types::identifier::Identifier;
+use libra_types::language_storage::StructTag;
 use libra_types::{identifier::IdentStr, language_storage::ModuleId};
 use move_vm_definition::MoveVMImpl;
 use vm::{errors::VMResult, gas_schedule::CostTable, transaction_metadata::TransactionMetadata};
@@ -92,6 +92,16 @@ impl MoveVM {
         self.0.rent(|runtime| runtime.cache_module(module))
     }
 
+    pub fn resolve_struct_tag_by_name<S: ChainState>(
+        &self,
+        module_id: &ModuleId,
+        name: &Identifier,
+        chain_state: &mut S,
+    ) -> VMResult<StructTag> {
+        self.0
+            .rent(|runtime| runtime.resolve_struct_tag_by_name(module_id, name, chain_state))
+    }
+
     pub fn resolve_struct_def_by_name<S: ChainState>(
         &self,
         module_id: &ModuleId,
@@ -100,15 +110,6 @@ impl MoveVM {
     ) -> VMResult<StructDef> {
         self.0
             .rent(|runtime| runtime.resolve_struct_def_by_name(module_id, name, chain_state))
-    }
-
-    pub fn load_gas_schedule<S: ChainState>(
-        &self,
-        chain_state: &mut S,
-        data_view: &dyn RemoteCache,
-    ) -> VMResult<CostTable> {
-        self.0
-            .rent(|runtime| runtime.load_gas_schedule(chain_state, data_view))
     }
 }
 

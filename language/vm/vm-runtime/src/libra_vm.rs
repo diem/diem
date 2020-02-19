@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::identifier::create_access_path;
 use crate::{
     chain_state::{ChainState, SystemExecutionContext, TransactionExecutionContext},
     counters::*,
@@ -14,7 +15,7 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
-    account_config::CORE_CODE_ADDRESS,
+    account_config,
     block_metadata::BlockMetadata,
     byte_array::ByteArray,
     transaction::{
@@ -28,6 +29,7 @@ use libra_types::{
 use rayon::prelude::*;
 use std::sync::Arc;
 use vm::errors::convert_prologue_runtime_error;
+use vm::gas_schedule::GAS_SCHEDULE_NAME;
 use vm::{
     errors::VMResult,
     gas_schedule::{self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
@@ -63,12 +65,38 @@ impl LibraVM {
     }
 
     fn load_configs_impl(&mut self, data_cache: &dyn RemoteCache) {
-        self.load_gas_schedule(data_cache)
+        self.gas_schedule = self.fetch_gas_schedule(data_cache).ok();
     }
 
-    fn load_gas_schedule(&mut self, data_cache: &dyn RemoteCache) {
+    fn fetch_gas_schedule(&mut self, data_cache: &dyn RemoteCache) -> VMResult<CostTable> {
+        let address = account_config::association_address();
         let mut ctx = SystemExecutionContext::new(data_cache, GasUnits::new(0));
-        self.gas_schedule = self.move_vm.load_gas_schedule(&mut ctx, data_cache).ok();
+        let gas_struct_tag = self
+            .move_vm
+            .resolve_struct_tag_by_name(&GAS_SCHEDULE_MODULE, &GAS_SCHEDULE_NAME, &mut ctx)
+            .map_err(|_| {
+                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
+                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_MODULE)
+            })?;
+
+        let access_path = create_access_path(&address, gas_struct_tag);
+
+        let data_blob = data_cache
+            .get(&access_path)
+            .map_err(|_| {
+                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
+                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_RESOURCE)
+            })?
+            .ok_or_else(|| {
+                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
+                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_RESOURCE)
+            })?;
+        let table: CostTable = lcs::from_bytes(&data_blob).map_err(|_| {
+            VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
+                .with_sub_status(sub_status::GSE_UNABLE_TO_DESERIALIZE)
+        })?;
+
+        Ok(table)
     }
 
     fn get_gas_schedule(&self) -> VMResult<&CostTable> {
@@ -380,7 +408,7 @@ impl LibraVM {
         //    might be useful here.
         // 3. We set the max gas to a big number just to get rid of the potential out of gas error.
         let mut txn_data = TransactionMetadata::default();
-        txn_data.sender = CORE_CODE_ADDRESS;
+        txn_data.sender = account_config::CORE_CODE_ADDRESS;
         txn_data.max_gas_amount = GasUnits::new(std::u64::MAX);
 
         let mut interpreter_context =
