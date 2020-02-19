@@ -737,7 +737,13 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                 Some(LValue::FieldMutate(edotted)) => EE::FieldMutate(edotted, er),
             }
         }
-        PE::Return(pe) => EE::Return(exp(context, *pe)),
+        PE::Return(pe_opt) => {
+            let ev = match pe_opt {
+                None => Box::new(sp(loc, EE::Unit)),
+                Some(pe) => exp(context, *pe),
+            };
+            EE::Return(ev)
+        }
         PE::Abort(pe) => EE::Abort(exp(context, *pe)),
         PE::Break => EE::Break,
         PE::Continue => EE::Continue,
