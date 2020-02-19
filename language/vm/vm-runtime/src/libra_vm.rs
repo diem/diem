@@ -4,7 +4,7 @@
 use crate::{
     chain_state::{ChainState, SystemExecutionContext, TransactionExecutionContext},
     counters::*,
-    data_cache::{BlockDataCache, RemoteCache},
+    data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
     move_vm::MoveVM,
     system_module_names::*,
     system_txn::block_metadata_processor::process_block_metadata,
@@ -53,7 +53,11 @@ impl LibraVM {
         }
     }
 
-    pub fn load_gas_schedule(&mut self, data_cache: &dyn RemoteCache) {
+    pub fn load_configs(&mut self, state: &dyn StateView) {
+        self.load_gas_schedule(&RemoteStorage::new(state))
+    }
+
+    fn load_gas_schedule(&mut self, data_cache: &dyn RemoteCache) {
         let mut ctx = SystemExecutionContext::new(data_cache, GasUnits::new(0));
         self.gas_schedule = self.move_vm.load_gas_schedule(&mut ctx, data_cache).ok();
     }

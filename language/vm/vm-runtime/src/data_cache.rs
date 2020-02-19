@@ -80,6 +80,22 @@ impl<'block> RemoteCache for BlockDataCache<'block> {
     }
 }
 
+pub(crate) struct RemoteStorage<'a>(&'a dyn StateView);
+
+impl<'a> RemoteStorage<'a> {
+    pub fn new(state_store: &'a dyn StateView) -> Self {
+        Self(state_store)
+    }
+}
+
+impl<'a> RemoteCache for RemoteStorage<'a> {
+    fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
+        self.0
+            .get(access_path)
+            .map_err(|_| VMStatus::new(StatusCode::STORAGE_ERROR))
+    }
+}
+
 /// Global cache for a transaction.
 /// Materializes Values from the RemoteCache and keeps an Rc to them.
 /// It also implements the opcodes that talk to storage and gives the proper guarantees of

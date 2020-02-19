@@ -17,7 +17,7 @@ fn failed_transaction_cleanup_test() {
 
     let mut libra_vm = LibraVM::new(fake_executor.config());
     let mut data_cache = BlockDataCache::new(fake_executor.get_state_view());
-    libra_vm.load_gas_schedule(&data_cache);
+    libra_vm.load_configs(fake_executor.get_state_view());
 
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = *sender.address();
