@@ -203,7 +203,7 @@ impl DB {
             return DB::open_cf(db_opts, &path, cf_opts_map.into_iter().collect());
         }
 
-        // If db doesn't exist, create a db first with all column families.
+        // If db doesn't exist, create one with all column families if requested.
         db_opts.create_if_missing(true);
 
         let mut db = DB::open_cf(
@@ -220,6 +220,23 @@ impl DB {
         Ok(db)
     }
 
+    /// Open db in readonly mode
+    pub fn open_readonly<P: AsRef<Path>>(
+        path: P,
+        cf_opts_map: ColumnFamilyOptionsMap,
+        db_log_dir: &str,
+    ) -> Result<Self> {
+        let mut db_opts = DBOptions::new();
+
+        // do not create if not exists
+        db_opts.create_if_missing(false);
+
+        // Put LOG file somewhere else
+        db_opts.set_db_log_dir(db_log_dir);
+
+        return DB::open_cf_readonly(db_opts, &path, cf_opts_map.into_iter().collect());
+    }
+
     fn open_cf<'a, P, T>(opts: DBOptions, path: P, cfds: Vec<T>) -> Result<DB>
     where
         P: AsRef<Path>,
@@ -231,6 +248,24 @@ impl DB {
                 format_err!("Path {:?} can not be converted to string.", path.as_ref())
             })?,
             cfds,
+        )
+        .map_err(convert_rocksdb_err)?;
+
+        Ok(DB { inner })
+    }
+
+    fn open_cf_readonly<'a, P, T>(opts: DBOptions, path: P, cfds: Vec<T>) -> Result<DB>
+    where
+        P: AsRef<Path>,
+        T: Into<ColumnFamilyDescriptor<'a>>,
+    {
+        let inner = rocksdb::DB::open_cf_for_read_only(
+            opts,
+            path.as_ref().to_str().ok_or_else(|| {
+                format_err!("Path {:?} can not be converted to string.", path.as_ref())
+            })?,
+            cfds,
+            false,
         )
         .map_err(convert_rocksdb_err)?;
 

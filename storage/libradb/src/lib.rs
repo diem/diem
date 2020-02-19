@@ -133,8 +133,11 @@ impl LibraDB {
     /// Config parameter for the pruner.
     const NUM_HISTORICAL_VERSIONS_TO_KEEP: u64 = 1_000_000;
 
-    /// This creates an empty LibraDB instance on disk or opens one if it already exists.
-    pub fn new<P: AsRef<Path> + Clone>(db_root_path: P) -> Self {
+    pub fn open<P: AsRef<Path> + Clone>(
+        db_root_path: P,
+        readonly: bool,
+        log_dir: Option<&Path>,
+    ) -> Result<Self> {
         let cf_opts_map: ColumnFamilyOptionsMap = [
             (
                 /* LedgerInfo CF = */ DEFAULT_CF_NAME,
@@ -167,7 +170,20 @@ impl LibraDB {
 
         let path = db_root_path.as_ref().join("libradb");
         let instant = Instant::now();
-        let db = Arc::new(DB::open(path.clone(), cf_opts_map).expect("LibraDB open failed"));
+
+        let db = Arc::new(match readonly {
+            true => {
+                ensure!(path.as_path().is_dir(), "libradb directory is not found.");
+                ensure!(
+                    log_dir.is_some(),
+                    "Must provide log_dir if opening in readonly mode."
+                );
+                let db_log_dir = log_dir.unwrap().to_str().expect("Invalid directory");
+                info!("log stored at {}", db_log_dir);
+                DB::open_readonly(path.clone(), cf_opts_map, db_log_dir)?
+            }
+            false => DB::open(path.clone(), cf_opts_map)?,
+        });
 
         info!(
             "Opened LibraDB at {:?} in {} ms",
@@ -175,7 +191,7 @@ impl LibraDB {
             instant.elapsed().as_millis()
         );
 
-        LibraDB {
+        Ok(LibraDB {
             db: Arc::clone(&db),
             event_store: EventStore::new(Arc::clone(&db)),
             ledger_store: Arc::new(LedgerStore::new(Arc::clone(&db))),
@@ -183,7 +199,12 @@ impl LibraDB {
             transaction_store: Arc::new(TransactionStore::new(Arc::clone(&db))),
             system_store: SystemStore::new(Arc::clone(&db)),
             pruner: Pruner::new(Arc::clone(&db), Self::NUM_HISTORICAL_VERSIONS_TO_KEEP),
-        }
+        })
+    }
+
+    /// This creates an empty LibraDB instance on disk or opens one if it already exists.
+    pub fn new<P: AsRef<Path> + Clone>(db_root_path: P) -> Self {
+        Self::open(db_root_path, false, None).expect("Unable to open LibraDB")
     }
 
     // ================================== Public API ==================================
@@ -328,7 +349,7 @@ impl LibraDB {
     }
 
     /// Gets the latest version number available in the ledger.
-    fn get_latest_version(&self) -> Result<Version> {
+    pub fn get_latest_version(&self) -> Result<Version> {
         Ok(self
             .ledger_store
             .get_latest_ledger_info()?
@@ -843,7 +864,7 @@ impl LibraDB {
         Ok(())
     }
 
-    fn get_transaction_with_proof(
+    pub fn get_transaction_with_proof(
         &self,
         version: Version,
         ledger_version: Version,
