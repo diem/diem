@@ -904,7 +904,6 @@ fn parse_binop_exp<'input>(
 // Parse a unary expression:
 //      UnaryExp =
 //          "!" <UnaryExp>
-//          | "-" <UnaryExp>
 //          | "&mut" <UnaryExp>
 //          | "&" <UnaryExp>
 //          | "*" <UnaryExp>
@@ -916,13 +915,6 @@ fn parse_unary_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             tokens.advance()?;
             let op_end_loc = tokens.previous_end_loc();
             let op = spanned(tokens.file_name(), start_loc, op_end_loc, UnaryOp_::Not);
-            let e = parse_unary_exp(tokens)?;
-            Exp_::UnaryExp(op, Box::new(e))
-        }
-        Tok::Minus => {
-            tokens.advance()?;
-            let op_end_loc = tokens.previous_end_loc();
-            let op = spanned(tokens.file_name(), start_loc, op_end_loc, UnaryOp_::Neg);
             let e = parse_unary_exp(tokens)?;
             Exp_::UnaryExp(op, Box::new(e))
         }
