@@ -54,7 +54,11 @@ impl LibraVM {
     }
 
     pub fn load_configs(&mut self, state: &dyn StateView) {
-        self.load_gas_schedule(&RemoteStorage::new(state))
+        self.load_configs_impl(&RemoteStorage::new(state))
+    }
+
+    fn load_configs_impl(&mut self, data_cache: &dyn RemoteCache) {
+        self.load_gas_schedule(data_cache)
     }
 
     fn load_gas_schedule(&mut self, data_cache: &dyn RemoteCache) {
@@ -351,7 +355,7 @@ impl LibraVM {
     ) -> TransactionOutput {
         let (write_set, events) = change_set.into_inner();
         remote_cache.push_write_set(&write_set);
-        self.load_gas_schedule(remote_cache);
+        self.load_configs_impl(remote_cache);
         TransactionOutput::new(
             write_set,
             events,
@@ -479,7 +483,7 @@ impl LibraVM {
         let mut result = vec![];
         let blocks = chunk_block_transactions(transactions);
         let mut data_cache = BlockDataCache::new(state_view);
-        self.load_gas_schedule(&data_cache);
+        self.load_configs_impl(&data_cache);
         for block in blocks {
             match block {
                 TransactionBlock::UserTransaction(txns) => {
