@@ -8,7 +8,10 @@ use rand::{rngs::StdRng, SeedableRng};
 const KEY_KEY: &str = "key";
 const U64_KEY: &str = "u64";
 
-pub fn run_test_suite(mut storage: Box<dyn Storage>, name: &str) {
+/// This helper function checks various features of the secure storage behaviour relating to K/V
+/// support, e.g., ensuring errors are returned when attempting to retrieve missing keys, and
+/// verifying sets and gets are implemented correctly.
+pub fn run_test_suite(storage: &mut dyn Storage, name: &str) {
     assert!(
         storage.available(),
         eprintln!("Backend storage, {}, is not available", name)
@@ -89,5 +92,44 @@ pub fn run_test_suite(mut storage: Box<dyn Storage>, name: &str) {
     assert_eq!(
         storage.get(KEY_KEY).unwrap().u64().unwrap_err(),
         Error::UnexpectedValueType
+    );
+}
+
+/// This helper function: (i) creates a new named test key pair; (ii) retrieves the public key for
+/// the created key pair; (iii) compares the public keys returned by the create call and the
+/// retrieval call.
+pub fn create_get_and_test_key_pair(storage: &mut dyn Storage) {
+    let key_pair_name = "Test Key";
+    let public_key = storage
+        .generate_new_ed25519_key_pair(key_pair_name, &Policy::public())
+        .expect("Failed to create a test Ed25519 key pair!");
+    let retrieved_public_key = storage
+        .get_public_key_for(key_pair_name)
+        .expect("Failed to fetch the test key pair!");
+    assert_eq!(public_key, retrieved_public_key);
+}
+
+/// This helper function attempts to create two named key pairs using the same name, and asserts
+/// that the second creation call (i.e., the duplicate), fails.
+pub fn create_key_pair_twice(storage: &mut dyn Storage) {
+    let key_pair_name = "Test Key";
+    let policy = Policy::public();
+    let _ = storage
+        .generate_new_ed25519_key_pair(key_pair_name, &policy)
+        .expect("Failed to create a test Ed25519 key pair!");
+    assert!(
+        storage
+            .generate_new_ed25519_key_pair(key_pair_name, &policy)
+            .is_err(),
+        "The second call to generate_ed25519_key_pair() should have failed!"
+    );
+}
+
+/// This helper function tries to get the public key of a key pair that has not yet been created. As
+/// such, it asserts that this attempt fails.
+pub fn get_uncreated_key_pair(storage: &mut dyn Storage) {
+    assert!(
+        storage.get_public_key_for("Non-existent key").is_err(),
+        "Accessing a key that has not yet been created should have failed!"
     );
 }

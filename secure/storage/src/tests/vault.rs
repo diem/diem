@@ -7,13 +7,37 @@ use crate::{Capability, Error, Identity, Permission, Policy, Storage, Value};
 /// A test for verifying VaultStorage properly implements the LibraSecureStorage API. This test
 /// depends on running Vault, which can be done by using the provided docker run script in
 /// `docker/vault/run.sh`
+/// Note: because we only run a single vault backend for testing, we execute all tests sequentially
+/// using the method below.
+///
+/// TODO(joshlind): see how we can refactor this to run each test individually. This would better
+/// separate the testing of individual behaviours and help make failures easier to reason about.
+/// It would also be good to avoid having to call reset_vault_storage between tests..
 #[ignore]
 #[test]
-fn vault() {
+fn all_tests() {
+    let mut storage = Box::new(setup_vault());
+
+    // Test key/value related operations
+    suite::run_test_suite(storage.as_mut(), "VaultStorage");
+    reset_vault_storage(storage.as_mut());
+
+    // Test cryptographic key related operations
+    suite::create_get_and_test_key_pair(storage.as_mut());
+    reset_vault_storage(storage.as_mut());
+
+    suite::create_key_pair_twice(storage.as_mut());
+    reset_vault_storage(storage.as_mut());
+
+    suite::get_uncreated_key_pair(storage.as_mut());
+    reset_vault_storage(storage.as_mut());
+}
+
+fn setup_vault() -> VaultStorage {
     let host = "http://localhost:8200".to_string();
     let token = "root_token".to_string();
     let mut storage = VaultStorage::new(host.clone(), token);
-    storage.reset().unwrap();
+    reset_vault_storage(&mut storage);
 
     // @TODO davidiw, the following needs to be made generic but right now the creation of a token
     // / service is very backend specific.
@@ -99,7 +123,13 @@ fn vault() {
     assert_eq!(storage.get("partial"), Ok(Value::U64(7)));
     assert_eq!(storage.get("full"), Ok(Value::U64(12)));
 
-    // Now begin the generic test
-    storage.reset().unwrap();
-    suite::run_test_suite(Box::new(storage), "VaultStorage");
+    reset_vault_storage(&mut storage);
+    storage
+}
+
+/// Resets the internal state of vault for testing purposes (i.e., clears all stored data).
+fn reset_vault_storage(storage: &mut VaultStorage) {
+    storage
+        .reset()
+        .expect("Failed to reset vault storage state!");
 }

@@ -8,6 +8,8 @@ use toml;
 
 #[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
 pub enum Error {
+    #[error("Entropy error: {0}")]
+    EntropyError(String),
     #[error("Internal error: {0}")]
     InternalError(String),
     #[error("Key not set: {0}")]
