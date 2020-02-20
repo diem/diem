@@ -1,10 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::parser::ast::{InvariantKind, SpecBlockTarget, SpecConditionKind};
 use crate::{
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ResourceLoc, StructName,
-        UnaryOp, Value, Var,
+        BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ModuleName, ResourceLoc,
+        StructName, UnaryOp, Value, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -34,6 +35,7 @@ pub struct ModuleDefinition {
     pub is_source_module: bool,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
+    pub specs: Vec<SpecBlock>,
 }
 
 //**************************************************************************************************
@@ -83,6 +85,43 @@ pub struct Function {
 }
 
 //**************************************************************************************************
+// Specification Blocks
+//**************************************************************************************************
+
+// Specification block:
+#[derive(Debug, PartialEq)]
+pub struct SpecBlock_ {
+    pub target: SpecBlockTarget,
+    pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
+    pub members: Vec<SpecBlockMember>,
+}
+
+pub type SpecBlock = Spanned<SpecBlock_>;
+
+#[derive(Debug, PartialEq)]
+pub enum SpecBlockMember_ {
+    Condition {
+        kind: SpecConditionKind,
+        exp: Exp,
+    },
+    Invariant {
+        kind: InvariantKind,
+        exp: Exp,
+    },
+    Function {
+        name: FunctionName,
+        signature: FunctionSignature,
+        body: FunctionBody,
+    },
+    Variable {
+        name: Name,
+        type_: SingleType,
+    },
+}
+
+pub type SpecBlockMember = Spanned<SpecBlockMember_>;
+
+//**************************************************************************************************
 // Types
 //**************************************************************************************************
 
@@ -98,11 +137,12 @@ pub type ModuleAccess = Spanned<ModuleAccess_>;
 pub enum SingleType_ {
     Apply(ModuleAccess, Vec<SingleType>),
     Ref(bool, Box<SingleType>),
+    Fun(Vec<SingleType>, Box<Type>),
     UnresolvedError,
 }
 pub type SingleType = Spanned<SingleType_>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum Type_ {
     Unit,
@@ -156,6 +196,7 @@ pub enum Exp_ {
     While(Box<Exp>, Box<Exp>),
     Loop(Box<Exp>),
     Block(Sequence),
+    Lambda(BindList, Box<Exp>), // spec only
 
     Assign(AssignList, Box<Exp>),
     FieldMutate(Box<ExpDotted>, Box<Exp>),
@@ -175,6 +216,7 @@ pub enum Exp_ {
 
     Borrow(bool, Box<Exp>),
     ExpDotted(Box<ExpDotted>),
+    Index(Box<Exp>, Box<Exp>), // spec only (no mutation needed right now)
 
     Cast(Box<Exp>, Type),
     Annotate(Box<Exp>, Type),
@@ -221,6 +263,17 @@ impl fmt::Display for SingleType_ {
                 Ok(())
             }
             Ref(mut_, ty) => write!(f, "&{}{}", if *mut_ { "mut " } else { "" }, ty),
+            Fun(args, result) => write!(f, "({}):{}", format_comma(args), result),
+        }
+    }
+}
+
+impl fmt::Display for Type_ {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Type_::Unit => write!(f, "()"),
+            Type_::Single(ty) => write!(f, "{}", ty),
+            Type_::Multiple(tys) => write!(f, "({})", format_comma(tys)),
         }
     }
 }
@@ -262,6 +315,7 @@ impl AstDebug for ModuleDefinition {
             is_source_module,
             structs,
             functions,
+            specs,
         } = self;
         w.writeln(if *is_source_module {
             "source module"
@@ -294,6 +348,10 @@ impl AstDebug for ModuleDefinition {
             fdef.ast_debug(w);
             w.new_line();
         }
+        for spec in specs {
+            spec.ast_debug(w);
+            w.new_line();
+        }
     }
 }
 
@@ -324,6 +382,61 @@ impl AstDebug for (StructName, &StructDefinition) {
                     true
                 });
             })
+        }
+    }
+}
+
+impl AstDebug for SpecBlock_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.write(" spec ");
+        self.target.ast_debug(w);
+        w.write("{");
+        w.semicolon(&self.members, |w, m| m.ast_debug(w));
+        w.write("}");
+    }
+}
+
+impl AstDebug for SpecBlockMember_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            SpecBlockMember_::Condition { kind, exp } => {
+                match kind {
+                    SpecConditionKind::AbortsIf => w.write("aborts_if "),
+                    SpecConditionKind::Ensures => w.write("ensures "),
+                }
+                exp.ast_debug(w);
+            }
+            SpecBlockMember_::Invariant { kind, exp } => {
+                w.write("invariant ");
+                match kind {
+                    InvariantKind::Data => {}
+                    InvariantKind::Update => w.write("update "),
+                    InvariantKind::Pack => w.write("pack "),
+                    InvariantKind::Unpack => w.write("unpack "),
+                }
+                exp.ast_debug(w);
+            }
+            SpecBlockMember_::Function {
+                signature,
+                name,
+                body,
+            } => {
+                if let FunctionBody_::Native = &body.value {
+                    w.write("native ");
+                }
+                w.write("fun ");
+                w.write(&format!("{}", name));
+                signature.ast_debug(w);
+                match &body.value {
+                    FunctionBody_::Defined(body) => w.block(|w| body.ast_debug(w)),
+                    FunctionBody_::Native => w.writeln(";"),
+                }
+            }
+            SpecBlockMember_::Variable { name, type_ } => {
+                w.write(&format!("{}", name));
+                w.write(": ");
+                type_.ast_debug(w);
+            }
         }
     }
 }
@@ -406,6 +519,12 @@ impl AstDebug for SingleType_ {
                     w.write("mut ");
                 }
                 s.ast_debug(w)
+            }
+            SingleType_::Fun(args, result) => {
+                w.write("(");
+                w.comma(args, |w, ty| ty.ast_debug(w));
+                w.write("):");
+                result.ast_debug(w);
             }
             SingleType_::UnresolvedError => w.write("_|_"),
         }
@@ -521,6 +640,12 @@ impl AstDebug for Exp_ {
                 e.ast_debug(w);
             }
             E::Block(seq) => w.block(|w| seq.ast_debug(w)),
+            E::Lambda(sp!(_, bs), e) => {
+                w.write("fun ");
+                bs.ast_debug(w);
+                w.write(" ");
+                e.ast_debug(w);
+            }
             E::ExpList(es) => {
                 w.write("(");
                 w.comma(es, |w, e| e.ast_debug(w));
@@ -584,6 +709,12 @@ impl AstDebug for Exp_ {
                 w.write(" as ");
                 ty.ast_debug(w);
                 w.write(")");
+            }
+            E::Index(oper, index) => {
+                oper.ast_debug(w);
+                w.write("[");
+                index.ast_debug(w);
+                w.write("]");
             }
             E::Annotate(e, ty) => {
                 w.write("(");
