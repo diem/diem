@@ -79,8 +79,8 @@ pub struct EmitThreadParams {
 impl Default for EmitThreadParams {
     fn default() -> Self {
         Self {
-            wait_millis: 0,
-            wait_committed: true,
+            wait_millis: 75,
+            wait_committed: false,
         }
     }
 }
@@ -105,7 +105,7 @@ impl EmitJobRequest {
             },
             None => Self {
                 instances,
-                accounts_per_client: 16,
+                accounts_per_client: 10,
                 threads_per_ac: None,
                 thread_params: EmitThreadParams::default(),
             },
@@ -141,7 +141,7 @@ impl TxEmitter {
                 // We want to have equal numbers of threads for each AC, so that they are equally loaded
                 // Otherwise things like flamegrap/perf going to show different numbers depending on which AC is chosen
                 // Also limiting number of threads as max 10 per AC for use cases with very small number of nodes or use --peers
-                min(10, max(1, 200 / req.instances.len()))
+                min(10, max(1, 100 / req.instances.len()))
             }
         };
         let num_clients = req.instances.len() * threads_per_ac;

@@ -48,7 +48,7 @@ network_peers_file = ""
 seed_peers_file = ""
 
 [consensus]
-max_block_size = 1000
+max_block_size = 2000
 max_pruned_blocks_in_mem = 10000
 pacemaker_initial_timeout_ms = 1000
 proposer_type = "multiple_ordered_proposers"

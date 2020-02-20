@@ -100,13 +100,13 @@ struct Args {
     changelog: Option<Vec<String>>,
 
     // emit_tx options
-    #[structopt(long, default_value = "16")]
+    #[structopt(long, default_value = "10")]
     accounts_per_client: usize,
-    #[structopt(long)]
-    threads_per_ac: Option<usize>,
-    #[structopt(long, default_value = "0")]
+    #[structopt(long, default_value = "1")]
+    threads_per_ac: usize,
+    #[structopt(long, default_value = "75")]
     wait_millis: u64,
-    #[structopt(long)]
+    #[structopt(long, parse(try_from_str), default_value = "true")]
     burst: bool,
     #[structopt(long, default_value = "mint.key")]
     mint_file: String,
@@ -148,7 +148,7 @@ pub fn main() {
             let util = BasicSwarmUtil::setup(&args);
             rt.block_on(util.emit_tx(
                 args.accounts_per_client,
-                args.threads_per_ac,
+                Some(args.threads_per_ac),
                 thread_params,
                 duration,
             ));
@@ -157,7 +157,7 @@ pub fn main() {
             let util = ClusterUtil::setup(&args);
             rt.block_on(util.emit_tx(
                 args.accounts_per_client,
-                args.threads_per_ac,
+                Some(args.threads_per_ac),
                 thread_params,
                 duration,
             ));
@@ -468,7 +468,7 @@ impl ClusterTestRunner {
         let global_emit_job_request = EmitJobRequest {
             instances: vec![],
             accounts_per_client: args.accounts_per_client,
-            threads_per_ac: args.threads_per_ac,
+            threads_per_ac: Some(args.threads_per_ac),
             thread_params: EmitThreadParams {
                 wait_millis: args.wait_millis,
                 wait_committed: !args.burst,
