@@ -5,60 +5,7 @@ syntax = "proto3";
 
 package network;
 
-// A `PeerInfo` represents the network address(es) of a Peer.
-message PeerInfo {
-  // Monotonically increasing incarnation number used to allow peers to issue
-  // updates to their `PeerInfo` and prevent attackers from propagating old
-  // `PeerInfo`s. This is usually a timestamp.
-  uint64 epoch = 1;
-  // Network addresses this peer can be reached at. An address is a serialized
-  // [multiaddr](https://multiformats.io/multiaddr/).
-  repeated bytes addrs = 2;
-}
-
-// A `PeerInfo` authenticated by the peer's root `network_signing_key` stored
-// on-chain.
-message SignedPeerInfo {
-  // A serialized `PeerInfo`.
-  bytes peer_info = 1;
-  // A signature over the above serialzed `PeerInfo`, signed by the validator's
-  // `network_signing_key` referred to by the `peer_id` account address.
-  bytes signature = 2;
-}
-
-// Discovery information relevant to public full nodes and clients.
-message FullNodePayload {
-  // Monotonically increasing incarnation number used to allow peers to issue
-  // updates to their `FullNodePayload` and prevent attackers from propagating
-  // old `FullNodePayload`s. This is usually a timestamp.
-  uint64 epoch = 1;
-  // The DNS domain name other public full nodes should query to get this
-  // validator's list of full nodes.
-  bytes dns_seed_addr = 2;
-}
-
-// A signed `FullNodePayload`.
-message SignedFullNodePayload {
-  // A serialized `FullNodePayload`.
-  bytes payload = 1;
-  // A signature over `payload` signed by the validator's `network_signing_key`
-  // referred to by the `peer_id` account address.
-  bytes signature = 2;
-}
-
-// A `Note` contains a validator's signed `PeerInfo` as well as a signed
-// `FullNodePayload`, which provides relevant discovery info for public full
-// nodes and clients.
-message Note {
-  // Id of the peer.
-  bytes peer_id = 1;
-  // The validator node's signed `PeerInfo`.
-  SignedPeerInfo signed_peer_info = 2;
-  // The validator node's signed `FullNodePayload`.
-  SignedFullNodePayload signed_full_node_payload = 3;
-}
-
 // Discovery message exchanged as part of the discovery protocol.
 // The discovery message sent by a peer consists of notes for all the peers the
 // sending peer knows about.
-message DiscoveryMsg { repeated Note notes = 1; }
+message DiscoveryMsg { bytes message = 1; }

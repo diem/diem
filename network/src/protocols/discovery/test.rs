@@ -3,7 +3,6 @@
 
 use super::*;
 use crate::peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest};
-use crate::proto::DiscoveryMsg;
 use crate::protocols::direct_send::Message;
 use crate::validator_network::DISCOVERY_DIRECT_SEND_PROTOCOL;
 use crate::ProtocolId;
@@ -13,24 +12,20 @@ use core::str::FromStr;
 use futures::channel::oneshot;
 use libra_config::config::RoleType;
 use libra_crypto::{test_utils::TEST_SEED, *};
+use libra_prost_ext::MessageExt;
 use prost::Message as _;
 use rand::{rngs::StdRng, SeedableRng};
 use std::num::NonZeroUsize;
 use tokio::runtime::Runtime;
 
 fn gen_peer_info() -> PeerInfo {
-    let mut peer_info = PeerInfo::default();
-    peer_info.epoch = 1;
-    peer_info.addrs.push(
-        Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090")
-            .unwrap()
-            .as_ref()
-            .into(),
-    );
-    peer_info
+    PeerInfo::new(
+        vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()],
+        1,
+    )
 }
 
-fn get_raw_message(msg: DiscoveryMsg) -> Message {
+fn get_raw_message(msg: crate::proto::DiscoveryMsg) -> Message {
     Message {
         protocol: ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
         mdata: msg.to_bytes().unwrap(),
@@ -39,32 +34,10 @@ fn get_raw_message(msg: DiscoveryMsg) -> Message {
 
 fn parse_raw_message(msg: Message) -> Result<DiscoveryMsg, NetworkError> {
     assert_eq!(msg.protocol, DISCOVERY_DIRECT_SEND_PROTOCOL);
-    let msg = DiscoveryMsg::decode(msg.mdata.as_ref())?;
-    Ok(msg)
-}
-
-fn get_addrs_from_note(note: &Note) -> Vec<Multiaddr> {
-    let signed_peer_info = note.signed_peer_info.as_ref().unwrap();
-    let peer_info = PeerInfo::decode(signed_peer_info.peer_info.as_ref()).unwrap();
-    let mut addrs = vec![];
-    for addr in peer_info.addrs {
-        addrs.push(Multiaddr::try_from(addr.clone()).unwrap());
-    }
-    addrs
-}
-
-fn get_epoch_from_note(note: &Note) -> u64 {
-    let signed_peer_info = note.signed_peer_info.as_ref().unwrap();
-    let peer_info = PeerInfo::decode(signed_peer_info.peer_info.as_ref()).unwrap();
-    peer_info.epoch
-}
-
-fn get_addrs_from_info(peer_info: &PeerInfo) -> Vec<Multiaddr> {
-    peer_info
-        .addrs
-        .iter()
-        .map(|addr| Multiaddr::try_from(addr.clone()).unwrap())
-        .collect()
+    let msg = crate::proto::DiscoveryMsg::decode(msg.mdata.as_ref())?;
+    let notes = lcs::from_bytes(&msg.message)
+        .map_err(|err| anyhow!(err).context(NetworkErrorKind::ParsingError))?;
+    Ok(notes)
 }
 
 fn setup_discovery(
@@ -156,7 +129,7 @@ fn inbound() {
 
     // Setup seed.
     let seed_peer_info = gen_peer_info();
-    let seed_peer_addrs = get_addrs_from_info(&seed_peer_info);
+    let seed_peer_addrs = seed_peer_info.addrs.clone();
     let seed_peer_id = PeerId::random();
     let (seed_pub_keys, seed_signer) = generate_network_pub_keys_and_signer(seed_peer_id);
     let trusted_peers = Arc::new(RwLock::new(
@@ -186,7 +159,7 @@ fn inbound() {
         // peer to the connectivity manager.
         let peer_id_other = PeerId::random();
         let addrs_other = vec![Multiaddr::from_str("/ip4/172.29.52.192/tcp/8080").unwrap()];
-        let seed_note = create_note(
+        let seed_note = Note::new(
             &seed_signer,
             seed_peer_id,
             seed_peer_addrs.clone(),
@@ -199,7 +172,7 @@ fn inbound() {
             .unwrap()
             .insert(peer_id_other, pub_keys_other);
         let note_other = {
-            create_note(
+            Note::new(
                 &signer_other,
                 peer_id_other,
                 addrs_other.clone(),
@@ -207,9 +180,11 @@ fn inbound() {
                 get_unix_epoch(),
             )
         };
-        let mut msg = DiscoveryMsg::default();
-        msg.notes.push(note_other.clone());
-        msg.notes.push(seed_note.clone());
+        let mut notes = vec![];
+        notes.push(note_other.clone());
+        notes.push(seed_note.clone());
+        let message = lcs::to_bytes(&notes).unwrap();
+        let msg = crate::proto::DiscoveryMsg { message };
         let key = (
             seed_peer_id,
             ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
@@ -242,23 +217,26 @@ fn inbound() {
 
         // Send new message.
         // Compose new msg.
-        let mut msg = DiscoveryMsg::default();
-        msg.notes.push(note_other);
+        let mut notes = vec![];
+        notes.push(note_other);
         let new_seed_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/8098").unwrap()];
         {
-            let seed_note = create_note(
+            let seed_note = Note::new(
                 &seed_signer,
                 seed_peer_id,
                 new_seed_addrs.clone(),
                 b"example.com",
                 get_unix_epoch(),
             );
-            msg.notes.push(seed_note);
+            notes.push(seed_note);
             let key = (
                 seed_peer_id,
                 ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
             );
             let (delivered_tx, delivered_rx) = oneshot::channel();
+
+            let message = lcs::to_bytes(&notes).unwrap();
+            let msg = crate::proto::DiscoveryMsg { message };
             network_notifs_tx
                 .push_with_feedback(
                     key.clone(),
@@ -332,7 +310,7 @@ fn outbound() {
                 seed_peer_id,
                 peer_manager::ConnectionStatusNotification::NewPeer(
                     seed_peer_id,
-                    Multiaddr::try_from(seed_peer_info.addrs.get(0).unwrap().clone()).unwrap(),
+                    seed_peer_info.addrs[0].clone(),
                 ),
                 Some(delivered_tx),
             )
@@ -350,8 +328,8 @@ fn outbound() {
                 // Receive DiscoveryMsg from actor. The message should contain only a note for the
                 // sending peer since it doesn't yet have the note for the seed peer.
                 assert_eq!(1, msg.notes.len());
-                assert_eq!(Vec::from(peer_id), msg.notes[0].peer_id);
-                assert_eq!(addrs, get_addrs_from_note(&msg.notes[0]));
+                assert_eq!(peer_id, msg.notes[0].peer_id);
+                assert_eq!(&addrs, msg.notes[0].addrs());
             }
             req => {
                 panic!("Unexpected request to peer manager: {:?}", req);
@@ -374,7 +352,7 @@ fn addr_update_includes_seed_addrs() {
 
     // Setup seed.
     let seed_peer_info = gen_peer_info();
-    let mut seed_peer_addrs = get_addrs_from_info(&seed_peer_info);
+    let mut seed_peer_addrs = seed_peer_info.addrs.clone();
     let seed_peer_id = PeerId::random();
     let (seed_pub_keys, seed_signer) = generate_network_pub_keys_and_signer(seed_peer_id);
     let trusted_peers = Arc::new(RwLock::new(
@@ -403,15 +381,15 @@ fn addr_update_includes_seed_addrs() {
         // The discovery actor should send the addrs in the new seed peer note
         // _and_ the configured seed addrs to the connectivity manager.
         let new_seed_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
-        let seed_note = create_note(
+        let seed_note = Note::new(
             &seed_signer,
             seed_peer_id,
             new_seed_addrs.clone(),
             b"example.com",
             get_unix_epoch(),
         );
-        let mut msg = DiscoveryMsg::default();
-        msg.notes.push(seed_note.clone());
+        let message = lcs::to_bytes(&vec![seed_note]).unwrap();
+        let msg = crate::proto::DiscoveryMsg { message };
         let key = (
             seed_peer_id,
             ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
@@ -455,7 +433,7 @@ fn old_note_higher_epoch() {
 
     // Setup seed.
     let seed_peer_info = gen_peer_info();
-    let seed_peer_addrs = get_addrs_from_info(&seed_peer_info);
+    let seed_peer_addrs = seed_peer_info.addrs.clone();
     let seed_peer_id = PeerId::random();
     let (seed_pub_keys, _) = generate_network_pub_keys_and_signer(seed_peer_id);
     let trusted_peers = Arc::new(RwLock::new(
@@ -493,7 +471,7 @@ fn old_note_higher_epoch() {
                 seed_peer_id,
                 peer_manager::ConnectionStatusNotification::NewPeer(
                     seed_peer_id,
-                    Multiaddr::try_from(seed_peer_addrs.get(0).unwrap().clone()).unwrap(),
+                    seed_peer_addrs[0].clone(),
                 ),
                 Some(delivered_tx),
             )
@@ -504,15 +482,15 @@ fn old_note_higher_epoch() {
         // current note.
         let old_self_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
         let old_epoch = get_unix_epoch() + 100;
-        let old_note = create_note(
+        let old_note = Note::new(
             &self_signer,
             peer_id,
             old_self_addrs.clone(),
             b"example.com",
             old_epoch,
         );
-        let mut msg = DiscoveryMsg::default();
-        msg.notes.push(old_note.clone());
+        let message = lcs::to_bytes(&vec![old_note]).unwrap();
+        let msg = crate::proto::DiscoveryMsg { message };
         let key = (
             seed_peer_id,
             ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
@@ -538,8 +516,8 @@ fn old_note_higher_epoch() {
                 // Receive DiscoveryMsg from actor. The message should contain only a note for the
                 // sending peer since it doesn't yet have the note for the seed peer.
                 assert_eq!(1, msg.notes.len());
-                assert_eq!(Vec::from(peer_id), msg.notes[0].peer_id);
-                assert!(get_epoch_from_note(&msg.notes[0]) > old_epoch);
+                assert_eq!(peer_id, msg.notes[0].peer_id);
+                assert!(msg.notes[0].epoch() > old_epoch);
             }
             req => {
                 panic!("Unexpected request to peer manager: {:?}", req);
@@ -561,7 +539,7 @@ fn old_note_max_epoch() {
 
     // Setup seed.
     let seed_peer_info = gen_peer_info();
-    let seed_peer_addrs = get_addrs_from_info(&seed_peer_info);
+    let seed_peer_addrs = seed_peer_info.addrs.clone();
     let seed_peer_id = PeerId::random();
     let (seed_pub_keys, _) = generate_network_pub_keys_and_signer(seed_peer_id);
     let trusted_peers = Arc::new(RwLock::new(
@@ -599,7 +577,7 @@ fn old_note_max_epoch() {
                 seed_peer_id,
                 peer_manager::ConnectionStatusNotification::NewPeer(
                     seed_peer_id,
-                    Multiaddr::try_from(seed_peer_addrs.get(0).unwrap().clone()).unwrap(),
+                    seed_peer_addrs[0].clone(),
                 ),
                 Some(delivered_tx),
             )
@@ -609,15 +587,15 @@ fn old_note_max_epoch() {
         // Send DiscoveryMsg consisting of the this node's older note which has u64::MAX epoch.
         let old_self_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
         let old_epoch = std::u64::MAX;
-        let old_note = create_note(
+        let old_note = Note::new(
             &self_signer,
             peer_id,
             old_self_addrs.clone(),
             b"example.com",
             old_epoch,
         );
-        let mut msg = DiscoveryMsg::default();
-        msg.notes.push(old_note.clone());
+        let message = lcs::to_bytes(&vec![old_note]).unwrap();
+        let msg = crate::proto::DiscoveryMsg { message };
         let key = (
             seed_peer_id,
             ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
@@ -643,8 +621,8 @@ fn old_note_max_epoch() {
                 // Receive DiscoveryMsg from actor. The message should contain only a note for the
                 // sending peer since it doesn't yet have the note for the seed peer.
                 assert_eq!(1, msg.notes.len());
-                assert_eq!(Vec::from(peer_id), msg.notes[0].peer_id);
-                assert!(get_epoch_from_note(&msg.notes[0]) < old_epoch);
+                assert_eq!(peer_id, msg.notes[0].peer_id);
+                assert!(msg.notes[0].epoch() < old_epoch);
             }
             req => {
                 panic!("Unexpected request to peer manager: {:?}", req);

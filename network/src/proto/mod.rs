@@ -22,11 +22,6 @@ mod health_checker {
 }
 
 pub use self::{
-    consensus::ConsensusMsg,
-    health_checker::HealthCheckerMsg,
-    mempool::MempoolSyncMsg,
-    network::{
-        DiscoveryMsg, FullNodePayload, Note, PeerInfo, SignedFullNodePayload, SignedPeerInfo,
-    },
-    state_synchronizer::StateSynchronizerMsg,
+    consensus::ConsensusMsg, health_checker::HealthCheckerMsg, mempool::MempoolSyncMsg,
+    network::DiscoveryMsg, state_synchronizer::StateSynchronizerMsg,
 };
