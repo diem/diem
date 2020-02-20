@@ -652,6 +652,7 @@ fn base_type(context: &mut Context, ty: E::SingleType) -> N::BaseType {
             context.error(vec![(tyloc, msg)]);
             NB::Anything
         }
+        ES::Fun(..) => panic!("unexpected specification type"),
     };
     sp(tyloc, n_ty_)
 }
@@ -881,6 +882,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             assert!(context.has_errors());
             NE::UnresolvedError
         }
+        EE::Index(..) | EE::Lambda(..) => panic!("unexpected specification construct"),
     };
     sp(eloc, ne_)
 }

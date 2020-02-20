@@ -696,6 +696,8 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                     subtype(context, rloc, msg, &er.ty, &Type_::bool(lloc));
                     (Type_::bool(eloc), Type_::bool(eloc))
                 }
+
+                Range | Implies => panic!("specification operator unexpected"),
             };
             (ty, TE::BinopExp(el, bop, Box::new(operand_ty), er))
         }

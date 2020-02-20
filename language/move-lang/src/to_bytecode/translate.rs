@@ -1133,5 +1133,7 @@ fn binary_op(code: &mut Code, sp!(_, op_): BinOp) {
 
         O::Le => B::Le,
         O::Ge => B::Ge,
+
+        O::Range | O::Implies => panic!("specification operator unexpected"),
     });
 }

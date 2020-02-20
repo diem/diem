@@ -92,6 +92,7 @@ pub struct ModuleDefinition {
     pub name: ModuleName,
     pub structs: Vec<StructDefinition>,
     pub functions: Vec<Function>,
+    pub specs: Vec<SpecBlock>,
 }
 
 //**************************************************************************************************
@@ -157,6 +158,69 @@ pub struct Function {
 }
 
 //**************************************************************************************************
+// Specification Blocks
+//**************************************************************************************************
+
+// Specification block:
+//    SpecBlock = "spec" <SpecBlockTarget> "{" SpecBlockMember* "}"
+#[derive(Debug, PartialEq)]
+pub struct SpecBlock_ {
+    pub target: SpecBlockTarget,
+    pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
+    pub members: Vec<SpecBlockMember>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SpecBlockTarget_ {
+    Module,
+    Function(FunctionName),
+    Structure(StructName),
+}
+
+pub type SpecBlockTarget = Spanned<SpecBlockTarget_>;
+
+pub type SpecBlock = Spanned<SpecBlock_>;
+
+#[derive(Debug, PartialEq)]
+pub enum SpecBlockMember_ {
+    Condition {
+        kind: SpecConditionKind,
+        exp: Exp,
+    },
+    Invariant {
+        kind: InvariantKind,
+        exp: Exp,
+    },
+    Function {
+        name: FunctionName,
+        signature: FunctionSignature,
+        body: FunctionBody,
+    },
+    Variable {
+        name: Name,
+        type_: SingleType,
+    },
+}
+
+pub type SpecBlockMember = Spanned<SpecBlockMember_>;
+
+// Specification condition kind.
+#[derive(PartialEq, Debug)]
+pub enum SpecConditionKind {
+    AbortsIf,
+    Ensures,
+}
+
+// Specification invaiant kind.
+#[derive(Debug, PartialEq)]
+pub enum InvariantKind {
+    Data,
+    Update,
+    Pack,
+    Unpack,
+}
+
+//**************************************************************************************************
 // Types
 //**************************************************************************************************
 
@@ -193,6 +257,8 @@ pub enum SingleType_ {
     // &t
     // &mut t
     Ref(bool, Box<SingleType>),
+    // (t1,...,tn):t
+    Fun(Vec<SingleType>, Box<Type>),
 }
 pub type SingleType = Spanned<SingleType_>;
 
@@ -274,8 +340,12 @@ pub enum BinOp_ {
     Shl,
     // >>
     Shr,
+    // ..
+    Range, // spec only
 
     // Bool ops
+    // ==>
+    Implies, // spec only
     // &&
     And,
     // ||
@@ -327,6 +397,8 @@ pub enum Exp_ {
 
     // { seq }
     Block(Sequence),
+    // fun (x1, ..., xn) e
+    Lambda(BindList, Box<Exp>), // spec only
     // (e1, ..., en)
     ExpList(Vec<Exp>),
     // ()
@@ -354,8 +426,11 @@ pub enum Exp_ {
     // &e
     // &mut e
     Borrow(bool, Box<Exp>),
+
     // e.f
     Dot(Box<Exp>, Name),
+    // e[e']
+    Index(Box<Exp>, Box<Exp>), // spec only
 
     // (e as t)
     Cast(Box<Exp>, Type),
@@ -490,6 +565,8 @@ impl BinOp_ {
     pub const GT: &'static str = ">";
     pub const LE: &'static str = "<=";
     pub const GE: &'static str = ">=";
+    pub const IMPLIES: &'static str = "==>";
+    pub const RANGE: &'static str = "..";
 
     pub fn symbol(&self) -> &'static str {
         use BinOp_ as B;
@@ -512,6 +589,8 @@ impl BinOp_ {
             B::Gt => B::GT,
             B::Le => B::LE,
             B::Ge => B::GE,
+            B::Implies => B::IMPLIES,
+            B::Range => B::RANGE,
         }
     }
 
@@ -529,7 +608,17 @@ impl BinOp_ {
             | B::Lt
             | B::Gt
             | B::Le
-            | B::Ge => true,
+            | B::Ge
+            | B::Range
+            | B::Implies => true,
+        }
+    }
+
+    pub fn is_spec_only(&self) -> bool {
+        use BinOp_ as B;
+        match self {
+            B::Range | B::Implies => true,
+            _ => false,
         }
     }
 }
@@ -615,6 +704,7 @@ impl AstDebug for ModuleDefinition {
             name,
             structs,
             functions,
+            specs,
         } = self;
         w.write(&format!("module {}", name));
         w.block(|w| {
@@ -625,6 +715,10 @@ impl AstDebug for ModuleDefinition {
             }
             for fdef in functions {
                 fdef.ast_debug(w);
+                w.new_line();
+            }
+            for spec in specs {
+                spec.ast_debug(w);
                 w.new_line();
             }
         });
@@ -670,8 +764,73 @@ impl AstDebug for StructDefinition {
                 w.semicolon(fields, |w, (f, st)| {
                     w.write(&format!("{}: ", f));
                     st.ast_debug(w);
-                })
+                });
             })
+        }
+    }
+}
+
+impl AstDebug for SpecBlock_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.write("spec ");
+        self.target.ast_debug(w);
+        w.write("{");
+        w.semicolon(&self.members, |w, m| m.ast_debug(w));
+        w.write("}");
+    }
+}
+
+impl AstDebug for SpecBlockTarget_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            SpecBlockTarget_::Module => w.write("module "),
+            SpecBlockTarget_::Function(n) => w.write(&format!("fun {} ", n.0.value)),
+            SpecBlockTarget_::Structure(n) => w.write(&format!("struct {} ", n.0.value)),
+        }
+    }
+}
+
+impl AstDebug for SpecBlockMember_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            SpecBlockMember_::Condition { kind, exp } => {
+                match kind {
+                    SpecConditionKind::AbortsIf => w.write("aborts_if "),
+                    SpecConditionKind::Ensures => w.write("ensures "),
+                }
+                exp.ast_debug(w);
+            }
+            SpecBlockMember_::Invariant { kind, exp } => {
+                w.write("invariant ");
+                match kind {
+                    InvariantKind::Data => {}
+                    InvariantKind::Update => w.write("update "),
+                    InvariantKind::Pack => w.write("pack "),
+                    InvariantKind::Unpack => w.write("unpack "),
+                }
+                exp.ast_debug(w);
+            }
+            SpecBlockMember_::Function {
+                signature,
+                name,
+                body,
+            } => {
+                if let FunctionBody_::Native = &body.value {
+                    w.write("native ");
+                }
+                w.write("fun ");
+                w.write(&format!("{}", name));
+                signature.ast_debug(w);
+                match &body.value {
+                    FunctionBody_::Defined(body) => w.block(|w| body.ast_debug(w)),
+                    FunctionBody_::Native => w.writeln(";"),
+                }
+            }
+            SpecBlockMember_::Variable { name, type_ } => {
+                w.write(&format!("{}", name));
+                w.write(": ");
+                type_.ast_debug(w);
+            }
         }
     }
 }
@@ -799,6 +958,12 @@ impl AstDebug for SingleType_ {
                 }
                 s.ast_debug(w)
             }
+            SingleType_::Fun(args, result) => {
+                w.write("(");
+                w.comma(args, |w, ty| ty.ast_debug(w));
+                w.write("):");
+                result.ast_debug(w);
+            }
         }
     }
 }
@@ -924,6 +1089,12 @@ impl AstDebug for Exp_ {
                 e.ast_debug(w);
             }
             E::Block(seq) => w.block(|w| seq.ast_debug(w)),
+            E::Lambda(sp!(_, bs), e) => {
+                w.write("fun ");
+                bs.ast_debug(w);
+                w.write(" ");
+                e.ast_debug(w);
+            }
             E::ExpList(es) => {
                 w.write("(");
                 w.comma(es, |w, e| e.ast_debug(w));
@@ -980,6 +1151,12 @@ impl AstDebug for Exp_ {
                 w.write(" as ");
                 ty.ast_debug(w);
                 w.write(")");
+            }
+            E::Index(e, i) => {
+                e.ast_debug(w);
+                w.write("[");
+                i.ast_debug(w);
+                w.write("]");
             }
             E::Annotate(e, ty) => {
                 w.write("(");

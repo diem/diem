@@ -22,6 +22,7 @@ struct Context {
     errors: Errors,
     address: Option<Address>,
     aliases: AliasMap,
+    in_spec_context: bool,
 }
 impl Context {
     fn new() -> Self {
@@ -29,6 +30,7 @@ impl Context {
             errors: vec![],
             address: None,
             aliases: AliasMap::new(),
+            in_spec_context: false,
         }
     }
 
@@ -79,6 +81,19 @@ impl Context {
 
     pub fn module_alias_get(&mut self, n: &Name) -> Option<&ModuleIdent> {
         self.aliases.get(n)
+    }
+
+    /// Produces an error if translation is not in specification context.
+    pub fn require_spec_context(&mut self, loc: Loc, item: &str) -> bool {
+        if self.in_spec_context {
+            true
+        } else {
+            self.error(vec![(
+                loc,
+                &format!("{} only allowed in specifications", item),
+            )]);
+            false
+        }
     }
 }
 
@@ -210,6 +225,7 @@ fn module(
         name,
         structs: pstructs,
         functions: pfunctions,
+        specs: pspecs,
     } = mdef;
     let name_loc = name.loc();
     if name.value() == ModuleName::SELF_NAME {
@@ -229,6 +245,7 @@ fn module(
     context.set_and_shadow_aliases(alias_map.clone());
     let structs = structs(context, &name, pstructs);
     let functions = functions(context, &name, pfunctions);
+    let specs = specs(context, pspecs);
     let used_aliases = context.clear_aliases();
     let (uses, unused_aliases) = check_aliases(context, used_aliases, alias_map);
     let is_source_module = is_source_module && !fake_natives::is_fake_native(&current_module);
@@ -238,6 +255,7 @@ fn module(
         is_source_module,
         structs,
         functions,
+        specs,
     };
     (current_module, def)
 }
@@ -422,7 +440,7 @@ fn struct_fields(
 }
 
 //**************************************************************************************************
-// Functiosn
+// Functions
 //**************************************************************************************************
 
 fn functions(
@@ -506,6 +524,67 @@ fn function_body(context: &mut Context, sp!(loc, pbody_): P::FunctionBody) -> E:
 }
 
 //**************************************************************************************************
+// Specification Blocks
+//**************************************************************************************************
+
+fn specs(context: &mut Context, pspecs: Vec<P::SpecBlock>) -> Vec<E::SpecBlock> {
+    pspecs.into_iter().map(|s| spec(context, s)).collect()
+}
+
+fn spec(context: &mut Context, sp!(loc, pspec): P::SpecBlock) -> E::SpecBlock {
+    let P::SpecBlock_ {
+        target,
+        uses,
+        members: pmembers,
+    } = pspec;
+    context.in_spec_context = true;
+    let members = pmembers
+        .into_iter()
+        .map(|m| spec_member(context, m))
+        .collect();
+    context.in_spec_context = false;
+    sp(
+        loc,
+        E::SpecBlock_ {
+            target,
+            uses,
+            members,
+        },
+    )
+}
+
+fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::SpecBlockMember {
+    let em = match pm {
+        P::SpecBlockMember_::Condition { kind, exp } => {
+            let exp = exp_(context, exp);
+            E::SpecBlockMember_::Condition { kind, exp }
+        }
+        P::SpecBlockMember_::Invariant { kind, exp } => {
+            let exp = exp_(context, exp);
+            E::SpecBlockMember_::Invariant { kind, exp }
+        }
+        P::SpecBlockMember_::Function {
+            name,
+            signature,
+            body,
+        } => {
+            let body = function_body(context, body);
+            let signature = function_signature(context, signature);
+            E::SpecBlockMember_::Function {
+                name,
+                signature,
+                body,
+            }
+        }
+        P::SpecBlockMember_::Variable { name, type_ } => {
+            let type_ = single_type(context, type_);
+            E::SpecBlockMember_::Variable { name, type_ }
+        }
+    };
+    sp(loc, em)
+}
+
+//**************************************************************************************************
 // Types
 //**************************************************************************************************
 
@@ -552,6 +631,15 @@ fn single_type_(context: &mut Context, sp!(loc, pst_): P::SingleType) -> Option<
             ES::Apply(n, tyargs)
         }
         PS::Ref(mut_, inner) => ES::Ref(mut_, Box::new(single_type(context, *inner))),
+        PS::Fun(args, result) => {
+            if context.require_spec_context(loc, "`|_|_` function type") {
+                let args = single_types(context, args);
+                let result = type_(context, *result);
+                ES::Fun(args, Box::new(result))
+            } else {
+                ES::UnresolvedError
+            }
+        }
     };
     Some(sp(loc, st_))
 }
@@ -717,6 +805,21 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::While(pb, ploop) => EE::While(exp(context, *pb), exp(context, *ploop)),
         PE::Loop(ploop) => EE::Loop(exp(context, *ploop)),
         PE::Block(seq) => EE::Block(sequence(context, loc, seq)),
+        PE::Lambda(pbs, pe) => {
+            if !context.require_spec_context(loc, "`|_| _` lambda expression") {
+                EE::UnresolvedError
+            } else {
+                let bs_opt = bind_list(context, pbs);
+                let e = exp_(context, *pe);
+                match bs_opt {
+                    Some(bs) => EE::Lambda(bs, Box::new(e)),
+                    None => {
+                        assert!(context.has_errors());
+                        EE::UnresolvedError
+                    }
+                }
+            }
+        }
         PE::ExpList(pes) => {
             assert!(pes.len() > 1);
             EE::ExpList(exps(context, pes))
@@ -747,7 +850,15 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Continue => EE::Continue,
         PE::Dereference(pe) => EE::Dereference(exp(context, *pe)),
         PE::UnaryExp(op, pe) => EE::UnaryExp(op, exp(context, *pe)),
-        PE::BinopExp(pl, op, pr) => EE::BinopExp(exp(context, *pl), op, exp(context, *pr)),
+        PE::BinopExp(pl, op, pr) => {
+            if op.value.is_spec_only()
+                && !context.require_spec_context(loc, &format!("`{}` operator", op.value.symbol()))
+            {
+                EE::UnresolvedError
+            } else {
+                EE::BinopExp(exp(context, *pl), op, exp(context, *pr))
+            }
+        }
         PE::Borrow(mut_, pr) => EE::Borrow(mut_, exp(context, *pr)),
         pdotted_ @ PE::Dot(_, _) => match exp_dotted(context, sp(loc, pdotted_)) {
             Some(edotted) => EE::ExpDotted(Box::new(edotted)),
@@ -757,6 +868,13 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             }
         },
         PE::Cast(e, ty) => EE::Cast(exp(context, *e), type_(context, ty)),
+        PE::Index(e, i) => {
+            if context.require_spec_context(loc, "`_[_]` index operator") {
+                EE::Index(exp(context, *e), exp(context, *i))
+            } else {
+                EE::UnresolvedError
+            }
+        }
         PE::Annotate(e, ty) => EE::Annotate(exp(context, *e), type_(context, ty)),
         PE::UnresolvedError => panic!("ICE error should have been thrown"),
     };
