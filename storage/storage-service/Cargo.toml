@@ -35,4 +35,5 @@ proptest = "0.9.2"
 
 [features]
 default = []
+testing = ["storage-client", "libradb/fuzzing"]
 fuzzing = ["proptest", "storage-client", "libradb/fuzzing"]

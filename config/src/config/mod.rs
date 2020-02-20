@@ -16,6 +16,8 @@ use thiserror::Error;
 
 mod admission_control_config;
 pub use admission_control_config::*;
+mod rpc_config;
+pub use rpc_config::*;
 mod consensus_config;
 pub use consensus_config::*;
 mod debug_interface_config;
@@ -52,6 +54,8 @@ pub use vm_config::*;
 pub struct NodeConfig {
     #[serde(default)]
     pub admission_control: AdmissionControlConfig,
+    #[serde(default)]
+    pub rpc: RpcConfig,
     #[serde(default)]
     pub base: BaseConfig,
     #[serde(default)]
@@ -157,6 +161,7 @@ impl NodeConfig {
     pub fn clone_for_template(&self) -> Self {
         Self {
             admission_control: self.admission_control.clone(),
+            rpc: self.rpc.clone(),
             base: self.base.clone(),
             consensus: self.consensus.clone(),
             debug_interface: self.debug_interface.clone(),
@@ -256,6 +261,7 @@ impl NodeConfig {
         self.admission_control.randomize_ports();
         self.debug_interface.randomize_ports();
         self.storage.randomize_ports();
+        self.rpc.randomize_ports();
     }
 
     pub fn random() -> Self {

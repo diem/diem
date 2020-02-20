@@ -9,7 +9,7 @@
 //! [`storage-client`](../storage-client/index.html) instead of via
 //! [`StorageClient`](../storage-proto/proto/storage_grpc/struct.StorageClient.html) directly.
 
-#[cfg(feature = "fuzzing")]
+#[cfg(any(feature = "testing", feature = "fuzzing"))]
 pub mod mocks;
 
 use anyhow::Result;
