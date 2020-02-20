@@ -4,8 +4,8 @@
 //! This module has definition of various proofs.
 
 #[cfg(test)]
-#[path = "unit_tests/proof_proto_conversion_test.rs"]
-mod proof_proto_conversion_test;
+#[path = "unit_tests/proof_conversion_test.rs"]
+mod proof_conversion_test;
 
 use super::{
     position::Position, verify_transaction_info, MerkleTreeInternalNode, SparseMerkleInternalNode,
@@ -77,7 +77,7 @@ fn into_proto_siblings(siblings: Vec<HashValue>, placeholder: HashValue) -> Vec<
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For
 /// example, both `LedgerInfoToTransactionInfoProof` and `TransactionInfoToEventProof` can be
 /// constructed on top of this structure.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AccumulatorProof<H> {
     /// All siblings in this proof, including the default ones. Siblings are ordered from the bottom
     /// level to the root level.
@@ -198,7 +198,7 @@ pub type TestAccumulatorProof = AccumulatorProof<TestOnlyHasher>;
 
 /// A proof that can be used to authenticate an element in a Sparse Merkle Tree given trusted root
 /// hash. For example, `TransactionInfoToAccountProof` can be constructed on top of this structure.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SparseMerkleProof {
     /// This proof can be used to authenticate whether a given leaf exists in the tree or not.
     ///     - If this is `Some(HashValue, HashValue)`
@@ -373,7 +373,7 @@ impl From<SparseMerkleProof> for crate::proto::types::SparseMerkleProof {
 /// leaves, it can be convinced that the two accumulators are consistent.
 ///
 /// See [`crate::proof::accumulator::Accumulator::append_subtrees`] for more details.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct AccumulatorConsistencyProof {
     /// The subtrees representing the newly appended leaves.
     subtrees: Vec<HashValue>,
@@ -671,7 +671,7 @@ impl From<SparseMerkleRangeProof> for crate::proto::types::SparseMerkleRangeProo
 /// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo` the verifier needs to verify the
 /// correctness of the `TransactionInfo` object, and the `TransactionInfo` object that is supposed
 /// to match the `Transaction`.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TransactionProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
@@ -776,7 +776,7 @@ impl From<TransactionProof> for crate::proto::types::TransactionProof {
 /// The complete proof used to authenticate the state of an account. This structure consists of the
 /// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo`, the `TransactionInfo` object and the
 /// `SparseMerkleProof` from state root to the account.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountStateProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
@@ -886,7 +886,7 @@ impl From<AccountStateProof> for crate::proto::types::AccountStateProof {
 /// The complete proof used to authenticate a contract event. This structure consists of the
 /// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo`, the `TransactionInfo` object and the
 /// `AccumulatorProof` from event accumulator root to the event.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct EventProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the

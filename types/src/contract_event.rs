@@ -155,7 +155,7 @@ impl From<ContractEvent> for crate::proto::types::Event {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct EventWithProof {
     pub transaction_version: u64, // Should be `Version`

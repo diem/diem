@@ -450,7 +450,7 @@ impl From<SignatureCheckedTransaction> for crate::proto::types::SignedTransactio
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TransactionWithProof {
     pub version: Version,
