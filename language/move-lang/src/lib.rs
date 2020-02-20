@@ -98,6 +98,26 @@ pub fn move_compile_no_report(
     })
 }
 
+/// Move compile up to expansion phase, returning errors instead of reporting them to stderr
+pub fn move_compile_to_expansion_no_report(
+    targets: &[String],
+    deps: &[String],
+    sender_opt: Option<Address>,
+) -> io::Result<(FilesSourceText, Result<expansion::ast::Program, Errors>)> {
+    let (files, pprog_res) = parse_program(targets, deps)?;
+    Ok(match pprog_res {
+        Ok(pprog) => {
+            let (eprog, errors) = expansion::translate::program(pprog, sender_opt);
+            if errors.is_empty() {
+                (files, Ok(eprog))
+            } else {
+                (files, Err(errors))
+            }
+        }
+        Err(errors) => (files, Err(errors)),
+    })
+}
+
 /// Runs the bytecode verifier on the compiled units
 /// Fails if the bytecode verifier errors
 pub fn sanity_check_compiled_units(
