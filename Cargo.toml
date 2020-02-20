@@ -56,6 +56,8 @@ members = [
     "language/compiler/bytecode-source-map",
     "language/move-ir/types",
     "language/move-prover/bytecode-to-boogie",
+    "language/move-prover/spec-lang",
+    "language/move-prover/test-utils",
     "language/move-prover/stackless-bytecode-generator",
     "language/move-vm/cache",
     "language/move-vm/types",

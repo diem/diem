@@ -1,0 +1,23 @@
+error: expected `bool` but found `num`
+
+   ┌── tests/sources/invariants_err.move:9:15 ───
+   │
+ 9 │     invariant x + 1;
+   │               ^^^^^
+   │
+
+error: `old(..)` expression not allowed in this context
+
+    ┌── tests/sources/invariants_err.move:11:15 ───
+    │
+ 11 │     invariant old(x) > 0;
+    │               ^^^^^^
+    │
+
+error: `old(..old(..)..)` not allowed
+
+    ┌── tests/sources/invariants_err.move:13:26 ───
+    │
+ 13 │     invariant update old(old(x)) > 0;
+    │                          ^^^^^^
+    │

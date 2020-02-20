@@ -1,0 +1,47 @@
+error: field `xx` not declared in struct `M::S`
+
+    ┌── tests/sources/structs_err.move:26:7 ───
+    │
+ 26 │       s.xx
+    │       ^^^^
+    │
+
+error: expected `bool` but found `u64`
+
+    ┌── tests/sources/structs_err.move:31:7 ───
+    │
+ 31 │       s.x
+    │       ^^^
+    │
+
+error: expected `bool` but found `u64`
+
+    ┌── tests/sources/structs_err.move:36:18 ───
+    │
+ 36 │       S{x: x, y: y, z: z}
+    │                  ^
+    │
+
+error: missing fields `y`, `z`
+
+    ┌── tests/sources/structs_err.move:40:7 ───
+    │
+ 40 │       S{x: x}
+    │       ^^^^^^^
+    │
+
+error: expected `bool` but found `u64`
+
+    ┌── tests/sources/structs_err.move:45:7 ───
+    │
+ 45 │       G{x: x, y: y}
+    │       ^^^^^^^^^^^^^
+    │
+
+error: generic count mismatch (expected 1 but found 2)
+
+    ┌── tests/sources/structs_err.move:50:7 ───
+    │
+ 50 │       G<u64, bool>{x: x, y: y}
+    │       ^^^^^^^^^^^^^^^^^^^^^^^^
+    │

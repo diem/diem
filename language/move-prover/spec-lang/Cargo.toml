@@ -1,0 +1,33 @@
+[package]
+name = "spec-lang"
+version = "0.1.0"
+authors = ["Libra <oncall+libra@xmail.facebook.com>"]
+publish = false
+edition = "2018"
+
+[dependencies]
+# libra dependencies
+move-lang = { path = "../../move-lang", version = "0.0.1" }
+bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
+libra-types = { path = "../../../types", version = "0.1.0" }
+bytecode-source-map = { path = "../../compiler/bytecode-source-map", version = "0.1.0" }
+move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
+stdlib = { path = "../../stdlib", version = "0.1.0" }
+
+# external dependencies
+codespan = "0.5.0"
+codespan-reporting = "0.5.0"
+itertools = "0.8.0"
+log = "0.4.8"
+num = "0.2.0"
+regex = "1.3.1"
+anyhow = "1.0.*"
+
+[dev-dependencies]
+datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
+test-utils = { path = "../test-utils", version = "0.1.0" }
+
+[[test]]
+name = "testsuite"
+harness = false
