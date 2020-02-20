@@ -146,14 +146,11 @@ impl StateSyncClient {
                     Err(format_err!("[state sync client] failed to receive commit ACK from state synchronizer on time"))
                 }
                 Ok(resp) => {
-                    match resp?? {
-                        CommitResponse { msg } => {
-                            if msg != "" {
-                                Err(format_err!("[state sync client] commit failed: {:?}", msg))
-                            } else {
-                                Ok(())
-                            }
-                        }
+                    let CommitResponse { msg } = resp??;
+                    if msg != "" {
+                        Err(format_err!("[state sync client] commit failed: {:?}", msg))
+                    } else {
+                        Ok(())
                     }
                 }
             }
