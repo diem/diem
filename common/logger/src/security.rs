@@ -168,7 +168,11 @@ impl SecurityLog {
 
 impl fmt::Display for SecurityLog {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", serde_json::to_string(&self).unwrap_or_else(|e| e.to_string()))
+        write!(
+            f,
+            "{}",
+            serde_json::to_string(&self).unwrap_or_else(|e| e.to_string())
+        )
     }
 }
 
