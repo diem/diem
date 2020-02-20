@@ -9,7 +9,6 @@ use std::{
     process::{Child, Command, Output, Stdio},
     sync::Arc,
 };
-use workspace_builder;
 
 pub struct InteractiveClient {
     client: Option<Child>,

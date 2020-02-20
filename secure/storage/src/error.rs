@@ -4,7 +4,6 @@
 use serde::{Deserialize, Serialize};
 use std::io;
 use thiserror::Error;
-use toml;
 
 #[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
 pub enum Error {

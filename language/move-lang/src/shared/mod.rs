@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan::Span;
-use hex;
 use std::{
     cmp::Ordering,
     convert::TryFrom,

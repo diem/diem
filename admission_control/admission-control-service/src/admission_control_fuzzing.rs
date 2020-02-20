@@ -10,7 +10,6 @@ use libra_mempool::mocks::MockSharedMempool;
 use libra_proptest_helpers::ValueGenerator;
 use libra_prost_ext::MessageExt;
 use libra_types::transaction::SignedTransaction;
-use proptest;
 use prost::Message;
 use std::sync::Arc;
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;

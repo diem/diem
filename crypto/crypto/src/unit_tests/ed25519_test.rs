@@ -13,7 +13,6 @@ use core::{
 };
 
 use crate::hash::HashValue;
-use ed25519_dalek;
 use proptest::prelude::*;
 
 proptest! {

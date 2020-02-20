@@ -50,7 +50,6 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
-use channel;
 use futures::{
     io::{AsyncRead, AsyncWrite},
     sink::SinkExt,

@@ -7,12 +7,10 @@ use crate::{
     collector_serializer::CollectorSerializer,
     kv_categorizer::{KVCategorizer, KVCategory},
 };
-use chrono;
 use itertools::{Either, Itertools};
 use slog::{Drain, Key, Level, OwnedKVList, Record, KV};
 use slog_term::{Decorator, RecordDecorator};
 use std::{io, str};
-use thread_id;
 
 /// A slog `Drain` for glog-formatted logs.
 pub struct GlogFormat<D: Decorator, C: KVCategorizer> {
@@ -163,7 +161,6 @@ mod tests {
     use regex::{Captures, Regex};
     use slog::{info, o, Drain, Logger};
     use slog_term::PlainSyncDecorator;
-    use thread_id;
 
     // Create a regex that matches log lines.
     static LOG_REGEX: Lazy<Regex> = Lazy::new(|| {

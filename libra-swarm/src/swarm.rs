@@ -18,7 +18,6 @@ use std::{
     str::FromStr,
 };
 use thiserror::Error;
-use workspace_builder;
 
 const LIBRA_NODE_BIN: &str = "libra-node";
 

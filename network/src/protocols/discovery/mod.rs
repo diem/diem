@@ -41,7 +41,6 @@ use crate::{
 };
 use anyhow::anyhow;
 use bytes::Bytes;
-use channel;
 use futures::{
     sink::SinkExt,
     stream::{FusedStream, Stream, StreamExt},

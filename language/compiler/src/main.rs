@@ -16,7 +16,6 @@ use libra_types::{
     transaction::{Module, Script},
     vm_error::VMStatus,
 };
-use serde_json;
 use std::{
     convert::TryFrom,
     fs,

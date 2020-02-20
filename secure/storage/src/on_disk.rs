@@ -9,7 +9,6 @@ use std::{
     io::{Read, Write},
     path::PathBuf,
 };
-use toml;
 
 /// InMemoryStorage represents a key value store that is purely in memory and intended for single
 /// threads (or must be wrapped by a Arc<RwLock<>>). This provides no permission checks and simply

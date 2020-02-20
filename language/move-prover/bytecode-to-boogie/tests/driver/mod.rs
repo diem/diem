@@ -4,7 +4,6 @@
 use bytecode_to_boogie::boogie_wrapper::BoogieOutput;
 use bytecode_to_boogie::cli::Options;
 use bytecode_to_boogie::driver::Driver;
-use goldenfile;
 use itertools::Itertools;
 use libra_temppath::TempPath;
 use log::info;

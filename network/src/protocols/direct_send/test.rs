@@ -9,7 +9,6 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
-use channel;
 use futures::{sink::SinkExt, stream::StreamExt};
 use libra_logger::prelude::*;
 use libra_types::PeerId;

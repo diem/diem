@@ -10,7 +10,6 @@ use std::{
     convert::{TryFrom, TryInto},
 };
 use thiserror::Error;
-use ureq;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {

@@ -3,7 +3,6 @@
 
 use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
-use hex;
 #[cfg(feature = "fuzzing")]
 use rand::{rngs::OsRng, RngCore};
 use serde::{de, ser, Deserialize, Serialize};

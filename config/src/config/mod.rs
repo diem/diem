@@ -13,7 +13,6 @@ use std::{
     str::FromStr,
 };
 use thiserror::Error;
-use toml;
 
 mod admission_control_config;
 pub use admission_control_config::*;
