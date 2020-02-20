@@ -72,6 +72,7 @@ pub struct RawTransaction {
     expiration_time: Duration,
 }
 
+// TODO(#1307)
 fn serialize_duration<S>(d: &Duration, serializer: S) -> std::result::Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
