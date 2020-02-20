@@ -17,8 +17,11 @@ use crate::{
         conn_status_channel, PeerManager, PeerManagerNotification, PeerManagerRequest,
         PeerManagerRequestSender,
     },
-    proto::PeerInfo,
-    protocols::{discovery::Discovery, health_checker::HealthChecker, identity::Identity},
+    protocols::{
+        discovery::{Discovery, PeerInfo},
+        health_checker::HealthChecker,
+        identity::Identity,
+    },
     transport::*,
     validator_network, ProtocolId,
 };
@@ -189,15 +192,7 @@ impl NetworkBuilder {
     pub fn seed_peers(&mut self, seed_peers: HashMap<PeerId, Vec<Multiaddr>>) -> &mut Self {
         self.seed_peers = seed_peers
             .into_iter()
-            .map(|(peer_id, seed_addrs)| {
-                let mut peer_info = PeerInfo::default();
-                peer_info.epoch = 0;
-                peer_info.addrs = seed_addrs
-                    .into_iter()
-                    .map(|addr| addr.as_ref().into())
-                    .collect();
-                (peer_id, peer_info)
-            })
+            .map(|(peer_id, seed_addrs)| (peer_id, PeerInfo::new(seed_addrs, 0)))
             .collect();
         self
     }
