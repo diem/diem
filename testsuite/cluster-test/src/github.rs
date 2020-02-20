@@ -53,3 +53,9 @@ impl GitHub {
         Ok(response)
     }
 }
+
+impl Default for GitHub {
+    fn default() -> Self {
+        Self::new()
+    }
+}

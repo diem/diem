@@ -111,3 +111,9 @@ impl MoveVM {
             .rent(|runtime| runtime.load_gas_schedule(chain_state, data_view))
     }
 }
+
+impl Default for MoveVM {
+    fn default() -> Self {
+        Self::new()
+    }
+}

@@ -4,7 +4,7 @@
 use serde::Serialize;
 use std::fmt;
 
-#[derive(Serialize)]
+#[derive(Default, Serialize)]
 pub struct SuiteReport {
     metrics: Vec<ReportedMetric>,
     text: String,
@@ -19,10 +19,7 @@ pub struct ReportedMetric {
 
 impl SuiteReport {
     pub fn new() -> Self {
-        SuiteReport {
-            metrics: vec![],
-            text: String::new(),
-        }
+        Default::default()
     }
 
     pub fn report_metric<E: ToString, M: ToString>(

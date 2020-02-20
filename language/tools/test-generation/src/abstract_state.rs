@@ -561,6 +561,12 @@ impl fmt::Display for AbstractState {
     }
 }
 
+impl Default for AbstractState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl fmt::Display for AbstractValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({:?}: {:?})", self.token, self.kind)

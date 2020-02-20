@@ -183,6 +183,7 @@ pub enum Opcodes {
 pub const BINARY_SIZE_LIMIT: usize = usize::max_value();
 
 /// A wrapper for the binary vector
+#[derive(Default)]
 pub struct BinaryData {
     _binary: Vec<u8>,
 }

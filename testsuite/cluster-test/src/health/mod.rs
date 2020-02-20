@@ -234,3 +234,9 @@ impl HealthCheckContext {
         self.err_acc.push(HealthCheckError { validator, message })
     }
 }
+
+impl Default for HealthCheckContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
