@@ -881,8 +881,8 @@ fn parse_binop_exp<'input>(
             Tok::Caret => BinOp_::Xor,
             Tok::Pipe => BinOp_::BitOr,
             Tok::Amp => BinOp_::BitAnd,
-            Tok::LessLess => BinOp_::BitOr, // BinOp_::BitShl, FIXME
-            Tok::GreaterGreater => BinOp_::BitOr, // BinOp_::BitShr, FIXME
+            Tok::LessLess => BinOp_::Shl,
+            Tok::GreaterGreater => BinOp_::Shr,
             Tok::Plus => BinOp_::Add,
             Tok::Minus => BinOp_::Sub,
             Tok::Star => BinOp_::Mul,
