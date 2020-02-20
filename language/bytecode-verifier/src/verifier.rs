@@ -383,8 +383,16 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VMSt
             Some(vm_native_function) => {
                 let declared_function_signature =
                     native_function_definition_view.signature().as_inner();
-                let expected_function_signature = vm_native_function.signature(Some(module_view));
-                let matching_signatures = expected_function_signature
+                let expected_function_signature_res =
+                    vm_native_function.signature(Some(module_view));
+                let expected_function_signature_opt = match expected_function_signature_res {
+                    Ok(opt) => opt,
+                    Err(e) => {
+                        errors.push(e);
+                        continue;
+                    }
+                };
+                let matching_signatures = expected_function_signature_opt
                     .map(|e| &e == declared_function_signature)
                     .unwrap_or(false);
                 if !matching_signatures {
