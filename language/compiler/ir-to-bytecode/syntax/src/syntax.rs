@@ -2087,9 +2087,7 @@ fn parse_script_or_module<'input>(
     }
 }
 
-pub fn parse_cmd_string(
-    input: &str,
-) -> Result<Cmd_, ParseError<usize, anyhow::Error>> {
+pub fn parse_cmd_string(input: &str) -> Result<Cmd_, ParseError<usize, anyhow::Error>> {
     let mut tokens = Lexer::new(input);
     tokens.advance()?;
     parse_cmd_(&mut tokens)
@@ -2103,17 +2101,13 @@ pub fn parse_module_string(
     parse_module(&mut tokens)
 }
 
-pub fn parse_program_string(
-    input: &str,
-) -> Result<Program, ParseError<usize, anyhow::Error>> {
+pub fn parse_program_string(input: &str) -> Result<Program, ParseError<usize, anyhow::Error>> {
     let mut tokens = Lexer::new(input);
     tokens.advance()?;
     parse_program(&mut tokens)
 }
 
-pub fn parse_script_string(
-    input: &str,
-) -> Result<Script, ParseError<usize, anyhow::Error>> {
+pub fn parse_script_string(input: &str) -> Result<Script, ParseError<usize, anyhow::Error>> {
     let mut tokens = Lexer::new(input);
     tokens.advance()?;
     parse_script(&mut tokens)

@@ -114,10 +114,7 @@ pub fn parse_cmd_(cmd_str: &str, _sender_address: AccountAddress) -> Result<ast:
     syntax::parse_cmd_string(stripped_string).or_else(|e| handle_error(e, stripped_string))
 }
 
-fn handle_error<T>(
-    e: syntax::ParseError<usize, anyhow::Error>,
-    code_str: &str,
-) -> Result<T> {
+fn handle_error<T>(e: syntax::ParseError<usize, anyhow::Error>, code_str: &str) -> Result<T> {
     let mut s = DefaultHasher::new();
     code_str.hash(&mut s);
     let mut code = CodeMap::new();
