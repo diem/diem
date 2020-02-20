@@ -14,7 +14,7 @@ type BlockIDSize = u16;
 type BlockLocals = HashMap<usize, (AbstractValue, BorrowState)>;
 
 /// This represents a basic block in a control flow graph
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct BasicBlock {
     /// The starting locals
     locals_in: BlockLocals,

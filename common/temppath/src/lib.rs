@@ -76,3 +76,9 @@ impl std::convert::AsRef<Path> for TempPath {
         self.path()
     }
 }
+
+impl Default for TempPath {
+    fn default() -> Self {
+        Self::new()
+    }
+}

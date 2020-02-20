@@ -109,7 +109,7 @@ impl EvaluationOutput {
 
 /// A log consisting of outputs from all stages and the final status.
 /// This is checked against the directives.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EvaluationLog {
     pub outputs: Vec<EvaluationOutput>,
 }

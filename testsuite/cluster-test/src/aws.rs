@@ -56,6 +56,12 @@ impl Aws {
     }
 }
 
+impl Default for Aws {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn discover_workspace(ec2: &Ec2Client) -> String {
     let instance_id = current_instance_id();
     let mut attempt = 0;

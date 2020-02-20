@@ -31,3 +31,9 @@ impl SlackClient {
         Ok(())
     }
 }
+
+impl Default for SlackClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}

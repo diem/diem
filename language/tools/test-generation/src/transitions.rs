@@ -23,15 +23,14 @@ use std::collections::HashMap;
 
 /// A substitution is a mapping from type formal index to the `SignatureToken` representing the
 /// type instantiation for that index.
+#[derive(Default)]
 pub struct Subst {
     pub subst: HashMap<usize, SignatureToken>,
 }
 
 impl Subst {
     pub fn new() -> Self {
-        Self {
-            subst: HashMap::new(),
-        }
+        Default::default()
     }
 
     /// NB that the position of arguments here matters. We can build a substitution if the `instr_sig`
