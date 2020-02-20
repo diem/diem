@@ -232,7 +232,6 @@ impl LibraVM {
     fn verify_transaction_impl(
         &self,
         transaction: &SignatureCheckedTransaction,
-        gas_schedule: VMResult<&CostTable>,
         state_view: &dyn StateView,
         remote_cache: &dyn RemoteCache,
     ) -> VMResult<VerifiedTranscationPayload> {
@@ -243,14 +242,14 @@ impl LibraVM {
         match transaction.payload() {
             TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
             TransactionPayload::Script(script) => {
-                self.run_prologue(gas_schedule, &mut ctx, &txn_data)?;
+                self.run_prologue(&mut ctx, &txn_data)?;
                 Ok(VerifiedTranscationPayload::Script(
                     script.code().to_vec(),
                     script.args().to_vec(),
                 ))
             }
             TransactionPayload::Module(module) => {
-                self.run_prologue(gas_schedule, &mut ctx, &txn_data)?;
+                self.run_prologue(&mut ctx, &txn_data)?;
                 Ok(VerifiedTranscationPayload::Module(module.code().to_vec()))
             }
             TransactionPayload::WriteSet(_) => Err(VMStatus::new(StatusCode::UNREACHABLE)),
@@ -329,7 +328,7 @@ impl LibraVM {
     ) -> TransactionOutput {
         let txn_data = TransactionMetadata::new(txn);
         let verified_payload = record_stats! {time_hist | TXN_VERIFICATION_TIME_TAKEN | {
-            self.verify_transaction_impl(txn, self.get_gas_schedule(), state_view, remote_cache)
+            self.verify_transaction_impl(txn, state_view, remote_cache)
         }};
         let result = verified_payload
             .and_then(|verified_payload| {
@@ -415,7 +414,6 @@ impl LibraVM {
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_prologue<T: ChainState>(
         &self,
-        gas_schedule: VMResult<&CostTable>,
         chain_state: &mut T,
         txn_data: &TransactionMetadata,
     ) -> VMResult<()> {
@@ -429,7 +427,7 @@ impl LibraVM {
                     .execute_function(
                         &ACCOUNT_MODULE,
                         &PROLOGUE_NAME,
-                        gas_schedule?,
+                        self.get_gas_schedule()?,
                         chain_state,
                         &txn_data,
                         vec![
@@ -569,13 +567,11 @@ impl VMVerifier for LibraVM {
     ) -> Option<VMStatus> {
         let data_cache = BlockDataCache::new(state_view);
         record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
-                let mut ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
-                let gas_schedule = self.move_vm.load_gas_schedule(&mut ctx, &data_cache);
                 let signature_verified_txn = match transaction.check_signature() {
                     Ok(t) => t,
                     Err(_) => return Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
                 };
-                let res = match self.verify_transaction_impl(&signature_verified_txn, gas_schedule.as_ref().map_err(|err| err.clone()), state_view, &data_cache) {
+                let res = match self.verify_transaction_impl(&signature_verified_txn, state_view, &data_cache) {
                     Ok(_) => None,
                     Err(err) => {
                         if err.major_status == StatusCode::SEQUENCE_NUMBER_TOO_NEW {
