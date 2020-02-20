@@ -15,10 +15,20 @@ jobs:
       - name: Setup env
         run: |
           echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
+      - name: Check kill switch
+        id: check_ks
+        run:
+          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} ; then
+            echo "::set-output name=should_run::false";
+          else
+            echo "::set-output name=should_run::true";
+          fi
       - name: Build, tag and push images
+        if: steps.check_ks.outputs.should_run == 'true'
         run: |
           docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary
       - name: Launch cluster test
+        if: steps.check_ks.outputs.should_run == 'true'
         run: |
           JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
           ./scripts/cti \
@@ -32,6 +42,11 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
+            // Check kill switch
+            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}}) {
+              console.log('Kill switch is set. Will skip this step.');
+              return;
+            }
             // Find the number of the pull request that trigggers this push
             let pr_num = 0;
             let commit_message = context.payload.head_commit.message;
