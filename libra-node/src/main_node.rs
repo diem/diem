@@ -10,6 +10,7 @@ use debug_interface::{
 use executor::Executor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
+use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_metrics::metric_server;
 use network::validator_network::{
@@ -28,6 +29,7 @@ const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
 
 pub struct LibraHandle {
     _ac: Runtime,
+    _rpc: Runtime,
     _mempool: Runtime,
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
@@ -236,6 +238,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let (ac_sender, client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
     let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
 
+    let rpc_runtime = bootstrap_rpc(&node_config);
+
     let mut consensus = None;
     let (consensus_to_mempool_sender, consensus_requests) = channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
 
@@ -294,6 +298,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     LibraHandle {
         _network_runtimes: network_runtimes,
         _ac: admission_control_runtime,
+        _rpc: rpc_runtime,
         _mempool: mempool,
         _state_synchronizer: state_synchronizer,
         consensus,

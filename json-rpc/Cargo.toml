@@ -1,0 +1,30 @@
+[package]
+name = "libra-json-rpc"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra rpc endpoint"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+hex = "0.4.2"
+serde_json = "1.0.40"
+serde = { version = "1.0.99", default-features = false }
+warp = "0.2.1"
+futures = "0.3.0"
+tokio = { version = "0.2.8", features = ["full"] }
+
+libra-config = { path = "../config", version = "0.1.0" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
+storage-client = { path = "../storage/storage-client", version = "0.1.0" }
+storage-proto = { path = "../storage/storage-proto", version = "0.1.0" }
+
+[dev-dependencies]
+reqwest = { version="0.10.1", features=["blocking", "json"], default_features = false }
+storage-service = { path = "../storage/storage-service", version = "0.1.0", features=["testing"] }
