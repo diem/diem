@@ -1086,7 +1086,6 @@ fn unary_op(code: &mut Code, sp!(_, op_): UnaryOp) {
     use UnaryOp_ as O;
     use F::Bytecode as B;
     code.push(match op_ {
-        O::Neg => panic!("ICE not yet supported for any type"),
         O::Not => B::Not,
     });
 }

@@ -279,14 +279,9 @@ impl BuiltinTypeName_ {
         s
     }
 
-    pub fn signed() -> BTreeSet<BuiltinTypeName_> {
-        BTreeSet::new()
-        // s.insert(BT::I64);
-    }
-
     pub fn numeric() -> BTreeSet<BuiltinTypeName_> {
         use BuiltinTypeName_ as BT;
-        let mut s = BT::signed();
+        let mut s = BTreeSet::new();
         s.insert(BT::U8);
         s.insert(BT::U64);
         s.insert(BT::U128);

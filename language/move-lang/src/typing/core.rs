@@ -32,7 +32,6 @@ pub enum Constraint {
     NumericConstraint(Loc, &'static str, Type),
     BitsConstraint(Loc, &'static str, Type),
     OrderedConstraint(Loc, &'static str, Type),
-    SignedConstraint(Loc, &'static str, Type),
 }
 pub type Constraints = Vec<Constraint>;
 type TParamSubst = HashMap<TParamID, BaseType>;
@@ -155,11 +154,6 @@ impl Context {
     pub fn add_ordered_constraint(&mut self, loc: Loc, op: &'static str, t: Type) {
         self.constraints
             .push(Constraint::OrderedConstraint(loc, op, t))
-    }
-
-    pub fn add_signed_constraint(&mut self, loc: Loc, op: &'static str, t: Type) {
-        self.constraints
-            .push(Constraint::SignedConstraint(loc, op, t))
     }
 
     pub fn declare_local(&mut self, var: Var, ty_opt: Option<SingleType>) {
@@ -649,9 +643,6 @@ pub fn solve_constraints(context: &mut Context) {
             }
             Constraint::OrderedConstraint(loc, op, t) => {
                 solve_builtin_type_constraint(context, BT::ordered(), loc, op, t)
-            }
-            Constraint::SignedConstraint(loc, op, t) => {
-                solve_builtin_type_constraint(context, BT::signed(), loc, op, t)
             }
         }
     }

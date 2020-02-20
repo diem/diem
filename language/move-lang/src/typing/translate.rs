@@ -622,10 +622,6 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                     subtype(context, rloc, msg, &er.ty, &Type_::bool(rloc));
                     Type_::bool(eloc)
                 }
-                Neg => {
-                    context.add_signed_constraint(eloc, uop.value.symbol(), er.ty.clone());
-                    er.ty.clone()
-                }
             };
             (ty, TE::UnaryExp(uop, er))
         }
