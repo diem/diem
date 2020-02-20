@@ -168,17 +168,32 @@ impl NativeFunction {
     /// The signature as defined in it's declaring module.
     /// It should NOT be generally inspected outside of it's declaring module as the various
     /// struct handle indexes are not remapped into the local context.
+    /// Returns:
+    /// - `Err(NATIVE_FUNCTION_INTERNAL_INCONSISTENCY)` if the produced function signature
+    ///   is inconsistent with `self.num_args()`. This only fails if the native function was
+    ///   implemented incorrectly
+    /// - `Ok(None)` if a function signature could not be generated for the native function with
+    ///   the given `ModuleView`, `m`
+    /// - `Ok(Some(expected_function_signature))` otherwise
     pub fn signature<T: ModuleAccess>(
         self,
         m: Option<&ModuleView<T>>,
-    ) -> Option<FunctionSignature> {
-        let res = self.signature_(m)?;
-        assert!(
-            self.num_args() == res.arg_types.len(),
-            "Invalid native function declaration. Declared number of args does not match produced \
-             signature"
-        );
-        Some(res)
+    ) -> VMResult<Option<FunctionSignature>> {
+        let res = match self.signature_(m) {
+            None => return Ok(None),
+            Some(res) => res,
+        };
+        if self.num_args() == res.arg_types.len() {
+            Ok(Some(res))
+        } else {
+            Err(
+                VMStatus::new(StatusCode::NATIVE_FUNCTION_INTERNAL_INCONSISTENCY).with_message(
+                    "Invalid native function declaration. Declared number of args does not match \
+                     produced signature"
+                        .to_owned(),
+                ),
+            )
+        }
     }
 
     fn signature_<T: ModuleAccess>(self, m: Option<&ModuleView<T>>) -> Option<FunctionSignature> {
