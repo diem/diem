@@ -220,7 +220,8 @@ impl FakeExecutor {
 
     /// Verifies the given transaction by running it through the VM verifier.
     pub fn verify_transaction(&self, txn: SignedTransaction) -> Option<VMStatus> {
-        let vm = LibraVM::new(&self.config);
+        let mut vm = LibraVM::new(&self.config);
+        vm.load_configs(self.get_state_view());
         vm.validate_transaction(txn, &self.data_store)
     }
 

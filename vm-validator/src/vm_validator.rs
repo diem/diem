@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use futures::executor::block_on;
 use libra_config::config::NodeConfig;
 use libra_types::{
     account_address::AccountAddress, account_config::AccountResource,
@@ -38,10 +39,26 @@ impl VMValidator {
         storage_read_client: Arc<dyn StorageRead>,
         rt_handle: Handle,
     ) -> Self {
+        let mut vm = LibraVM::new(&config.vm_config);
+        let client = storage_read_client.clone();
+        let (version, state_root) =
+            block_on(rt_handle.spawn(async move { client.get_latest_state_root().await }))
+                .expect("Block error")
+                .expect("Failed to get the latest state");
+        let smt = SparseMerkleTree::new(state_root);
+        let state_view = VerifiedStateView::new(
+            storage_read_client.clone(),
+            rt_handle.clone(),
+            Some(version),
+            state_root,
+            &smt,
+        );
+
+        vm.load_configs(&state_view);
         VMValidator {
             storage_read_client,
             rt_handle,
-            vm: LibraVM::new(&config.vm_config),
+            vm,
         }
     }
 }
