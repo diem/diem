@@ -295,10 +295,15 @@ module VerifyVector {
         return (0, *move(y));
     }
 
+    // succeeds. standard vector method.
+    public my_empty<Element>() : vector<Element>
+    ensures len(RET(0)) == 0
+    {
+        return Vector.empty<Element>();
+    }
 
-
-    // succeeds.
-    public my_length1(v: vector<u64>): u64
+    // succeeds. with a vector as a value
+    public my_length1(v: vector< u64>): u64
     ensures len(v) == RET(0)
     // TODO: spec_translator cannot handle the following post-conditions
         // error: unknown result type of helper function; cannot use in operation
@@ -486,6 +491,108 @@ module VerifyVector {
         return Vector.pop_back<Element>(move(v));
     }
 
-    // TODO: specifying the following vector methods: swap, append, remove_unstable
+    // succeeds. standard vector method (without type parameter).
+    public my_swap1(v: &mut vector<u64>, i: u64, j: u64)
+    aborts_if i >= len(*v)
+    aborts_if j >= len(*v)
+    ensures *v == old(v[i:=v[j]][j:=v[i]])
+    {
+        Vector.swap<u64>(move(v), move(i), move(j));
+        return;
+    }
+
+    // succeeds. standard vector method.
+    public my_swap2<Element>(v: &mut vector<Element>, i: u64, j: u64)
+    aborts_if i >= len(*v)
+    aborts_if j >= len(*v)
+    ensures *v == old(v[i:=v[j]][j:=v[i]])
+    {
+        Vector.swap<Element>(move(v), move(i), move(j));
+        return;
+    }
+
+    // succeeds. custom vector method.
+    public my_swap3<Element: unrestricted>(v: &mut vector<Element>, i: u64, j: u64)
+    aborts_if i >= len(*v)
+    aborts_if j >= len(*v)
+    ensures *v == old(v[i:=v[j]][j:=v[i]])
+    {
+        let x : Element;
+        let y : Element;
+        x = Vector.get<Element>(freeze(copy(v)), copy(i));
+        y = Vector.get<Element>(freeze(copy(v)), copy(j));
+        Vector.set<Element>(copy(v), move(i), move(y));
+        Vector.set<Element>(move(v), move(j), move(x));
+        return;
+    }
+
+    // TODO: define the boogie procedure Vector_remove_unstable
+    public my_remove_unstable1(v : &mut vector<u64>, i: u64) : u64
+    {
+        // return Vector.remove_unstable<u64>(move(v), move(i)); // Error: call to undeclared procedure: Vector_remove_unstable
+        return 0; // temporary placeholder
+    }
+
+    // succeeds. standard vector method.
+    public my_remove_unstable2<Element>(v: &mut vector<Element>, i: u64): Element
+    aborts_if i >= len(*v)
+    ensures len(*v) == old(len(*v)) - 1
+    ensures old(v[i]) == RET(0)
+    ensures *v == old(v[i := v[len(*v)-1]][0..len(*v)-1]) // or equal upto permutation?
+    {
+        let last_index: u64;
+
+        if (Vector.is_empty<Element>(freeze(copy(v)))) {
+            // i out of bounds; abort
+            abort(10);
+        }
+
+        last_index = Vector.length<Element>(freeze(copy(v))) - 1;
+        if (copy(i) != copy(last_index)) {
+            Vector.swap<Element>(copy(v), move(i), move(last_index));
+        } // else, no need for swap, since i is already the last index
+        return Vector.pop_back<Element>(move(v));
+    }
+
+    // succeeds. standard vector method (without type parameter).
+    public my_append1(lhs: &mut vector<u64>, other: vector<u64>)
+    ensures len(*lhs) == old(len(*lhs) + len(other))
+    ensures lhs[0..old(len(*lhs))] == old(*lhs)
+    ensures lhs[old(len(*lhs))..len(*lhs)] == old(other)
+    {
+        Vector.append<u64>(move(lhs), move(other));
+        return;
+    }
+
+    // succeeds. standard vector method.
+    public my_append2<Element>(lhs: &mut vector<Element>, other: vector<Element>)
+    ensures len(*lhs) == old(len(*lhs) + len(other))
+    ensures lhs[0..old(len(*lhs))] == old(*lhs)
+    ensures lhs[old(len(*lhs))..len(*lhs)] == old(other)
+    {
+        Vector.append<Element>(move(lhs), move(other));
+        return;
+    }
+
+    // TODO. actual Vector.append implementation with loop
+    public my_append3(lhs: &mut vector<u64>, other: vector<u64>)
+    //ensures len(*lhs) == old(len(*lhs) + len(other))
+    //ensures lhs[0..old(len(*lhs))] == old(*lhs)
+    //ensures lhs[old(len(*lhs))..len(*lhs)] == old(other)
+    {
+        Vector.reverse<u64>(&mut other);
+
+        while (!Vector.is_empty<u64>(&other)) {
+            Vector.push_back<u64>(
+                copy(lhs),
+                Vector.pop_back<u64>(&mut other)
+            );
+        }
+
+        Vector.destroy_empty<u64>(move(other));
+        return;
+    }
+
     // NOTE: the current spec language cannot specify the following vector methods: reverse, contains
+    // JP: I am not sure what could be the specs for Vector.borrow, Vector.borrow_mut and Vector.destroy.
 }
