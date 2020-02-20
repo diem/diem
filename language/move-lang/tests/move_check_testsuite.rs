@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use difference;
 use move_lang::{move_compile_no_report, shared::Address};
 use std::{fs, path::Path};
 

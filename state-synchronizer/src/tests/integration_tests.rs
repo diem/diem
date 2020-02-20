@@ -6,7 +6,6 @@ use crate::{
     StateSynchronizer, SynchronizerState,
 };
 use anyhow::{bail, Result};
-use config_builder;
 use executor::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;

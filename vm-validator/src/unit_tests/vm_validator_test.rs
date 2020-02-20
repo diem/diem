@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
-use config_builder;
 use executor::Executor;
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::*, PrivateKey};

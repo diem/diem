@@ -7,7 +7,6 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::lexer::*;
-use hex;
 use libra_types::identifier::Identifier;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 use move_ir_types::{ast::*, spec_language_ast::*};

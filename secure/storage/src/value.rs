@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::error::Error;
-use base64;
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use serde::{Deserialize, Serialize};
 

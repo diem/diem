@@ -20,7 +20,6 @@ use std::{
     time::{Duration, UNIX_EPOCH},
 };
 use structopt::StructOpt;
-use ureq;
 
 #[derive(Debug, StructOpt)]
 #[structopt(

@@ -6,7 +6,6 @@ use crate::{
     protocols::identity::Identity,
     ProtocolId,
 };
-use channel;
 use futures::{
     executor::block_on,
     future::join,

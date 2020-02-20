@@ -61,7 +61,6 @@ use libra_crypto_derive::{Deref, DeserializeKey, SerializeKey, SilentDebug, Sile
 use rand::{rngs::EntropyRng, RngCore};
 use sha2::Sha256;
 use std::{convert::TryFrom, ops::Deref};
-use x25519_dalek;
 
 /// TODO: move traits to the right file (possibly traits.rs)
 

@@ -5,7 +5,6 @@ use crate::{
     counters,
     util::time_service::{SendTask, TimeService},
 };
-use channel;
 use consensus_types::common::Round;
 use libra_logger::prelude::*;
 use std::{

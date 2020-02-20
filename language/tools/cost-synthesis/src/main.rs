@@ -14,7 +14,6 @@ use cost_synthesis::{
     natives::StackAccessorMocker,
     stack_generator::RandomStackGenerator,
 };
-use csv;
 use language_e2e_tests::data_store::FakeDataStore;
 use libra_types::vm_error::StatusCode;
 use std::{

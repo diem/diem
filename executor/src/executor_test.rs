@@ -8,7 +8,6 @@ use crate::{
     },
     Executor, OP_COUNTERS,
 };
-use config_builder;
 use libra_config::config::NodeConfig;
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_types::block_info::BlockInfo;

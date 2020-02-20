@@ -62,7 +62,6 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
-use channel;
 use error::RpcError;
 use futures::{
     channel::oneshot,

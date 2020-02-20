@@ -7,7 +7,6 @@ use crate::{
     protocols::rpc::{self, RpcNotification},
     ProtocolId,
 };
-use channel;
 use futures::{
     future::{self, FutureExt},
     io::{AsyncReadExt, AsyncWriteExt},

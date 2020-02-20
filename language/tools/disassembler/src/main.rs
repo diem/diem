@@ -9,7 +9,6 @@ use bytecode_source_map::{
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use libra_types::transaction::Module;
 use move_ir_types::ast::Loc;
-use serde_json;
 use std::fs;
 use std::path::Path;
 use structopt::StructOpt;

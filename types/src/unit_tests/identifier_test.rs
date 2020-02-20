@@ -6,7 +6,6 @@ use crate::test_helpers::assert_canonical_encode_decode;
 use once_cell::sync::Lazy;
 use proptest::prelude::*;
 use regex::Regex;
-use serde_json;
 use std::borrow::Borrow;
 
 #[test]

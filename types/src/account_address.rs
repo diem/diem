@@ -3,7 +3,6 @@
 
 use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
-use hex;
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},
     HashValue, VerifyingKey,

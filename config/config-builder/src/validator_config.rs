@@ -15,7 +15,6 @@ use libra_types::transaction::Transaction;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{collections::HashMap, net::SocketAddr};
-use vm_genesis;
 
 const DEFAULT_SEED: [u8; 32] = [13u8; 32];
 const DEFAULT_ADVERTISED: &str = "/ip4/127.0.0.1/tcp/6180";

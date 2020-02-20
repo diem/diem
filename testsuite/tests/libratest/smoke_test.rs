@@ -21,7 +21,6 @@ use std::fs::{self, File};
 use std::io::Read;
 use std::str::FromStr;
 use std::{thread, time};
-use workspace_builder;
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,

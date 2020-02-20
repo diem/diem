@@ -9,7 +9,6 @@ use crate::{
     protocols::identity::{exchange_identity, Identity},
     ProtocolId,
 };
-use channel;
 use channel::libra_channel;
 use channel::message_queues::QueueStyle;
 use futures::{channel::oneshot, stream::StreamExt};

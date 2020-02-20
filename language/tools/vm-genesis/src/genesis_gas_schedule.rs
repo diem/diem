@@ -3,7 +3,6 @@
 
 //! This file contains the starting gas schedule published at genesis.
 
-use lcs;
 use once_cell::sync::Lazy;
 use vm::{
     file_format::{

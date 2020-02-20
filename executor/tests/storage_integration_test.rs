@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, format_err, Result};
-use config_builder;
 use executor::utils::create_storage_service_and_executor;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};

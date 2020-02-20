@@ -15,7 +15,6 @@ use crate::{
     util::time_service::ClockTimeService,
 };
 use anyhow::Result;
-use channel;
 use consensus_types::common::{Author, Payload, Round};
 use futures::{select, stream::StreamExt};
 use libra_config::config::{ConsensusConfig, NodeConfig};

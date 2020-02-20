@@ -32,7 +32,6 @@
 use crate::{traits::*, HashValue};
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
-use ed25519_dalek;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 use std::cmp::Ordering;
 

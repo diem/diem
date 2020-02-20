@@ -26,7 +26,6 @@ use std::{
     sync::Arc,
     task::{Context, Poll},
 };
-use yamux;
 
 /// Re-export `Mode` and `Stream` from the yamux crate
 pub use yamux::Mode;
