@@ -21,6 +21,7 @@ use bytecode_verifier::VerifiedModule;
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
+use libra_config::config::VMConfig;
 use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray, vm_error::StatusCode};
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -32,12 +33,9 @@ use vm::{
     access::ModuleAccess,
     errors::VMResult,
     file_format::{CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, SignatureToken},
-    gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS,
     transaction_metadata::TransactionMetadata,
 };
-use vm_runtime::{
-    chain_state::TransactionExecutionContext, data_cache::BlockDataCache, move_vm::MoveVM,
-};
+use vm_runtime::LibraVM;
 use vm_runtime_types::values::Value;
 
 /// This function calls the Bytecode verifier to test it
@@ -89,24 +87,25 @@ fn execute_function_in_module(
         module.identifier_at(entry_name_idx)
     };
     {
-        let runtime = MoveVM::new();
-        runtime.cache_module(module.clone());
+        let mut libra_vm = LibraVM::new(&VMConfig::default());
+        libra_vm.load_configs(state_view);
 
-        let data_cache = BlockDataCache::new(state_view);
-        let mut context =
-            TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, &data_cache);
-        let gas_schedule = runtime.load_gas_schedule(&mut context, &data_cache)?;
+        let internals = libra_vm.internals();
+        let move_vm = internals.move_vm();
+        move_vm.cache_module(module.clone());
+
+        let gas_schedule = internals.gas_schedule()?;
         let txn_data = TransactionMetadata::default();
-        let mut interpreter_context =
-            TransactionExecutionContext::new(txn_data.max_gas_amount(), &data_cache);
-        runtime.execute_function(
-            &module_id,
-            &entry_name,
-            &gas_schedule,
-            &mut interpreter_context,
-            &txn_data,
-            args,
-        )
+        internals.with_txn_context(&txn_data, state_view, |mut txn_context| {
+            move_vm.execute_function(
+                &module_id,
+                &entry_name,
+                gas_schedule,
+                &mut txn_context,
+                &txn_data,
+                args,
+            )
+        })
     }
 }
 
