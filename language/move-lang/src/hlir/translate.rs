@@ -987,7 +987,17 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
             };
             HE::BorrowLocal(mut_, tmp)
         }
-
+        TE::Cast(te, rhs_ty) => {
+            use N::BuiltinTypeName_ as BT;
+            let e = exp(context, result, None, *te);
+            let bt = match rhs_ty.value.builtin_name() {
+                Some(bt @ sp!(_, BT::U8))
+                | Some(bt @ sp!(_, BT::U64))
+                | Some(bt @ sp!(_, BT::U128)) => bt.clone(),
+                _ => panic!("ICE typing failed for cast"),
+            };
+            HE::Cast(e, bt)
+        }
         TE::Annotate(te, rhs_ty) => {
             let expected_ty = type_(context, *rhs_ty);
             return exp_(context, result, Some(&expected_ty), *te);

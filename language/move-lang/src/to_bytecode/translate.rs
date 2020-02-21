@@ -993,6 +993,17 @@ fn exp_(
             });
             function_frame.push(eloc)?;
         }
+
+        E::Cast(el, sp!(_, bt_)) => {
+            use BuiltinTypeName_ as BT;
+            exp(context, function_frame, code, el)?;
+            code.push(match bt_ {
+                BT::U8 => B::CastU8,
+                BT::U64 => B::CastU64,
+                BT::U128 => B::CastU128,
+                _ => panic!("ICE type checking failed"),
+            })
+        }
     }
     Ok(())
 }

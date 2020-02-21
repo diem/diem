@@ -5,7 +5,7 @@ use super::core::{self, Context};
 use crate::{
     naming::ast::{
         BaseType, BaseType_, BuiltinTypeName_, FunctionSignature, SingleType, SingleType_, TParam,
-        Type, TypeName_, Type_,
+        Type, Type_,
     },
     parser::ast::{Kind, Kind_, Value_},
     shared::*,
@@ -203,21 +203,9 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
             }
         }
         E::InferredNum(v) => {
-            use BaseType_ as B;
             use BuiltinTypeName_ as BT;
-            use SingleType_ as S;
-            use TypeName_ as TN;
-            use Type_ as T;
-            macro_rules! builtin {
-                ($b:pat) => {
-                    T::Single(sp!(
-                        _,
-                        S::Base(sp!(_, B::Apply(_, sp!(_, TN::Builtin(sp!(_, $b))), _)))
-                    ))
-                };
-            }
-            let bt = match &e.ty.value {
-                builtin!(bt) if bt.is_numeric() => bt,
+            let bt = match e.ty.value.builtin_name() {
+                Some(sp!(_, bt)) if bt.is_numeric() => bt,
                 _ => panic!("ICE inferred num failed {:?}", &e.ty.value),
             };
             let v = *v;
@@ -320,7 +308,7 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
             }
         }
         E::ExpList(el) => exp_list(context, el),
-        E::Annotate(el, rhs_ty) => {
+        E::Cast(el, rhs_ty) | E::Annotate(el, rhs_ty) => {
             exp(context, el);
             type_(context, rhs_ty);
         }

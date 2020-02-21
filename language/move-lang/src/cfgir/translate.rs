@@ -513,6 +513,7 @@ fn exp_(context: &Context, he: H::Exp) -> G::Exp {
             assert!(context.has_errors());
             E::UnresolvedError
         }
+        HE::Cast(e, bt) => E::Cast(exp(context, e), bt),
         HE::Unreachable => E::Unreachable,
     };
     G::exp(ty, sp(loc, e_))

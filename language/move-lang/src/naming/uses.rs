@@ -359,7 +359,7 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
 
         E::DerefBorrow(edotted) | E::Borrow(_, edotted) => exp_dotted(context, edotted),
 
-        E::Annotate(e, ty) => {
+        E::Cast(e, ty) | E::Annotate(e, ty) => {
             exp(context, e);
             type_(context, ty)
         }

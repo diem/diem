@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    naming::ast::{BuiltinTypeName_, TParam, TypeName, TypeName_},
+    naming::ast::{BuiltinTypeName, BuiltinTypeName_, TParam, TypeName, TypeName_},
     parser::ast::{
         BinOp, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc,
         StructName, UnaryOp, Value, Var,
@@ -201,6 +201,8 @@ pub enum UnannotatedExp_ {
 
     Borrow(bool, Box<Exp>, Field),
     BorrowLocal(bool, Var),
+
+    Cast(Box<Exp>, BuiltinTypeName),
 
     Unreachable,
 
@@ -742,6 +744,13 @@ impl AstDebug for UnannotatedExp_ {
                     w.write("mut ");
                 }
                 w.write(&format!("{}", v));
+            }
+            E::Cast(e, bt) => {
+                w.write("(");
+                e.ast_debug(w);
+                w.write(" as ");
+                bt.ast_debug(w);
+                w.write(")");
             }
             E::UnresolvedError => w.write("_|_"),
             E::Unreachable => w.write("unreachable"),

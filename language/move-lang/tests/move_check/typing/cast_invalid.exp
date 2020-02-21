@@ -1,0 +1,110 @@
+error: 
+
+   ┌── tests/move_check/typing/cast_invalid.move:6:10 ───
+   │
+ 6 │         (false as u8);
+   │          ^^^^^ Invalid argument to 'as'
+   ·
+ 6 │         (false as u8);
+   │          ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/cast_invalid.move:7:10 ───
+   │
+ 7 │         (true as u128);
+   │          ^^^^ Invalid argument to 'as'
+   ·
+ 7 │         (true as u128);
+   │          ---- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/cast_invalid.move:9:10 ───
+   │
+ 9 │         (() as u64);
+   │          ^^ Invalid argument to 'as'
+   ·
+ 9 │         (() as u64);
+   │          -- Found: '()'. But expected: 'u8', 'u64', 'u128'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/cast_invalid.move:10:10 ───
+    │
+ 10 │         ((0, 1) as u8);
+    │          ^^^^^^ Invalid argument to 'as'
+    ·
+ 10 │         ((0, 1) as u8);
+    │          ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/cast_invalid.move:12:15 ───
+    │
+ 12 │         (0 as bool);
+    │               ^^^^ Invalid argument to 'as'
+    ·
+ 12 │         (0 as bool);
+    │               ---- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/cast_invalid.move:13:15 ───
+    │
+ 13 │         (0 as address);
+    │               ^^^^^^^ Invalid argument to 'as'
+    ·
+ 13 │         (0 as address);
+    │               ------- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/cast_invalid.move:14:21 ───
+    │
+ 14 │         R{} = (0 as R);
+    │                     ^ Invalid argument to 'as'
+    ·
+ 14 │         R{} = (0 as R);
+    │                     - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/cast_invalid.move:15:15 ───
+    │
+ 15 │         (0 as Cup<u8>);
+    │               ^^^^^^^ Invalid argument to 'as'
+    ·
+ 15 │         (0 as Cup<u8>);
+    │               ------- Found: '0x8675309::M::Cup<u8>'. But expected: 'u8', 'u64', 'u128'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/cast_invalid.move:16:15 ───
+    │
+ 16 │         (0 as ());
+    │               ^^ Invalid argument to 'as'
+    ·
+ 16 │         (0 as ());
+    │               -- Found: '()'. But expected: 'u8', 'u64', 'u128'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/cast_invalid.move:17:15 ───
+    │
+ 17 │         (0 as (u64, u8));
+    │               ^^^^^^^^^ Invalid argument to 'as'
+    ·
+ 17 │         (0 as (u64, u8));
+    │               --------- Found: '(u64, u8)'. But expected: 'u8', 'u64', 'u128'
+    │
+

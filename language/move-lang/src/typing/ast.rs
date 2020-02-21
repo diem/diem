@@ -184,6 +184,7 @@ pub enum UnannotatedExp_ {
     TempBorrow(bool, Box<Exp>),
     BorrowLocal(bool, Var),
 
+    Cast(Box<Exp>, Box<Type>),
     Annotate(Box<Exp>, Box<Type>),
 
     UnresolvedError,
@@ -494,6 +495,13 @@ impl AstDebug for UnannotatedExp_ {
                     w.write("mut ");
                 }
                 w.write(&format!("{}", v));
+            }
+            E::Cast(e, ty) => {
+                w.write("(");
+                e.ast_debug(w);
+                w.write(" as ");
+                ty.ast_debug(w);
+                w.write(")");
             }
             E::Annotate(e, ty) => {
                 w.write("annot(");
