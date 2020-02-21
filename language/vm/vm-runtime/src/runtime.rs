@@ -182,7 +182,7 @@ impl<'alloc> VMRuntime<'alloc> {
         )
     }
 
-    pub fn cache_module(&mut self, module: VerifiedModule) {
+    pub fn cache_module(&self, module: VerifiedModule) {
         self.code_cache.cache_module(module);
     }
 
