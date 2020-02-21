@@ -33,7 +33,7 @@ use crate::{traits::*, HashValue};
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt};
 
 /// The length of the Ed25519PrivateKey
 pub const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
@@ -60,7 +60,7 @@ static_assertions::assert_not_impl_any!(Ed25519PrivateKey: Clone);
 pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
 
 /// An Ed25519 signature
-#[derive(DeserializeKey, Clone, Debug, SerializeKey)]
+#[derive(DeserializeKey, Clone, SerializeKey)]
 pub struct Ed25519Signature(ed25519_dalek::Signature);
 
 impl Ed25519PrivateKey {
@@ -256,14 +256,14 @@ impl VerifyingKey for Ed25519PublicKey {
     type SignatureMaterial = Ed25519Signature;
 }
 
-impl std::fmt::Display for Ed25519PublicKey {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Ed25519PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", hex::encode(&self.0.as_bytes()))
     }
 }
 
-impl std::fmt::Debug for Ed25519PublicKey {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for Ed25519PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Ed25519PublicKey({})", self)
     }
 }
@@ -400,6 +400,18 @@ impl PartialEq for Ed25519Signature {
 }
 
 impl Eq for Ed25519Signature {}
+
+impl fmt::Display for Ed25519Signature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", hex::encode(&self.0.to_bytes()[..]))
+    }
+}
+
+impl fmt::Debug for Ed25519Signature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Ed25519Signature({})", self)
+    }
+}
 
 /// Check if S < L to capture invalid signatures.
 fn check_s_lt_l(s: &[u8]) -> bool {
