@@ -37,6 +37,7 @@ use parity_multiaddr::Multiaddr;
 use prost::Message;
 use std::{
     collections::{HashMap, HashSet},
+    convert::TryInto,
     num::NonZeroUsize,
     sync::{Arc, Mutex},
     time::Duration,
@@ -53,6 +54,7 @@ struct SharedMempoolNetwork {
     network_notifs_txs:
         HashMap<PeerId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     network_conn_event_notifs_txs: HashMap<PeerId, conn_status_channel::Sender>,
+    network_senders: HashMap<PeerId, MempoolNetworkSender>,
     runtimes: HashMap<PeerId, Runtime>,
     subscribers: HashMap<PeerId, UnboundedReceiver<SharedMempoolNotification>>,
     timers: HashMap<PeerId, UnboundedSender<SyncEvent>>,
@@ -72,7 +74,7 @@ fn init_single_shared_mempool(smp: &mut SharedMempoolNetwork, peer_id: PeerId, c
     let (sender, subscriber) = unbounded();
     let (timer_sender, timer_receiver) = unbounded();
     let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
-    let network_handles = vec![(peer_id, network_sender, network_events)];
+    let network_handles = vec![(peer_id, network_sender.clone(), network_events)];
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
     let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
 
@@ -101,6 +103,7 @@ fn init_single_shared_mempool(smp: &mut SharedMempoolNetwork, peer_id: PeerId, c
     smp.network_notifs_txs.insert(peer_id, network_notifs_tx);
     smp.network_conn_event_notifs_txs
         .insert(peer_id, conn_status_tx);
+    smp.network_senders.insert(peer_id, network_sender);
     smp.subscribers.insert(peer_id, subscriber);
     smp.timers.insert(peer_id, timer_sender);
     smp.runtimes.insert(peer_id, runtime);
@@ -173,7 +176,11 @@ impl SharedMempoolNetwork {
     }
 
     /// delivers next broadcast message from `peer`
-    fn deliver_message(&mut self, peer: &PeerId) -> (Vec<SignedTransaction>, PeerId) {
+    fn deliver_message(
+        &mut self,
+        peer: &PeerId,
+        num_recipients: usize,
+    ) -> (Vec<SignedTransaction>, Vec<PeerId>) {
         // emulate timer tick
         self.timers
             .get(peer)
@@ -181,50 +188,57 @@ impl SharedMempoolNetwork {
             .unbounded_send(SyncEvent)
             .unwrap();
 
-        // await next message from node
-        let network_reqs_rx = self.network_reqs_rxs.get_mut(peer).unwrap();
-        let network_req = block_on(network_reqs_rx.next()).unwrap();
+        let mut recipients = vec![];
+        let mut result_transactions = vec![];
+        for _ in 0..num_recipients {
+            // await next message from node
+            let network_reqs_rx = self.network_reqs_rxs.get_mut(peer).unwrap();
+            let network_req = block_on(network_reqs_rx.next()).unwrap();
 
-        if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
-            let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
-            let sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
+            if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
+                let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
+                let sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
 
-            if let MempoolSyncMsg::BroadcastTransactionsRequest((_start, _end), transactions) =
-                sync_msg
-            {
-                // send it to peer
-                let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
-                receiver_network_notif_tx
-                    .push(
-                        (
-                            *peer,
-                            ProtocolId::from_static(
-                                network::validator_network::MEMPOOL_DIRECT_SEND_PROTOCOL,
+                if let MempoolSyncMsg::BroadcastTransactionsRequest((_start, _end), transactions) =
+                    sync_msg
+                {
+                    // send it to peer
+                    let receiver_network_notif_tx =
+                        self.network_notifs_txs.get_mut(&peer_id).unwrap();
+                    receiver_network_notif_tx
+                        .push(
+                            (
+                                *peer,
+                                ProtocolId::from_static(
+                                    network::validator_network::MEMPOOL_DIRECT_SEND_PROTOCOL,
+                                ),
                             ),
-                        ),
-                        PeerManagerNotification::RecvMessage(*peer, msg),
-                    )
-                    .unwrap();
+                            PeerManagerNotification::RecvMessage(*peer, msg),
+                        )
+                        .unwrap();
 
-                // await message delivery
-                self.wait_for_event(&peer_id, SharedMempoolNotification::NewTransactions);
+                    // await message delivery
+                    self.wait_for_event(&peer_id, SharedMempoolNotification::NewTransactions);
 
-                // verify transaction was inserted into Mempool
-                let mempool = self.mempools.get(&peer_id).unwrap();
-                let block = mempool.lock().unwrap().get_block(100, HashSet::new());
-                for txn in transactions.iter() {
-                    assert!(block.contains(txn));
+                    // verify transaction was inserted into Mempool
+                    let mempool = self.mempools.get(&peer_id).unwrap();
+                    let block = mempool.lock().unwrap().get_block(100, HashSet::new());
+                    for txn in transactions.iter() {
+                        assert!(block.contains(txn));
+                    }
+
+                    // deliver ACK for this request
+                    self.deliver_response(&peer_id);
+                    result_transactions = transactions;
+                    recipients.push(peer_id)
+                } else {
+                    panic!("did not receive expected BroadcastTransactionsRequest");
                 }
-
-                // deliver ACK for this request
-                self.deliver_response(&peer_id);
-                (transactions, peer_id)
             } else {
-                panic!("did not receive expected BroadcastTransactionsRequest");
+                panic!("peer {:?} didn't broadcast transaction", peer)
             }
-        } else {
-            panic!("peer {:?} didn't broadcast transaction", peer)
         }
+        (result_transactions, recipients)
     }
 
     /// delivers broadcast ACK from `peer`
@@ -261,6 +275,61 @@ impl SharedMempoolNetwork {
         }
     }
 
+    /// mock a broadcast ACK from `sender` to `receiver`
+    fn mock_ack(&mut self, sender: &PeerId, receiver: &PeerId, range: (u64, u64)) {
+        let msg = MempoolSyncMsg::BroadcastTransactionsResponse(range.0, range.1);
+        let mut sync_msg = network::proto::MempoolSyncMsg::default();
+        sync_msg.message = lcs::to_bytes(&msg).unwrap();
+        let network_sender = self
+            .network_senders
+            .get_mut(sender)
+            .expect("missing network sender");
+        assert!(network_sender.clone().send_to(*receiver, sync_msg).is_ok());
+        self.deliver_response(sender);
+    }
+
+    fn intercept_message(&mut self, peer: &PeerId) -> ((u64, u64), Vec<SignedTransaction>, PeerId) {
+        // emulate timer tick
+        self.timers
+            .get(peer)
+            .unwrap()
+            .unbounded_send(SyncEvent)
+            .unwrap();
+
+        // await next message from node
+        let network_reqs_rx = self.network_reqs_rxs.get_mut(peer).unwrap();
+        let network_req = block_on(network_reqs_rx.next()).unwrap();
+
+        if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
+            let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
+            let sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
+
+            if let MempoolSyncMsg::BroadcastTransactionsRequest(range, txns) = sync_msg {
+                (range, txns, peer_id)
+            } else {
+                panic!("did not receive expected BroadcastTransactionsRequest");
+            }
+        } else {
+            panic!("peer {:?} did not broadcast transaction", peer)
+        }
+    }
+
+    fn inspect_broadcast_request(
+        &mut self,
+        sender: PeerId,
+        expected_receiver: PeerId,
+        expected_range: (u64, u64),
+        expected_txns: &[TestTransaction],
+    ) {
+        let (range, broadcasted, recipient) = self.intercept_message(&sender);
+        assert_eq!(recipient, expected_receiver);
+        assert_eq!(range, expected_range);
+        assert_eq!(broadcasted.len(), expected_txns.len());
+        for txn in expected_txns.iter() {
+            assert!(broadcasted.contains(&txn.make_signed_transaction_with_max_gas_amount(5)));
+        }
+    }
+
     fn exist_in_metrics_cache(&self, peer_id: &PeerId, txn: &TestTransaction) -> bool {
         let mempool = self.mempools.get(peer_id).unwrap().lock().unwrap();
         mempool
@@ -294,7 +363,7 @@ fn test_basic_flow() {
 
     for seq in 0..3 {
         // A attempts to send message
-        let transactions = smp.deliver_message(&peer_a).0;
+        let transactions = smp.deliver_message(&peer_a, 1).0;
         assert_eq!(transactions.get(0).unwrap().sequence_number(), seq);
     }
 }
@@ -325,9 +394,9 @@ fn test_metric_cache_ignore_shared_txns() {
     );
     for txn in txns.iter().take(3) {
         // Let peer_a share txns with peer_b
-        let (_transaction, rx_peer) = smp.deliver_message(&peer_a);
+        let (_transaction, rx_peer) = smp.deliver_message(&peer_a, 1);
         // Check if txns's creation timestamp exist in peer_b's metrics_cache.
-        assert_eq!(smp.exist_in_metrics_cache(&rx_peer, txn), false);
+        assert_eq!(smp.exist_in_metrics_cache(&rx_peer[0], txn), false);
     }
 }
 
@@ -352,10 +421,7 @@ fn test_interruption_in_sync() {
     );
 
     // make sure it delivered first transaction to both nodes
-    let mut peers = vec![
-        smp.deliver_message(&peer_a).1,
-        smp.deliver_message(&peer_a).1,
-    ];
+    let mut peers = smp.deliver_message(&peer_a, 2).1;
     peers.sort();
     let mut expected_peers = vec![*peer_b, *peer_c];
     expected_peers.sort();
@@ -373,13 +439,13 @@ fn test_interruption_in_sync() {
 
     // only C receives following transactions
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 1, 1)]);
-    let (txn, peer_id) = smp.deliver_message(&peer_a);
-    assert_eq!(peer_id, *peer_c);
+    let (txn, peer_id) = smp.deliver_message(&peer_a, 1);
+    assert_eq!(peer_id[0], *peer_c);
     assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
 
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 2, 1)]);
-    let (txn, peer_id) = smp.deliver_message(&peer_a);
-    assert_eq!(peer_id, *peer_c);
+    let (txn, peer_id) = smp.deliver_message(&peer_a, 1);
+    assert_eq!(peer_id[0], *peer_c);
     assert_eq!(txn.get(0).unwrap().sequence_number(), 2);
 
     // A reconnects to B
@@ -389,8 +455,8 @@ fn test_interruption_in_sync() {
     );
 
     // B should receive transaction 2
-    let (txn, peer_id) = smp.deliver_message(&peer_a);
-    assert_eq!(peer_id, *peer_b);
+    let (txn, peer_id) = smp.deliver_message(&peer_a, 1);
+    assert_eq!(peer_id[0], *peer_b);
     assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
 }
 
@@ -407,14 +473,14 @@ fn test_ready_transactions() {
         &peer_a,
         ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
     );
-    smp.deliver_message(&peer_a);
+    smp.deliver_message(&peer_a, 1);
 
     // add txn1 to Mempool
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 1, 1)]);
     // txn1 unlocked txn2. Now all transactions can go through in correct order
-    let txn = &smp.deliver_message(&peer_a).0;
+    let txn = &smp.deliver_message(&peer_a, 1).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
-    let txn = &smp.deliver_message(&peer_a).0;
+    let txn = &smp.deliver_message(&peer_a, 1).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 2);
 }
 
@@ -435,13 +501,13 @@ fn test_broadcast_self_transactions() {
     );
 
     // A sends txn to B
-    smp.deliver_message(&peer_a);
+    smp.deliver_message(&peer_a, 1);
 
     // add new txn to B
     smp.add_txns(&peer_b, vec![TestTransaction::new(1, 0, 1)]);
 
     // verify that A will receive only second transaction from B
-    let (txn, _) = smp.deliver_message(&peer_b);
+    let (txn, _) = smp.deliver_message(&peer_b, 1);
     assert_eq!(
         txn.get(0).unwrap().sender(),
         TestTransaction::get_address(1)
@@ -471,12 +537,12 @@ fn test_broadcast_dependencies() {
     );
 
     // B receives 0
-    smp.deliver_message(&peer_a);
+    smp.deliver_message(&peer_a, 1);
     // now B can broadcast 1
-    let txn = smp.deliver_message(&peer_b).0;
+    let txn = smp.deliver_message(&peer_b, 1).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
     // now A can broadcast 2
-    let txn = smp.deliver_message(&peer_a).0;
+    let txn = smp.deliver_message(&peer_a, 1).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 2);
 }
 
@@ -499,7 +565,7 @@ fn test_broadcast_updated_transaction() {
     );
 
     // B receives 0
-    let txn = smp.deliver_message(&peer_a).0;
+    let txn = smp.deliver_message(&peer_a, 1).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
     assert_eq!(txn.get(0).unwrap().gas_unit_price(), 1);
 
@@ -507,7 +573,7 @@ fn test_broadcast_updated_transaction() {
     smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 5)]);
 
     // trigger send from A to B and check B has updated gas price for sequence 0
-    let txn = smp.deliver_message(&peer_a).0;
+    let txn = smp.deliver_message(&peer_a, 1).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
     assert_eq!(txn.get(0).unwrap().gas_unit_price(), 5);
 }
@@ -638,8 +704,8 @@ fn test_broadcast_ack_single_account_single_peer() {
     let mut remaining_txn_index = batch_size;
     while remaining_txn_index < all_txns.len() + 1 {
         // deliver message
-        let (_transactions, recipient) = smp.deliver_message(&full_node);
-        assert_eq!(validator, recipient);
+        let (_transactions, recipient) = smp.deliver_message(&full_node, 1);
+        assert_eq!(validator, recipient[0]);
 
         // check that txns on FN have been GC'ed
         let mempool = smp.mempools.get(&full_node).unwrap();
@@ -679,8 +745,8 @@ fn test_broadcast_ack_multiple_accounts_single_peer() {
     );
 
     // deliver message
-    let (_transactions, recipient) = smp.deliver_message(&full_node);
-    assert_eq!(validator, recipient);
+    let (_transactions, recipient) = smp.deliver_message(&full_node, 1);
+    assert_eq!(validator, recipient[0]);
 
     // check that txns have been GC'ed
     let mempool = smp.mempools.get(&full_node).unwrap();
@@ -690,4 +756,215 @@ fn test_broadcast_ack_multiple_accounts_single_peer() {
     for txn in remaining_txns {
         assert!(block.contains(&txn.make_signed_transaction_with_max_gas_amount(5)));
     }
+}
+
+#[test]
+fn test_suite_rebroadcast() {
+    let test_cases: Vec<fn(bool)> = vec![rebroadcast_basic, rebroadcast_changing_mempool];
+
+    // we need to test for full node network and validator network separately
+    // and see that ACK'ed txns are not rebroadcasted (since ACK'ed txns are
+    // removed from mempool in full nodes but not in validators)
+    for test_case in test_cases {
+        test_case(true);
+        test_case(false);
+    }
+}
+
+///////////////////////////////////
+// rebroadcast flows for testing //
+///////////////////////////////////
+fn rebroadcast_basic(is_validator_network: bool) {
+    let batch_size: usize = 2;
+    let batch_size_u64 = batch_size.try_into().unwrap();
+    let num_max_broadcast = 3;
+    let (mut smp, sender, receiver) = if is_validator_network {
+        let (smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, batch_size);
+        let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
+        (smp, *peer_a, *peer_b)
+    } else {
+        let (smp, validator, full_node) = SharedMempoolNetwork::bootstrap_vfn_network(batch_size);
+        (smp, full_node, validator)
+    };
+
+    // add txns to FN
+    let mut all_txns = vec![];
+    for i in 0..13 {
+        all_txns.push(TestTransaction::new(1, i, 1));
+    }
+    smp.add_txns(&sender, all_txns.clone());
+
+    // FN discovers new peer V
+    smp.send_connection_event(
+        &sender,
+        ConnectionStatusNotification::NewPeer(receiver, Multiaddr::empty()),
+    );
+
+    let mut range_start: u64 = 0;
+    let mut range_end: u64 = batch_size_u64;
+    // broadcast three times
+    // intercept and don't respond
+    for _ in 0..num_max_broadcast {
+        smp.inspect_broadcast_request(
+            sender,
+            receiver,
+            (range_start, range_end),
+            &all_txns[range_start.try_into().unwrap()..range_end.try_into().unwrap()].to_vec(),
+        );
+        range_start = range_end;
+        range_end += batch_size_u64;
+    }
+
+    println!("[test] okay this passes");
+
+    // rebroadcast twice
+    for _ in 0..2 {
+        smp.inspect_broadcast_request(sender, receiver, (0, 2), &all_txns[0..2].to_vec());
+    }
+
+    // ACK first broadcast (0, 2)
+    smp.mock_ack(&receiver, &sender, (0, 2));
+
+    // check broadcast - should be 6-8
+    smp.inspect_broadcast_request(sender, receiver, (6, 8), &all_txns[6..8].to_vec());
+
+    // duplicate outdated ACK (0, 2)
+    smp.mock_ack(&receiver, &sender, (0, 2));
+
+    // check broadcast - should be 2-4
+    smp.inspect_broadcast_request(sender, receiver, (2, 4), &all_txns[2..4].to_vec());
+
+    // ACK (2, 4), (4, 6)
+    smp.mock_ack(&receiver, &sender, (2, 4));
+    smp.mock_ack(&receiver, &sender, (4, 6));
+
+    // check broadcast - should be 8-10, 10-12
+    let expected_range = vec![(8, 10), (10, 12), (6, 8), (6, 8)];
+    for range in expected_range {
+        smp.inspect_broadcast_request(
+            sender,
+            receiver,
+            range,
+            &all_txns[range.0.try_into().unwrap()..range.1.try_into().unwrap()].to_vec(),
+        );
+    }
+
+    // receive ACK for later broadcast first
+    smp.mock_ack(&receiver, &sender, (8, 10));
+    let expected_range = vec![(12, 13), (6, 8)];
+    for range in expected_range {
+        smp.inspect_broadcast_request(
+            sender,
+            receiver,
+            range,
+            &all_txns[range.0.try_into().unwrap()..range.1.try_into().unwrap()].to_vec(),
+        );
+    }
+}
+
+fn rebroadcast_changing_mempool(is_validator_network: bool) {
+    let batch_size: usize = 5;
+    let (mut smp, sender, receiver) = if is_validator_network {
+        let (smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, batch_size);
+        let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
+        (smp, *peer_a, *peer_b)
+    } else {
+        let (smp, validator, full_node) = SharedMempoolNetwork::bootstrap_vfn_network(batch_size);
+        (smp, full_node, validator)
+    };
+
+    let mut all_txns = vec![];
+    for _ in 0..2 {
+        all_txns.push(TestTransaction::new(
+            1,
+            all_txns.len().try_into().unwrap(),
+            1,
+        ));
+    }
+    smp.add_txns(&sender, all_txns.clone());
+
+    // broadcaster discovers new peer to broadcast to
+    smp.send_connection_event(
+        &sender,
+        ConnectionStatusNotification::NewPeer(receiver, Multiaddr::empty()),
+    );
+
+    // smaller starting batches
+    smp.inspect_broadcast_request(sender, receiver, (0, 2), &all_txns[0..2].to_vec());
+
+    // add txns
+    for _ in 0..4 {
+        let txn = TestTransaction::new(1, all_txns.len().try_into().unwrap(), 1);
+        all_txns.push(txn.clone());
+        smp.add_txns(&sender, vec![txn]);
+    }
+
+    smp.inspect_broadcast_request(sender, receiver, (2, 6), &all_txns[2..6].to_vec());
+
+    for _ in 0..2 {
+        let txn = TestTransaction::new(1, all_txns.len().try_into().unwrap(), 1);
+        all_txns.push(txn.clone());
+        smp.add_txns(&sender, vec![txn]);
+    }
+
+    let expected_range = vec![(6, 8), (0, 5), (0, 5)];
+    for range in expected_range {
+        smp.inspect_broadcast_request(
+            sender,
+            receiver,
+            range,
+            &all_txns[range.0.try_into().unwrap()..range.1.try_into().unwrap()].to_vec(),
+        );
+    }
+
+    // unordered ACKs that cause holes in read_timeline
+    smp.mock_ack(&receiver, &sender, (0, 5));
+
+    // add txn
+    let txn = TestTransaction::new(1, all_txns.len().try_into().unwrap(), 1);
+    all_txns.push(txn.clone());
+    smp.add_txns(&sender, vec![txn]);
+
+    let expected_range = vec![(8, 9), (5, 9), (5, 9)];
+    //    let expected_range = vec![];
+    for range in expected_range {
+        smp.inspect_broadcast_request(
+            sender,
+            receiver,
+            range,
+            &all_txns[range.0.try_into().unwrap()..range.1.try_into().unwrap()].to_vec(),
+        );
+    }
+
+    for _ in 0..2 {
+        let txn = TestTransaction::new(1, all_txns.len().try_into().unwrap(), 1);
+        all_txns.push(txn.clone());
+        smp.add_txns(&sender, vec![txn]);
+    }
+
+    let expected_range = vec![(9, 11), (5, 10)];
+    for range in expected_range {
+        smp.inspect_broadcast_request(
+            sender,
+            receiver,
+            range,
+            &all_txns[range.0.try_into().unwrap()..range.1.try_into().unwrap()].to_vec(),
+        );
+    }
+
+    smp.mock_ack(&receiver, &sender, (8, 9));
+
+    // check that txns that are ACK'ed for are not rebroadcasted and are 'holes' in broadcast
+    smp.inspect_broadcast_request(
+        sender,
+        receiver,
+        (5, 11),
+        &[
+            TestTransaction::new(1, 5, 1),
+            TestTransaction::new(1, 6, 1),
+            TestTransaction::new(1, 7, 1),
+            TestTransaction::new(1, 9, 1),
+            TestTransaction::new(1, 10, 1),
+        ],
+    );
 }

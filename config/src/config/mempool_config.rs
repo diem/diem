@@ -10,6 +10,7 @@ pub struct MempoolConfig {
     pub shared_mempool_tick_interval_ms: u64,
     pub shared_mempool_batch_size: usize,
     pub shared_mempool_max_concurrent_inbound_syncs: usize,
+    pub shared_mempool_max_pending_broadcasts: usize,
     pub capacity: usize,
     // max number of transactions per user in Mempool
     pub capacity_per_user: usize,
@@ -24,6 +25,7 @@ impl Default for MempoolConfig {
             shared_mempool_tick_interval_ms: 50,
             shared_mempool_batch_size: 100,
             shared_mempool_max_concurrent_inbound_syncs: 100,
+            shared_mempool_max_pending_broadcasts: 3,
             capacity: 1_000_000,
             capacity_per_user: 100,
             system_transaction_timeout_secs: 86400,

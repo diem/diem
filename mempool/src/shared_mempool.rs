@@ -43,8 +43,8 @@ use network::validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSend
 use serde::{Deserialize, Serialize};
 use std::{
     cmp,
-    collections::{HashMap, HashSet},
-    convert::TryFrom,
+    collections::{HashMap, HashSet, VecDeque},
+    convert::{TryFrom, TryInto},
     ops::Deref,
     pin::Pin,
     sync::{Arc, Mutex},
@@ -61,11 +61,16 @@ use vm_validator::vm_validator::{get_account_state, TransactionValidation, VMVal
 /// `timeline_id` is position in log of ready transactions
 /// `is_alive` - is connection healthy
 /// `network_id` - ID of the mempool network that this peer belongs to
+/// `pending_ranges` - helper DS that stores tuples (start, end), and each tuple represents
+/// the timeline range of broadcasted transactions that have not been ACK'ed for yet.
+/// The entries do not overlap and are in ascending order. Each entry is not guaranteed to
+/// correspond to the range found in a BroadcastTransactionsRequest
 #[derive(Clone)]
 struct PeerSyncState {
     timeline_id: u64,
     is_alive: bool,
     network_id: PeerId,
+    pending_ranges: VecDeque<(u64, u64)>,
 }
 
 /// stores only peers that receive txns from this node
@@ -208,6 +213,7 @@ fn new_peer(peer_info: &Mutex<PeerInfo>, peer_id: PeerId, network_id: PeerId) {
             timeline_id: 0,
             is_alive: true,
             network_id,
+            pending_ranges: VecDeque::new(),
         })
         .is_alive = true;
 }
@@ -260,6 +266,7 @@ async fn sync_with_peers<'a>(
     mempool: &'a Mutex<CoreMempool>,
     mut network_senders: HashMap<PeerId, MempoolNetworkSender>,
     batch_size: usize,
+    max_pending_broadcasts: usize,
 ) {
     // Clone the underlying peer_info map and use this to sync and collect
     // state updates. We do this instead of holding the lock for the whole
@@ -270,14 +277,46 @@ async fn sync_with_peers<'a>(
         .deref()
         .clone();
     let mut state_updates = vec![];
+    let (_, earliest_timeline_id) = mempool
+        .lock()
+        .expect("[smp] failed to acquire mempool lock")
+        .read_timeline(0, 1);
 
+    // Broadcasting strategy (very high-level):
+    // Check whether for a peer we sent the maximum possible transactions (see `should_rebroadcast` for logic determining this)
+    // if not, broadcast a batch of new transactions
+    // else, rebroadcast older transactions that have not been ACK'ed for yet
     for (peer_id, peer_state) in peer_info_copy.into_iter() {
         if peer_state.is_alive {
-            let timeline_id = peer_state.timeline_id;
-            let (transactions, new_timeline_id) = mempool
-                .lock()
-                .expect("[shared mempool] failed to acquire mempool lock")
-                .read_timeline(timeline_id, batch_size);
+            let ranges_clone = peer_state.pending_ranges.clone();
+
+            let (transactions, timeline_id, new_timeline_id) = if should_rebroadcast(
+                ranges_clone.clone(),
+                batch_size,
+                max_pending_broadcasts,
+                earliest_timeline_id - 1,
+            ) {
+                get_rebroadcast_batch(ranges_clone, mempool, batch_size, true)
+            } else {
+                // fresh broadcast
+                let mut timeline_id = peer_state.timeline_id;
+                let (mut txns, mut new_timeline_id) = mempool
+                    .lock()
+                    .expect("[shared mempool] failed to acquire mempool lock")
+                    .read_timeline(peer_state.timeline_id, batch_size);
+
+                // if on an attempt to do a fresh broadcast there are no new transactions to broadcast,
+                // fall back to rebroadcasting older transactions that have not been ACK'ed yet
+                if txns.is_empty() {
+                    let rebroadcast_batch_info =
+                        get_rebroadcast_batch(ranges_clone, &mempool, batch_size, false);
+                    txns = rebroadcast_batch_info.0;
+                    timeline_id = rebroadcast_batch_info.1;
+                    new_timeline_id = rebroadcast_batch_info.2;
+                }
+
+                (txns, timeline_id, new_timeline_id)
+            };
 
             if !transactions.is_empty() {
                 counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(transactions.len() as i64);
@@ -295,7 +334,7 @@ async fn sync_with_peers<'a>(
                     network_sender,
                 ) {
                     error!(
-                        "[shared mempool] error broadcasting transations to peer {}: {}",
+                        "[shared mempool] error broadcasting transactions to peer {}: {}",
                         peer_id, e
                     );
                 } else {
@@ -312,7 +351,17 @@ async fn sync_with_peers<'a>(
         .expect("[shared mempool] failed to acquire peer_info lock");
     for (peer_id, new_timeline_id) in state_updates {
         peer_info.entry(peer_id).and_modify(|t| {
-            t.timeline_id = new_timeline_id;
+            if let Some((_range_start, range_end)) = t.pending_ranges.clone().back() {
+                if *range_end < new_timeline_id {
+                    // add new range
+                    t.pending_ranges.push_back((*range_end, new_timeline_id));
+                }
+            } else {
+                // add first broadcast
+                t.pending_ranges.push_back((t.timeline_id, new_timeline_id));
+            }
+
+            t.timeline_id = std::cmp::max(t.timeline_id, new_timeline_id);
         });
     }
 }
@@ -328,6 +377,94 @@ fn convert_txn_from_proto(txn_proto: SignedTransactionProto) -> Option<SignedTra
             None
         }
     }
+}
+
+fn should_rebroadcast(
+    mut ranges: VecDeque<(u64, u64)>,
+    batch_size: usize,
+    max_pending_broadcasts: usize,
+    earliest_timeline_id: u64,
+) -> bool {
+    // update pending ranges based on new earliest_timeline_id
+    // that are no longer applicable due to transactions not being in mempool anymore
+    // This can happen from transactions that got cleaned out via commits (notified by consensus/state sync)
+    while let Some((range_start, range_end)) = ranges.front_mut() {
+        if earliest_timeline_id <= *range_start {
+            break;
+        }
+        if *range_start < earliest_timeline_id && earliest_timeline_id < *range_end {
+            *range_start = earliest_timeline_id;
+            break;
+        }
+        if *range_end <= earliest_timeline_id {
+            ranges.pop_front();
+        }
+    }
+
+    if ranges.len() < max_pending_broadcasts {
+        return false;
+    }
+
+    let num_txns_in_saturated_broadcast: u64 =
+        (max_pending_broadcasts * batch_size).try_into().unwrap();
+    let mut txns_count = 0;
+    for (range_start, range_end) in ranges.into_iter() {
+        txns_count += range_end - range_start;
+        if txns_count >= num_txns_in_saturated_broadcast {
+            return true;
+        }
+    }
+    txns_count >= num_txns_in_saturated_broadcast
+}
+
+/// Returns (
+///     batch of transactions for rebroadcasting,
+///     timeline id of first txn in batch,
+///     timeline_id of last txn in batch
+/// )
+/// `should_pad` - if batch of broadcasted txns purely from `ranges` is less than batch_size, if `should_pad`,
+/// pad the batch with new transactions
+fn get_rebroadcast_batch(
+    ranges: VecDeque<(u64, u64)>,
+    mempool: &Mutex<CoreMempool>,
+    batch_size: usize,
+    should_pad: bool,
+) -> (Vec<SignedTransaction>, u64, u64) {
+    let mut batch = vec![];
+    let mut end_timeline_id = 0;
+    let mut start_timeline_id = 0;
+    {
+        let mut pool = mempool
+            .lock()
+            .expect("[shared mempool] failed to acquire mempool lock");
+        for (i, (range_start, range_end)) in ranges.into_iter().enumerate() {
+            end_timeline_id = range_end;
+            if i == 0 {
+                start_timeline_id = range_start;
+            }
+            let mut range_txns = pool.timeline_range(range_start, range_end);
+            batch.append(&mut range_txns);
+            if batch.len() >= batch_size {
+                let overflow: u64 = (batch.len() - batch_size)
+                    .try_into()
+                    .expect("failed usize conversion");
+                end_timeline_id -= overflow;
+                batch.split_off(batch_size);
+                break;
+            }
+        }
+
+        // if batch is not full yet, read remaining stuff from read_timeline directly
+        if should_pad && batch.len() < batch_size {
+            let (mut new_txns, last_read_timeline_id) =
+                pool.read_timeline(end_timeline_id, batch_size - batch.len());
+            batch.append(&mut new_txns);
+            end_timeline_id = last_read_timeline_id;
+        }
+    }
+
+    // return txns, start timeline id, end timeline id
+    (batch, start_timeline_id, end_timeline_id)
 }
 
 /// submits a list of SignedTransaction to the local mempool
@@ -520,14 +657,62 @@ async fn process_transaction_broadcast<V>(
     }
 }
 
-fn process_broadcast_ack<V>(smp: SharedMempool<V>, start_id: u64, end_id: u64, is_validator: bool)
-where
+fn process_broadcast_ack<V>(
+    smp: SharedMempool<V>,
+    peer_id: PeerId,
+    start_id: u64,
+    end_id: u64,
+    is_validator: bool,
+) where
     V: TransactionValidation,
 {
+    // update peer_sync_state
+    let mut peer_sync_info = smp
+        .peer_info
+        .lock()
+        .expect("[shared mempool] failed to get peer info lock");
+    let peer_state = peer_sync_info
+        .get_mut(&peer_id)
+        .expect("[shared mempool] missing peer info");
+
+    if start_id > end_id {
+        warn!(
+            "[shared mempool] ACK with invalid broadcast range {} to {}",
+            start_id, end_id
+        );
+        return;
+    }
+
+    // clear all pending ranges that are covered by the ACK'ed range
+    peer_state
+        .pending_ranges
+        .retain(|(range_start, range_end)| !(start_id <= *range_start && *range_end <= end_id));
+    if let Some((range_start, range_end)) = peer_state.pending_ranges.front_mut() {
+        if *range_start <= start_id && start_id < *range_end {
+            *range_start = start_id;
+        }
+
+        if *range_start <= end_id && end_id < *range_end {
+            *range_start = end_id;
+        }
+    }
+
+    // only remove ACK'ed transactions for full nodes
     if is_validator {
         return;
     }
-    if start_id < end_id {
+
+    let pending_timeline_id = if let Some((range_start, _)) = peer_state.pending_ranges.front() {
+        *range_start
+    } else {
+        warn!("[shared mempool] received ACK when there are no pending broadcasts");
+        peer_state.timeline_id
+    };
+
+    // only remove commits for earliest un-ACK'ed txn - this is because removing later txns can potentially
+    // lead to earlier transactions that have not been ACK'ed yet to be removed from mempool, if they are from
+    // the same account.
+    if start_id <= pending_timeline_id {
         let mut mempool = smp
             .mempool
             .lock()
@@ -536,11 +721,6 @@ where
         for txn in mempool.timeline_range(start_id, end_id).iter() {
             mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
         }
-    } else {
-        warn!(
-            "[shared mempool] ACK with invalid broadcast range {} to {}",
-            start_id, end_id
-        );
     }
 }
 
@@ -554,11 +734,19 @@ where
     let mempool = smp.mempool;
     let network_senders = smp.network_senders;
     let batch_size = smp.config.shared_mempool_batch_size;
+    let max_pending_broadcasts = smp.config.shared_mempool_max_pending_broadcasts;
     let subscribers = smp.subscribers;
 
     while let Some(sync_event) = interval.next().await {
         trace!("SyncEvent: {:?}", sync_event);
-        sync_with_peers(&peer_info, &mempool, network_senders.clone(), batch_size).await;
+        sync_with_peers(
+            &peer_info,
+            &mempool,
+            network_senders.clone(),
+            batch_size,
+            max_pending_broadcasts,
+        )
+        .await;
         notify_subscribers(SharedMempoolNotification::Sync, &subscribers);
     }
 
@@ -756,7 +944,7 @@ async fn inbound_network_task<V>(
                                             .await;
                                     }
                                     MempoolSyncMsg::BroadcastTransactionsResponse(start_id, end_id) => {
-                                        process_broadcast_ack(smp.clone(), start_id, end_id, is_validator);
+                                        process_broadcast_ack(smp.clone(), peer_id, start_id, end_id, is_validator);
                                         notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
                                     }
                                 };
