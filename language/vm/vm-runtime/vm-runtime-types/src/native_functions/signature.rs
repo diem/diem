@@ -97,7 +97,7 @@ pub fn native_ed25519_threshold_signature_verification(
 ) -> VMResult<NativeResult> {
     if arguments.len() != 4 {
         let msg = format!(
-            "wrong number of arguments for ed25519_signature_verification expected 4 found {}",
+            "wrong number of arguments for ed25519_threshold_signature_verification expected 4 found {}",
             arguments.len()
         );
         return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
