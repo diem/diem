@@ -20,44 +20,6 @@ pub struct ProposalMsg<T> {
     sync_info: SyncInfo,
 }
 
-/// A ProposalMsg is only accessible after verifying the signatures of a ProposalUncheckedSignatures
-/// via the `validate_signatures` function.
-pub struct ProposalUncheckedSignatures<T>(ProposalMsg<T>);
-
-#[cfg(any(test, feature = "fuzzing"))]
-impl<T: Payload> From<ProposalUncheckedSignatures<T>> for ProposalMsg<T> {
-    fn from(proposal: ProposalUncheckedSignatures<T>) -> Self {
-        proposal.0
-    }
-}
-
-impl<T: Payload> ProposalUncheckedSignatures<T> {
-    pub fn new(proposal: ProposalMsg<T>) -> Self {
-        Self(proposal)
-    }
-
-    /// Validates the signatures of the proposal. This includes the leader's signature over the
-    /// block and the QC, the timeout certificate signatures.
-    pub fn validate_signatures(self, validator: &ValidatorVerifier) -> Result<ProposalMsg<T>> {
-        // verify block leader's signature and QC
-        self.0
-            .proposal
-            .validate_signatures(validator)
-            .map_err(|e| format_err!("{:?}", e))?;
-        // if there is a timeout certificate, verify its signatures
-        if let Some(tc) = self.0.sync_info.highest_timeout_certificate() {
-            tc.verify(validator).map_err(|e| format_err!("{:?}", e))?;
-        }
-        // Note that we postpone the verification of SyncInfo until it's being used.
-        // return proposal
-        Ok(self.0)
-    }
-
-    pub fn epoch(&self) -> u64 {
-        self.0.proposal.epoch()
-    }
-}
-
 impl<T: Payload> ProposalMsg<T> {
     /// Creates a new proposal.
     pub fn new(proposal: Block<T>, sync_info: SyncInfo) -> Self {
@@ -67,8 +29,12 @@ impl<T: Payload> ProposalMsg<T> {
         }
     }
 
+    pub fn epoch(&self) -> u64 {
+        self.proposal.epoch()
+    }
+
     /// Verifies that the ProposalMsg is well-formed.
-    pub fn verify_well_formed(self) -> Result<Self> {
+    pub fn verify_well_formed(&self) -> Result<()> {
         ensure!(
             !self.proposal.is_nil_block(),
             "Proposal {} for a NIL block",
@@ -111,7 +77,19 @@ impl<T: Payload> ProposalMsg<T> {
             "Proposal {} does not define an author",
             self.proposal
         );
-        Ok(self)
+        Ok(())
+    }
+
+    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<()> {
+        self.proposal
+            .validate_signatures(validator)
+            .map_err(|e| format_err!("{:?}", e))?;
+        // if there is a timeout certificate, verify its signatures
+        if let Some(tc) = self.sync_info.highest_timeout_certificate() {
+            tc.verify(validator).map_err(|e| format_err!("{:?}", e))?;
+        }
+        // Note that we postpone the verification of SyncInfo until it's being used.
+        self.verify_well_formed()
     }
 
     pub fn proposal(&self) -> &Block<T> {

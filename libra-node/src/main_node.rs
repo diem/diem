@@ -240,6 +240,16 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut consensus = None;
     let (consensus_to_mempool_sender, consensus_requests) = channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
 
+    instant = Instant::now();
+    let mempool = libra_mempool::bootstrap(
+        node_config,
+        mempool_network_handles,
+        client_events,
+        consensus_requests,
+        state_sync_requests,
+    );
+    debug!("Mempool started in {} ms", instant.elapsed().as_millis());
+
     if let Some((peer_id, runtime, mut network_builder)) = validator_network_provider {
         // Note: We need to start network provider before consensus, because the consensus
         // initialization is blocked on state synchronizer to sync to the initial root ledger
@@ -281,16 +291,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         consensus = Some(consensus_provider);
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
-
-    instant = Instant::now();
-    let mempool = libra_mempool::bootstrap(
-        node_config,
-        mempool_network_handles,
-        client_events,
-        consensus_requests,
-        state_sync_requests,
-    );
-    debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
     LibraHandle {
         _network_runtimes: network_runtimes,

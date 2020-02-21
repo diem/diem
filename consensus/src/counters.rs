@@ -84,28 +84,6 @@ pub static COMMITTED_TXNS_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
 });
 
 /// Histogram of idle time of spent in event processing loop
-pub static STARTUP_SYNC_LOOP_IDLE_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(
-        register_histogram!(
-            "libra_consensus_startup_sync_loop_idle_duration_s",
-            "Histogram of idle time of spent in startup sync loop"
-        )
-        .unwrap(),
-    )
-});
-
-/// Histogram of idle time of spent in event processing loop
-pub static STARTUP_SYNC_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(
-        register_histogram!(
-            "libra_consensus_startup_sync_loop_busy_duration_s",
-            "Histogram of busy time of spent in startup sync loop"
-        )
-        .unwrap(),
-    )
-});
-
-/// Histogram of idle time of spent in event processing loop
 pub static EVENT_PROCESSING_LOOP_IDLE_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
     DurationHistogram::new(
         register_histogram!(
@@ -127,21 +105,11 @@ pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy
     )
 });
 
-/// Counters(queued,dequeued,dropped) related to proposals channel
-pub static PROPOSAL_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
+/// Counters(queued,dequeued,dropped) related to consensus channel
+pub static CONSENSUS_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_consensus_proposal_channel_msgs_count",
-        "Counters(queued,dequeued,dropped) related to proposals channel",
-        &["state"]
-    )
-    .unwrap()
-});
-
-/// Counters(queued,dequeued,dropped) related to votes channel
-pub static VOTES_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_votes_channel_msgs_count",
-        "Counters(queued,dequeued,dropped) related to votes channel",
+        "libra_consensus_channel_msgs_count",
+        "Counters(queued,dequeued,dropped) related to consensus channel",
         &["state"]
     )
     .unwrap()
@@ -152,26 +120,6 @@ pub static BLOCK_RETRIEVAL_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_consensus_block_retrieval_channel_msgs_count",
         "Counters(queued,dequeued,dropped) related to block retrieval channel",
-        &["state"]
-    )
-    .unwrap()
-});
-
-/// Counters(queued,dequeued,dropped) related to sync info channel
-pub static SYNC_INFO_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_sync_info_dropped_channel_msgs_count",
-        "Counters(queued,dequeued,dropped) related to sync info channel",
-        &["state"]
-    )
-    .unwrap()
-});
-
-/// Counters(queued,dequeued,dropped) related to epoch change channel
-pub static EPOCH_CHANGE_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_epoch_change_dropped_channel_msgs_count",
-        "Counters(queued,dequeued,dropped) related to epoch change channel",
         &["state"]
     )
     .unwrap()

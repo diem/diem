@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Request to get a ValidatorChangeProof from current_epoch to target_epoch
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct EpochRetrievalRequest {
     pub start_epoch: u64,
     pub end_epoch: u64,
