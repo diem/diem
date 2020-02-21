@@ -53,6 +53,11 @@ impl LibraVM {
         }
     }
 
+    /// Provides access to some internal APIs of the Libra VM.
+    pub fn internals(&self) -> LibraVMInternals {
+        LibraVMInternals(self)
+    }
+
     pub fn load_configs(&mut self, state: &dyn StateView) {
         self.load_configs_impl(&RemoteStorage::new(state))
     }
@@ -602,6 +607,44 @@ impl VMExecutor for LibraVM {
     ) -> VMResult<Vec<TransactionOutput>> {
         let mut vm = LibraVM::new(config);
         vm.execute_block_impl(transactions, state_view)
+    }
+}
+
+/// Internal APIs for the Libra VM, primarily used for testing.
+#[derive(Clone, Copy)]
+pub struct LibraVMInternals<'a>(&'a LibraVM);
+
+impl<'a> LibraVMInternals<'a> {
+    /// Returns the internal Move VM instance.
+    pub fn move_vm(self) -> &'a MoveVM {
+        &self.0.move_vm
+    }
+
+    /// Returns the internal gas schedule if it has been loaded, or an error if it hasn't.
+    pub fn gas_schedule(self) -> VMResult<&'a CostTable> {
+        self.0.get_gas_schedule()
+    }
+
+    /// Returns the configuration.
+    pub fn config(self) -> &'a VMConfig {
+        &self.0.config
+    }
+
+    /// Executes the given code within the context of a transaction.
+    ///
+    /// The `TransactionExecutionContext` can be used as a `ChainState`.
+    ///
+    /// If you don't care about the transaction metadata, use `TransactionMetadata::default()`.
+    pub fn with_txn_context<T>(
+        self,
+        txn_data: &TransactionMetadata,
+        state_view: &dyn StateView,
+        f: impl for<'txn> FnOnce(TransactionExecutionContext<'txn>) -> T,
+    ) -> T {
+        let remote_storage = RemoteStorage::new(state_view);
+        let txn_context =
+            TransactionExecutionContext::new(txn_data.max_gas_amount(), &remote_storage);
+        f(txn_context)
     }
 }
 
