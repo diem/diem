@@ -143,7 +143,8 @@ mod count {
             | E::Freeze(e)
             | E::Dereference(e)
             | E::UnaryExp(_, e)
-            | E::Borrow(_, e, _) => exp(context, e),
+            | E::Borrow(_, e, _)
+            | E::Cast(e, _) => exp(context, e),
 
             E::BinopExp(e1, _, e2) => {
                 exp(context, e1);
@@ -201,6 +202,7 @@ mod count {
 
             E::Unit | E::Value(_) => true,
 
+            E::Cast(e, _) => can_subst_exp_single(e),
             E::UnaryExp(op, e) => can_subst_exp_unary(op) && can_subst_exp_single(e),
             E::BinopExp(e1, op, e2) => {
                 can_subst_exp_binary(op) && can_subst_exp_single(e1) && can_subst_exp_single(e2)
@@ -365,7 +367,8 @@ mod eliminate {
             | E::Freeze(e)
             | E::Dereference(e)
             | E::UnaryExp(_, e)
-            | E::Borrow(_, e, _) => exp(context, e),
+            | E::Borrow(_, e, _)
+            | E::Cast(e, _) => exp(context, e),
 
             E::BinopExp(e1, _, e2) => {
                 exp(context, e1);

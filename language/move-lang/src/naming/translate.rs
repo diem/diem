@@ -833,6 +833,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             Some(d) => NE::DerefBorrow(d),
         },
 
+        EE::Cast(e, t) => NE::Cast(exp(context, *e), type_(context, t)),
         EE::Annotate(e, t) => NE::Annotate(exp(context, *e), type_(context, t)),
 
         EE::GlobalCall(n, tys_opt, rhs) => {

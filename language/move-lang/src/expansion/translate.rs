@@ -758,6 +758,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                 EE::UnresolvedError
             }
         },
+        PE::Cast(e, ty) => EE::Cast(exp(context, *e), type_(context, ty)),
         PE::Annotate(e, ty) => EE::Annotate(exp(context, *e), type_(context, ty)),
         PE::UnresolvedError => panic!("ICE error should have been thrown"),
     };

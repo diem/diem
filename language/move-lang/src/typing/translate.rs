@@ -814,6 +814,15 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             }
         }
 
+        NE::Cast(nl, ty) => {
+            let el = exp(context, *nl);
+            let tyloc = ty.loc;
+            let rhs = core::instantiate(context, ty);
+            context.add_numeric_constraint(el.exp.loc, "as", el.ty.clone());
+            context.add_numeric_constraint(tyloc, "as", rhs.clone());
+            (rhs.clone(), TE::Cast(el, Box::new(rhs)))
+        }
+
         NE::Annotate(nl, ty_annot) => {
             let el = exp(context, *nl);
             let annot_loc = ty_annot.loc;

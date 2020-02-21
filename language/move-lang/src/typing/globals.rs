@@ -148,7 +148,7 @@ fn exp(
         }
         E::ExpList(el) => exp_list(context, annotated_acquires, seen, el),
 
-        E::Annotate(e, _) => exp(context, annotated_acquires, seen, e),
+        E::Cast(e, _) | E::Annotate(e, _) => exp(context, annotated_acquires, seen, e),
     }
 }
 

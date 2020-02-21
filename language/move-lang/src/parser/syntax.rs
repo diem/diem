@@ -600,13 +600,8 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                     Exp_::Annotate(Box::new(e), ty)
                 } else if match_token(tokens, Tok::As)? {
                     let ty = parse_type(tokens)?;
-                    // FIXME: Exp_::Cast(Box::new(e), ty)
-                    // The extra let binding here is just to keep clippy from complaining
-                    // that this code is the same as above. Remove it when there is a Cast
-                    // expression (or whatever we end up calling it).
-                    let e = Exp_::Annotate(Box::new(e), ty);
                     consume_token(tokens, Tok::RParen)?;
-                    e
+                    Exp_::Cast(Box::new(e), ty)
                 } else {
                     if tokens.peek() != Tok::RParen {
                         consume_token(tokens, Tok::Comma)?;

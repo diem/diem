@@ -357,6 +357,8 @@ pub enum Exp_ {
     // e.f
     Dot(Box<Exp>, Name),
 
+    // (e as t)
+    Cast(Box<Exp>, Type),
     // (e: t)
     Annotate(Box<Exp>, Type),
 
@@ -971,6 +973,13 @@ impl AstDebug for Exp_ {
             E::Dot(e, n) => {
                 e.ast_debug(w);
                 w.write(&format!(".{}", n));
+            }
+            E::Cast(e, ty) => {
+                w.write("(");
+                e.ast_debug(w);
+                w.write(" as ");
+                ty.ast_debug(w);
+                w.write(")");
             }
             E::Annotate(e, ty) => {
                 w.write("(");

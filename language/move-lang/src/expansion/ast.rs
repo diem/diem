@@ -175,6 +175,7 @@ pub enum Exp_ {
     Borrow(bool, Box<Exp>),
     ExpDotted(Box<ExpDotted>),
 
+    Cast(Box<Exp>, Type),
     Annotate(Box<Exp>, Type),
 
     UnresolvedError,
@@ -576,6 +577,13 @@ impl AstDebug for Exp_ {
                 e.ast_debug(w);
             }
             E::ExpDotted(ed) => ed.ast_debug(w),
+            E::Cast(e, ty) => {
+                w.write("(");
+                e.ast_debug(w);
+                w.write(" as ");
+                ty.ast_debug(w);
+                w.write(")");
+            }
             E::Annotate(e, ty) => {
                 w.write("(");
                 e.ast_debug(w);

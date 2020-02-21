@@ -241,6 +241,7 @@ pub enum Exp_ {
     DerefBorrow(ExpDotted),
     Borrow(bool, ExpDotted),
 
+    Cast(Box<Exp>, Type),
     Annotate(Box<Exp>, Type),
 
     UnresolvedError,
@@ -405,6 +406,13 @@ impl BaseType_ {
     pub fn u128(loc: Loc) -> BaseType {
         Self::builtin(loc, BuiltinTypeName_::U128)
     }
+
+    pub fn builtin_name(&self) -> Option<&BuiltinTypeName> {
+        match self {
+            BaseType_::Apply(_, sp!(_, TypeName_::Builtin(b)), _) => Some(b),
+            _ => None,
+        }
+    }
 }
 
 impl SingleType_ {
@@ -434,6 +442,13 @@ impl SingleType_ {
 
     pub fn u128(loc: Loc) -> SingleType {
         Self::base(BaseType_::u128(loc))
+    }
+
+    pub fn builtin_name(&self) -> Option<&BuiltinTypeName> {
+        match self {
+            SingleType_::Ref(_, _) => None,
+            SingleType_::Base(b) => b.value.builtin_name(),
+        }
     }
 }
 
@@ -468,6 +483,13 @@ impl Type_ {
 
     pub fn u128(loc: Loc) -> Type {
         Self::single(SingleType_::u128(loc))
+    }
+
+    pub fn builtin_name(&self) -> Option<&BuiltinTypeName> {
+        match self {
+            Type_::Unit | Type_::Multiple(_) => None,
+            Type_::Single(s) => s.value.builtin_name(),
+        }
     }
 }
 
@@ -897,6 +919,13 @@ impl AstDebug for Exp_ {
             E::DerefBorrow(ed) => {
                 w.write("(&*)");
                 ed.ast_debug(w)
+            }
+            E::Cast(e, ty) => {
+                w.write("(");
+                e.ast_debug(w);
+                w.write(" as ");
+                ty.ast_debug(w);
+                w.write(")");
             }
             E::Annotate(e, ty) => {
                 w.write("(");

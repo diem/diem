@@ -239,7 +239,7 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
         }
 
         E::Unit | E::Value(_) | E::UnresolvedError => svalue(),
-        E::UnaryExp(_, e) => {
+        E::Cast(e, _) | E::UnaryExp(_, e) => {
             let v = exp(context, e);
             assert!(!assert_single_value(v).is_ref());
             svalue()
