@@ -41,6 +41,7 @@ jobs:
               pr_num = match[1];
             } else {
               console.warn("Did not find pull request num in commit message. -\\_(O_o)_/-");
+              console.log("GH event payload\n", context.payload);
               return;
             }
             // Read and check cluster test results
