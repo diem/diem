@@ -947,6 +947,8 @@ impl<T: Payload> EventProcessor<T> {
                             .with_label_values(&["failed"])
                             .inc();
                     }
+                    // TODO(zekunli): add counter
+                    TransactionStatus::Retry => (),
                 }
             }
         }

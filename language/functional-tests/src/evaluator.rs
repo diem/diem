@@ -360,7 +360,7 @@ fn run_transaction(
                     Err(ErrorKind::VMExecutionFailure(output).into())
                 }
             }
-            TransactionStatus::Discard(_) => {
+            TransactionStatus::Discard(_) | TransactionStatus::Retry => {
                 checked_verify!(output.write_set().is_empty());
                 Err(ErrorKind::DiscardedTransaction(output).into())
             }
