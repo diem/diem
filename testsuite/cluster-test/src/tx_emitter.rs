@@ -41,13 +41,15 @@ use rand::{
     Rng, SeedableRng,
 };
 use slog_scope::{debug, info};
-use tokio::runtime::Runtime;
+use tokio::runtime::{Handle, Runtime};
 
+use futures::executor::block_on;
+use futures::future::FutureExt;
 use std::cmp::{max, min};
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::thread::JoinHandle;
+use tokio::{task::JoinHandle, time};
 use util::retry;
 
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
@@ -89,7 +91,7 @@ impl Default for EmitThreadParams {
 pub struct EmitJobRequest {
     pub instances: Vec<Instance>,
     pub accounts_per_client: usize,
-    pub threads_per_ac: Option<usize>,
+    pub workers_per_ac: Option<usize>,
     pub thread_params: EmitThreadParams,
 }
 
@@ -105,8 +107,8 @@ impl EmitJobRequest {
             },
             None => Self {
                 instances,
-                accounts_per_client: 16,
-                threads_per_ac: None,
+                accounts_per_client: 10,
+                workers_per_ac: None,
                 thread_params: EmitThreadParams::default(),
             },
         }
@@ -134,20 +136,21 @@ impl TxEmitter {
     }
 
     pub async fn start_job(&mut self, req: EmitJobRequest) -> Result<EmitJob> {
-        let threads_per_ac = match req.threads_per_ac {
+        let workers_per_ac = match req.workers_per_ac {
             Some(x) => x,
             None => {
-                // Trying to create somewhere between 75-150 threads
+                let target_threads = 300;
+                // Trying to create somewhere between target_threads/2..target_threads threads
                 // We want to have equal numbers of threads for each AC, so that they are equally loaded
                 // Otherwise things like flamegrap/perf going to show different numbers depending on which AC is chosen
                 // Also limiting number of threads as max 10 per AC for use cases with very small number of nodes or use --peers
-                min(10, max(1, 200 / req.instances.len()))
+                min(10, max(1, target_threads / req.instances.len()))
             }
         };
-        let num_clients = req.instances.len() * threads_per_ac;
+        let num_clients = req.instances.len() * workers_per_ac;
         info!(
-            "Will use {} threads per AC with total {} AC clients",
-            threads_per_ac, num_clients
+            "Will use {} workers per AC with total {} AC clients",
+            workers_per_ac, num_clients
         );
         let num_accounts = req.accounts_per_client * num_clients;
         info!(
@@ -162,17 +165,17 @@ impl TxEmitter {
         let mut all_accounts = all_accounts.into_iter();
         let stop = Arc::new(AtomicBool::new(false));
         let stats = Arc::new(TxStats::default());
-        for _ in 0..threads_per_ac {
-            for instance in &req.instances {
-                let instance = instance.clone();
+        let tokio_handle = Handle::current();
+        for instance in &req.instances {
+            for _ in 0..workers_per_ac {
                 let client = Self::make_client(&instance);
+                let instance = instance.clone();
                 let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
                 let all_addresses = all_addresses.clone();
                 let stop = stop.clone();
-                let peer_id = instance.peer_name().clone();
                 let params = req.thread_params.clone();
                 let stats = Arc::clone(&stats);
-                let thread = SubmissionThread {
+                let worker = SubmissionWorker {
                     accounts,
                     instance,
                     client,
@@ -181,13 +184,7 @@ impl TxEmitter {
                     params,
                     stats,
                 };
-                let join_handle = thread::Builder::new()
-                    .name(format!("txem-{}", peer_id))
-                    .spawn(move || {
-                        let mut rt = Runtime::new().unwrap();
-                        rt.block_on(thread.run())
-                    })
-                    .unwrap();
+                let join_handle = tokio_handle.spawn(worker.run().boxed());
                 workers.push(Worker { join_handle });
                 thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
             }
@@ -274,10 +271,8 @@ impl TxEmitter {
     pub fn stop_job(&mut self, job: EmitJob) -> TxStats {
         job.stop.store(true, Ordering::Relaxed);
         for worker in job.workers {
-            let mut accounts = worker
-                .join_handle
-                .join()
-                .expect("TxEmitter worker thread failed");
+            let mut accounts =
+                block_on(worker.join_handle).expect("TxEmitter worker thread failed");
             self.accounts.append(&mut accounts);
         }
         #[allow(clippy::match_wild_err_arm)]
@@ -307,7 +302,7 @@ struct Worker {
     join_handle: JoinHandle<Vec<AccountData>>,
 }
 
-struct SubmissionThread {
+struct SubmissionWorker {
     accounts: Vec<AccountData>,
     instance: Instance,
     client: AdmissionControlClientAsync,
@@ -317,13 +312,12 @@ struct SubmissionThread {
     stats: Arc<TxStats>,
 }
 
-impl SubmissionThread {
+impl SubmissionWorker {
     #[allow(clippy::collapsible_if)]
     async fn run(mut self) -> Vec<AccountData> {
         let wait = Duration::from_millis(self.params.wait_millis);
-        let mut rng = ThreadRng::default();
         while !self.stop.load(Ordering::Relaxed) {
-            let requests = self.gen_requests(&mut rng);
+            let requests = self.gen_requests();
             let num_requests = requests.len();
             for request in requests {
                 self.stats.submitted.fetch_add(1, Ordering::Relaxed);
@@ -343,7 +337,7 @@ impl SubmissionThread {
                 }
                 let now = Instant::now();
                 if wait_util > now {
-                    thread::sleep(wait_util - now);
+                    time::delay_for(wait_util - now).await;
                 } else {
                     debug!("[{}] Thread won't sleep", self.instance);
                 }
@@ -372,14 +366,18 @@ impl SubmissionThread {
         self.accounts
     }
 
-    fn gen_requests(&mut self, rng: &mut ThreadRng) -> Vec<SubmitTransactionRequest> {
+    fn gen_requests(&mut self) -> Vec<SubmitTransactionRequest> {
+        let mut rng = ThreadRng::default();
         let batch_size = max(MAX_TXN_BATCH_SIZE, self.accounts.len());
-        let accounts = self.accounts.iter_mut().choose_multiple(rng, batch_size);
+        let accounts = self
+            .accounts
+            .iter_mut()
+            .choose_multiple(&mut rng, batch_size);
         let mut requests = Vec::with_capacity(accounts.len());
         for sender in accounts {
             let receiver = self
                 .all_addresses
-                .choose(rng)
+                .choose(&mut rng)
                 .expect("all_addresses can't be empty");
             let request = gen_transfer_txn_request(sender, receiver, 1);
             requests.push(request);
@@ -413,7 +411,7 @@ async fn wait_for_accounts_sequence(
                 }
             }
         }
-        thread::sleep(Duration::from_millis(100));
+        time::delay_for(Duration::from_millis(100)).await;
     }
     Ok(())
 }
