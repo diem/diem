@@ -101,6 +101,7 @@ pub fn report_execution_status(status: &TransactionStatus) {
     match status {
         TransactionStatus::Keep(vm_status) => inc_counter(TXN_EXECUTION_KEEP, vm_status),
         TransactionStatus::Discard(vm_status) => inc_counter(TXN_EXECUTION_DISCARD, vm_status),
+        TransactionStatus::Retry => (),
     }
 }
 

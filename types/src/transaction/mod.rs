@@ -569,12 +569,18 @@ pub enum TransactionStatus {
 
     /// Keep the transaction output
     Keep(VMStatus),
+
+    /// Retry the transaction because it is after a ValidatorSetChange txn
+    Retry,
 }
 
 impl TransactionStatus {
-    pub fn vm_status(&self) -> &VMStatus {
+    pub fn vm_status(&self) -> VMStatus {
         match self {
-            TransactionStatus::Discard(vm_status) | TransactionStatus::Keep(vm_status) => vm_status,
+            TransactionStatus::Discard(vm_status) | TransactionStatus::Keep(vm_status) => {
+                vm_status.clone()
+            }
+            TransactionStatus::Retry => VMStatus::new(StatusCode::UNKNOWN_VALIDATION_STATUS),
         }
     }
 
@@ -582,6 +588,7 @@ impl TransactionStatus {
         match self {
             TransactionStatus::Discard(_) => true,
             TransactionStatus::Keep(_) => false,
+            TransactionStatus::Retry => true,
         }
     }
 }

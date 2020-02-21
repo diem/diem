@@ -218,6 +218,7 @@ impl FakeExecutor {
                 output
             }
             TransactionStatus::Discard(status) => panic!("transaction discarded with {:?}", status),
+            TransactionStatus::Retry => panic!("transaction status is retry"),
         }
     }
 

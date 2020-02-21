@@ -523,7 +523,21 @@ where
         let mut next_validator_set = None;
 
         let proof_reader = ProofReader::new(account_to_proof);
+        let validator_set_change_event_key = ValidatorSet::change_event_key();
         for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
+            if next_validator_set.is_some() {
+                txn_data.push(TransactionData::new(
+                    HashMap::new(),
+                    vec![],
+                    TransactionStatus::Retry,
+                    Arc::clone(&current_state_tree),
+                    Arc::new(InMemoryAccumulator::<EventAccumulatorHasher>::default()),
+                    0,
+                    0,
+                    None,
+                ));
+                continue;
+            }
             let (blobs, state_tree, num_accounts_created) = Self::process_write_set(
                 txn,
                 &mut account_to_state,
@@ -537,8 +551,8 @@ where
                     vm_output.events().iter().map(CryptoHash::hash).collect();
                 InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes)
             };
-            let mut txn_info_hash = None;
 
+            let mut txn_info_hash = None;
             match vm_output.status() {
                 TransactionStatus::Keep(status) => {
                     ensure!(
@@ -569,6 +583,7 @@ where
                         );
                     }
                 }
+                TransactionStatus::Retry => (),
             }
 
             txn_data.push(TransactionData::new(
@@ -584,13 +599,12 @@ where
             current_state_tree = state_tree;
 
             // check for change in validator set
-            let validator_set_change_event_key = ValidatorSet::change_event_key();
-            for event in vm_output.events() {
-                if *event.key() == validator_set_change_event_key {
-                    next_validator_set = Some(ValidatorSet::from_bytes(event.event_data())?);
-                    break;
-                }
-            }
+            next_validator_set = vm_output
+                .events()
+                .iter()
+                .find(|event| *event.key() == validator_set_change_event_key)
+                .map(|event| ValidatorSet::from_bytes(event.event_data()))
+                .transpose()?
         }
 
         let current_transaction_accumulator =

@@ -36,6 +36,7 @@ enum MockVMTransaction {
         recipient: AccountAddress,
         amount: u64,
     },
+    Reconfiguration,
 }
 
 pub static KEEP_STATUS: Lazy<TransactionStatus> =
@@ -139,6 +140,24 @@ impl VMExecutor for MockVM {
                         events,
                         0,
                         TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
+                    ));
+                }
+                MockVMTransaction::Reconfiguration => {
+                    let account = AccountAddress::new([0xff; ADDRESS_LENGTH]);
+                    let balance_access_path = balance_ap(account);
+                    read_balance_from_storage(state_view, &balance_access_path);
+                    outputs.push(TransactionOutput::new(
+                        // WriteSet cannot be empty so use genesis writeset only for testing.
+                        gen_genesis_writeset(),
+                        // mock the validator set event
+                        vec![ContractEvent::new(
+                            ValidatorSet::change_event_key(),
+                            0,
+                            TypeTag::Bool,
+                            lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap(),
+                        )],
+                        0,
+                        KEEP_STATUS.clone(),
                     ));
                 }
             }
@@ -297,6 +316,18 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
     )
 }
 
+pub fn encode_reconfiguration_transaction(sender: AccountAddress) -> Transaction {
+    let raw_transaction = RawTransaction::new_write_set(sender, 0, WriteSet::default());
+
+    let (privkey, pubkey) = compat::generate_keypair(None);
+    Transaction::UserTransaction(
+        raw_transaction
+            .sign(&privkey, pubkey)
+            .expect("Failed to sign raw transaction.")
+            .into_inner(),
+    )
+}
+
 fn decode_transaction(txn: &SignedTransaction) -> MockVMTransaction {
     let sender = txn.sender();
     match txn.payload() {
@@ -326,7 +357,8 @@ fn decode_transaction(txn: &SignedTransaction) -> MockVMTransaction {
             }
         }
         TransactionPayload::WriteSet(_) => {
-            unimplemented!("MockVM does not support WriteSet transaction payload.")
+            // Use WriteSet for reconfig only for testing.
+            MockVMTransaction::Reconfiguration
         }
         TransactionPayload::Program => {
             unimplemented!("MockVM does not support Program transaction payload.")
