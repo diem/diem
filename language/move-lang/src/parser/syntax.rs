@@ -774,17 +774,9 @@ fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
         Tok::Return => {
             tokens.advance()?;
             let e = if at_end_of_exp(tokens) {
-                // If the return value expression is not present, construct a default
-                // unit value (with the same source location as the return keyword).
-                let default_value = spanned(
-                    tokens.file_name(),
-                    start_loc,
-                    tokens.previous_end_loc(),
-                    Exp_::Unit,
-                );
-                Box::new(default_value)
+                None
             } else {
-                Box::new(parse_exp(tokens)?)
+                Some(Box::new(parse_exp(tokens)?))
             };
             Exp_::Return(e)
         }

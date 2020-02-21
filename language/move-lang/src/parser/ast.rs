@@ -336,7 +336,7 @@ pub enum Exp_ {
     Assign(Box<Exp>, Box<Exp>),
 
     // return e
-    Return(Box<Exp>),
+    Return(Option<Box<Exp>>),
     // abort e
     Abort(Box<Exp>),
     // break
@@ -933,8 +933,11 @@ impl AstDebug for Exp_ {
                 rhs.ast_debug(w);
             }
             E::Return(e) => {
-                w.write("return ");
-                e.ast_debug(w);
+                w.write("return");
+                if let Some(v) = e {
+                    w.write(" ");
+                    v.ast_debug(w);
+                }
             }
             E::Abort(e) => {
                 w.write("abort ");
