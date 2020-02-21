@@ -43,7 +43,7 @@ use futures::future::join_all;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::select;
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 use tokio::time::{delay_for, delay_until, Instant as TokioInstant};
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
@@ -100,10 +100,10 @@ struct Args {
     changelog: Option<Vec<String>>,
 
     // emit_tx options
-    #[structopt(long, default_value = "16")]
+    #[structopt(long, default_value = "10")]
     accounts_per_client: usize,
     #[structopt(long)]
-    threads_per_ac: Option<usize>,
+    workers_per_ac: Option<usize>,
     #[structopt(long, default_value = "0")]
     wait_millis: u64,
     #[structopt(long)]
@@ -148,7 +148,7 @@ pub fn main() {
             let util = BasicSwarmUtil::setup(&args);
             rt.block_on(util.emit_tx(
                 args.accounts_per_client,
-                args.threads_per_ac,
+                args.workers_per_ac,
                 thread_params,
                 duration,
             ));
@@ -157,7 +157,7 @@ pub fn main() {
             let util = ClusterUtil::setup(&args);
             rt.block_on(util.emit_tx(
                 args.accounts_per_client,
-                args.threads_per_ac,
+                args.workers_per_ac,
                 thread_params,
                 duration,
             ));
@@ -325,7 +325,7 @@ impl BasicSwarmUtil {
     pub async fn emit_tx(
         self,
         accounts_per_client: usize,
-        threads_per_ac: Option<usize>,
+        workers_per_ac: Option<usize>,
         thread_params: EmitThreadParams,
         duration: Duration,
     ) {
@@ -334,7 +334,7 @@ impl BasicSwarmUtil {
             .start_job(EmitJobRequest {
                 instances: self.cluster.validator_instances().to_vec(),
                 accounts_per_client,
-                threads_per_ac,
+                workers_per_ac,
                 thread_params,
             })
             .await
@@ -393,7 +393,7 @@ impl ClusterUtil {
     pub async fn emit_tx(
         self,
         accounts_per_client: usize,
-        threads_per_ac: Option<usize>,
+        workers_per_ac: Option<usize>,
         thread_params: EmitThreadParams,
         duration: Duration,
     ) {
@@ -402,7 +402,7 @@ impl ClusterUtil {
             .start_job(EmitJobRequest {
                 instances: self.cluster.validator_instances().to_vec(),
                 accounts_per_client,
-                threads_per_ac,
+                workers_per_ac,
                 thread_params,
             })
             .await
@@ -464,11 +464,17 @@ impl ClusterTestRunner {
         );
         let github = GitHub::new();
         let report = SuiteReport::new();
-        let runtime = Runtime::new().expect("Failed to create tokio runtime");
+        let runtime = Builder::new()
+            .threaded_scheduler()
+            .core_threads(num_cpus::get())
+            .thread_name("ct-tokio")
+            .enable_all()
+            .build()
+            .expect("Failed to create tokio runtime");
         let global_emit_job_request = EmitJobRequest {
             instances: vec![],
             accounts_per_client: args.accounts_per_client,
-            threads_per_ac: args.threads_per_ac,
+            workers_per_ac: args.workers_per_ac,
             thread_params: EmitThreadParams {
                 wait_millis: args.wait_millis,
                 wait_committed: !args.burst,

@@ -104,7 +104,7 @@ fn main() {
         .join(",");
     println!("To run transaction generator run:");
     println!(
-        "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?}  --emit-tx",
+        "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --emit-tx --workers-per-ac 1",
         faucet_key_file_path, node_address_list,
     );
     if let Some(ref swarm) = full_node_swarm {

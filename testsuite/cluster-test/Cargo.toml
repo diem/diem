@@ -35,6 +35,7 @@ slog-envlogger = "2.1.0"
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
 admission-control-proto = { path = "../../admission_control/admission-control-proto", version = "0.1.0" }
 util = { path = "../../common/util", version = "0.1.0", package = "libra-util" }
+num_cpus = "1.11.1"
 
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
