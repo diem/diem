@@ -10,7 +10,7 @@ fn locals() -> VMResult<()> {
     let mut locals = Locals::new(LEN);
     for i in 0..LEN {
         assert!(locals.copy_loc(i).is_err());
-        assert!(locals.move_loc(1).is_err());
+        assert!(locals.move_loc(i).is_err());
         assert!(locals.borrow_loc(i).is_err());
     }
     locals.store_loc(1, Value::u64(42))?;
