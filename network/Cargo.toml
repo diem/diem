@@ -42,7 +42,7 @@ libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0
 proptest = { version = "0.9.4", default-features = false, optional = true }
 
 [dev-dependencies]
-criterion = "=0.3.0"
+criterion = "=0.3.1"
 noise = { path = "noise", version = "0.1.0", features = ["testing"] }
 socket-bench-server = { path = "socket-bench-server", version = "0.1.0" }
 
