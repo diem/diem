@@ -7,7 +7,9 @@
 use bytecode_verifier::absint::{AbstractDomain, JoinResult};
 use bytecode_verifier::control_flow_graph::{BlockId, ControlFlowGraph};
 use std::collections::HashMap;
+use vm::file_format::CodeOffset;
 
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct BlockState<State: Clone> {
     pub pre: State,
     pub post: State,
@@ -21,7 +23,12 @@ pub trait TransferFunctions {
     type InstrType;
 
     /// Execute instr found at index in the current basic block from pre-state
-    fn execute(&mut self, pre: &Self::State, instr: &Self::InstrType) -> Self::State;
+    fn execute(
+        &mut self,
+        pre: &Self::State,
+        instr: &Self::InstrType,
+        idx: CodeOffset,
+    ) -> Self::State;
 }
 
 pub trait DataflowAnalysis: TransferFunctions {
@@ -106,7 +113,7 @@ pub trait DataflowAnalysis: TransferFunctions {
         let mut state = pre_state.clone();
         for offset in cfg.instr_indexes(block_id) {
             let instr = &instrs[offset as usize];
-            state = self.execute(&state, instr);
+            state = self.execute(&state, instr, offset);
         }
         state
     }

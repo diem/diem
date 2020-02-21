@@ -14,5 +14,6 @@ pub mod cli;
 pub mod dataflow_analysis;
 pub mod driver;
 pub mod env;
+pub mod lifetime_analysis;
 pub mod spec_translator;
 pub mod stackless_control_flow_graph;
