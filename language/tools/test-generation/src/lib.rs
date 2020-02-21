@@ -89,7 +89,7 @@ fn execute_function_in_module(
         module.identifier_at(entry_name_idx)
     };
     {
-        let mut runtime = MoveVM::new();
+        let runtime = MoveVM::new();
         runtime.cache_module(module.clone());
 
         let data_cache = BlockDataCache::new(state_view);

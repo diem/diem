@@ -168,7 +168,7 @@ fn stack_instructions(options: &Opt) {
 
     // create a VMRuntime and populate it with generated modules
     let allocator = Arena::new();
-    let mut runtime = VMRuntime::new(&allocator);
+    let runtime = VMRuntime::new(&allocator);
     for m in modules.clone() {
         runtime.cache_module(m);
     }

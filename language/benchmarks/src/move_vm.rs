@@ -23,7 +23,7 @@ use vm_runtime::{
 /// Entry point for the bench, provide a function name to invoke in Module Bench in bench.move.
 pub fn bench(c: &mut Criterion, fun: &str) {
     let module = compile_module();
-    let mut move_vm = MoveVM::new();
+    let move_vm = MoveVM::new();
     move_vm.cache_module(module);
     execute(c, &move_vm, fun);
 }

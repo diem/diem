@@ -128,7 +128,7 @@ pub fn encode_genesis_transaction_with_validator_and_modules(
     stdlib_modules: &'static [VerifiedModule],
 ) -> SignatureCheckedTransaction {
     // create a MoveVM
-    let mut move_vm = MoveVM::new();
+    let move_vm = MoveVM::new();
 
     // create a data view for move_vm
     let state_view = GenesisStateView;

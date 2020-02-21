@@ -88,8 +88,8 @@ impl MoveVM {
             .rent(|runtime| runtime.publish_module(module, chain_state, txn_data))
     }
 
-    pub fn cache_module(&mut self, module: VerifiedModule) {
-        self.0.rent_mut(|runtime| runtime.cache_module(module))
+    pub fn cache_module(&self, module: VerifiedModule) {
+        self.0.rent(|runtime| runtime.cache_module(module))
     }
 
     pub fn resolve_struct_def_by_name<S: ChainState>(
