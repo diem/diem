@@ -6,14 +6,12 @@ use anyhow::{anyhow, ensure, Error};
 use bytes::Bytes;
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::{
-    block::Block,
     block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse},
     common::{Author, Payload},
     epoch_retrieval::EpochRetrievalRequest,
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
-    vote_proposal::VoteProposal,
 };
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_logger::prelude::*;
@@ -37,8 +35,6 @@ use std::{
 
 #[derive(Deserialize, Serialize)]
 pub enum ConsensusTypes<T> {
-    #[serde(bound = "T: Payload")]
-    Block(Box<Block<T>>),
     BlockRetrievalRequest(Box<BlockRetrievalRequest>),
     #[serde(bound = "T: Payload")]
     BlockRetrievalResponse(Box<BlockRetrievalResponse<T>>),
@@ -48,8 +44,6 @@ pub enum ConsensusTypes<T> {
     SyncInfo(Box<SyncInfo>),
     ValidatorChangeProof(Box<ValidatorChangeProof>),
     VoteMsg(Box<VoteMsg>),
-    #[serde(bound = "T: Payload")]
-    VoteProposal(Box<VoteProposal<T>>),
 }
 
 impl<T: Payload> TryFrom<&ConsensusMsg> for ConsensusTypes<T> {
