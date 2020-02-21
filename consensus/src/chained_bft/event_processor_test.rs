@@ -48,20 +48,13 @@ use libra_crypto::HashValue;
 use libra_types::{
     block_info::BlockInfo,
     crypto_proxies::{
-        random_validator_verifier, EpochInfo, LedgerInfoWithSignatures, ValidatorSigner,
-        ValidatorVerifier,
+        random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
     },
 };
 use network::{peer_manager::conn_status_channel, proto::ConsensusMsg};
 use prost::Message as _;
 use safety_rules::{ConsensusState, PersistentSafetyStorage as SafetyStorage, SafetyRulesManager};
-use std::{
-    collections::HashMap,
-    convert::TryFrom,
-    num::NonZeroUsize,
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+use std::{collections::HashMap, convert::TryFrom, num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -149,14 +142,7 @@ impl NodeSetup {
             initial_data.validators(),
         );
 
-        let (task, _receiver) = NetworkTask::<TestPayload>::new(
-            Arc::new(RwLock::new(EpochInfo {
-                epoch: 0,
-                verifier: initial_data.validators(),
-            })),
-            network_events,
-            self_receiver,
-        );
+        let (task, _receiver) = NetworkTask::<TestPayload>::new(network_events, self_receiver);
 
         executor.spawn(task.start());
         let last_vote_sent = initial_data.last_vote();

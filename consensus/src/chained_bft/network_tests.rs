@@ -366,7 +366,6 @@ use consensus_types::block_retrieval::{
 use libra_crypto::HashValue;
 #[cfg(test)]
 use libra_types::crypto_proxies::random_validator_verifier;
-use libra_types::crypto_proxies::EpochInfo;
 use std::convert::TryFrom;
 
 #[test]
@@ -392,14 +391,7 @@ fn test_network_api() {
         playground.add_node(*peer, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
         let (self_sender, self_receiver) = channel::new_test(8);
         let node = NetworkSender::new(*peer, network_sender, self_sender, Arc::clone(&validators));
-        let (task, receiver) = NetworkTask::new(
-            Arc::new(RwLock::new(EpochInfo {
-                epoch: 1,
-                verifier: Arc::clone(&validators),
-            })),
-            network_events,
-            self_receiver,
-        );
+        let (task, receiver) = NetworkTask::new(network_events, self_receiver);
         receivers.push(receiver);
         runtime.handle().spawn(task.start());
         nodes.push(node);
@@ -426,16 +418,22 @@ fn test_network_api() {
             .wait_for_messages(3, NetworkPlayground::take_all)
             .await;
         for r in receivers.iter_mut().take(5).skip(2) {
-            let v = r.votes.next().await.unwrap();
-            assert_eq!(v, vote_msg);
+            let (_, msg) = r.consensus_messages.next().await.unwrap();
+            match msg {
+                ConsensusTypes::VoteMsg(v) => assert_eq!(*v, vote_msg),
+                _ => panic!("unexpected messages"),
+            }
         }
         nodes[0].broadcast_proposal(proposal.clone()).await;
         playground
             .wait_for_messages(4, NetworkPlayground::take_all)
             .await;
         for r in receivers.iter_mut().take(num_nodes - 1) {
-            let p = r.proposals.next().await.unwrap();
-            assert_eq!(p, proposal);
+            let (_, msg) = r.consensus_messages.next().await.unwrap();
+            match msg {
+                ConsensusTypes::ProposalMsg(p) => assert_eq!(*p, proposal),
+                _ => panic!("unexpected messages"),
+            }
         }
     });
 }
@@ -469,14 +467,7 @@ fn test_rpc() {
             self_sender,
             Arc::clone(&validators),
         );
-        let (task, receiver) = NetworkTask::new(
-            Arc::new(RwLock::new(EpochInfo {
-                epoch: 1,
-                verifier: Arc::clone(&validators),
-            })),
-            network_events,
-            self_receiver,
-        );
+        let (task, receiver) = NetworkTask::new(network_events, self_receiver);
         senders.push(network_sender);
         receivers.push(receiver);
         runtime.handle().spawn(task.start());

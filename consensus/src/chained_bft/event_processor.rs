@@ -61,6 +61,56 @@ use std::{
 };
 use termion::color::*;
 
+pub enum UnverifiedEvent<T> {
+    ProposalMsg(Box<ProposalMsg<T>>),
+    VoteMsg(Box<VoteMsg>),
+    SyncInfo(Box<SyncInfo>),
+}
+
+impl<T: Payload> UnverifiedEvent<T> {
+    pub fn verify(self, validator: &ValidatorVerifier) -> Result<VerifiedEvent<T>> {
+        Ok(match self {
+            UnverifiedEvent::ProposalMsg(p) => {
+                p.verify(validator)?;
+                VerifiedEvent::ProposalMsg(p)
+            }
+            UnverifiedEvent::VoteMsg(v) => {
+                v.verify(validator)?;
+                VerifiedEvent::VoteMsg(v)
+            }
+            UnverifiedEvent::SyncInfo(s) => {
+                s.verify(validator)?;
+                VerifiedEvent::SyncInfo(s)
+            }
+        })
+    }
+
+    pub fn epoch(&self) -> u64 {
+        match self {
+            UnverifiedEvent::ProposalMsg(p) => p.epoch(),
+            UnverifiedEvent::VoteMsg(v) => v.epoch(),
+            UnverifiedEvent::SyncInfo(s) => s.epoch(),
+        }
+    }
+}
+
+impl<T> From<ConsensusTypes<T>> for UnverifiedEvent<T> {
+    fn from(value: ConsensusTypes<T>) -> Self {
+        match value {
+            ConsensusTypes::ProposalMsg(m) => UnverifiedEvent::ProposalMsg(m),
+            ConsensusTypes::VoteMsg(m) => UnverifiedEvent::VoteMsg(m),
+            ConsensusTypes::SyncInfo(m) => UnverifiedEvent::SyncInfo(m),
+            _ => unreachable!("Unexpected conversion"),
+        }
+    }
+}
+
+pub enum VerifiedEvent<T> {
+    ProposalMsg(Box<ProposalMsg<T>>),
+    VoteMsg(Box<VoteMsg>),
+    SyncInfo(Box<SyncInfo>),
+}
+
 #[cfg(test)]
 #[path = "event_processor_test.rs"]
 mod event_processor_test;
@@ -108,15 +158,6 @@ impl<T: Payload> StartupSyncProcessor<T> {
         let author = vote_msg.vote().author();
         let sync_info = vote_msg.sync_info();
         self.sync_up(&sync_info, author).await
-    }
-
-    pub async fn process_sync_info_msg(
-        &mut self,
-        sync_info: SyncInfo,
-        peer: Author,
-    ) -> Result<RecoveryData<T>> {
-        debug!("Startup Sync received a sync info msg: {}", sync_info);
-        self.sync_up(&sync_info, peer).await
     }
 
     async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData<T>> {
@@ -780,6 +821,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 1) fetch missing dependencies if required, and then
     /// 2) call process_certificates(), which will start a new round in return.
     async fn add_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
+        debug!("Add vote: {}", vote);
         let block_id = vote.vote_data().proposed().id();
         // Check if the block already had a QC
         if self

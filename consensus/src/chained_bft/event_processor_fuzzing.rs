@@ -156,7 +156,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     };
 
     let proposal = match proposal.verify_well_formed() {
-        Ok(xx) => xx,
+        Ok(_) => proposal,
         Err(_) => {
             if cfg!(test) {
                 panic!();
