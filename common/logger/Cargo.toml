@@ -24,7 +24,6 @@ slog = { version = "2.5.0", features = ["max_level_trace", "release_max_level_de
 slog-async = "2.3"
 slog-envlogger = "2.1.0"
 slog-scope = "4.0"
-slog-stdlog = "4.0.0"
 slog-term = "2.4.1"
 thread-id = "3.3.0"
 

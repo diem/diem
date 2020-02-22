@@ -1324,7 +1324,6 @@ dependencies = [
  "libra-metrics 0.1.0",
  "libra-types 0.1.0",
  "slog-scope 4.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "slog-stdlog 4.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2232,7 +2231,6 @@ dependencies = [
  "slog-async 2.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-envlogger 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-scope 4.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "slog-stdlog 4.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-term 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thread-id 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
