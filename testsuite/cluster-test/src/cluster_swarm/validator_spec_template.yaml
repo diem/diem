@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: validator-{index}
+  labels:
+    app: libra-validator
+    libra-node: "true"
+  annotations:
+    prometheus.io/should_be_scraped: "true"
+spec:
+  hostNetwork: true
+  serviceAccountName: validator
+  nodeSelector:
+    nodeType: validators
+  nodeName: "{node_name}"
+  initContainers:
+  - name: init
+    image: bitnami/kubectl:1.17
+    volumeMounts:
+    - mountPath: /opt/libra/data
+      name: data
+    securityContext:
+      runAsUser: 0 # To get permissions to write to /opt/libra/data
+    command:
+    - "bash"
+    - "-c"
+    - |
+      set -x;
+      if [[ {delete_data} = true ]]; then
+        rm -rf /opt/libra/data/*
+      fi
+      CFG_SEED_PEER_IP=$(kubectl get pod/validator-0 -o=jsonpath='{{.status.podIP}}');
+      while [ -z "${{CFG_SEED_PEER_IP}}" ]; do
+        sleep 5;
+        CFG_SEED_PEER_IP=$(kubectl get pod/validator-0 -o=jsonpath='{{.status.podIP}}');
+        echo "Waiting for pod/validator-0 IP Address";
+      done;
+      echo -n "${{CFG_SEED_PEER_IP}}" > /opt/libra/data/seed_peer_ip
+      until [ $(kubectl get pods -l app=libra-validator | grep ^validator | grep -e Init -e Running | wc -l) = "{num_validators}" ]; do
+        sleep 3;
+        echo "Waiting for all validator pods to be scheduled";
+      done
+  containers:
+  - name: main
+    image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_validator:{image_tag}
+    imagePullPolicy: Always
+    resources:
+      requests:
+        cpu: 7800m
+    ports:
+    - containerPort: 6180
+    - containerPort: 6181
+    - containerPort: 8000
+    - containerPort: 9101
+    - containerPort: 6191
+    volumeMounts:
+    - mountPath: /opt/libra/data
+      name: data
+    env:
+    - name: CFG_NODE_INDEX
+      value: "{index}"
+    - name: CFG_NUM_VALIDATORS
+      value: "{num_validators}"
+    - name: CFG_NUM_FULLNODES
+      value: "{num_fullnodes}"
+    - name: CFG_SEED
+      value: "1337133713371337133713371337133713371337133713371337133713371337"
+    - name: CFG_FULLNODE_SEED
+      value: "2674267426742674267426742674267426742674267426742674267426742674"
+    - name: RUST_LOG
+      value: "debug"
+    - name: RUST_BACKTRACE
+      value: "1"
+    - name: CFG_OVERRIDES
+      value: "{cfg_overrides}"
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    command:
+      - "bash"
+      - "-c"
+      - |
+        set -x;
+        export CFG_LISTEN_ADDR=$MY_POD_IP;
+        export CFG_SEED_PEER_IP=$(cat /opt/libra/data/seed_peer_ip);
+        exec bash /docker-run-dynamic.sh
+  volumes:
+  - name: data
+    hostPath:
+      path: /data
+      type: Directory
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: libra-node
+            operator: Exists
+        topologyKey: "kubernetes.io/hostname"
+  terminationGracePeriodSeconds: 5
+  tolerations:
+  - key: "validators"
+    operator: "Exists"
+    effect: "NoSchedule"

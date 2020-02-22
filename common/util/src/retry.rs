@@ -36,7 +36,7 @@ where
             Ok(value) => return Ok(value),
             Err(err) => {
                 if let Some(delay) = iterator.next() {
-                    thread::sleep(delay);
+                    tokio::time::delay_for(delay).await;
                 } else {
                     return Err(err);
                 }
