@@ -83,14 +83,24 @@ jobs:
               should_fail = true;
             }
             // Post test result on original pull request
-            await github.issues.createComment(
-                {
-                  issue_number: pr_num,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: body,
-                }
-            );
+            try {
+              await github.issues.createComment(
+                  {
+                    issue_number: pr_num,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: body,
+                  }
+              );
+            } catch (err) {
+              if (err.status === 401) {
+                // Fail silently for auth but log to console.
+                console.warn("GH token has expired when trying to POST\n", err);
+              } else {
+                console.error("HttpError other than 401 is not bypassed");
+                throw err;
+              }
+            }
             // Fail the workflow if test fails or perf regresses
             if (should_fail) {
               throw "Land-blocking test failed";
