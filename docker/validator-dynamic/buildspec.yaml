@@ -13,6 +13,13 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
+      - echo "$CODEBUILD_EFSCACHE"
+      - ls -la /
+      - ls -la /efscache
+      - ls -la
+      - ln -s "$CODEBUILD_EFSCACHE" target
+      - ls -la
+      - ls -la target
       - docker/validator/build.sh
       - docker/validator-dynamic/build-dynamic.sh
   post_build:
