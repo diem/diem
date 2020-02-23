@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Network API for [`Consensus`](/consensus/index.html)
+//! Network API for Libra
 
 pub use crate::protocols::rpc::error::RpcError;
 use crate::{
@@ -22,19 +22,16 @@ use pin_project::pin_project;
 use prost::Message;
 use std::{default::Default, marker::PhantomData, pin::Pin, time::Duration};
 
-pub mod consensus;
 pub mod discovery;
 pub mod health_checker;
 pub mod network_builder;
 
 #[cfg(test)]
 mod test;
+#[cfg(any(feature = "testing", test))]
+pub mod test_network;
 
 // Public re-exports
-pub use consensus::{
-    ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
-    CONSENSUS_RPC_PROTOCOL,
-};
 pub use discovery::{
     DiscoveryNetworkEvents, DiscoveryNetworkSender, DISCOVERY_DIRECT_SEND_PROTOCOL,
 };

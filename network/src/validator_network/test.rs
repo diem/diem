@@ -3,184 +3,109 @@
 
 //! Integration tests for validator_network.
 use crate::{
-    common::NetworkPublicKeys,
     proto::ConsensusMsg,
     utils::MessageExt,
-    validator_network::{
-        self,
-        network_builder::{NetworkBuilder, TransportType},
-        Event,
-    },
+    validator_network::{test_network::setup_network, Event},
 };
 use futures::{future::join, StreamExt};
-use libra_config::config::RoleType;
-use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
-use libra_types::PeerId;
-use parity_multiaddr::Multiaddr;
-use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::HashMap, time::Duration};
-use tokio::runtime::Runtime;
+use std::time::Duration;
 
 #[test]
 fn test_network_builder() {
-    let runtime = Runtime::new().unwrap();
-    let peer_id = PeerId::random();
-    let addr: Multiaddr = "/memory/0".parse().unwrap();
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let (signing_private_key, signing_public_key) = compat::generate_keypair(&mut rng);
-    let (_identity_private_key, identity_public_key) = x25519::compat::generate_keypair(&mut rng);
-
-    let mut network_builder =
-        NetworkBuilder::new(runtime.handle().clone(), peer_id, addr, RoleType::Validator);
-    network_builder
-        .transport(TransportType::Memory)
-        .signing_keys((signing_private_key, signing_public_key.clone()))
-        .trusted_peers(
-            vec![(
-                peer_id,
-                NetworkPublicKeys {
-                    signing_public_key,
-                    identity_public_key,
-                },
-            )]
-            .into_iter()
-            .collect(),
-        )
-        .add_discovery()
-        .channel_size(8);
-    let (_consensus_network_sender, _consensus_network_events) =
-        validator_network::consensus::add_to_network(&mut network_builder);
-    let _listen_addr = network_builder.build();
+    setup_network();
 }
 
 #[test]
-fn test_consensus_rpc() {
+fn test_direct_send() {
     ::libra_logger::try_init_for_testing();
-    let mut runtime = Runtime::new().unwrap();
-
-    // Setup peer ids.
-    let listener_peer_id = PeerId::random();
-    let dialer_peer_id = PeerId::random();
-    // Setup signing public keys.
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let (listener_signing_private_key, listener_signing_public_key) =
-        compat::generate_keypair(&mut rng);
-    let (dialer_signing_private_key, dialer_signing_public_key) =
-        compat::generate_keypair(&mut rng);
-    // Setup identity public keys.
-    let (_listener_identity_private_key, listener_identity_public_key) =
-        x25519::compat::generate_keypair(&mut rng);
-    let (_dialer_identity_private_key, dialer_identity_public_key) =
-        x25519::compat::generate_keypair(&mut rng);
-
-    let trusted_peers: HashMap<_, _> = vec![
-        (
-            listener_peer_id,
-            NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key.clone(),
-                identity_public_key: listener_identity_public_key,
-            },
-        ),
-        (
-            dialer_peer_id,
-            NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key.clone(),
-                identity_public_key: dialer_identity_public_key,
-            },
-        ),
-    ]
-    .into_iter()
-    .collect();
-
-    // Set up the listener network
-    let listener_addr: Multiaddr = "/memory/0".parse().unwrap();
-    let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
-        listener_peer_id,
-        listener_addr,
-        RoleType::Validator,
-    );
-    network_builder
-        .signing_keys((listener_signing_private_key, listener_signing_public_key))
-        .trusted_peers(trusted_peers.clone())
-        .transport(TransportType::Memory)
-        .add_discovery()
-        .channel_size(8);
-    let (_, mut listener_con_net_events) =
-        validator_network::consensus::add_to_network(&mut network_builder);
-    let listener_addr = network_builder.build();
-
-    // Set up the dialer network
-    let dialer_addr: Multiaddr = "/memory/0".parse().unwrap();
-    let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
-        dialer_peer_id,
-        dialer_addr,
-        RoleType::Validator,
-    );
-    network_builder
-        .transport(TransportType::Memory)
-        .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
-        .trusted_peers(trusted_peers)
-        .seed_peers(
-            [(listener_peer_id, vec![listener_addr])]
-                .iter()
-                .cloned()
-                .collect(),
-        )
-        .add_discovery()
-        .channel_size(8);
-    let (mut dialer_con_net_sender, mut dialer_con_net_events) =
-        validator_network::consensus::add_to_network(&mut network_builder);
-    let _dialer_addr = network_builder.build();
+    let mut tn = setup_network();
+    let dialer_peer_id = tn.dialer_peer_id;
+    let mut dialer_events = tn.dialer_events;
+    let mut dialer_sender = tn.dialer_sender;
+    let listener_peer_id = tn.listener_peer_id;
+    let mut listener_events = tn.listener_events;
+    let mut listener_sender = tn.listener_sender;
 
     let msg = ConsensusMsg::default();
 
-    // The dialer dials the listener and sends a RequestBlock rpc request
+    // The dialer sends a direct send and listener receives
     let msg_clone = msg.clone();
     let f_dialer = async move {
-        // Wait until dialing finished and NewPeer event received
-        match dialer_con_net_events.next().await.unwrap().unwrap() {
-            Event::NewPeer(peer_id) => {
-                assert_eq!(peer_id, listener_peer_id);
-            }
-            event => panic!("Unexpected event {:?}", event),
-        }
-
-        // Dialer sends a RequestBlock rpc request.
-        let res_block_msg = dialer_con_net_sender
-            .send_rpc(listener_peer_id, msg_clone.clone(), Duration::from_secs(10))
-            .await
+        dialer_sender
+            .send_to(listener_peer_id, msg_clone.clone())
             .unwrap();
-        assert_eq!(res_block_msg, msg_clone);
+        match listener_events.next().await.unwrap().unwrap() {
+            Event::Message((peer_id, msg)) => {
+                assert_eq!(peer_id, dialer_peer_id);
+                assert_eq!(msg, msg_clone);
+            }
+            event => panic!("Unexpected event {:?}", event),
+        }
     };
 
-    // The listener receives a RequestBlock rpc request and sends a RespondBlock
-    // rpc response.
+    // The listener sends a direct send and the dialer receives
     let f_listener = async move {
-        // The listener receives a NewPeer event first
-        match listener_con_net_events.next().await.unwrap().unwrap() {
-            Event::NewPeer(peer_id) => {
-                assert_eq!(peer_id, dialer_peer_id);
-            }
-            event => panic!("Unexpected event {:?}", event),
-        }
-
-        // The listener then handles the RequestBlock rpc request.
-        match listener_con_net_events.next().await.unwrap().unwrap() {
-            Event::RpcRequest((peer_id, req_msg, res_tx)) => {
-                assert_eq!(peer_id, dialer_peer_id);
-
-                // Check the request
-                assert_eq!(req_msg, msg);
-
-                // Send the serialized response back.
-                let res_data = msg.to_bytes().unwrap();
-                res_tx.send(Ok(res_data)).unwrap();
+        listener_sender
+            .send_to(dialer_peer_id, msg.clone())
+            .unwrap();
+        match dialer_events.next().await.unwrap().unwrap() {
+            Event::Message((peer_id, incoming_msg)) => {
+                assert_eq!(peer_id, listener_peer_id);
+                assert_eq!(incoming_msg, msg);
             }
             event => panic!("Unexpected event {:?}", event),
         }
     };
 
-    runtime.block_on(join(f_dialer, f_listener));
+    tn.runtime.block_on(join(f_dialer, f_listener));
+}
+
+#[test]
+fn test_rpc() {
+    ::libra_logger::try_init_for_testing();
+    let mut tn = setup_network();
+    let dialer_peer_id = tn.dialer_peer_id;
+    let mut dialer_events = tn.dialer_events;
+    let mut dialer_sender = tn.dialer_sender;
+    let listener_peer_id = tn.listener_peer_id;
+    let mut listener_events = tn.listener_events;
+    let mut listener_sender = tn.listener_sender;
+
+    let msg = ConsensusMsg::default();
+
+    // Dialer send rpc request and receives rpc response
+    let msg_clone = msg.clone();
+    let f_send =
+        dialer_sender.send_rpc(listener_peer_id, msg_clone.clone(), Duration::from_secs(10));
+    let f_respond = async move {
+        match listener_events.next().await.unwrap().unwrap() {
+            Event::RpcRequest((peer_id, msg, rs)) => {
+                assert_eq!(peer_id, dialer_peer_id);
+                assert_eq!(msg, msg_clone);
+                rs.send(Ok(msg.to_bytes().unwrap())).unwrap();
+            }
+            event => panic!("Unexpected event: {:?}", event),
+        }
+    };
+
+    let (res_msg, _) = tn.runtime.block_on(join(f_send, f_respond));
+    assert_eq!(res_msg.unwrap(), msg);
+
+    // Listener send rpc request and receives rpc response
+    let msg_clone = msg.clone();
+    let f_send =
+        listener_sender.send_rpc(dialer_peer_id, msg_clone.clone(), Duration::from_secs(10));
+    let f_respond = async move {
+        match dialer_events.next().await.unwrap().unwrap() {
+            Event::RpcRequest((peer_id, msg, rs)) => {
+                assert_eq!(peer_id, listener_peer_id);
+                assert_eq!(msg, msg_clone);
+                rs.send(Ok(msg.to_bytes().unwrap())).unwrap();
+            }
+            event => panic!("Unexpected event: {:?}", event),
+        }
+    };
+
+    let (res_msg, _) = tn.runtime.block_on(join(f_send, f_respond));
+    assert_eq!(res_msg.unwrap(), msg);
 }

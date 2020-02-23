@@ -52,6 +52,7 @@ prost-build = "0.6"
 [features]
 default = []
 fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing"]
+testing = []
 
 [[bench]]
 name = "socket_muxer_bench"
