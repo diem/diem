@@ -183,7 +183,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     if let Some(network) = node_config.validator_network.as_mut() {
         let (runtime, mut network_builder) = setup_network(network, RoleType::Validator);
-        state_sync_network_handles.push(validator_network::state_synchronizer::add_to_network(
+        state_sync_network_handles.push(state_synchronizer::network::add_to_network(
             &mut network_builder,
         ));
 
@@ -196,7 +196,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     for i in 0..node_config.full_node_networks.len() {
         let (runtime, mut network_builder) =
             setup_network(&mut node_config.full_node_networks[i], RoleType::FullNode);
-        state_sync_network_handles.push(validator_network::state_synchronizer::add_to_network(
+        state_sync_network_handles.push(state_synchronizer::network::add_to_network(
             &mut network_builder,
         ));
 

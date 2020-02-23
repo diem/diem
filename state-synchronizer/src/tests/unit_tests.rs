@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    network::StateSynchronizerSender,
     peer_manager::{PeerManager, PeerScoreUpdateType},
     PeerId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use network::validator_network::StateSynchronizerSender;
 use std::{collections::HashMap, num::NonZeroUsize};
 
 #[test]

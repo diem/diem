@@ -13,6 +13,7 @@ extern crate prometheus;
 pub use common::NetworkPublicKeys;
 pub use interface::NetworkProvider;
 
+pub mod error;
 pub mod interface;
 pub mod peer_manager;
 pub mod proto;
@@ -22,7 +23,6 @@ pub mod validator_network;
 mod common;
 mod connectivity_manager;
 mod counters;
-mod error;
 mod peer;
 mod sink;
 mod transport;

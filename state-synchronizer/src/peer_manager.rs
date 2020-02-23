@@ -1,9 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{counters, PeerId};
+use crate::{counters, network::StateSynchronizerSender, PeerId};
 use libra_logger::prelude::*;
-use network::validator_network::StateSynchronizerSender;
 use rand::{
     distributions::{Distribution, WeightedIndex},
     thread_rng,

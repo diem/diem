@@ -5,6 +5,15 @@ use libra_metrics::DurationHistogram;
 use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntCounterVec, IntGauge};
 
+/// Counter of pending network events to State Synchronizer
+pub static PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_state_sync_pending_network_events",
+        "Counters(queued,dequeued,dropped) related to pending network notifications for State Synchronizer",
+        &["state"]
+    ).unwrap()
+});
+
 /// Number of sync requests sent from a node
 pub static REQUESTS_SENT: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
