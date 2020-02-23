@@ -28,10 +28,7 @@ use libra_types::{
     waypoint::Waypoint,
 };
 use network::{
-    validator_network::{
-        self,
-        network_builder::{NetworkBuilder, TransportType},
-    },
+    validator_network::network_builder::{NetworkBuilder, TransportType},
     NetworkPublicKeys,
 };
 use parity_multiaddr::Multiaddr;
@@ -274,8 +271,7 @@ impl SynchronizerEnv {
             .transport(TransportType::Memory)
             .add_discovery();
 
-        let (sender, events) =
-            validator_network::state_synchronizer::add_to_network(&mut network_builder);
+        let (sender, events) = crate::network::add_to_network(&mut network_builder);
         let peer_addr = network_builder.build();
 
         let mut config = config_builder::test_config().0;

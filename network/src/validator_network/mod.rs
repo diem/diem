@@ -27,7 +27,6 @@ pub mod discovery;
 pub mod health_checker;
 pub mod mempool;
 pub mod network_builder;
-pub mod state_synchronizer;
 
 #[cfg(test)]
 mod test;
@@ -45,9 +44,6 @@ pub use health_checker::{
 };
 use libra_types::PeerId;
 pub use mempool::{MempoolNetworkEvents, MempoolNetworkSender, MEMPOOL_DIRECT_SEND_PROTOCOL};
-pub use state_synchronizer::{
-    StateSynchronizerEvents, StateSynchronizerSender, STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
-};
 
 /// Events received by network clients in a validator
 ///

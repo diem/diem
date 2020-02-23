@@ -4,6 +4,7 @@ use crate::coordinator::EpochRetrievalRequest;
 use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator, SyncRequest},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
+    network::{StateSynchronizerEvents, StateSynchronizerSender},
     SynchronizerState,
 };
 use anyhow::{format_err, Result};
@@ -20,7 +21,6 @@ use libra_types::{
     transaction::Transaction,
     waypoint::Waypoint,
 };
-use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::{sync::Arc, time::Duration};
 use tokio::{
     runtime::{Builder, Runtime},

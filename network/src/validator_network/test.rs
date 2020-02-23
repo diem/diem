@@ -52,8 +52,6 @@ fn test_network_builder() {
         validator_network::mempool::add_to_network(&mut network_builder);
     let (_consensus_network_sender, _consensus_network_events) =
         validator_network::consensus::add_to_network(&mut network_builder);
-    let (_state_sync_network_sender, _state_sync_network_events) =
-        validator_network::state_synchronizer::add_to_network(&mut network_builder);
     let _listen_addr = network_builder.build();
 }
 

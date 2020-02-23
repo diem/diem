@@ -6,6 +6,7 @@ use crate::{
     chunk_response::{GetChunkResponse, ResponseLedgerInfo},
     counters,
     executor_proxy::ExecutorProxyTrait,
+    network::{StateSynchronizerEvents, StateSynchronizerSender},
     peer_manager::{PeerManager, PeerScoreUpdateType},
     PeerId, SynchronizerState,
 };
@@ -24,10 +25,7 @@ use libra_types::{
     transaction::{Transaction, TransactionListWithProof},
     waypoint::Waypoint,
 };
-use network::{
-    proto::StateSynchronizerMsg,
-    validator_network::{Event, StateSynchronizerEvents, StateSynchronizerSender},
-};
+use network::{proto::StateSynchronizerMsg, validator_network::Event};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
