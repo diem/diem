@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{chained_bft_smr::ChainedBftSMR, persistent_liveness_storage::StorageWriteProxy},
+    chained_bft::{
+        chained_bft_smr::ChainedBftSMR,
+        network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
+        persistent_liveness_storage::StorageWriteProxy,
+    },
     state_computer::ExecutionProxy,
     txn_manager::MempoolProxy,
 };
@@ -11,7 +15,6 @@ use executor::Executor;
 use futures::channel::mpsc;
 use libra_config::config::NodeConfig;
 use libra_mempool::ConsensusRequest;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};

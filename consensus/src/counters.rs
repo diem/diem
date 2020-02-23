@@ -8,6 +8,17 @@ use prometheus::{Histogram, IntCounter, IntCounterVec, IntGauge};
 //////////////////////
 // HEALTH COUNTERS
 //////////////////////
+
+/// Counter of pending network events to Consensus
+pub static PENDING_CONSENSUS_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_consensus_pending_network_events",
+        "Counters(queued,dequeued,dropped) related to pending network notifications to Consensus",
+        &["state"]
+    )
+    .unwrap()
+});
+
 /// This counter is set to the round of the highest committed block.
 pub static LAST_COMMITTED_ROUND: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(

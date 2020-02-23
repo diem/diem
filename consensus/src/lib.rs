@@ -17,6 +17,7 @@
 extern crate prometheus;
 
 mod chained_bft;
+pub use chained_bft::network_interface;
 
 mod util;
 

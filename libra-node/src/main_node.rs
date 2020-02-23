@@ -13,10 +13,7 @@ use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_metrics::metric_server;
-use network::validator_network::{
-    self,
-    network_builder::{NetworkBuilder, TransportType},
-};
+use network::validator_network::network_builder::{NetworkBuilder, TransportType};
 use state_synchronizer::StateSynchronizer;
 use std::{collections::HashMap, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
@@ -254,7 +251,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         // was observed in GitHub Issue #749. A long term fix might be make
         // consensus initialization async instead of blocking on state synchronizer.
         let (consensus_network_sender, consensus_network_events) =
-            validator_network::consensus::add_to_network(&mut network_builder);
+            consensus::network_interface::add_to_network(&mut network_builder);
         let _listen_addr = network_builder.build();
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);

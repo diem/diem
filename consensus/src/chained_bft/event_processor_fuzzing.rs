@@ -11,6 +11,7 @@ use crate::{
             rotating_proposer_election::RotatingProposer,
         },
         network::NetworkSender,
+        network_interface::ConsensusNetworkSender,
         persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
         test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager, TestPayload},
     },
@@ -20,7 +21,6 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
 use futures::{channel::mpsc, executor::block_on};
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
-use network::validator_network::ConsensusNetworkSender;
 use once_cell::sync::Lazy;
 use safety_rules::{PersistentSafetyStorage, SafetyRules};
 use std::{num::NonZeroUsize, sync::Arc};

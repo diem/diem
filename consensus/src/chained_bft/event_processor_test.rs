@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::network::{IncomingBlockRetrievalRequest, NetworkTask};
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
@@ -12,7 +11,8 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
-        network::{ConsensusTypes, NetworkSender},
+        network::{ConsensusTypes, IncomingBlockRetrievalRequest, NetworkSender, NetworkTask},
+        network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
         network_tests::NetworkPlayground,
         persistent_liveness_storage::RecoveryData,
         test_utils::{
@@ -49,11 +49,7 @@ use libra_types::crypto_proxies::{
     random_validator_verifier, EpochInfo, LedgerInfoWithSignatures, ValidatorSigner,
     ValidatorVerifier,
 };
-use network::peer_manager::conn_status_channel;
-use network::{
-    proto::ConsensusMsg,
-    validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
-};
+use network::{peer_manager::conn_status_channel, proto::ConsensusMsg};
 use prost::Message as _;
 use safety_rules::{ConsensusState, PersistentSafetyStorage as SafetyStorage, SafetyRulesManager};
 use std::sync::RwLock;

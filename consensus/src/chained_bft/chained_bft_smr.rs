@@ -7,6 +7,7 @@ use crate::{
         block_storage::BlockStore,
         epoch_manager::{EpochManager, LivenessStorageData, Processor},
         network::{NetworkReceivers, NetworkTask},
+        network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
         persistent_liveness_storage::PersistentLivenessStorage,
     },
     consensus_provider::ConsensusProvider,
@@ -19,7 +20,6 @@ use consensus_types::common::{Author, Payload, Round};
 use futures::{select, stream::StreamExt};
 use libra_config::config::{ConsensusConfig, NodeConfig};
 use libra_logger::prelude::*;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use safety_rules::SafetyRulesManager;
 use std::{
     sync::{Arc, RwLock},
