@@ -10,7 +10,7 @@ use crate::{
     },
     abstract_state::{AbstractState, AbstractValue, TypedAbstractValue},
     control_flow_graph::VMControlFlowGraph,
-    nonce::Nonce,
+    ref_id::RefID,
 };
 use libra_types::vm_error::{StatusCode, VMStatus};
 use mirai_annotations::checked_verify;
@@ -114,13 +114,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             .type_formals
     }
 
-    fn is_readable_reference(
-        state: &AbstractState,
-        signature: &SignatureToken,
-        nonce: Nonce,
-    ) -> bool {
+    fn is_readable_reference(state: &AbstractState, signature: &SignatureToken, id: RefID) -> bool {
         checked_verify!(signature.is_reference());
-        !signature.is_mutable_reference() || state.is_nonce_freezable(nonce)
+        !signature.is_mutable_reference() || state.is_freezable(id)
     }
 
     // helper for both `ImmBorrowField` and `MutBorrowField`
@@ -162,7 +158,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             return;
         }
 
-        if let Some(nonce) = state.borrow_field_from_nonce(&operand, mut_, field_definition_index) {
+        if let Some(id) = state.borrow_field(&operand, mut_, field_definition_index) {
             let field_signature = self
                 .module()
                 .get_field_signature(field_definition_index)
@@ -179,10 +175,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             };
             self.stack.push(TypedAbstractValue {
                 signature,
-                value: AbstractValue::Reference(nonce),
+                value: AbstractValue::Reference(id),
             });
-            let operand_nonce = operand.value.extract_nonce().unwrap();
-            state.remove_nonce(operand_nonce);
+            let operand_id = operand.value.extract_id().unwrap();
+            state.remove(operand_id);
         } else {
             errors.push(err_at_offset(
                 StatusCode::BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR,
@@ -214,7 +210,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             return;
         }
 
-        if let Some(nonce) = state.borrow_local_value(mut_, idx) {
+        if let Some(id) = state.borrow_local_value(mut_, idx) {
             let signature = if mut_ {
                 SignatureToken::MutableReference(Box::new(loc_signature))
             } else {
@@ -222,7 +218,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             };
             self.stack.push(TypedAbstractValue {
                 signature,
-                value: AbstractValue::Reference(nonce),
+                value: AbstractValue::Reference(id),
             });
         } else {
             errors.push(err_at_offset(
@@ -263,7 +259,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             return;
         }
 
-        if let Some(nonce) = state.borrow_global_value(mut_, idx) {
+        if let Some(id) = state.borrow_global_value(mut_, idx) {
             let signature = if mut_ {
                 SignatureToken::MutableReference(Box::new(struct_type))
             } else {
@@ -271,7 +267,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             };
             self.stack.push(TypedAbstractValue {
                 signature,
-                value: AbstractValue::Reference(nonce),
+                value: AbstractValue::Reference(id),
             });
         } else {
             errors.push(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset))
@@ -295,8 +291,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     return;
                 }
 
-                if let AbstractValue::Reference(nonce) = operand.value {
-                    state.remove_nonce(nonce);
+                if let AbstractValue::Reference(id) = operand.value {
+                    state.remove(id);
                 }
             }
 
@@ -364,8 +360,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         return;
                     }
                     if return_type_view.is_mutable_reference() {
-                        if let AbstractValue::Reference(nonce) = operand.value {
-                            if state.is_nonce_borrowed(nonce) {
+                        if let AbstractValue::Reference(id) = operand.value {
+                            if state.is_borrowed(id) {
                                 errors.push(err_at_offset(
                                     StatusCode::RET_BORROWED_MUTABLE_REFERENCE_ERROR,
                                     offset,
@@ -383,8 +379,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::FreezeRef => {
                 let operand = self.stack.pop().unwrap();
                 if let SignatureToken::MutableReference(signature) = operand.signature {
-                    let operand_nonce = operand.value.extract_nonce().unwrap();
-                    if state.is_nonce_freezable(operand_nonce) {
+                    let operand_id = operand.value.extract_id().unwrap();
+                    if state.is_freezable(operand_id) {
                         self.stack.push(TypedAbstractValue {
                             signature: SignatureToken::Reference(signature),
                             value: operand.value,
@@ -458,10 +454,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if !state.is_available(*idx) {
                     errors.push(err_at_offset(StatusCode::COPYLOC_UNAVAILABLE_ERROR, offset))
                 } else if signature_view.is_reference() {
-                    let nonce = state.borrow_from_local_reference(*idx);
+                    let id = state.borrow_local_reference(*idx);
                     self.stack.push(TypedAbstractValue {
                         signature: signature_view.as_inner().clone(),
-                        value: AbstractValue::Reference(nonce),
+                        value: AbstractValue::Reference(id),
                     });
                 } else {
                     match signature_view.kind(self.type_formals()) {
@@ -532,30 +528,30 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         errors.push(err_at_offset(StatusCode::CALL_TYPE_MISMATCH_ERROR, offset));
                         return;
                     }
-                    if let AbstractValue::Reference(nonce) = arg.value {
+                    if let AbstractValue::Reference(id) = arg.value {
                         if arg_type.is_mutable_reference() {
-                            if state.is_nonce_borrowed(nonce) {
+                            if state.is_borrowed(id) {
                                 errors.push(err_at_offset(
                                     StatusCode::CALL_BORROWED_MUTABLE_REFERENCE_ERROR,
                                     offset,
                                 ));
                                 return;
                             }
-                            mutable_references_to_borrow_from.insert(nonce);
+                            mutable_references_to_borrow_from.insert(id);
                         }
-                        all_references_to_borrow_from.insert(nonce);
+                        all_references_to_borrow_from.insert(id);
                     }
                 }
                 for return_type_view in function_signature_view.return_tokens() {
                     if return_type_view.is_reference() {
-                        let nonce = if return_type_view.is_mutable_reference() {
-                            state.borrow_from_nonces(&mutable_references_to_borrow_from)
+                        let id = if return_type_view.is_mutable_reference() {
+                            state.borrow_from(&mutable_references_to_borrow_from)
                         } else {
-                            state.borrow_from_nonces(&all_references_to_borrow_from)
+                            state.borrow_from(&all_references_to_borrow_from)
                         };
                         self.stack.push(TypedAbstractValue {
                             signature: return_type_view.as_inner().substitute(type_actuals),
-                            value: AbstractValue::Reference(nonce),
+                            value: AbstractValue::Reference(id),
                         });
                     } else {
                         let return_type = return_type_view.as_inner().substitute(type_actuals);
@@ -567,8 +563,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         });
                     }
                 }
-                for nonce in all_references_to_borrow_from {
-                    state.remove_nonce(nonce);
+                for id in all_references_to_borrow_from {
+                    state.remove(id);
                 }
             }
 
@@ -675,8 +671,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     ));
                     return;
                 }
-                let operand_nonce = operand_value.extract_nonce().unwrap();
-                if !Self::is_readable_reference(state, &operand_signature, operand_nonce) {
+                let operand_id = operand_value.extract_id().unwrap();
+                if !Self::is_readable_reference(state, &operand_signature, operand_id) {
                     errors.push(err_at_offset(
                         StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
                         offset,
@@ -697,7 +693,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             signature: inner_signature,
                             value: AbstractValue::Value(Kind::Unrestricted),
                         });
-                        state.remove_nonce(operand_nonce);
+                        state.remove(operand_id);
                     }
                 }
             }
@@ -719,9 +715,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                                     offset,
                                 ))
                             } else {
-                                let ref_operand_nonce = ref_operand.value.extract_nonce().unwrap();
-                                if !state.is_nonce_borrowed(ref_operand_nonce) {
-                                    state.remove_nonce(ref_operand_nonce);
+                                let ref_operand_id = ref_operand.value.extract_id().unwrap();
+                                if !state.is_borrowed(ref_operand_id) {
+                                    state.remove(ref_operand_id);
                                 } else {
                                     errors.push(err_at_offset(
                                         StatusCode::WRITEREF_EXISTS_BORROW_ERROR,
@@ -861,9 +857,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     .kind(self.type_formals());
                 let is_copyable = kind1 == Kind::Unrestricted;
                 if is_copyable && operand1.signature == operand2.signature {
-                    if let AbstractValue::Reference(nonce) = operand1.value {
-                        if Self::is_readable_reference(state, &operand1.signature, nonce) {
-                            state.remove_nonce(nonce);
+                    if let AbstractValue::Reference(id) = operand1.value {
+                        if Self::is_readable_reference(state, &operand1.signature, id) {
+                            state.remove(id);
                         } else {
                             errors.push(err_at_offset(
                                 StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
@@ -872,9 +868,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             return;
                         }
                     }
-                    if let AbstractValue::Reference(nonce) = operand2.value {
-                        if Self::is_readable_reference(state, &operand2.signature, nonce) {
-                            state.remove_nonce(nonce);
+                    if let AbstractValue::Reference(id) = operand2.value {
+                        if Self::is_readable_reference(state, &operand2.signature, id) {
+                            state.remove(id);
                         } else {
                             errors.push(err_at_offset(
                                 StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
