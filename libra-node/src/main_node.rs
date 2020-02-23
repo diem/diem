@@ -186,7 +186,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         ));
 
         let (mempool_sender, mempool_events) =
-            validator_network::mempool::add_to_network(&mut network_builder);
+            libra_mempool::network::add_to_network(&mut network_builder);
         mempool_network_handles.push((network.peer_id, mempool_sender, mempool_events));
         validator_network_provider = Some((network.peer_id, runtime, network_builder));
     }
@@ -199,7 +199,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         ));
 
         let (mempool_sender, mempool_events) =
-            validator_network::mempool::add_to_network(&mut network_builder);
+            libra_mempool::network::add_to_network(&mut network_builder);
         mempool_network_handles.push((
             node_config.full_node_networks[i].peer_id,
             mempool_sender,

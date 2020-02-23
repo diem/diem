@@ -104,16 +104,6 @@ pub static PENDING_CONSENSUS_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| 
     .unwrap()
 });
 
-/// Counter of pending network events to Mempool
-pub static PENDING_MEMPOOL_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "pending_mempool_network_events",
-        "Counters(queued,dequeued,dropped) related to pending network notifications to Mempool",
-        &["state"]
-    )
-    .unwrap()
-});
-
 /// Counter of pending network events to Health Checker.
 pub static PENDING_HEALTH_CHECKER_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
