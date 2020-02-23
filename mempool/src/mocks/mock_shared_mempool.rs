@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
     core_mempool::{CoreMempool, TimelineState},
+    network::{MempoolNetworkEvents, MempoolNetworkSender},
     shared_mempool::start_shared_mempool,
     CommitNotification, ConsensusRequest,
 };
@@ -17,10 +18,7 @@ use futures::channel::{
 use libra_config::config::{NetworkConfig, NodeConfig};
 use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_types::{transaction::SignedTransaction, PeerId};
-use network::{
-    peer_manager::conn_status_channel,
-    validator_network::{MempoolNetworkEvents, MempoolNetworkSender},
-};
+use network::peer_manager::conn_status_channel;
 use std::{
     num::NonZeroUsize,
     sync::{Arc, Mutex},

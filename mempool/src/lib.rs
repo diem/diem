@@ -69,6 +69,7 @@ pub use shared_mempool::{
 
 mod core_mempool;
 mod counters;
+pub mod network;
 mod shared_mempool;
 
 // module op counters

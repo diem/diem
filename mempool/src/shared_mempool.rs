@@ -4,6 +4,7 @@
 use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     counters,
+    network::{MempoolNetworkEvents, MempoolNetworkSender},
 };
 use admission_control_proto::{
     proto::admission_control::{
@@ -39,7 +40,7 @@ use libra_types::{
     },
     PeerId,
 };
-use network::validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender};
+use network::validator_network::Event;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp,

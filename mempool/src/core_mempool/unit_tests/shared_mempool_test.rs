@@ -7,6 +7,7 @@ use crate::{
         CoreMempool, TimelineState,
     },
     mocks::MockSharedMempool,
+    network::{MempoolNetworkEvents, MempoolNetworkSender, MEMPOOL_DIRECT_SEND_PROTOCOL},
     shared_mempool::{
         start_shared_mempool, ConsensusRequest, MempoolSyncMsg, SharedMempoolNotification,
         SyncEvent,
@@ -30,7 +31,6 @@ use network::{
         conn_status_channel, ConnectionStatusNotification, PeerManagerNotification,
         PeerManagerRequest,
     },
-    validator_network::{MempoolNetworkEvents, MempoolNetworkSender},
     DisconnectReason, ProtocolId,
 };
 use parity_multiaddr::Multiaddr;
@@ -196,12 +196,7 @@ impl SharedMempoolNetwork {
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 receiver_network_notif_tx
                     .push(
-                        (
-                            *peer,
-                            ProtocolId::from_static(
-                                network::validator_network::MEMPOOL_DIRECT_SEND_PROTOCOL,
-                            ),
-                        ),
+                        (*peer, ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)),
                         PeerManagerNotification::RecvMessage(*peer, msg),
                     )
                     .unwrap();
@@ -241,12 +236,7 @@ impl SharedMempoolNetwork {
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 receiver_network_notif_tx
                     .push(
-                        (
-                            *peer,
-                            ProtocolId::from_static(
-                                network::validator_network::MEMPOOL_DIRECT_SEND_PROTOCOL,
-                            ),
-                        ),
+                        (*peer, ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)),
                         PeerManagerNotification::RecvMessage(*peer, msg),
                     )
                     .unwrap();

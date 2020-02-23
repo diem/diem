@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Network API for [`Consensus`](/consensus/index.html) and [`Mempool`](/mempool/index.html)
+//! Network API for [`Consensus`](/consensus/index.html)
 
 pub use crate::protocols::rpc::error::RpcError;
 use crate::{
@@ -25,7 +25,6 @@ use std::{default::Default, marker::PhantomData, pin::Pin, time::Duration};
 pub mod consensus;
 pub mod discovery;
 pub mod health_checker;
-pub mod mempool;
 pub mod network_builder;
 
 #[cfg(test)]
@@ -43,7 +42,6 @@ pub use health_checker::{
     HealthCheckerNetworkEvents, HealthCheckerNetworkSender, HEALTH_CHECKER_RPC_PROTOCOL,
 };
 use libra_types::PeerId;
-pub use mempool::{MempoolNetworkEvents, MempoolNetworkSender, MEMPOOL_DIRECT_SEND_PROTOCOL};
 
 /// Events received by network clients in a validator
 ///
