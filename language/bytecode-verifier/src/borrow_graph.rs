@@ -15,7 +15,7 @@
 //! b is equal to the p-extension of a.  Instead, if the edge was weak, it indicates that b is an
 //! extension of the p-extension of a.
 
-use crate::nonce::Nonce;
+use crate::ref_id::RefID;
 use mirai_annotations::{
     checked_assume, checked_postcondition, checked_precondition, checked_verify,
 };
@@ -36,7 +36,7 @@ pub type Label<T> = Vec<T>;
 pub struct Edge<T> {
     edge_type: EdgeType,
     label: Label<T>,
-    to: Nonce,
+    to: RefID,
 }
 
 impl<T> Edge<T>
@@ -51,10 +51,10 @@ where
     }
 }
 
-/// A borrow graph is represented as a map from a source nonce to the set of all edges
+/// A borrow graph is represented as a map from a source id to the set of all edges
 /// coming out of it.
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
-pub struct BorrowGraph<T>(BTreeMap<Nonce, BTreeSet<Edge<T>>>);
+pub struct BorrowGraph<T>(BTreeMap<RefID, BTreeSet<Edge<T>>>);
 
 impl<T> BorrowGraph<T>
 where
@@ -66,14 +66,14 @@ where
         BorrowGraph(BTreeMap::new())
     }
 
-    /// adds a fresh nonce
-    pub fn add_nonce(&mut self, nonce: Nonce) {
-        checked_precondition!(!self.0.contains_key(&nonce));
-        self.0.insert(nonce, BTreeSet::new());
+    /// adds a fresh id
+    pub fn add(&mut self, id: RefID) {
+        checked_precondition!(!self.0.contains_key(&id));
+        self.0.insert(id, BTreeSet::new());
     }
 
     /// adds a weak edge
-    pub fn add_weak_edge(&mut self, from: Nonce, label: Label<T>, to: Nonce) {
+    pub fn add_weak_edge(&mut self, from: RefID, label: Label<T>, to: RefID) {
         checked_precondition!(self.0.contains_key(&from));
         checked_precondition!(self.0.contains_key(&to));
         checked_precondition!(self.0[&to].is_empty());
@@ -86,7 +86,7 @@ where
     }
 
     /// adds a strong edge and factors other edges coming out of `from` with respect to the new edge
-    pub fn add_strong_edge(&mut self, from: Nonce, label: Label<T>, to: Nonce) {
+    pub fn add_strong_edge(&mut self, from: RefID, label: Label<T>, to: RefID) {
         checked_precondition!(self.0.contains_key(&from));
         checked_precondition!(self.0.contains_key(&to));
         checked_precondition!(self.0[&to].is_empty());
@@ -120,17 +120,17 @@ where
         }
     }
 
-    /// removes `nonce` and appropriately concatenates each incoming edge with each outgoing edge of `nonce`
-    pub fn remove_nonce(&mut self, nonce: Nonce) {
+    /// removes `id` and appropriately concatenates each incoming edge with each outgoing edge of `id`
+    pub fn remove(&mut self, id: RefID) {
         checked_assume!(self.invariant());
-        let nonce_edge_set = self.0.remove(&nonce).unwrap();
+        let id_edge_set = self.0.remove(&id).unwrap();
         let removed_edges = {
             let mut x = BTreeMap::new();
             for (n, es) in &self.0 {
                 x.insert(
                     n.clone(),
                     es.iter()
-                        .filter(|x| x.to == nonce)
+                        .filter(|x| x.to == id)
                         .cloned()
                         .collect::<Vec<_>>(),
                 );
@@ -141,26 +141,26 @@ where
             es.iter().for_each(|removed_edge| {
                 let n_edge_set_ref = self.0.get_mut(n).unwrap();
                 n_edge_set_ref.remove(removed_edge);
-                nonce_edge_set.iter().for_each(|nonce_edge| {
+                id_edge_set.iter().for_each(|id_edge| {
                     // Avoid adding self edges in the case of cycles
-                    if n == &nonce_edge.to {
+                    if n == &id_edge.to {
                         return;
                     }
                     if removed_edge.edge_type == EdgeType::Strong {
                         let mut new_label = vec![];
                         new_label.append(&mut removed_edge.label.clone());
-                        new_label.append(&mut nonce_edge.label.clone());
+                        new_label.append(&mut id_edge.label.clone());
                         let edge = Edge {
-                            edge_type: nonce_edge.edge_type,
+                            edge_type: id_edge.edge_type,
                             label: new_label,
-                            to: nonce_edge.to,
+                            to: id_edge.to,
                         };
                         n_edge_set_ref.insert(edge);
                     } else {
                         let edge = Edge {
                             edge_type: EdgeType::Weak,
                             label: removed_edge.label.clone(),
-                            to: nonce_edge.to,
+                            to: id_edge.to,
                         };
                         n_edge_set_ref.insert(edge);
                     }
@@ -168,21 +168,21 @@ where
             });
         }
         checked_verify!(self.invariant());
-        checked_postcondition!(!self.0.contains_key(&nonce));
+        checked_postcondition!(!self.0.contains_key(&id));
     }
 
-    /// renames nonces in `self` according to `nonce_map`
-    pub fn rename_nonces(&self, nonce_map: BTreeMap<Nonce, Nonce>) -> Self {
+    /// renames ids in `self` according to `id_map`
+    pub fn rename_ids(&self, id_map: BTreeMap<RefID, RefID>) -> Self {
         checked_assume!(self.invariant());
         let mut new_graph = BTreeMap::new();
         for (n, es) in &self.0 {
             new_graph.insert(
-                nonce_map[n],
+                id_map[n],
                 es.iter()
                     .map(|x| Edge {
                         edge_type: x.edge_type,
                         label: x.label.clone(),
-                        to: nonce_map[&x.to],
+                        to: id_map[&x.to],
                     })
                     .collect::<BTreeSet<_>>(),
             );
@@ -205,26 +205,26 @@ where
         }
     }
 
-    /// gets all nonces that are targets of outgoing edges from `nonce`
-    pub fn all_borrows(&self, nonce: Nonce) -> BTreeSet<Nonce> {
-        checked_precondition!(self.0.contains_key(&nonce));
-        self.0[&nonce].iter().map(|x| x.to).collect()
+    /// gets all ids that are targets of outgoing edges from `id`
+    pub fn all_borrows(&self, id: RefID) -> BTreeSet<RefID> {
+        checked_precondition!(self.0.contains_key(&id));
+        self.0[&id].iter().map(|x| x.to).collect()
     }
 
-    /// gets all nonces that are targets of outgoing edges from `nonce` that are labeled with the empty label
-    pub fn nil_borrows(&self, nonce: Nonce) -> BTreeSet<Nonce> {
-        checked_precondition!(self.0.contains_key(&nonce));
-        self.0[&nonce]
+    /// gets all ids that are targets of outgoing edges from `id` that are labeled with the empty label
+    pub fn nil_borrows(&self, id: RefID) -> BTreeSet<RefID> {
+        checked_precondition!(self.0.contains_key(&id));
+        self.0[&id]
             .iter()
             .filter(|x| x.label.is_empty())
             .map(|x| x.to)
             .collect()
     }
 
-    /// gets all nonces that are targets of outgoing edges from `nonce` that are consistent with `label_elem`
-    pub fn consistent_borrows(&self, nonce: Nonce, label_elem: T) -> BTreeSet<Nonce> {
-        checked_precondition!(self.0.contains_key(&nonce));
-        self.0[&nonce]
+    /// gets all ids that are targets of outgoing edges from `id` that are consistent with `label_elem`
+    pub fn consistent_borrows(&self, id: RefID, label_elem: T) -> BTreeSet<RefID> {
+        checked_precondition!(self.0.contains_key(&id));
+        self.0[&id]
             .iter()
             .filter(|x| x.label.is_empty() || x.label[0] == label_elem)
             .map(|x| x.to)
@@ -249,7 +249,7 @@ where
         (pred_true, pred_false)
     }
 
-    fn unmatched_edges(&self, other: &Self) -> BTreeMap<Nonce, BTreeSet<Edge<T>>> {
+    fn unmatched_edges(&self, other: &Self) -> BTreeMap<RefID, BTreeSet<Edge<T>>> {
         let mut unmatched_edges = BTreeMap::new();
         for (n, other_edges) in &other.0 {
             unmatched_edges.insert(n.clone(), BTreeSet::new());
