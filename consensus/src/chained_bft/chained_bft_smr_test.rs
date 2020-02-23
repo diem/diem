@@ -6,6 +6,7 @@ use crate::{
         block_storage::BlockReader,
         chained_bft_smr::ChainedBftSMR,
         network::ConsensusTypes,
+        network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
         network_tests::NetworkPlayground,
         test_utils::{
             consensus_runtime, MockSharedStorage, MockStateComputer, MockStorage,
@@ -30,7 +31,6 @@ use libra_crypto::HashValue;
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet, ValidatorVerifier};
 use network::peer_manager::conn_status_channel;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use std::{convert::TryFrom, num::NonZeroUsize, sync::Arc};
 
 /// Auxiliary struct that is preparing SMR for the test

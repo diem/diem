@@ -3,6 +3,10 @@
 
 use crate::chained_bft::{
     network::{ConsensusTypes, NetworkReceivers, NetworkSender},
+    network_interface::{
+        ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
+        CONSENSUS_RPC_PROTOCOL,
+    },
     test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
@@ -19,10 +23,6 @@ use network::{
     peer_manager::{conn_status_channel, PeerManagerNotification, PeerManagerRequest},
     proto::ConsensusMsg,
     protocols::rpc::InboundRpcRequest,
-    validator_network::{
-        ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
-        CONSENSUS_RPC_PROTOCOL,
-    },
     ProtocolId,
 };
 use prost::Message;

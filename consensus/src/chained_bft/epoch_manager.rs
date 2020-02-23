@@ -13,6 +13,7 @@ use crate::{
             rotating_proposer_election::{choose_leader, RotatingProposer},
         },
         network::{ConsensusTypes, NetworkSender},
+        network_interface::ConsensusNetworkSender,
         persistent_liveness_storage::{
             LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
         },
@@ -32,10 +33,7 @@ use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorVerifier},
 };
-use network::{
-    proto::ConsensusMsg,
-    validator_network::{ConsensusNetworkSender, Event},
-};
+use network::{proto::ConsensusMsg, validator_network::Event};
 use safety_rules::SafetyRulesManager;
 use std::{
     cmp::Ordering,

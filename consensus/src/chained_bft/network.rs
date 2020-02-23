@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::counters;
+use crate::{
+    chained_bft::network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
+    counters,
+};
 use anyhow::{anyhow, ensure, Error};
 use bytes::Bytes;
 use channel::{self, libra_channel, message_queues::QueueStyle};
@@ -15,13 +18,16 @@ use consensus_types::{
 };
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_logger::prelude::*;
-use libra_types::account_address::AccountAddress;
-use libra_types::crypto_proxies::{EpochInfo, ValidatorChangeProof};
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
-use libra_types::validator_change::VerifierType;
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::{
+        EpochInfo, LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier,
+    },
+    validator_change::VerifierType,
+};
 use network::{
     proto::ConsensusMsg,
-    validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
+    validator_network::{Event, RpcError},
 };
 use serde::{Deserialize, Serialize};
 use std::{
