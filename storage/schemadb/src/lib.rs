@@ -231,7 +231,7 @@ impl DB {
         db_opts.create_if_missing(false);
         db_opts.set_db_log_dir(db_log_dir);
 
-        return DB::open_cf_readonly(db_opts, &path, cf_opts_map.into_iter().collect());
+        DB::open_cf_readonly(db_opts, &path, cf_opts_map.into_iter().collect())
     }
 
     fn open_cf<'a, P, T>(opts: DBOptions, path: P, cfds: Vec<T>) -> Result<DB>
