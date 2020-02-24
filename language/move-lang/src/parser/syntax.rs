@@ -1311,13 +1311,13 @@ fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, 
     }
 
     let mut structs = vec![];
-    while is_struct_definition(tokens)? {
-        structs.push(parse_struct_definition(tokens)?);
-    }
-
     let mut functions = vec![];
     while tokens.peek() != Tok::RBrace {
-        functions.push(parse_function_decl(tokens, /* allow_native */ true)?);
+        if is_struct_definition(tokens)? {
+            structs.push(parse_struct_definition(tokens)?);
+        } else {
+            functions.push(parse_function_decl(tokens, /* allow_native */ true)?);
+        }
     }
     tokens.advance()?; // consume the RBrace
 
