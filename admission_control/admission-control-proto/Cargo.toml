@@ -11,7 +11,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-bytes = "0.5.4"
 tonic = "0.1"
 tokio = { version = "0.2.8", features = ["full"] }
 prost = "0.6"

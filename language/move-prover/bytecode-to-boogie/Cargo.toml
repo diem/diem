@@ -16,7 +16,6 @@ bytecode-source-map = { path = "../../compiler/bytecode-source-map", version = "
 ir-to-bytecode = { path = "../../compiler/ir-to-bytecode", version = "0.1.0" }
 move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
 stackless-bytecode-generator = { path = "../stackless-bytecode-generator", version = "0.1.0"}
-stdlib = { path = "../../stdlib", version = "0.1.0" }
 
 # external dependencies
 clap = "2.33.0"

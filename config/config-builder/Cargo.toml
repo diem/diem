@@ -14,7 +14,6 @@ anyhow = "1.0"
 hex = "0.4.2"
 parity-multiaddr = { version = "0.7.2", default-features = false }
 rand = "0.6.5"
-serde = { version = "1.0.99", default-features = false }
 structopt = "0.3.2"
 thiserror = "1.0"
 
