@@ -9,8 +9,10 @@ use libradb::LibraDB;
 use std::path::PathBuf;
 use transaction_builder::get_transaction_name;
 
-use libra_crypto::hash::CryptoHash;
+use libra_crypto::hash::{CryptoHash, EventAccumulatorHasher};
 use libra_crypto::HashValue;
+use libra_types::contract_event::ContractEvent;
+use libra_types::proof::accumulator::InMemoryAccumulator;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -67,8 +69,6 @@ fn verify_txns(db: &LibraDB) -> Result<()> {
     for n in (1..latest_version).rev() {
         let tx = db.get_transaction_with_proof(n, latest_version, true)?;
 
-        let tx_info = tx.proof.transaction_info();
-
         let events_root_hash = tx.events.as_ref().map(|events| {
             let event_hashes: Vec<_> = events.iter().map(ContractEvent::hash).collect();
             InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes).root_hash()
@@ -91,13 +91,13 @@ fn verify_latest_account_state(db: &LibraDB) -> Result<()> {
     let iter = backup.get_account_iter(version)?;
 
     let mut total = 0;
-    for i in iter {
-        let (addr_hash, blob) = i?;
+    for (i, item) in iter.enumerate() {
+        let (addr_hash, blob) = item?;
         ensure!(addr_hash != HashValue::zero(), "Invalid address hash!");
         ensure!(blob.hash() != HashValue::zero(), "Invalid blob!");
-        total += 1;
+        total = i;
     }
-    info!("Total account verified: {}", total);
+    info!("Total account verified: {}", total + 1);
 
     // TODO: verify the root hash is correct
 

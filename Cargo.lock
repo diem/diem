@@ -2558,6 +2558,7 @@ dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
+ "libra-types 0.1.0",
  "libradb 0.1.0",
  "structopt 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",

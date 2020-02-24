@@ -171,18 +171,17 @@ impl LibraDB {
         let path = db_root_path.as_ref().join("libradb");
         let instant = Instant::now();
 
-        let db = Arc::new(match readonly {
-            true => {
-                ensure!(path.as_path().is_dir(), "libradb directory is not found.");
-                ensure!(
-                    log_dir.is_some(),
-                    "Must provide log_dir if opening in readonly mode."
-                );
-                let db_log_dir = log_dir.unwrap().to_str().expect("Invalid directory");
-                info!("log stored at {}", db_log_dir);
-                DB::open_readonly(path.clone(), cf_opts_map, db_log_dir)?
-            }
-            false => DB::open(path.clone(), cf_opts_map)?,
+        let db = Arc::new(if readonly {
+            ensure!(path.as_path().is_dir(), "libradb directory is not found.");
+            ensure!(
+                log_dir.is_some(),
+                "Must provide log_dir if opening in readonly mode."
+            );
+            let db_log_dir = log_dir.unwrap().to_str().expect("Invalid directory");
+            info!("log stored at {}", db_log_dir);
+            DB::open_readonly(path.clone(), cf_opts_map, db_log_dir)?
+        } else {
+            DB::open(path.clone(), cf_opts_map)?
         });
 
         info!(
