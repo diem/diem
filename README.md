@@ -1,5 +1,5 @@
 <a href="https://developers.libra.org">
-	<img width="200" src="./.assets/libra.png" alt="Libra Logo" />
+    <img width="200" src="./.assets/libra.png" alt="Libra Logo" />
 </a>
 
 ---
@@ -7,6 +7,7 @@
 [![CircleCI](https://circleci.com/gh/libra/libra.svg?style=shield)](https://circleci.com/gh/libra/libra)
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
 [![codecov](https://codecov.io/gh/libra/libra/branch/master/graph/badge.svg)](https://codecov.io/gh/libra/libra)
+[![deps.rs](https://deps.rs/repo/github/libra/libra/status.svg)](https://deps.rs/repo/github/libra/libra)
 
 Libra Core implements a decentralized, programmable database which provides a financial infrastructure that can empower billions of people.
 
