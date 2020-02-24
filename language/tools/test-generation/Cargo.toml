@@ -18,7 +18,7 @@ structopt = "0.3.2"
 itertools = "0.8.2"
 hex = "0.4.2"
 getrandom = "0.1.13"
-crossbeam-channel = "0.4.0"
+crossbeam-channel = "0.4.2"
 
 slog = { version = "2.5.0", features = ["max_level_debug", "release_max_level_debug"] }
 slog-term = "2.4.1"
