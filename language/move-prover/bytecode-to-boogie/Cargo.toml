@@ -21,7 +21,7 @@ stdlib = { path = "../../stdlib", version = "0.1.0" }
 # external dependencies
 clap = "2.33.0"
 codespan = "0.2.1"
-codespan-reporting = "0.2.1"
+codespan-reporting = "0.8.0"
 itertools = "0.8.0"
 log = "0.4.8"
 num = "0.2.0"
