@@ -228,10 +228,7 @@ impl DB {
     ) -> Result<Self> {
         let mut db_opts = DBOptions::new();
 
-        // do not create if not exists
         db_opts.create_if_missing(false);
-
-        // Put LOG file somewhere else
         db_opts.set_db_log_dir(db_log_dir);
 
         return DB::open_cf_readonly(db_opts, &path, cf_opts_map.into_iter().collect());
