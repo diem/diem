@@ -10,15 +10,13 @@ use crate::{
         loaded_module::LoadedModule,
     },
     runtime::VMRuntime,
-    system_module_names::{
-        ACCOUNT_MODULE, ACCOUNT_STRUCT_NAME, EMIT_EVENT_NAME, SAVE_ACCOUNT_NAME,
-    },
+    system_module_names::{EMIT_EVENT_NAME, SAVE_ACCOUNT_NAME},
 };
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::CORE_CODE_ADDRESS,
+    account_config,
     byte_array::ByteArray,
     contract_event::ContractEvent,
     event::EventKey,
@@ -709,9 +707,12 @@ impl<'txn> Interpreter<'txn> {
         let function_name = function.name();
         let native_function = NativeFunction::resolve(&module_id, function_name)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-        if module_id == *ACCOUNT_MODULE && function_name == EMIT_EVENT_NAME.as_ident_str() {
+        if module_id == *account_config::ACCOUNT_MODULE
+            && function_name == EMIT_EVENT_NAME.as_ident_str()
+        {
             self.call_emit_event(context, type_actual_tags, type_actuals)
-        } else if module_id == *ACCOUNT_MODULE && function_name == SAVE_ACCOUNT_NAME.as_ident_str()
+        } else if module_id == *account_config::ACCOUNT_MODULE
+            && function_name == SAVE_ACCOUNT_NAME.as_ident_str()
         {
             self.call_save_account(runtime, context)
         } else {
@@ -787,10 +788,10 @@ impl<'txn> Interpreter<'txn> {
         runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
     ) -> VMResult<()> {
-        let account_module = runtime.get_loaded_module(&ACCOUNT_MODULE, context)?;
+        let account_module = runtime.get_loaded_module(&account_config::ACCOUNT_MODULE, context)?;
         let account_resource = self.operand_stack.pop_as::<Struct>()?;
         let address = self.operand_stack.pop_as::<AccountAddress>()?;
-        if address == CORE_CODE_ADDRESS {
+        if address == account_config::CORE_CODE_ADDRESS {
             return Err(VMStatus::new(StatusCode::CREATE_NULL_ACCOUNT));
         }
         self.save_account(runtime, context, account_module, address, account_resource)
@@ -948,7 +949,7 @@ impl<'txn> Interpreter<'txn> {
         )?;
         let account_struct_id = account_module
             .struct_defs_table
-            .get(&*ACCOUNT_STRUCT_NAME)
+            .get(account_config::account_struct_name())
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         let account_struct_def =
             runtime.resolve_struct_def(account_module, *account_struct_id, vec![], context)?;

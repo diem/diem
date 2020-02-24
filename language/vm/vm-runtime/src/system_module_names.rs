@@ -6,25 +6,11 @@ use libra_types::{account_config, identifier::Identifier, language_storage::Modu
 use once_cell::sync::Lazy;
 
 // Data to resolve basic account and transaction flow functions and structs
-/// The ModuleId for the Account module
-pub static ACCOUNT_MODULE: Lazy<ModuleId> = Lazy::new(|| {
-    ModuleId::new(
-        account_config::CORE_CODE_ADDRESS,
-        Identifier::new("LibraAccount").unwrap(),
-    )
-});
 /// The ModuleId for the LibraTransactionTimeout module
 pub static LIBRA_TRANSACTION_TIMEOUT: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
         Identifier::new("LibraTransactionTimeout").unwrap(),
-    )
-});
-/// The ModuleId for the LibraCoin module
-pub static COIN_MODULE: Lazy<ModuleId> = Lazy::new(|| {
-    ModuleId::new(
-        account_config::CORE_CODE_ADDRESS,
-        Identifier::new("LibraCoin").unwrap(),
     )
 });
 /// The ModuleId for the Event
@@ -59,7 +45,6 @@ pub static GAS_SCHEDULE_MODULE: Lazy<ModuleId> = Lazy::new(|| {
 // Names for special functions and structs
 pub static CREATE_ACCOUNT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("create_account").unwrap());
-pub static ACCOUNT_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 pub static EMIT_EVENT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("write_to_event_store").unwrap());
 pub static SAVE_ACCOUNT_NAME: Lazy<Identifier> =

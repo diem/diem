@@ -461,7 +461,7 @@ impl LibraVM {
         record_stats! {time_hist | TXN_PROLOGUE_TIME_TAKEN | {
                 self.move_vm
                     .execute_function(
-                        &ACCOUNT_MODULE,
+                        &account_config::ACCOUNT_MODULE,
                         &PROLOGUE_NAME,
                         self.get_gas_schedule()?,
                         chain_state,
@@ -492,7 +492,7 @@ impl LibraVM {
         let gas_remaining = chain_state.remaining_gas().get();
         record_stats! {time_hist | TXN_EPILOGUE_TIME_TAKEN | {
                 self.move_vm.execute_function(
-                    &ACCOUNT_MODULE,
+                    &account_config::ACCOUNT_MODULE,
                     &EPILOGUE_NAME,
                     self.get_gas_schedule()?,
                     chain_state,
