@@ -50,7 +50,7 @@ jobs:
             // Find the number of the pull request that trigggers this push
             let pr_num = 0;
             let commit_message = context.payload.head_commit.message;
-            let re = /.*[^]Closes:\s\#(\d+)[^]Approved\sby:\s\w+$/;
+            let re = /.*[^]Closes:\s\#(\d+)[^]Approved\sby:\s[A-Za-z0-9_-]+$/;
             if (re.test(commit_message)) {
               let match = re.exec(commit_message);
               pr_num = match[1];
