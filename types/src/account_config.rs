@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::language_storage::ModuleId;
 use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
@@ -19,10 +20,18 @@ use serde::{Deserialize, Serialize};
 static COIN_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("LibraCoin").unwrap());
 static COIN_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 
+/// The ModuleId for the LibraCoin module.
+pub static COIN_MODULE: Lazy<ModuleId> =
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, COIN_MODULE_NAME.clone()));
+
 // Account
 static ACCOUNT_MODULE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("LibraAccount").unwrap());
 static ACCOUNT_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
+
+/// The ModuleId for the Account module.
+pub static ACCOUNT_MODULE: Lazy<ModuleId> =
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, ACCOUNT_MODULE_NAME.clone()));
 
 // Payment Events
 static SENT_EVENT_NAME: Lazy<Identifier> =

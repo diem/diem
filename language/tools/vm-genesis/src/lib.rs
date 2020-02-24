@@ -197,7 +197,7 @@ fn create_and_initialize_main_accounts(
     // create the association account
     move_vm
         .execute_function(
-            &ACCOUNT_MODULE,
+            &account_config::ACCOUNT_MODULE,
             &CREATE_ACCOUNT_NAME,
             gas_schedule,
             interpreter_context,
@@ -215,7 +215,7 @@ fn create_and_initialize_main_accounts(
     let transaction_fee_address = account_config::transaction_fee_address();
     move_vm
         .execute_function(
-            &ACCOUNT_MODULE,
+            &account_config::ACCOUNT_MODULE,
             &CREATE_ACCOUNT_NAME,
             gas_schedule,
             interpreter_context,
@@ -231,7 +231,7 @@ fn create_and_initialize_main_accounts(
 
     move_vm
         .execute_function(
-            &COIN_MODULE,
+            &account_config::COIN_MODULE,
             &INITIALIZE,
             &gas_schedule,
             interpreter_context,
@@ -275,7 +275,7 @@ fn create_and_initialize_main_accounts(
 
     move_vm
         .execute_function(
-            &ACCOUNT_MODULE,
+            &account_config::ACCOUNT_MODULE,
             &MINT_TO_ADDRESS,
             &gas_schedule,
             interpreter_context,
@@ -290,7 +290,7 @@ fn create_and_initialize_main_accounts(
     let genesis_auth_key = ByteArray::new(AccountAddress::from_public_key(public_key).to_vec());
     move_vm
         .execute_function(
-            &ACCOUNT_MODULE,
+            &account_config::ACCOUNT_MODULE,
             &ROTATE_AUTHENTICATION_KEY,
             &gas_schedule,
             interpreter_context,
@@ -305,7 +305,7 @@ fn create_and_initialize_main_accounts(
     // number 0
     move_vm
         .execute_function(
-            &ACCOUNT_MODULE,
+            &account_config::ACCOUNT_MODULE,
             &EPILOGUE,
             &gas_schedule,
             interpreter_context,
@@ -363,7 +363,7 @@ fn create_and_initialize_validator_set(
 
     move_vm
         .execute_function(
-            &ACCOUNT_MODULE,
+            &account_config::ACCOUNT_MODULE,
             &CREATE_ACCOUNT_NAME,
             gas_schedule,
             interpreter_context,
@@ -401,7 +401,7 @@ fn create_and_initialize_discovery_set(
 
     move_vm
         .execute_function(
-            &ACCOUNT_MODULE,
+            &account_config::ACCOUNT_MODULE,
             &CREATE_ACCOUNT_NAME,
             gas_schedule,
             interpreter_context,
@@ -443,7 +443,7 @@ fn initialize_validators(
         let validator_address = *validator_keys.account_address();
         move_vm
             .execute_function(
-                &ACCOUNT_MODULE,
+                &account_config::ACCOUNT_MODULE,
                 &CREATE_ACCOUNT_NAME,
                 gas_schedule,
                 interpreter_context,
