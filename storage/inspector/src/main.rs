@@ -1,3 +1,8 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+#![forbid(unsafe_code)]
+
 use anyhow::{ensure, Result};
 use libra_logger::prelude::*;
 use libradb::LibraDB;
@@ -14,7 +19,7 @@ struct Opt {
     db: PathBuf,
 }
 
-// Print out latest information stored in the DB.
+/// Print out latest information stored in the DB.
 fn print_head(db: &LibraDB) {
     let version = db
         .get_latest_version()
@@ -49,8 +54,8 @@ fn print_head(db: &LibraDB) {
     );
 }
 
-// List all TXs from DB and verify their proofs
-fn verify_txs(db: &LibraDB) -> Result<()> {
+/// List all TXNs from DB and verify their proofs
+fn verify_txns(db: &LibraDB) -> Result<()> {
     let si = db
         .get_startup_info()
         .expect("Can't get startup info")
@@ -73,7 +78,7 @@ fn verify_txs(db: &LibraDB) -> Result<()> {
         tx.proof
             .verify(ledger_info, tx.transaction.hash(), events_root_hash, n)?;
     }
-    info!("Total TX verified: {}", latest_version);
+    info!("Total TXNs verified: {}", latest_version);
 
     Ok(())
 }
@@ -119,7 +124,7 @@ fn main() {
 
     print_head(&db);
 
-    verify_txs(&db).expect("Unable to verify all TXs");
+    verify_txns(&db).expect("Unable to verify all TXNs");
 
     verify_latest_account_state(&db).expect("Unable to verify account state");
 
