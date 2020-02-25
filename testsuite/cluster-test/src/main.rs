@@ -873,14 +873,12 @@ impl ClusterTestRunner {
     }
 
     fn reboot(&mut self) {
-        let futures = self.cluster.all_instances().map(|instance| {
-            async move {
-                let reboot = Reboot::new(instance.clone());
-                reboot
-                    .apply()
-                    .await
-                    .map_err(|e| info!("Failed to reboot {}: {:?}", instance, e))
-            }
+        let futures = self.cluster.all_instances().map(|instance| async move {
+            let reboot = Reboot::new(instance.clone());
+            reboot
+                .apply()
+                .await
+                .map_err(|e| info!("Failed to reboot {}: {:?}", instance, e))
         });
         self.runtime.block_on(join_all(futures));
         info!("Completed");
@@ -893,18 +891,16 @@ impl ClusterTestRunner {
     }
 
     fn cleanup(&mut self) {
-        let futures = self.cluster.all_instances().map(|instance| {
-            async move {
-                RemoveNetworkEffects::new(instance.clone())
-                    .apply()
-                    .await
-                    .map_err(|e| {
-                        info!(
-                            "Failed to remove network effects for {}. Error: {}",
-                            instance, e
-                        );
-                    })
-            }
+        let futures = self.cluster.all_instances().map(|instance| async move {
+            RemoveNetworkEffects::new(instance.clone())
+                .apply()
+                .await
+                .map_err(|e| {
+                    info!(
+                        "Failed to remove network effects for {}. Error: {}",
+                        instance, e
+                    );
+                })
         });
         self.runtime.block_on(join_all(futures));
     }

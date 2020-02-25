@@ -44,17 +44,13 @@ pub fn build_test_transport(
 {
     let memory_transport = MemoryTransport::default();
     memory_transport
-        .and_then(move |socket, origin| {
-            async move {
-                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
-                Ok((identity, socket))
-            }
+        .and_then(move |socket, origin| async move {
+            let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+            Ok((identity, socket))
         })
-        .and_then(|(identity, socket), origin| {
-            async move {
-                let muxer = Yamux::upgrade_connection(socket, origin).await?;
-                Ok((identity, muxer))
-            }
+        .and_then(|(identity, socket), origin| async move {
+            let muxer = Yamux::upgrade_connection(socket, origin).await?;
+            Ok((identity, muxer))
         })
         .boxed()
 }
