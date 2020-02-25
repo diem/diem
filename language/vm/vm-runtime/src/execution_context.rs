@@ -9,13 +9,13 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{sub_status, StatusCode},
 };
+use move_vm_types::{
+    loaded_data::struct_def::StructDef,
+    values::{GlobalValue, Struct, Value},
+};
 use vm::{
     errors::*,
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits},
-};
-use vm_runtime_types::{
-    loaded_data::struct_def::StructDef,
-    values::{GlobalValue, Struct, Value},
 };
 
 /// The `InterpreterContext` context trait specifies the mutations that are allowed to the

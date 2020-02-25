@@ -18,6 +18,11 @@ use libra_types::{
     language_storage::{ModuleId, StructTag},
     vm_error::{StatusCode, VMStatus},
 };
+use move_vm_types::{
+    loaded_data::{struct_def::StructDef, types::Type},
+    type_context::TypeContext,
+    values::Value,
+};
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
@@ -27,11 +32,6 @@ use vm::{
     CompiledModule, IndexKind,
 };
 use vm_cache_map::Arena;
-use vm_runtime_types::{
-    loaded_data::{struct_def::StructDef, types::Type},
-    type_context::TypeContext,
-    values::Value,
-};
 
 /// An instantiation of the MoveVM.
 /// `code_cache` is the top level module cache that holds loaded published modules.

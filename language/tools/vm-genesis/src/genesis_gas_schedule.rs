@@ -3,6 +3,7 @@
 
 //! This file contains the starting gas schedule published at genesis.
 
+use move_vm_types::{loaded_data::types::Type, values::Value};
 use once_cell::sync::Lazy;
 use vm::{
     file_format::{
@@ -15,7 +16,6 @@ use vm_runtime::{
     chain_state::TransactionExecutionContext, data_cache::RemoteCache, move_vm::MoveVM,
     system_module_names::GAS_SCHEDULE_MODULE,
 };
-use vm_runtime_types::{loaded_data::types::Type, values::Value};
 
 static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
     use Bytecode::*;

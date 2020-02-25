@@ -13,12 +13,12 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
+use move_vm_types::{loaded_data::struct_def::StructDef, values::GlobalValue};
 use vm::{
     errors::VMResult,
     gas_schedule::{GasAlgebra, GasCarrier, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
-use vm_runtime_types::{loaded_data::struct_def::StructDef, values::GlobalValue};
 
 /// Trait that describes what Move bytecode runtime expects from the Libra blockchain.
 pub trait ChainState {

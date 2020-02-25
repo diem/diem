@@ -12,11 +12,11 @@ use libra_types::{
     transaction::{Transaction, TransactionPayload},
     write_set::{WriteOp, WriteSet},
 };
+use move_vm_types::values::Struct;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 use vm::{errors::*, CompiledModule};
 use vm_runtime::data_cache::RemoteCache;
-use vm_runtime_types::values::Struct;
 
 /// The write set encoded in the genesis transaction.
 pub static GENESIS_WRITE_SET: Lazy<WriteSet> = Lazy::new(|| {

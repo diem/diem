@@ -16,6 +16,7 @@ use cost_synthesis::{
 };
 use language_e2e_tests::data_store::FakeDataStore;
 use libra_types::vm_error::StatusCode;
+use move_vm_types::{native_functions::hash, values::Value};
 use std::{
     collections::{HashMap, VecDeque},
     convert::TryFrom,
@@ -40,7 +41,6 @@ use vm_runtime::{
     loaded_data::function::{FunctionRef, FunctionReference},
     runtime::VMRuntime,
 };
-use vm_runtime_types::{native_functions::hash, values::Value};
 
 #[derive(Debug, StructOpt)]
 #[structopt(

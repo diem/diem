@@ -25,6 +25,12 @@ use libra_types::{
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
+use move_vm_types::{
+    loaded_data::{struct_def::StructDef, types::Type},
+    native_functions::dispatch::NativeFunction,
+    type_context::TypeContext,
+    values::{IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
+};
 #[cfg(any(test, feature = "instruction_synthesis"))]
 use std::collections::HashMap;
 use std::{collections::VecDeque, convert::TryFrom, marker::PhantomData};
@@ -40,12 +46,6 @@ use vm::{
         NativeCostIndex, Opcodes,
     },
     transaction_metadata::TransactionMetadata,
-};
-use vm_runtime_types::{
-    loaded_data::{struct_def::StructDef, types::Type},
-    native_functions::dispatch::NativeFunction,
-    type_context::TypeContext,
-    values::{IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
 };
 
 fn derive_type_tag(

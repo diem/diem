@@ -15,6 +15,7 @@ use libra_types::{
     identifier::Identifier,
     language_storage::ModuleId,
 };
+use move_vm_types::values::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 use vm::{
@@ -33,7 +34,6 @@ use vm_runtime::{
     chain_state::SystemExecutionContext, interpreter::InterpreterForCostSynthesis,
     loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
 };
-use vm_runtime_types::values::*;
 
 /// Specifies the data to be applied to the execution stack for the next valid stack state.
 ///

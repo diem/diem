@@ -16,7 +16,7 @@ petgraph = "0.5.0"
 
 vm = { path = "../vm", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
-vm-runtime-types = { path = "../vm/vm-runtime/vm-runtime-types", version = "0.1.0" }
+move-vm-types = { path = "../move-vm/types", version = "0.1.0" }
 
 [dev-dependencies]
 invalid-mutations = { path = "invalid-mutations", version = "0.1.0" }

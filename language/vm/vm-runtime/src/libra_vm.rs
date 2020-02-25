@@ -26,6 +26,7 @@ use libra_types::{
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::WriteSet,
 };
+use move_vm_types::values::Value;
 use rayon::prelude::*;
 use std::sync::Arc;
 use vm::{
@@ -35,7 +36,6 @@ use vm::{
     },
     transaction_metadata::TransactionMetadata,
 };
-use vm_runtime_types::values::Value;
 
 #[derive(Clone)]
 /// A wrapper to make VMRuntime standalone and thread safe.

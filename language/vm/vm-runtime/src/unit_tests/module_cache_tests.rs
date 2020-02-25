@@ -21,6 +21,7 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, StatusType},
 };
+use move_vm_types::loaded_data::{struct_def::StructDef, types::Type};
 use std::collections::HashMap;
 use vm::{
     access::ModuleAccess,
@@ -29,7 +30,6 @@ use vm::{
     gas_schedule::{GasAlgebra, GasUnits},
 };
 use vm_cache_map::Arena;
-use vm_runtime_types::loaded_data::{struct_def::StructDef, types::Type};
 
 struct NullStateView;
 

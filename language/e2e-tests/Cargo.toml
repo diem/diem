@@ -19,12 +19,12 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["f
 rand = "0.6.5"
 libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+move-vm-types = { path = "../move-vm/types", version = "0.1.0" }
 transaction-builder = { path = "../transaction-builder", version = "0.1.0", features = ["fuzzing"]}
 vm = { path = "../vm", version = "0.1.0" }
 vm-cache-map = { path = "../vm/vm-runtime/vm-cache-map", version = "0.1.0" }
 vm-genesis = { path = "../tools/vm-genesis", version = "0.1.0" }
 vm-runtime = { path = "../vm/vm-runtime", version = "0.1.0" }
-vm-runtime-types = { path = "../vm/vm-runtime/vm-runtime-types", version = "0.1.0" }
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
