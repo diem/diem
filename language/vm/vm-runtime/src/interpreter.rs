@@ -371,7 +371,7 @@ impl<'txn> Interpreter<'txn> {
                         self.operand_stack.push(Value::bool(true))?;
                     }
                     Bytecode::LdFalse => {
-                        gas!(const_instr: context, self, Opcodes::LD_TRUE)?;
+                        gas!(const_instr: context, self, Opcodes::LD_FALSE)?;
                         self.operand_stack.push(Value::bool(false))?;
                     }
                     Bytecode::CopyLoc(idx) => {
