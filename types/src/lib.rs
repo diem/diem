@@ -28,6 +28,7 @@ pub mod proto;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod test_helpers;
 pub mod transaction;
+pub mod trusted_state;
 pub mod validator_change;
 pub mod validator_public_keys;
 pub mod validator_set;
