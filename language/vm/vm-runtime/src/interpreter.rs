@@ -110,7 +110,7 @@ fn derive_type_tag(
 // REVIEW: abstract the data store better (maybe a single Trait for both data and event?)
 // The ModuleCache should be a Loader with a proper API.
 // Resolve where GasMeter should live.
-pub struct Interpreter<'txn> {
+pub(crate) struct Interpreter<'txn> {
     /// Operand stack, where Move `Value`s are stored for stack operations.
     operand_stack: Stack,
     /// The stack of active functions.
