@@ -38,7 +38,7 @@ pub enum VerifyError {
 }
 
 /// Helper struct to manage validator information for validation
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ValidatorInfo<PublicKey> {
     public_key: PublicKey,
     voting_power: u64,
@@ -64,7 +64,7 @@ impl<PublicKey: VerifyingKey> ValidatorInfo<PublicKey> {
 /// Supports validation of signatures for known authors with individual voting powers. This struct
 /// can be used for all signature verification operations including block and network signature
 /// verification, respectively.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ValidatorVerifier<PublicKey> {
     /// An ordered map of each validator's on-chain account address to its pubkeys
     /// and voting power.

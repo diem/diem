@@ -25,7 +25,7 @@ pub struct ValidatorChangeProof {
     pub more: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// The verification of the validator change proof starts with some verifier that is trusted by the
 /// client: could be either a waypoint (upon startup) or a known validator verifier.
 pub enum VerifierType {

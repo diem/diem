@@ -96,7 +96,7 @@ pub type ValidatorSet = RawValidatorSet<Ed25519PublicKey>;
 pub use crate::validator_change::ValidatorChangeProof;
 use std::sync::Arc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// EpochInfo represents a trusted validator set to validate messages from the specific epoch,
 /// it could be updated with ValidatorChangeProof.
 pub struct EpochInfo {
