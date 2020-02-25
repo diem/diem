@@ -203,7 +203,7 @@ impl DB {
             return DB::open_cf(db_opts, &path, cf_opts_map.into_iter().collect());
         }
 
-        // If db doesn't exist, create one with all column families if requested.
+        // If db doesn't exist, create a db first with all column families.
         db_opts.create_if_missing(true);
 
         let mut db = DB::open_cf(
