@@ -193,7 +193,7 @@ impl ClientProxy {
 
     /// Returns the ledger info corresonding to the latest epoch change
     /// (could further be used for e.g., generating a waypoint)
-    pub fn latest_epoch_change_li(&self) -> Option<LedgerInfoWithSignatures> {
+    pub fn latest_epoch_change_li(&self) -> Option<&LedgerInfoWithSignatures> {
         self.client.latest_epoch_change_li()
     }
 
