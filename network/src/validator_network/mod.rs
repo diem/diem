@@ -22,7 +22,6 @@ use pin_project::pin_project;
 use prost::Message;
 use std::{default::Default, marker::PhantomData, pin::Pin, time::Duration};
 
-pub mod health_checker;
 pub mod network_builder;
 
 #[cfg(test)]
@@ -30,10 +29,6 @@ mod test;
 #[cfg(any(feature = "testing", test))]
 pub mod test_network;
 
-// Public re-exports
-pub use health_checker::{
-    HealthCheckerNetworkEvents, HealthCheckerNetworkSender, HEALTH_CHECKER_RPC_PROTOCOL,
-};
 use libra_types::PeerId;
 
 /// Events received by network clients in a validator
