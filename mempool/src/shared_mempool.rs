@@ -4,7 +4,7 @@
 use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     counters,
-    network::{MempoolNetworkEvents, MempoolNetworkSender},
+    network::{MempoolNetworkEvents, MempoolNetworkSender, MempoolSyncMsg},
 };
 use admission_control_proto::{
     proto::admission_control::{
@@ -40,8 +40,7 @@ use libra_types::{
     },
     PeerId,
 };
-use network::validator_network::Event;
-use serde::{Deserialize, Serialize};
+use network::protocols::network::Event;
 use std::{
     cmp,
     collections::{HashMap, HashSet},
@@ -166,22 +165,6 @@ pub struct TransactionExclusion {
     pub sequence_number: u64,
 }
 
-/// Container for exchanging transactions with other Mempools
-#[derive(Serialize, Deserialize)]
-pub enum MempoolSyncMsg {
-    BroadcastTransactionsRequest(
-        (
-            u64, // timeline ID that is lower than the first txn in this broadcast's transactions
-            u64, // last timeline ID in this broadcast's transactions
-        ),
-        Vec<SignedTransaction>, // transactions
-    ),
-    BroadcastTransactionsResponse(
-        u64, // first timeline ID of corresponding request for this response
-        u64, // last timeline ID of corresponding request for this response
-    ),
-}
-
 fn notify_subscribers(
     event: SharedMempoolNotification,
     subscribers: &[UnboundedSender<SharedMempoolNotification>],
@@ -229,24 +212,9 @@ fn send_mempool_sync_msg(
     recipient: PeerId,
     mut network_sender: MempoolNetworkSender,
 ) -> Result<()> {
-    let mut sync_msg = network::proto::MempoolSyncMsg::default();
-    sync_msg.message = match lcs::to_bytes(&msg) {
-        Ok(bytes) => bytes,
-        Err(e) => {
-            warn!(
-                "[shared mempool] unable to serialize mempool sync msg: {}",
-                e
-            );
-            return Err(format_err!(
-                "[shared mempool] unable to serialize MempoolSyncMsg: {}",
-                e
-            ));
-        }
-    };
-
     // Since this is a direct-send, this will only error if the network
     // module has unexpectedly crashed or shutdown.
-    network_sender.send_to(recipient, sync_msg).map_err(|e| {
+    network_sender.send_to(recipient, msg).map_err(|e| {
         format_err!(
             "[shared mempool] failed to direct-send mempool sync message: {}",
             e
@@ -727,13 +695,6 @@ async fn inbound_network_task<V>(
                                 counters::SHARED_MEMPOOL_EVENTS
                                     .with_label_values(&["message".to_string().deref()])
                                     .inc();
-                                let msg: MempoolSyncMsg = match lcs::from_bytes(&msg.message) {
-                                    Ok(msg) => msg,
-                                    Err(e) => {
-                                        warn!("Unable to deserialize message from {}: {:?}", peer_id, msg);
-                                        continue;
-                                    }
-                                };
                                 match msg {
                                     MempoolSyncMsg::BroadcastTransactionsRequest((start_id, end_id), transactions) => {
                                         counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
