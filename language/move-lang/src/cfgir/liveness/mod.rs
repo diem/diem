@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{
     errors::*,
-    parser::ast::{StructName, Var},
+    parser::ast::Var,
     shared::{unique_map::UniqueMap, *},
 };
 use state::*;
@@ -63,25 +63,6 @@ impl TransferFunctions for Liveness {
 }
 
 impl AbstractInterpreter for Liveness {}
-
-pub fn refine_inference_and_verify(
-    errors: &mut Errors,
-    _signature: &FunctionSignature,
-    _acquires: &BTreeSet<StructName>,
-    locals: &UniqueMap<Var, SingleType>,
-    cfg: &mut BlockCFG,
-    infinite_loop_starts: &BTreeSet<Label>,
-) -> FinalInvariants {
-    let (final_invariants, per_command_states) = analyze(cfg, &infinite_loop_starts);
-    last_usage(
-        errors,
-        locals,
-        &final_invariants,
-        per_command_states,
-        cfg.blocks_mut(),
-    );
-    final_invariants
-}
 
 //**************************************************************************************************
 // Analysis
@@ -179,16 +160,16 @@ fn exp_list_item(state: &mut LivenessState, item: &ExpListItem) {
 /// - Reports an error if an assignment/let was not used
 ///   Switches it to an `Ignore` if it is not a resource (helps with error messages for borrows)
 
-fn last_usage(
+pub fn last_usage(
     errors: &mut Errors,
     locals: &UniqueMap<Var, SingleType>,
-    final_invariants: &FinalInvariants,
-    block_command_states: PerCommandStates,
-    blocks: &mut Blocks,
+    cfg: &mut BlockCFG,
+    infinite_loop_starts: &BTreeSet<Label>,
 ) {
-    for (lbl, block) in blocks {
+    let (final_invariants, per_command_states) = analyze(cfg, &infinite_loop_starts);
+    for (lbl, block) in cfg.blocks_mut() {
         let final_invariant = final_invariants.get(lbl).unwrap();
-        let command_states = block_command_states.get(lbl).unwrap();
+        let command_states = per_command_states.get(lbl).unwrap();
         last_usage::block(errors, locals, final_invariant, command_states, block)
     }
 }
@@ -334,7 +315,14 @@ mod last_usage {
                 // Even if not switched to a move:
                 // remove it from dropped_live to prevent accidental dropping in previous usages
                 let var_is_dead = context.dropped_live.remove(var);
-                if var_is_dead && !*from_user {
+                // Non-references might still be borrowed
+                // Switching such non-locals to a copy is an optimization and not
+                // needed for this refinement
+                let is_reference = match &parent_e.ty.value {
+                    Type_::Single(sp!(_, SingleType_::Ref(_, _))) => true,
+                    _ => false,
+                };
+                if var_is_dead && is_reference && !*from_user {
                     parent_e.exp.value = E::Move {
                         var: var.clone(),
                         from_user: *from_user,
@@ -399,12 +387,13 @@ mod last_usage {
 /// satisfies (1) and (2)
 
 pub fn release_dead_refs(
+    locals_pre_states: &BTreeMap<Label, locals::state::LocalStates>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &mut BlockCFG,
-    liveness_pre_states: &FinalInvariants,
-    locals_pre_states: &BTreeMap<Label, locals::state::LocalStates>,
+    infinite_loop_starts: &BTreeSet<Label>,
 ) {
-    let forward_intersections = build_forward_intersections(cfg, liveness_pre_states);
+    let (liveness_pre_states, _per_command_states) = analyze(cfg, &infinite_loop_starts);
+    let forward_intersections = build_forward_intersections(cfg, &liveness_pre_states);
     for (lbl, block) in cfg.blocks_mut() {
         let locals_pre_state = locals_pre_states.get(lbl).unwrap();
         let liveness_pre_state = liveness_pre_states.get(lbl).unwrap();
