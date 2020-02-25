@@ -21,10 +21,11 @@ use crate::{
     counters,
     error::NetworkError,
     peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
-    proto,
-    protocols::rpc::error::RpcError,
-    utils::MessageExt,
-    validator_network::{network_builder::NetworkBuilder, Event, NetworkEvents, NetworkSender},
+    protocols::{
+        network::{Event, NetworkEvents, NetworkSender},
+        rpc::error::RpcError,
+    },
+    validator_network::network_builder::NetworkBuilder,
     ProtocolId,
 };
 use bytes::Bytes;
@@ -51,7 +52,7 @@ pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/health-checker
 /// raw `Bytes` rpc messages are deserialized into
 /// `HealthCheckerMsg` types. `HealthCheckerNetworkEvents` is a thin wrapper
 /// around an `channel::Receiver<PeerManagerNotification>`.
-pub type HealthCheckerNetworkEvents = NetworkEvents<proto::HealthCheckerMsg>;
+pub type HealthCheckerNetworkEvents = NetworkEvents<HealthCheckerMsg>;
 
 /// The interface from HealthChecker to Networking layer.
 ///
@@ -63,7 +64,7 @@ pub type HealthCheckerNetworkEvents = NetworkEvents<proto::HealthCheckerMsg>;
 /// requires the `HealthCheckerNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct HealthCheckerNetworkSender {
-    inner: NetworkSender<proto::HealthCheckerMsg>,
+    inner: NetworkSender<HealthCheckerMsg>,
 }
 
 pub fn add_to_network(
@@ -96,9 +97,9 @@ impl HealthCheckerNetworkSender {
     pub async fn send_rpc(
         &mut self,
         recipient: PeerId,
-        req_msg: proto::HealthCheckerMsg,
+        req_msg: HealthCheckerMsg,
         timeout: Duration,
-    ) -> Result<proto::HealthCheckerMsg, RpcError> {
+    ) -> Result<HealthCheckerMsg, RpcError> {
         let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
         self.inner
             .unary_rpc(recipient, protocol, req_msg, timeout)
@@ -110,17 +111,17 @@ impl HealthCheckerNetworkSender {
     }
 }
 
-#[derive(Deserialize, Serialize)]
-enum HealthCheckerMsg {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum HealthCheckerMsg {
     Ping(Ping),
     Pong(Pong),
 }
 
-#[derive(Deserialize, Serialize)]
-struct Ping(u32);
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Ping(u32);
 
-#[derive(Deserialize, Serialize)]
-struct Pong(u32);
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Pong(u32);
 
 /// The actor performing health checks by running the Ping protocol
 pub struct HealthChecker<TTicker> {
@@ -183,10 +184,10 @@ where
                             self.connected.remove(&peer_id);
                         },
                         Ok(Event::RpcRequest((peer_id, msg, res_tx))) => {
-                            match lcs::from_bytes(&msg.message) {
-                                Ok(HealthCheckerMsg::Ping(ping)) => self.handle_ping_request(peer_id, ping, res_tx),
-                                _ => security_log(SecurityEvent::InvalidHealthCheckerMsg)
-                                    .error("Unexpected rpc message")
+                            match msg {
+                            HealthCheckerMsg::Ping(ping) => self.handle_ping_request(peer_id, ping, res_tx),
+                            _ => security_log(SecurityEvent::InvalidHealthCheckerMsg)
+                                .error("Unexpected rpc message")
                                     .data(&msg)
                                     .data(&peer_id)
                                     .log(),
@@ -254,14 +255,12 @@ where
                 return;
             }
         };
-        let res_msg = crate::proto::HealthCheckerMsg { message };
         debug!(
             "Sending Pong response to peer: {} with nonce: {}",
             peer_id.short_str(),
             ping.0,
         );
-        let res_data = res_msg.to_bytes().unwrap();
-        let _ = res_tx.send(Ok(res_data));
+        let _ = res_tx.send(Ok(message.into()));
     }
 
     async fn handle_ping_response(
@@ -339,25 +338,16 @@ where
         nonce: u32,
         ping_timeout: Duration,
     ) -> (PeerId, u64, u32, Result<Pong, RpcError>) {
-        let message = match lcs::to_bytes(&HealthCheckerMsg::Ping(Ping(nonce))) {
-            Ok(msg) => msg,
-            Err(e) => {
-                warn!("Unable to serialize ping request: {}", e);
-                let err = RpcError::ApplicationError(anyhow::Error::new(e));
-                return (peer_id, round, nonce, Err(err));
-            }
-        };
         debug!(
             "Sending Ping request to peer: {} with nonce: {}",
             peer_id.short_str(),
             nonce
         );
-        let msg = crate::proto::HealthCheckerMsg { message };
         let res_pong_msg = network_tx
-            .send_rpc(peer_id, msg, ping_timeout)
+            .send_rpc(peer_id, HealthCheckerMsg::Ping(Ping(nonce)), ping_timeout)
             .await
-            .and_then(|msg| match lcs::from_bytes(&msg.message) {
-                Ok(HealthCheckerMsg::Pong(res)) => Ok(res),
+            .and_then(|msg| match msg {
+                HealthCheckerMsg::Pong(res) => Ok(res),
                 _ => Err(RpcError::InvalidRpcResponse),
             });
         (peer_id, round, nonce, res_pong_msg)

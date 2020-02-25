@@ -10,7 +10,6 @@ use crate::{
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::sink::SinkExt;
 use parity_multiaddr::Multiaddr;
-use prost::Message as _;
 use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
 
@@ -81,10 +80,9 @@ async fn expect_ping(
         ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)
     );
 
-    let req_msg = crate::proto::HealthCheckerMsg::decode(req_data.as_ref()).unwrap();
-    match lcs::from_bytes(&req_msg.message).unwrap() {
+    match lcs::from_bytes(&req_data).unwrap() {
         HealthCheckerMsg::Ping(ping) => (ping, res_tx),
-        _ => panic!("Unexpected HealthCheckerMsg: {:?}", req_msg),
+        msg => panic!("Unexpected HealthCheckerMsg: {:?}", msg),
     }
 }
 
@@ -92,11 +90,8 @@ async fn expect_ping_send_ok(
     network_reqs_rx: &mut libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
 ) {
     let (ping, res_tx) = expect_ping(network_reqs_rx).await;
-    let res_msg_enum = crate::proto::HealthCheckerMsg {
-        message: lcs::to_bytes(&HealthCheckerMsg::Pong(Pong(ping.0))).unwrap(),
-    };
-    let res_data = res_msg_enum.to_bytes().unwrap();
-    res_tx.send(Ok(res_data)).unwrap();
+    let res_data = lcs::to_bytes(&HealthCheckerMsg::Pong(Pong(ping.0))).unwrap();
+    res_tx.send(Ok(res_data.into())).unwrap();
 }
 
 async fn expect_ping_send_notok(
@@ -121,10 +116,9 @@ async fn send_inbound_ping(
     network_notifs_tx: &mut libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
 ) -> oneshot::Receiver<Result<Bytes, RpcError>> {
     let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
-    let req_msg_enum = crate::proto::HealthCheckerMsg {
-        message: lcs::to_bytes(&HealthCheckerMsg::Ping(Ping(ping))).unwrap(),
-    };
-    let data = req_msg_enum.to_bytes().unwrap();
+    let data = lcs::to_bytes(&HealthCheckerMsg::Ping(Ping(ping)))
+        .unwrap()
+        .into();
     let (res_tx, res_rx) = oneshot::channel();
     let inbound_rpc_req = InboundRpcRequest {
         protocol,
@@ -149,11 +143,10 @@ async fn send_inbound_ping(
 
 async fn expect_pong(res_rx: oneshot::Receiver<Result<Bytes, RpcError>>) {
     let res_data = res_rx.await.unwrap().unwrap();
-    let res_msg = crate::proto::HealthCheckerMsg::decode(res_data.as_ref()).unwrap();
-    match lcs::from_bytes(&res_msg.message).unwrap() {
+    match lcs::from_bytes(&res_data).unwrap() {
         HealthCheckerMsg::Pong(_) => {}
-        _ => panic!("Unexpected HealthCheckerMsg: {:?}", res_msg),
-    }
+        msg => panic!("Unexpected HealthCheckerMsg: {:?}", msg),
+    };
 }
 
 async fn expect_disconnect(
