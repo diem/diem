@@ -18,15 +18,13 @@ use futures::{
     sink::SinkExt,
     stream::{FuturesUnordered, StreamExt},
 };
-use libra_prost_ext::MessageExt;
 use libra_types::PeerId;
-use network::{
-    proto::ConsensusMsg,
-    protocols::rpc::error::RpcError,
-    validator_network::{
-        test_network::{setup_network, TestNetworkSender},
+use network::protocols::{
+    network::{
+        dummy::{setup_network, DummyMsg, DummyNetworkSender},
         Event,
     },
+    rpc::error::RpcError,
 };
 use std::time::Duration;
 
@@ -43,7 +41,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     let mut listener_events = tn.listener_events;
 
     // Compose Proposal message with `msg_len` bytes payload
-    let msg = compose_proposal(*msg_len);
+    let msg = DummyMsg(vec![0u8; *msg_len]);
 
     let (mut tx, mut rx) = mpsc::channel(0);
     // The listener side keeps receiving messages and send signal back to the bencher to finish
@@ -74,12 +72,6 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     });
 }
 
-fn compose_proposal(msg_len: usize) -> ConsensusMsg {
-    let mut msg = ConsensusMsg::default();
-    msg.message = vec![0u8; msg_len];
-    msg
-}
-
 fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     let tn = setup_network();
     let runtime = tn.runtime;
@@ -88,15 +80,17 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     let mut listener_events = tn.listener_events;
 
     // Compose RequestBlock message and RespondBlock message with `msg_len` bytes payload
-    let req = compose_send_rpc();
-    let res = compose_respond_block(*msg_len);
+    let req = DummyMsg(vec![]);
+    let res = DummyMsg(vec![0u8; *msg_len]);
 
     // The listener side keeps receiving RPC requests and sending responses back
     let f_listener = async move {
         while let Some(Ok(event)) = listener_events.next().await {
             match event {
                 Event::RpcRequest((_, _, res_tx)) => res_tx
-                    .send(Ok(res.clone().to_bytes().expect("fail to serialize proto")))
+                    .send(Ok(lcs::to_bytes(&res)
+                        .expect("fail to serialize proto")
+                        .into()))
                     .expect("fail to send rpc response to network"),
                 event => panic!("Unexpected event: {:?}", event),
             }
@@ -122,23 +116,13 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
 }
 
 async fn send_rpc(
-    mut sender: TestNetworkSender,
+    mut sender: DummyNetworkSender,
     recipient: PeerId,
-    req_msg: ConsensusMsg,
-) -> Result<ConsensusMsg, RpcError> {
+    req_msg: DummyMsg,
+) -> Result<DummyMsg, RpcError> {
     sender
         .send_rpc(recipient, req_msg, Duration::from_secs(15))
         .await
-}
-
-fn compose_send_rpc() -> ConsensusMsg {
-    ConsensusMsg::default()
-}
-
-fn compose_respond_block(msg_len: usize) -> ConsensusMsg {
-    let mut msg = ConsensusMsg::default();
-    msg.message = vec![0u8; msg_len];
-    msg
 }
 
 fn network_crate_benchmark(c: &mut Criterion) {

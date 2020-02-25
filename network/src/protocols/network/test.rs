@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Integration tests for validator_network.
-use crate::{
-    proto::ConsensusMsg,
-    utils::MessageExt,
-    validator_network::{test_network::setup_network, Event},
-};
+use super::*;
+use crate::protocols::network::dummy::{setup_network, DummyMsg};
 use futures::{future::join, StreamExt};
 use std::time::Duration;
 
@@ -26,7 +23,7 @@ fn test_direct_send() {
     let mut listener_events = tn.listener_events;
     let mut listener_sender = tn.listener_sender;
 
-    let msg = ConsensusMsg::default();
+    let msg = DummyMsg(vec![]);
 
     // The dialer sends a direct send and listener receives
     let msg_clone = msg.clone();
@@ -71,7 +68,7 @@ fn test_rpc() {
     let mut listener_events = tn.listener_events;
     let mut listener_sender = tn.listener_sender;
 
-    let msg = ConsensusMsg::default();
+    let msg = DummyMsg(vec![]);
 
     // Dialer send rpc request and receives rpc response
     let msg_clone = msg.clone();
@@ -82,7 +79,7 @@ fn test_rpc() {
             Event::RpcRequest((peer_id, msg, rs)) => {
                 assert_eq!(peer_id, dialer_peer_id);
                 assert_eq!(msg, msg_clone);
-                rs.send(Ok(msg.to_bytes().unwrap())).unwrap();
+                rs.send(Ok(lcs::to_bytes(&msg).unwrap().into())).unwrap();
             }
             event => panic!("Unexpected event: {:?}", event),
         }
@@ -100,7 +97,7 @@ fn test_rpc() {
             Event::RpcRequest((peer_id, msg, rs)) => {
                 assert_eq!(peer_id, listener_peer_id);
                 assert_eq!(msg, msg_clone);
-                rs.send(Ok(msg.to_bytes().unwrap())).unwrap();
+                rs.send(Ok(lcs::to_bytes(&msg).unwrap().into())).unwrap();
             }
             event => panic!("Unexpected event: {:?}", event),
         }

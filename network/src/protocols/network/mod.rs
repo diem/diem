@@ -1,13 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Network API for Libra
+//! Convenience Network API for Libra
 
 pub use crate::protocols::rpc::error::RpcError;
 use crate::{
     error::NetworkError,
     peer_manager::{self, PeerManagerNotification, PeerManagerRequestSender},
-    utils::MessageExt,
     ProtocolId,
 };
 use bytes::Bytes;
@@ -17,14 +16,19 @@ use futures::{
     stream::{FusedStream, Map, Select, Stream, StreamExt},
     task::{Context, Poll},
 };
+use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use pin_project::pin_project;
-use prost::Message;
-use std::{default::Default, marker::PhantomData, pin::Pin, time::Duration};
+use serde::{de::DeserializeOwned, Serialize};
+use std::{marker::PhantomData, pin::Pin, time::Duration};
 
-pub mod network_builder;
+#[cfg(any(feature = "testing", test))]
+pub mod dummy;
+#[cfg(test)]
+mod test;
 
-use libra_types::PeerId;
+pub trait Message: DeserializeOwned + Serialize {}
+impl<T: DeserializeOwned + Serialize> Message for T {}
 
 /// Events received by network clients in a validator
 ///
@@ -89,7 +93,7 @@ pub struct NetworkEvents<TMessage> {
     _marker: PhantomData<TMessage>,
 }
 
-impl<TMessage: Message + Default> NetworkEvents<TMessage> {
+impl<TMessage: Message> NetworkEvents<TMessage> {
     pub fn new(
         peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
         control_notifs_rx: libra_channel::Receiver<
@@ -126,19 +130,16 @@ impl<TMessage> Stream for NetworkEvents<TMessage> {
     }
 }
 
-fn peer_mgr_notif_to_event<TMessage>(
+fn peer_mgr_notif_to_event<TMessage: Message>(
     notif: PeerManagerNotification,
-) -> Result<Event<TMessage>, NetworkError>
-where
-    TMessage: Message + Default,
-{
+) -> Result<Event<TMessage>, NetworkError> {
     match notif {
         PeerManagerNotification::RecvRpc(peer_id, rpc_req) => {
-            let req_msg = TMessage::decode(rpc_req.data.as_ref())?;
+            let req_msg: TMessage = lcs::from_bytes(&rpc_req.data)?;
             Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
         }
         PeerManagerNotification::RecvMessage(peer_id, msg) => {
-            let msg = TMessage::decode(msg.mdata.as_ref())?;
+            let msg: TMessage = lcs::from_bytes(&msg.mdata)?;
             Ok(Event::Message((peer_id, msg)))
         }
     }
@@ -213,7 +214,7 @@ impl<TMessage> NetworkSender<TMessage> {
     }
 }
 
-impl<TMessage: Message + Default> NetworkSender<TMessage> {
+impl<TMessage: Message> NetworkSender<TMessage> {
     /// Send a protobuf message to a single recipient. Provides a wrapper over
     /// `[peer_manager::PeerManagerRequestSender::send_to]`.
     pub fn send_to(
@@ -222,8 +223,7 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
         protocol: ProtocolId,
         message: TMessage,
     ) -> Result<(), NetworkError> {
-        // Serialize message.
-        let mdata = message.to_bytes().unwrap();
+        let mdata = lcs::to_bytes(&message)?.into();
         self.inner.send_to(recipient, protocol, mdata)?;
         Ok(())
     }
@@ -237,7 +237,7 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
         message: TMessage,
     ) -> Result<(), NetworkError> {
         // Serialize message.
-        let mdata = message.to_bytes().unwrap();
+        let mdata = lcs::to_bytes(&message)?.into();
         self.inner.send_to_many(recipients, protocol, mdata)?;
         Ok(())
     }
@@ -253,12 +253,12 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
         timeout: Duration,
     ) -> Result<TMessage, RpcError> {
         // serialize request
-        let req_data = req_msg.to_bytes().unwrap();
+        let req_data = lcs::to_bytes(&req_msg)?.into();
         let res_data = self
             .inner
             .unary_rpc(recipient, protocol, req_data, timeout)
             .await?;
-        let res_msg = TMessage::decode(res_data.as_ref())?;
+        let res_msg: TMessage = lcs::from_bytes(&res_data)?;
         Ok(res_msg)
     }
 }
