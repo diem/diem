@@ -22,7 +22,6 @@ use pin_project::pin_project;
 use prost::Message;
 use std::{default::Default, marker::PhantomData, pin::Pin, time::Duration};
 
-pub mod discovery;
 pub mod health_checker;
 pub mod network_builder;
 
@@ -32,9 +31,6 @@ mod test;
 pub mod test_network;
 
 // Public re-exports
-pub use discovery::{
-    DiscoveryNetworkEvents, DiscoveryNetworkSender, DISCOVERY_DIRECT_SEND_PROTOCOL,
-};
 pub use health_checker::{
     HealthCheckerNetworkEvents, HealthCheckerNetworkSender, HEALTH_CHECKER_RPC_PROTOCOL,
 };
