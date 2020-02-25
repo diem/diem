@@ -6,12 +6,11 @@
 use crate::{
     error::NetworkError,
     peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
-    proto::ConsensusMsg,
-    protocols::rpc::error::RpcError,
-    validator_network::{
-        network_builder::{NetworkBuilder, TransportType},
-        Event, NetworkEvents, NetworkSender,
+    protocols::{
+        network::{Event, NetworkEvents, NetworkSender},
+        rpc::error::RpcError,
     },
+    validator_network::network_builder::{NetworkBuilder, TransportType},
     NetworkPublicKeys, ProtocolId,
 };
 use channel::{libra_channel, message_queues::QueueStyle};
@@ -21,13 +20,17 @@ use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime::Runtime;
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct DummyMsg(pub Vec<u8>);
 
 pub const TEST_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/test/0.1.0";
 pub const TEST_DIRECT_SENDER_PROTOCOL: &[u8] = b"/libra/ds/0.1.0/test/0.1.0";
 
-fn add_to_network(network: &mut NetworkBuilder) -> (TestNetworkSender, TestNetworkEvents) {
+fn add_to_network(network: &mut NetworkBuilder) -> (DummyNetworkSender, DummyNetworkEvents) {
     let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
         vec![ProtocolId::from_static(TEST_RPC_PROTOCOL)],
         vec![ProtocolId::from_static(TEST_DIRECT_SENDER_PROTOCOL)],
@@ -35,21 +38,21 @@ fn add_to_network(network: &mut NetworkBuilder) -> (TestNetworkSender, TestNetwo
         None,
     );
     (
-        TestNetworkSender::new(sender),
-        TestNetworkEvents::new(receiver, control_notifs_rx),
+        DummyNetworkSender::new(sender),
+        DummyNetworkEvents::new(receiver, control_notifs_rx),
     )
 }
 
-/// TODO(davidiw): In TestNetwork, replace ConsensusMsg with a Serde compatible type once migration
+/// TODO(davidiw): In DummyNetwork, replace DummyMsg with a Serde compatible type once migration
 /// is complete
-pub type TestNetworkEvents = NetworkEvents<ConsensusMsg>;
+pub type DummyNetworkEvents = NetworkEvents<DummyMsg>;
 
 #[derive(Clone)]
-pub struct TestNetworkSender {
-    peer_mgr_reqs_tx: NetworkSender<ConsensusMsg>,
+pub struct DummyNetworkSender {
+    peer_mgr_reqs_tx: NetworkSender<DummyMsg>,
 }
 
-impl TestNetworkSender {
+impl DummyNetworkSender {
     pub fn new(
         peer_mgr_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
     ) -> Self {
@@ -58,11 +61,7 @@ impl TestNetworkSender {
         }
     }
 
-    pub fn send_to(
-        &mut self,
-        recipient: PeerId,
-        message: ConsensusMsg,
-    ) -> Result<(), NetworkError> {
+    pub fn send_to(&mut self, recipient: PeerId, message: DummyMsg) -> Result<(), NetworkError> {
         let protocol = ProtocolId::from_static(TEST_DIRECT_SENDER_PROTOCOL);
         self.peer_mgr_reqs_tx.send_to(recipient, protocol, message)
     }
@@ -70,9 +69,9 @@ impl TestNetworkSender {
     pub async fn send_rpc(
         &mut self,
         recipient: PeerId,
-        message: ConsensusMsg,
+        message: DummyMsg,
         timeout: Duration,
-    ) -> Result<ConsensusMsg, RpcError> {
+    ) -> Result<DummyMsg, RpcError> {
         let protocol = ProtocolId::from_static(TEST_RPC_PROTOCOL);
         self.peer_mgr_reqs_tx
             .unary_rpc(recipient, protocol, message, timeout)
@@ -82,18 +81,18 @@ impl TestNetworkSender {
 
 const HOUR_IN_MS: u64 = 60 * 60 * 1000;
 
-pub struct TestNetwork {
+pub struct DummyNetwork {
     pub runtime: Runtime,
     pub dialer_peer_id: PeerId,
-    pub dialer_events: TestNetworkEvents,
-    pub dialer_sender: TestNetworkSender,
+    pub dialer_events: DummyNetworkEvents,
+    pub dialer_sender: DummyNetworkSender,
     pub listener_peer_id: PeerId,
-    pub listener_events: TestNetworkEvents,
-    pub listener_sender: TestNetworkSender,
+    pub listener_events: DummyNetworkEvents,
+    pub listener_sender: DummyNetworkSender,
 }
 
 /// The following sets up a 2 peer network and verifies connectivity.
-pub fn setup_network() -> TestNetwork {
+pub fn setup_network() -> DummyNetwork {
     let any: Multiaddr = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
     let runtime = Runtime::new().unwrap();
     let (dialer_peer_id, dialer_addr) = (PeerId::random(), any.clone());
@@ -182,7 +181,7 @@ pub fn setup_network() -> TestNetwork {
     let first_listener_event = block_on(listener_events.next()).unwrap().unwrap();
     assert_eq!(first_listener_event, Event::NewPeer(dialer_peer_id));
 
-    TestNetwork {
+    DummyNetwork {
         runtime,
         dialer_peer_id,
         dialer_events,

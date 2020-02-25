@@ -19,6 +19,9 @@ pub enum NetworkErrorKind {
     #[error("IO error")]
     IoError,
 
+    #[error("Lcs error")]
+    LcsError,
+
     #[error("Error parsing protobuf message")]
     ProtobufParseError,
 
@@ -71,6 +74,14 @@ impl From<io::Error> for NetworkError {
     fn from(err: io::Error) -> NetworkError {
         anyhow::Error::new(err)
             .context(NetworkErrorKind::IoError)
+            .into()
+    }
+}
+
+impl From<lcs::Error> for NetworkError {
+    fn from(err: lcs::Error) -> NetworkError {
+        anyhow::Error::new(err)
+            .context(NetworkErrorKind::LcsError)
             .into()
     }
 }

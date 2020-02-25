@@ -5,6 +5,7 @@
 //!
 //! Each protocol corresponds to a certain order of messages
 pub mod direct_send;
+pub mod network;
 pub mod rpc;
 
 pub(crate) mod discovery;
