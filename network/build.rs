@@ -3,10 +3,7 @@
 
 /// Builds the proto files needed for the network crate.
 fn main() {
-    let proto_files = [
-        "src/proto/consensus.proto",
-        "src/proto/state_synchronizer.proto",
-    ];
+    let proto_files = ["src/proto/consensus.proto"];
 
     let includes = [
         "../types/src/proto",
