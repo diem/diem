@@ -14,12 +14,12 @@ use libra_types::{
     account_config::AccountResource,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    crypto_proxies::{EpochInfo, LedgerInfoWithSignatures},
+    crypto_proxies::LedgerInfoWithSignatures,
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     transaction::{Transaction, Version},
-    validator_change::VerifierType,
+    trusted_state::{TrustedState, TrustedStateChange},
     vm_error::StatusCode,
     waypoint::Waypoint,
 };
@@ -27,37 +27,47 @@ use std::convert::TryFrom;
 
 const MAX_GRPC_RETRY_COUNT: u64 = 2;
 
-struct TrustedState {
-    version: Version,
-    verifier: VerifierType,
-    latest_epoch_change_li: Option<LedgerInfoWithSignatures>,
-}
-
-/// Struct holding dependencies of client, known_version_and_epoch is updated when learning about
-/// new LedgerInfo
+/// A gRPC client connection to an AdmissionControl (AC) service. `GRPCClient` also
+/// handles verifying the server's responses, retrying on non-fatal failures, and
+/// ratcheting our latest verified state, which includes the latest verified
+/// version and latest verified epoch change ledger info.
+///
+/// ### Note
+///
+/// `GRPCClient` will reject out-of-date responses. For example, this can happen if
+///
+/// 1. We make a request to the remote AC service.
+/// 2. The remote service crashes and it forgets the most recent state or an
+///    out-of-date replica takes its place.
+/// 3. We make another request to the remote AC service. In this case, the remote
+///    AC will be behind us and we will reject their response as stale.
 pub struct GRPCClient {
+    /// The client connection to an AdmissionControl service. We will only connect
+    /// when the first request is made.
     client: AdmissionControlClientBlocking,
+    /// The latest verified chain state.
     trusted_state: TrustedState,
+    /// The most recent epoch change ledger info. This is `None` if we only know
+    /// about our local [`Waypoint`] and have not yet ratcheted to the remote's
+    /// latest state.
+    latest_epoch_change_li: Option<LedgerInfoWithSignatures>,
 }
 
 impl GRPCClient {
     /// Construct a new Client instance.
+    // TODO(philiphayes/dmitrip): Waypoint should not be optional
     pub fn new(host: &str, port: u16, waypoint: Option<Waypoint>) -> Result<Self> {
         let client = AdmissionControlClientBlocking::new(host, port);
         // If waypoint is present, use it for initial verification, otherwise the initial
         // verification is essentially empty.
-        let (initial_version, initial_verifier) = waypoint.map_or(
-            (0, VerifierType::TrustedVerifier(EpochInfo::empty())),
-            |w| (w.version(), VerifierType::Waypoint(w)),
-        );
-        let initial_trusted_state = TrustedState {
-            version: initial_version,
-            verifier: initial_verifier,
-            latest_epoch_change_li: None,
+        let initial_trusted_state = match waypoint {
+            Some(waypoint) => TrustedState::from_waypoint(waypoint),
+            None => TrustedState::new_trust_any_genesis_WARNING_UNSAFE(),
         };
         Ok(GRPCClient {
             client,
             trusted_state: initial_trusted_state,
+            latest_epoch_change_li: None,
         })
     }
 
@@ -123,24 +133,46 @@ impl GRPCClient {
         &mut self,
         requested_items: Vec<RequestItem>,
     ) -> Result<UpdateToLatestLedgerResponse> {
-        let current_trusted_state = &self.trusted_state;
-        let req = UpdateToLatestLedgerRequest::new(current_trusted_state.version, requested_items);
+        let req =
+            UpdateToLatestLedgerRequest::new(self.trusted_state.latest_version(), requested_items);
 
         debug!("get_with_proof with request: {:?}", req);
         let proto_req = req.clone().into();
         let resp = self.client.update_to_latest_ledger(proto_req)?;
         let resp = UpdateToLatestLedgerResponse::try_from(resp)?;
 
-        if let Some(new_epoch_info) = resp.verify(&current_trusted_state.verifier, &req)? {
-            info!("Trusted epoch change to :{}", new_epoch_info);
-            self.trusted_state.verifier = VerifierType::TrustedVerifier(new_epoch_info);
-            self.trusted_state.latest_epoch_change_li = resp
-                .validator_change_proof
-                .ledger_info_with_sigs
-                .last()
-                .cloned();
+        let trusted_state_change = self
+            .trusted_state
+            .verify_and_ratchet_response(&req, &resp)?;
+
+        match trusted_state_change {
+            TrustedStateChange::Epoch {
+                new_state,
+                latest_epoch_change_li,
+                latest_validator_set,
+                ..
+            } => {
+                info!(
+                    "Verified epoch change to epoch: {}, validator set: [{}]",
+                    latest_epoch_change_li.ledger_info().epoch(),
+                    latest_validator_set
+                );
+                // Update client state
+                self.trusted_state = new_state;
+                self.latest_epoch_change_li = Some(latest_epoch_change_li.clone());
+            }
+            TrustedStateChange::Version { new_state, .. } => {
+                self.trusted_state = new_state;
+            }
+            TrustedStateChange::Stale => {
+                bail!(
+                    "Server version is stale, discarding response: \
+                    our version: {}, their version: {}",
+                    self.trusted_state.latest_version(),
+                    resp.ledger_info_with_sigs.ledger_info().version(),
+                );
+            }
         }
-        self.trusted_state.version = resp.ledger_info_with_sigs.ledger_info().version();
 
         Ok(resp)
     }
@@ -163,8 +195,8 @@ impl GRPCClient {
     }
 
     /// LedgerInfo corresponding to the latest epoch change.
-    pub(crate) fn latest_epoch_change_li(&self) -> Option<LedgerInfoWithSignatures> {
-        self.trusted_state.latest_epoch_change_li.clone()
+    pub(crate) fn latest_epoch_change_li(&self) -> Option<&LedgerInfoWithSignatures> {
+        self.latest_epoch_change_li.as_ref()
     }
 
     /// Sync version of get_with_proof
