@@ -24,7 +24,7 @@ module M {
         let x = 0;
         let x_ref = &mut x;
         loop {
-            if (cond) break else  { _ = copy x_ref; }
+            if (cond) break else  { _ = x_ref; }
         };
         _ = x;
         _ = move x;
