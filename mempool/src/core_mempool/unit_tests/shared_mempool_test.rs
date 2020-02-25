@@ -7,10 +7,11 @@ use crate::{
         CoreMempool, TimelineState,
     },
     mocks::MockSharedMempool,
-    network::{MempoolNetworkEvents, MempoolNetworkSender, MEMPOOL_DIRECT_SEND_PROTOCOL},
+    network::{
+        MempoolNetworkEvents, MempoolNetworkSender, MempoolSyncMsg, MEMPOOL_DIRECT_SEND_PROTOCOL,
+    },
     shared_mempool::{
-        start_shared_mempool, ConsensusRequest, MempoolSyncMsg, SharedMempoolNotification,
-        SyncEvent,
+        start_shared_mempool, ConsensusRequest, SharedMempoolNotification, SyncEvent,
     },
     CommitNotification, CommittedTransaction,
 };
@@ -34,7 +35,6 @@ use network::{
     DisconnectReason, ProtocolId,
 };
 use parity_multiaddr::Multiaddr;
-use prost::Message;
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroUsize,
@@ -186,9 +186,7 @@ impl SharedMempoolNetwork {
         let network_req = block_on(network_reqs_rx.next()).unwrap();
 
         if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
-            let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
-            let sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
-
+            let sync_msg = lcs::from_bytes(&msg.mdata).unwrap();
             if let MempoolSyncMsg::BroadcastTransactionsRequest((_start, _end), transactions) =
                 sync_msg
             {
@@ -228,9 +226,7 @@ impl SharedMempoolNetwork {
         let network_req = block_on(network_reqs_rx.next()).unwrap();
 
         if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
-            let sync_msg = network::proto::MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
-            let sync_msg: MempoolSyncMsg = lcs::from_bytes(&sync_msg.message).unwrap();
-
+            let sync_msg = lcs::from_bytes(&msg.mdata).unwrap();
             if let MempoolSyncMsg::BroadcastTransactionsResponse(_start, _end) = sync_msg {
                 // send it to peer
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();

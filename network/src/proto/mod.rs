@@ -8,13 +8,8 @@
 mod consensus {
     include!(concat!(env!("OUT_DIR"), "/consensus.rs"));
 }
-mod mempool {
-    include!(concat!(env!("OUT_DIR"), "/mempool.rs"));
-}
 mod state_synchronizer {
     include!(concat!(env!("OUT_DIR"), "/state_synchronizer.rs"));
 }
 
-pub use self::{
-    consensus::ConsensusMsg, mempool::MempoolSyncMsg, state_synchronizer::StateSynchronizerMsg,
-};
+pub use self::{consensus::ConsensusMsg, state_synchronizer::StateSynchronizerMsg};
