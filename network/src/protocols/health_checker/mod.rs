@@ -18,11 +18,17 @@
 //! - Use successful inbound pings as a sign of remote note being healthy
 //! - Ping a peer only in periods of no application-level communication with the peer
 use crate::{
+    counters,
+    error::NetworkError,
+    peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
+    proto,
     protocols::rpc::error::RpcError,
     utils::MessageExt,
-    validator_network::{Event, HealthCheckerNetworkEvents, HealthCheckerNetworkSender},
+    validator_network::{network_builder::NetworkBuilder, Event, NetworkEvents, NetworkSender},
+    ProtocolId,
 };
 use bytes::Bytes;
+use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{
     channel::oneshot,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
@@ -35,6 +41,74 @@ use std::{collections::HashMap, time::Duration};
 
 #[cfg(test)]
 mod test;
+
+/// Protocol id for HealthChecker RPC calls
+pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/health-checker/0.1.0";
+
+/// The interface from Network to HealthChecker layer.
+///
+/// `HealthCheckerNetworkEvents` is a `Stream` of `PeerManagerNotification` where the
+/// raw `Bytes` rpc messages are deserialized into
+/// `HealthCheckerMsg` types. `HealthCheckerNetworkEvents` is a thin wrapper
+/// around an `channel::Receiver<PeerManagerNotification>`.
+pub type HealthCheckerNetworkEvents = NetworkEvents<proto::HealthCheckerMsg>;
+
+/// The interface from HealthChecker to Networking layer.
+///
+/// This is a thin wrapper around a `NetworkSender<HealthCheckerMsg>`, so it is
+/// easy to clone and send off to a separate task. For example, the rpc requests
+/// return Futures that encapsulate the whole flow, from sending the request to
+/// remote, to finally receiving the response and deserializing. It therefore
+/// makes the most sense to make the rpc call on a separate async task, which
+/// requires the `HealthCheckerNetworkSender` to be `Clone` and `Send`.
+#[derive(Clone)]
+pub struct HealthCheckerNetworkSender {
+    inner: NetworkSender<proto::HealthCheckerMsg>,
+}
+
+pub fn add_to_network(
+    network: &mut NetworkBuilder,
+) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
+    let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
+        vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)],
+        vec![],
+        QueueStyle::LIFO,
+        Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
+    );
+    (
+        HealthCheckerNetworkSender::new(sender),
+        HealthCheckerNetworkEvents::new(receiver, control_notifs_rx),
+    )
+}
+
+impl HealthCheckerNetworkSender {
+    pub fn new(inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>) -> Self {
+        Self {
+            inner: NetworkSender::new(PeerManagerRequestSender::new(inner)),
+        }
+    }
+
+    /// Send a HealthChecker Ping RPC request to remote peer `recipient`. Returns
+    /// the remote peer's future `Pong` reply.
+    ///
+    /// The rpc request can be canceled at any point by dropping the returned
+    /// future.
+    pub async fn send_rpc(
+        &mut self,
+        recipient: PeerId,
+        req_msg: proto::HealthCheckerMsg,
+        timeout: Duration,
+    ) -> Result<proto::HealthCheckerMsg, RpcError> {
+        let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
+        self.inner
+            .unary_rpc(recipient, protocol, req_msg, timeout)
+            .await
+    }
+
+    pub async fn disconnect_peer(&mut self, peer_id: PeerId) -> Result<(), NetworkError> {
+        self.inner.disconnect_peer(peer_id).await
+    }
+}
 
 #[derive(Deserialize, Serialize)]
 enum HealthCheckerMsg {

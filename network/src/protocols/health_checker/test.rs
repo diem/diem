@@ -5,7 +5,6 @@ use super::*;
 use crate::{
     peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest},
     protocols::rpc::InboundRpcRequest,
-    validator_network::HEALTH_CHECKER_RPC_PROTOCOL,
     ProtocolId,
 };
 use channel::{libra_channel, message_queues::QueueStyle};
