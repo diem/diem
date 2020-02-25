@@ -1,8 +1,0 @@
-// Copyright (c) The Libra Core Contributors
-// SPDX-License-Identifier: Apache-2.0
-
-syntax = "proto3";
-
-package health_checker;
-
-message HealthCheckerMsg { bytes message = 1; }

@@ -17,11 +17,8 @@ mod mempool {
 mod state_synchronizer {
     include!(concat!(env!("OUT_DIR"), "/state_synchronizer.rs"));
 }
-mod health_checker {
-    include!(concat!(env!("OUT_DIR"), "/health_checker.rs"));
-}
 
 pub use self::{
-    consensus::ConsensusMsg, health_checker::HealthCheckerMsg, mempool::MempoolSyncMsg,
-    network::DiscoveryMsg, state_synchronizer::StateSynchronizerMsg,
+    consensus::ConsensusMsg, mempool::MempoolSyncMsg, network::DiscoveryMsg,
+    state_synchronizer::StateSynchronizerMsg,
 };
