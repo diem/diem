@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    counters::*,
     execution_context::InterpreterContext,
     gas,
     identifier::{create_access_path, resource_storage_key},
@@ -168,13 +167,8 @@ impl<'txn> Interpreter<'txn> {
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
         let mut interp = Self::new(txn_data, gas_schedule);
-        let starting_gas = context.remaining_gas();
         gas!(consume: context, calculate_intrinsic_gas(txn_size))?;
-        let ret = interp.execute(runtime, context, func, args);
-        record_stats!(
-            observe | TXN_EXECUTION_GAS_USAGE | starting_gas.sub(context.remaining_gas()).get()
-        );
-        ret
+        interp.execute(runtime, context, func, args)
     }
 
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
