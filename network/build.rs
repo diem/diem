@@ -6,7 +6,6 @@ fn main() {
     let proto_files = [
         "src/proto/consensus.proto",
         "src/proto/mempool.proto",
-        "src/proto/network.proto",
         "src/proto/state_synchronizer.proto",
     ];
 

@@ -35,11 +35,10 @@ use crate::{
     counters,
     error::{NetworkError, NetworkErrorKind},
     peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
-    proto,
-    validator_network::{network_builder::NetworkBuilder, Event, NetworkEvents, NetworkSender},
+    protocols::network::{Event, NetworkEvents, NetworkSender},
+    validator_network::network_builder::NetworkBuilder,
     NetworkPublicKeys, ProtocolId,
 };
-use anyhow::anyhow;
 use bytes::Bytes;
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{
@@ -76,7 +75,7 @@ pub const DISCOVERY_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/dis
 /// raw `Bytes` rpc messages are deserialized into
 /// `DiscoveryMsg` types. `DiscoveryNetworkEvents` is a thin wrapper
 /// around a `channel::Receiver<PeerManagerNotification>`.
-pub type DiscoveryNetworkEvents = NetworkEvents<proto::DiscoveryMsg>;
+pub type DiscoveryNetworkEvents = NetworkEvents<DiscoveryMsg>;
 
 /// The interface from Discovery to Networking layer.
 ///
@@ -88,7 +87,7 @@ pub type DiscoveryNetworkEvents = NetworkEvents<proto::DiscoveryMsg>;
 /// requires the `DiscoveryNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct DiscoveryNetworkSender {
-    inner: NetworkSender<proto::DiscoveryMsg>,
+    inner: NetworkSender<DiscoveryMsg>,
 }
 
 /// Register the discovery sender and event handler with network and return interfaces for those
@@ -117,7 +116,7 @@ impl DiscoveryNetworkSender {
     }
 
     /// Send a DiscoveryMsg to a peer.
-    pub fn send_to(&mut self, peer: PeerId, msg: proto::DiscoveryMsg) -> Result<(), NetworkError> {
+    pub fn send_to(&mut self, peer: PeerId, msg: DiscoveryMsg) -> Result<(), NetworkError> {
         self.inner.send_to(
             peer,
             ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
@@ -276,10 +275,7 @@ where
         }
     }
 
-    async fn handle_network_event(
-        &mut self,
-        event: Result<Event<proto::DiscoveryMsg>, NetworkError>,
-    ) {
+    async fn handle_network_event(&mut self, event: Result<Event<DiscoveryMsg>, NetworkError>) {
         trace!("Network event::{:?}", event);
         match event {
             Ok(e) => {
@@ -331,16 +327,14 @@ where
     }
 
     // Creates DiscoveryMsg to be sent to some remote peer.
-    fn compose_discovery_msg(&self) -> proto::DiscoveryMsg {
+    fn compose_discovery_msg(&self) -> DiscoveryMsg {
         let notes = self
             .known_peers
             .values()
             .map(|note| note.as_note())
             .cloned()
             .collect::<Vec<_>>();
-        let msg = DiscoveryMsg { notes };
-        let message = lcs::to_bytes(&msg).expect("LCS serialization failed");
-        proto::DiscoveryMsg { message }
+        DiscoveryMsg { notes }
     }
 
     // Updates local state by reconciling with notes received from some remote peer.
@@ -443,7 +437,7 @@ where
 }
 
 /// A Discovery message contains notes collected from other peers within the system.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DiscoveryMsg {
     notes: Vec<Note>,
 }
@@ -621,16 +615,14 @@ fn get_unix_epoch() -> u64 {
 // Handles an inbound message from a remote peer as follows:
 // Verifies signatures on all notes contained in the message.
 fn handle_discovery_msg(
-    msg: proto::DiscoveryMsg,
+    msg: DiscoveryMsg,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     peer_id: PeerId,
 ) -> Result<Vec<VerifiedNote>, NetworkError> {
     // Check that all received `Note`s are valid -- reject the whole message
     // if any `Note` is invalid.
     let mut verified_notes = vec![];
-    let discovery_msg: DiscoveryMsg = lcs::from_bytes(&msg.message)
-        .map_err(|err| anyhow!(err).context(NetworkErrorKind::ParsingError))?;
-    for note in discovery_msg.notes.into_iter() {
+    for note in msg.notes.into_iter() {
         let rlock = trusted_peers.read().unwrap();
         let pub_key = rlock
             .get(&note.peer_id)

@@ -5,16 +5,14 @@ use super::*;
 use crate::{
     peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest},
     protocols::direct_send::Message,
-    validator_network::DISCOVERY_DIRECT_SEND_PROTOCOL,
     ProtocolId,
 };
+use anyhow::anyhow;
 use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::channel::oneshot;
 use libra_config::config::RoleType;
 use libra_crypto::{test_utils::TEST_SEED, *};
-use libra_prost_ext::MessageExt;
-use prost::Message as _;
 use rand::{rngs::StdRng, SeedableRng};
 use std::num::NonZeroUsize;
 use tokio::runtime::Runtime;
@@ -26,19 +24,18 @@ fn gen_peer_info() -> PeerInfo {
     )
 }
 
-fn get_raw_message(msg: crate::proto::DiscoveryMsg) -> Message {
+fn get_raw_message(msg: DiscoveryMsg) -> Message {
     Message {
         protocol: ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
-        mdata: msg.to_bytes().unwrap(),
+        mdata: lcs::to_bytes(&msg).unwrap().into(),
     }
 }
 
 fn parse_raw_message(msg: Message) -> Result<DiscoveryMsg, NetworkError> {
     assert_eq!(msg.protocol, DISCOVERY_DIRECT_SEND_PROTOCOL);
-    let msg = crate::proto::DiscoveryMsg::decode(msg.mdata.as_ref())?;
-    let notes = lcs::from_bytes(&msg.message)
+    let msg: DiscoveryMsg = lcs::from_bytes(&msg.mdata)
         .map_err(|err| anyhow!(err).context(NetworkErrorKind::ParsingError))?;
-    Ok(notes)
+    Ok(msg)
 }
 
 fn setup_discovery(
@@ -184,8 +181,7 @@ fn inbound() {
         let mut notes = vec![];
         notes.push(note_other.clone());
         notes.push(seed_note.clone());
-        let message = lcs::to_bytes(&notes).unwrap();
-        let msg = crate::proto::DiscoveryMsg { message };
+        let msg = DiscoveryMsg { notes };
         let key = (
             seed_peer_id,
             ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
@@ -236,8 +232,7 @@ fn inbound() {
             );
             let (delivered_tx, delivered_rx) = oneshot::channel();
 
-            let message = lcs::to_bytes(&notes).unwrap();
-            let msg = crate::proto::DiscoveryMsg { message };
+            let msg = DiscoveryMsg { notes };
             network_notifs_tx
                 .push_with_feedback(
                     key.clone(),
@@ -389,8 +384,8 @@ fn addr_update_includes_seed_addrs() {
             b"example.com",
             get_unix_epoch(),
         );
-        let message = lcs::to_bytes(&vec![seed_note]).unwrap();
-        let msg = crate::proto::DiscoveryMsg { message };
+        let notes = vec![seed_note];
+        let msg = DiscoveryMsg { notes };
         let key = (
             seed_peer_id,
             ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
@@ -490,8 +485,8 @@ fn old_note_higher_epoch() {
             b"example.com",
             old_epoch,
         );
-        let message = lcs::to_bytes(&vec![old_note]).unwrap();
-        let msg = crate::proto::DiscoveryMsg { message };
+        let notes = vec![old_note];
+        let msg = DiscoveryMsg { notes };
         let key = (
             seed_peer_id,
             ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
@@ -595,8 +590,8 @@ fn old_note_max_epoch() {
             b"example.com",
             old_epoch,
         );
-        let message = lcs::to_bytes(&vec![old_note]).unwrap();
-        let msg = crate::proto::DiscoveryMsg { message };
+        let notes = vec![old_note];
+        let msg = DiscoveryMsg { notes };
         let key = (
             seed_peer_id,
             ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
