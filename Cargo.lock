@@ -409,7 +409,7 @@ name = "bytecode-source-map"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
  "move-ir-types 0.1.0",
@@ -425,7 +425,7 @@ dependencies = [
  "bytecode-source-map 0.1.0",
  "bytecode-verifier 0.1.0",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "functional-tests 0.1.0",
  "goldenfile 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -728,8 +728,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -737,6 +735,15 @@ name = "codespan"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
+ "unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "codespan"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1230,7 +1237,7 @@ dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-source-map 0.1.0",
  "bytecode-verifier 0.1.0",
- "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ir-to-bytecode-syntax 0.1.0",
  "libra-types 0.1.0",
@@ -1946,7 +1953,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-source-map 0.1.0",
- "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ir-to-bytecode-syntax 0.1.0",
  "libra-types 0.1.0",
@@ -1961,7 +1968,7 @@ name = "ir-to-bytecode-syntax"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
  "move-ir-types 0.1.0",
@@ -2816,7 +2823,7 @@ name = "move-ir-types"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2829,7 +2836,7 @@ dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "borrow-graph 0.0.1",
  "bytecode-verifier 0.1.0",
- "codespan 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "datatest-stable 0.1.0",
  "difference 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6296,6 +6303,7 @@ dependencies = [
 "checksum cmake 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)" = "81fb25b677f8bf1eb325017cb6bb8452f87969db0fedb4f757b297bee78a7c62"
 "checksum codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "004def512a9848b23a68ed110927d102b0e6d9f3dc732e28570879afde051f8c"
 "checksum codespan 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "de67bdcd653002a6dba3eb53850ce3a485547225d81cb6c2bbdbc5a0cba5d15d"
+"checksum codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "52899426b69706219a1aaee2e95868fd01a0bd8006bb163f069578a0af5b5bb2"
 "checksum codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ab081a14ab8f9598ce826890fe896d0addee68c7a58ab49008369ccbb51510a8"
 "checksum codespan-reporting 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "efd1d915d9e2b2ad696b2cd73215a84823ef3f0e3084d90304204415921b62c6"
 "checksum constant_time_eq 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
