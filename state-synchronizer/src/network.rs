@@ -3,16 +3,24 @@
 
 //! Interface between StateSynchronizer and Network layers.
 
-use crate::counters;
+use crate::{chunk_request::GetChunkRequest, chunk_response::GetChunkResponse, counters};
 use channel::{libra_channel, message_queues::QueueStyle};
 use libra_types::PeerId;
 use network::{
     error::NetworkError,
     peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
-    proto::StateSynchronizerMsg,
-    validator_network::{network_builder::NetworkBuilder, NetworkEvents, NetworkSender},
+    protocols::network::{NetworkEvents, NetworkSender},
+    validator_network::network_builder::NetworkBuilder,
     ProtocolId,
 };
+use serde::{Deserialize, Serialize};
+
+/// StateSynchronizer network messages
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum StateSynchronizerMsg {
+    GetChunkRequest(Box<GetChunkRequest>),
+    GetChunkResponse(Box<GetChunkResponse>),
+}
 
 /// Protocol id for state-synchronizer direct-send calls
 pub const STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL: &[u8] =

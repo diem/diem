@@ -6,7 +6,7 @@ use crate::{
     chunk_response::{GetChunkResponse, ResponseLedgerInfo},
     counters,
     executor_proxy::ExecutorProxyTrait,
-    network::{StateSynchronizerEvents, StateSynchronizerSender},
+    network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
     peer_manager::{PeerManager, PeerScoreUpdateType},
     PeerId, SynchronizerState,
 };
@@ -24,19 +24,12 @@ use libra_types::{
     transaction::{Transaction, TransactionListWithProof, Version},
     waypoint::Waypoint,
 };
-use network::{proto::StateSynchronizerMsg, validator_network::Event};
-use serde::{Deserialize, Serialize};
+use network::protocols::network::Event;
 use std::{
     collections::HashMap,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::time::{interval, timeout};
-
-#[derive(Deserialize, Serialize)]
-pub enum NetworkTypes {
-    GetChunkRequest(Box<GetChunkRequest>),
-    GetChunkResponse(Box<GetChunkResponse>),
-}
 
 pub(crate) struct SyncRequest {
     // The Result value returned to the caller is Error in case the StateSynchronizer failed to
@@ -214,21 +207,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     }
 
     async fn process_one_message(&mut self, peer_id: PeerId, msg: StateSynchronizerMsg) {
-        let input = match lcs::from_bytes(&msg.message) {
-            Ok(input) => input,
-            Err(_) => {
-                warn!("Unexpected msg from {}: {:?}", peer_id, msg);
-                return;
-            }
-        };
-
-        match input {
-            NetworkTypes::GetChunkRequest(request) => {
+        match msg {
+            StateSynchronizerMsg::GetChunkRequest(request) => {
                 if let Err(err) = self.process_chunk_request(peer_id, *request).await {
                     error!("[state sync] failed to serve chunk request from {}, local LI version {}: {}", peer_id, self.local_state.highest_local_li.ledger_info().version(), err);
                 }
             }
-            NetworkTypes::GetChunkResponse(response) => {
+            StateSynchronizerMsg::GetChunkResponse(response) => {
                 if let Err(err) = self.process_chunk_response(&peer_id, *response).await {
                     error!(
                         "[state sync] failed to process chunk response from {}: {}",
@@ -629,9 +614,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .get_chunk(known_version, limit, response_li.version())
             .await?;
         let chunk_response = GetChunkResponse::new(response_li, txns);
-        let msg = StateSynchronizerMsg {
-            message: lcs::to_bytes(&NetworkTypes::GetChunkResponse(Box::new(chunk_response)))?,
-        };
+        let msg = StateSynchronizerMsg::GetChunkResponse(Box::new(chunk_response));
         if network_sender.send_to(peer_id, msg).is_err() {
             error!("[state sync] failed to send p2p message");
         }
@@ -913,16 +896,14 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 }
             }
         };
+
         let req = GetChunkRequest::new(known_version, known_epoch, self.config.chunk_limit, target);
         debug!(
             "[state sync] request next chunk. peer_id: {}, chunk req: {}",
             peer_id.short_str(),
             req,
         );
-        let msg = StateSynchronizerMsg {
-            message: lcs::to_bytes(&NetworkTypes::GetChunkRequest(Box::new(req)))?,
-        };
-
+        let msg = StateSynchronizerMsg::GetChunkRequest(Box::new(req));
         self.peer_manager
             .process_request(known_version + 1, peer_id);
         sender.send_to(peer_id, msg)?;
