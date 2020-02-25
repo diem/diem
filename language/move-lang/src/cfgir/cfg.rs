@@ -139,8 +139,7 @@ impl<'a> CFG for BlockCFG<'a> {
     }
 }
 
-const DEAD_ERR_CMD: &str =
-    "Unreachable code. This statement (and any following statements) will \
+const DEAD_ERR_CMD: &str = "Unreachable code. This statement (and any following statements) will \
      not be executed. In some cases, this will result in unused resource values.";
 
 const DEAD_ERR_EXP: &str =

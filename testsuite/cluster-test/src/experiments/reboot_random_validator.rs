@@ -60,14 +60,12 @@ impl Experiment for RebootRandomValidators {
     }
 
     async fn run(&mut self, _context: &mut Context<'_>) -> anyhow::Result<()> {
-        let futures = self.instances.iter().map(|instance| {
-            async move {
-                let reboot = Reboot::new(instance.clone());
-                reboot
-                    .apply()
-                    .await
-                    .map_err(|e| warn!("Failed to reboot {}: {}", instance, e))
-            }
+        let futures = self.instances.iter().map(|instance| async move {
+            let reboot = Reboot::new(instance.clone());
+            reboot
+                .apply()
+                .await
+                .map_err(|e| warn!("Failed to reboot {}: {}", instance, e))
         });
         let results = join_all(futures).await;
         if results.iter().any(Result::is_err) {

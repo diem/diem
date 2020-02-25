@@ -79,13 +79,10 @@ impl Args {
 
 /// Build a MemorySocket + Noise transport
 pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSocket<MemorySocket>> {
-    MemoryTransport::default().and_then(move |socket, origin| {
-        async move {
-            let noise_config = Arc::new(NoiseConfig::new_random());
-            let (_remote_static_key, socket) =
-                noise_config.upgrade_connection(socket, origin).await?;
-            Ok(socket)
-        }
+    MemoryTransport::default().and_then(move |socket, origin| async move {
+        let noise_config = Arc::new(NoiseConfig::new_random());
+        let (_remote_static_key, socket) = noise_config.upgrade_connection(socket, origin).await?;
+        Ok(socket)
     })
 }
 
@@ -119,26 +116,21 @@ pub fn build_memsocket_dual_muxed_transport() -> impl Transport<Output = impl St
 /// Build a MemorySocket + Noise + Muxer transport
 pub fn build_memsocket_noise_muxer_transport() -> impl Transport<Output = impl StreamMultiplexer> {
     MemoryTransport::default()
-        .and_then(move |socket, origin| {
-            async move {
-                let noise_config = Arc::new(NoiseConfig::new_random());
-                let (_remote_static_key, socket) =
-                    noise_config.upgrade_connection(socket, origin).await?;
-                Ok(socket)
-            }
+        .and_then(move |socket, origin| async move {
+            let noise_config = Arc::new(NoiseConfig::new_random());
+            let (_remote_static_key, socket) =
+                noise_config.upgrade_connection(socket, origin).await?;
+            Ok(socket)
         })
         .and_then(Yamux::upgrade_connection)
 }
 
 /// Build a Tcp + Noise transport
 pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseSocket<TcpSocket>> {
-    TcpTransport::default().and_then(move |socket, origin| {
-        async move {
-            let noise_config = Arc::new(NoiseConfig::new_random());
-            let (_remote_static_key, socket) =
-                noise_config.upgrade_connection(socket, origin).await?;
-            Ok(socket)
-        }
+    TcpTransport::default().and_then(move |socket, origin| async move {
+        let noise_config = Arc::new(NoiseConfig::new_random());
+        let (_remote_static_key, socket) = noise_config.upgrade_connection(socket, origin).await?;
+        Ok(socket)
     })
 }
 
@@ -150,13 +142,11 @@ pub fn build_tcp_muxer_transport() -> impl Transport<Output = impl StreamMultipl
 /// Build a Tcp + Noise + Muxer transport
 pub fn build_tcp_noise_muxer_transport() -> impl Transport<Output = impl StreamMultiplexer> {
     TcpTransport::default()
-        .and_then(move |socket, origin| {
-            async move {
-                let noise_config = Arc::new(NoiseConfig::new_random());
-                let (_remote_static_key, socket) =
-                    noise_config.upgrade_connection(socket, origin).await?;
-                Ok(socket)
-            }
+        .and_then(move |socket, origin| async move {
+            let noise_config = Arc::new(NoiseConfig::new_random());
+            let (_remote_static_key, socket) =
+                noise_config.upgrade_connection(socket, origin).await?;
+            Ok(socket)
         })
         .and_then(Yamux::upgrade_connection)
 }

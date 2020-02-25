@@ -272,24 +272,22 @@ mod test {
 
     #[tokio::test]
     async fn simple_listen_and_dial() -> Result<(), ::std::io::Error> {
-        let t = TcpTransport::default().and_then(|mut out, connection| {
-            async move {
-                match connection {
-                    ConnectionOrigin::Inbound => {
-                        out.write_all(b"Earth").await?;
-                        let mut buf = [0; 3];
-                        out.read_exact(&mut buf).await?;
-                        assert_eq!(&buf, b"Air");
-                    }
-                    ConnectionOrigin::Outbound => {
-                        let mut buf = [0; 5];
-                        out.read_exact(&mut buf).await?;
-                        assert_eq!(&buf, b"Earth");
-                        out.write_all(b"Air").await?;
-                    }
+        let t = TcpTransport::default().and_then(|mut out, connection| async move {
+            match connection {
+                ConnectionOrigin::Inbound => {
+                    out.write_all(b"Earth").await?;
+                    let mut buf = [0; 3];
+                    out.read_exact(&mut buf).await?;
+                    assert_eq!(&buf, b"Air");
                 }
-                Ok(())
+                ConnectionOrigin::Outbound => {
+                    let mut buf = [0; 5];
+                    out.read_exact(&mut buf).await?;
+                    assert_eq!(&buf, b"Earth");
+                    out.write_all(b"Air").await?;
+                }
             }
+            Ok(())
         });
 
         let (listener, addr) = t.listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap())?;

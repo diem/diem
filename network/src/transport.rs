@@ -97,30 +97,24 @@ pub fn build_memory_noise_transport(
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
 
     memory_transport
-        .and_then(move |socket, origin| {
-            async move {
-                let (remote_static_key, socket) =
-                    noise_config.upgrade_connection(socket, origin).await?;
-                if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
-                    Ok((peer_id, socket))
-                } else {
-                    Err(io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
-                }
+        .and_then(move |socket, origin| async move {
+            let (remote_static_key, socket) =
+                noise_config.upgrade_connection(socket, origin).await?;
+            if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
+                Ok((peer_id, socket))
+            } else {
+                Err(io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
             }
         })
-        .and_then(move |(peer_id, socket), origin| {
-            async move {
-                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, socket)))
-            }
+        .and_then(move |(peer_id, socket), origin| async move {
+            let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+            match_peer_id(identity, peer_id)
+                .and_then(|identity| check_role(&own_identity, identity))
+                .and_then(|identity| Ok((identity, socket)))
         })
-        .and_then(|(peer_id, socket), origin| {
-            async move {
-                let muxer = Yamux::upgrade_connection(socket, origin).await?;
-                Ok((peer_id, muxer))
-            }
+        .and_then(|(peer_id, socket), origin| async move {
+            let muxer = Yamux::upgrade_connection(socket, origin).await?;
+            Ok((peer_id, muxer))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
@@ -148,19 +142,15 @@ pub fn build_unauthenticated_memory_noise_transport(
                 Ok((peer_id, socket))
             }
         })
-        .and_then(move |(peer_id, socket), origin| {
-            async move {
-                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, socket)))
-            }
+        .and_then(move |(peer_id, socket), origin| async move {
+            let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+            match_peer_id(identity, peer_id)
+                .and_then(|identity| check_role(&own_identity, identity))
+                .and_then(|identity| Ok((identity, socket)))
         })
-        .and_then(|(peer_id, socket), origin| {
-            async move {
-                let muxer = Yamux::upgrade_connection(socket, origin).await?;
-                Ok((peer_id, muxer))
-            }
+        .and_then(|(peer_id, socket), origin| async move {
+            let muxer = Yamux::upgrade_connection(socket, origin).await?;
+            Ok((peer_id, muxer))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
@@ -171,17 +161,13 @@ pub fn build_memory_transport(
 ) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     memory_transport
-        .and_then(move |socket, origin| {
-            async move {
-                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
-                check_role(&own_identity, identity).and_then(|identity| Ok((identity, socket)))
-            }
+        .and_then(move |socket, origin| async move {
+            let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+            check_role(&own_identity, identity).and_then(|identity| Ok((identity, socket)))
         })
-        .and_then(|(identity, socket), origin| {
-            async move {
-                let muxer = Yamux::upgrade_connection(socket, origin).await?;
-                Ok((identity, muxer))
-            }
+        .and_then(|(identity, socket), origin| async move {
+            let muxer = Yamux::upgrade_connection(socket, origin).await?;
+            Ok((identity, muxer))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
@@ -196,35 +182,29 @@ pub fn build_tcp_noise_transport(
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
 
     LIBRA_TCP_TRANSPORT
-        .and_then(move |socket, origin| {
-            async move {
-                let (remote_static_key, socket) =
-                    noise_config.upgrade_connection(socket, origin).await?;
-                if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
-                    Ok((peer_id, socket))
-                } else {
-                    security_log(SecurityEvent::InvalidNetworkPeer)
-                        .error("UntrustedPeer")
-                        .data(&trusted_peers)
-                        .data(&remote_static_key)
-                        .log();
-                    Err(io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
-                }
+        .and_then(move |socket, origin| async move {
+            let (remote_static_key, socket) =
+                noise_config.upgrade_connection(socket, origin).await?;
+            if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
+                Ok((peer_id, socket))
+            } else {
+                security_log(SecurityEvent::InvalidNetworkPeer)
+                    .error("UntrustedPeer")
+                    .data(&trusted_peers)
+                    .data(&remote_static_key)
+                    .log();
+                Err(io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
             }
         })
-        .and_then(move |(peer_id, socket), origin| {
-            async move {
-                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, socket)))
-            }
+        .and_then(move |(peer_id, socket), origin| async move {
+            let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+            match_peer_id(identity, peer_id)
+                .and_then(|identity| check_role(&own_identity, identity))
+                .and_then(|identity| Ok((identity, socket)))
         })
-        .and_then(|(peer_id, socket), origin| {
-            async move {
-                let muxer = Yamux::upgrade_connection(socket, origin).await?;
-                Ok((peer_id, muxer))
-            }
+        .and_then(|(peer_id, socket), origin| async move {
+            let muxer = Yamux::upgrade_connection(socket, origin).await?;
+            Ok((peer_id, muxer))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
@@ -253,19 +233,15 @@ pub fn build_unauthenticated_tcp_noise_transport(
                 Ok((peer_id, socket))
             }
         })
-        .and_then(move |(peer_id, socket), origin| {
-            async move {
-                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, socket)))
-            }
+        .and_then(move |(peer_id, socket), origin| async move {
+            let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+            match_peer_id(identity, peer_id)
+                .and_then(|identity| check_role(&own_identity, identity))
+                .and_then(|identity| Ok((identity, socket)))
         })
-        .and_then(|(peer_id, socket), origin| {
-            async move {
-                let muxer = Yamux::upgrade_connection(socket, origin).await?;
-                Ok((peer_id, muxer))
-            }
+        .and_then(|(peer_id, socket), origin| async move {
+            let muxer = Yamux::upgrade_connection(socket, origin).await?;
+            Ok((peer_id, muxer))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
@@ -275,17 +251,13 @@ pub fn build_tcp_transport(
     own_identity: Identity,
 ) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
     LIBRA_TCP_TRANSPORT
-        .and_then(move |socket, origin| {
-            async move {
-                let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
-                check_role(&own_identity, identity).and_then(|identity| Ok((identity, socket)))
-            }
+        .and_then(move |socket, origin| async move {
+            let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+            check_role(&own_identity, identity).and_then(|identity| Ok((identity, socket)))
         })
-        .and_then(|(identity, socket), origin| {
-            async move {
-                let muxer = Yamux::upgrade_connection(socket, origin).await?;
-                Ok((identity, muxer))
-            }
+        .and_then(|(identity, socket), origin| async move {
+            let muxer = Yamux::upgrade_connection(socket, origin).await?;
+            Ok((identity, muxer))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
