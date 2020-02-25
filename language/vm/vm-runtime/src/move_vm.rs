@@ -35,15 +35,6 @@ impl MoveVM {
         }))
     }
 
-    // API for temporal backward compatibility.
-    // TODO: Get rid of it later with the following three api after LibraVM refactor.
-    pub fn execute_runtime<F, T>(&self, f: F) -> T
-    where
-        F: FnOnce(&VMRuntime) -> T,
-    {
-        self.0.rent(|runtime| f(runtime))
-    }
-
     pub fn execute_function<S: ChainState>(
         &self,
         module: &ModuleId,
