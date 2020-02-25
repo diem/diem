@@ -26,6 +26,7 @@ use libra_types::{
     identifier::Identifier,
     transaction::{ChangeSet, RawTransaction, SignatureCheckedTransaction},
 };
+use move_vm_types::values::Value;
 use once_cell::sync::Lazy;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
@@ -42,7 +43,6 @@ use vm_runtime::{
     move_vm::MoveVM,
     system_module_names::*,
 };
-use vm_runtime_types::values::Value;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];

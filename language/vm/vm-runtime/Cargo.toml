@@ -25,9 +25,9 @@ libra-logger = { path = "../../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../../common/metrics", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
+move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 vm = { path = "../", version = "0.1.0" }
 vm-cache-map = { path = "vm-cache-map", version = "0.1.0" }
-vm-runtime-types = { path = "vm-runtime-types", version = "0.1.0" }
 
 [dev-dependencies]
 anyhow = "1.0"

@@ -27,9 +27,9 @@ structopt = "0.3.2"
 admission-control-service = { path = "../../admission_control/admission-control-service", version = "0.1.0", features = ["fuzzing"] }
 consensus = { path = "../../consensus", version = "0.1.0", features = ["fuzzing"] }
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+move-vm-types = { path = "../../language/move-vm/types", version = "0.1.0", features = ["fuzzing"] }
 network = { path = "../../network", version = "0.1.0", features = ["fuzzing"] }
 vm = { path = "../../language/vm", version = "0.1.0", features = ["fuzzing"] }
-vm-runtime-types = { path = "../../language/vm/vm-runtime/vm-runtime-types", version = "0.1.0", features = ["fuzzing"] }
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", features = ["fuzzing"] }
 noise = { path = "../../network/noise", features = ["fuzzing"]}
 

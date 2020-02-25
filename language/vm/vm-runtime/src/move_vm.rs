@@ -10,9 +10,9 @@ use libra_types::{
     language_storage::{ModuleId, StructTag},
 };
 use move_vm_definition::MoveVMImpl;
+use move_vm_types::{loaded_data::struct_def::StructDef, values::Value};
 use vm::{errors::VMResult, gas_schedule::CostTable, transaction_metadata::TransactionMetadata};
 use vm_cache_map::Arena;
-use vm_runtime_types::{loaded_data::struct_def::StructDef, values::Value};
 
 rental! {
     mod move_vm_definition {

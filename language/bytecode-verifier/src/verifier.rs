@@ -12,6 +12,9 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+use move_vm_types::{
+    native_functions::dispatch::NativeFunction, native_structs::dispatch::resolve_native_struct,
+};
 use std::{collections::BTreeMap, fmt};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
@@ -20,9 +23,6 @@ use vm::{
     resolver::Resolver,
     views::{ModuleView, ViewInternals},
     IndexKind,
-};
-use vm_runtime_types::{
-    native_functions::dispatch::NativeFunction, native_structs::dispatch::resolve_native_struct,
 };
 
 /// A program that has been verified for internal consistency.

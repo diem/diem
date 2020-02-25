@@ -8,6 +8,7 @@ use libra_types::{
     identifier::{IdentStr, Identifier},
     vm_error::{StatusCode, VMStatus},
 };
+use move_vm_types::loaded_data::struct_def::StructDef;
 use std::{collections::HashMap, sync::RwLock};
 use vm::{
     access::ModuleAccess,
@@ -18,7 +19,6 @@ use vm::{
     },
     internals::ModuleIndex,
 };
-use vm_runtime_types::loaded_data::struct_def::StructDef;
 
 /// Defines a loaded module in the memory. Currently we just store module itself with a bunch of
 /// reverse mapping that allows querying definition of struct/function by name.

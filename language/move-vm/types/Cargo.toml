@@ -1,8 +1,8 @@
 [package]
-name = "vm-runtime-types"
+name = "move-vm-types"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra vm runtime types"
+description = "Types for Move VM"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
@@ -16,10 +16,10 @@ proptest = { version = "0.9", optional = true }
 sha2 = "0.8.0"
 serde = { version = "1.0", features = ["derive", "rc"] }
 
-libra-types = { path = "../../../../types", version = "0.1.0" }
-vm = { path = "../../", version = "0.1.0" }
-lcs = { path = "../../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../../../../crypto/crypto", version = "0.1.0" }
+libra-types = { path = "../../../types", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
+lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9"

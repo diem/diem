@@ -5,11 +5,11 @@ use crate::FuzzTargetImpl;
 use anyhow::{bail, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use libra_proptest_helpers::ValueGenerator;
-use std::io::Cursor;
-use vm_runtime_types::{
+use move_vm_types::{
     loaded_data::types::Type,
     values::{prop::layout_and_value_strategy, Value},
 };
+use std::io::Cursor;
 
 #[derive(Clone, Debug, Default)]
 pub struct ValueTarget;

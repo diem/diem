@@ -10,12 +10,12 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use std::{collections::btree_map::BTreeMap, mem::replace};
-use vm::errors::*;
-use vm_runtime_types::{
+use move_vm_types::{
     loaded_data::{struct_def::StructDef, types::Type},
     values::{GlobalValue, Value},
 };
+use std::{collections::btree_map::BTreeMap, mem::replace};
+use vm::errors::*;
 
 /// The wrapper around the StateVersionView for the block.
 /// It keeps track of the value that have been changed during execution of a block.
