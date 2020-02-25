@@ -41,7 +41,7 @@ pub struct Options {
     pub prelude_path: String,
     /// The path to the boogie output which represents the verification problem.
     pub output_path: String,
-    /// Verbosity level for logging
+    /// Verbosity level for logging.
     pub verbosity_level: LevelFilter,
     /// The paths to the mvir sources.
     pub mvir_sources: Vec<String>,
@@ -49,13 +49,13 @@ pub struct Options {
     pub boogie_exe: String,
     /// Path to the z3 executable.
     pub z3_exe: String,
-    /// Whether to use cvc4
+    /// Whether to use cvc4.
     pub use_cvc4: bool,
     /// Path to the cvc4 executable.
     pub cvc4_exe: String,
     /// List of flags to pass on to boogie.
     pub boogie_flags: Vec<String>,
-    /// Whether to only generate boogie
+    /// Whether to only generate boogie.
     pub generate_only: bool,
     /// Whether to generate stubs for native functions.
     pub native_stubs: bool,
@@ -65,6 +65,8 @@ pub struct Options {
     pub omit_model_debug: bool,
     /// The model use for invariant enforcement.
     pub invariant_model: InvariantModel,
+    /// Whether to use native array theory.
+    pub use_array_theory: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,6 +92,7 @@ impl Default for Options {
             minimize_execution_trace: true,
             omit_model_debug: false,
             invariant_model: InvariantModel::LifetimeBased,
+            use_array_theory: false,
         }
     }
 }
@@ -182,6 +185,11 @@ impl Options {
                     .help("path to the cvc4 executable"),
             )
             .arg(
+                Arg::with_name("use-array-theory")
+                    .long("use-array-theory")
+                    .help("whether to use native array theory"),
+            )
+            .arg(
                 Arg::with_name("boogie-flags")
                     .short("B")
                     .long("boogie")
@@ -237,6 +245,7 @@ impl Options {
         self.cvc4_exe = get_with_default("cvc4-exe");
         self.boogie_flags = get_vec("boogie-flags");
         self.mvir_sources = get_vec("sources");
+        self.use_array_theory = matches.is_present("use-array-theory");
     }
 
     /// Sets up logging based on provided options. This should be called as early as possible
@@ -272,10 +281,15 @@ impl Options {
         if self.use_cvc4 {
             add(&[
                 "-proverOpt:SOLVER=cvc4",
-                &format!("-cvc4exe:{}", &self.cvc4_exe),
+                &format!("-proverOpt:PROVER_PATH={}", &self.cvc4_exe),
             ]);
         } else {
-            add(&[&format!("-z3exe:{}", &self.z3_exe)]);
+            add(&[&format!("-proverOpt:PROVER_PATH={}", &self.z3_exe)]);
+        }
+        if self.use_array_theory {
+            add(&["-useArrayTheory"]);
+        } else {
+            add(&["-proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]);
         }
         for f in &self.boogie_flags {
             add(&[f.as_str()]);
