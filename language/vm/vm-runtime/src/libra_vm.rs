@@ -307,13 +307,16 @@ impl LibraVM {
                     Ok(s) => s,
                     Err(e) => return discard_error_output(e),
                 };
-                self.move_vm.execute_script(
+                let ret = self.move_vm.execute_script(
                     s,
                     gas_schedule,
                     &mut ctx,
                     txn_data,
                     convert_txn_args(args),
-                )
+                );
+                let gas_usage = txn_data.max_gas_amount().sub(ctx.gas_left()).get();
+                record_stats!(observe | TXN_EXECUTION_GAS_USAGE | gas_usage);
+                ret
             }
         }
         .map_err(|err| {
