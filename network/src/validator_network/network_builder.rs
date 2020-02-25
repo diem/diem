@@ -18,7 +18,7 @@ use crate::{
         PeerManagerRequestSender,
     },
     protocols::{
-        discovery::{Discovery, PeerInfo},
+        discovery::{self, Discovery, PeerInfo},
         health_checker::HealthChecker,
         identity::Identity,
     },
@@ -380,8 +380,7 @@ impl NetworkBuilder {
         // Setup signer from keys.
         let signer = ValidatorSigner::new(self.peer_id, signing_private_key);
         // Get handles for network events and sender.
-        let (discovery_network_tx, discovery_network_rx) =
-            validator_network::discovery::add_to_network(self);
+        let (discovery_network_tx, discovery_network_rx) = discovery::add_to_network(self);
         let peer_id = self.peer_id;
         let addrs = vec![self
             .advertised_address

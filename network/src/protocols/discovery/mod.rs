@@ -34,11 +34,14 @@ use crate::{
     connectivity_manager::ConnectivityRequest,
     counters,
     error::{NetworkError, NetworkErrorKind},
-    validator_network::{DiscoveryNetworkEvents, DiscoveryNetworkSender, Event},
-    NetworkPublicKeys,
+    peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
+    proto,
+    validator_network::{network_builder::NetworkBuilder, Event, NetworkEvents, NetworkSender},
+    NetworkPublicKeys, ProtocolId,
 };
 use anyhow::anyhow;
 use bytes::Bytes;
+use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{
     sink::SinkExt,
     stream::{FusedStream, Stream, StreamExt},
@@ -64,6 +67,64 @@ use std::{
 
 #[cfg(test)]
 mod test;
+
+pub const DISCOVERY_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/discovery/0.1.0";
+
+/// The interface from Network to Discovery module.
+///
+/// `DiscoveryNetworkEvents` is a `Stream` of `PeerManagerNotification` where the
+/// raw `Bytes` rpc messages are deserialized into
+/// `DiscoveryMsg` types. `DiscoveryNetworkEvents` is a thin wrapper
+/// around a `channel::Receiver<PeerManagerNotification>`.
+pub type DiscoveryNetworkEvents = NetworkEvents<proto::DiscoveryMsg>;
+
+/// The interface from Discovery to Networking layer.
+///
+/// This is a thin wrapper around a `NetworkSender<Discoverymsg>`, so it is
+/// easy to clone and send off to a separate task. For example, the rpc requests
+/// return Futures that encapsulate the whole flow, from sending the request to
+/// remote, to finally receiving the response and deserializing. It therefore
+/// makes the most sense to make the rpc call on a separate async task, which
+/// requires the `DiscoveryNetworkSender` to be `Clone` and `Send`.
+#[derive(Clone)]
+pub struct DiscoveryNetworkSender {
+    inner: NetworkSender<proto::DiscoveryMsg>,
+}
+
+/// Register the discovery sender and event handler with network and return interfaces for those
+/// actors.
+pub fn add_to_network(
+    network: &mut NetworkBuilder,
+) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
+    let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
+        vec![],
+        vec![ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL)],
+        QueueStyle::LIFO,
+        Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
+    );
+    (
+        DiscoveryNetworkSender::new(sender),
+        DiscoveryNetworkEvents::new(receiver, control_notifs_rx),
+    )
+}
+
+impl DiscoveryNetworkSender {
+    /// Create a new Discovery sender
+    pub fn new(inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>) -> Self {
+        Self {
+            inner: NetworkSender::new(PeerManagerRequestSender::new(inner)),
+        }
+    }
+
+    /// Send a DiscoveryMsg to a peer.
+    pub fn send_to(&mut self, peer: PeerId, msg: proto::DiscoveryMsg) -> Result<(), NetworkError> {
+        self.inner.send_to(
+            peer,
+            ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
+            msg,
+        )
+    }
+}
 
 /// The actor running the discovery protocol.
 pub struct Discovery<TTicker> {
@@ -217,7 +278,7 @@ where
 
     async fn handle_network_event(
         &mut self,
-        event: Result<Event<crate::proto::DiscoveryMsg>, NetworkError>,
+        event: Result<Event<proto::DiscoveryMsg>, NetworkError>,
     ) {
         trace!("Network event::{:?}", event);
         match event {
@@ -270,7 +331,7 @@ where
     }
 
     // Creates DiscoveryMsg to be sent to some remote peer.
-    fn compose_discovery_msg(&self) -> crate::proto::DiscoveryMsg {
+    fn compose_discovery_msg(&self) -> proto::DiscoveryMsg {
         let notes = self
             .known_peers
             .values()
@@ -279,7 +340,7 @@ where
             .collect::<Vec<_>>();
         let msg = DiscoveryMsg { notes };
         let message = lcs::to_bytes(&msg).expect("LCS serialization failed");
-        crate::proto::DiscoveryMsg { message }
+        proto::DiscoveryMsg { message }
     }
 
     // Updates local state by reconciling with notes received from some remote peer.
@@ -560,7 +621,7 @@ fn get_unix_epoch() -> u64 {
 // Handles an inbound message from a remote peer as follows:
 // Verifies signatures on all notes contained in the message.
 fn handle_discovery_msg(
-    msg: crate::proto::DiscoveryMsg,
+    msg: proto::DiscoveryMsg,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     peer_id: PeerId,
 ) -> Result<Vec<VerifiedNote>, NetworkError> {
