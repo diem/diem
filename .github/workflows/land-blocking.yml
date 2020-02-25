@@ -72,6 +72,13 @@ jobs:
             ${result.text}
             \`\`\`
             `;
+              let tps = result.metrics.find(m => m.experiment == "all up" && m.metric == "avg_tps").value;
+              let min_tps = 900;
+              if (tps < min_tps) {
+                body += "\n :exclamation: Performance regression is detected on this PR";
+                body += "\n TPS with PR: " + tps + ", this is lower then minimum allowed " + min_tps + " TPS.";
+                should_fail = true;
+              }
             } catch (err) {
               if (err.code === 'ENOENT') {
                 body = "Cluster Test failed - no test report found.";
