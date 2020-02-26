@@ -1332,8 +1332,7 @@ fn resolve_field(context: &mut Context, loc: Loc, ty: BaseType, field: &Field) -
             BaseType_::anything(loc)
         }
         sp!(_, Apply(_, sp!(_, ModuleType(m, n)), targs)) => {
-            let current_module = context.current_module.clone().unwrap();
-            if m != current_module {
+            if !context.is_current_module(&m) {
                 let msg = format!(
                     "Invalid access of field '{}' on '{}::{}'. \
                      Fields can only be accessed inside the struct's module",
