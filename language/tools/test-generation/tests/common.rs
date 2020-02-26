@@ -7,7 +7,7 @@ use test_generation::{
     config::ALLOW_MEMORY_UNSAFE,
     summaries::{instruction_summary, Effects},
 };
-use vm::file_format::Bytecode;
+use vm::file_format::{Bytecode, FunctionInstantiation, StructDefInstantiation};
 
 pub fn run_instruction(
     instruction: Bytecode,
@@ -29,10 +29,15 @@ pub fn run_instruction(
             | Bytecode::WriteRef
             | Bytecode::FreezeRef
             | Bytecode::MutBorrowField(_)
+            | Bytecode::MutBorrowFieldGeneric(_)
+            | Bytecode::ImmBorrowFieldGeneric(_)
             | Bytecode::ImmBorrowField(_)
-            | Bytecode::MutBorrowGlobal(_, _)
-            | Bytecode::ImmBorrowGlobal(_, _)
-            | Bytecode::MoveToSender(_, _) => {
+            | Bytecode::MutBorrowGlobal(_)
+            | Bytecode::MutBorrowGlobalGeneric(_)
+            | Bytecode::ImmBorrowGlobal(_)
+            | Bytecode::ImmBorrowGlobalGeneric(_)
+            | Bytecode::MoveToSender(_)
+            | Bytecode::MoveToSenderGeneric(_) => {
                 let len = summary.preconditions.len();
                 summary.preconditions[..(len - 1)]
                     .iter()
@@ -61,10 +66,33 @@ pub fn run_instruction(
     );
     match summary.effects {
         Effects::TyParams(instantiation, effect, instantiation_application) => {
-            let instantiation = instantiation(&initial_state);
+            let (struct_idx, instantiation) = instantiation(&initial_state);
             let index = initial_state.module.add_instantiation(instantiation);
-            let effects = effect(index);
-            let instruction = instantiation_application(index);
+            let struct_inst = StructDefInstantiation {
+                def: struct_idx,
+                type_parameters: index,
+            };
+            let str_inst_idx = initial_state.module.add_struct_instantiation(struct_inst);
+            let effects = effect(str_inst_idx);
+            let instruction = instantiation_application(str_inst_idx);
+            (
+                effects.iter().fold(initial_state, |acc, effect| {
+                    effect(&acc)
+                        .unwrap_or_else(|err| panic!("Error applying instruction effect: {}", err))
+                }),
+                instruction,
+            )
+        }
+        Effects::TyParamsCall(instantiation, effect, instantiation_application) => {
+            let (fh_idx, instantiation) = instantiation(&initial_state);
+            let index = initial_state.module.add_instantiation(instantiation);
+            let func_inst = FunctionInstantiation {
+                handle: fh_idx,
+                type_parameters: index,
+            };
+            let func_inst_idx = initial_state.module.add_function_instantiation(func_inst);
+            let effects = effect(func_inst_idx);
+            let instruction = instantiation_application(func_inst_idx);
             (
                 effects.iter().fold(initial_state, |acc, effect| {
                     effect(&acc)

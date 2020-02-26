@@ -1,5 +1,5 @@
 module M {
-    struct S<T: unrestricted> { b: bool }
+    struct S<T: copyable> { b: bool }
 
     foo<T>() {
         let x: Self.S<T>;

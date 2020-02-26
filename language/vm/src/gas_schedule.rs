@@ -7,8 +7,9 @@
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
 use crate::file_format::{
-    AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
-    StructDefinitionIndex, NO_TYPE_ACTUALS, NUMBER_OF_NATIVE_FUNCTIONS,
+    AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldHandleIndex, FieldInstantiationIndex,
+    FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
+    StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
 };
 pub use crate::file_format_common::Opcodes;
 use libra_types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
@@ -209,18 +210,25 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         CopyLoc(_) => Opcodes::COPY_LOC,
         MoveLoc(_) => Opcodes::MOVE_LOC,
         StLoc(_) => Opcodes::ST_LOC,
-        Call(_, _) => Opcodes::CALL,
-        Pack(_, _) => Opcodes::PACK,
-        Unpack(_, _) => Opcodes::UNPACK,
+        Call(_) => Opcodes::CALL,
+        CallGeneric(_) => Opcodes::CALL_GENERIC,
+        Pack(_) => Opcodes::PACK,
+        PackGeneric(_) => Opcodes::PACK_GENERIC,
+        Unpack(_) => Opcodes::UNPACK,
+        UnpackGeneric(_) => Opcodes::UNPACK_GENERIC,
         ReadRef => Opcodes::READ_REF,
         WriteRef => Opcodes::WRITE_REF,
         FreezeRef => Opcodes::FREEZE_REF,
         MutBorrowLoc(_) => Opcodes::MUT_BORROW_LOC,
         ImmBorrowLoc(_) => Opcodes::IMM_BORROW_LOC,
         MutBorrowField(_) => Opcodes::MUT_BORROW_FIELD,
+        MutBorrowFieldGeneric(_) => Opcodes::MUT_BORROW_FIELD_GENERIC,
         ImmBorrowField(_) => Opcodes::IMM_BORROW_FIELD,
-        MutBorrowGlobal(_, _) => Opcodes::MUT_BORROW_GLOBAL,
-        ImmBorrowGlobal(_, _) => Opcodes::IMM_BORROW_GLOBAL,
+        ImmBorrowFieldGeneric(_) => Opcodes::IMM_BORROW_FIELD_GENERIC,
+        MutBorrowGlobal(_) => Opcodes::MUT_BORROW_GLOBAL,
+        MutBorrowGlobalGeneric(_) => Opcodes::MUT_BORROW_GLOBAL_GENERIC,
+        ImmBorrowGlobal(_) => Opcodes::IMM_BORROW_GLOBAL,
+        ImmBorrowGlobalGeneric(_) => Opcodes::IMM_BORROW_GLOBAL_GENERIC,
         Add => Opcodes::ADD,
         Sub => Opcodes::SUB,
         Mul => Opcodes::MUL,
@@ -245,9 +253,12 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         GetTxnMaxGasUnits => Opcodes::GET_TXN_MAX_GAS_UNITS,
         GetGasRemaining => Opcodes::GET_GAS_REMAINING,
         GetTxnSenderAddress => Opcodes::GET_TXN_SENDER,
-        Exists(_, _) => Opcodes::EXISTS,
-        MoveFrom(_, _) => Opcodes::MOVE_FROM,
-        MoveToSender(_, _) => Opcodes::MOVE_TO,
+        Exists(_) => Opcodes::EXISTS,
+        ExistsGeneric(_) => Opcodes::EXISTS_GENERIC,
+        MoveFrom(_) => Opcodes::MOVE_FROM,
+        MoveFromGeneric(_) => Opcodes::MOVE_FROM_GENERIC,
+        MoveToSender(_) => Opcodes::MOVE_TO,
+        MoveToSenderGeneric(_) => Opcodes::MOVE_TO_GENERIC,
         GetTxnSequenceNumber => Opcodes::GET_TXN_SEQUENCE_NUMBER,
         GetTxnPublicKey => Opcodes::GET_TXN_PUBLIC_KEY,
     };
@@ -332,12 +343,17 @@ impl CostTable {
         // in the gas schedule for each instruction.
         let instrs = vec![
             (
-                MoveToSender(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                MoveToSender(StructDefinitionIndex::new(0)),
+                GasCost::new(0, 0),
+            ),
+            (
+                MoveToSenderGeneric(StructDefInstantiationIndex::new(0)),
                 GasCost::new(0, 0),
             ),
             (GetTxnSenderAddress, GasCost::new(0, 0)),
+            (MoveFrom(StructDefinitionIndex::new(0)), GasCost::new(0, 0)),
             (
-                MoveFrom(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                MoveFromGeneric(StructDefInstantiationIndex::new(0)),
                 GasCost::new(0, 0),
             ),
             (BrTrue(0), GasCost::new(0, 0)),
@@ -350,12 +366,14 @@ impl CostTable {
             (BitAnd, GasCost::new(0, 0)),
             (ReadRef, GasCost::new(0, 0)),
             (Sub, GasCost::new(0, 0)),
+            (MutBorrowField(FieldHandleIndex::new(0)), GasCost::new(0, 0)),
             (
-                MutBorrowField(FieldDefinitionIndex::new(0)),
+                MutBorrowFieldGeneric(FieldInstantiationIndex::new(0)),
                 GasCost::new(0, 0),
             ),
+            (ImmBorrowField(FieldHandleIndex::new(0)), GasCost::new(0, 0)),
             (
-                ImmBorrowField(FieldDefinitionIndex::new(0)),
+                ImmBorrowFieldGeneric(FieldInstantiationIndex::new(0)),
                 GasCost::new(0, 0),
             ),
             (Add, GasCost::new(0, 0)),
@@ -379,14 +397,16 @@ impl CostTable {
             (Shr, GasCost::new(0, 0)),
             (Neq, GasCost::new(0, 0)),
             (Not, GasCost::new(0, 0)),
+            (Call(FunctionHandleIndex::new(0)), GasCost::new(0, 0)),
             (
-                Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
+                CallGeneric(FunctionInstantiationIndex::new(0)),
                 GasCost::new(0, 0),
             ),
             (Le, GasCost::new(0, 0)),
             (Branch(0), GasCost::new(0, 0)),
+            (Unpack(StructDefinitionIndex::new(0)), GasCost::new(0, 0)),
             (
-                Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                UnpackGeneric(StructDefInstantiationIndex::new(0)),
                 GasCost::new(0, 0),
             ),
             (Or, GasCost::new(0, 0)),
@@ -395,8 +415,9 @@ impl CostTable {
             (GetTxnGasUnitPrice, GasCost::new(0, 0)),
             (Mod, GasCost::new(0, 0)),
             (BrFalse(0), GasCost::new(0, 0)),
+            (Exists(StructDefinitionIndex::new(0)), GasCost::new(0, 0)),
             (
-                Exists(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                ExistsGeneric(StructDefInstantiationIndex::new(0)),
                 GasCost::new(0, 0),
             ),
             (GetGasRemaining, GasCost::new(0, 0)),
@@ -405,19 +426,28 @@ impl CostTable {
             (GetTxnSequenceNumber, GasCost::new(0, 0)),
             (FreezeRef, GasCost::new(0, 0)),
             (
-                MutBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                MutBorrowGlobal(StructDefinitionIndex::new(0)),
                 GasCost::new(0, 0),
             ),
             (
-                ImmBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                MutBorrowGlobalGeneric(StructDefInstantiationIndex::new(0)),
+                GasCost::new(0, 0),
+            ),
+            (
+                ImmBorrowGlobal(StructDefinitionIndex::new(0)),
+                GasCost::new(0, 0),
+            ),
+            (
+                ImmBorrowGlobalGeneric(StructDefInstantiationIndex::new(0)),
                 GasCost::new(0, 0),
             ),
             (Div, GasCost::new(0, 0)),
             (Eq, GasCost::new(0, 0)),
             (LdByteArray(ByteArrayPoolIndex::new(0)), GasCost::new(0, 0)),
             (Gt, GasCost::new(0, 0)),
+            (Pack(StructDefinitionIndex::new(0)), GasCost::new(0, 0)),
             (
-                Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                PackGeneric(StructDefInstantiationIndex::new(0)),
                 GasCost::new(0, 0),
             ),
         ];

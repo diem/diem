@@ -9,13 +9,10 @@ use std::collections::BTreeMap;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        Bytecode, CodeOffset, CompiledModule, FieldDefinitionIndex, FunctionDefinition,
-        LocalsSignatureIndex, SignatureToken,
+        Bytecode, CodeOffset, CompiledModule, FieldHandleIndex, FunctionDefinition, SignatureIndex,
+        SignatureToken, StructDefinitionIndex, StructFieldInformation,
     },
-    views::{
-        FieldDefinitionView, FunctionDefinitionView, FunctionSignatureView, StructDefinitionView,
-        ViewInternals,
-    },
+    views::{FunctionDefinitionView, FunctionHandleView, StructDefinitionView, ViewInternals},
 };
 
 pub struct StacklessFunction {
@@ -61,8 +58,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         if !function_definition_view.is_native() {
             let locals_signature_view = function_definition_view.locals_signature();
             temp_count = locals_signature_view.len();
-            for (_, arg_type_view) in locals_signature_view.tokens().enumerate() {
-                local_types.push(arg_type_view.as_inner().clone());
+            for (_, parameter_view) in locals_signature_view.tokens().enumerate() {
+                local_types.push(parameter_view.as_inner().clone());
             }
         }
         StacklessBytecodeGenerator {
@@ -87,18 +84,24 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         }
     }
 
-    fn get_field_signature(&self, field_definition_index: FieldDefinitionIndex) -> SignatureToken {
-        let field_definition = self.module.field_def_at(field_definition_index);
-        let field_definition_view = FieldDefinitionView::new(self.module, field_definition);
-        field_definition_view
-            .type_signature()
-            .token()
-            .as_inner()
-            .clone()
+    fn get_field_info(
+        &self,
+        field_handle_index: FieldHandleIndex,
+    ) -> (StructDefinitionIndex, usize, SignatureToken) {
+        let field_handle = self.module.field_handle_at(field_handle_index);
+        let struct_def = self.module.struct_def_at(field_handle.owner);
+        if let StructFieldInformation::Declared(fields) = &struct_def.field_information {
+            return (
+                field_handle.owner,
+                field_handle.field as usize,
+                fields[field_handle.field as usize].signature.0.clone(),
+            );
+        }
+        unreachable!("struct must have fields")
     }
 
-    fn get_type_params(&self, type_params_index: LocalsSignatureIndex) -> Vec<SignatureToken> {
-        self.module.locals_signature_at(type_params_index).0.clone()
+    fn get_type_params(&self, type_params_index: SignatureIndex) -> Vec<SignatureToken> {
+        self.module.signature_at(type_params_index).0.clone()
     }
 
     #[allow(clippy::cognitive_complexity)]
@@ -133,7 +136,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
 
             Bytecode::Ret => {
                 let mut return_temps = vec![];
-                for _ in self.function_definition_view.signature().return_tokens() {
+                for _ in self.function_definition_view.return_tokens() {
                     let return_temp_index = self.temp_stack.pop().unwrap();
                     return_temps.push(return_temp_index);
                 }
@@ -160,52 +163,42 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 }
             }
 
-            Bytecode::MutBorrowField(field_definition_index) => {
+            Bytecode::ImmBorrowField(field_handle_index)
+            | Bytecode::MutBorrowField(field_handle_index) => {
                 let struct_ref_index = self.temp_stack.pop().unwrap();
-                let field_signature = self.get_field_signature(*field_definition_index);
-                let parent_type = self.local_types[struct_ref_index].clone();
-                let type_sigs = match parent_type {
-                    SignatureToken::MutableReference(b) => match *b {
-                        SignatureToken::Struct(_, v) => v,
-                        _ => panic!("not a struct in BorrowField"),
-                    },
-                    _ => panic!("not a reference in BorrowField"),
-                };
-                let field_type = match field_signature {
-                    SignatureToken::TypeParameter(i) => type_sigs[i as usize].clone(),
-                    _ => field_signature,
-                };
+                let (struct_def_idx, field_offset, field_type) =
+                    self.get_field_info(*field_handle_index);
                 let field_ref_index = self.temp_count;
                 self.temp_stack.push(field_ref_index);
 
                 self.code.push(StacklessBytecode::BorrowField(
                     field_ref_index,
                     struct_ref_index,
-                    *field_definition_index,
+                    struct_def_idx,
+                    field_offset,
                 ));
                 self.temp_count += 1;
-                self.local_types
-                    .push(SignatureToken::MutableReference(Box::new(field_type)));
-            }
-
-            Bytecode::ImmBorrowField(field_definition_index) => {
-                let struct_ref_index = self.temp_stack.pop().unwrap();
-                let field_signature = self.get_field_signature(*field_definition_index);
-                let parent_type = self.local_types[struct_ref_index].clone();
-                let type_sigs = match parent_type {
-                    SignatureToken::Reference(b) | SignatureToken::MutableReference(b) => {
-                        match *b {
-                            SignatureToken::Struct(_, v) => v,
-                            _ => panic!("not a struct in BorrowField"),
-                        }
+                match bytecode {
+                    Bytecode::ImmBorrowField(_) => {
+                        self.local_types
+                            .push(SignatureToken::Reference(Box::new(field_type)));
                     }
                     _ => {
-                        println!("{:?},{:?}", bytecode, parent_type);
-                        panic!("not a reference in BorrowField")
+                        self.local_types
+                            .push(SignatureToken::MutableReference(Box::new(field_type)));
                     }
-                };
+                }
+            }
+
+            Bytecode::ImmBorrowFieldGeneric(field_inst_index)
+            | Bytecode::MutBorrowFieldGeneric(field_inst_index) => {
+                let field_inst = self.module.field_instantiation_at(*field_inst_index);
+                let struct_ref_index = self.temp_stack.pop().unwrap();
+                let (struct_def_idx, field_offset, field_signature) =
+                    self.get_field_info(field_inst.handle);
+                let type_sigs = self.module.signature_at(field_inst.type_parameters);
                 let field_type = match field_signature {
-                    SignatureToken::TypeParameter(i) => type_sigs[i as usize].clone(),
+                    SignatureToken::TypeParameter(i) => type_sigs.0[i as usize].clone(),
                     _ => field_signature,
                 };
                 let field_ref_index = self.temp_count;
@@ -214,11 +207,20 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.code.push(StacklessBytecode::BorrowField(
                     field_ref_index,
                     struct_ref_index,
-                    *field_definition_index,
+                    struct_def_idx,
+                    field_offset,
                 ));
                 self.temp_count += 1;
-                self.local_types
-                    .push(SignatureToken::Reference(Box::new(field_type)));
+                match bytecode {
+                    Bytecode::ImmBorrowField(_) => {
+                        self.local_types
+                            .push(SignatureToken::Reference(Box::new(field_type)));
+                    }
+                    _ => {
+                        self.local_types
+                            .push(SignatureToken::MutableReference(Box::new(field_type)));
+                    }
+                }
             }
 
             Bytecode::LdU8(number) => {
@@ -360,21 +362,47 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
             }
 
-            Bytecode::Call(idx, type_params) => {
-                let type_sigs = self.get_type_params(*type_params);
+            Bytecode::Call(idx) => {
                 let function_handle = self.module.function_handle_at(*idx);
-                let function_signature =
-                    self.module.function_signature_at(function_handle.signature);
-                let function_signature_view =
-                    FunctionSignatureView::new(self.module, function_signature);
+                let function_handle_view = FunctionHandleView::new(self.module, function_handle);
 
                 let mut arg_temp_indices = vec![];
                 let mut return_temp_indices = vec![];
-                for _ in function_signature.arg_types.iter() {
+                for _ in function_handle_view.arg_tokens() {
                     let arg_temp_index = self.temp_stack.pop().unwrap();
                     arg_temp_indices.push(arg_temp_index);
                 }
-                for return_type_view in function_signature_view.return_tokens() {
+                for return_type_view in function_handle_view.return_tokens() {
+                    let return_temp_index = self.temp_count;
+                    let return_type = return_type_view.as_inner().clone();
+                    return_temp_indices.push(return_temp_index);
+                    self.temp_stack.push(return_temp_index);
+                    self.local_types.push(return_type);
+                    self.temp_count += 1;
+                }
+                arg_temp_indices.reverse();
+                return_temp_indices.reverse();
+                self.code.push(StacklessBytecode::Call(
+                    return_temp_indices,
+                    *idx,
+                    None,
+                    arg_temp_indices,
+                ))
+            }
+            Bytecode::CallGeneric(idx) => {
+                let func_instantiation = self.module.function_instantiation_at(*idx);
+
+                let type_sigs = self.get_type_params(func_instantiation.type_parameters);
+                let function_handle = self.module.function_handle_at(func_instantiation.handle);
+                let function_handle_view = FunctionHandleView::new(self.module, function_handle);
+
+                let mut arg_temp_indices = vec![];
+                let mut return_temp_indices = vec![];
+                for _ in function_handle_view.arg_tokens() {
+                    let arg_temp_index = self.temp_stack.pop().unwrap();
+                    arg_temp_indices.push(arg_temp_index);
+                }
+                for return_type_view in function_handle_view.return_tokens() {
                     let return_temp_index = self.temp_count;
                     // instantiate type parameters
                     let return_type =
@@ -388,13 +416,13 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 return_temp_indices.reverse();
                 self.code.push(StacklessBytecode::Call(
                     return_temp_indices,
-                    *idx,
-                    *type_params,
+                    func_instantiation.handle,
+                    Some(func_instantiation.type_parameters),
                     arg_temp_indices,
                 ))
             }
 
-            Bytecode::Pack(idx, type_params) => {
+            Bytecode::Pack(idx) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let struct_definition_view =
                     StructDefinitionView::new(self.module, struct_definition);
@@ -405,24 +433,71 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     let field_temp_index = self.temp_stack.pop().unwrap();
                     field_temp_indices.push(field_temp_index);
                 }
-                self.local_types.push(SignatureToken::Struct(
-                    struct_definition.struct_handle,
-                    self.get_type_params(*type_params),
-                ));
+                self.local_types
+                    .push(SignatureToken::Struct(struct_definition.struct_handle));
                 self.temp_stack.push(struct_temp_index);
                 field_temp_indices.reverse();
                 self.code.push(StacklessBytecode::Pack(
                     struct_temp_index,
                     *idx,
-                    *type_params,
+                    None,
                     field_temp_indices,
                 ));
                 self.temp_count += 1;
             }
 
-            Bytecode::Unpack(idx, type_params) => {
-                let type_sigs = self.get_type_params(*type_params);
+            Bytecode::PackGeneric(idx) => {
+                let struct_instantiation = self.module.struct_instantiation_at(*idx);
+                let struct_definition = self.module.struct_def_at(struct_instantiation.def);
+                let struct_definition_view =
+                    StructDefinitionView::new(self.module, struct_definition);
+
+                let mut field_temp_indices = vec![];
+                let struct_temp_index = self.temp_count;
+                for _ in struct_definition_view.fields().unwrap() {
+                    let field_temp_index = self.temp_stack.pop().unwrap();
+                    field_temp_indices.push(field_temp_index);
+                }
+                self.local_types
+                    .push(SignatureToken::Struct(struct_definition.struct_handle));
+                self.temp_stack.push(struct_temp_index);
+                field_temp_indices.reverse();
+                self.code.push(StacklessBytecode::Pack(
+                    struct_temp_index,
+                    struct_instantiation.def,
+                    Some(struct_instantiation.type_parameters),
+                    field_temp_indices,
+                ));
+                self.temp_count += 1;
+            }
+
+            Bytecode::Unpack(idx) => {
                 let struct_definition = self.module.struct_def_at(*idx);
+                let struct_definition_view =
+                    StructDefinitionView::new(self.module, struct_definition);
+                let mut field_temp_indices = vec![];
+                let struct_temp_index = self.temp_stack.pop().unwrap();
+                for field_definition_view in struct_definition_view.fields().unwrap() {
+                    let field_signature_view = field_definition_view.type_signature();
+                    let field_type = field_signature_view.token().as_inner().clone();
+                    let field_temp_index = self.temp_count;
+                    field_temp_indices.push(field_temp_index);
+                    self.temp_stack.push(field_temp_index);
+                    self.local_types.push(field_type);
+                    self.temp_count += 1;
+                }
+                self.code.push(StacklessBytecode::Unpack(
+                    field_temp_indices,
+                    *idx,
+                    None,
+                    struct_temp_index,
+                ));
+            }
+
+            Bytecode::UnpackGeneric(idx) => {
+                let struct_instantiation = self.module.struct_instantiation_at(*idx);
+                let type_sigs = self.get_type_params(struct_instantiation.type_parameters);
+                let struct_definition = self.module.struct_def_at(struct_instantiation.def);
                 let struct_definition_view =
                     StructDefinitionView::new(self.module, struct_definition);
                 let mut field_temp_indices = vec![];
@@ -441,11 +516,12 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 }
                 self.code.push(StacklessBytecode::Unpack(
                     field_temp_indices,
-                    *idx,
-                    *type_params,
+                    struct_instantiation.def,
+                    Some(struct_instantiation.type_parameters),
                     struct_temp_index,
                 ));
             }
+
             Bytecode::ReadRef => {
                 let operand_index = self.temp_stack.pop().unwrap();
                 let operand_sig = self.local_types[operand_index].clone();
@@ -665,7 +741,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     _ => {}
                 }
             }
-            Bytecode::Exists(struct_index, type_params) => {
+            Bytecode::Exists(struct_index) => {
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.local_types.push(SignatureToken::Bool);
@@ -675,21 +751,33 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     temp_index,
                     operand_index,
                     *struct_index,
-                    *type_params,
+                    None,
                 ));
             }
-            Bytecode::MutBorrowGlobal(idx, type_params)
-            | Bytecode::ImmBorrowGlobal(idx, type_params) => {
+
+            Bytecode::ExistsGeneric(idx) => {
+                let struct_instantiation = self.module.struct_instantiation_at(*idx);
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.local_types.push(SignatureToken::Bool);
+                self.temp_count += 1;
+                self.temp_stack.push(temp_index);
+                self.code.push(StacklessBytecode::Exists(
+                    temp_index,
+                    operand_index,
+                    struct_instantiation.def,
+                    Some(struct_instantiation.type_parameters),
+                ));
+            }
+
+            Bytecode::MutBorrowGlobal(idx) | Bytecode::ImmBorrowGlobal(idx) => {
                 let struct_definition = self.module.struct_def_at(*idx);
 
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.local_types
                     .push(SignatureToken::MutableReference(Box::new(
-                        SignatureToken::Struct(
-                            struct_definition.struct_handle,
-                            self.get_type_params(*type_params),
-                        ),
+                        SignatureToken::Struct(struct_definition.struct_handle),
                     )));
                 self.temp_stack.push(temp_index);
                 self.temp_count += 1;
@@ -697,32 +785,84 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     temp_index,
                     operand_index,
                     *idx,
-                    *type_params,
+                    None,
                 ));
             }
-            Bytecode::MoveFrom(idx, type_params) => {
+
+            Bytecode::MutBorrowGlobalGeneric(idx) | Bytecode::ImmBorrowGlobalGeneric(idx) => {
+                let struct_instantiation = self.module.struct_instantiation_at(*idx);
+                let struct_definition = self.module.struct_def_at(struct_instantiation.def);
+
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.local_types
+                    .push(SignatureToken::MutableReference(Box::new(
+                        SignatureToken::StructInstantiation(
+                            struct_definition.struct_handle,
+                            self.get_type_params(struct_instantiation.type_parameters),
+                        ),
+                    )));
+                self.temp_stack.push(temp_index);
+                self.temp_count += 1;
+                self.code.push(StacklessBytecode::BorrowGlobal(
+                    temp_index,
+                    operand_index,
+                    struct_instantiation.def,
+                    Some(struct_instantiation.type_parameters),
+                ));
+            }
+
+            Bytecode::MoveFrom(idx) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
-                self.local_types.push(SignatureToken::Struct(
-                    struct_definition.struct_handle,
-                    self.get_type_params(*type_params),
-                ));
+                self.local_types
+                    .push(SignatureToken::Struct(struct_definition.struct_handle));
                 self.temp_count += 1;
                 self.code.push(StacklessBytecode::MoveFrom(
                     temp_index,
                     operand_index,
                     *idx,
-                    *type_params,
+                    None,
                 ));
             }
-            Bytecode::MoveToSender(idx, type_params) => {
+
+            Bytecode::MoveFromGeneric(idx) => {
+                let struct_instantiation = self.module.struct_instantiation_at(*idx);
+                let struct_definition = self.module.struct_def_at(struct_instantiation.def);
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(SignatureToken::StructInstantiation(
+                    struct_definition.struct_handle,
+                    self.get_type_params(struct_instantiation.type_parameters),
+                ));
+                self.temp_count += 1;
+                self.code.push(StacklessBytecode::MoveFrom(
+                    temp_index,
+                    operand_index,
+                    struct_instantiation.def,
+                    Some(struct_instantiation.type_parameters),
+                ));
+            }
+
+            Bytecode::MoveToSender(idx) => {
                 let value_operand_index = self.temp_stack.pop().unwrap();
                 self.code.push(StacklessBytecode::MoveToSender(
                     value_operand_index,
                     *idx,
-                    *type_params,
+                    None,
+                ));
+            }
+
+            Bytecode::MoveToSenderGeneric(idx) => {
+                let struct_instantiation = self.module.struct_instantiation_at(*idx);
+                let value_operand_index = self.temp_stack.pop().unwrap();
+                self.code.push(StacklessBytecode::MoveToSender(
+                    value_operand_index,
+                    struct_instantiation.def,
+                    Some(struct_instantiation.type_parameters),
                 ));
             }
 
@@ -759,13 +899,15 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             SignatureToken::MutableReference(b) => SignatureToken::MutableReference(Box::new(
                 self.instantiate_type_params(&**b, actuals),
             )),
-            SignatureToken::Struct(handle_index, type_args) => SignatureToken::Struct(
-                *handle_index,
-                type_args
-                    .iter()
-                    .map(|a| self.instantiate_type_params(a, actuals))
-                    .collect(),
-            ),
+            SignatureToken::StructInstantiation(handle_index, type_args) => {
+                SignatureToken::StructInstantiation(
+                    *handle_index,
+                    type_args
+                        .iter()
+                        .map(|a| self.instantiate_type_params(a, actuals))
+                        .collect(),
+                )
+            }
             _ => sig.clone(),
         }
     }
@@ -827,8 +969,13 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     let new_dest_vec = dest_vec.iter().map(|t| temp_to_local(t)).collect();
                     new_code.push(Unpack(new_dest_vec, *s, *l, temp_to_local(src)));
                 }
-                BorrowField(dest, src, f) => {
-                    new_code.push(BorrowField(temp_to_local(dest), temp_to_local(src), *f));
+                BorrowField(dest, src, s, offset) => {
+                    new_code.push(BorrowField(
+                        temp_to_local(dest),
+                        temp_to_local(src),
+                        *s,
+                        *offset,
+                    ));
                 }
                 MoveToSender(t, s, l) => {
                     new_code.push(MoveToSender(temp_to_local(t), *s, *l));

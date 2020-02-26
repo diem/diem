@@ -10,11 +10,10 @@ use std::{collections::BTreeMap, ops::Bound};
 use vm::{
     access::*,
     file_format::{
-        AddressPoolIndex, CodeOffset, CompiledModule, CompiledScript, FieldDefinitionIndex,
-        FunctionDefinition, FunctionDefinitionIndex, IdentifierIndex, StructDefinition,
+        AddressPoolIndex, CodeOffset, CompiledModule, CompiledScript, FunctionDefinition,
+        FunctionDefinitionIndex, IdentifierIndex, MemberCount, StructDefinition,
         StructDefinitionIndex, TableIndex,
     },
-    internals::ModuleIndex,
 };
 
 //***************************************************************************
@@ -108,8 +107,8 @@ impl<Location: Clone + Eq> StructSourceMap<Location> {
         self.fields.push(field_loc)
     }
 
-    pub fn get_field_location(&self, field_index: FieldDefinitionIndex) -> Option<Location> {
-        self.fields.get(field_index.into_index()).cloned()
+    pub fn get_field_location(&self, field_index: MemberCount) -> Option<Location> {
+        self.fields.get(field_index as usize).cloned()
     }
 
     pub fn dummy_struct_map(
@@ -126,7 +125,7 @@ impl<Location: Clone + Eq> StructSourceMap<Location> {
             Ok(count) => (0..count).for_each(|_| self.fields.push(default_loc.clone())),
         }
 
-        for i in 0..struct_handle.type_formals.len() {
+        for i in 0..struct_handle.type_parameters.len() {
             let name = format!("Ty{}", i);
             self.add_type_parameter((name, default_loc.clone()))
         }
@@ -226,17 +225,16 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
         default_loc: Location,
     ) -> Result<()> {
         let function_handle = module.function_handle_at(function_def.function);
-        let function_signature = module.function_signature_at(function_handle.signature);
         let function_code = &function_def.code;
 
         // Generate names for each type parameter
-        for i in 0..function_signature.type_formals.len() {
+        for i in 0..function_handle.type_parameters.len() {
             let name = format!("Ty{}", i);
             self.add_type_parameter((name, default_loc.clone()))
         }
 
         if !function_def.is_native() {
-            let locals = module.locals_signature_at(function_code.locals);
+            let locals = module.signature_at(function_code.locals);
             for i in 0..locals.0.len() {
                 let name = format!("loc{}", i);
                 self.add_local_mapping((name, default_loc.clone()))
@@ -417,7 +415,7 @@ impl<Location: Clone + Eq> SourceMap<Location> {
     pub fn get_struct_field_name(
         &self,
         struct_def_idx: StructDefinitionIndex,
-        field_idx: FieldDefinitionIndex,
+        field_idx: MemberCount,
     ) -> Option<Location> {
         self.struct_map
             .get(&struct_def_idx.0)

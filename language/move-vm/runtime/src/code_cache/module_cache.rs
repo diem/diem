@@ -100,26 +100,19 @@ impl<'alloc> VMModuleCache<'alloc> {
         let struct_handle = module.struct_handle_at(struct_def.struct_handle);
         let struct_name = module.identifier_at(struct_handle.name);
 
-        let (field_count, fields) = match &struct_def.field_information {
+        let fields = match &struct_def.field_information {
             StructFieldInformation::Native => unreachable!("native structs have been removed"),
-            StructFieldInformation::Declared {
-                field_count,
-                fields,
-            } => (*field_count, *fields),
+            StructFieldInformation::Declared(fields) => fields,
         };
 
-        let ty_args: Vec<_> = (0..struct_handle.type_formals.len())
+        let ty_args: Vec<_> = (0..struct_handle.type_parameters.len())
             .map(|idx| Type::TyParam(idx as usize))
             .collect();
 
         let mut field_tys = vec![];
-        for field in module.field_def_range(field_count, fields) {
-            let ty = self.resolve_signature_token(
-                module,
-                &module.type_signature_at(field.signature).0,
-                &ty_args,
-                data_view,
-            )?;
+        for field in fields {
+            let ty =
+                self.resolve_signature_token(module, &field.signature.0, &ty_args, data_view)?;
             // `field_types` is initally empty, a single element is pushed
             // per loop iteration and the number of iterations is bound to
             // the max size of `module.field_def_range()`.
@@ -251,7 +244,11 @@ impl<'alloc> VMModuleCache<'alloc> {
                 let inner_ty = self.resolve_signature_token(module, sub_tok, ty_args, data_view)?;
                 Type::MutableReference(Box::new(inner_ty))
             }
-            SignatureToken::Struct(sh_idx, tys) => {
+            SignatureToken::Struct(sh_idx) => {
+                let struct_ty = self.resolve_struct_handle(module, *sh_idx, &[], data_view)?;
+                Type::Struct(Box::new(struct_ty))
+            }
+            SignatureToken::StructInstantiation(sh_idx, tys) => {
                 let ty_args: Vec<_> = tys
                     .iter()
                     .map(|tok| self.resolve_signature_token(module, tok, ty_args, data_view))

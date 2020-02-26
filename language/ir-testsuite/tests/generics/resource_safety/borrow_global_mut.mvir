@@ -1,5 +1,5 @@
 module M {
-    struct Foo<T: unrestricted> { x: T }
+    struct Foo<T: copyable> { x: T }
 
     f(): u64 acquires Foo {
         let foo_ref: &mut Self.Foo<u64>;

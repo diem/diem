@@ -4,5 +4,5 @@
 
 module M {
     struct Foo<T> { x: T }
-    struct Bar<T1, T2, T3: resource, T4: unrestricted> { x1: T2, x2: T3, x3: T4, x4: T1 }
+    struct Bar<T1, T2, T3: resource, T4: copyable> { x1: T2, x2: T3, x3: T4, x4: T1 }
 }

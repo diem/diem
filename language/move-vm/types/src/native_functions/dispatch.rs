@@ -19,7 +19,7 @@ use std::collections::VecDeque;
 use vm::{
     access::ModuleAccess,
     errors::VMResult,
-    file_format::{FunctionSignature, Kind, SignatureToken, StructHandleIndex},
+    file_format::{FunctionSignature, Kind, Signature, SignatureToken, StructHandleIndex},
     gas_schedule::{
         AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, NativeCostIndex,
     },
@@ -164,6 +164,27 @@ impl NativeFunction {
         }
     }
 
+    pub fn parameters<T: ModuleAccess>(
+        self,
+        m: Option<&ModuleView<T>>,
+    ) -> VMResult<Option<Signature>> {
+        Ok(self.signature(m)?.map(|res| Signature(res.parameters)))
+    }
+
+    pub fn return_<T: ModuleAccess>(
+        self,
+        m: Option<&ModuleView<T>>,
+    ) -> VMResult<Option<Signature>> {
+        Ok(self.signature(m)?.map(|res| Signature(res.return_)))
+    }
+
+    pub fn type_parameters<T: ModuleAccess>(
+        self,
+        m: Option<&ModuleView<T>>,
+    ) -> VMResult<Option<Vec<Kind>>> {
+        Ok(self.signature(m)?.map(|res| res.type_parameters))
+    }
+
     /// The signature as defined in it's declaring module.
     /// It should NOT be generally inspected outside of it's declaring module as the various
     /// struct handle indexes are not remapped into the local context.
@@ -182,7 +203,7 @@ impl NativeFunction {
             None => return Ok(None),
             Some(res) => res,
         };
-        if self.num_args() == res.arg_types.len() {
+        if self.num_args() == res.parameters.len() {
             Ok(Some(res))
         } else {
             Err(
@@ -203,9 +224,9 @@ impl NativeFunction {
             }};
             ($kinds:expr, $args:expr, $ret:expr) => {{
                 FunctionSignature {
-                    return_types: $ret,
-                    arg_types: $args,
-                    type_formals: $kinds,
+                    return_: $ret,
+                    parameters: $args,
+                    type_parameters: $kinds,
                 }
             }};
         }
@@ -284,12 +305,12 @@ impl NativeFunction {
                 vec![]
             ),
             Self::AccountWriteEvent => simple!(
-                vec![Kind::Unrestricted],
+                vec![Kind::Copyable],
                 vec![Vector(Box::new(U8)), U64, TypeParameter(0)],
                 vec![]
             ),
             Self::AccountSaveAccount => {
-                let type_formals = vec![Kind::All];
+                let type_parameters = vec![Kind::All];
                 let self_t_idx = struct_handle_idx(
                     m?,
                     &CORE_CODE_ADDRESS,
@@ -302,16 +323,16 @@ impl NativeFunction {
                     account_module_name().as_str(),
                     account_balance_struct_name().as_str(),
                 )?;
-                let arg_types = vec![
-                    Struct(balance_t_idx, vec![TypeParameter(0)]),
-                    Struct(self_t_idx, vec![]),
+                let parameters = vec![
+                    StructInstantiation(balance_t_idx, vec![TypeParameter(0)]),
+                    Struct(self_t_idx),
                     Address,
                 ];
-                let return_types = vec![];
+                let return_ = vec![];
                 FunctionSignature {
-                    type_formals,
-                    arg_types,
-                    return_types,
+                    type_parameters,
+                    parameters,
+                    return_,
                 }
             }
         })
@@ -330,7 +351,7 @@ fn struct_handle_idx<T: ModuleAccess>(
             && handle.module_id().name().as_str() == module_name
             && handle.module_id().address() == module_address
         {
-            Some(StructHandleIndex::new(idx as u16))
+            Some(StructHandleIndex(idx as u16))
         } else {
             None
         }

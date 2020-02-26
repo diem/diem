@@ -2,4 +2,4 @@
 main() {
     return;
 }
-// check: NUMBER_OF_TYPE_ACTUALS_MISMATCH
+// check: NUMBER_OF_TYPE_ARGUMENTS_MISMATCH

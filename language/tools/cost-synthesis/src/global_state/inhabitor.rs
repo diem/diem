@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use vm::{
     access::*,
     file_format::{
-        MemberCount, ModuleHandle, SignatureToken, StructDefinition, StructDefinitionIndex,
+        ModuleHandle, SignatureToken, StructDefinition, StructDefinitionIndex,
         StructFieldInformation, StructHandleIndex, TableIndex,
     },
 };
@@ -143,28 +143,21 @@ impl<'txn> RandomInhabitor<'txn> {
             SignatureToken::Reference(_sig) | SignatureToken::MutableReference(_sig) => {
                 panic!("cannot inhabit references");
             }
-            SignatureToken::Struct(struct_handle_idx, _) => {
+            SignatureToken::Struct(struct_handle_idx)
+            | SignatureToken::StructInstantiation(struct_handle_idx, _) => {
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
                     .root_module
                     .struct_def_at(self.resolve_struct_handle(*struct_handle_idx).2);
-                let (num_fields, index) = match struct_definition.field_information {
+                let fields = match &struct_definition.field_information {
                     StructFieldInformation::Native => {
                         panic!("[Struct Generation] Unexpected native struct")
                     }
-                    StructFieldInformation::Declared {
-                        field_count,
-                        fields,
-                    } => (field_count as usize, fields),
+                    StructFieldInformation::Declared(fields) => fields,
                 };
-                let fields = self
-                    .root_module
-                    .field_def_range(num_fields as MemberCount, index);
                 let (layouts, values): (Vec<_>, Vec<_>) = fields
                     .iter()
-                    .map(|field| {
-                        self.inhabit(&self.root_module.type_signature_at(field.signature).0)
-                    })
+                    .map(|field| self.inhabit(&field.signature.0))
                     .unzip();
                 (
                     Type::Struct(Box::new(StructType {

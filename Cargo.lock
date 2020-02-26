@@ -469,6 +469,7 @@ dependencies = [
  "invalid-mutations 0.1.0",
  "libra-types 0.1.0",
  "mirai-annotations 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "move-core-types 0.1.0",
  "move-vm-types 0.1.0",
  "petgraph 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",

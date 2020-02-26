@@ -9,6 +9,6 @@ proptest! {
     #[test]
     fn valid_duplication(module in CompiledModule::valid_strategy(20)) {
         let duplication_checker = DuplicationChecker::new(&module);
-        prop_assert!(!duplication_checker.verify().is_empty());
+        prop_assert!(duplication_checker.verify().is_empty());
     }
 }

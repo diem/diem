@@ -159,7 +159,7 @@ impl<'a> ModuleGenerator<'a> {
         }
     }
 
-    fn type_formals(&mut self) -> Vec<(TypeVar, Kind)> {
+    fn type_parameters(&mut self) -> Vec<(TypeVar, Kind)> {
         // Don't generate type parameters if we're generating simple types only
         if self.options.simple_types_only {
             vec![]
@@ -169,7 +169,7 @@ impl<'a> ModuleGenerator<'a> {
                 num_ty_params,
                 (
                     Spanned::unsafe_no_loc(TypeVar_::new(self.identifier())),
-                    Kind::Unrestricted,
+                    Kind::Copyable,
                 )
             )
         }
@@ -178,7 +178,7 @@ impl<'a> ModuleGenerator<'a> {
     // All functions will have unit return type, and an empty body with the exception of a return.
     // We'll scoop this out and replace it later on in the compiled module that we generate.
     fn function_signature(&mut self) -> FunctionSignature {
-        let ty_params = self.type_formals();
+        let ty_params = self.type_parameters();
         let number_of_args = self.index(self.options.max_function_call_size);
         let mut formals: Vec<(Var, Type)> = init!(number_of_args, {
             let param_name = Spanned::unsafe_no_loc(Var_::new(self.identifier()));
@@ -247,12 +247,12 @@ impl<'a> ModuleGenerator<'a> {
 
     fn struct_def(&mut self, is_nominal_resource: bool) {
         let name = StructName::new(self.identifier());
-        let type_formals = self.type_formals();
-        let fields = self.struct_fields(&type_formals);
+        let type_parameters = self.type_parameters();
+        let fields = self.struct_fields(&type_parameters);
         let strct = StructDefinition_ {
             is_nominal_resource,
             name,
-            type_formals,
+            type_formals: type_parameters,
             fields,
             invariants: vec![],
         };

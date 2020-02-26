@@ -11,10 +11,8 @@ use std::collections::BTreeMap;
 use vm::{
     errors::{append_err_info, bounds_error},
     file_format::{
-        AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinitionIndex,
-        FunctionHandleIndex, FunctionSignatureIndex, IdentifierIndex, LocalsSignatureIndex,
-        ModuleHandleIndex, StructFieldInformation, StructHandleIndex, TableIndex,
-        TypeSignatureIndex,
+        AddressPoolIndex, CompiledModule, CompiledModuleMut, FunctionHandleIndex, IdentifierIndex,
+        ModuleHandleIndex, SignatureIndex, StructHandleIndex, TableIndex,
     },
     internals::ModuleIndex,
     views::{ModuleView, SignatureTokenView},
@@ -23,6 +21,7 @@ use vm::{
 
 mod code_unit;
 pub use code_unit::{ApplyCodeUnitBoundsContext, CodeUnitBoundsMutation};
+use vm::file_format::SignatureToken;
 
 /// Represents the number of pointers that exist out from a node of a particular kind.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -51,22 +50,17 @@ impl PointerKind {
         match src_kind {
             ModuleHandle => &[One(AddressPool), One(Identifier)],
             StructHandle => &[One(ModuleHandle), One(Identifier)],
-            FunctionHandle => &[One(ModuleHandle), One(Identifier), One(FunctionSignature)],
-            StructDefinition => &[One(StructHandle), One(FieldDefinition)],
-            FieldDefinition => &[One(StructHandle), One(Identifier), One(TypeSignature)],
-            FunctionDefinition => &[One(FunctionHandle), One(LocalsSignature)],
-            TypeSignature => &[Optional(StructHandle)],
-            FunctionSignature => &[Star(StructHandle)],
-            LocalsSignature => &[Star(StructHandle)],
-            Identifier => &[],
-            ByteArrayPool => &[],
-            AddressPool => &[],
-            // LocalPool and CodeDefinition are function-local, and this only works for
-            // module-scoped indexes.
-            // XXX maybe don't treat LocalPool and CodeDefinition the same way as the others?
-            LocalPool => &[],
-            CodeDefinition => &[],
-            TypeParameter => &[],
+            FunctionHandle => &[
+                One(ModuleHandle),
+                One(Identifier),
+                One(Signature),
+                One(Signature),
+            ],
+            StructDefinition => &[One(StructHandle), Star(StructHandle)],
+            FunctionDefinition => &[One(FunctionHandle), One(Signature)],
+            Signature => &[Star(StructHandle)],
+            FieldHandle => &[One(StructHandle)],
+            _ => &[],
         }
     }
 
@@ -82,12 +76,10 @@ pub static VALID_POINTER_SRCS: &[IndexKind] = &[
     IndexKind::ModuleHandle,
     IndexKind::StructHandle,
     IndexKind::FunctionHandle,
+    IndexKind::FieldHandle,
     IndexKind::StructDefinition,
-    IndexKind::FieldDefinition,
     IndexKind::FunctionDefinition,
-    IndexKind::TypeSignature,
-    IndexKind::FunctionSignature,
-    IndexKind::LocalsSignature,
+    IndexKind::Signature,
 ];
 
 #[cfg(test)]
@@ -172,23 +164,17 @@ pub struct ApplyOutOfBoundsContext {
     mutations: Option<Vec<OutOfBoundsMutation>>,
 
     // Some precomputations done for signatures.
-    type_sig_structs: Vec<TypeSignatureIndex>,
-    function_sig_structs: Vec<FunctionSignatureTokenIndex>,
-    locals_sig_structs: Vec<(LocalsSignatureIndex, usize)>,
+    sig_structs: Vec<(SignatureIndex, usize)>,
 }
 
 impl ApplyOutOfBoundsContext {
     pub fn new(module: CompiledModule, mutations: Vec<OutOfBoundsMutation>) -> Self {
-        let type_sig_structs: Vec<_> = Self::type_sig_structs(&module).collect();
-        let function_sig_structs: Vec<_> = Self::function_sig_structs(&module).collect();
-        let locals_sig_structs: Vec<_> = Self::locals_sig_structs(&module).collect();
+        let sig_structs: Vec<_> = Self::sig_structs(&module).collect();
 
         Self {
             module: module.into_inner(),
             mutations: Some(mutations),
-            type_sig_structs,
-            function_sig_structs,
-            locals_sig_structs,
+            sig_structs,
         }
     }
 
@@ -225,11 +211,7 @@ impl ApplyOutOfBoundsContext {
         mutations: Vec<OutOfBoundsMutation>,
     ) -> Vec<VMStatus> {
         let src_count = match src_kind {
-            // Only the signature indexes that have structs in them (i.e. are in *_sig_structs)
-            // are going to be modifiable, so pick among them.
-            IndexKind::TypeSignature => self.type_sig_structs.len(),
-            IndexKind::FunctionSignature => self.function_sig_structs.len(),
-            IndexKind::LocalsSignature => self.locals_sig_structs.len(),
+            IndexKind::Signature => self.sig_structs.len(),
             // For the other sorts it's always possible to change an index.
             src_kind => self.module.kind_count(src_kind),
         };
@@ -270,7 +252,7 @@ impl ApplyOutOfBoundsContext {
 
         // These are default values, but some of the match arms below mutate them.
         let mut src_idx = src_idx;
-        let mut err = bounds_error(
+        let err = bounds_error(
             dst_kind,
             new_idx as usize,
             dst_count,
@@ -284,102 +266,40 @@ impl ApplyOutOfBoundsContext {
 
         match (src_kind, dst_kind) {
             (ModuleHandle, AddressPool) => {
-                self.module.module_handles[src_idx].address = AddressPoolIndex::new(new_idx);
+                self.module.module_handles[src_idx].address = AddressPoolIndex(new_idx);
             }
             (ModuleHandle, Identifier) => {
-                self.module.module_handles[src_idx].name = IdentifierIndex::new(new_idx)
+                self.module.module_handles[src_idx].name = IdentifierIndex(new_idx)
             }
             (StructHandle, ModuleHandle) => {
-                self.module.struct_handles[src_idx].module = ModuleHandleIndex::new(new_idx)
+                self.module.struct_handles[src_idx].module = ModuleHandleIndex(new_idx)
             }
             (StructHandle, Identifier) => {
-                self.module.struct_handles[src_idx].name = IdentifierIndex::new(new_idx)
+                self.module.struct_handles[src_idx].name = IdentifierIndex(new_idx)
             }
             (FunctionHandle, ModuleHandle) => {
-                self.module.function_handles[src_idx].module = ModuleHandleIndex::new(new_idx)
+                self.module.function_handles[src_idx].module = ModuleHandleIndex(new_idx)
             }
             (FunctionHandle, Identifier) => {
-                self.module.function_handles[src_idx].name = IdentifierIndex::new(new_idx)
+                self.module.function_handles[src_idx].name = IdentifierIndex(new_idx)
             }
-            (FunctionHandle, FunctionSignature) => {
-                self.module.function_handles[src_idx].signature =
-                    FunctionSignatureIndex::new(new_idx)
+            (FunctionHandle, Signature) => {
+                self.module.function_handles[src_idx].parameters = SignatureIndex(new_idx);
             }
             (StructDefinition, StructHandle) => {
-                self.module.struct_defs[src_idx].struct_handle = StructHandleIndex::new(new_idx)
-            }
-            (StructDefinition, FieldDefinition) => {
-                let field_count = match self.module.struct_defs[src_idx].field_information {
-                    // There is no way to set an invalid index for a native struct definition
-                    StructFieldInformation::Native => return None,
-                    StructFieldInformation::Declared { field_count, .. } => field_count,
-                };
-
-                // Consider a situation with 3 fields, and with first field = 1 and count = 2.
-                // A graphical representation of that might be:
-                //
-                //      |___|___|___|
-                //  idx   0   1   2
-                //          ^       ^
-                //          |       |
-                // first field = 1  (first field + count) = 3
-                //
-                // Given that the lowest value for new_idx is 3 (offset 0), the goal is to make
-                // (first field + count) at least 4, or (new_idx + 1). This means that the first
-                // field would be new_idx + 1 - count.
-                let end_idx = new_idx + 1;
-                let first_new_idx = end_idx - field_count;
-                let field_information = StructFieldInformation::Declared {
-                    field_count,
-                    fields: FieldDefinitionIndex::new(first_new_idx),
-                };
-                self.module.struct_defs[src_idx].field_information = field_information;
-                err = VMStatus::new(StatusCode::RANGE_OUT_OF_BOUNDS);
-                err.set_message(format!(
-                    "Range {}-{} out of bounds for {} while indexing {}",
-                    dst_kind, dst_count, first_new_idx as usize, end_idx as usize,
-                ));
-            }
-            (FieldDefinition, StructHandle) => {
-                self.module.field_defs[src_idx].struct_ = StructHandleIndex::new(new_idx)
-            }
-            (FieldDefinition, Identifier) => {
-                self.module.field_defs[src_idx].name = IdentifierIndex::new(new_idx)
-            }
-            (FieldDefinition, TypeSignature) => {
-                self.module.field_defs[src_idx].signature = TypeSignatureIndex::new(new_idx)
+                self.module.struct_defs[src_idx].struct_handle = StructHandleIndex(new_idx)
             }
             (FunctionDefinition, FunctionHandle) => {
-                self.module.function_defs[src_idx].function = FunctionHandleIndex::new(new_idx)
+                self.module.function_defs[src_idx].function = FunctionHandleIndex(new_idx)
             }
-            (FunctionDefinition, LocalsSignature) => {
-                self.module.function_defs[src_idx].code.locals = LocalsSignatureIndex::new(new_idx)
+            (FunctionDefinition, Signature) => {
+                self.module.function_defs[src_idx].code.locals = SignatureIndex(new_idx)
             }
-            (TypeSignature, StructHandle) => {
-                // For this and the other signatures, the source index will be picked from
-                // only the ones that have struct handles in them.
-                src_idx = self.type_sig_structs[src_idx].into_index();
-                self.module.type_signatures[src_idx]
-                    .0
-                    .debug_set_sh_idx(StructHandleIndex::new(new_idx));
-            }
-            (FunctionSignature, StructHandle) => match &self.function_sig_structs[src_idx] {
-                FunctionSignatureTokenIndex::ReturnType(actual_src_idx, ret_idx) => {
-                    src_idx = actual_src_idx.into_index();
-                    self.module.function_signatures[src_idx].return_types[*ret_idx]
-                        .debug_set_sh_idx(StructHandleIndex::new(new_idx));
-                }
-                FunctionSignatureTokenIndex::ArgType(actual_src_idx, arg_idx) => {
-                    src_idx = actual_src_idx.into_index();
-                    self.module.function_signatures[src_idx].arg_types[*arg_idx]
-                        .debug_set_sh_idx(StructHandleIndex::new(new_idx));
-                }
-            },
-            (LocalsSignature, StructHandle) => {
-                let (actual_src_idx, arg_idx) = self.locals_sig_structs[src_idx];
+            (Signature, StructHandle) => {
+                let (actual_src_idx, arg_idx) = self.sig_structs[src_idx];
                 src_idx = actual_src_idx.into_index();
-                self.module.locals_signatures[src_idx].0[arg_idx]
-                    .debug_set_sh_idx(StructHandleIndex::new(new_idx));
+                self.module.signatures[src_idx].0[arg_idx]
+                    .debug_set_sh_idx(StructHandleIndex(new_idx));
             }
             _ => panic!("Invalid pointer kind: {:?} -> {:?}", src_kind, dst_kind),
         }
@@ -387,60 +307,16 @@ impl ApplyOutOfBoundsContext {
         Some(append_err_info(err, src_kind, src_idx))
     }
 
-    /// Returns the indexes of type signatures that contain struct handles inside them.
-    fn type_sig_structs<'b>(
-        module: &'b CompiledModule,
-    ) -> impl Iterator<Item = TypeSignatureIndex> + 'b {
-        let module_view = ModuleView::new(module);
-        module_view
-            .type_signatures()
-            .enumerate()
-            .filter_map(|(idx, signature)| {
-                signature
-                    .token()
-                    .struct_handle()
-                    .map(|_| TypeSignatureIndex::new(idx as u16))
-            })
-    }
-
-    /// Returns the indexes of function signatures that contain struct handles inside them.
-    fn function_sig_structs<'b>(
-        module: &'b CompiledModule,
-    ) -> impl Iterator<Item = FunctionSignatureTokenIndex> + 'b {
-        let module_view = ModuleView::new(module);
-        let return_tokens =
-            module_view
-                .function_signatures()
-                .enumerate()
-                .flat_map(|(idx, signature)| {
-                    let idx = FunctionSignatureIndex::new(idx as u16);
-                    Self::find_struct_tokens(signature.return_tokens(), move |arg_idx| {
-                        FunctionSignatureTokenIndex::ReturnType(idx, arg_idx)
-                    })
-                });
-        let arg_tokens =
-            module_view
-                .function_signatures()
-                .enumerate()
-                .flat_map(|(idx, signature)| {
-                    let idx = FunctionSignatureIndex::new(idx as u16);
-                    Self::find_struct_tokens(signature.arg_tokens(), move |arg_idx| {
-                        FunctionSignatureTokenIndex::ArgType(idx, arg_idx)
-                    })
-                });
-        return_tokens.chain(arg_tokens)
-    }
-
     /// Returns the indexes of locals signatures that contain struct handles inside them.
-    fn locals_sig_structs<'b>(
+    fn sig_structs<'b>(
         module: &'b CompiledModule,
-    ) -> impl Iterator<Item = (LocalsSignatureIndex, usize)> + 'b {
+    ) -> impl Iterator<Item = (SignatureIndex, usize)> + 'b {
         let module_view = ModuleView::new(module);
         module_view
-            .locals_signatures()
+            .signatures()
             .enumerate()
             .flat_map(|(idx, signature)| {
-                let idx = LocalsSignatureIndex::new(idx as u16);
+                let idx = SignatureIndex(idx as u16);
                 Self::find_struct_tokens(signature.tokens(), move |arg_idx| (idx, arg_idx))
             })
     }
@@ -456,12 +332,19 @@ impl ApplyOutOfBoundsContext {
         tokens
             .into_iter()
             .enumerate()
-            .filter_map(move |(arg_idx, token)| token.struct_handle().map(|_| map_fn(arg_idx)))
+            .filter_map(move |(arg_idx, token)| {
+                struct_handle(token.signature_token()).map(|_| map_fn(arg_idx))
+            })
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-enum FunctionSignatureTokenIndex {
-    ReturnType(FunctionSignatureIndex, usize),
-    ArgType(FunctionSignatureIndex, usize),
+fn struct_handle(token: &SignatureToken) -> Option<StructHandleIndex> {
+    use SignatureToken::*;
+
+    match token {
+        Struct(sh_idx) => Some(*sh_idx),
+        StructInstantiation(sh_idx, _) => Some(*sh_idx),
+        Reference(token) | MutableReference(token) => struct_handle(token),
+        Bool | U8 | U64 | U128 | Address | Vector(_) | TypeParameter(_) => None,
+    }
 }

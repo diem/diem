@@ -32,9 +32,7 @@ fn compile_script_expr_addition() {
     assert_eq!(compiled_script.main().code.code.len(), 9);
     assert!(compiled_script.struct_handles().is_empty());
     assert_eq!(compiled_script.function_handles().len(), 1);
-    assert!(compiled_script.type_signatures().is_empty());
-    assert_eq!(compiled_script.function_signatures().len(), 1); // method sig
-    assert_eq!(compiled_script.locals_signatures().len(), 1); // local variables sig
+    assert_eq!(compiled_script.signatures().len(), 2);
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
     assert_eq!(compiled_script.identifiers().len(), 2); // the name of `main()` + the name of the "<SELF>" module
     assert_eq!(compiled_script.address_pool().len(), 1); // the empty address of <SELF> module
@@ -62,9 +60,7 @@ fn compile_script_expr_combined() {
     assert_eq!(compiled_script.main().code.code.len(), 13);
     assert!(compiled_script.struct_handles().is_empty());
     assert_eq!(compiled_script.function_handles().len(), 1);
-    assert!(compiled_script.type_signatures().is_empty());
-    assert_eq!(compiled_script.function_signatures().len(), 1); // method sig
-    assert_eq!(compiled_script.locals_signatures().len(), 1); // local variables sig
+    assert_eq!(compiled_script.signatures().len(), 2);
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
     assert_eq!(compiled_script.identifiers().len(), 2); // the name of `main()` + the name of the "<SELF>" module
     assert_eq!(compiled_script.address_pool().len(), 1); // the empty address of <SELF> module
@@ -89,9 +85,7 @@ fn compile_script_borrow_local() {
     assert_eq!(count_locals(&compiled_script), 2);
     assert!(compiled_script.struct_handles().is_empty());
     assert_eq!(compiled_script.function_handles().len(), 1);
-    assert!(compiled_script.type_signatures().is_empty());
-    assert_eq!(compiled_script.function_signatures().len(), 1); // method sig
-    assert_eq!(compiled_script.locals_signatures().len(), 1); // local variables sig
+    assert_eq!(compiled_script.signatures().len(), 2);
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
     assert_eq!(compiled_script.identifiers().len(), 2); // the name of `main()` + the name of the "<SELF>" module
     assert_eq!(compiled_script.address_pool().len(), 1); // the empty address of <SELF> module
@@ -116,9 +110,7 @@ fn compile_script_borrow_local_mutable() {
     assert_eq!(count_locals(&compiled_script), 2);
     assert!(compiled_script.struct_handles().is_empty());
     assert_eq!(compiled_script.function_handles().len(), 1);
-    assert!(compiled_script.type_signatures().is_empty());
-    assert_eq!(compiled_script.function_signatures().len(), 1); // method sig
-    assert_eq!(compiled_script.locals_signatures().len(), 1); // local variables sig
+    assert_eq!(compiled_script.signatures().len(), 2);
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
     assert_eq!(compiled_script.identifiers().len(), 2); // the name of `main()` + the name of the "<SELF>" module
     assert_eq!(compiled_script.address_pool().len(), 1); // the empty address of <SELF> module
@@ -144,9 +136,7 @@ fn compile_script_borrow_reference() {
     assert_eq!(count_locals(&compiled_script), 3);
     assert!(compiled_script.struct_handles().is_empty());
     assert_eq!(compiled_script.function_handles().len(), 1);
-    assert!(compiled_script.type_signatures().is_empty());
-    assert_eq!(compiled_script.function_signatures().len(), 1); // method sig
-    assert_eq!(compiled_script.locals_signatures().len(), 1); // local variables sig
+    assert_eq!(compiled_script.signatures().len(), 2);
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
     assert_eq!(compiled_script.identifiers().len(), 2); // the name of `main()` + the name of the "<SELF>" module
     assert_eq!(compiled_script.address_pool().len(), 1); // the empty address of <SELF> module
@@ -228,6 +218,40 @@ fn compile_borrow_field() {
             }
 
             public borrow_mut_field(arg: &mut Self.FooCoin) {
+                let field_ref: &mut u64;
+                field_ref = &mut move(arg).value;
+                _ = move(field_ref);
+                return;
+            }
+        }
+        ",
+    );
+    let compiled_module_res = compile_module_string(&code);
+    let _compiled_module = compiled_module_res.unwrap();
+}
+
+#[test]
+fn compile_borrow_field_generic() {
+    let code = String::from(
+        "
+        module Foobar {
+            resource FooCoin<T> { value: u64 }
+
+            public borrow_immut_field(arg: &Self.FooCoin<u64>) {
+                let field_ref: &u64;
+                field_ref = &move(arg).value;
+                _ = move(field_ref);
+                return;
+            }
+
+            public borrow_immut_field_from_mut_ref(arg: &mut Self.FooCoin<u128>) {
+                let field_ref: &u64;
+                field_ref = &move(arg).value;
+                _ = move(field_ref);
+                return;
+            }
+
+            public borrow_mut_field(arg: &mut Self.FooCoin<address>) {
                 let field_ref: &mut u64;
                 field_ref = &mut move(arg).value;
                 _ = move(field_ref);

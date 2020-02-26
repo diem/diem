@@ -342,7 +342,7 @@ impl BaseType_ {
         use BuiltinTypeName_::*;
 
         let kind = match b_ {
-            U8 | U64 | U128 | Bool | Address => sp(loc, Kind_::Unrestricted),
+            U8 | U64 | U128 | Bool | Address => sp(loc, Kind_::Copyable),
             Vector => {
                 assert!(
                     ty_args.len() == 1,
@@ -398,7 +398,7 @@ impl SingleType_ {
 
     pub fn kind(&self, loc: Loc) -> Kind {
         match self {
-            SingleType_::Ref(_, _) => sp(loc, Kind_::Unrestricted),
+            SingleType_::Ref(_, _) => sp(loc, Kind_::Copyable),
             SingleType_::Base(b) => b.value.kind(),
         }
     }

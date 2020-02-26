@@ -102,7 +102,7 @@ pub enum Tok {
     U64,
     U128,
     Vector,
-    Unrestricted,
+    Copyable,
     While,
     LBrace,
     Pipe,
@@ -455,7 +455,7 @@ fn get_name_token(name: &str) -> Tok {
         "u8" => Tok::U8,
         "u64" => Tok::U64,
         "u128" => Tok::U128,
-        "unrestricted" => Tok::Unrestricted,
+        "copyable" => Tok::Copyable,
         "while" => Tok::While,
         _ => Tok::NameValue,
     }

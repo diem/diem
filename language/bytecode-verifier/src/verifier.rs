@@ -4,8 +4,9 @@
 //! This module contains the public APIs supported by the bytecode verifier.
 use crate::{
     check_duplication::DuplicationChecker, code_unit_verifier::CodeUnitVerifier,
-    instantiation_loops::InstantiationLoopChecker, resources::ResourceTransitiveChecker,
-    signature::SignatureChecker, struct_defs::RecursiveStructDefChecker,
+    instantiation_loops::InstantiationLoopChecker, resolver::Resolver,
+    resources::ResourceTransitiveChecker, signature::SignatureChecker,
+    struct_defs::RecursiveStructDefChecker,
 };
 use anyhow::Error;
 use libra_types::{
@@ -13,12 +14,11 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use move_vm_types::native_functions::dispatch::NativeFunction;
-use std::{collections::BTreeMap, fmt};
+use std::collections::BTreeMap;
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{append_err_info, verification_error},
     file_format::{CompiledModule, CompiledScript, SignatureToken},
-    resolver::Resolver,
     views::{ModuleView, ViewInternals},
     IndexKind,
 };
@@ -48,7 +48,7 @@ impl VerifiedModule {
             errors.append(&mut RecursiveStructDefChecker::new(&module).verify());
         }
         if errors.is_empty() {
-            errors.append(&mut InstantiationLoopChecker::new(&module).verify())
+            errors.append(&mut InstantiationLoopChecker::new(&module).verify());
         }
         if errors.is_empty() {
             errors.append(&mut CodeUnitVerifier::verify(&module));
@@ -95,12 +95,6 @@ impl VerifiedModule {
 impl ModuleAccess for VerifiedModule {
     fn as_module(&self) -> &CompiledModule {
         self.as_inner()
-    }
-}
-
-impl fmt::Display for VerifiedModule {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "VerifiedModule: {}", self.0)
     }
 }
 
@@ -180,21 +174,16 @@ impl ScriptAccess for VerifiedScript {
     }
 }
 
-impl fmt::Display for VerifiedScript {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "VerifiedScript: {}", self.0)
-    }
-}
-
 /// This function checks the extra requirements on the signature of the main function of a script.
 pub fn verify_main_signature(script: &CompiledScript) -> Vec<VMStatus> {
     let function_handle = &script.function_handle_at(script.main().function);
-    let function_signature = &script.function_signature_at(function_handle.signature);
-    if !function_signature.return_types.is_empty() {
+    let return_ = script.signature_at(function_handle.return_);
+    if !return_.is_empty() {
         return vec![VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE)];
     }
 
-    for arg_type in &function_signature.arg_types {
+    let arguments = script.signature_at(function_handle.parameters);
+    for arg_type in &arguments.0 {
         if !(arg_type.is_primitive()
             || *arg_type == SignatureToken::Vector(Box::new(SignatureToken::U8)))
         {
@@ -269,26 +258,89 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VMSt
                 StatusCode::MISSING_DEPENDENCY,
             )),
             Some(vm_native_function) => {
-                let declared_function_signature =
-                    native_function_definition_view.signature().as_inner();
-                let expected_function_signature_res =
-                    vm_native_function.signature(Some(module_view));
-                let expected_function_signature_opt = match expected_function_signature_res {
-                    Ok(opt) => opt,
+                // check parameters
+                let def_params = native_function_definition_view.parameters();
+                let native_params = match vm_native_function.parameters(Some(module_view)) {
+                    Ok(opt) => match opt {
+                        None => {
+                            errors.push(verification_error(
+                                IndexKind::FunctionHandle,
+                                idx,
+                                StatusCode::TYPE_MISMATCH,
+                            ));
+                            continue;
+                        }
+                        Some(sig) => sig,
+                    },
                     Err(e) => {
                         errors.push(e);
                         continue;
                     }
                 };
-                let matching_signatures = expected_function_signature_opt
-                    .map(|e| &e == declared_function_signature)
-                    .unwrap_or(false);
-                if !matching_signatures {
+                if def_params != &native_params {
                     errors.push(verification_error(
                         IndexKind::FunctionHandle,
                         idx,
                         StatusCode::TYPE_MISMATCH,
-                    ))
+                    ));
+                    continue;
+                }
+
+                // check return_
+                let def_return_ = native_function_definition_view.return_();
+                let native_return_ = match vm_native_function.return_(Some(module_view)) {
+                    Ok(opt) => match opt {
+                        None => {
+                            errors.push(verification_error(
+                                IndexKind::FunctionHandle,
+                                idx,
+                                StatusCode::TYPE_MISMATCH,
+                            ));
+                            continue;
+                        }
+                        Some(sig) => sig,
+                    },
+                    Err(e) => {
+                        errors.push(e);
+                        continue;
+                    }
+                };
+                if def_return_ != &native_return_ {
+                    errors.push(verification_error(
+                        IndexKind::FunctionHandle,
+                        idx,
+                        StatusCode::TYPE_MISMATCH,
+                    ));
+                    continue;
+                }
+
+                // check type parameters
+                let def_type_parameters = native_function_definition_view.type_parameters();
+                let native_type_parameters =
+                    match vm_native_function.type_parameters(Some(module_view)) {
+                        Ok(opt) => match opt {
+                            None => {
+                                errors.push(verification_error(
+                                    IndexKind::FunctionHandle,
+                                    idx,
+                                    StatusCode::TYPE_MISMATCH,
+                                ));
+                                continue;
+                            }
+                            Some(t_params) => t_params,
+                        },
+                        Err(e) => {
+                            errors.push(e);
+                            continue;
+                        }
+                    };
+                if def_type_parameters != &native_type_parameters {
+                    errors.push(verification_error(
+                        IndexKind::FunctionHandle,
+                        idx,
+                        StatusCode::TYPE_MISMATCH,
+                    ));
+                    continue;
                 }
             }
         }
@@ -344,7 +396,7 @@ fn verify_struct_kind(
         if let Some(struct_definition_view) = owner_module_view.struct_definition(struct_name) {
             if struct_handle_view.is_nominal_resource()
                 != struct_definition_view.is_nominal_resource()
-                || struct_handle_view.type_formals() != struct_definition_view.type_formals()
+                || struct_handle_view.type_parameters() != struct_definition_view.type_parameters()
             {
                 errors.push(verification_error(
                     IndexKind::StructHandle,
@@ -372,6 +424,7 @@ fn verify_function_visibility_and_type(
     for (idx, function_handle_view) in module_view.function_handles().enumerate() {
         let owner_module_id = function_handle_view.module_id();
         if !dependency_map.contains_key(&owner_module_id) {
+            // REVIEW: when does it happen? definitions? should we check correctness?
             continue;
         }
         let function_name = function_handle_view.name();
@@ -379,31 +432,41 @@ fn verify_function_visibility_and_type(
         let owner_module_view = ModuleView::new(owner_module);
         if let Some(function_definition_view) = owner_module_view.function_definition(function_name)
         {
-            if function_definition_view.is_public() {
-                let function_definition_signature = function_definition_view.signature().as_inner();
-                match resolver
-                    .import_function_signature(owner_module, &function_definition_signature)
-                {
-                    Ok(imported_function_signature) => {
-                        let function_handle_signature = function_handle_view.signature().as_inner();
-                        if imported_function_signature != *function_handle_signature {
-                            errors.push(verification_error(
-                                IndexKind::FunctionHandle,
-                                idx,
-                                StatusCode::TYPE_MISMATCH,
-                            ));
-                        }
-                    }
-                    Err(err) => {
-                        errors.push(append_err_info(err, IndexKind::FunctionHandle, idx));
-                    }
-                }
-            } else {
+            if !function_definition_view.is_public() {
                 errors.push(verification_error(
                     IndexKind::FunctionHandle,
                     idx,
                     StatusCode::VISIBILITY_MISMATCH,
                 ));
+                continue;
+            }
+            // same type parameter constraints
+            if function_definition_view.type_parameters() != function_handle_view.type_parameters()
+            {
+                errors.push(verification_error(
+                    IndexKind::FunctionHandle,
+                    idx,
+                    StatusCode::TYPE_MISMATCH,
+                ));
+                continue;
+            }
+            // same parameters
+            let handle_params = function_handle_view.parameters();
+            let def_params = function_definition_view.parameters();
+            if let Err(err) =
+                resolver.compare_cross_module_signatures(handle_params, def_params, owner_module)
+            {
+                errors.push(append_err_info(err, IndexKind::FunctionHandle, idx));
+                continue;
+            }
+            // same return_
+            let handle_return = function_handle_view.return_();
+            let def_return = function_definition_view.return_();
+            if let Err(err) =
+                resolver.compare_cross_module_signatures(handle_return, def_return, owner_module)
+            {
+                errors.push(append_err_info(err, IndexKind::FunctionHandle, idx));
+                continue;
             }
         } else {
             errors.push(verification_error(
@@ -411,8 +474,10 @@ fn verify_function_visibility_and_type(
                 idx,
                 StatusCode::LOOKUP_FAILED,
             ));
+            continue;
         }
     }
+
     errors
 }
 

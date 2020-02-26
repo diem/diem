@@ -1035,9 +1035,9 @@ impl<'env> ModuleTranslator<'env> {
                     emitln!(self.writer, s);
                 }
             }
-            BorrowField(dest, src, field_def_index) => {
-                let struct_env = self.module_env.get_struct_of_field(field_def_index);
-                let field_env = &struct_env.get_field_by_def_idx(*field_def_index);
+            BorrowField(dest, src, struct_def_index, field_offset) => {
+                let struct_env = self.module_env.get_struct_by_def_idx(*struct_def_index);
+                let field_env = &struct_env.get_field_by_offset(*field_offset);
                 emitln!(
                     self.writer,
                     "call {} := BorrowField({}, {});",

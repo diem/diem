@@ -57,8 +57,12 @@ fn is_valid(s: &str) -> bool {
 /// A regex describing what identifiers are allowed. Used for proptests.
 // TODO: "<SELF>" is coded as an exception. It should be removed once CompiledScript goes away.
 #[cfg(any(test, feature = "fuzzing"))]
+#[allow(dead_code)]
 pub(crate) static ALLOWED_IDENTIFIERS: &str =
     r"(?:[a-zA-Z][a-zA-Z0-9_]*)|(?:_[a-zA-Z0-9_]+)|(?:<SELF>)";
+#[cfg(any(test, feature = "fuzzing"))]
+pub(crate) static ALLOWED_NO_SELF_IDENTIFIERS: &str =
+    r"(?:[a-zA-Z][a-zA-Z0-9_]*)|(?:_[a-zA-Z0-9_]+)";
 
 /// An owned identifier.
 ///
@@ -207,7 +211,7 @@ impl Arbitrary for Identifier {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with((): ()) -> Self::Strategy {
-        ALLOWED_IDENTIFIERS
+        ALLOWED_NO_SELF_IDENTIFIERS
             .prop_map(|s| {
                 // Identifier::new will verify that generated identifiers are correct.
                 Identifier::new(s).unwrap()

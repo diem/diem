@@ -64,7 +64,7 @@ impl<'a> StructDefGraphBuilder<'a> {
         // DuplicationChecker
         for (idx, struct_def) in module.struct_defs().iter().enumerate() {
             let sh_idx = struct_def.struct_handle;
-            handle_to_def.insert(sh_idx, StructDefinitionIndex::new(idx as TableIndex));
+            handle_to_def.insert(sh_idx, StructDefinitionIndex(idx as TableIndex));
         }
 
         Self {
@@ -115,7 +115,15 @@ impl<'a> StructDefGraphBuilder<'a> {
                     .with_message("Reference field when checking recursive structs".to_owned()))
             }
             T::Vector(inner) => self.add_signature_token(neighbors, cur_idx, inner)?,
-            T::Struct(sh_idx, inners) => {
+            T::Struct(sh_idx) => {
+                if let Some(struct_def_idx) = self.handle_to_def.get(sh_idx) {
+                    neighbors
+                        .entry(cur_idx)
+                        .or_insert_with(BTreeSet::new)
+                        .insert(*struct_def_idx);
+                }
+            }
+            T::StructInstantiation(sh_idx, inners) => {
                 if let Some(struct_def_idx) = self.handle_to_def.get(sh_idx) {
                     neighbors
                         .entry(cur_idx)

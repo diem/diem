@@ -395,7 +395,7 @@ pub fn infer_kind(context: &Context, subst: &Subst, ty: Type) -> Option<Kind> {
     use Type_ as T;
     let loc = ty.loc;
     match unfold_type(subst, ty).value {
-        T::Unit | T::Ref(_, _) => Some(sp(loc, Kind_::Unrestricted)),
+        T::Unit | T::Ref(_, _) => Some(sp(loc, Kind_::Copyable)),
         T::Var(_) => panic!("ICE unfold_type failed, which is impossible"),
         T::UnresolvedError | T::Anything => None,
         T::Param(TParam { kind, .. }) | T::Apply(Some(kind), _, _) => Some(kind),
@@ -422,12 +422,12 @@ pub fn infer_kind(context: &Context, subst: &Subst, ty: Type) -> Option<Kind> {
                 .zip(contraints)
                 .filter_map(|(t, constraint_opt)| infer_kind(context, subst, t).or(constraint_opt))
                 .map(|k| match k {
-                    sp!(loc, K::Unrestricted) => sp(loc, K::Affine),
+                    sp!(loc, K::Copyable) => sp(loc, K::Affine),
                     k => k,
                 })
                 .max_by(most_general_kind);
             Some(match max {
-                Some(sp!(_, K::Unrestricted)) => unreachable!(),
+                Some(sp!(_, K::Copyable)) => unreachable!(),
                 None | Some(sp!(_, K::Affine)) => {
                     sp(type_name_declared_loc(context, &n), K::Affine)
                 }
@@ -441,7 +441,7 @@ fn most_general_kind(k1: &Kind, k2: &Kind) -> std::cmp::Ordering {
     use std::cmp::Ordering as O;
     use Kind_ as K;
     match (&k1.value, &k2.value) {
-        (K::Unrestricted, _) | (_, K::Unrestricted) => panic!("ICE structs cannot be unrestricted"),
+        (K::Copyable, _) | (_, K::Copyable) => panic!("ICE structs cannot be copyable"),
 
         (K::Unknown, K::Unknown) => O::Equal,
         (K::Unknown, _) => O::Greater,
@@ -717,21 +717,21 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: Type, k: Kind) {
         Some(k) => k,
     };
     match (b_kind.value, &k.value) {
-        (_, K::Unrestricted) => panic!("ICE tparams cannot have unrestricted constraints"),
+        (_, K::Copyable) => panic!("ICE tparams cannot have copyable constraints"),
 
         // _ <: all
-        // unrestricted <: affine
+        // copyable <: affine
         // affine <: affine
         // linear <: linear
         (_, K::Unknown)
-        | (K::Unrestricted, K::Affine)
+        | (K::Copyable, K::Affine)
         | (K::Affine, K::Affine)
         | (K::Resource, K::Resource) => (),
 
-        // unrestricted </: linear
+        // copyable </: linear
         // affine </: linear
         // all </: linear
-        (K::Unrestricted, K::Resource) | (K::Affine, K::Resource) | (K::Unknown, K::Resource) => {
+        (K::Copyable, K::Resource) | (K::Affine, K::Resource) | (K::Unknown, K::Resource) => {
             let ty_str = error_format(&b, &context.subst);
             let cmsg = format!(
                 "The {} type {} does not satisfy the constraint '{}'",
@@ -757,7 +757,7 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: Type, k: Kind) {
         // linear </: affine
         (bk @ K::Unknown, K::Affine) | (bk @ K::Resource, K::Affine) => {
             let resource_msg = match bk {
-                K::Unrestricted | K::Affine => panic!("ICE covered above"),
+                K::Copyable | K::Affine => panic!("ICE covered above"),
                 K::Resource => "resource ",
                 K::Unknown => "",
             };
@@ -794,7 +794,7 @@ fn solve_copyable_constraint(context: &mut Context, loc: Loc, msg: String, s: Ty
         Some(k) => k,
     };
     match kind {
-        sp!(_, Kind_::Unrestricted) | sp!(_, Kind_::Affine) => (),
+        sp!(_, Kind_::Copyable) | sp!(_, Kind_::Affine) => (),
         sp!(rloc, Kind_::Unknown) | sp!(rloc, Kind_::Resource) => {
             let ty_str = error_format(&s, &context.subst);
             context.error(vec![
@@ -822,7 +822,7 @@ fn solve_implicitly_copyable_constraint(
         Some(k) => k,
     };
     match kind {
-        sp!(_, Kind_::Unrestricted) => (),
+        sp!(_, Kind_::Copyable) => (),
         sp!(kloc, Kind_::Affine) => {
             let ty_str = error_format(&ty, &context.subst);
             context.error(vec![

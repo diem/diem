@@ -16,7 +16,7 @@ module Option {
         return T<E> { v: move(v) };
     }
 
-    public unwrap_or<E: unrestricted>(x: Self.T<E>, e: E): E {
+    public unwrap_or<E: copyable>(x: Self.T<E>, e: E): E {
         let v: vector<E>;
         T<E> { v: v } = move(x);
         if (Vector.is_empty<E>(&v)) {
@@ -25,7 +25,7 @@ module Option {
         return Vector.pop_back<E>(&mut v);
     }
 
-    public really_none<E: unrestricted>(): Self.T<E> {
+    public really_none<E: copyable>(): Self.T<E> {
         return Self.unwrap_or<Self.T<E>>(Self.none<Self.T<E>>(), Self.none<E>());
     }
 }
