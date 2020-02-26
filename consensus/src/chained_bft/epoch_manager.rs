@@ -12,8 +12,8 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::{choose_leader, RotatingProposer},
         },
-        network::{ConsensusTypes, IncomingBlockRetrievalRequest, NetworkSender},
-        network_interface::ConsensusNetworkSender,
+        network::{IncomingBlockRetrievalRequest, NetworkSender},
+        network_interface::{ConsensusMsg, ConsensusNetworkSender},
         persistent_liveness_storage::{
             LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
         },
@@ -34,9 +34,9 @@ use libra_types::{
     crypto_proxies::{EpochInfo, ValidatorVerifier},
     validator_change::{ValidatorChangeProof, VerifierType},
 };
-use network::{proto::ConsensusMsg, validator_network::Event};
+use network::protocols::network::Event;
 use safety_rules::SafetyRulesManager;
-use std::{cmp::Ordering, convert::TryFrom, sync::Arc, time::Duration};
+use std::{cmp::Ordering, sync::Arc, time::Duration};
 
 /// The enum contains two processor
 /// StartupSyncProcessor is used to process events in order to sync up with peer if we can't recover from local consensusdb
@@ -82,8 +82,8 @@ pub struct EpochManager<T> {
     epoch_info: EpochInfo,
     config: ConsensusConfig,
     time_service: Arc<ClockTimeService>,
-    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
-    network_sender: ConsensusNetworkSender,
+    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
+    network_sender: ConsensusNetworkSender<T>,
     timeout_sender: channel::Sender<Round>,
     txn_manager: Box<dyn TxnManager<Payload = T>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
@@ -98,8 +98,8 @@ impl<T: Payload> EpochManager<T> {
         epoch_info: EpochInfo,
         config: ConsensusConfig,
         time_service: Arc<ClockTimeService>,
-        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
-        network_sender: ConsensusNetworkSender,
+        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
+        network_sender: ConsensusNetworkSender<T>,
         timeout_sender: channel::Sender<Round>,
         txn_manager: Box<dyn TxnManager<Payload = T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
@@ -185,14 +185,7 @@ impl<T: Payload> EpochManager<T> {
                 return;
             }
         };
-        let msg = ConsensusTypes::ValidatorChangeProof::<T>(Box::new(proof));
-        let msg = match ConsensusMsg::try_from(msg) {
-            Ok(bytes) => bytes,
-            Err(e) => {
-                warn!("Failed to serialize ValidatorChangeProof: {:?}", e);
-                return;
-            }
-        };
+        let msg = ConsensusMsg::ValidatorChangeProof::<T>(Box::new(proof));
         if let Err(e) = self.network_sender.send_to(peer_id, msg) {
             warn!(
                 "Failed to send a epoch retrieval to peer {}: {:?}",
@@ -220,14 +213,7 @@ impl<T: Payload> EpochManager<T> {
                     start_epoch: self.epoch(),
                     end_epoch: different_epoch,
                 };
-                let request = ConsensusTypes::EpochRetrievalRequest::<T>(Box::new(request));
-                let msg = match ConsensusMsg::try_from(request) {
-                    Ok(msg) => msg,
-                    Err(e) => {
-                        warn!("Fail to serialize EpochRetrievalRequest: {:?}", e);
-                        return;
-                    }
-                };
+                let msg = ConsensusMsg::EpochRetrievalRequest::<T>(Box::new(request));
                 if let Err(e) = self.network_sender.send_to(peer_id, msg) {
                     warn!(
                         "Failed to send a epoch retrieval to peer {}: {:?}",
@@ -378,7 +364,7 @@ impl<T: Payload> EpochManager<T> {
     pub async fn process_message(
         &mut self,
         peer_id: AccountAddress,
-        consensus_msg: ConsensusTypes<T>,
+        consensus_msg: ConsensusMsg<T>,
     ) {
         if let Some(event) = self.process_epoch(peer_id, consensus_msg).await {
             match event.verify(&self.epoch_info.verifier) {
@@ -391,12 +377,10 @@ impl<T: Payload> EpochManager<T> {
     async fn process_epoch(
         &mut self,
         peer_id: AccountAddress,
-        msg: ConsensusTypes<T>,
+        msg: ConsensusMsg<T>,
     ) -> Option<UnverifiedEvent<T>> {
         match msg {
-            ConsensusTypes::ProposalMsg(_)
-            | ConsensusTypes::SyncInfo(_)
-            | ConsensusTypes::VoteMsg(_) => {
+            ConsensusMsg::ProposalMsg(_) | ConsensusMsg::SyncInfo(_) | ConsensusMsg::VoteMsg(_) => {
                 let event: UnverifiedEvent<T> = msg.into();
                 if event.epoch() == self.epoch() {
                     return Some(event);
@@ -404,7 +388,7 @@ impl<T: Payload> EpochManager<T> {
                     self.process_different_epoch(event.epoch(), peer_id).await;
                 }
             }
-            ConsensusTypes::ValidatorChangeProof(proof) => {
+            ConsensusMsg::ValidatorChangeProof(proof) => {
                 let msg_epoch = proof.epoch().map_err(|e| warn!("{:?}", e)).ok()?;
                 if msg_epoch == self.epoch() {
                     self.start_new_epoch(*proof).await
@@ -412,7 +396,7 @@ impl<T: Payload> EpochManager<T> {
                     self.process_different_epoch(msg_epoch, peer_id).await
                 }
             }
-            ConsensusTypes::EpochRetrievalRequest(request) => {
+            ConsensusMsg::EpochRetrievalRequest(request) => {
                 if request.end_epoch <= self.epoch() {
                     self.process_epoch_retrieval(*request, peer_id).await
                 } else {

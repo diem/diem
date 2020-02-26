@@ -11,12 +11,14 @@ use crate::{
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
         },
-        network::{ConsensusTypes, NetworkSender},
+        network::{IncomingBlockRetrievalRequest, NetworkSender},
+        network_interface::ConsensusMsg,
         persistent_liveness_storage::{
             LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
         },
     },
     counters,
+    state_replication::StateComputer,
     state_replication::TxnManager,
     util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
@@ -26,7 +28,9 @@ use anyhow::{ensure, format_err, Context, Result};
 use consensus_types::{
     accumulator_extension_proof::AccumulatorExtensionProof,
     block::Block,
+    block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
     common::{Author, Payload, Round},
+    executed_block::ExecutedBlock,
     proposal_msg::ProposalMsg,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
@@ -37,25 +41,14 @@ use consensus_types::{
 };
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
-use libra_prost_ext::MessageExt;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier},
     transaction::TransactionStatus,
-};
-use network::proto::ConsensusMsg;
-
-use crate::{
-    chained_bft::network::IncomingBlockRetrievalRequest, state_replication::StateComputer,
-};
-use consensus_types::{
-    block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
-    executed_block::ExecutedBlock,
 };
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
 use std::{
-    convert::TryFrom,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -94,12 +87,12 @@ impl<T: Payload> UnverifiedEvent<T> {
     }
 }
 
-impl<T> From<ConsensusTypes<T>> for UnverifiedEvent<T> {
-    fn from(value: ConsensusTypes<T>) -> Self {
+impl<T> From<ConsensusMsg<T>> for UnverifiedEvent<T> {
+    fn from(value: ConsensusMsg<T>) -> Self {
         match value {
-            ConsensusTypes::ProposalMsg(m) => UnverifiedEvent::ProposalMsg(m),
-            ConsensusTypes::VoteMsg(m) => UnverifiedEvent::VoteMsg(m),
-            ConsensusTypes::SyncInfo(m) => UnverifiedEvent::SyncInfo(m),
+            ConsensusMsg::ProposalMsg(m) => UnverifiedEvent::ProposalMsg(m),
+            ConsensusMsg::VoteMsg(m) => UnverifiedEvent::VoteMsg(m),
+            ConsensusMsg::SyncInfo(m) => UnverifiedEvent::SyncInfo(m),
             _ => unreachable!("Unexpected conversion"),
         }
     }
@@ -983,13 +976,12 @@ impl<T: Payload> EventProcessor<T> {
         }
 
         let response = Box::new(BlockRetrievalResponse::new(status, blocks));
-        if let Err(e) = ConsensusMsg::try_from(ConsensusTypes::BlockRetrievalResponse(response))
-            .and_then(|proto| Ok(proto.to_bytes()?))
-            .and_then(|bytes| {
+        if let Err(e) =
+            lcs::to_bytes(&ConsensusMsg::BlockRetrievalResponse(response)).and_then(|bytes| {
                 request
                     .response_sender
-                    .send(Ok(bytes))
-                    .map_err(|e| format_err!("{:?}", e))
+                    .send(Ok(bytes.into()))
+                    .map_err(|e| lcs::Error::Custom(format!("{:?}", e)))
             })
         {
             warn!("Failed to serialize BlockRetrievalResponse: {:?}", e);
