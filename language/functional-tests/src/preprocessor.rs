@@ -5,13 +5,14 @@ use crate::{
     checker::Directive,
     common::LineSp,
     config::{
+        block_metadata::{build_block_metadata, is_new_block, Entry as BlockEntry},
         global::{Config as GlobalConfig, Entry as GlobalConfigEntry},
         transaction::{
             is_new_transaction, Config as TransactionConfig, Entry as TransactionConfigEntry,
         },
     },
     errors::*,
-    evaluator::Transaction,
+    evaluator::{Command, Transaction},
 };
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
@@ -32,94 +33,142 @@ pub struct RawTransactionInput {
     pub text: Vec<String>,
 }
 
+pub enum RawCommand {
+    Transaction(RawTransactionInput),
+    BlockMetadata(Vec<BlockEntry>),
+}
+
+fn is_empty_command(cmd: &RawCommand) -> bool {
+    match cmd {
+        RawCommand::Transaction(txn) => txn.text.is_empty() && txn.config_entries.is_empty(),
+        RawCommand::BlockMetadata(entries) => entries.is_empty(),
+    }
+}
+
+fn check_raw_transaction(txn: &RawTransactionInput) -> Result<()> {
+    if txn.text.is_empty() {
+        if !txn.config_entries.is_empty() {
+            return Err(ErrorKind::Other(
+                "config options attached to empty transaction".to_string(),
+            )
+            .into());
+        }
+        return Err(ErrorKind::Other("empty transaction".to_string()).into());
+    }
+    Ok(())
+}
+
+fn check_raw_command(cmd: &RawCommand) -> Result<()> {
+    match cmd {
+        RawCommand::Transaction(txn) => check_raw_transaction(txn),
+        RawCommand::BlockMetadata(entries) => {
+            if entries.len() < 2 {
+                Err(
+                    ErrorKind::Other("block prologue doesn't have enough arguments".to_string())
+                        .into(),
+                )
+            } else {
+                Ok(())
+            }
+        }
+    }
+}
+
+fn new_command(input: &str) -> Option<RawCommand> {
+    if is_new_transaction(input) {
+        return Some(RawCommand::Transaction(RawTransactionInput {
+            config_entries: vec![],
+            text: vec![],
+        }));
+    }
+    if is_new_block(input) {
+        return Some(RawCommand::BlockMetadata(vec![]));
+    }
+    None
+}
+
 /// Parses the input string into three parts: a global config, directives and transactions.
 pub fn split_input(
     lines: impl IntoIterator<Item = impl AsRef<str>>,
 ) -> Result<(
     Vec<GlobalConfigEntry>,
     Vec<LineSp<Directive>>,
-    Vec<RawTransactionInput>,
+    Vec<RawCommand>,
 )> {
     let mut global_config = vec![];
     let mut directives = vec![];
-    let mut text = vec![];
-    let mut transaction_config = vec![];
-    let mut transactions = vec![];
-
+    let mut commands = vec![];
     let mut first_transaction = true;
+
+    let mut command = RawCommand::Transaction(RawTransactionInput {
+        config_entries: vec![],
+        text: vec![],
+    });
 
     for (line_idx, line) in lines.into_iter().enumerate() {
         let line = line.as_ref();
-        if is_new_transaction(line) {
-            if text.is_empty() {
-                if !transaction_config.is_empty() {
-                    return Err(ErrorKind::Other(
-                        "config options attached to empty transaction".to_string(),
-                    )
-                    .into());
-                }
-                if first_transaction {
-                    first_transaction = false;
-                    continue;
-                }
-                return Err(ErrorKind::Other("empty transaction".to_string()).into());
+        if let Some(new_command) = new_command(line) {
+            if first_transaction && is_empty_command(&command) {
+                command = new_command;
+                continue;
             }
+            check_raw_command(&command)?;
+            commands.push(command);
+            command = new_command;
             first_transaction = false;
-            transactions.push(RawTransactionInput {
-                config_entries: transaction_config,
-                text,
-            });
-            text = vec![];
-            transaction_config = vec![];
             continue;
         }
+
         if let Ok(entry) = line.parse::<GlobalConfigEntry>() {
             global_config.push(entry);
             continue;
         }
-        if let Ok(entry) = line.parse::<TransactionConfigEntry>() {
-            transaction_config.push(entry);
-            continue;
-        }
+
         if let Ok(dirs) = Directive::parse_line(line) {
             directives.extend(dirs.into_iter().map(|sp| sp.into_line_sp(line_idx)));
             continue;
         }
-        if !line.trim().is_empty() {
-            text.push(line.to_string());
+
+        match &mut command {
+            RawCommand::Transaction(txn) => {
+                if let Ok(entry) = line.parse::<TransactionConfigEntry>() {
+                    txn.config_entries.push(entry);
+                    continue;
+                }
+                if !line.trim().is_empty() {
+                    txn.text.push(line.to_string());
+                    continue;
+                }
+            }
+            RawCommand::BlockMetadata(entries) => {
+                if let Ok(entry) = line.parse::<BlockEntry>() {
+                    entries.push(entry);
+                    continue;
+                }
+            }
         }
     }
 
-    if text.is_empty() {
-        return Err(ErrorKind::Other(
-            (if transaction_config.is_empty() {
-                "empty transaction"
-            } else {
-                "config options attached to empty transaction"
-            })
-            .to_string(),
-        )
-        .into());
-    }
-    transactions.push(RawTransactionInput {
-        config_entries: transaction_config,
-        text,
-    });
+    check_raw_command(&command)?;
+    commands.push(command);
 
-    Ok((global_config, directives, transactions))
+    Ok((global_config, directives, commands))
 }
 
 pub fn build_transactions<'a>(
     config: &'a GlobalConfig,
-    txn_inputs: &[RawTransactionInput],
-) -> Result<Vec<Transaction<'a>>> {
-    txn_inputs
+    command_inputs: &[RawCommand],
+) -> Result<Vec<Command<'a>>> {
+    command_inputs
         .iter()
-        .map(|txn_input| {
-            Ok(Transaction {
+        .map(|command_input| match command_input {
+            RawCommand::Transaction(txn_input) => Ok(Command::Transaction(Transaction {
                 config: TransactionConfig::build(config, &txn_input.config_entries)?,
                 input: substitute_addresses(config, &txn_input.text.join("\n")),
-            })
+            })),
+            RawCommand::BlockMetadata(entries) => Ok(Command::BlockMetadata(build_block_metadata(
+                config, &entries,
+            )?)),
         })
         .collect()
 }

@@ -16,10 +16,11 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    block_metadata::BlockMetadata,
     language_storage::ModuleId,
     transaction::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
-        SignedTransaction, TransactionOutput, TransactionStatus,
+        SignedTransaction, Transaction as LibraTransaction, TransactionOutput, TransactionStatus,
     },
     vm_error::{StatusCode, VMStatus},
 };
@@ -39,6 +40,13 @@ use vm::views::ModuleView;
 pub struct Transaction<'a> {
     pub config: TransactionConfig<'a>,
     pub input: String,
+}
+
+/// Commands that can be evaluated by the testing infra.
+#[derive(Debug)]
+pub enum Command<'a> {
+    Transaction(Transaction<'a>),
+    BlockMetadata(BlockMetadata),
 }
 
 /// Indicates one step in the pipeline the given move module/program goes through.
@@ -506,11 +514,38 @@ fn eval_transaction<TComp: Compiler>(
     Ok(Status::Success)
 }
 
+pub fn eval_block_metadata(
+    executor: &mut FakeExecutor,
+    block_metadata: BlockMetadata,
+    log: &mut EvaluationLog,
+) -> Result<Status> {
+    let outputs =
+        executor.execute_transaction_block(vec![LibraTransaction::BlockMetadata(block_metadata)]);
+
+    match outputs {
+        Ok(mut outputs) => {
+            let output = outputs
+                .pop()
+                .expect("There should be one output in the result");
+            executor.apply_write_set(output.write_set());
+            log.append(EvaluationOutput::Output(OutputType::TransactionOutput(
+                Box::new(output),
+            )));
+            Ok(Status::Success)
+        }
+        Err(err) => {
+            let err: Error = ErrorKind::VerificationError(err).into();
+            log.append(EvaluationOutput::Error(Box::new(err)));
+            Ok(Status::Failure)
+        }
+    }
+}
+
 /// Feeds all given transactions through the pipeline and produces an EvaluationLog.
 pub fn eval<TComp: Compiler>(
     config: &GlobalConfig,
     mut compiler: TComp,
-    transactions: &[Transaction],
+    commands: &[Command],
 ) -> Result<EvaluationLog> {
     let mut log = EvaluationLog { outputs: vec![] };
 
@@ -527,9 +562,18 @@ pub fn eval<TComp: Compiler>(
         exec.add_account_data(&data);
     }
 
-    for (idx, transaction) in transactions.iter().enumerate() {
-        let status = eval_transaction(&mut compiler, &mut exec, idx, transaction, &mut log)?;
-        log.append(EvaluationOutput::Status(status));
+    for (idx, command) in commands.iter().enumerate() {
+        match command {
+            Command::Transaction(transaction) => {
+                let status =
+                    eval_transaction(&mut compiler, &mut exec, idx, transaction, &mut log)?;
+                log.append(EvaluationOutput::Status(status));
+            }
+            Command::BlockMetadata(block_metadata) => {
+                let status = eval_block_metadata(&mut exec, block_metadata.clone(), &mut log)?;
+                log.append(EvaluationOutput::Status(status));
+            }
+        }
     }
 
     Ok(log)

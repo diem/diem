@@ -64,9 +64,9 @@ pub fn functional_tests<TComp: Compiler>(
 
     let (config, directives, transactions) = split_input(&lines)?;
     let config = GlobalConfig::build(&config)?;
-    let transactions = build_transactions(&config, &transactions)?;
+    let commands = build_transactions(&config, &transactions)?;
 
-    let log = eval(&config, compiler, &transactions)?;
+    let log = eval(&config, compiler, &commands)?;
 
     let res = match_output(&log, &directives);
 
