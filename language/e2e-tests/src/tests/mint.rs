@@ -1,10 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::executor::FakeExecutor;
 use crate::{
     account::{Account, AccountData},
     common_transactions::mint_txn,
+    executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
     transaction_status_eq,
 };

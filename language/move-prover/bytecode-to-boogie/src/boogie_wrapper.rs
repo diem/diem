@@ -3,19 +3,22 @@
 
 //! Wrapper around the boogie program. Allows to call boogie and analyze the output.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::option::Option::None;
-use std::process::Command;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    option::Option::None,
+    process::Command,
+};
 
 use codespan::{
     ByteIndex, ByteOffset, ByteSpan, CodeMap, ColumnIndex, FileName, LineIndex, RawIndex,
 };
-use codespan_reporting::termcolor::{ColorChoice, StandardStream};
-use codespan_reporting::{Diagnostic, Label, Severity};
+use codespan_reporting::{
+    termcolor::{ColorChoice, StandardStream},
+    Diagnostic, Label, Severity,
+};
 use itertools::Itertools;
-use log::warn;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use num::BigInt;
 use pretty::RcDoc;
 use regex::Regex;
@@ -23,10 +26,12 @@ use regex::Regex;
 use move_ir_types::ast::Loc;
 use vm::file_format::{FunctionDefinitionIndex, StructDefinitionIndex};
 
-use crate::cli::{abort_on_error, abort_with_error};
-use crate::code_writer::CodeWriter;
-use crate::driver::PSEUDO_PRELUDE_MODULE;
-use crate::env::{FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, ModuleIndex};
+use crate::{
+    cli::{abort_on_error, abort_with_error},
+    code_writer::CodeWriter,
+    driver::PSEUDO_PRELUDE_MODULE,
+    env::{FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, ModuleIndex},
+};
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a
 /// Wadler-style pretty printer. Our simple usage doesn't require any lifetime management.

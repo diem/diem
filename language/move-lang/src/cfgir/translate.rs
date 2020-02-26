@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     cfgir::{
         self,
@@ -11,10 +10,9 @@ use crate::{
     errors::Errors,
     hlir::ast as H,
     parser::ast::{FunctionName, ModuleIdent, StructName},
-    shared::*,
+    shared::{unique_map::UniqueMap, *},
 };
-use std::collections::BTreeSet;
-use std::mem;
+use std::{collections::BTreeSet, mem};
 
 //**************************************************************************************************
 // Context

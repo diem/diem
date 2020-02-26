@@ -25,9 +25,7 @@ use libra_types::{
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
-use std::convert::TryFrom;
-use std::net::SocketAddr;
-use std::sync::Mutex;
+use std::{convert::TryFrom, net::SocketAddr, sync::Mutex};
 use storage_proto::{
     proto::storage::{
         storage_client::StorageClient, GetLatestStateRootRequest, GetStartupInfoRequest,

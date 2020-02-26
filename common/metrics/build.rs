@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::env;
-use std::process::Command;
+use std::{env, process::Command};
 
 /// Save revision info to environment variable
 fn main() {

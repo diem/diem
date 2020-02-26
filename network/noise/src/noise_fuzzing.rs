@@ -26,8 +26,7 @@ use snow::{
     types::*,
     Builder,
 };
-use std::io;
-use std::pin::Pin;
+use std::{io, pin::Pin};
 
 //
 // Corpus generation

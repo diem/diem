@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extern crate test_generation;
-use test_generation::abstract_state::AbstractState;
-use test_generation::transitions::Subst;
+use test_generation::{abstract_state::AbstractState, transitions::Subst};
 use vm::file_format::SignatureToken;
 
 //---------------------------------------------------------------------------

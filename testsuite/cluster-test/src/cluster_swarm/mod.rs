@@ -5,8 +5,7 @@ pub mod cluster_swarm_kube;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::future::try_join_all;
-use futures::try_join;
+use futures::{future::try_join_all, try_join};
 
 #[async_trait]
 pub trait ClusterSwarm {

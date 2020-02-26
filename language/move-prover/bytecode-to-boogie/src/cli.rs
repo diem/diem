@@ -10,8 +10,10 @@ use log::{error, LevelFilter};
 use simplelog::{
     CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
 };
-use std::fmt::Display;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    fmt::Display,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 /// Represents the virtual path to the boogie prelude which is inlined into the binary.
 pub const INLINE_PRELUDE: &str = "<inline-prelude>";

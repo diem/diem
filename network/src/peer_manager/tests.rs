@@ -9,8 +9,7 @@ use crate::{
     protocols::identity::{exchange_identity, Identity},
     ProtocolId,
 };
-use channel::libra_channel;
-use channel::message_queues::QueueStyle;
+use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{channel::oneshot, stream::StreamExt};
 use libra_config::config::RoleType;
 use libra_types::PeerId;
@@ -24,12 +23,12 @@ use netcore::{
     transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
 };
 use parity_multiaddr::Multiaddr;
-use std::iter::FromIterator;
-use std::num::NonZeroUsize;
-use std::str::FromStr;
 use std::{
     collections::{HashMap, HashSet},
     io,
+    iter::FromIterator,
+    num::NonZeroUsize,
+    str::FromStr,
 };
 use tokio::runtime::Handle;
 

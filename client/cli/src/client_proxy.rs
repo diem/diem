@@ -10,9 +10,6 @@ use libra_crypto::{
 };
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
-use libra_types::account_state::AccountState;
-use libra_types::crypto_proxies::LedgerInfoWithSignatures;
-use libra_types::waypoint::Waypoint;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -20,13 +17,16 @@ use libra_types::{
         association_address, AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
         CORE_CODE_ADDRESS,
     },
+    account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
+    crypto_proxies::LedgerInfoWithSignatures,
     transaction::{
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
         parse_as_transaction_argument, RawTransaction, Script, SignedTransaction, Transaction,
         TransactionArgument, TransactionPayload, Version,
     },
+    waypoint::Waypoint,
 };
 use libra_wallet::{io_utils, WalletLibrary};
 use num_traits::{

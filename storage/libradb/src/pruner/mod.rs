@@ -19,15 +19,13 @@ use schemadb::{ReadOptions, SchemaBatch, SchemaIterator, DB};
 use std::thread::sleep;
 use std::{
     iter::Peekable,
-    sync::atomic::{AtomicU64, Ordering},
-    time::{Duration, Instant},
-};
-use std::{
     sync::{
+        atomic::{AtomicU64, Ordering},
         mpsc::{channel, Receiver, Sender},
         Arc, Mutex,
     },
     thread::JoinHandle,
+    time::{Duration, Instant},
 };
 
 /// The `Pruner` is meant to be part of a `LibraDB` instance and runs in the background to prune old

@@ -1,16 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::process;
 use std::{
     collections::HashSet,
-    env, thread,
+    env, process, thread,
     time::{Duration, Instant},
 };
 
 use chrono::{Datelike, Timelike, Utc};
-use rand::prelude::ThreadRng;
-use rand::Rng;
+use rand::{prelude::ThreadRng, Rng};
 use reqwest::Url;
 use slog::{o, Drain};
 use slog_scope::{info, warn};
@@ -18,33 +16,31 @@ use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
 
 use anyhow::{bail, format_err, Result};
-use cluster_test::effects::RemoveNetworkEffects;
-use cluster_test::experiments::{get_experiment, Context};
-use cluster_test::github::GitHub;
-use cluster_test::health::PrintFailures;
-use cluster_test::instance::Instance;
-use cluster_test::prometheus::Prometheus;
-use cluster_test::report::SuiteReport;
-use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
-use cluster_test::util::unix_timestamp_now;
 use cluster_test::{
     aws::Aws,
     cluster::Cluster,
     deployment::DeploymentManager,
-    effects::{Action, Effect, Reboot, StopContainer},
-    experiments::Experiment,
-    health::{DebugPortLogThread, HealthCheckRunner, LogTail},
+    effects::{Action, Effect, Reboot, RemoveNetworkEffects, StopContainer},
+    experiments::{get_experiment, Context, Experiment},
+    github::GitHub,
+    health::{DebugPortLogThread, HealthCheckRunner, LogTail, PrintFailures},
+    instance::Instance,
+    prometheus::Prometheus,
+    report::SuiteReport,
     slack::SlackClient,
     stats,
     suite::ExperimentSuite,
-    tx_emitter::TxEmitter,
+    tx_emitter::{EmitJobRequest, EmitThreadParams, TxEmitter},
+    util::unix_timestamp_now,
 };
-use futures::future::join_all;
-use futures::future::FutureExt;
-use futures::future::TryFutureExt;
-use futures::select;
-use tokio::runtime::{Builder, Runtime};
-use tokio::time::{delay_for, delay_until, Instant as TokioInstant};
+use futures::{
+    future::{join_all, FutureExt, TryFutureExt},
+    select,
+};
+use tokio::{
+    runtime::{Builder, Runtime},
+    time::{delay_for, delay_until, Instant as TokioInstant},
+};
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 

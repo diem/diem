@@ -80,8 +80,7 @@ impl<Sig: RawSignature> From<Sig> for SignatureWrapper<Sig> {
 // below is banned.
 
 use libra_crypto::ed25519::*;
-use std::collections::BTreeMap;
-use std::fmt;
+use std::{collections::BTreeMap, fmt};
 
 // used in chained_bft::consensus_types::block_test
 #[cfg(any(test, feature = "fuzzing"))]

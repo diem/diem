@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::event_processor::EventProcessor;
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
         epoch_manager::{EpochManager, LivenessStorageData, Processor},
+        event_processor::EventProcessor,
         network::{NetworkReceivers, NetworkTask},
         network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
         persistent_liveness_storage::PersistentLivenessStorage,

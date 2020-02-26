@@ -8,9 +8,7 @@ use crate::{
         BinOp, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName, UnaryOp, Value,
         Var,
     },
-    shared::ast_debug::*,
-    shared::unique_map::UniqueMap,
-    shared::*,
+    shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
 use std::{
     collections::{BTreeSet, VecDeque},

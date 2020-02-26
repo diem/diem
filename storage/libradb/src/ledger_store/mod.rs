@@ -4,12 +4,12 @@
 //! This file defines ledger store APIs that are related to the main ledger accumulator, from the
 //! root(LedgerInfo) to leaf(TransactionInfo).
 
-use crate::schema::epoch_by_version::EpochByVersionSchema;
 use crate::{
     change_set::ChangeSet,
     errors::LibraDbError,
     schema::{
-        ledger_info::LedgerInfoSchema, transaction_accumulator::TransactionAccumulatorSchema,
+        epoch_by_version::EpochByVersionSchema, ledger_info::LedgerInfoSchema,
+        transaction_accumulator::TransactionAccumulatorSchema,
         transaction_info::TransactionInfoSchema,
     },
 };

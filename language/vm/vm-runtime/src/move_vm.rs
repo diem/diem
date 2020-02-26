@@ -5,9 +5,10 @@ use crate::{
     chain_state::ChainState, loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
 };
 use bytecode_verifier::VerifiedModule;
-use libra_types::identifier::Identifier;
-use libra_types::language_storage::StructTag;
-use libra_types::{identifier::IdentStr, language_storage::ModuleId};
+use libra_types::{
+    identifier::{IdentStr, Identifier},
+    language_storage::{ModuleId, StructTag},
+};
 use move_vm_definition::MoveVMImpl;
 use vm::{errors::VMResult, gas_schedule::CostTable, transaction_metadata::TransactionMetadata};
 use vm_cache_map::Arena;

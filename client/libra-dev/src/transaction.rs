@@ -10,11 +10,11 @@ use crate::{
 };
 use lcs::to_bytes;
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
-use libra_types::transaction::SignedTransaction;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     transaction::{
-        helpers::TransactionSigner, RawTransaction, TransactionArgument, TransactionPayload,
+        helpers::TransactionSigner, RawTransaction, SignedTransaction, TransactionArgument,
+        TransactionPayload,
     },
 };
 use std::{convert::TryFrom, slice, time::Duration};

@@ -3,8 +3,7 @@
 
 use crate::utils;
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
-use std::time::Duration;
+use std::{net::SocketAddr, time::Duration};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]

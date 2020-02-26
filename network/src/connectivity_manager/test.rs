@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::peer::DisconnectReason;
-use crate::peer_manager::{conn_status_channel, PeerManagerRequest};
-use crate::ProtocolId;
-use channel::libra_channel;
-use channel::message_queues::QueueStyle;
+use crate::{
+    peer::DisconnectReason,
+    peer_manager::{conn_status_channel, PeerManagerRequest},
+    ProtocolId,
+};
+use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::SinkExt;
 use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use rand::{rngs::StdRng, SeedableRng};
-use std::io;
-use std::num::NonZeroUsize;
+use std::{io, num::NonZeroUsize};
 use tokio::runtime::Runtime;
 use tokio_retry::strategy::FixedInterval;
 

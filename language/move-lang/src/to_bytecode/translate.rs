@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{context::*, labels_to_offsets, remove_fallthrough_jumps};
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     cfgir::ast as G,
     errors::*,
@@ -11,7 +10,7 @@ use crate::{
         BinOp, BinOp_, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
         ModuleIdent_, ModuleName, StructName, UnaryOp, UnaryOp_, Value_, Var,
     },
-    shared::*,
+    shared::{unique_map::UniqueMap, *},
 };
 use move_vm::file_format as F;
 use std::{collections::HashMap, convert::TryInto};

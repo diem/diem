@@ -9,8 +9,7 @@ use anyhow::Result;
 use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use rand::{rngs::StdRng, SeedableRng};
-use std::collections::BTreeMap;
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 #[test]
 fn test_iterator_same_version() {

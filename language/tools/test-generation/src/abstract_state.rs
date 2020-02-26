@@ -6,10 +6,12 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
 };
-use vm::access::ModuleAccess;
-use vm::file_format::{
-    empty_module, CompiledModule, CompiledModuleMut, FunctionHandleIndex, Kind, LocalsSignature,
-    LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, TableIndex,
+use vm::{
+    access::ModuleAccess,
+    file_format::{
+        empty_module, CompiledModule, CompiledModuleMut, FunctionHandleIndex, Kind,
+        LocalsSignature, LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, TableIndex,
+    },
 };
 
 /// The BorrowState denotes whether a local is `Available` or

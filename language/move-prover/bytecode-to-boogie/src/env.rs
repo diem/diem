@@ -11,24 +11,34 @@ use num::{BigInt, Num};
 
 use bytecode_source_map::source_map::ModuleSourceMap;
 use bytecode_verifier::VerifiedModule;
-use libra_types::{identifier::IdentStr, identifier::Identifier, language_storage::ModuleId};
-use move_ir_types::ast::{Loc, QualifiedStructIdent, Type, TypeVar_};
-use move_ir_types::spec_language_ast::{Condition, Invariant, SyntheticDefinition};
-use vm::access::ModuleAccess;
-use vm::file_format::{
-    AddressPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, Kind,
-    LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, StructFieldInformation,
-    StructHandleIndex, TypeParameterIndex,
+use libra_types::{
+    identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
 };
-use vm::views::{
-    FieldDefinitionView, FunctionDefinitionView, FunctionHandleView, SignatureTokenView,
-    StructDefinitionView, StructHandleView, ViewInternals,
+use move_ir_types::{
+    ast::{Loc, QualifiedStructIdent, Type, TypeVar_},
+    spec_language_ast::{Condition, Invariant, SyntheticDefinition},
+};
+use vm::{
+    access::ModuleAccess,
+    file_format::{
+        AddressPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, Kind,
+        LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, StructFieldInformation,
+        StructHandleIndex, TypeParameterIndex,
+    },
+    views::{
+        FieldDefinitionView, FunctionDefinitionView, FunctionHandleView, SignatureTokenView,
+        StructDefinitionView, StructHandleView, ViewInternals,
+    },
 };
 
 use crate::cli::Options;
 use codespan::{CodeMap, ColumnIndex, FileMap, FileName, LineIndex};
-use codespan_reporting::termcolor::{ColorChoice, StandardStream};
-use codespan_reporting::{emit, Diagnostic, Label, Severity};
+use codespan_reporting::{
+    emit,
+    termcolor::{ColorChoice, StandardStream},
+    Diagnostic, Label, Severity,
+};
 use libra_types::account_address::AccountAddress;
 use std::fs;
 

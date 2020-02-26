@@ -3,10 +3,10 @@
 
 //! This file defines transaction store APIs that are related to committed signed transactions.
 
-use crate::schema::transaction::TransactionSchema;
 use crate::{
-    change_set::ChangeSet, errors::LibraDbError,
-    schema::transaction_by_account::TransactionByAccountSchema,
+    change_set::ChangeSet,
+    errors::LibraDbError,
+    schema::{transaction::TransactionSchema, transaction_by_account::TransactionByAccountSchema},
 };
 use anyhow::{ensure, format_err, Result};
 use libra_types::{

@@ -4,8 +4,7 @@
 #![forbid(unsafe_code)]
 
 use move_lang::ir_translation::fix_syntax_and_write;
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 use structopt::*;
 
 #[derive(Debug, StructOpt)]

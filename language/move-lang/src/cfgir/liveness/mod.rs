@@ -10,11 +10,10 @@ use super::{
     cfg::{BlockCFG, ReverseBlockCFG, CFG},
     locals,
 };
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::*,
     parser::ast::{StructName, Var},
-    shared::*,
+    shared::{unique_map::UniqueMap, *},
 };
 use state::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -195,10 +194,13 @@ fn last_usage(
 }
 
 mod last_usage {
-    use crate::cfgir::ast::*;
-    use crate::cfgir::liveness::state::LivenessState;
-    use crate::hlir::translate::{display_var, DisplayVar};
-    use crate::{errors::*, parser::ast::Var, shared::unique_map::*, shared::*};
+    use crate::{
+        cfgir::{ast::*, liveness::state::LivenessState},
+        errors::*,
+        hlir::translate::{display_var, DisplayVar},
+        parser::ast::Var,
+        shared::{unique_map::*, *},
+    };
     use std::collections::{BTreeSet, VecDeque};
 
     struct Context<'a, 'b> {

@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bindgen::EnumVariation;
-use std::env;
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 fn main() {
     // The bindgen::Builder is the main entry point

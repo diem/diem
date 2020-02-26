@@ -14,8 +14,7 @@ use network::{
     peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
     proto::ConsensusMsg,
     protocols::rpc::error::RpcError,
-    validator_network::network_builder::NetworkBuilder,
-    validator_network::{NetworkEvents, NetworkSender},
+    validator_network::{network_builder::NetworkBuilder, NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use std::time::Duration;

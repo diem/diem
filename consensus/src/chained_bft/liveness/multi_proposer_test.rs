@@ -5,7 +5,7 @@ use crate::chained_bft::liveness::{
     multi_proposer_election::{self, MultiProposer},
     proposer_election::ProposerElection,
 };
-use consensus_types::{block::block_test_utils::certificate_for_genesis, block::Block};
+use consensus_types::block::{block_test_utils::certificate_for_genesis, Block};
 use libra_crypto::ed25519::*;
 use libra_types::validator_signer::ValidatorSigner;
 

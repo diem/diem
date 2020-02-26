@@ -11,9 +11,7 @@ use rusoto_ecr::EcrClient;
 use rusoto_ecs::EcsClient;
 use rusoto_s3::{PutObjectRequest, S3Client, S3};
 use slog_scope::*;
-use std::fs::File;
-use std::io::Read;
-use std::{thread, time::Duration};
+use std::{fs::File, io::Read, thread, time::Duration};
 
 #[derive(Clone)]
 pub struct Aws {

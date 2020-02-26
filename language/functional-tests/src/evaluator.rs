@@ -29,9 +29,11 @@ use std::{
     str::FromStr,
     time::Duration,
 };
-use vm::file_format::{CompiledModule, CompiledScript};
-use vm::gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS};
-use vm::views::ModuleView;
+use vm::{
+    file_format::{CompiledModule, CompiledScript},
+    gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS},
+    views::ModuleView,
+};
 
 /// A transaction to be evaluated by the testing infra.
 /// Contains code and a transaction config.

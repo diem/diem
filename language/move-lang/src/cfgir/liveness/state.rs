@@ -6,8 +6,7 @@
 //**************************************************************************************************
 
 use crate::{cfgir::absint::*, parser::ast::Var};
-use std::cmp::Ordering;
-use std::collections::BTreeSet;
+use std::{cmp::Ordering, collections::BTreeSet};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LivenessState(pub BTreeSet<Var>);

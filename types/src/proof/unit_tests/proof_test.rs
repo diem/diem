@@ -1,10 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block_info::BlockInfo;
 use crate::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
+    block_info::BlockInfo,
     ledger_info::LedgerInfo,
     proof::{
         definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccountStateProof, EventAccumulatorInternalNode,

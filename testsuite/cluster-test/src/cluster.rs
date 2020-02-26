@@ -8,14 +8,14 @@ use anyhow::{ensure, format_err, Result};
 use config_builder::ValidatorConfig;
 use generate_keypair::load_key_from_file;
 use libra_config::config::AdmissionControlConfig;
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
-use libra_crypto::test_utils::KeyPair;
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+};
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
 use slog_scope::*;
-use std::collections::HashMap;
-use std::convert::TryInto;
-use std::{thread, time::Duration};
+use std::{collections::HashMap, convert::TryInto, thread, time::Duration};
 
 #[derive(Clone)]
 pub struct Cluster {

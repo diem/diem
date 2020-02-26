@@ -11,16 +11,15 @@ use crate::{
     state_replication::StateComputer,
 };
 use anyhow::{bail, format_err};
-use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
 use consensus_types::{
     block::Block,
+    block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus},
     common::{Author, Payload},
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
 };
 use libra_logger::prelude::*;
-use libra_types::account_address::AccountAddress;
-use libra_types::validator_change::ValidatorChangeProof;
+use libra_types::{account_address::AccountAddress, validator_change::ValidatorChangeProof};
 use mirai_annotations::checked_precondition;
 use rand::{prelude::*, Rng};
 use std::{

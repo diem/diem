@@ -6,9 +6,9 @@
 use ir_to_bytecode::compiler::compile_program;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
-use libra_types::block_metadata::BlockMetadata;
 use libra_types::{
     account_address::AccountAddress,
+    block_metadata::BlockMetadata,
     byte_array::ByteArray,
     transaction::{Script, Transaction, TransactionArgument, SCRIPT_HASH_LENGTH},
 };

@@ -14,12 +14,12 @@ use libra_crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use libra_state_view::StateView;
-use libra_types::contract_event::ContractEvent;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
     byte_array::ByteArray,
+    contract_event::ContractEvent,
     crypto_proxies::ValidatorSet,
     discovery_info::DiscoveryInfo,
     discovery_set::DiscoverySet,

@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use consensus_types::block::Block;
-use consensus_types::executed_block::ExecutedBlock;
+use consensus_types::{block::Block, executed_block::ExecutedBlock};
 use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof};
 

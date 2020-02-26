@@ -30,8 +30,7 @@ pub trait MessageExt: Message {
 
 pub mod test_helpers {
     use super::MessageExt;
-    use std::convert::TryFrom;
-    use std::fmt::Debug;
+    use std::{convert::TryFrom, fmt::Debug};
 
     /// Assert that protobuf encoding and decoding roundtrips correctly.
     ///

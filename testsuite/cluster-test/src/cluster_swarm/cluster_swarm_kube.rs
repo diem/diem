@@ -3,14 +3,12 @@
 
 #![forbid(unsafe_code)]
 
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{bail, format_err, Result};
 use async_trait::async_trait;
 
-use futures::future::try_join_all;
-use futures::lock::Mutex;
+use futures::{future::try_join_all, lock::Mutex};
 use kube::{
     api::{Api, PostParams},
     client::APIClient,
@@ -19,8 +17,7 @@ use kube::{
 use slog_scope::*;
 use util::retry;
 
-use crate::cluster_swarm::ClusterSwarm;
-use crate::instance::Instance;
+use crate::{cluster_swarm::ClusterSwarm, instance::Instance};
 use kube::api::ListParams;
 use libra_config::config::AdmissionControlConfig;
 

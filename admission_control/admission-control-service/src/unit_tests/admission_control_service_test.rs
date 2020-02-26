@@ -1,11 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_proto::proto::admission_control::{
-    admission_control_server::AdmissionControl, submit_transaction_response::Status,
-    SubmitTransactionRequest, SubmitTransactionResponse as ProtoSubmitTransactionResponse,
+use admission_control_proto::{
+    proto::admission_control::{
+        admission_control_server::AdmissionControl, submit_transaction_response::Status,
+        SubmitTransactionRequest, SubmitTransactionResponse as ProtoSubmitTransactionResponse,
+    },
+    AdmissionControlStatus, SubmitTransactionResponse,
 };
-use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 use anyhow::Result;
 use futures::executor::block_on;
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED};

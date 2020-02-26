@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::remembering_unique_map::RememberingUniqueMap;
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::*,
     expansion::ast::{self as E, Fields},
@@ -10,7 +8,7 @@ use crate::{
         self as P, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ModuleIdent_,
         ModuleName, StructName, Var,
     },
-    shared::*,
+    shared::{remembering_unique_map::RememberingUniqueMap, unique_map::UniqueMap, *},
 };
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 

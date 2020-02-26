@@ -3,11 +3,16 @@
 
 //! The Peer actor owns the underlying connection and is responsible for listening for
 //!  and opening substreams as well as negotiating particular protocols on those substreams.
-use crate::peer_manager::PeerManagerError;
-use crate::{common::NegotiatedSubstream, protocols::identity::Identity, transport, ProtocolId};
-use futures::channel::oneshot;
-use futures::stream::FuturesUnordered;
-use futures::{future::BoxFuture, stream::StreamExt, FutureExt, SinkExt};
+use crate::{
+    common::NegotiatedSubstream, peer_manager::PeerManagerError, protocols::identity::Identity,
+    transport, ProtocolId,
+};
+use futures::{
+    channel::oneshot,
+    future::BoxFuture,
+    stream::{FuturesUnordered, StreamExt},
+    FutureExt, SinkExt,
+};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{
@@ -16,9 +21,7 @@ use netcore::{
     transport::ConnectionOrigin,
 };
 use parity_multiaddr::Multiaddr;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::iter::FromIterator;
+use std::{collections::HashSet, fmt::Debug, iter::FromIterator};
 
 #[cfg(test)]
 mod test;

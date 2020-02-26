@@ -3,7 +3,7 @@
 
 use crate::AccountData;
 use admission_control_proto::{
-    proto::admission_control::SubmitTransactionRequest, proto::AdmissionControlClientBlocking,
+    proto::{admission_control::SubmitTransactionRequest, AdmissionControlClientBlocking},
     AdmissionControlStatus, SubmitTransactionResponse,
 };
 use anyhow::{bail, Result};

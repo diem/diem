@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::message_queues::{PerKeyQueue, QueueStyle};
-use libra_types::account_address::AccountAddress;
-use libra_types::account_address::ADDRESS_LENGTH;
+use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};
 use std::num::NonZeroUsize;
 
 /// This represents a proposal message from a validator

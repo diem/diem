@@ -5,12 +5,13 @@ use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
 use criterion::Criterion;
 use libra_state_view::StateView;
-use libra_types::access_path::AccessPath;
-use libra_types::account_address::AccountAddress;
-use libra_types::identifier::{IdentStr, Identifier};
-use libra_types::language_storage::ModuleId;
-use move_lang::shared::Address;
-use move_lang::to_bytecode::translate::CompiledUnit;
+use libra_types::{
+    access_path::AccessPath,
+    account_address::AccountAddress,
+    identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
+};
+use move_lang::{shared::Address, to_bytecode::translate::CompiledUnit};
 use std::path::PathBuf;
 use vm::{
     gas_schedule::{CostTable, GasAlgebra, GasUnits},

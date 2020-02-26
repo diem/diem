@@ -18,8 +18,7 @@ use vm::{
 };
 use vm_runtime::identifier::{create_access_path, resource_storage_key};
 use vm_runtime_types::{
-    loaded_data::struct_def::StructDef,
-    loaded_data::types::Type,
+    loaded_data::{struct_def::StructDef, types::Type},
     values::{Struct, Value},
 };
 

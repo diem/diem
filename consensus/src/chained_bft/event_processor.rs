@@ -44,8 +44,9 @@ use libra_types::{
 };
 use network::proto::ConsensusMsg;
 
-use crate::chained_bft::network::IncomingBlockRetrievalRequest;
-use crate::state_replication::StateComputer;
+use crate::{
+    chained_bft::network::IncomingBlockRetrievalRequest, state_replication::StateComputer,
+};
 use consensus_types::{
     block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
     executed_block::ExecutedBlock,

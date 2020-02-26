@@ -36,19 +36,19 @@ use libra_types::{
 use rand::{
     prelude::ThreadRng,
     rngs::{EntropyRng, StdRng},
-    seq::IteratorRandom,
-    seq::SliceRandom,
+    seq::{IteratorRandom, SliceRandom},
     Rng, SeedableRng,
 };
 use slog_scope::{debug, info};
 use tokio::runtime::{Handle, Runtime};
 
-use futures::executor::block_on;
-use futures::future::FutureExt;
-use std::cmp::{max, min};
-use std::fmt;
-use std::ops::{Deref, DerefMut};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use futures::{executor::block_on, future::FutureExt};
+use std::{
+    cmp::{max, min},
+    fmt,
+    ops::{Deref, DerefMut},
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
+};
 use tokio::{task::JoinHandle, time};
 use util::retry;
 

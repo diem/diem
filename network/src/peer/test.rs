@@ -24,11 +24,7 @@ use netcore::{
     transport::ConnectionOrigin,
 };
 use parity_multiaddr::Multiaddr;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::iter::FromIterator;
-use std::str::FromStr;
-use std::time::Duration;
+use std::{collections::HashSet, fmt::Debug, iter::FromIterator, str::FromStr, time::Duration};
 use tokio::time::timeout;
 
 const HELLO_PROTOCOL: &[u8] = b"/hello-world/1.0.0";

@@ -1,15 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     expansion::ast::Fields,
     parser::ast::{
         BinOp, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc,
         StructName, UnaryOp, Value, Value_, Var,
     },
-    shared::ast_debug::*,
-    shared::*,
+    shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},

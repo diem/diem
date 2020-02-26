@@ -4,10 +4,11 @@
 use codespan::{ByteIndex, Span};
 use std::str::FromStr;
 
-use crate::errors::*;
-use crate::parser::ast::*;
-use crate::parser::lexer::*;
-use crate::shared::*;
+use crate::{
+    errors::*,
+    parser::{ast::*, lexer::*},
+    shared::*,
+};
 
 // In the informal grammar comments in this file, Comma<T> is shorthand for:
 //      (<T> ",")* <T>?

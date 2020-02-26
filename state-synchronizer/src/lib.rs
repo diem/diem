@@ -11,8 +11,10 @@
 extern crate prometheus;
 
 use executor::ExecutedTrees;
-use libra_types::crypto_proxies::{EpochInfo, ValidatorVerifier};
-use libra_types::{account_address::AccountAddress, crypto_proxies::LedgerInfoWithSignatures};
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorVerifier},
+};
 use std::sync::Arc;
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 

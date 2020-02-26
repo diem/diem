@@ -3,8 +3,11 @@
 
 use crate::{test_utils, Error, TSafetyRules};
 use consensus_types::{
-    block::block_test_utils, block::Block, common::Round, quorum_cert::QuorumCert,
-    timeout::Timeout, vote_proposal::VoteProposal,
+    block::{block_test_utils, Block},
+    common::Round,
+    quorum_cert::QuorumCert,
+    timeout::Timeout,
+    vote_proposal::VoteProposal,
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::crypto_proxies::ValidatorSigner;

@@ -9,8 +9,7 @@
 use crate::HashValue;
 use anyhow::Result;
 use core::convert::{From, TryFrom};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, hash::Hash};
 use thiserror::Error;
 

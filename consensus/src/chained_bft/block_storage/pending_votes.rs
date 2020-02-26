@@ -14,8 +14,10 @@ use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
     validator_verifier::VerifyError,
 };
-use std::collections::BTreeMap;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 
 #[cfg(test)]
 #[path = "pending_votes_test.rs"]

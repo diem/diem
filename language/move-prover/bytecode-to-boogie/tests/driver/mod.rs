@@ -1,16 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytecode_to_boogie::boogie_wrapper::BoogieOutput;
-use bytecode_to_boogie::cli::Options;
-use bytecode_to_boogie::driver::Driver;
+use bytecode_to_boogie::{boogie_wrapper::BoogieOutput, cli::Options, driver::Driver};
 use itertools::Itertools;
 use libra_temppath::TempPath;
 use log::info;
 use prettydiff::{basic::DiffOp, diff_lines};
 use regex::Regex;
-use std::fs::read_to_string;
-use std::{env, fs, fs::File, io::Error, io::Read, io::Write, path::Path};
+use std::{
+    env, fs,
+    fs::{read_to_string, File},
+    io::{Error, Read, Write},
+    path::Path,
+};
 
 pub fn test(flags: &[&str], sources: &[&str]) {
     // Configure options.

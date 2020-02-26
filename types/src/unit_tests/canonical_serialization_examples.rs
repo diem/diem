@@ -3,12 +3,11 @@
 
 //! These tests verify the behavior of LCS against some known test vectors with various types.
 
-use crate::transaction::ChangeSet;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
     byte_array::ByteArray,
-    transaction::{RawTransaction, Script, TransactionArgument, TransactionPayload},
+    transaction::{ChangeSet, RawTransaction, Script, TransactionArgument, TransactionPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use lcs::to_bytes;

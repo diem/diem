@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::mapping::SourceMapping;
-use crate::source_map::{ModuleSourceMap, SourceMap};
+use crate::{
+    mapping::SourceMapping,
+    source_map::{ModuleSourceMap, SourceMap},
+};
 use anyhow::{format_err, Result};
 use codespan::{CodeMap, FileName};
 use codespan_reporting::{
@@ -12,8 +14,7 @@ use codespan_reporting::{
 };
 use move_ir_types::ast::Loc;
 use serde::de::DeserializeOwned;
-use std::fs::File;
-use std::path::Path;
+use std::{fs::File, path::Path};
 
 pub type Error = (Loc, String);
 pub type Errors = Vec<Error>;

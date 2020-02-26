@@ -3,8 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use bytecode_to_boogie::cli::Options;
-use bytecode_to_boogie::driver::Driver;
+use bytecode_to_boogie::{cli::Options, driver::Driver};
 use std::env;
 
 fn main() {

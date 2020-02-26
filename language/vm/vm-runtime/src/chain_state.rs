@@ -13,10 +13,10 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
-use vm::transaction_metadata::TransactionMetadata;
 use vm::{
     errors::VMResult,
     gas_schedule::{GasAlgebra, GasCarrier, GasUnits},
+    transaction_metadata::TransactionMetadata,
 };
 use vm_runtime_types::{loaded_data::struct_def::StructDef, values::GlobalValue};
 

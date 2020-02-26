@@ -1,11 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::unique_map::UniqueMap;
-use super::*;
-use std::collections::BTreeSet;
-use std::fmt;
-use std::iter::IntoIterator;
+use super::{unique_map::UniqueMap, *};
+use std::{collections::BTreeSet, fmt, iter::IntoIterator};
 
 //**************************************************************************************************
 // UniqueMap

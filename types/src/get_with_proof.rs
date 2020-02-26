@@ -3,15 +3,13 @@
 
 #![forbid(unsafe_code)]
 
-use crate::crypto_proxies::EpochInfo;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::AccountResource,
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
-    crypto_proxies::LedgerInfoWithSignatures,
-    crypto_proxies::ValidatorChangeProof,
+    crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorChangeProof},
     ledger_info::LedgerInfo,
     proof::AccumulatorConsistencyProof,
     proto::types::{
@@ -27,11 +25,11 @@ use anyhow::{bail, ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::{
     cmp,
     convert::{TryFrom, TryInto},
     mem,
+    sync::Arc,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

@@ -1,25 +1,23 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::experiments::ExperimentParam;
-use crate::tx_emitter::EmitJobRequest;
 use crate::{
     cluster::Cluster,
     effects::{Effect, StopContainer},
-    experiments::Context,
-    experiments::Experiment,
+    experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
     stats,
+    tx_emitter::EmitJobRequest,
     util::unix_timestamp_now,
 };
 use async_trait::async_trait;
 use futures::future::join_all;
 use slog_scope::info;
-use std::sync::atomic::Ordering;
 use std::{
     collections::HashSet,
     fmt::{Display, Error, Formatter},
+    sync::atomic::Ordering,
     time::Duration,
 };
 use structopt::StructOpt;

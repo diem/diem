@@ -8,13 +8,11 @@ use crate::{
     validator_network::HEALTH_CHECKER_RPC_PROTOCOL,
     ProtocolId,
 };
-use channel::libra_channel;
-use channel::message_queues::QueueStyle;
+use channel::{libra_channel, message_queues::QueueStyle};
 use futures::sink::SinkExt;
 use parity_multiaddr::Multiaddr;
 use prost::Message as _;
-use std::num::NonZeroUsize;
-use std::str::FromStr;
+use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
 
 const PING_TIMEOUT: Duration = Duration::from_millis(500);

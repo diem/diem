@@ -26,8 +26,7 @@ use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray, vm_error::StatusCode};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use slog_scope::{debug, error, info};
-use std::thread;
-use std::{fs, io::Write, panic};
+use std::{fs, io::Write, panic, thread};
 use utils::module_generation::generate_module;
 use vm::{
     access::ModuleAccess,

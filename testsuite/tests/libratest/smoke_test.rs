@@ -5,8 +5,7 @@ use cli::client_proxy::ClientProxy;
 use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, SigningKey};
 use libra_logger::prelude::*;
-use libra_swarm::swarm::LibraNode;
-use libra_swarm::swarm::LibraSwarm;
+use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress,
@@ -17,10 +16,12 @@ use libra_types::{
 };
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
-use std::fs::{self, File};
-use std::io::Read;
-use std::str::FromStr;
-use std::{thread, time};
+use std::{
+    fs::{self, File},
+    io::Read,
+    str::FromStr,
+    thread, time,
+};
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,

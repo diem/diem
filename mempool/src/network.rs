@@ -10,8 +10,7 @@ use network::{
     error::NetworkError,
     peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
     proto::MempoolSyncMsg,
-    validator_network::network_builder::NetworkBuilder,
-    validator_network::{NetworkEvents, NetworkSender},
+    validator_network::{network_builder::NetworkBuilder, NetworkEvents, NetworkSender},
     ProtocolId,
 };
 

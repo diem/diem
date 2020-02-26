@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::data_cache::RemoteCache;
 use crate::{
     chain_state::{SystemExecutionContext, TransactionExecutionContext},
     code_cache::module_cache::VMModuleCache,
-    data_cache::BlockDataCache,
+    data_cache::{BlockDataCache, RemoteCache},
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
@@ -23,9 +22,9 @@ use libra_types::{
     vm_error::{StatusCode, StatusType},
 };
 use std::collections::HashMap;
-use vm::errors::VMResult;
 use vm::{
     access::ModuleAccess,
+    errors::VMResult,
     file_format::*,
     gas_schedule::{GasAlgebra, GasUnits},
 };

@@ -5,8 +5,7 @@
 
 use move_lang::{ir_translation::fix_syntax_and_write, test_utils::*};
 use regex::Regex;
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 use structopt::*;
 
 #[derive(Debug, StructOpt)]

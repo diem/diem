@@ -21,8 +21,7 @@ use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
-    transaction::Version,
-    transaction::{Transaction, TransactionListWithProof},
+    transaction::{Transaction, TransactionListWithProof, Version},
     waypoint::Waypoint,
 };
 use network::{proto::StateSynchronizerMsg, validator_network::Event};

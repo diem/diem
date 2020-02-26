@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_lang::test_utils::*;
-use std::collections::HashSet;
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 
 #[test]
 fn test_ir_test_coverage() {

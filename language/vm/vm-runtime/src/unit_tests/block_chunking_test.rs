@@ -3,8 +3,7 @@
 
 use crate::libra_vm::{chunk_block_transactions, TransactionBlock};
 use libra_types::transaction::{Transaction, TransactionPayload};
-use proptest::collection::vec;
-use proptest::prelude::*;
+use proptest::{collection::vec, prelude::*};
 
 fn reconstruct_transaction_vec(blocks: Vec<TransactionBlock>) -> Vec<Transaction> {
     let mut txns = vec![];

@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block_info::{BlockInfo, Round};
 use crate::{
     account_address::AccountAddress,
+    block_info::{BlockInfo, Round},
     crypto_proxies::ValidatorSet,
     transaction::Version,
     validator_verifier::{ValidatorVerifier, VerifyError},
@@ -17,8 +17,8 @@ use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::{
+    collections::BTreeMap,
     convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
 };
@@ -307,9 +307,11 @@ impl<Sig: Signature> From<LedgerInfoWithSignatures<Sig>>
 
 #[cfg(test)]
 mod tests {
-    use crate::block_info::BlockInfo;
-    use crate::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
-    use crate::validator_signer::ValidatorSigner;
+    use crate::{
+        block_info::BlockInfo,
+        ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+        validator_signer::ValidatorSigner,
+    };
     use libra_crypto::{ed25519::*, HashValue};
     use std::collections::BTreeMap;
 

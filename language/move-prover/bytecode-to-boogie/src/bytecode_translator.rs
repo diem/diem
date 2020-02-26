@@ -10,26 +10,28 @@ use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info};
 
-use libra_types::account_address::AccountAddress;
-use libra_types::language_storage::ModuleId;
+use libra_types::{account_address::AccountAddress, language_storage::ModuleId};
 use move_ir_types::ast::Loc;
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
     stackless_bytecode_generator::{StacklessFunction, StacklessModuleGenerator},
 };
 
-use crate::boogie_helpers::{
-    boogie_declare_global, boogie_field_name, boogie_function_name, boogie_invariant_target,
-    boogie_local_type, boogie_struct_name, boogie_struct_type_value, boogie_synthetic_name,
-    boogie_type_check, boogie_type_value, boogie_type_values, boogie_var_before_borrow,
+use crate::{
+    boogie_helpers::{
+        boogie_declare_global, boogie_field_name, boogie_function_name, boogie_invariant_target,
+        boogie_local_type, boogie_struct_name, boogie_struct_type_value, boogie_synthetic_name,
+        boogie_type_check, boogie_type_value, boogie_type_values, boogie_var_before_borrow,
+    },
+    cli::InvariantModel,
+    code_writer::CodeWriter,
+    driver::PSEUDO_PRELUDE_MODULE,
+    env::{
+        FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, Parameter, StructEnv, TypeParameter,
+        ERROR_TYPE,
+    },
+    spec_translator::SpecTranslator,
 };
-use crate::cli::InvariantModel;
-use crate::code_writer::CodeWriter;
-use crate::driver::PSEUDO_PRELUDE_MODULE;
-use crate::env::{
-    FunctionEnv, GlobalEnv, GlobalType, ModuleEnv, Parameter, StructEnv, TypeParameter, ERROR_TYPE,
-};
-use crate::spec_translator::SpecTranslator;
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,

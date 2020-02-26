@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::*,
     naming::ast::{
@@ -12,7 +11,7 @@ use crate::{
         Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc, StructName,
         Var,
     },
-    shared::*,
+    shared::{unique_map::UniqueMap, *},
 };
 use std::collections::{BTreeSet, HashMap};
 
