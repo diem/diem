@@ -1,14 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::Errors,
     expansion::ast::Fields,
     hlir::ast::{self as H, Block},
     naming::ast as N,
     parser::ast::{BinOp_, Field, FunctionName, ModuleIdent, StructName, Var},
-    shared::*,
+    shared::{unique_map::UniqueMap, *},
     typing::ast as T,
 };
 use std::collections::VecDeque;

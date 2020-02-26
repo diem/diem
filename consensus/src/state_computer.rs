@@ -3,13 +3,11 @@
 
 use crate::{counters, state_replication::StateComputer};
 use anyhow::{ensure, Result};
-use consensus_types::block::Block;
-use consensus_types::executed_block::ExecutedBlock;
+use consensus_types::{block::Block, executed_block::ExecutedBlock};
 use executor::{ExecutedTrees, Executor, ProcessedVMOutput};
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::ValidatorChangeProof;
 use libra_types::{
-    crypto_proxies::LedgerInfoWithSignatures,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::{SignedTransaction, Transaction},
 };
 use state_synchronizer::StateSyncClient;

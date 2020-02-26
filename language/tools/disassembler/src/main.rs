@@ -9,8 +9,7 @@ use bytecode_source_map::{
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use libra_types::transaction::Module;
 use move_ir_types::ast::Loc;
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 use structopt::StructOpt;
 use vm::file_format::{CompiledModule, CompiledScript};
 

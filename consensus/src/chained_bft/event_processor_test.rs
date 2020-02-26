@@ -23,13 +23,14 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use consensus_types::block::block_test_utils::gen_test_certificate;
-use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
 use consensus_types::{
     block::{
-        block_test_utils::{certificate_for_genesis, placeholder_ledger_info},
+        block_test_utils::{
+            certificate_for_genesis, gen_test_certificate, placeholder_ledger_info,
+        },
         Block,
     },
+    block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus},
     common::Author,
     proposal_msg::ProposalMsg,
     sync_info::SyncInfo,
@@ -44,16 +45,23 @@ use futures::{
     executor::block_on,
 };
 use libra_crypto::HashValue;
-use libra_types::block_info::BlockInfo;
-use libra_types::crypto_proxies::{
-    random_validator_verifier, EpochInfo, LedgerInfoWithSignatures, ValidatorSigner,
-    ValidatorVerifier,
+use libra_types::{
+    block_info::BlockInfo,
+    crypto_proxies::{
+        random_validator_verifier, EpochInfo, LedgerInfoWithSignatures, ValidatorSigner,
+        ValidatorVerifier,
+    },
 };
 use network::{peer_manager::conn_status_channel, proto::ConsensusMsg};
 use prost::Message as _;
 use safety_rules::{ConsensusState, PersistentSafetyStorage as SafetyStorage, SafetyRulesManager};
-use std::sync::RwLock;
-use std::{collections::HashMap, convert::TryFrom, num::NonZeroUsize, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    num::NonZeroUsize,
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 use tokio::runtime::Handle;
 
 /// Auxiliary struct that is setting up node environment for the test.

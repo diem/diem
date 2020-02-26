@@ -5,8 +5,6 @@ use anyhow::{ensure, format_err, Result};
 use executor::utils::create_storage_service_and_executor;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
-use libra_types::crypto_proxies::EpochInfo;
-use libra_types::validator_change::VerifierType;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -14,12 +12,13 @@ use libra_types::{
     account_state_blob::AccountStateWithProof,
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
-    crypto_proxies::ValidatorVerifier,
+    crypto_proxies::{EpochInfo, ValidatorVerifier},
     discovery_set::{DISCOVERY_SET_CHANGE_EVENT_PATH, GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH},
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Script, Transaction, TransactionListWithProof, TransactionWithProof},
+    validator_change::VerifierType,
 };
 use rand::SeedableRng;
 use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};

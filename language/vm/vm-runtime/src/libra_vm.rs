@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::identifier::create_access_path;
 use crate::{
     chain_state::{ChainState, SystemExecutionContext, TransactionExecutionContext},
     counters::*,
     data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
+    identifier::create_access_path,
     move_vm::MoveVM,
     system_module_names::*,
     VMExecutor, VMVerifier,
@@ -28,11 +28,11 @@ use libra_types::{
 };
 use rayon::prelude::*;
 use std::sync::Arc;
-use vm::errors::convert_prologue_runtime_error;
-use vm::gas_schedule::GAS_SCHEDULE_NAME;
 use vm::{
-    errors::VMResult,
-    gas_schedule::{self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
+    errors::{convert_prologue_runtime_error, VMResult},
+    gas_schedule::{
+        self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, GAS_SCHEDULE_NAME,
+    },
     transaction_metadata::TransactionMetadata,
 };
 use vm_runtime_types::values::Value;

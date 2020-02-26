@@ -5,7 +5,6 @@ use super::{
     core::{self, Context, LocalStatus, Subst},
     expand, globals,
 };
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::Errors,
     expansion::ast::Fields,
@@ -13,7 +12,7 @@ use crate::{
         self as N, BaseType, BaseType_, SingleType, SingleType_, TVar, Type, TypeName_, Type_,
     },
     parser::ast::{BinOp_, Field, FunctionName, ModuleIdent, StructName, UnaryOp_, Var},
-    shared::*,
+    shared::{unique_map::UniqueMap, *},
     typing::ast as T,
 };
 use std::collections::{BTreeSet, VecDeque};

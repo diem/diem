@@ -13,8 +13,10 @@ use libra_types::{
     validator_signer::proptests,
 };
 use proptest::prelude::*;
-use std::collections::BTreeMap;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{
+    collections::BTreeMap,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 type LinearizedBlockForest<T> = Vec<Block<T>>;
 

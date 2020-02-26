@@ -11,10 +11,10 @@ mod locals;
 mod remove_no_ops;
 pub mod translate;
 
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::Errors,
     parser::ast::{StructName, Var},
+    shared::unique_map::UniqueMap,
 };
 use ast::*;
 use cfg::*;

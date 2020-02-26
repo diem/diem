@@ -3,8 +3,8 @@
 
 use crate::{error::Error, policy::Policy, storage::Storage, value::Value};
 use libra_temppath::TempPath;
-use std::collections::HashMap;
 use std::{
+    collections::HashMap,
     fs::{self, File},
     io::{Read, Write},
     path::PathBuf,

@@ -276,7 +276,11 @@ fn eliminate(cfg: &mut BlockCFG, ssa_temps: BTreeSet<Var>) {
 }
 
 mod eliminate {
-    use crate::{cfgir::ast, cfgir::ast::*, parser::ast::Var, shared::*};
+    use crate::{
+        cfgir::{ast, ast::*},
+        parser::ast::Var,
+        shared::*,
+    };
     use std::collections::{BTreeMap, BTreeSet};
 
     pub struct Context {

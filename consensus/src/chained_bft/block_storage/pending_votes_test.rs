@@ -1,13 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::block_storage::pending_votes::PendingVotes;
-use crate::chained_bft::block_storage::VoteReceptionResult;
+use crate::chained_bft::block_storage::{pending_votes::PendingVotes, VoteReceptionResult};
 use consensus_types::{common::Round, vote::Vote, vote_data::VoteData};
 use libra_crypto::HashValue;
-use libra_types::block_info::BlockInfo;
-use libra_types::crypto_proxies::random_validator_verifier;
-use libra_types::ledger_info::LedgerInfo;
+use libra_types::{
+    block_info::BlockInfo, crypto_proxies::random_validator_verifier, ledger_info::LedgerInfo,
+};
 
 fn random_ledger_info() -> LedgerInfo {
     LedgerInfo::new(

@@ -29,8 +29,10 @@ use libra_crypto::{
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::convert::{TryFrom, TryInto};
-use std::marker::PhantomData;
+use std::{
+    convert::{TryFrom, TryInto},
+    marker::PhantomData,
+};
 
 /// Converts sibling nodes from Protobuf format to Rust format, using the fact that empty byte
 /// arrays represent placeholder hashes.

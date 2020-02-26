@@ -9,11 +9,10 @@ use rand::Rng;
 
 use anyhow::{bail, Result};
 
-use crate::experiments::{Context, ExperimentParam};
 use crate::{
     cluster::Cluster,
     effects::{Action, Reboot},
-    experiments::Experiment,
+    experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
 };

@@ -16,8 +16,7 @@ pub use delete_libra_data::DeleteLibraData;
 
 use async_trait::async_trait;
 pub use generate_cpu_flamegraph::GenerateCpuFlamegraph;
-pub use network_delay::three_region_simulation_effects;
-pub use network_delay::NetworkDelay;
+pub use network_delay::{three_region_simulation_effects, NetworkDelay};
 pub use packet_loss::PacketLoss;
 pub use reboot::Reboot;
 pub use remove_network_effects::RemoveNetworkEffects;

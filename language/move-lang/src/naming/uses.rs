@@ -1,17 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::*,
     naming::ast as N,
     parser::ast::{ModuleIdent, StructName},
-    shared::*,
+    shared::{unique_map::UniqueMap, *},
 };
-use petgraph::algo::astar as petgraph_astar;
-use petgraph::algo::toposort as petgraph_toposort;
-use petgraph::algo::Cycle;
-use petgraph::graphmap::DiGraphMap;
+use petgraph::{
+    algo::{astar as petgraph_astar, toposort as petgraph_toposort, Cycle},
+    graphmap::DiGraphMap,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************

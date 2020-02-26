@@ -3,12 +3,10 @@
 
 use anyhow::{Context, Error};
 use codespan::{ByteIndex, Span};
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use crate::lexer::*;
-use libra_types::identifier::Identifier;
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 use move_ir_types::{ast::*, spec_language_ast::*};
 
 // FIXME: The following simplified version of ParseError copied from

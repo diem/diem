@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest};
-use crate::protocols::direct_send::Message;
-use crate::validator_network::DISCOVERY_DIRECT_SEND_PROTOCOL;
-use crate::ProtocolId;
-use channel::libra_channel;
-use channel::message_queues::QueueStyle;
+use crate::{
+    peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest},
+    protocols::direct_send::Message,
+    validator_network::DISCOVERY_DIRECT_SEND_PROTOCOL,
+    ProtocolId,
+};
+use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::channel::oneshot;
 use libra_config::config::RoleType;

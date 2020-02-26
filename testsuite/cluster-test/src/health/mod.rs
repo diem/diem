@@ -16,8 +16,7 @@ use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::LogTail;
 use std::{
-    collections::HashMap,
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     env, fmt,
     iter::FromIterator,
     time::{Duration, Instant, SystemTime},

@@ -4,8 +4,10 @@
 //! Adapted from AbstractInterpreter for Bytecode, this module defines the data-flow analysis
 //! framework for stackless bytecode.
 
-use bytecode_verifier::absint::{AbstractDomain, JoinResult};
-use bytecode_verifier::control_flow_graph::{BlockId, ControlFlowGraph};
+use bytecode_verifier::{
+    absint::{AbstractDomain, JoinResult},
+    control_flow_graph::{BlockId, ControlFlowGraph},
+};
 use std::collections::HashMap;
 use vm::file_format::CodeOffset;
 

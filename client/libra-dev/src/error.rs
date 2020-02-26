@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::cell::RefCell;
-use std::cmp::min;
-use std::os::raw::c_char;
+use std::{cell::RefCell, cmp::min, os::raw::c_char};
 
 const MAX_ERROR_LENGTH: usize = 1024;
 

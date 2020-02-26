@@ -16,9 +16,14 @@ use vm::{
         StructFieldInformation, StructHandleIndex, TableIndex,
     },
 };
-use vm_runtime::chain_state::SystemExecutionContext;
-use vm_runtime::{loaded_data::loaded_module::LoadedModule, runtime::VMRuntime};
-use vm_runtime_types::{loaded_data::struct_def::StructDef, loaded_data::types::Type, values::*};
+use vm_runtime::{
+    chain_state::SystemExecutionContext, loaded_data::loaded_module::LoadedModule,
+    runtime::VMRuntime,
+};
+use vm_runtime_types::{
+    loaded_data::{struct_def::StructDef, types::Type},
+    values::*,
+};
 
 /// A wrapper around state that is used to generate random valid inhabitants for types.
 pub struct RandomInhabitor<'alloc, 'txn>

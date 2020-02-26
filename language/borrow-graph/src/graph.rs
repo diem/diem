@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::paths::{self, Path, PathSlice};
-use crate::references::*;
+use crate::{
+    paths::{self, Path, PathSlice},
+    references::*,
+};
 use mirai_annotations::{debug_checked_postcondition, debug_checked_precondition};
 use std::collections::{BTreeMap, BTreeSet};
 

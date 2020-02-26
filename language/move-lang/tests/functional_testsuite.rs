@@ -7,8 +7,12 @@ use functional_tests::{
     testsuite,
 };
 use libra_types::account_address::AccountAddress as LibraAddress;
-use move_lang::test_utils::{stdlib_files, FUNCTIONAL_TEST_DIR};
-use move_lang::{move_compile_no_report, shared::Address, to_bytecode::translate::CompiledUnit};
+use move_lang::{
+    move_compile_no_report,
+    shared::Address,
+    test_utils::{stdlib_files, FUNCTIONAL_TEST_DIR},
+    to_bytecode::translate::CompiledUnit,
+};
 use std::{convert::TryFrom, io::Write, path::Path};
 use tempfile::NamedTempFile;
 

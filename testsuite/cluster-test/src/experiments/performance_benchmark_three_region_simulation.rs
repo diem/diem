@@ -1,14 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::experiments::ExperimentParam;
-use crate::tx_emitter::EmitJobRequest;
 use crate::{
     cluster::Cluster,
     effects::{three_region_simulation_effects, Effect},
-    experiments::Context,
-    experiments::Experiment,
+    experiments::{Context, Experiment, ExperimentParam},
     stats,
+    tx_emitter::EmitJobRequest,
     util::unix_timestamp_now,
 };
 use async_trait::async_trait;

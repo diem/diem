@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
-use std::cmp::min;
-use std::env;
+use std::{cmp::min, env};
 
-use crate::experiments::{CpuFlamegraphParams, ExperimentParam};
 use crate::{
     cluster::Cluster,
     experiments::{
-        Experiment, PerformanceBenchmarkNodesDownParams,
+        CpuFlamegraphParams, Experiment, ExperimentParam, PerformanceBenchmarkNodesDownParams,
         PerformanceBenchmarkThreeRegionSimulationParams, RebootRandomValidatorsParams,
         RecoveryTimeParams,
     },

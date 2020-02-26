@@ -4,7 +4,7 @@
 use crate::chained_bft::liveness::{
     proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer,
 };
-use consensus_types::{block::block_test_utils::certificate_for_genesis, block::Block};
+use consensus_types::block::{block_test_utils::certificate_for_genesis, Block};
 use libra_types::validator_signer::ValidatorSigner;
 
 #[test]

@@ -7,8 +7,7 @@ use crate::{
 use libra_types::{
     account_config::AccountResource, account_state_blob::AccountStateBlob, event::EVENT_KEY_LENGTH,
 };
-use std::convert::TryFrom;
-use std::slice;
+use std::{convert::TryFrom, slice};
 
 pub fn libra_LibraAccountResource_from_safe(
     blob: AccountStateBlob,
@@ -86,9 +85,10 @@ mod tests {
     fn test_get_accountresource() {
         use libra_crypto::ed25519::compat;
         use libra_types::{
-            account_address::AccountAddress, account_config::AccountResource,
-            account_config::ACCOUNT_RESOURCE_PATH, byte_array::ByteArray, event::EventHandle,
-            event::EventKey,
+            account_address::AccountAddress,
+            account_config::{AccountResource, ACCOUNT_RESOURCE_PATH},
+            byte_array::ByteArray,
+            event::{EventHandle, EventKey},
         };
         use std::collections::BTreeMap;
 

@@ -13,8 +13,7 @@
 pub mod mocks;
 
 use anyhow::Result;
-use futures::channel::mpsc;
-use futures::sink::SinkExt;
+use futures::{channel::mpsc, sink::SinkExt};
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_types::proto::types::{

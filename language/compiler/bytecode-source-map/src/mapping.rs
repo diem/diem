@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::marking::MarkedSourceMapping;
-use crate::source_map::ModuleSourceMap;
+use crate::{marking::MarkedSourceMapping, source_map::ModuleSourceMap};
 use vm::file_format::{CompiledModule, CompiledScript};
 
 /// An object that associates source code with compiled bytecode and source map.

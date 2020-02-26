@@ -3,26 +3,27 @@
 
 #![forbid(unsafe_code)]
 
-use crate::boogie_wrapper::BoogieWrapper;
-use crate::bytecode_translator::BoogieTranslator;
-use crate::cli::{abort_on_error, Options, INLINE_PRELUDE};
-use crate::code_writer::CodeWriter;
-use crate::env::{GlobalEnv, ModuleIndex};
+use crate::{
+    boogie_wrapper::BoogieWrapper,
+    bytecode_translator::BoogieTranslator,
+    cli::{abort_on_error, Options, INLINE_PRELUDE},
+    code_writer::CodeWriter,
+    env::{GlobalEnv, ModuleIndex},
+};
 use bytecode_verifier::VerifiedModule;
-use ir_to_bytecode::compiler::compile_module;
-use ir_to_bytecode::parser::parse_module;
+use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
 use itertools::Itertools;
-use libra_types::account_address::AccountAddress;
-use libra_types::identifier::Identifier;
+use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use log::info;
-use move_ir_types::ast::Loc;
-use move_ir_types::ast::ModuleDefinition;
-use move_ir_types::spec_language_ast::{Condition, Invariant};
-use std::collections::BTreeMap;
-use std::fs;
-use std::path::Path;
-use vm::access::ModuleAccess;
-use vm::file_format::{FunctionDefinitionIndex, StructDefinitionIndex};
+use move_ir_types::{
+    ast::{Loc, ModuleDefinition},
+    spec_language_ast::{Condition, Invariant},
+};
+use std::{collections::BTreeMap, fs, path::Path};
+use vm::{
+    access::ModuleAccess,
+    file_format::{FunctionDefinitionIndex, StructDefinitionIndex},
+};
 
 /// Content of the default prelude.
 const DEFAULT_PRELUDE: &[u8] = include_bytes!("prelude.bpl");

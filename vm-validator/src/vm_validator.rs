@@ -9,8 +9,7 @@ use libra_types::{
     transaction::SignedTransaction, vm_error::VMStatus,
 };
 use scratchpad::SparseMerkleTree;
-use std::convert::TryFrom;
-use std::sync::Arc;
+use std::{convert::TryFrom, sync::Arc};
 use storage_client::{StorageRead, VerifiedStateView};
 use tokio::runtime::Handle;
 use vm_runtime::{LibraVM, VMVerifier};

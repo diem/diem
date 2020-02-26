@@ -7,11 +7,11 @@ mod mock_vm_test;
 use libra_config::config::VMConfig;
 use libra_crypto::ed25519::compat;
 use libra_state_view::StateView;
-use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     contract_event::ContractEvent,
+    crypto_proxies::ValidatorSet,
     event::EventKey,
     language_storage::TypeTag,
     transaction::{

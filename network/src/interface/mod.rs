@@ -15,25 +15,26 @@ use crate::{
     counters,
     peer::{Peer, PeerHandle, PeerNotification},
     peer_manager::ConnectionNotification,
-    protocols::identity::Identity,
     protocols::{
         direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
+        identity::Identity,
         rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification, RpcRequest},
     },
     validator_network, ProtocolId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::io::{AsyncRead, AsyncWrite};
-use futures::{stream::StreamExt, FutureExt, SinkExt};
+use futures::{
+    io::{AsyncRead, AsyncWrite},
+    stream::StreamExt,
+    FutureExt, SinkExt,
+};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{multiplexing::StreamMultiplexer, transport::ConnectionOrigin};
 use parity_multiaddr::Multiaddr;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::num::NonZeroUsize;
-use std::time::Duration;
+use std::{
+    collections::HashSet, fmt::Debug, marker::PhantomData, num::NonZeroUsize, time::Duration,
+};
 use tokio::runtime::Handle;
 
 /// Requests [`NetworkProvider`] receives from the network interface.

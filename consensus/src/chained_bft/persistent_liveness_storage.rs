@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::epoch_manager::LivenessStorageData;
 use crate::{
-    chained_bft::consensusdb::ConsensusDB, consensus_provider::create_storage_read_client,
+    chained_bft::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData},
+    consensus_provider::create_storage_read_client,
 };
 use anyhow::{format_err, Context, Result};
 use consensus_types::{
@@ -14,11 +14,11 @@ use executor::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use libra_types::block_info::Round;
-use libra_types::crypto_proxies::ValidatorPublicKeys;
-use libra_types::crypto_proxies::ValidatorSet;
-use libra_types::crypto_proxies::ValidatorVerifier;
-use libra_types::ledger_info::LedgerInfo;
+use libra_types::{
+    block_info::Round,
+    crypto_proxies::{ValidatorPublicKeys, ValidatorSet, ValidatorVerifier},
+    ledger_info::LedgerInfo,
+};
 use std::{collections::HashSet, sync::Arc};
 use storage_client::StorageRead;
 

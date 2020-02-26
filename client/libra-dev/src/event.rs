@@ -6,14 +6,13 @@ use crate::{
     error::*,
 };
 use libra_types::{
-    account_address::ADDRESS_LENGTH, account_config::ReceivedPaymentEvent,
-    account_config::SentPaymentEvent, contract_event::ContractEvent, event::EventKey,
-    event::EVENT_KEY_LENGTH, language_storage::TypeTag,
+    account_address::ADDRESS_LENGTH,
+    account_config::{ReceivedPaymentEvent, SentPaymentEvent},
+    contract_event::ContractEvent,
+    event::{EventKey, EVENT_KEY_LENGTH},
+    language_storage::TypeTag,
 };
-use std::convert::TryFrom;
-use std::ffi::CString;
-use std::ops::Deref;
-use std::slice;
+use std::{convert::TryFrom, ffi::CString, ops::Deref, slice};
 
 const MAX_BUFFER_LENGTH: usize = 255;
 

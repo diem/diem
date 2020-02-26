@@ -18,8 +18,7 @@ use memsocket::MemorySocket;
 use proptest::{arbitrary::any, collection::vec, prop_oneof, strategy::Strategy};
 use std::{io, time::Duration};
 use tokio::runtime;
-use tokio_util::codec::Encoder;
-use tokio_util::codec::LengthDelimitedCodec;
+use tokio_util::codec::{Encoder, LengthDelimitedCodec};
 
 // Length of unsigned varint prefix in bytes for a u128-sized length
 const MAX_UVI_PREFIX_BYTES: usize = 19;

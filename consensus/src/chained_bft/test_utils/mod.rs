@@ -26,8 +26,7 @@ use libra_types::block_info::BlockInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockSharedStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
-use std::thread;
-use std::time::Duration;
+use std::{thread, time::Duration};
 
 pub type TestPayload = Vec<usize>;
 

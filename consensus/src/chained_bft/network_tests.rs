@@ -11,14 +11,17 @@ use crate::chained_bft::{
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::{
-    block::block_test_utils::certificate_for_genesis, block::Block, common::Author,
-    proposal_msg::ProposalMsg, sync_info::SyncInfo, vote::Vote, vote_data::VoteData,
+    block::{block_test_utils::certificate_for_genesis, Block},
+    common::Author,
+    proposal_msg::ProposalMsg,
+    sync_info::SyncInfo,
+    vote::Vote,
+    vote_data::VoteData,
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
 use libra_prost_ext::MessageExt;
-use libra_types::block_info::BlockInfo;
-use libra_types::PeerId;
+use libra_types::{block_info::BlockInfo, PeerId};
 use network::{
     peer_manager::{conn_status_channel, PeerManagerNotification, PeerManagerRequest},
     proto::ConsensusMsg,
@@ -356,8 +359,7 @@ impl DropConfig {
     }
 }
 
-use crate::chained_bft::network::NetworkTask;
-use crate::chained_bft::test_utils::TestPayload;
+use crate::chained_bft::{network::NetworkTask, test_utils::TestPayload};
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };

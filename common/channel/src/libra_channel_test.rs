@@ -5,8 +5,7 @@ use crate::{libra_channel, libra_channel::ElementStatus, message_queues::QueueSt
 use futures::{
     channel::oneshot,
     executor::block_on,
-    future::join,
-    future::FutureExt,
+    future::{join, FutureExt},
     stream::{FusedStream, StreamExt},
 };
 use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};

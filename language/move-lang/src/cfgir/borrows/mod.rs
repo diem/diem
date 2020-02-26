@@ -4,11 +4,10 @@
 mod state;
 
 use super::{absint::*, ast::*};
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::*,
     parser::ast::{StructName, Var},
-    shared::*,
+    shared::{unique_map::UniqueMap, *},
 };
 use state::*;
 use std::collections::{BTreeMap, BTreeSet};

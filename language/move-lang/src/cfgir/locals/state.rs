@@ -1,8 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::unique_map::UniqueMap;
-use crate::{cfgir::absint::*, parser::ast::Var, shared::*};
+use crate::{
+    cfgir::absint::*,
+    parser::ast::Var,
+    shared::{unique_map::UniqueMap, *},
+};
 
 //**************************************************************************************************
 // Abstract state

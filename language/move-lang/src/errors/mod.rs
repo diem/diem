@@ -5,8 +5,11 @@ use crate::shared::Loc;
 use codespan::{FileId, Files, Span};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
-    term::termcolor::{Buffer, ColorChoice, StandardStream, WriteColor},
-    term::{emit, Config},
+    term::{
+        emit,
+        termcolor::{Buffer, ColorChoice, StandardStream, WriteColor},
+        Config,
+    },
 };
 use std::collections::{HashMap, HashSet};
 

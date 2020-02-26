@@ -12,8 +12,10 @@ use anyhow::{ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::convert::{TryFrom, TryInto};
-use std::sync::Arc;
+use std::{
+    convert::{TryFrom, TryInto},
+    sync::Arc,
+};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
@@ -205,8 +207,7 @@ mod tests {
 
     #[test]
     fn verify_validator_set_change_proof() {
-        use crate::crypto_proxies::random_validator_verifier;
-        use crate::ledger_info::LedgerInfo;
+        use crate::{crypto_proxies::random_validator_verifier, ledger_info::LedgerInfo};
         use libra_crypto::hash::{CryptoHash, HashValue};
         use std::collections::BTreeMap;
 

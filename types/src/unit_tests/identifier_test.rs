@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::identifier::{IdentStr, Identifier, ALLOWED_IDENTIFIERS};
-use crate::test_helpers::assert_canonical_encode_decode;
+use crate::{
+    identifier::{IdentStr, Identifier, ALLOWED_IDENTIFIERS},
+    test_helpers::assert_canonical_encode_decode,
+};
 use once_cell::sync::Lazy;
 use proptest::prelude::*;
 use regex::Regex;

@@ -12,12 +12,13 @@
 //!  * An actor responsible for dialing and listening for new connections.
 use crate::{
     counters,
-    interface::NetworkProvider,
-    interface::{NetworkNotification, NetworkRequest},
+    interface::{NetworkNotification, NetworkProvider, NetworkRequest},
     peer::DisconnectReason,
-    protocols::direct_send::Message,
-    protocols::identity::Identity,
-    protocols::rpc::{error::RpcError, InboundRpcRequest, OutboundRpcRequest},
+    protocols::{
+        direct_send::Message,
+        identity::Identity,
+        rpc::{error::RpcError, InboundRpcRequest, OutboundRpcRequest},
+    },
     transport, ProtocolId,
 };
 use bytes::Bytes;
@@ -35,10 +36,10 @@ use netcore::{
     transport::{ConnectionOrigin, Transport},
 };
 use parity_multiaddr::Multiaddr;
-use std::time::Duration;
 use std::{
     collections::{HashMap, HashSet},
     marker::PhantomData,
+    time::Duration,
 };
 use tokio::runtime::Handle;
 

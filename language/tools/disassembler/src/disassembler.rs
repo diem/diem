@@ -8,11 +8,13 @@ use bytecode_source_map::{
 };
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
 use libra_types::identifier::{IdentStr, Identifier};
-use vm::access::ModuleAccess;
-use vm::file_format::{
-    Bytecode, FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionSignature,
-    Kind, LocalsSignature, LocalsSignatureIndex, SignatureToken, StructDefinition,
-    StructDefinitionIndex, StructFieldInformation, TableIndex, TypeSignature,
+use vm::{
+    access::ModuleAccess,
+    file_format::{
+        Bytecode, FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex,
+        FunctionSignature, Kind, LocalsSignature, LocalsSignatureIndex, SignatureToken,
+        StructDefinition, StructDefinitionIndex, StructFieldInformation, TableIndex, TypeSignature,
+    },
 };
 
 /// Holds the various options that we support while disassembling code.

@@ -9,20 +9,20 @@ use std::{
 
 use anyhow::{format_err, Result};
 
-use futures::future::FutureExt;
-use futures::join;
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use futures::{future::FutureExt, join};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use structopt::StructOpt;
 
 use async_trait::async_trait;
 
-use crate::effects::{Action, GenerateCpuFlamegraph};
-use crate::experiments::ExperimentParam;
-use crate::tx_emitter::EmitJobRequest;
 use crate::{
-    aws, cluster::Cluster, experiments::Context, experiments::Experiment, instance,
+    aws,
+    cluster::Cluster,
+    effects::{Action, GenerateCpuFlamegraph},
+    experiments::{Context, Experiment, ExperimentParam},
+    instance,
     instance::Instance,
+    tx_emitter::EmitJobRequest,
 };
 
 #[derive(StructOpt, Debug)]

@@ -26,8 +26,7 @@ use libra_config::{
     },
     generator::{self, ValidatorSwarm},
 };
-use libra_crypto::hash::CryptoHash;
-use libra_crypto::HashValue;
+use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet, ValidatorVerifier};
 use network::peer_manager::conn_status_channel;

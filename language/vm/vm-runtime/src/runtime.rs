@@ -1,20 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::identifier::resource_storage_key;
-use crate::loaded_data::function::FunctionRef;
 use crate::{
     code_cache::{module_cache::VMModuleCache, script_cache::ScriptCache},
     execution_context::InterpreterContext,
+    identifier::resource_storage_key,
     interpreter::Interpreter,
-    loaded_data::{function::FunctionReference, loaded_module::LoadedModule},
+    loaded_data::{
+        function::{FunctionRef, FunctionReference},
+        loaded_module::LoadedModule,
+    },
 };
 use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
-use libra_types::language_storage::StructTag;
 use libra_types::{
     identifier::{IdentStr, Identifier},
-    language_storage::ModuleId,
+    language_storage::{ModuleId, StructTag},
     vm_error::{StatusCode, VMStatus},
 };
 use vm::{

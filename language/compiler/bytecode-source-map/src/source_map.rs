@@ -2,19 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Result};
-use libra_types::account_address::AccountAddress;
-use libra_types::identifier::Identifier;
+use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use move_ir_types::ast::{ModuleName, QualifiedModuleIdent};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::ops::Bound;
-use vm::access::*;
-use vm::file_format::{
-    AddressPoolIndex, CodeOffset, CompiledModule, CompiledScript, FieldDefinitionIndex,
-    FunctionDefinition, FunctionDefinitionIndex, IdentifierIndex, StructDefinition,
-    StructDefinitionIndex, TableIndex,
+use std::{collections::BTreeMap, ops::Bound};
+use vm::{
+    access::*,
+    file_format::{
+        AddressPoolIndex, CodeOffset, CompiledModule, CompiledScript, FieldDefinitionIndex,
+        FunctionDefinition, FunctionDefinitionIndex, IdentifierIndex, StructDefinition,
+        StructDefinitionIndex, TableIndex,
+    },
+    internals::ModuleIndex,
 };
-use vm::internals::ModuleIndex;
 
 //***************************************************************************
 // Source location mapping

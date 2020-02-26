@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block::block_test_utils::certificate_for_genesis;
 use crate::{
-    block::{block_test_utils::*, Block},
+    block::{
+        block_test_utils::{certificate_for_genesis, *},
+        Block,
+    },
     quorum_cert::QuorumCert,
 };
 use libra_crypto::hash::{CryptoHash, HashValue};

@@ -5,8 +5,7 @@
 
 use anyhow::{ensure, format_err, Result};
 use serde_json::Value;
-use std::collections::HashSet;
-use std::{ffi::OsStr, fmt, process::Stdio};
+use std::{collections::HashSet, ffi::OsStr, fmt, process::Stdio};
 
 #[derive(Clone)]
 pub struct Instance {

@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use std::fmt::Debug;
-use std::{collections::BTreeMap, iter::IntoIterator};
+use std::{collections::BTreeMap, fmt::Debug, iter::IntoIterator};
 
 //**************************************************************************************************
 // UniqueMap

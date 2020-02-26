@@ -41,9 +41,9 @@ use proptest::{
     prelude::*,
 };
 use proptest_derive::Arbitrary;
-use std::convert::TryFrom;
 use std::{
     borrow::Cow,
+    convert::TryFrom,
     iter::{FromIterator, Iterator},
     net::{Ipv4Addr, Ipv6Addr},
     time::Duration,

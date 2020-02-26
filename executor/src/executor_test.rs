@@ -10,9 +10,9 @@ use crate::{
 };
 use libra_config::config::NodeConfig;
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
-use libra_types::block_info::BlockInfo;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
+    block_info::BlockInfo,
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
     transaction::{Transaction, TransactionListWithProof, Version},

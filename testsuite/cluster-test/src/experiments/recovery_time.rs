@@ -8,12 +8,13 @@ use std::{collections::HashSet, fmt, time::Duration};
 use structopt::StructOpt;
 use tokio::time;
 
-use crate::cluster::Cluster;
-use crate::effects::{DeleteLibraData, Effect, StopContainer};
-use crate::experiments::{Context, ExperimentParam};
-use crate::instance::Instance;
-use crate::tx_emitter::EmitJobRequest;
-use crate::{effects::Action, experiments::Experiment};
+use crate::{
+    cluster::Cluster,
+    effects::{Action, DeleteLibraData, Effect, StopContainer},
+    experiments::{Context, Experiment, ExperimentParam},
+    instance::Instance,
+    tx_emitter::EmitJobRequest,
+};
 use async_trait::async_trait;
 use slog_scope::info;
 use std::time::Instant;

@@ -1,13 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_address::AccountAddress;
-use crate::validator_set::ValidatorSet;
+use crate::{account_address::AccountAddress, validator_set::ValidatorSet};
 use anyhow::{ensure, Result};
 use libra_crypto::*;
 use mirai_annotations::*;
-use std::collections::BTreeMap;
-use std::fmt;
+use std::{collections::BTreeMap, fmt};
 use thiserror::Error;
 
 /// Errors possible during signature verification.
@@ -322,11 +320,12 @@ impl<PublicKey: VerifyingKey> From<&ValidatorVerifier<PublicKey>> for ValidatorS
 
 #[cfg(test)]
 mod tests {
-    use crate::crypto_proxies::random_validator_verifier;
-    use crate::validator_verifier::VerifyError::TooLittleVotingPower;
     use crate::{
+        crypto_proxies::random_validator_verifier,
         validator_signer::ValidatorSigner,
-        validator_verifier::{ValidatorInfo, ValidatorVerifier, VerifyError},
+        validator_verifier::{
+            ValidatorInfo, ValidatorVerifier, VerifyError, VerifyError::TooLittleVotingPower,
+        },
     };
     use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue};
     use std::collections::BTreeMap;

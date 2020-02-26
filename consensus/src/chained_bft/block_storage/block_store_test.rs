@@ -1,12 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::test_utils::build_simple_tree;
 use crate::chained_bft::{
     block_storage::{
         block_store::sync_manager::NeedFetchResult, BlockReader, PendingVotes, VoteReceptionResult,
     },
-    test_utils::{build_empty_tree, TreeInserter},
+    test_utils::{build_empty_tree, build_simple_tree, TreeInserter},
 };
 use consensus_types::{
     block::{
@@ -21,8 +20,10 @@ use consensus_types::{
     vote_data::VoteData,
 };
 use libra_crypto::{HashValue, PrivateKey};
-use libra_types::crypto_proxies::random_validator_verifier;
-use libra_types::{account_address::AccountAddress, crypto_proxies::ValidatorSigner};
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::{random_validator_verifier, ValidatorSigner},
+};
 use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet};
 

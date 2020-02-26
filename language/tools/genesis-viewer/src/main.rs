@@ -1,12 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::access_path::AccessPath;
-use libra_types::contract_event::ContractEvent;
-use libra_types::transaction::{ChangeSet, Transaction, TransactionPayload};
-use libra_types::write_set::{WriteOp, WriteSet};
-use std::collections::{BTreeMap, BTreeSet};
-use std::{fs::File, io::prelude::*, path::PathBuf};
+use libra_types::{
+    access_path::AccessPath,
+    contract_event::ContractEvent,
+    transaction::{ChangeSet, Transaction, TransactionPayload},
+    write_set::{WriteOp, WriteSet},
+};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs::File,
+    io::prelude::*,
+    path::PathBuf,
+};
 use structopt::StructOpt;
 use vm::CompiledModule;
 

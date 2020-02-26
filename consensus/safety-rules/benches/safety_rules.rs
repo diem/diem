@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use consensus_types::{block::block_test_utils, block::Block};
+use consensus_types::block::{block_test_utils, Block};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use libra_config::config::{OnDiskStorageConfig, SafetyRulesBackend};
 use libra_secure_storage::{InMemoryStorage, OnDiskStorage};

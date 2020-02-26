@@ -11,8 +11,7 @@ mod performance_benchmark_three_region_simulation;
 mod reboot_random_validator;
 mod recovery_time;
 
-use std::time::Duration;
-use std::{collections::HashSet, fmt::Display};
+use std::{collections::HashSet, fmt::Display, time::Duration};
 
 pub use multi_region_network_simulation::{MultiRegionSimulation, MultiRegionSimulationParams};
 pub use packet_loss_random_validators::{
@@ -27,10 +26,12 @@ pub use performance_benchmark_three_region_simulation::{
 pub use reboot_random_validator::{RebootRandomValidators, RebootRandomValidatorsParams};
 pub use recovery_time::{RecoveryTime, RecoveryTimeParams};
 
-use crate::cluster::Cluster;
-use crate::prometheus::Prometheus;
-use crate::report::SuiteReport;
-use crate::tx_emitter::{EmitJobRequest, TxEmitter};
+use crate::{
+    cluster::Cluster,
+    prometheus::Prometheus,
+    report::SuiteReport,
+    tx_emitter::{EmitJobRequest, TxEmitter},
+};
 
 use async_trait::async_trait;
 pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};

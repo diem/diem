@@ -3,8 +3,7 @@
 
 use crate::{common::Round, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate};
 use anyhow::{ensure, Context};
-use libra_types::block_info::BlockInfo;
-use libra_types::crypto_proxies::ValidatorVerifier;
+use libra_types::{block_info::BlockInfo, crypto_proxies::ValidatorVerifier};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

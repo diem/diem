@@ -4,8 +4,7 @@
 use codespan::{ByteIndex, Span};
 use std::fmt;
 
-use crate::errors::*;
-use crate::shared::*;
+use crate::{errors::*, shared::*};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tok {

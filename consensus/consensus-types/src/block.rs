@@ -9,14 +9,15 @@ use crate::{
 };
 use anyhow::{bail, ensure, format_err};
 use libra_crypto::hash::{CryptoHash, HashValue};
-use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};
-use libra_types::block_info::BlockInfo;
-use libra_types::block_metadata::BlockMetadata;
-use libra_types::crypto_proxies::ValidatorSet;
-use libra_types::transaction::Version;
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
+    account_address::{AccountAddress, ADDRESS_LENGTH},
+    block_info::BlockInfo,
+    block_metadata::BlockMetadata,
+    crypto_proxies::{
+        LedgerInfoWithSignatures, Signature, ValidatorSet, ValidatorSigner, ValidatorVerifier,
+    },
     ledger_info::LedgerInfo,
+    transaction::Version,
 };
 use mirai_annotations::debug_checked_verify_eq;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
