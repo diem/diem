@@ -291,10 +291,10 @@ error:
     │                   ^^^^^^^^^ Incompatible arguments to '>='
     ·
  19 │         (0, 1) >= (0, 1, 2);
-    │         ------ The type: '({integer}, {integer})'
+    │         ------ The expression list type of length 2: '({integer}, {integer})'
     ·
  19 │         (0, 1) >= (0, 1, 2);
-    │                   --------- Is not compatible with: '({integer}, {integer}, {integer})'
+    │                   --------- Is not compatible with the expression list type of length 3: '({integer}, {integer}, {integer})'
     │
 
 error: 

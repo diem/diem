@@ -3,18 +3,10 @@ error:
    ┌── tests/move_check/typing/declare_wrong_arity.move:5:13 ───
    │
  5 │         let x: ();
-   │             ^ Invalid list-binding. The list-binding expected 1 argument(s) but got 0
+   │             ^ Invalid type for local
    ·
  5 │         let x: ();
-   │                -- Found 0 arguments here
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/declare_wrong_arity.move:5:13 ───
-   │
- 5 │         let x: ();
-   │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+   │             - Expected a single type, but found expression list type: '()'
    │
 
 error: 
@@ -22,10 +14,13 @@ error:
    ┌── tests/move_check/typing/declare_wrong_arity.move:6:13 ───
    │
  6 │         let (): u64;
-   │             ^^ Invalid list-binding. The list-binding expected 0 argument(s) but got 1
+   │             ^^ Invalid value for binding
    ·
  6 │         let (): u64;
-   │                 --- Found 1 arguments here
+   │             -- The type: '()'
+   ·
+ 6 │         let (): u64;
+   │                 --- Is not compatible with: 'u64'
    │
 
 error: 
@@ -33,10 +28,13 @@ error:
    ┌── tests/move_check/typing/declare_wrong_arity.move:7:13 ───
    │
  7 │         let (x, b, R{f}): (u64, bool, R, R);
-   │             ^^^^^^^^^^^^ Invalid list-binding. The list-binding expected 3 argument(s) but got 4
+   │             ^^^^^^^^^^^^ Invalid value for binding
    ·
  7 │         let (x, b, R{f}): (u64, bool, R, R);
-   │                           ----------------- Found 4 arguments here
+   │             ------------ The expression list type of length 3: '(_, _, _)'
+   ·
+ 7 │         let (x, b, R{f}): (u64, bool, R, R);
+   │                           ----------------- Is not compatible with the expression list type of length 4: '(u64, bool, 0x8675309::M::R, 0x8675309::M::R)'
    │
 
 error: 
@@ -44,9 +42,12 @@ error:
    ┌── tests/move_check/typing/declare_wrong_arity.move:8:13 ───
    │
  8 │         let (x, b, R{f}): (u64, bool);
-   │             ^^^^^^^^^^^^ Invalid list-binding. The list-binding expected 3 argument(s) but got 2
+   │             ^^^^^^^^^^^^ Invalid value for binding
    ·
  8 │         let (x, b, R{f}): (u64, bool);
-   │                           ----------- Found 2 arguments here
+   │             ------------ The expression list type of length 3: '(_, _, _)'
+   ·
+ 8 │         let (x, b, R{f}): (u64, bool);
+   │                           ----------- Is not compatible with the expression list type of length 2: '(u64, bool)'
    │
 

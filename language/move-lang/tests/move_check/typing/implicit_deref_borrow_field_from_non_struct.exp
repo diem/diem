@@ -69,10 +69,21 @@ error:
     ┌── tests/move_check/typing/implicit_deref_borrow_field_from_non_struct.move:12:9 ───
     │
  12 │         ().R;
-    │         ^^ Invalid dot access. Expected an expression of a single type but got an expression of type: '()'
+    │         ^^ Invalid dot access
     ·
  12 │         ().R;
-    │         -- Type found here
+    │         -- Expected a single type, but found expression list type: '()'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_from_non_struct.move:12:9 ───
+    │
+ 12 │         ().R;
+    │         ^^^^ Unbound field 'R'
+    ·
+ 12 │         ().R;
+    │         -- Expected a struct type in the current module but got: '()'
     │
 
 error: 
@@ -80,9 +91,20 @@ error:
     ┌── tests/move_check/typing/implicit_deref_borrow_field_from_non_struct.move:13:9 ───
     │
  13 │         (S{f: 0}, S{f:0}).f;
-    │         ^^^^^^^^^^^^^^^^^ Invalid dot access. Expected an expression of a single type but got an expression of type: '(0x8675309::M::S, 0x8675309::M::S)'
+    │         ^^^^^^^^^^^^^^^^^ Invalid dot access
     ·
  13 │         (S{f: 0}, S{f:0}).f;
-    │         ----------------- Type found here
+    │         ----------------- Expected a single type, but found expression list type: '(0x8675309::M::S, 0x8675309::M::S)'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_from_non_struct.move:13:9 ───
+    │
+ 13 │         (S{f: 0}, S{f:0}).f;
+    │         ^^^^^^^^^^^^^^^^^^^ Unbound field 'f'
+    ·
+ 13 │         (S{f: 0}, S{f:0}).f;
+    │         ----------------- Expected a struct type in the current module but got: '(0x8675309::M::S, 0x8675309::M::S)'
     │
 

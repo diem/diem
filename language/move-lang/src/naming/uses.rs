@@ -178,9 +178,7 @@ fn module(context: &mut Context, mident: ModuleIdent, mdef: &N::ModuleDefinition
 
 fn struct_def(context: &mut Context, sdef: &N::StructDefinition) {
     if let N::StructFields::Defined(fields) = &sdef.fields {
-        fields
-            .iter()
-            .for_each(|(_, (_, bt))| base_type(context, bt));
+        fields.iter().for_each(|(_, (_, bt))| type_(context, bt));
     }
 }
 
@@ -193,7 +191,7 @@ fn function(context: &mut Context, fdef: &N::Function) {
 }
 
 fn function_signature(context: &mut Context, sig: &N::FunctionSignature) {
-    single_types(context, sig.parameters.iter().map(|(_, st)| st));
+    types(context, sig.parameters.iter().map(|(_, st)| st));
     type_(context, &sig.return_type)
 }
 
@@ -210,44 +208,28 @@ fn type_name(context: &mut Context, sp!(loc, tn_): &N::TypeName) {
     }
 }
 
-fn base_types_opt(context: &mut Context, bs_opt: &Option<Vec<N::BaseType>>) {
-    bs_opt.iter().for_each(|bs| base_types(context, bs))
+fn types<'a>(context: &mut Context, tys: impl IntoIterator<Item = &'a N::Type>) {
+    tys.into_iter().for_each(|ty| type_(context, ty))
 }
 
-fn base_types<'a>(context: &mut Context, bs: impl IntoIterator<Item = &'a N::BaseType>) {
-    bs.into_iter().for_each(|bt| base_type(context, bt))
+fn types_opt(context: &mut Context, tys_opt: &Option<Vec<N::Type>>) {
+    tys_opt.iter().for_each(|tys| types(context, tys))
 }
 
-fn base_type(context: &mut Context, sp!(_, bt_): &N::BaseType) {
-    use N::BaseType_ as BT;
-    if let BT::Apply(_, tn, bs) = bt_ {
-        type_name(context, tn);
-        base_types(context, bs);
-    }
-}
-
-fn single_types<'a>(context: &mut Context, ss: impl IntoIterator<Item = &'a N::SingleType>) {
-    ss.into_iter().for_each(|st| single_type(context, st))
-}
-
-fn single_type(context: &mut Context, sp!(_, st_): &N::SingleType) {
-    use N::SingleType_ as ST;
-    match st_ {
-        ST::Base(bt) | ST::Ref(_, bt) => base_type(context, bt),
+fn type_(context: &mut Context, sp!(_, ty_): &N::Type) {
+    use N::Type_ as T;
+    match ty_ {
+        T::Apply(_, tn, tys) => {
+            type_name(context, tn);
+            types(context, tys);
+        }
+        T::Ref(_, t) => type_(context, t),
+        T::Param(_) | T::Unit | T::Anything | T::UnresolvedError | T::Var(_) => (),
     }
 }
 
 fn type_opt(context: &mut Context, t_opt: &Option<N::Type>) {
     t_opt.iter().for_each(|t| type_(context, t))
-}
-
-fn type_(context: &mut Context, sp!(_, t_): &N::Type) {
-    use N::Type_ as T;
-    match t_ {
-        T::Unit => (),
-        T::Single(s) => single_type(context, s),
-        T::Multiple(ss) => single_types(context, ss),
-    }
 }
 
 //**************************************************************************************************
@@ -260,40 +242,27 @@ fn sequence(context: &mut Context, sequence: &N::Sequence) {
         match item_ {
             SI::Seq(e) => exp(context, e),
             SI::Declare(bl, ty_opt) => {
-                binds(context, &bl.value);
+                lvalues(context, &bl.value);
                 type_opt(context, ty_opt);
             }
             SI::Bind(bl, e) => {
-                binds(context, &bl.value);
+                lvalues(context, &bl.value);
                 exp(context, e)
             }
         }
     }
 }
 
-fn binds<'a>(context: &mut Context, bl: impl IntoIterator<Item = &'a N::Bind>) {
-    bl.into_iter().for_each(|b| bind(context, b))
+fn lvalues<'a>(context: &mut Context, al: impl IntoIterator<Item = &'a N::LValue>) {
+    al.into_iter().for_each(|a| lvalue(context, a))
 }
 
-fn bind(context: &mut Context, sp!(loc, b_): &N::Bind) {
-    use N::Bind_ as B;
-    if let B::Unpack(m, _, bs_opt, f) = b_ {
+fn lvalue(context: &mut Context, sp!(loc, a_): &N::LValue) {
+    use N::LValue_ as L;
+    if let L::Unpack(m, _, bs_opt, f) = a_ {
         context.add_usage(m, *loc);
-        base_types_opt(context, bs_opt);
-        binds(context, f.iter().map(|(_, (_, b))| b));
-    }
-}
-
-fn assigns<'a>(context: &mut Context, al: impl IntoIterator<Item = &'a N::Assign>) {
-    al.into_iter().for_each(|a| assign(context, a))
-}
-
-fn assign(context: &mut Context, sp!(loc, a_): &N::Assign) {
-    use N::Assign_ as A;
-    if let A::Unpack(m, _, bs_opt, f) = a_ {
-        context.add_usage(m, *loc);
-        base_types_opt(context, bs_opt);
-        assigns(context, f.iter().map(|(_, (_, b))| b));
+        types_opt(context, bs_opt);
+        lvalues(context, f.iter().map(|(_, (_, b))| b));
     }
 }
 
@@ -310,15 +279,15 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
         | E::Copy(_)
         | E::Use(_) => (),
 
-        E::ModuleCall(m, _, bs_opt, er) => {
+        E::ModuleCall(m, _, bs_opt, sp!(_, es_)) => {
             context.add_usage(m, *loc);
-            base_types_opt(context, bs_opt);
-            exp(context, er);
+            types_opt(context, bs_opt);
+            es_.iter().for_each(|e| exp(context, e))
         }
 
-        E::Builtin(bf, er) => {
+        E::Builtin(bf, sp!(_, es_)) => {
             builtin_function(context, bf);
-            exp(context, er);
+            es_.iter().for_each(|e| exp(context, e))
         }
 
         E::IfElse(ec, et, ef) => {
@@ -333,7 +302,7 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
         }
         E::Block(seq) => sequence(context, seq),
         E::Assign(al, e) => {
-            assigns(context, &al.value);
+            lvalues(context, &al.value);
             exp(context, e)
         }
         E::FieldMutate(edotted, e) => {
@@ -347,7 +316,7 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
 
         E::Pack(m, _, bs_opt, fes) => {
             context.add_usage(m, *loc);
-            base_types_opt(context, bs_opt);
+            types_opt(context, bs_opt);
             fes.iter().for_each(|(_, (_, e))| exp(context, e))
         }
 
@@ -377,6 +346,6 @@ fn builtin_function(context: &mut Context, sp!(_, bf_): &N::BuiltinFunction) {
         | B::MoveFrom(bt_opt)
         | B::BorrowGlobal(_, bt_opt)
         | B::Exists(bt_opt)
-        | B::Freeze(bt_opt) => bt_opt.iter().for_each(|bt| base_type(context, bt)),
+        | B::Freeze(bt_opt) => type_opt(context, bt_opt),
     }
 }

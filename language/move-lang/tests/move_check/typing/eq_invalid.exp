@@ -34,10 +34,10 @@ error:
     │               ^ Incompatible arguments to '=='
     ·
  15 │         &0 == 1;
-    │         -- The type: '&{integer}'
+    │               - The type: integer
     ·
  15 │         &0 == 1;
-    │               - Is not compatible with: integer
+    │         -- Is not compatible with: '&{integer}'
     │
 
 error: 
@@ -128,7 +128,7 @@ error:
     │         ^^^^^^^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
     ·
  27 │         G1{} == G1{};
-    │         ---- The type: '0x8675309::M::G1<_>'
+    │                 ---- The type: '0x8675309::M::G1<_>'
     ·
   7 │     struct G1<T: resource> {}
     │                  -------- Is found to be a non-copyable type here
@@ -158,7 +158,7 @@ error:
     │         ^^^^^^^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
     ·
  28 │         G2{} == G2{};
-    │         ---- The type: '0x8675309::M::G2<_>'
+    │                 ---- The type: '0x8675309::M::G2<_>'
     ·
   8 │     struct G2<T> {}
     │               - Is found to be a non-copyable type here
@@ -177,10 +177,10 @@ error:
     ┌── tests/move_check/typing/eq_invalid.move:32:9 ───
     │
  32 │         () == ();
-    │         ^^^^^^^^ Invalid use of '=='. Expected an expression of a single type but got an expression of the list: '()'
+    │         ^^^^^^^^ Invalid arguments to '=='
     ·
  32 │         () == ();
-    │         -- Type found here
+    │               -- Expected a single type, but found expression list type: '()'
     │
 
 error: 
@@ -188,10 +188,10 @@ error:
     ┌── tests/move_check/typing/eq_invalid.move:33:9 ───
     │
  33 │         (0, 1) == (0, 1);
-    │         ^^^^^^^^^^^^^^^^ Invalid use of '=='. Expected an expression of a single type but got an expression of the list: '({integer}, {integer})'
+    │         ^^^^^^^^^^^^^^^^ Invalid arguments to '=='
     ·
  33 │         (0, 1) == (0, 1);
-    │         ------ Type found here
+    │                   ------ Expected a single type, but found expression list type: '(u64, u64)'
     │
 
 error: 
@@ -202,10 +202,10 @@ error:
     │                      ^^^^^^ Incompatible arguments to '=='
     ·
  34 │         (1, 2, 3) == (0, 1);
-    │         --------- The type: '({integer}, {integer}, {integer})'
+    │         --------- The expression list type of length 3: '({integer}, {integer}, {integer})'
     ·
  34 │         (1, 2, 3) == (0, 1);
-    │                      ------ Is not compatible with: '({integer}, {integer})'
+    │                      ------ Is not compatible with the expression list type of length 2: '({integer}, {integer})'
     │
 
 error: 
@@ -216,9 +216,9 @@ error:
     │                   ^^^^^^^^^ Incompatible arguments to '=='
     ·
  35 │         (0, 1) == (1, 2, 3);
-    │         ------ The type: '({integer}, {integer})'
+    │         ------ The expression list type of length 2: '({integer}, {integer})'
     ·
  35 │         (0, 1) == (1, 2, 3);
-    │                   --------- Is not compatible with: '({integer}, {integer}, {integer})'
+    │                   --------- Is not compatible with the expression list type of length 3: '({integer}, {integer}, {integer})'
     │
 

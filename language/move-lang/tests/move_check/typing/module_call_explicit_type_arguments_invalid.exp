@@ -6,10 +6,10 @@ error:
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
    ·
  6 │         foo<u64, u64>(false, false);
-   │             --- The type: 'u64'
+   │                       ----- The type: 'bool'
    ·
  6 │         foo<u64, u64>(false, false);
-   │                       ----- Is not compatible with: 'bool'
+   │             --- Is not compatible with: 'u64'
    │
 
 error: 
@@ -20,10 +20,10 @@ error:
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
    ·
  6 │         foo<u64, u64>(false, false);
-   │                  --- The type: 'u64'
+   │                              ----- The type: 'bool'
    ·
  6 │         foo<u64, u64>(false, false);
-   │                              ----- Is not compatible with: 'bool'
+   │                  --- Is not compatible with: 'u64'
    │
 
 error: 
@@ -89,11 +89,11 @@ error:
  13 │         foo<U, u64>(t, 0);
     │         ^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
     ·
- 13 │         foo<U, u64>(t, 0);
-    │             - The type: 'U'
-    ·
  12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
-    │                        - Is not compatible with: 'T'
+    │                        - The type: 'T'
+    ·
+ 13 │         foo<U, u64>(t, 0);
+    │             - Is not compatible with: 'U'
     │
 
 error: 
@@ -103,11 +103,11 @@ error:
  14 │         foo<V, T>(u, v);
     │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
     ·
- 14 │         foo<V, T>(u, v);
-    │             - The type: 'V'
-    ·
  12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
-    │                              - Is not compatible with: 'U'
+    │                              - The type: 'U'
+    ·
+ 14 │         foo<V, T>(u, v);
+    │             - Is not compatible with: 'V'
     │
 
 error: 
@@ -117,10 +117,10 @@ error:
  14 │         foo<V, T>(u, v);
     │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
     ·
- 14 │         foo<V, T>(u, v);
-    │                - The type: 'T'
-    ·
  12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
-    │                                    - Is not compatible with: 'V'
+    │                                    - The type: 'V'
+    ·
+ 14 │         foo<V, T>(u, v);
+    │                - Is not compatible with: 'T'
     │
 

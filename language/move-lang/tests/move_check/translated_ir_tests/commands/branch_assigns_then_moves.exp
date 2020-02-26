@@ -1,11 +1,11 @@
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/commands/branch_assigns_then_moves.move:14:30 ───
+    ┌── tests/move_check/translated_ir_tests/commands/branch_assigns_then_moves.move:11:30 ───
     │
- 14 │     0x0::Transaction::assert(x == 5, 42);
+ 11 │     0x0::Transaction::assert(x == 5, 42);
     │                              ^ Invalid usage of local 'x'
     ·
-  9 │         y = move x;
+  6 │         y = move x;
     │             ------ The local might not have a value due to this position. The local must be assigned a value before being used
     │
 

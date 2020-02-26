@@ -3,35 +3,10 @@ error:
    ┌── tests/move_check/typing/pack_multiple.move:5:9 ───
    │
  5 │         Box { f: (0, 1) };
-   │         ^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+   │         ^^^^^^^^^^^^^^^^^ Invalid type argument
    ·
  5 │         Box { f: (0, 1) };
-   │         ----------------- The type: '0x8675309::M::Box<_>'
-   ·
- 2 │     struct Box<T> { f: T }
-   │                - Is found to be a non-copyable type here
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_multiple.move:5:9 ───
-   │
- 5 │         Box { f: (0, 1) };
-   │         ^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_multiple.move:5:18 ───
-   │
- 5 │         Box { f: (0, 1) };
-   │                  ^^^^^^ Invalid argument for field 'f' for '0x8675309::M::Box'
-   ·
- 5 │         Box { f: (0, 1) };
-   │                  ------ The type: '({integer}, {integer})'
-   ·
- 5 │         Box { f: (0, 1) };
-   │         ----------------- Is not compatible with: '_'
+   │         ----------------- Expected a single non-reference type, but found: '(u64, u64)'
    │
 
 error: 
@@ -39,35 +14,10 @@ error:
    ┌── tests/move_check/typing/pack_multiple.move:6:9 ───
    │
  6 │         Box { f: (0, 1, 2) };
-   │         ^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+   │         ^^^^^^^^^^^^^^^^^^^^ Invalid type argument
    ·
  6 │         Box { f: (0, 1, 2) };
-   │         -------------------- The type: '0x8675309::M::Box<_>'
-   ·
- 2 │     struct Box<T> { f: T }
-   │                - Is found to be a non-copyable type here
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_multiple.move:6:9 ───
-   │
- 6 │         Box { f: (0, 1, 2) };
-   │         ^^^^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_multiple.move:6:18 ───
-   │
- 6 │         Box { f: (0, 1, 2) };
-   │                  ^^^^^^^^^ Invalid argument for field 'f' for '0x8675309::M::Box'
-   ·
- 6 │         Box { f: (0, 1, 2) };
-   │                  --------- The type: '({integer}, {integer}, {integer})'
-   ·
- 6 │         Box { f: (0, 1, 2) };
-   │         -------------------- Is not compatible with: '_'
+   │         -------------------- Expected a single non-reference type, but found: '(u64, u64, u64)'
    │
 
 error: 
@@ -75,34 +25,9 @@ error:
    ┌── tests/move_check/typing/pack_multiple.move:7:9 ───
    │
  7 │         Box { f: (true, Box { f: 0 }) };
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
    ·
  7 │         Box { f: (true, Box { f: 0 }) };
-   │         ------------------------------- The type: '0x8675309::M::Box<_>'
-   ·
- 2 │     struct Box<T> { f: T }
-   │                - Is found to be a non-copyable type here
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_multiple.move:7:9 ───
-   │
- 7 │         Box { f: (true, Box { f: 0 }) };
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_multiple.move:7:18 ───
-   │
- 7 │         Box { f: (true, Box { f: 0 }) };
-   │                  ^^^^^^^^^^^^^^^^^^^^ Invalid argument for field 'f' for '0x8675309::M::Box'
-   ·
- 7 │         Box { f: (true, Box { f: 0 }) };
-   │                  -------------------- The type: '(bool, 0x8675309::M::Box<{integer}>)'
-   ·
- 7 │         Box { f: (true, Box { f: 0 }) };
-   │         ------------------------------- Is not compatible with: '_'
+   │         ------------------------------- Expected a single non-reference type, but found: '(bool, 0x8675309::M::Box<u64>)'
    │
 

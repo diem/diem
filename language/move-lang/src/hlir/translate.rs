@@ -11,7 +11,7 @@ use crate::{
     typing::ast as T,
 };
 use move_ir_types::location::*;
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
 
 //**************************************************************************************************
 // Vars
@@ -57,6 +57,7 @@ struct Context {
     structs: UniqueMap<StructName, UniqueMap<Field, usize>>,
     function_locals: UniqueMap<Var, H::SingleType>,
     local_scope: UniqueMap<Var, Var>,
+    used_locals: BTreeSet<Var>,
     return_type: Option<H::Type>,
     has_return_abort: bool,
 }
@@ -68,9 +69,15 @@ impl Context {
             structs: UniqueMap::new(),
             function_locals: UniqueMap::new(),
             local_scope: UniqueMap::new(),
+            used_locals: BTreeSet::new(),
             return_type: None,
             has_return_abort: false,
         }
+    }
+
+    pub fn error(&mut self, e: Vec<(Loc, impl Into<String>)>) {
+        self.errors
+            .push(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
     }
 
     pub fn get_errors(self) -> Errors {
@@ -85,9 +92,11 @@ impl Context {
         self.function_locals.is_empty() && self.local_scope.is_empty()
     }
 
-    pub fn extract_function_locals(&mut self) -> UniqueMap<Var, H::SingleType> {
+    pub fn extract_function_locals(&mut self) -> (UniqueMap<Var, H::SingleType>, BTreeSet<Var>) {
         self.local_scope = UniqueMap::new();
-        std::mem::replace(&mut self.function_locals, UniqueMap::new())
+        let locals = std::mem::replace(&mut self.function_locals, UniqueMap::new());
+        let used = std::mem::replace(&mut self.used_locals, BTreeSet::new());
+        (locals, used)
     }
 
     pub fn new_temp(&mut self, loc: Loc, t: H::SingleType) -> Var {
@@ -96,6 +105,7 @@ impl Context {
         self.local_scope
             .add(new_var.clone(), new_var.clone())
             .unwrap();
+        self.used_locals.insert(new_var.clone());
         new_var
     }
 
@@ -112,7 +122,9 @@ impl Context {
     }
 
     pub fn remapped_local(&mut self, v: Var) -> Var {
-        self.local_scope.get(&v).unwrap().clone()
+        let remapped = self.local_scope.get(&v).unwrap().clone();
+        self.used_locals.insert(remapped.clone());
+        remapped
     }
 
     pub fn add_struct_fields(&mut self, structs: &UniqueMap<StructName, H::StructDefinition>) {
@@ -209,6 +221,7 @@ fn function_signature(context: &mut Context, sig: N::FunctionSignature) -> H::Fu
         .into_iter()
         .map(|(v, tty)| {
             let ty = single_type(context, tty);
+            context.used_locals.insert(v.clone());
             context.bind_local(v.clone(), ty.clone());
             (v, ty)
         })
@@ -249,7 +262,9 @@ fn function_body(
                     body.push_back(sp(eloc, S::Command(ret)))
                 }
             }
-            let locals = context.extract_function_locals();
+            let (mut locals, used) = context.extract_function_locals();
+            let unused = check_unused_locals(context, &mut locals, used);
+            remove_unused_bindings(&unused, &mut body);
             HB::Defined { locals, body }
         }
     };
@@ -292,27 +307,42 @@ fn struct_fields(context: &mut Context, tfields: N::StructFields) -> H::StructFi
 // Types
 //**************************************************************************************************
 
+fn type_name(_context: &Context, sp!(loc, ntn_): N::TypeName) -> H::TypeName {
+    use H::TypeName_ as HT;
+    use N::TypeName_ as NT;
+    let tn_ = match ntn_ {
+        NT::Multiple(_) => panic!("ICE type constraints failed {}:{}", loc.file(), loc.span()),
+        NT::Builtin(bt) => HT::Builtin(bt),
+        NT::ModuleType(m, s) => HT::ModuleType(m, s),
+    };
+    sp(loc, tn_)
+}
+
 fn base_types<R: std::iter::FromIterator<H::BaseType>>(
     context: &Context,
-    tys: impl IntoIterator<Item = N::BaseType>,
+    tys: impl IntoIterator<Item = N::Type>,
 ) -> R {
     tys.into_iter().map(|t| base_type(context, t)).collect()
 }
 
-fn base_type(context: &Context, sp!(loc, nb_): N::BaseType) -> H::BaseType {
+fn base_type(context: &Context, sp!(loc, nb_): N::Type) -> H::BaseType {
     use H::BaseType_ as HB;
-    use N::BaseType_ as NB;
+    use N::Type_ as NT;
     let b_ = match nb_ {
-        NB::Var(_) => panic!("ICE tvar not expanded: {}:{}", loc.file(), loc.span()),
-        NB::Apply(None, _, _) => panic!("ICE kind not expanded: {:#?}", loc),
-        NB::Apply(Some(k), n, nbs) => HB::Apply(k, n, base_types(context, nbs)),
-        NB::Param(tp) => HB::Param(tp),
-        NB::Anything => HB::UnresolvedError,
+        NT::Var(_) => panic!("ICE tvar not expanded: {}:{}", loc.file(), loc.span()),
+        NT::Apply(None, _, _) => panic!("ICE kind not expanded: {:#?}", loc),
+        NT::Apply(Some(k), n, nbs) => HB::Apply(k, type_name(context, n), base_types(context, nbs)),
+        NT::Param(tp) => HB::Param(tp),
+        NT::UnresolvedError => HB::UnresolvedError,
+        NT::Anything => HB::UnresolvedError,
+        NT::Ref(_, _) | NT::Unit => {
+            panic!("ICE type constraints failed {}:{}", loc.file(), loc.span())
+        }
     };
     sp(loc, b_)
 }
 
-fn expected_types(context: &Context, loc: Loc, nss: Vec<Option<N::SingleType>>) -> H::Type {
+fn expected_types(context: &Context, loc: Loc, nss: Vec<Option<N::Type>>) -> H::Type {
     let any = || {
         sp(
             loc,
@@ -326,27 +356,28 @@ fn expected_types(context: &Context, loc: Loc, nss: Vec<Option<N::SingleType>>) 
     H::Type_::from_vec(loc, ss)
 }
 
-fn single_types(context: &Context, ss: Vec<N::SingleType>) -> Vec<H::SingleType> {
+fn single_types(context: &Context, ss: Vec<N::Type>) -> Vec<H::SingleType> {
     ss.into_iter().map(|s| single_type(context, s)).collect()
 }
 
-fn single_type(context: &Context, sp!(loc, ns_): N::SingleType) -> H::SingleType {
+fn single_type(context: &Context, sp!(loc, ty_): N::Type) -> H::SingleType {
     use H::SingleType_ as HS;
-    use N::SingleType_ as NS;
-    let s_ = match ns_ {
-        NS::Ref(mut_, nb) => HS::Ref(mut_, base_type(context, nb)),
-        NS::Base(nb) => HS::Base(base_type(context, nb)),
+    use N::Type_ as NT;
+    let s_ = match ty_ {
+        NT::Ref(mut_, nb) => HS::Ref(mut_, base_type(context, *nb)),
+        _ => HS::Base(base_type(context, sp(loc, ty_))),
     };
     sp(loc, s_)
 }
 
-fn type_(context: &Context, sp!(loc, et_): N::Type) -> H::Type {
+fn type_(context: &Context, sp!(loc, ty_): N::Type) -> H::Type {
     use H::Type_ as HT;
-    use N::Type_ as NT;
-    let t_ = match et_ {
+    use N::{TypeName_ as TN, Type_ as NT};
+    let t_ = match ty_ {
         NT::Unit => HT::Unit,
-        NT::Single(s) => HT::Single(single_type(context, s)),
-        NT::Multiple(ss) => HT::Multiple(single_types(context, ss)),
+        NT::Apply(None, _, _) => panic!("ICE kind not expanded: {:#?}", loc),
+        NT::Apply(Some(_), sp!(_, TN::Multiple(_)), ss) => HT::Multiple(single_types(context, ss)),
+        _ => HT::Single(single_type(context, sp(loc, ty_))),
     };
     sp(loc, t_)
 }
@@ -378,7 +409,7 @@ fn block(
                 let expected_tys = expected_types(context, sloc, ty);
                 let res = exp_(context, result, Some(&expected_tys), *e);
                 declare_bind_list(context, &binds);
-                binds_as_assign(context, result, sloc, binds, res);
+                assign_command(context, result, sloc, binds, res);
             }
         }
     }
@@ -466,59 +497,29 @@ fn statement_loop_body(context: &mut Context, body: T::Exp) -> (Block, bool) {
 // LValue
 //**************************************************************************************************
 
-fn declare_bind_list(context: &mut Context, sp!(_, binds): &T::BindList) {
+fn declare_bind_list(context: &mut Context, sp!(_, binds): &T::LValueList) {
     binds.iter().for_each(|b| declare_bind(context, b))
 }
 
-fn declare_bind(context: &mut Context, sp!(_, bind_): &T::Bind) {
-    use T::Bind_ as B;
+fn declare_bind(context: &mut Context, sp!(_, bind_): &T::LValue) {
+    use T::LValue_ as L;
     match bind_ {
-        B::Ignore => (),
-        B::Var(v, tst) => {
-            let st = single_type(context, tst.clone().unwrap());
+        L::Ignore => (),
+        L::Var(v, ty) => {
+            let st = single_type(context, *ty.clone());
             context.bind_local(v.clone(), st)
         }
-        B::Unpack(_, _, _, fields) | B::BorrowUnpack(_, _, _, _, fields) => fields
+        L::Unpack(_, _, _, fields) | L::BorrowUnpack(_, _, _, _, fields) => fields
             .iter()
             .for_each(|(_, (_, (_, b)))| declare_bind(context, b)),
     }
-}
-
-fn binds_as_assign(
-    context: &mut Context,
-    result: &mut Block,
-    loc: Loc,
-    sp!(lloc, binds_): T::BindList,
-    e: H::Exp,
-) {
-    let assigns = binds_.into_iter().map(bind_as_assign).collect();
-    assign_command(context, result, loc, sp(lloc, assigns), e)
-}
-
-fn bind_as_assign(sp!(loc, tb_): T::Bind) -> T::Assign {
-    use T::{Assign_ as A, Bind_ as B};
-    let ta_ = match tb_ {
-        B::Ignore => A::Ignore,
-        B::Var(v, topt) => A::Var(v, topt.unwrap()),
-        B::Unpack(m, s, bs, fields) => A::Unpack(m, s, bs, bind_fields_as_assign(fields)),
-        B::BorrowUnpack(mut_, m, s, bs, fields) => {
-            A::BorrowUnpack(mut_, m, s, bs, bind_fields_as_assign(fields))
-        }
-    };
-    sp(loc, ta_)
-}
-
-fn bind_fields_as_assign(
-    fields: Fields<(N::BaseType, T::Bind)>,
-) -> Fields<(N::BaseType, T::Assign)> {
-    fields.map(|_, (idx, (tb, b))| (idx, (tb, bind_as_assign(b))))
 }
 
 fn assign_command(
     context: &mut Context,
     result: &mut Block,
     loc: Loc,
-    sp!(_, assigns): T::AssignList,
+    sp!(_, assigns): T::LValueList,
     rvalue: H::Exp,
 ) {
     use H::{Command_ as C, Statement_ as S};
@@ -541,17 +542,17 @@ fn assign_command(
 fn assign(
     context: &mut Context,
     result: &mut Block,
-    sp!(loc, ta_): T::Assign,
+    sp!(loc, ta_): T::LValue,
     rvalue_ty: &H::SingleType,
 ) -> (H::LValue, Block) {
     use H::{LValue_ as L, UnannotatedExp_ as E};
-    use T::Assign_ as A;
+    use T::LValue_ as A;
     let mut after = Block::new();
     let l_ = match ta_ {
         A::Ignore => L::Ignore,
         A::Var(v, st) => L::Var(
             context.remapped_local(v),
-            Box::new(single_type(context, st)),
+            Box::new(single_type(context, *st)),
         ),
         A::Unpack(_m, s, tbs, tfields) => {
             let bs = base_types(context, tbs);
@@ -593,8 +594,8 @@ fn assign(
 fn assign_fields(
     context: &Context,
     s: &StructName,
-    tfields: Fields<(N::BaseType, T::Assign)>,
-) -> Vec<(usize, Field, H::BaseType, T::Assign)> {
+    tfields: Fields<(N::Type, T::LValue)>,
+) -> Vec<(usize, Field, H::BaseType, T::LValue)> {
     let decl_fields = context.fields(s);
     let decl_field = |f: &Field| -> usize { *decl_fields.get(f).unwrap() };
     let mut tfields_vec = tfields
@@ -809,20 +810,20 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
                 name.value(),
             );
             if let (&Address::LIBRA_CORE, TXN::MOD, TXN::ASSERT) = (a, m, f) {
-                let tbool = N::SingleType_::bool(eloc);
-                let tu64 = N::SingleType_::u64(eloc);
+                let tbool = N::Type_::bool(eloc);
+                let tu64 = N::Type_::u64(eloc);
                 let tunit = sp(eloc, N::Type_::Unit);
                 let vcond = Var(sp(eloc, new_temp_name()));
                 let vcode = Var(sp(eloc, new_temp_name()));
 
                 let mut stmts = VecDeque::new();
 
-                let bvar = |v, st| sp(eloc, T::Bind_::Var(v, Some(st)));
+                let bvar = |v, st| sp(eloc, T::LValue_::Var(v, st));
                 let bind_list = sp(
                     eloc,
                     vec![
-                        bvar(vcond.clone(), tbool.clone()),
-                        bvar(vcode.clone(), tu64.clone()),
+                        bvar(vcond.clone(), Box::new(tbool.clone())),
+                        bvar(vcode.clone(), Box::new(tu64.clone())),
                     ],
                 );
                 let tys = vec![Some(tbool.clone()), Some(tu64.clone())];
@@ -832,7 +833,7 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
                 let mvar = |var, st| {
                     let from_user = false;
                     let mv = TE::Move { from_user, var };
-                    T::exp(N::Type_::single(st), sp(eloc, mv))
+                    T::exp(st, sp(eloc, mv))
                 };
                 let econd = mvar(vcond, tu64);
                 let ecode = mvar(vcode, tbool);
@@ -932,7 +933,7 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
             let decl_fields = context.fields(&s);
             let decl_field = |f: &Field| -> usize { *decl_fields.get(f).unwrap() };
 
-            let mut texp_fields: Vec<(usize, Field, usize, N::BaseType, T::Exp)> = tfields
+            let mut texp_fields: Vec<(usize, Field, usize, N::Type, T::Exp)> = tfields
                 .into_iter()
                 .map(|(f, (exp_idx, (bt, tf)))| (decl_field(&f), f, exp_idx, bt, tf))
                 .collect();
@@ -1357,4 +1358,85 @@ fn bind_for_short_circuit_sequence(seq: &T::Sequence) -> bool {
                 panic!("ICE unexpected item in short circuit check: {:?}", item)
             }
         }
+}
+
+//**************************************************************************************************
+// Unused locals
+//**************************************************************************************************
+
+fn check_unused_locals(
+    context: &mut Context,
+    locals: &mut UniqueMap<Var, H::SingleType>,
+    used: BTreeSet<Var>,
+) -> BTreeSet<Var> {
+    let mut unused = BTreeSet::new();
+    for (v, _) in locals.iter().filter(|(v, _)| !used.contains(v)) {
+        let vstr = match display_var(v.value()) {
+            DisplayVar::Tmp => panic!("ICE unused tmp"),
+            DisplayVar::Orig(vstr) => vstr,
+        };
+        let msg = format!(
+            "Unused local '{0}'. Consider removing or prefixing with an underscore: '_{0}'",
+            vstr
+        );
+        context.error(vec![(v.loc(), msg)]);
+        unused.insert(v);
+    }
+    for v in &unused {
+        locals.remove(v);
+    }
+    unused
+}
+
+fn remove_unused_bindings(unused: &BTreeSet<Var>, block: &mut H::Block) {
+    block
+        .iter_mut()
+        .for_each(|s| remove_unused_bindings_statement(unused, s))
+}
+
+fn remove_unused_bindings_statement(unused: &BTreeSet<Var>, sp!(_, s_): &mut H::Statement) {
+    use H::Statement_ as S;
+    match s_ {
+        S::Command(c) => remove_unused_bindings_command(unused, c),
+        S::IfElse {
+            if_block,
+            else_block,
+            ..
+        } => {
+            remove_unused_bindings(unused, if_block);
+            remove_unused_bindings(unused, else_block)
+        }
+        S::While {
+            cond: (cond_block, _),
+            block,
+        } => {
+            remove_unused_bindings(unused, cond_block);
+            remove_unused_bindings(unused, block)
+        }
+        S::Loop { block, .. } => remove_unused_bindings(unused, block),
+    }
+}
+
+fn remove_unused_bindings_command(unused: &BTreeSet<Var>, sp!(_, c_): &mut H::Command) {
+    use H::Command_ as HC;
+
+    if let HC::Assign(ls, _) = c_ {
+        remove_unused_bindings_lvalues(unused, ls)
+    }
+}
+
+fn remove_unused_bindings_lvalues(unused: &BTreeSet<Var>, ls: &mut Vec<H::LValue>) {
+    ls.iter_mut()
+        .for_each(|l| remove_unused_bindings_lvalue(unused, l))
+}
+
+fn remove_unused_bindings_lvalue(unused: &BTreeSet<Var>, sp!(_, l_): &mut H::LValue) {
+    use H::LValue_ as HL;
+    match l_ {
+        HL::Var(v, _) if unused.contains(v) => *l_ = HL::Ignore,
+        HL::Var(_, _) | HL::Ignore => (),
+        HL::Unpack(_, _, fields) => fields
+            .iter_mut()
+            .for_each(|(_, l)| remove_unused_bindings_lvalue(unused, l)),
+    }
 }

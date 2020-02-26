@@ -6,7 +6,7 @@ error:
    │         ^^ Invalid borrow
    ·
  2 │     fun t0(r: &u64, r_mut: &mut u64) {
-   │               ---- Expected a single non-reference type, but got: '&u64'
+   │               ---- Expected a single non-reference type, but found: '&u64'
    │
 
 error: 
@@ -17,7 +17,7 @@ error:
    │         ^^^^^^ Invalid borrow
    ·
  2 │     fun t0(r: &u64, r_mut: &mut u64) {
-   │                            -------- Expected a single non-reference type, but got: '&mut u64'
+   │                            -------- Expected a single non-reference type, but found: '&mut u64'
    │
 
 error: 
@@ -28,7 +28,7 @@ error:
    │         ^^^^^^ Invalid borrow
    ·
  2 │     fun t0(r: &u64, r_mut: &mut u64) {
-   │               ---- Expected a single non-reference type, but got: '&u64'
+   │               ---- Expected a single non-reference type, but found: '&u64'
    │
 
 error: 
@@ -39,6 +39,6 @@ error:
    │         ^^^^^^^^^^ Invalid borrow
    ·
  2 │     fun t0(r: &u64, r_mut: &mut u64) {
-   │                            -------- Expected a single non-reference type, but got: '&mut u64'
+   │                            -------- Expected a single non-reference type, but found: '&mut u64'
    │
 

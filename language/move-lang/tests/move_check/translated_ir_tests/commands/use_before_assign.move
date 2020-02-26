@@ -1,5 +1,5 @@
 fun main() {
-    let x;
+    let x: u64;
     let y = x;
 }
 

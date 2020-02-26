@@ -34,7 +34,7 @@ error:
     │         ^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
     ·
  14 │         (0, false, R{});
-    │                    --- The type: '0x8675309::M::R'
+    │         --------------- The type: '(u64, bool, 0x8675309::M::R)'
     ·
   2 │     resource struct R {}
     │     -------- Is found to be a non-copyable type here
@@ -48,7 +48,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
     ·
  19 │         if (true) (0, false, R{}) else (0, false, r);
-    │                              --- The type: '0x8675309::M::R'
+    │                                        ------------- The type: '(u64, bool, 0x8675309::M::R)'
     ·
   2 │     resource struct R {}
     │     -------- Is found to be a non-copyable type here

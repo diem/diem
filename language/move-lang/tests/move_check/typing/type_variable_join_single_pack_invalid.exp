@@ -20,7 +20,7 @@ error:
    │                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid argument for field 'f2' for '0x8675309::M::Box'
    ·
  6 │         let b2 = Box { f1: Box { f1: 0, f2: 0 }, f2:  Box { f1: false, f2: false } };
-   │                            -------------------- The type: ''integer''
+   │                            -------------------- The type: integer
    ·
  6 │         let b2 = Box { f1: Box { f1: 0, f2: 0 }, f2:  Box { f1: false, f2: false } };
    │                                                                 ----- Is not compatible with: 'bool'

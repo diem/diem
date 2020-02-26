@@ -6,7 +6,7 @@ error:
    │          ^ Invalid mutation. Expected a mutable reference
    ·
  6 │         let u = 0;
-   │                 - The type: integer
+   │             - The type: integer
    ·
  7 │         *u = 1;
    │          - Is not compatible with: '&mut _'

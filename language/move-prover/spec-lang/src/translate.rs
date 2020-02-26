@@ -807,11 +807,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         self.spec_funs.push(fun_decl);
     }
 
-    fn decl_ana_var(&mut self, loc: &Loc, name: &Name, type_: &EA::SingleType) {
+    fn decl_ana_var(&mut self, loc: &Loc, name: &Name, type_: &EA::Type) {
         let name = self.symbol_pool().make(name.value.as_str());
         let type_ = {
             let et = &mut ExpTranslator::new(self, OldExpStatus::NotSupported);
-            et.translate_single_type(type_)
+            et.translate_type(type_)
         };
         if type_.is_reference() {
             self.parent.error(
@@ -878,7 +878,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 let mut field_map = BTreeMap::new();
                 for (ref field_name, (_, ty)) in fields.iter() {
                     let field_sym = et.symbol_pool().make(&field_name.0.value);
-                    let field_ty = et.translate_single_type(&ty);
+                    let field_ty = et.translate_type(&ty);
                     field_map.insert(field_sym, field_ty);
                 }
                 Some(field_map)
@@ -1422,14 +1422,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
     /// Analyzes the sequence of function parameters as they are provided via the source AST and
     /// enters them into the environment. Returns a vector for representing them in the target AST.
-    fn analyze_and_add_params(
-        &mut self,
-        params: &[(PA::Var, EA::SingleType)],
-    ) -> Vec<(Symbol, Type)> {
+    fn analyze_and_add_params(&mut self, params: &[(PA::Var, EA::Type)]) -> Vec<(Symbol, Type)> {
         params
             .iter()
             .map(|(v, ty)| {
-                let ty = self.translate_single_type(ty);
+                let ty = self.translate_type(ty);
                 let sym = self.symbol_pool().make(v.0.value.as_str());
                 self.define_local(&self.to_loc(&v.0.loc), sym, ty.clone(), None);
                 (sym, ty)
@@ -1484,18 +1481,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     fn translate_type(&mut self, ty: &EA::Type) -> Type {
         use EA::Type_::*;
         match &ty.value {
-            Unit => Type::Tuple(vec![]),
-            Single(st) => self.translate_single_type(st),
-            Multiple(vst) => {
-                Type::Tuple(vst.iter().map(|t| self.translate_single_type(t)).collect())
-            }
-        }
-    }
-
-    /// Translates a source AST single-type into a target AST type.
-    fn translate_single_type(&mut self, ty: &EA::SingleType) -> Type {
-        use EA::SingleType_::*;
-        match &ty.value {
             Apply(access, args) => {
                 if let EA::ModuleAccess_::Name(n) = &access.value {
                     // Attempt to resolve as primitive type.
@@ -1515,9 +1500,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                                 );
                                 return Type::Error;
                             } else {
-                                return Type::Vector(Box::new(
-                                    self.translate_single_type(&args[0]),
-                                ));
+                                return Type::Vector(Box::new(self.translate_type(&args[0])));
                             }
                         }
                         _ => {}
@@ -1538,7 +1521,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                             self.error(&loc, "type argument count mismatch");
                             Type::Error
                         } else {
-                            Type::Struct(*mid, *sid, self.translate_single_types(args))
+                            Type::Struct(*mid, *sid, self.translate_types(args))
                         }
                     } else {
                         self.error(&loc, "type cannot have type arguments");
@@ -1548,18 +1531,20 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     rty
                 }
             }
-            Ref(is_mut, ty) => Type::Reference(*is_mut, Box::new(self.translate_single_type(&*ty))),
+            Ref(is_mut, ty) => Type::Reference(*is_mut, Box::new(self.translate_type(&*ty))),
             Fun(args, result) => Type::Fun(
-                self.translate_single_types(args),
+                self.translate_types(&args),
                 Box::new(self.translate_type(&*result)),
             ),
+            Unit => Type::Tuple(vec![]),
+            Multiple(vst) => Type::Tuple(self.translate_types(vst)),
             UnresolvedError => Type::Error,
         }
     }
 
     /// Translates a slice of single types.
-    fn translate_single_types(&mut self, tys: &[EA::SingleType]) -> Vec<Type> {
-        tys.iter().map(|t| self.translate_single_type(t)).collect()
+    fn translate_types(&mut self, tys: &[EA::Type]) -> Vec<Type> {
+        tys.iter().map(|t| self.translate_type(t)).collect()
     }
 }
 
@@ -1768,7 +1753,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     }
                     let bind_loc = self.to_loc(&list.value[0].loc);
                     match &list.value[0].value {
-                        EA::Bind_::Var(var) => {
+                        EA::LValue_::Var(var) => {
                             // Declare the variable in the local environment. Currently we mimic
                             // Rust/ML semantics here, allowing to shadow with each let.
                             self.enter_scope();
@@ -1781,7 +1766,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                                 binding: Some(e),
                             });
                         }
-                        EA::Bind_::Unpack(..) => {
+                        EA::LValue_::Unpack(..) => {
                             self.error(
                                 &bind_loc,
                                 "[current restriction] unpack not supported in let",
@@ -1882,7 +1867,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 
     /// Extract assign target from assignment list.
-    fn extract_assign_target(&self, list: &EA::AssignList) -> Option<Symbol> {
+    fn extract_assign_target(&self, list: &EA::LValueList) -> Option<Symbol> {
         let var_loc = &self.to_loc(&list.loc);
         if list.value.len() != 1 {
             self.error(
@@ -1891,7 +1876,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             );
             return None;
         }
-        if let EA::Assign_::Var(var) = &list.value[0].value {
+        if let EA::LValue_::Var(var) = &list.value[0].value {
             Some(self.symbol_pool().make(&var.0.value))
         } else {
             self.error(
@@ -1993,12 +1978,12 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         loc: &Loc,
         module: &Option<ModuleName>,
         name: Symbol,
-        generics: &Option<Vec<EA::SingleType>>,
+        generics: &Option<Vec<EA::Type>>,
         args: &[&EA::Exp],
         expected_type: &Type,
     ) -> Exp {
         // Translate generic arguments, if any.
-        let generics = generics.as_ref().map(|ts| self.translate_single_types(&ts));
+        let generics = generics.as_ref().map(|ts| self.translate_types(&ts));
         // Translate arguments.
         let (arg_types, args) = self.translate_exp_list(args);
         // Lookup candidates.
@@ -2167,13 +2152,13 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         &mut self,
         loc: &Loc,
         maccess: &EA::ModuleAccess,
-        generics: &Option<Vec<EA::SingleType>>,
+        generics: &Option<Vec<EA::Type>>,
         fields: &EA::Fields<EA::Exp>,
         expected_type: &Type,
     ) -> Exp {
         let struct_name = self.parent.module_access_to_qualified(maccess);
         let struct_name_loc = self.to_loc(&maccess.loc);
-        let generics = generics.as_ref().map(|ts| self.translate_single_types(&ts));
+        let generics = generics.as_ref().map(|ts| self.translate_types(&ts));
         if let Some(entry) = self.parent.parent.struct_table.get(&struct_name) {
             let entry = entry.clone();
             let (instantiation, diag) = self.make_instantiation(entry.type_params.len(), generics);
@@ -2250,7 +2235,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     fn translate_lambda(
         &mut self,
         loc: &Loc,
-        bindings: &EA::BindList,
+        bindings: &EA::LValueList,
         body: &EA::Exp,
         expected_type: &Type,
     ) -> Exp {
@@ -2261,7 +2246,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         for bind in &bindings.value {
             let loc = self.to_loc(&bind.loc);
             match &bind.value {
-                EA::Bind_::Var(v) => {
+                EA::LValue_::Var(v) => {
                     let name = self.symbol_pool().make(&v.0.value);
                     let ty = self.fresh_type_var();
                     let id = self.new_node_id_with_type_loc(&ty, &loc);
@@ -2273,7 +2258,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         binding: None,
                     });
                 }
-                EA::Bind_::Unpack(..) => {
+                EA::LValue_::Unpack(..) => {
                     self.error(&loc, "[current restriction] tuples not supported in lambda")
                 }
             }
