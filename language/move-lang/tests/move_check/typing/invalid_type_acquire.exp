@@ -49,7 +49,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:30:17 ───
     │
  30 │         destroy(move_from(a));
-    │                 ^^^^^^^^^ Could not infer this type. Try adding an annotation
+    │                 ^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
@@ -104,7 +104,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:36:9 ───
     │
  36 │         borrow_global(a);
-    │         ^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
+    │         ^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
@@ -159,7 +159,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:42:9 ───
     │
  42 │         borrow_global_mut(a);
-    │         ^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
+    │         ^^^^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
@@ -214,7 +214,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:48:9 ───
     │
  48 │         exists(a);
-    │         ^^^^^^ Could not infer this type. Try adding an annotation
+    │         ^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
@@ -269,7 +269,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:54:9 ───
     │
  54 │         move_to_sender(any());
-    │         ^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
+    │         ^^^^^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 

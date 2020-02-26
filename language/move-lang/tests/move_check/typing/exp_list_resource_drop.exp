@@ -6,7 +6,7 @@ error:
    │         ^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
    ·
  7 │         (0, S{}, R<u64> {});
-   │                  --------- The type: '0x8675309::M::R<u64>'
+   │         ------------------- The type: '(u64, 0x8675309::M::S, 0x8675309::M::R<u64>)'
    ·
  2 │     resource struct R<T> {}
    │     -------- Is found to be a non-copyable type here
@@ -20,7 +20,7 @@ error:
    │         ^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
    ·
  8 │         (0, S{}, Box<R<u64>> {});
-   │                  -------------- The type: '0x8675309::M::Box<0x8675309::M::R<u64>>'
+   │         ------------------------ The type: '(u64, 0x8675309::M::S, 0x8675309::M::Box<0x8675309::M::R<u64>>)'
    ·
  2 │     resource struct R<T> {}
    │     -------- Is found to be a non-copyable type here
@@ -34,7 +34,7 @@ error:
    │         ^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
    ·
  9 │         (0, S{}, Box {});
-   │                  ------ The type: '0x8675309::M::Box<_>'
+   │         ---------------- The type: '(u64, 0x8675309::M::S, 0x8675309::M::Box<_>)'
    ·
  4 │     struct Box<T> {}
    │                - Is found to be a non-copyable type here

@@ -3,9 +3,12 @@ error:
    ┌── tests/move_check/translated_ir_tests/commands/pop_negative.move:7:9 ───
    │
  7 │         (_, _, _, _) = three();
-   │         ^^^^^^^^^^^^ Invalid list-assignment. The list-assignment expected 4 argument(s) but got 3
+   │         ^^^^^^^^^^^^ Invalid value for assignment
+   ·
+ 7 │         (_, _, _, _) = three();
+   │         ------------ The expression list type of length 4: '(_, _, _, _)'
    ·
  2 │     fun three(): (u64, u64, u64) {
-   │                  --------------- Found 3 arguments here
+   │                  --------------- Is not compatible with the expression list type of length 3: '(u64, u64, u64)'
    │
 

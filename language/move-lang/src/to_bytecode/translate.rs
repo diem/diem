@@ -5,7 +5,8 @@ use super::{context::*, remove_fallthrough_jumps};
 use crate::{
     cfgir::ast as G,
     errors::*,
-    naming::ast::{BuiltinTypeName_, TParam, TypeName_},
+    hlir::ast::TypeName_,
+    naming::ast::{BuiltinTypeName_, TParam},
     parser::ast::{
         BinOp, BinOp_, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
         ModuleName, StructName, UnaryOp, UnaryOp_, Value_, Var,

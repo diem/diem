@@ -117,7 +117,7 @@ pub struct StructDefinition {
 
 #[derive(Debug, PartialEq)]
 pub enum StructFields {
-    Defined(Vec<(Field, SingleType)>),
+    Defined(Vec<(Field, Type)>),
     Native(Loc),
 }
 
@@ -130,7 +130,7 @@ new_name!(FunctionName);
 #[derive(PartialEq, Debug)]
 pub struct FunctionSignature {
     pub type_parameters: Vec<(Name, Kind)>,
-    pub parameters: Vec<(Var, SingleType)>,
+    pub parameters: Vec<(Var, Type)>,
     pub return_type: Type,
 }
 
@@ -202,7 +202,7 @@ pub enum SpecBlockMember_ {
     },
     Variable {
         name: Name,
-        type_: SingleType,
+        type_: Type,
     },
 }
 
@@ -254,28 +254,20 @@ pub enum Kind_ {
 pub type Kind = Spanned<Kind_>;
 
 #[derive(Debug, PartialEq)]
-pub enum SingleType_ {
+pub enum Type_ {
     // N
     // N<t1, ... , tn>
-    Apply(ModuleAccess, Vec<SingleType>),
+    Apply(Box<ModuleAccess>, Vec<Type>),
     // &t
     // &mut t
-    Ref(bool, Box<SingleType>),
+    Ref(bool, Box<Type>),
     // (t1,...,tn):t
-    Fun(Vec<SingleType>, Box<Type>),
-}
-pub type SingleType = Spanned<SingleType_>;
-
-#[derive(Debug, PartialEq)]
-#[allow(clippy::large_enum_variant)]
-pub enum Type_ {
+    Fun(Vec<Type>, Box<Type>),
     // ()
     Unit,
-    // t
-    Single(SingleType),
     // (t1, t2, ... , tn)
     // Used for return values and expression blocks
-    Multiple(Vec<SingleType>),
+    Multiple(Vec<Type>),
 }
 pub type Type = Spanned<Type_>;
 
@@ -291,7 +283,7 @@ pub enum Bind_ {
     Var(Var),
     // T { f1: b1, ... fn: bn }
     // T<t1, ... , tn> { f1: b1, ... fn: bn }
-    Unpack(ModuleAccess, Option<Vec<SingleType>>, Vec<(Field, Bind)>),
+    Unpack(ModuleAccess, Option<Vec<Type>>, Vec<(Field, Bind)>),
 }
 pub type Bind = Spanned<Bind_>;
 // b1, ..., bn
@@ -384,13 +376,13 @@ pub enum Exp_ {
     // n
     Name(Name),
     // ::n(e)
-    GlobalCall(Name, Option<Vec<SingleType>>, Spanned<Vec<Exp>>),
+    GlobalCall(Name, Option<Vec<Type>>, Spanned<Vec<Exp>>),
 
     // f(earg,*)
-    Call(ModuleAccess, Option<Vec<SingleType>>, Spanned<Vec<Exp>>),
+    Call(ModuleAccess, Option<Vec<Type>>, Spanned<Vec<Exp>>),
 
     // tn {f1: e1, ... , f_n: e_n }
-    Pack(ModuleAccess, Option<Vec<SingleType>>, Vec<(Field, Exp)>),
+    Pack(ModuleAccess, Option<Vec<Type>>, Vec<(Field, Exp)>),
 
     // if (eb) et else ef
     IfElse(Box<Exp>, Box<Exp>, Option<Box<Exp>>),
@@ -937,20 +929,12 @@ impl AstDebug for Type_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
             Type_::Unit => w.write("()"),
-            Type_::Single(s) => s.ast_debug(w),
             Type_::Multiple(ss) => {
                 w.write("(");
                 ss.ast_debug(w);
                 w.write(")")
             }
-        }
-    }
-}
-
-impl AstDebug for SingleType_ {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        match self {
-            SingleType_::Apply(m, ss) => {
+            Type_::Apply(m, ss) => {
                 m.ast_debug(w);
                 if !ss.is_empty() {
                     w.write("<");
@@ -958,14 +942,14 @@ impl AstDebug for SingleType_ {
                     w.write(">");
                 }
             }
-            SingleType_::Ref(mut_, s) => {
+            Type_::Ref(mut_, s) => {
                 w.write("&");
                 if *mut_ {
                     w.write("mut ");
                 }
                 s.ast_debug(w)
             }
-            SingleType_::Fun(args, result) => {
+            Type_::Fun(args, result) => {
                 w.write("(");
                 w.comma(args, |w, ty| ty.ast_debug(w));
                 w.write("):");
@@ -975,7 +959,7 @@ impl AstDebug for SingleType_ {
     }
 }
 
-impl AstDebug for Vec<SingleType> {
+impl AstDebug for Vec<Type> {
     fn ast_debug(&self, w: &mut AstWriter) {
         w.comma(self, |w, s| s.ast_debug(w))
     }

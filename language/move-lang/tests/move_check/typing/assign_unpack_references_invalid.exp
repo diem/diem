@@ -6,10 +6,10 @@ error:
    │         ^ Invalid assignment to local 'f'
    ·
  9 │         f = 0;
-   │             - The type: integer
+   │         - The type: integer
    ·
  8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
-   │                 ------- Is not compatible with: '&u64'
+   │                     - Is not compatible with: '&u64'
    │
 
 error: 
@@ -23,7 +23,7 @@ error:
     │              ---------- The type: '0x8675309::M::S'
     ·
   8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
-    │         --------------------- Is not compatible with: '&0x8675309::M::S'
+    │                          -- Is not compatible with: '&0x8675309::M::S'
     │
 
 error: 
@@ -34,10 +34,10 @@ error:
     │         ^ Invalid assignment to local 'f'
     ·
  17 │         f = 0;
-    │             - The type: integer
+    │         - The type: integer
     ·
  16 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │                 ------- Is not compatible with: '&mut u64'
+    │                     - Is not compatible with: '&mut u64'
     │
 
 error: 
@@ -51,7 +51,7 @@ error:
     │              ---------- The type: '0x8675309::M::S'
     ·
  16 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │         --------------------- Is not compatible with: '&mut 0x8675309::M::S'
+    │                          -- Is not compatible with: '&mut 0x8675309::M::S'
     │
 
 error: 
@@ -65,7 +65,7 @@ error:
     │             -- The type: '&{integer}'
     ·
  25 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │                 ------- Is not a subtype of: '&mut u64'
+    │                     - Is not a subtype of: '&mut u64'
     │
 
 error: 
@@ -79,6 +79,6 @@ error:
     │              ----------- The type: '&0x8675309::M::S'
     ·
  25 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │         --------------------- Is not a subtype of: '&mut 0x8675309::M::S'
+    │                          -- Is not a subtype of: '&mut 0x8675309::M::S'
     │
 

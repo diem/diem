@@ -6,10 +6,10 @@ error:
    │         ^^^^^^^^^^^^^^^^^^^ Incompatible branches
    ·
  3 │         if (cond) () else 0;
-   │                   -- The type: '()'
+   │                           - The type: integer
    ·
  3 │         if (cond) () else 0;
-   │                           - Is not compatible with: integer
+   │                   -- Is not compatible with: '()'
    │
 
 error: 
@@ -104,10 +104,10 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
     ·
  19 │         if (cond) (0, false, 0) else (0, false);
-    │                   ------------- The type: '({integer}, bool, {integer})'
+    │                   ------------- The expression list type of length 3: '({integer}, bool, {integer})'
     ·
  19 │         if (cond) (0, false, 0) else (0, false);
-    │                                      ---------- Is not compatible with: '({integer}, bool)'
+    │                                      ---------- Is not compatible with the expression list type of length 2: '({integer}, bool)'
     │
 
 error: 
@@ -118,9 +118,9 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
     ·
  20 │         if (cond) (0, false) else (0, false, 0);
-    │                   ---------- The type: '({integer}, bool)'
+    │                   ---------- The expression list type of length 2: '({integer}, bool)'
     ·
  20 │         if (cond) (0, false) else (0, false, 0);
-    │                                   ------------- Is not compatible with: '({integer}, bool, {integer})'
+    │                                   ------------- Is not compatible with the expression list type of length 3: '({integer}, bool, {integer})'
     │
 

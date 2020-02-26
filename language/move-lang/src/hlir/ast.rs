@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    naming::ast::{BuiltinTypeName, BuiltinTypeName_, TParam, TypeName, TypeName_},
+    naming::ast::{BuiltinTypeName, BuiltinTypeName_, TParam},
     parser::ast::{
         BinOp, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc,
         StructName, UnaryOp, Value, Var,
@@ -86,6 +86,13 @@ pub struct Function {
 //**************************************************************************************************
 // Types
 //**************************************************************************************************
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub enum TypeName_ {
+    Builtin(BuiltinTypeName),
+    ModuleType(ModuleIdent, StructName),
+}
+pub type TypeName = Spanned<TypeName_>;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 #[allow(clippy::large_enum_variant)]
@@ -339,6 +346,20 @@ impl Type_ {
 }
 
 //**************************************************************************************************
+// Display
+//**************************************************************************************************
+
+impl std::fmt::Display for TypeName_ {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use TypeName_::*;
+        match self {
+            Builtin(b) => write!(f, "{}", b),
+            ModuleType(m, n) => write!(f, "{}::{}", m, n),
+        }
+    }
+}
+
+//**************************************************************************************************
 // Debug
 //**************************************************************************************************
 
@@ -468,6 +489,15 @@ impl AstDebug for FunctionSignature {
         });
         w.write("): ");
         return_type.ast_debug(w)
+    }
+}
+
+impl AstDebug for TypeName_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            TypeName_::Builtin(bt) => bt.ast_debug(w),
+            TypeName_::ModuleType(m, s) => w.write(&format!("{}::{}", m, s)),
+        }
     }
 }
 

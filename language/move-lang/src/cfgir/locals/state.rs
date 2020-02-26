@@ -38,21 +38,24 @@ pub struct LocalStates {
 
 impl LocalStates {
     pub fn initial<T>(function_arguments: &[(Var, T)], local_types: &UniqueMap<Var, T>) -> Self {
-        let mut local_states = UniqueMap::new();
+        let mut states = LocalStates {
+            local_states: UniqueMap::new(),
+        };
         for (var, _) in local_types.iter() {
-            let state = LocalState::Unavailable(var.loc());
-            local_states.add(var.clone(), state).unwrap();
+            let local_state = LocalState::Unavailable(var.loc());
+            states.set_state(var.clone(), local_state)
         }
         for (var, _) in function_arguments {
-            let state = LocalState::Available(var.loc());
-            local_states.remove(&var);
-            local_states.add(var.clone(), state).unwrap();
+            let local_state = LocalState::Available(var.loc());
+            states.set_state(var.clone(), local_state)
         }
-        LocalStates { local_states }
+        states
     }
 
     pub fn get_state(&self, local: &Var) -> &LocalState {
-        self.local_states.get(local).unwrap()
+        self.local_states
+            .get(local)
+            .unwrap_or_else(|| panic!("{:#?}{:#?}", local.loc(), local))
     }
 
     pub fn set_state(&mut self, local: Var, state: LocalState) {
@@ -113,6 +116,7 @@ impl AbstractDomain for LocalStates {
                 }
             }
         }
+
         result
     }
 }

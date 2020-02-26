@@ -11,7 +11,7 @@ pub trait AbstractDomain: Clone + Sized {
     fn join(&mut self, other: &Self) -> JoinResult;
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum JoinResult {
     Unchanged,
     Changed,

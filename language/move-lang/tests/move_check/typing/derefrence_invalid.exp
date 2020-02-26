@@ -19,8 +19,8 @@ error:
  7 │         (*x_mut: &u64);
    │                  ^^^^ Invalid type annotation
    ·
- 7 │         (*x_mut: &u64);
-   │          ------ The type: ''u64''
+ 5 │     fun t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
+   │                                 --- The type: 'u64'
    ·
  7 │         (*x_mut: &u64);
    │                  ---- Is not compatible with: '&u64'
@@ -75,8 +75,8 @@ error:
  12 │         (*&s.x: &X);
     │                 ^^ Invalid type annotation
     ·
- 12 │         (*&s.x: &X);
-    │          ----- The type: ''0x8675309::M::X''
+  3 │     struct S { f: u64, x: X }
+    │                           - The type: '0x8675309::M::X'
     ·
  12 │         (*&s.x: &X);
     │                 -- Is not compatible with: '&0x8675309::M::X'
@@ -117,8 +117,8 @@ error:
  16 │         (*&mut s_mut.f: (bool, u64));
     │                         ^^^^^^^^^^^ Invalid type annotation
     ·
- 16 │         (*&mut s_mut.f: (bool, u64));
-    │          ------------- The type: ''u64''
+  3 │     struct S { f: u64, x: X }
+    │                   --- The type: 'u64'
     ·
  16 │         (*&mut s_mut.f: (bool, u64));
     │                         ----------- Is not compatible with: '(bool, u64)'
@@ -145,8 +145,8 @@ error:
  18 │         (*&s_mut.x: (X, S));
     │                     ^^^^^^ Invalid type annotation
     ·
- 18 │         (*&s_mut.x: (X, S));
-    │          --------- The type: ''0x8675309::M::X''
+  3 │     struct S { f: u64, x: X }
+    │                           - The type: '0x8675309::M::X'
     ·
  18 │         (*&s_mut.x: (X, S));
     │                     ------ Is not compatible with: '(0x8675309::M::X, 0x8675309::M::S)'
@@ -159,8 +159,8 @@ error:
  19 │         (*&mut s_mut.x: ());
     │                         ^^ Invalid type annotation
     ·
- 19 │         (*&mut s_mut.x: ());
-    │          ------------- The type: ''0x8675309::M::X''
+  3 │     struct S { f: u64, x: X }
+    │                           - The type: '0x8675309::M::X'
     ·
  19 │         (*&mut s_mut.x: ());
     │                         -- Is not compatible with: '()'

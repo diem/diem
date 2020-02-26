@@ -1,13 +1,5 @@
 error: 
 
-    ┌── tests/move_check/typing/assign_nested.move:10:13 ───
-    │
- 10 │         let x;
-    │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/assign_nested.move:14:19 ───
     │
  14 │         (_, x, _, s.f) = four();

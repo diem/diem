@@ -53,7 +53,7 @@ pub struct StructDefinition {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum StructFields {
-    Defined(Fields<BaseType>),
+    Defined(Fields<Type>),
     Native(Loc),
 }
 
@@ -64,7 +64,7 @@ pub enum StructFields {
 #[derive(PartialEq, Debug, Clone)]
 pub struct FunctionSignature {
     pub type_parameters: Vec<TParam>,
-    pub parameters: Vec<(Var, SingleType)>,
+    pub parameters: Vec<(Var, Type)>,
     pub return_type: Type,
 }
 
@@ -106,6 +106,8 @@ pub type BuiltinTypeName = Spanned<BuiltinTypeName_>;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum TypeName_ {
+    // exp-list/tuple type
+    Multiple(usize),
     Builtin(BuiltinTypeName),
     ModuleType(ModuleIdent, StructName),
 }
@@ -124,29 +126,16 @@ pub struct TParam {
 #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
 pub struct TVar(u64);
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
-#[allow(clippy::large_enum_variant)]
-pub enum BaseType_ {
-    Param(TParam),
-    Apply(Option<Kind>, TypeName, Vec<BaseType>),
-    Var(TVar),
-    Anything,
-}
-pub type BaseType = Spanned<BaseType_>;
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum SingleType_ {
-    Base(BaseType),
-    Ref(bool, BaseType),
-}
-pub type SingleType = Spanned<SingleType_>;
-
 #[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum Type_ {
     Unit,
-    Single(SingleType),
-    Multiple(Vec<SingleType>),
+    Ref(bool, Box<Type>),
+    Param(TParam),
+    Apply(Option<Kind>, TypeName, Vec<Type>),
+    Var(TVar),
+    Anything,
+    UnresolvedError,
 }
 pub type Type = Spanned<Type_>;
 
@@ -155,27 +144,14 @@ pub type Type = Spanned<Type_>;
 //**************************************************************************************************
 
 #[derive(Debug, PartialEq)]
-pub enum Assign_ {
+pub enum LValue_ {
     Ignore,
     Var(Var),
-    Unpack(
-        ModuleIdent,
-        StructName,
-        Option<Vec<BaseType>>,
-        Fields<Assign>,
-    ),
+    Unpack(ModuleIdent, StructName, Option<Vec<Type>>, Fields<LValue>),
 }
-pub type Assign = Spanned<Assign_>;
-pub type AssignList = Spanned<Vec<Assign>>;
-
-#[derive(Debug, PartialEq)]
-pub enum Bind_ {
-    Ignore,
-    Var(Var),
-    Unpack(ModuleIdent, StructName, Option<Vec<BaseType>>, Fields<Bind>),
-}
-pub type Bind = Spanned<Bind_>;
-pub type BindList = Spanned<Vec<Bind>>;
+pub type LValue = Spanned<LValue_>;
+pub type LValueList_ = Vec<LValue>;
+pub type LValueList = Spanned<LValueList_>;
 
 #[derive(Debug, PartialEq)]
 pub enum ExpDotted_ {
@@ -187,11 +163,11 @@ pub type ExpDotted = Spanned<ExpDotted_>;
 #[derive(Debug, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltinFunction_ {
-    MoveToSender(Option<BaseType>),
-    MoveFrom(Option<BaseType>),
-    BorrowGlobal(bool, Option<BaseType>),
-    Exists(Option<BaseType>),
-    Freeze(Option<BaseType>),
+    MoveToSender(Option<Type>),
+    MoveFrom(Option<Type>),
+    BorrowGlobal(bool, Option<Type>),
+    Exists(Option<Type>),
+    Freeze(Option<Type>),
     /* TODO move these to a native module
      * GetHeight,
      * GetMaxGasPrice,
@@ -212,15 +188,20 @@ pub enum Exp_ {
     Copy(Var),
     Use(Var),
 
-    ModuleCall(ModuleIdent, FunctionName, Option<Vec<BaseType>>, Box<Exp>),
-    Builtin(BuiltinFunction, Box<Exp>),
+    ModuleCall(
+        ModuleIdent,
+        FunctionName,
+        Option<Vec<Type>>,
+        Spanned<Vec<Exp>>,
+    ),
+    Builtin(BuiltinFunction, Spanned<Vec<Exp>>),
 
     IfElse(Box<Exp>, Box<Exp>, Box<Exp>),
     While(Box<Exp>, Box<Exp>),
     Loop(Box<Exp>),
     Block(Sequence),
 
-    Assign(AssignList, Box<Exp>),
+    Assign(LValueList, Box<Exp>),
     FieldMutate(ExpDotted, Box<Exp>),
     Mutate(Box<Exp>, Box<Exp>),
 
@@ -233,7 +214,7 @@ pub enum Exp_ {
     UnaryExp(UnaryOp, Box<Exp>),
     BinopExp(Box<Exp>, BinOp, Box<Exp>),
 
-    Pack(ModuleIdent, StructName, Option<Vec<BaseType>>, Fields<Exp>),
+    Pack(ModuleIdent, StructName, Option<Vec<Type>>, Fields<Exp>),
     ExpList(Vec<Exp>),
     Unit,
 
@@ -251,8 +232,8 @@ pub type Sequence = VecDeque<SequenceItem>;
 #[derive(Debug, PartialEq)]
 pub enum SequenceItem_ {
     Seq(Exp),
-    Declare(BindList, Option<Type>),
-    Bind(BindList, Exp),
+    Declare(LValueList, Option<Type>),
+    Bind(LValueList, Exp),
 }
 pub type SequenceItem = Spanned<SequenceItem_>;
 
@@ -355,7 +336,7 @@ impl BuiltinFunction_ {
         s
     }
 
-    pub fn resolve(name_str: &str, arg: Option<BaseType>) -> Option<Self> {
+    pub fn resolve(name_str: &str, arg: Option<Type>) -> Option<Self> {
         use BuiltinFunction_ as BF;
         match name_str {
             BF::MOVE_TO_SENDER => Some(BF::MoveToSender(arg)),
@@ -369,144 +350,76 @@ impl BuiltinFunction_ {
     }
 }
 
-impl BaseType_ {
-    pub fn anything(loc: Loc) -> BaseType {
-        sp(loc, BaseType_::Anything)
-    }
-
-    pub fn builtin_(loc: Loc, b_: BuiltinTypeName_, ty_args: Vec<BaseType>) -> BaseType_ {
+impl Type_ {
+    pub fn builtin_(b: BuiltinTypeName, ty_args: Vec<Type>) -> Type_ {
         use BuiltinTypeName_::*;
 
-        let kind = match b_ {
-            U8 | U64 | U128 | Address | Bool => Some(sp(loc, Kind_::Unrestricted)),
+        let kind = match b.value {
+            U8 | U64 | U128 | Address | Bool => Some(sp(b.loc, Kind_::Unrestricted)),
             Vector => None,
         };
-        let n = sp(loc, TypeName_::Builtin(sp(loc, b_)));
-        BaseType_::Apply(kind, n, ty_args)
+        let n = sp(b.loc, TypeName_::Builtin(b));
+        Type_::Apply(kind, n, ty_args)
     }
 
-    pub fn builtin(loc: Loc, b_: BuiltinTypeName_, ty_args: Vec<BaseType>) -> BaseType {
-        sp(loc, Self::builtin_(loc, b_, ty_args))
+    pub fn builtin(loc: Loc, b: BuiltinTypeName, ty_args: Vec<Type>) -> Type {
+        sp(loc, Self::builtin_(b, ty_args))
     }
 
-    pub fn bool(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::Bool, vec![])
+    pub fn bool(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::Bool), vec![])
     }
 
-    pub fn address(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::Address, vec![])
+    pub fn address(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::Address), vec![])
     }
 
-    pub fn u8(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::U8, vec![])
+    pub fn u8(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::U8), vec![])
     }
 
-    pub fn u64(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::U64, vec![])
+    pub fn u64(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::U64), vec![])
     }
 
-    pub fn u128(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::U128, vec![])
+    pub fn u128(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::U128), vec![])
+    }
+
+    pub fn vector(loc: Loc, elem: Type) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::Vector), vec![elem])
+    }
+
+    pub fn multiple(loc: Loc, tys: Vec<Type>) -> Type {
+        sp(loc, Self::multiple_(loc, tys))
+    }
+
+    pub fn multiple_(loc: Loc, mut tys: Vec<Type>) -> Type_ {
+        match tys.len() {
+            0 => Type_::Unit,
+            1 => tys.pop().unwrap().value,
+            n => Type_::Apply(None, sp(loc, TypeName_::Multiple(n)), tys),
+        }
     }
 
     pub fn builtin_name(&self) -> Option<&BuiltinTypeName> {
         match self {
-            BaseType_::Apply(_, sp!(_, TypeName_::Builtin(b)), _) => Some(b),
+            Type_::Apply(_, sp!(_, TypeName_::Builtin(b)), _) => Some(b),
             _ => None,
         }
     }
 }
 
-impl SingleType_ {
-    pub fn base(sp!(loc, b_): BaseType) -> SingleType {
-        sp(loc, SingleType_::Base(sp(loc, b_)))
-    }
-
-    pub fn anything(loc: Loc) -> SingleType {
-        Self::base(BaseType_::anything(loc))
-    }
-
-    pub fn bool(loc: Loc) -> SingleType {
-        Self::base(BaseType_::bool(loc))
-    }
-
-    pub fn address(loc: Loc) -> SingleType {
-        Self::base(BaseType_::address(loc))
-    }
-
-    pub fn u8(loc: Loc) -> SingleType {
-        Self::base(BaseType_::u8(loc))
-    }
-
-    pub fn u64(loc: Loc) -> SingleType {
-        Self::base(BaseType_::u64(loc))
-    }
-
-    pub fn u128(loc: Loc) -> SingleType {
-        Self::base(BaseType_::u128(loc))
-    }
-
-    pub fn builtin_name(&self) -> Option<&BuiltinTypeName> {
-        match self {
-            SingleType_::Ref(_, _) => None,
-            SingleType_::Base(b) => b.value.builtin_name(),
-        }
-    }
-}
-
-impl Type_ {
-    pub fn base(b: BaseType) -> Type {
-        Self::single(SingleType_::base(b))
-    }
-
-    pub fn single(sp!(loc, s_): SingleType) -> Type {
-        sp(loc, Type_::Single(sp(loc, s_)))
-    }
-
-    pub fn anything(loc: Loc) -> Type {
-        Self::single(SingleType_::anything(loc))
-    }
-
-    pub fn bool(loc: Loc) -> Type {
-        Self::single(SingleType_::bool(loc))
-    }
-
-    pub fn address(loc: Loc) -> Type {
-        Self::single(SingleType_::address(loc))
-    }
-
-    pub fn u8(loc: Loc) -> Type {
-        Self::single(SingleType_::u8(loc))
-    }
-
-    pub fn u64(loc: Loc) -> Type {
-        Self::single(SingleType_::u64(loc))
-    }
-
-    pub fn u128(loc: Loc) -> Type {
-        Self::single(SingleType_::u128(loc))
-    }
-
-    pub fn builtin_name(&self) -> Option<&BuiltinTypeName> {
-        match self {
-            Type_::Unit | Type_::Multiple(_) => None,
-            Type_::Single(s) => s.value.builtin_name(),
-        }
-    }
-}
-
 impl Value_ {
-    pub fn type_(&self, loc: Loc) -> BaseType {
+    pub fn type_(&self, loc: Loc) -> Type {
         use Value_::*;
         match self {
-            Address(_) => BaseType_::address(loc),
-            U8(_) => BaseType_::u8(loc),
-            U64(_) => BaseType_::u64(loc),
-            U128(_) => BaseType_::u128(loc),
-            Bool(_) => BaseType_::bool(loc),
-            Bytearray(_) => {
-                BaseType_::builtin(loc, BuiltinTypeName_::Vector, vec![BaseType_::u8(loc)])
-            }
+            Address(_) => Type_::address(loc),
+            U8(_) => Type_::u8(loc),
+            U64(_) => Type_::u64(loc),
+            U128(_) => Type_::u128(loc),
+            Bool(_) => Type_::bool(loc),
+            Bytearray(_) => Type_::vector(loc, Type_::u8(loc)),
         }
     }
 }
@@ -537,6 +450,7 @@ impl fmt::Display for TypeName_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         use TypeName_::*;
         match self {
+            Multiple(_) => panic!("ICE cannot display expr-list type name"),
             Builtin(b) => write!(f, "{}", b),
             ModuleType(m, n) => write!(f, "{}::{}", m, n),
         }
@@ -690,6 +604,7 @@ impl AstDebug for BuiltinTypeName_ {
 impl AstDebug for TypeName_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
+            TypeName_::Multiple(len) => w.write(&format!("Multiple({})", len)),
             TypeName_::Builtin(bt) => bt.ast_debug(w),
             TypeName_::ModuleType(m, s) => w.write(&format!("{}::{}", m, s)),
         }
@@ -709,11 +624,30 @@ impl AstDebug for TParam {
     }
 }
 
-impl AstDebug for BaseType_ {
+impl AstDebug for Type_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
-            BaseType_::Param(tp) => tp.ast_debug(w),
-            BaseType_::Apply(k_opt, m, ss) => {
+            Type_::Unit => w.write("()"),
+            Type_::Ref(mut_, s) => {
+                w.write("&");
+                if *mut_ {
+                    w.write("mut ");
+                }
+                s.ast_debug(w)
+            }
+            Type_::Param(tp) => tp.ast_debug(w),
+            Type_::Apply(k_opt, sp!(_, TypeName_::Multiple(_)), ss) => {
+                let w_ty = move |w: &mut AstWriter| {
+                    w.write("(");
+                    ss.ast_debug(w);
+                    w.write(")");
+                };
+                match k_opt {
+                    None => w_ty(w),
+                    Some(k) => w.annotate(w_ty, k),
+                }
+            }
+            Type_::Apply(k_opt, m, ss) => {
                 let w_ty = move |w: &mut AstWriter| {
                     m.ast_debug(w);
                     if !ss.is_empty() {
@@ -727,48 +661,14 @@ impl AstDebug for BaseType_ {
                     Some(k) => w.annotate(w_ty, k),
                 }
             }
-            BaseType_::Var(tv) => w.write(&format!("#{}", tv.0)),
-            BaseType_::Anything => w.write("_"),
+            Type_::Var(tv) => w.write(&format!("#{}", tv.0)),
+            Type_::Anything => w.write("_"),
+            Type_::UnresolvedError => w.write("_|_"),
         }
     }
 }
 
-impl AstDebug for SingleType_ {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        match self {
-            SingleType_::Base(b) => b.ast_debug(w),
-            SingleType_::Ref(mut_, s) => {
-                w.write("&");
-                if *mut_ {
-                    w.write("mut ");
-                }
-                s.ast_debug(w)
-            }
-        }
-    }
-}
-
-impl AstDebug for Type_ {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        match self {
-            Type_::Unit => w.write("()"),
-            Type_::Single(s) => s.ast_debug(w),
-            Type_::Multiple(ss) => {
-                w.write("(");
-                ss.ast_debug(w);
-                w.write(")")
-            }
-        }
-    }
-}
-
-impl AstDebug for Vec<SingleType> {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        w.comma(self, |w, s| s.ast_debug(w))
-    }
-}
-
-impl AstDebug for Vec<BaseType> {
+impl AstDebug for Vec<Type> {
     fn ast_debug(&self, w: &mut AstWriter) {
         w.comma(self, |w, s| s.ast_debug(w))
     }
@@ -812,7 +712,7 @@ impl AstDebug for Exp_ {
             E::Move(v) => w.write(&format!("move {}", v)),
             E::Copy(v) => w.write(&format!("copy {}", v)),
             E::Use(v) => w.write(&format!("{}", v)),
-            E::ModuleCall(m, f, tys_opt, rhs) => {
+            E::ModuleCall(m, f, tys_opt, sp!(_, rhs)) => {
                 w.write(&format!("{}::{}", m, f));
                 if let Some(ss) = tys_opt {
                     w.write("<");
@@ -820,13 +720,13 @@ impl AstDebug for Exp_ {
                     w.write(">");
                 }
                 w.write("(");
-                rhs.ast_debug(w);
+                w.comma(rhs, |w, e| e.ast_debug(w));
                 w.write(")");
             }
-            E::Builtin(bf, rhs) => {
+            E::Builtin(bf, sp!(_, rhs)) => {
                 bf.ast_debug(w);
                 w.write("(");
-                rhs.ast_debug(w);
+                w.comma(rhs, |w, e| e.ast_debug(w));
                 w.write(")");
             }
             E::Pack(m, s, tys_opt, fields) => {
@@ -975,7 +875,7 @@ impl AstDebug for ExpDotted_ {
     }
 }
 
-impl AstDebug for Vec<Bind> {
+impl AstDebug for Vec<LValue> {
     fn ast_debug(&self, w: &mut AstWriter) {
         let parens = self.len() != 1;
         if parens {
@@ -988,13 +888,13 @@ impl AstDebug for Vec<Bind> {
     }
 }
 
-impl AstDebug for Bind_ {
+impl AstDebug for LValue_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        use Bind_ as B;
+        use LValue_ as L;
         match self {
-            B::Ignore => w.write("_"),
-            B::Var(v) => w.write(&format!("{}", v)),
-            B::Unpack(m, s, tys_opt, fields) => {
+            L::Ignore => w.write("_"),
+            L::Var(v) => w.write(&format!("{}", v)),
+            L::Unpack(m, s, tys_opt, fields) => {
                 w.write(&format!("{}::{}", m, s));
                 if let Some(ss) = tys_opt {
                     w.write("<");
@@ -1006,44 +906,6 @@ impl AstDebug for Bind_ {
                     let (idx, b) = idx_b;
                     w.write(&format!("{}#{}: ", idx, f));
                     b.ast_debug(w);
-                });
-                w.write("}");
-            }
-        }
-    }
-}
-
-impl AstDebug for Vec<Assign> {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        let parens = self.len() != 1;
-        if parens {
-            w.write("(");
-        }
-        w.comma(self, |w, a| a.ast_debug(w));
-        if parens {
-            w.write(")");
-        }
-    }
-}
-
-impl AstDebug for Assign_ {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        use Assign_ as A;
-        match self {
-            A::Ignore => w.write("_"),
-            A::Var(v) => w.write(&format!("{}", v)),
-            A::Unpack(m, s, tys_opt, fields) => {
-                w.write(&format!("{}::{}", m, s));
-                if let Some(ss) = tys_opt {
-                    w.write("<");
-                    ss.ast_debug(w);
-                    w.write(">");
-                }
-                w.write("{");
-                w.comma(fields, |w, (f, idx_a)| {
-                    let (idx, a) = idx_a;
-                    w.write(&format!("{}#{}: ", idx, f));
-                    a.ast_debug(w);
                 });
                 w.write("}");
             }

@@ -17,7 +17,7 @@ error:
    │         ^^^^^^^^^^^^ Invalid argument to '|'
    ·
  8 │         false | true;
-   │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │                 ---- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
    │
 
 error: 
@@ -122,7 +122,7 @@ error:
     │         ^^^^^^^^^ Invalid argument to '|'
     ·
  11 │         0x0 | 0x1;
-    │         --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+    │               --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
@@ -343,7 +343,7 @@ error:
     │         ^^^^^^^ Invalid argument to '|'
     ·
  16 │         () | ();
-    │         -- Found: '()'. But expected: 'u8', 'u64', 'u128'
+    │              -- Found: '()'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
@@ -412,10 +412,10 @@ error:
     │                  ^^^^^^^^^ Incompatible arguments to '|'
     ·
  18 │         (0, 1) | (0, 1, 2);
-    │         ------ The type: '({integer}, {integer})'
+    │         ------ The expression list type of length 2: '({integer}, {integer})'
     ·
  18 │         (0, 1) | (0, 1, 2);
-    │                  --------- Is not compatible with: '({integer}, {integer}, {integer})'
+    │                  --------- Is not compatible with the expression list type of length 3: '({integer}, {integer}, {integer})'
     │
 
 error: 
@@ -448,7 +448,7 @@ error:
     │         ^^^^^^^^^^^^^^^ Invalid argument to '|'
     ·
  19 │         (1, 2) | (0, 1);
-    │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+    │                  ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
