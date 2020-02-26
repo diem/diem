@@ -18,7 +18,6 @@ pub mod connectivity_manager;
 pub mod error;
 pub mod interface;
 pub mod peer_manager;
-pub mod proto;
 pub mod protocols;
 pub mod validator_network;
 
@@ -26,7 +25,6 @@ mod counters;
 mod peer;
 mod sink;
 mod transport;
-mod utils;
 
 /// Type for unique identifier associated with each network protocol
 pub type ProtocolId = bytes::Bytes;
