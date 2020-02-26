@@ -1,24 +1,17 @@
 //! account: vivian, 1000000, 0, validator
 
-//! new-transaction
-import 0x0.LibraSystem;
-
-main() {
-    // TODO: this will stop working once we make the Block prologue private. We should delete this
-    // part (which will be done by the executor) and leave the second assert
-    LibraSystem.block_prologue(1000000, h"aa", h"bb", {{vivian}});
-    return;
-}
+//! block-prologue
+//! proposer: vivian
+//! block-time: 1000000
 
 //! new-transaction
 import 0x0.LibraSystem;
 import 0x0.LibraTimestamp;
 
 main() {
-    assert(LibraSystem.get_current_block_height() == 1, 77);
-    assert(LibraSystem.get_current_block_id() == h"aa", 77);
-    assert(LibraSystem.get_current_proposer() == {{vivian}}, 77);
-    assert(LibraTimestamp.now_microseconds() == 1000000, 77);
+    assert(LibraSystem.get_current_block_height() == 1, 73);
+    assert(LibraSystem.get_current_proposer() == {{vivian}}, 75);
+    assert(LibraTimestamp.now_microseconds() == 1000000, 76);
 
     return;
 }

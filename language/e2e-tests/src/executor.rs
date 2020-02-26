@@ -203,6 +203,13 @@ impl FakeExecutor {
         }
     }
 
+    pub fn execute_transaction_block(
+        &self,
+        txn_block: Vec<Transaction>,
+    ) -> Result<Vec<TransactionOutput>, VMStatus> {
+        LibraVM::execute_block(txn_block, &self.config, &self.data_store)
+    }
+
     pub fn execute_transaction(&self, txn: SignedTransaction) -> TransactionOutput {
         let txn_block = vec![txn];
         let mut outputs = self
