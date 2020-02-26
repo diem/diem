@@ -94,22 +94,6 @@ impl From<VerifyError> for NetworkError {
     }
 }
 
-impl From<prost::EncodeError> for NetworkError {
-    fn from(err: prost::EncodeError) -> NetworkError {
-        anyhow::Error::new(err)
-            .context(NetworkErrorKind::ProtobufParseError)
-            .into()
-    }
-}
-
-impl From<prost::DecodeError> for NetworkError {
-    fn from(err: prost::DecodeError) -> NetworkError {
-        anyhow::Error::new(err)
-            .context(NetworkErrorKind::ProtobufParseError)
-            .into()
-    }
-}
-
 impl From<parity_multiaddr::Error> for NetworkError {
     fn from(err: parity_multiaddr::Error) -> NetworkError {
         anyhow::Error::new(err)
