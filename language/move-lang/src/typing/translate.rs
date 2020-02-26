@@ -66,7 +66,66 @@ fn main_function(
     main: Option<(Address, FunctionName, N::Function)>,
 ) -> Option<(Address, FunctionName, T::Function)> {
     context.current_module = None;
-    main.map(|(addr, name, f)| (addr, name.clone(), function(context, name, f)))
+    main.map(|(addr, name, f)| (addr, name.clone(), main_function_(context, name, f)))
+}
+
+fn main_function_(context: &mut Context, name: FunctionName, f: N::Function) -> T::Function {
+    let loc = name.loc();
+    let fdef = function(context, name, f);
+    for (_, param_ty) in &fdef.signature.parameters {
+        check_primitive_main_arg(context, loc, param_ty);
+    }
+    subtype(
+        context,
+        loc,
+        || "Invalid main return type",
+        &fdef.signature.return_type,
+        &sp(loc, Type_::Unit),
+    );
+    fdef
+}
+
+fn check_primitive_main_arg(context: &mut Context, mloc: Loc, s: &SingleType) {
+    let sp!(loc, s_) = s;
+    match s_ {
+        SingleType_::Base(b) => check_primitive_main_arg_base(context, mloc, b),
+        _ => check_primitive_main_arg_error(
+            context,
+            mloc,
+            *loc,
+            core::error_format_single(s, &Subst::empty()),
+        ),
+    }
+}
+
+fn check_primitive_main_arg_base(context: &mut Context, mloc: Loc, b: &BaseType) {
+    let sp!(loc, b_) = b;
+    match (b_.builtin_name(), b_) {
+        (None, _) => check_primitive_main_arg_error(
+            context,
+            mloc,
+            *loc,
+            core::error_format_base(b, &Subst::empty()),
+        ),
+        (Some(_), BaseType_::Apply(_, _, ss)) => ss
+            .iter()
+            .for_each(|s| check_primitive_main_arg_base(context, mloc, s)),
+        _ => unreachable!(),
+    }
+}
+
+fn check_primitive_main_arg_error(context: &mut Context, mloc: Loc, tloc: Loc, tystr: String) {
+    let mmsg = format!("Invalid parameter for '{}'", FunctionName::MAIN_NAME);
+    let tmsg = format!(
+        "Found: {}. But expected: {}",
+        tystr,
+        format_comma(
+            N::BuiltinTypeName_::all_names()
+                .iter()
+                .map(|b| format!("'{}'", b))
+        ),
+    );
+    context.error(vec![(mloc, mmsg), (tloc, tmsg)])
 }
 
 //**************************************************************************************************

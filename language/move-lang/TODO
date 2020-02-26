@@ -3,7 +3,6 @@
 ## Soundness
 
 * SCC generic check
-* main args?
 
 ## Cohesion
 
@@ -15,12 +14,13 @@
 
 # P2
 
+* suggest copy or *& on inferred duplicate move of affine types
 * Traits on AST/Context
 * Context in separate files
 * location stack tracking
   if (true) R{} else R{} points to unused resource really weirdly
 * Better messages for unexpected exps in Expansion passes
-* Stop using box::leak and atomicusize, pass around compiliation context
+* Stop using box::leak and atomicusize, pass around compilation context
 * Address aliases
 * Using all sorts of aliases in error messages
   * i.e. 0x00000000000000384028920984.M.S becomes Sender.M.S
