@@ -4,8 +4,10 @@
 use crate::SynchronizerState;
 use anyhow::{ensure, format_err, Result};
 use executor::{ExecutedTrees, Executor};
+use futures::{channel::mpsc, SinkExt};
 use libra_config::config::NodeConfig;
 use libra_types::{
+    contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::TransactionListWithProof,
 };
@@ -50,14 +52,20 @@ pub trait ExecutorProxyTrait: Sync + Send {
 pub(crate) struct ExecutorProxy {
     storage_read_client: Arc<StorageReadServiceClient>,
     executor: Arc<Executor<LibraVM>>,
+    state_sync_reconfiguration_event_sender: mpsc::Sender<Vec<ContractEvent>>,
 }
 
 impl ExecutorProxy {
-    pub(crate) fn new(executor: Arc<Executor<LibraVM>>, config: &NodeConfig) -> Self {
+    pub(crate) fn new(
+        executor: Arc<Executor<LibraVM>>,
+        config: &NodeConfig,
+        state_sync_reconfiguration_event_sender: mpsc::Sender<Vec<ContractEvent>>,
+    ) -> Self {
         let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
         Self {
             storage_read_client,
             executor,
+            state_sync_reconfiguration_event_sender,
         }
     }
 }
@@ -93,12 +101,26 @@ impl ExecutorProxyTrait for ExecutorProxy {
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         synced_trees: &mut ExecutedTrees,
     ) -> Result<()> {
-        self.executor.execute_and_commit_chunk(
-            txn_list_with_proof,
-            verified_target_li,
-            intermediate_end_of_epoch_li,
-            synced_trees,
-        )
+        let reconfiguration_events = self
+            .executor
+            .execute_and_commit_chunk(
+                txn_list_with_proof,
+                verified_target_li,
+                intermediate_end_of_epoch_li,
+                synced_trees,
+            )
+            .expect("[executor proxy] failed to execute and commit chunk: {}");
+
+        // send reconfig notif to state sync
+        let mut sender = self.state_sync_reconfiguration_event_sender.clone();
+        if let Err(e) = sender.send(reconfiguration_events).await {
+            return Err(format_err!(
+                "[executor proxy] failed to send reconfiguration events to state sync: {}",
+                e
+            ));
+        }
+
+        Ok(())
     }
 
     async fn get_chunk(

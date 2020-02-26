@@ -557,7 +557,7 @@ where
         // carrying any epoch change LI.
         epoch_change_li: Option<LedgerInfoWithSignatures>,
         synced_trees: &mut ExecutedTrees,
-    ) -> Result<()> {
+    ) -> Result<Vec<ContractEvent>> {
         info!(
             "Local synced version: {}. First transaction version in request: {:?}. \
              Number of transactions in request: {}.",
@@ -613,6 +613,7 @@ where
         // Since we have verified the proofs, we just need to verify that each TransactionInfo
         // object matches what we have computed locally.
         let mut txns_to_commit = vec![];
+        let mut reconfiguration_events = vec![];
         for (txn, txn_data) in itertools::zip_eq(transactions, output.transaction_data()) {
             txns_to_commit.push(TransactionToCommit::new(
                 txn,
@@ -621,12 +622,18 @@ where
                 txn_data.gas_used(),
                 txn_data.status().vm_status().major_status,
             ));
+            let reconfiguration_key = ValidatorSet::change_event_key();
+            for event in txn_data.events() {
+                if *event.key() == reconfiguration_key {
+                    reconfiguration_events.push(event.clone());
+                }
+            }
         }
 
         let ledger_info_to_commit =
             Self::find_chunk_li(verified_target_li, epoch_change_li, &output)?;
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
-            return Ok(());
+            return Ok(reconfiguration_events);
         }
         let write_client = self.storage_write_client.clone();
         let ledger_info = ledger_info_to_commit.clone();
@@ -647,7 +654,7 @@ where
                 "not committed"
             },
         );
-        Ok(())
+        Ok(reconfiguration_events)
     }
 
     /// In case there is a new LI to be added to a LedgerStore, verify and return it.

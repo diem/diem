@@ -16,6 +16,7 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
+    contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::Transaction,
     waypoint::Waypoint,
@@ -41,7 +42,10 @@ impl StateSynchronizer {
         executor: Arc<Executor<LibraVM>>,
         config: &NodeConfig,
     ) -> Self {
-        let executor_proxy = ExecutorProxy::new(executor, config);
+        let (state_sync_reconfiguration_event_sender, state_sync_reconfiguration_event_receiver) =
+            mpsc::channel(1);
+        let executor_proxy =
+            ExecutorProxy::new(executor, config, state_sync_reconfiguration_event_sender);
         Self::bootstrap_with_executor_proxy(
             network,
             state_sync_to_mempool_sender,
@@ -49,6 +53,7 @@ impl StateSynchronizer {
             config.base.waypoint,
             &config.state_sync,
             executor_proxy,
+            state_sync_reconfiguration_event_receiver,
         )
     }
 
@@ -59,6 +64,7 @@ impl StateSynchronizer {
         waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
         executor_proxy: E,
+        state_sync_reconfiguration_event_receiver: mpsc::Receiver<Vec<ContractEvent>>,
     ) -> Self {
         let mut runtime = Builder::new()
             .thread_name("state-sync-")
@@ -75,6 +81,7 @@ impl StateSynchronizer {
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
             state_sync_to_mempool_sender,
+            state_sync_reconfiguration_event_receiver,
             role,
             waypoint,
             state_sync_config.clone(),

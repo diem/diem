@@ -19,6 +19,7 @@ use libra_config::config::{RoleType, StateSyncConfig};
 use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
+    contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::Version,
     transaction::{Transaction, TransactionListWithProof},
@@ -91,6 +92,8 @@ struct PendingRequestInfo {
 pub(crate) struct SyncCoordinator<T> {
     // used to process client requests
     client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
+    // reconfiguration events emitted from executor
+    state_sync_reconfiguration_events: mpsc::Receiver<Vec<ContractEvent>>,
     // used to send messages (e.g. notifications about newly committed txns) to mempool
     state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
     // Current state of the storage, which includes both the latest committed transaction and the
@@ -123,6 +126,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
+        state_sync_reconfiguration_events: mpsc::Receiver<Vec<ContractEvent>>,
         role: RoleType,
         waypoint: Option<Waypoint>,
         config: StateSyncConfig,
@@ -138,6 +142,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         Self {
             client_events,
             state_sync_to_mempool_sender,
+            state_sync_reconfiguration_events,
             local_state: initial_state,
             retry_timeout: Duration::from_millis(retry_timeout_val),
             config,
@@ -188,6 +193,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                             self.set_initialization_listener(cb_sender);
                         }
                     };
+                },
+                reconfig_event = self.state_sync_reconfiguration_events.select_next_some() => {
+                    // TODO process and send reconfig event to subscribers
                 },
                 (idx, network_event) = network_events.select_next_some() => {
                     match network_event {

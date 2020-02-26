@@ -301,6 +301,8 @@ impl SynchronizerEnv {
             self.signers[new_peer_idx].clone(),
         )));
         let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
+        let (_reconfiguration_event_sender, reconfiguration_event_receiver) =
+            futures::channel::mpsc::channel(1);
         let synchronizer = StateSynchronizer::bootstrap_with_executor_proxy(
             vec![(sender, events)],
             mempool_channel,
@@ -308,6 +310,7 @@ impl SynchronizerEnv {
             waypoint,
             &config.state_sync,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
+            reconfiguration_event_receiver,
         );
         self.mempools
             .push(MockSharedMempool::new(Some(mempool_requests)));
