@@ -75,3 +75,29 @@ cargo run --bin investigate -- -i artifacts/compiled_module/crash-5d7f403f
 
 This is helpful to investigate and debug a binary in order to find the root cause
 of a bug.
+
+### Google OSS-Fuzz Integration
+
+To integrate our fuzzers with [Google OSS-Fuzz](https://github.com/google/oss-fuzz) project,
+we need to have one binary per fuzzer.
+For this, build.rs can create a fuzzer binary based on an environement variable.
+Use it as such:
+
+```sh
+FUZZ_TARGET="consensus_proposal" cargo build --manifest-path fuzz/Cargo.toml --bin fuzzer_builder
+```
+
+Note that you might want to add more flags [[1]](https://github.com/rust-fuzz/cargo-fuzz/blob/2243de096b15b79b719ce7489f014d7d8ce197ee/src/project.rs#L153)[[2]](https://github.com/rust-fuzz/cargo-fuzz/blob/2243de096b15b79b719ce7489f014d7d8ce197ee/src/project.rs#L174).
+
+For example for MacOS:
+
+```sh
+cd fuzz
+ASAN_OPTIONS=detect_odr_violation=0 RUSTC_BOOTSTRAP=1 RUSTFLAGS="--cfg fuzzing -Cpasses=sancov -Cllvm-args=-sanitizer-coverage-level=4 -Cllvm-args=-sanitizer-coverage-trace-compares -Cllvm-args=-sanitizer-coverage-inline-8bit-counters -Cllvm-args=-sanitizer-coverage-trace-geps -Cllvm-args=-sanitizer-coverage-prune-blocks=0 -Cllvm-args=-sanitizer-coverage-pc-table -Clink-dead-code -Zsanitizer=address -Cdebug-assertions" FUZZ_TARGET="vm_value" cargo build --verbose --target x86_64-apple-darwin --bin fuzzer_builder
+```
+
+### Troubleshooting
+
+#### linking with CC failed
+
+Are you on MacOS? Have you checked that Xcode is up-to-date?
