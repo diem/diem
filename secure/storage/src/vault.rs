@@ -76,15 +76,12 @@ impl Storage for VaultStorage {
 
     fn create(&mut self, key: &str, value: Value, policy: &Policy) -> Result<(), Error> {
         // Vault internally does not distinguish creation versus update except by permissions. So we
-        // simulate that by first getting the key. If it doesn't exist, we're okay and return back a
-        // fake, but ignored value.
-        self.get_secret(&key).or_else(|e| {
-            if let Error::KeyNotSet(_) = e {
-                Ok(Value::U64(0))
-            } else {
-                Err(e)
-            }
-        })?;
+        // simulate that by first getting the key. If it doesn't exist, we're okay.
+        match self.get_secret(&key) {
+            Ok(_) => return Err(Error::KeyAlreadyExists(key.to_string())),
+            Err(Error::KeyNotSet(_)) => (/* Expected this for new keys! */),
+            Err(e) => return Err(e),
+        }
 
         self.set_secret(&key, value)?;
         for permission in &policy.permissions {
