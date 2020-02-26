@@ -90,4 +90,9 @@ pub fn run_test_suite(mut storage: Box<dyn Storage>, name: &str) {
         storage.get(KEY_KEY).unwrap().u64().unwrap_err(),
         Error::UnexpectedValueType
     );
+
+    // Attempt to perform a u64_key creation twice (i.e., for a key that already exists!)
+    assert!(storage
+        .create(U64_KEY, Value::U64(u64_value_1), &public)
+        .is_err());
 }
