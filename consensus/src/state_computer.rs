@@ -114,11 +114,15 @@ impl StateComputer for ExecutionProxy {
             })
             .collect();
 
-        let committed_txns =
+        let (committed_txns, reconfiguration_events) =
             self.executor
                 .commit_blocks(committable_blocks, finality_proof, committed_trees)?;
         counters::BLOCK_COMMIT_DURATION_S.observe_duration(pre_commit_instant.elapsed());
-        if let Err(e) = self.synchronizer.commit(committed_txns).await {
+        if let Err(e) = self
+            .synchronizer
+            .commit(committed_txns, reconfiguration_events)
+            .await
+        {
             error!("failed to notify state synchronizer: {:?}", e);
         }
         Ok(())

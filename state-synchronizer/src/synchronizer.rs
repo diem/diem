@@ -16,6 +16,7 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
+    contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::Transaction,
     waypoint::Waypoint,
@@ -133,12 +134,17 @@ impl StateSyncClient {
         &self,
         // *successfully* committed transactions
         committed_txns: Vec<Transaction>,
+        reconfiguration_events: Vec<ContractEvent>,
     ) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         async move {
             let (callback, callback_rcv) = oneshot::channel();
             sender
-                .send(CoordinatorMessage::Commit(committed_txns, callback))
+                .send(CoordinatorMessage::Commit(
+                    committed_txns,
+                    reconfiguration_events,
+                    callback,
+                ))
                 .await?;
 
             match timeout(Duration::from_secs(1), callback_rcv).await {

@@ -19,6 +19,7 @@ use libra_config::config::{RoleType, StateSyncConfig};
 use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
+    contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::Version,
     transaction::{Transaction, TransactionListWithProof},
@@ -62,6 +63,8 @@ pub(crate) enum CoordinatorMessage {
     Commit(
         // committed transactions
         Vec<Transaction>,
+        // reconfiguration events
+        Vec<ContractEvent>,
         // callback for recipient to send response back to this sender
         oneshot::Sender<Result<CommitResponse>>,
     ),
@@ -173,10 +176,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                 error!("[state sync] request sync fail: {}", e);
                             }
                         }
-                        CoordinatorMessage::Commit(txns, callback) => {
+                        CoordinatorMessage::Commit(txns, _reconfig_events, callback) => {
                             if let Err(e) = self.process_commit(txns, Some(callback)).await {
                                 error!("[state sync] process commit fail: {}", e);
                             }
+                            // TODO process reconfig_events
                         }
                         CoordinatorMessage::GetState(callback) => {
                             self.get_state(callback);

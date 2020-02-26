@@ -430,14 +430,15 @@ where
     /// then `D` and `E` later in the another batch.
     /// Commits a block and all its ancestors in a batch manner.
     ///
-    /// Returns `Ok(Result<Vec<Transaction>>)` if successful, where Vec<Transaction>
-    /// is a vector of transactions that were kept in the submitted blocks
+    /// Returns `Ok(Result<Vec<Transaction>, Vec<ContractEvents>)` if successful,
+    /// where Vec<Transaction> is a vector of transactions that were kept from the submitted blocks, and
+    /// Vec<ContractEvents> is a vector of reconfiguration events that were kept from the submitted blocks
     pub fn commit_blocks(
         &self,
         blocks: Vec<(Vec<Transaction>, Arc<ProcessedVMOutput>)>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         synced_trees: &ExecutedTrees,
-    ) -> Result<Vec<Transaction>> {
+    ) -> Result<(Vec<Transaction>, Vec<ContractEvent>)> {
         debug!(
             "Received request to commit block {:x}.",
             ledger_info_with_sigs.ledger_info().consensus_block_id()
@@ -449,6 +450,7 @@ where
         // This must be done before calculate potential skipping of transactions in idempotent commit.
         let mut txns_to_keep = vec![];
         let mut blocks_txns = vec![];
+        let mut reconfiguration_events = vec![];
         for (txn, txn_data) in blocks
             .iter()
             .flat_map(|block| itertools::zip_eq(&block.0, block.1.transaction_data()))
@@ -465,6 +467,13 @@ where
                     txn_data.num_account_created(),
                 ));
                 blocks_txns.push(txn.clone());
+
+                let reconfiguration_event_key = ValidatorSet::change_event_key();
+                for event in txn_data.events().iter() {
+                    if *event.key() == reconfiguration_event_key {
+                        reconfiguration_events.push(event.clone());
+                    }
+                }
             }
         }
 
@@ -543,7 +552,7 @@ where
             }
         }
         // Now that the blocks are persisted successfully, we can reply to consensus
-        Ok(blocks_txns)
+        Ok((blocks_txns, reconfiguration_events))
     }
 
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions

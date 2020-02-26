@@ -340,7 +340,7 @@ impl SynchronizerEnv {
         // in commit()
         assert!(Runtime::new()
             .unwrap()
-            .block_on(self.clients[peer_id].commit(committed_txns))
+            .block_on(self.clients[peer_id].commit(committed_txns, vec![]))
             .is_ok());
         let mempool_txns = self.mempools[peer_id].read_timeline(0, signed_txns.len());
         for txn in signed_txns.iter() {
