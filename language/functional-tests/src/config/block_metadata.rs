@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{common::strip, config::global::Config as GlobalConfig, errors::*};
 use libra_crypto::HashValue;
 use libra_types::block_metadata::BlockMetadata;
