@@ -5,8 +5,7 @@ use crate::{
     chained_bft::{
         block_storage::BlockReader,
         chained_bft_smr::ChainedBftSMR,
-        network::ConsensusTypes,
-        network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
+        network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
         network_tests::NetworkPlayground,
         test_utils::{
             consensus_runtime, MockSharedStorage, MockStateComputer, MockStorage,
@@ -30,7 +29,7 @@ use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet, ValidatorVerifier};
 use network::peer_manager::conn_status_channel;
-use std::{convert::TryFrom, num::NonZeroUsize, sync::Arc};
+use std::{num::NonZeroUsize, sync::Arc};
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
@@ -185,10 +184,10 @@ fn basic_start_test() {
         .root();
     block_on(async move {
         let msg = playground
-            .wait_for_messages(1, NetworkPlayground::proposals_only)
+            .wait_for_messages(1, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
-        let first_proposal = match ConsensusTypes::<TestPayload>::try_from(&msg[0].1).unwrap() {
-            ConsensusTypes::ProposalMsg(proposal) => proposal,
+        let first_proposal = match &msg[0].1 {
+            ConsensusMsg::ProposalMsg(proposal) => proposal,
             _ => panic!("Unexpected message found"),
         };
         assert_eq!(first_proposal.proposal().parent_id(), genesis.id());
@@ -212,19 +211,17 @@ fn start_with_proposal_test() {
 
     block_on(async move {
         let _proposals = playground
-            .wait_for_messages(1, NetworkPlayground::proposals_only)
+            .wait_for_messages(1, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
         // Need to wait for 2 votes for the 2 replicas
         let votes: Vec<VoteMsg> = playground
-            .wait_for_messages(2, NetworkPlayground::votes_only)
+            .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
             .await
             .into_iter()
-            .map(
-                |(_, msg)| match ConsensusTypes::<TestPayload>::try_from(&msg).unwrap() {
-                    ConsensusTypes::VoteMsg(vote_msg) => *vote_msg,
-                    _ => panic!("Unexpected message found"),
-                },
-            )
+            .map(|(_, msg)| match msg {
+                ConsensusMsg::VoteMsg(vote_msg) => *vote_msg,
+                _ => panic!("Unexpected message found"),
+            })
             .collect();
         let proposed_block_id = votes[0].vote().vote_data().proposed().id();
 
@@ -257,17 +254,26 @@ fn basic_full_round(num_nodes: usize, proposer_type: ConsensusProposerType) {
     };
     block_on(async move {
         let _broadcast_proposals_1 = playground
-            .wait_for_messages(num_messages_to_send, NetworkPlayground::proposals_only)
+            .wait_for_messages(
+                num_messages_to_send,
+                NetworkPlayground::proposals_only::<TestPayload>,
+            )
             .await;
         let _votes_1 = playground
-            .wait_for_messages(num_messages_to_send, NetworkPlayground::votes_only)
+            .wait_for_messages(
+                num_messages_to_send,
+                NetworkPlayground::votes_only::<TestPayload>,
+            )
             .await;
         let broadcast_proposals_2 = playground
-            .wait_for_messages(num_messages_to_send, NetworkPlayground::proposals_only)
+            .wait_for_messages(
+                num_messages_to_send,
+                NetworkPlayground::proposals_only::<TestPayload>,
+            )
             .await;
         let msg = &broadcast_proposals_2;
-        let next_proposal = match ConsensusTypes::<TestPayload>::try_from(&msg[0].1).unwrap() {
-            ConsensusTypes::ProposalMsg(proposal) => proposal,
+        let next_proposal = match &msg[0].1 {
+            ConsensusMsg::ProposalMsg(proposal) => proposal,
             _ => panic!("Unexpected message found"),
         };
         assert!(next_proposal.proposal().round() >= 2);
@@ -296,7 +302,7 @@ async fn basic_commit(
 
     for round in 0..num_rounds {
         let _proposals = playground
-            .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
+            .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg::<TestPayload>)
             .await;
 
         // A proposal is carrying a QC that commits a block of round - 3.
@@ -318,10 +324,10 @@ async fn basic_commit(
 
         // v1 and v2 send votes
         let votes = playground
-            .wait_for_messages(1, NetworkPlayground::votes_only)
+            .wait_for_messages(1, NetworkPlayground::votes_only::<TestPayload>)
             .await;
-        let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&votes[0].1).unwrap() {
-            ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+        let vote_msg = match &votes[0].1 {
+            ConsensusMsg::VoteMsg(vote_msg) => vote_msg,
             _ => panic!("Unexpected message found"),
         };
         block_ids.push(vote_msg.vote().vote_data().proposed().id());
@@ -341,7 +347,7 @@ async fn basic_commit(
     // This message is for proposal with round 11 to delivery the QC, but not gather the QC
     // so after restart, proposer will propose round 11 again.
     playground
-        .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
+        .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg::<TestPayload>)
         .await;
 }
 
@@ -374,8 +380,7 @@ fn basic_commit_and_restart() {
                 let msg = playground
                     .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
                     .await;
-                let vote_msg = lcs::from_bytes(&msg[0].1.message);
-                if let Ok(ConsensusTypes::<TestPayload>::VoteMsg(_)) = vote_msg {
+                if let ConsensusMsg::<TestPayload>::VoteMsg(_) = msg[0].1 {
                     round += 1;
                     break;
                 }
@@ -434,8 +439,7 @@ fn basic_commit_and_restart_from_clean_storage() {
                 let msg = playground
                     .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
                     .await;
-                let vote_msg = lcs::from_bytes(&msg[0].1.message);
-                if let Ok(ConsensusTypes::<TestPayload>::VoteMsg(_)) = vote_msg {
+                if let ConsensusMsg::<TestPayload>::VoteMsg(_) = msg[0].1 {
                     round += 1;
                     break;
                 }
@@ -469,13 +473,13 @@ fn basic_block_retrieval() {
         playground.drop_message_for(&nodes[0].smr.author(), nodes[3].smr.author());
         for _ in 0..2 {
             playground
-                .wait_for_messages(2, NetworkPlayground::proposals_only)
+                .wait_for_messages(2, NetworkPlayground::proposals_only::<TestPayload>)
                 .await;
             let votes = playground
-                .wait_for_messages(2, NetworkPlayground::votes_only)
+                .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
                 .await;
-            let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&votes[0].1).unwrap() {
-                ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+            let vote_msg = match &votes[0].1 {
+                ConsensusMsg::VoteMsg(vote_msg) => vote_msg,
                 _ => panic!("Unexpected message found"),
             };
             let proposal_id = vote_msg.vote().vote_data().proposed().id();
@@ -488,10 +492,10 @@ fn basic_block_retrieval() {
         playground.drop_message_for(&nodes[0].smr.author(), nodes[1].smr.author());
 
         playground
-            .wait_for_messages(2, NetworkPlayground::proposals_only)
+            .wait_for_messages(2, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
         playground
-            .wait_for_messages(2, NetworkPlayground::votes_only)
+            .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
             .await;
         // The first two proposals should be present at nodes[3] via block retrieval
         for block_id in &first_proposals {
@@ -505,10 +509,10 @@ fn basic_block_retrieval() {
 
         // 4th proposal will get quorum and verify that nodes[3] commits the first proposal.
         playground
-            .wait_for_messages(2, NetworkPlayground::proposals_only)
+            .wait_for_messages(2, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
         playground
-            .wait_for_messages(2, NetworkPlayground::votes_only)
+            .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
             .await;
         if let Some(commit_v3) = nodes[3].commit_cb_receiver.next().await {
             assert_eq!(
@@ -530,13 +534,13 @@ fn block_retrieval_with_timeout() {
         playground.drop_message_for(&nodes[0].smr.author(), nodes[3].smr.author());
         for _ in 0..2 {
             playground
-                .wait_for_messages(2, NetworkPlayground::proposals_only)
+                .wait_for_messages(2, NetworkPlayground::proposals_only::<TestPayload>)
                 .await;
             let votes = playground
-                .wait_for_messages(2, NetworkPlayground::votes_only)
+                .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
                 .await;
-            let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&votes[0].1).unwrap() {
-                ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+            let vote_msg = match &votes[0].1 {
+                ConsensusMsg::VoteMsg(vote_msg) => vote_msg,
                 _ => panic!("Unexpected message found"),
             };
             let proposal_id = vote_msg.vote().vote_data().proposed().id();
@@ -548,7 +552,7 @@ fn block_retrieval_with_timeout() {
 
         // Wait until {1, 2, 3} timeout to {0 , 1, 2, 3} excluding self messages
         playground
-            .wait_for_messages(3 * 3, NetworkPlayground::timeout_votes_only)
+            .wait_for_messages(3 * 3, NetworkPlayground::timeout_votes_only::<TestPayload>)
             .await;
 
         // the first two proposals should be present at nodes[3]
@@ -578,13 +582,13 @@ fn basic_state_sync() {
         playground.drop_message_for(&nodes[0].smr.author(), nodes[3].smr.author());
         for _ in 0..10 {
             playground
-                .wait_for_messages(2, NetworkPlayground::proposals_only)
+                .wait_for_messages(2, NetworkPlayground::proposals_only::<TestPayload>)
                 .await;
             let votes = playground
-                .wait_for_messages(2, NetworkPlayground::votes_only)
+                .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
                 .await;
-            let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&votes[0].1).unwrap() {
-                ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+            let vote_msg = match &votes[0].1 {
+                ConsensusMsg::VoteMsg(vote_msg) => vote_msg,
                 _ => panic!("Unexpected message found"),
             };
             let proposal_id = vote_msg.vote().vote_data().proposed().id();
@@ -609,7 +613,7 @@ fn basic_state_sync() {
         // missing blocks from nodes[0] and commit the first eight proposals as well.
         playground.stop_drop_message_for(&nodes[0].smr.author(), &nodes[3].smr.author());
         playground
-            .wait_for_messages(3, NetworkPlayground::proposals_only)
+            .wait_for_messages(3, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
         let mut node3_commits = vec![];
         // The only notification we will receive is for the last (8th) proposal.
@@ -626,10 +630,10 @@ fn basic_state_sync() {
 
         // wait for the vote from all including node3
         playground
-            .wait_for_messages(3, NetworkPlayground::votes_only)
+            .wait_for_messages(3, NetworkPlayground::votes_only::<TestPayload>)
             .await;
         playground
-            .wait_for_messages(3, NetworkPlayground::proposals_only)
+            .wait_for_messages(3, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
 
         let committed_txns = nodes[3]
@@ -659,10 +663,10 @@ fn state_sync_on_timeout() {
         playground.drop_message_for(&nodes[2].smr.author(), nodes[3].smr.author());
         for _ in 0..10 {
             playground
-                .wait_for_messages(2, NetworkPlayground::proposals_only)
+                .wait_for_messages(2, NetworkPlayground::proposals_only::<TestPayload>)
                 .await;
             playground
-                .wait_for_messages(2, NetworkPlayground::votes_only)
+                .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
                 .await;
         }
 
@@ -671,7 +675,7 @@ fn state_sync_on_timeout() {
         playground.stop_drop_message_for(&nodes[1].smr.author(), &nodes[3].smr.author());
         // Wait for the sync info message from 1 to 3
         playground
-            .wait_for_messages(1, NetworkPlayground::sync_info_only)
+            .wait_for_messages(1, NetworkPlayground::sync_info_only::<TestPayload>)
             .await;
         // In the end of the state synchronization node 3 should have commit at round >= 7.
         assert!(
@@ -704,21 +708,21 @@ fn sync_info_sent_if_remote_stale() {
         playground.drop_message_for(&nodes[2].smr.author(), nodes[1].smr.author());
         for _ in 0..10 {
             playground
-                .wait_for_messages(2, NetworkPlayground::proposals_only)
+                .wait_for_messages(2, NetworkPlayground::proposals_only::<TestPayload>)
                 .await;
             playground
-                .wait_for_messages(2, NetworkPlayground::votes_only)
+                .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
                 .await;
         }
 
         // Wait for some timeout message from 2 to {0, 1}.
         playground.stop_drop_message_for(&nodes[2].smr.author(), &nodes[1].smr.author());
         playground
-            .wait_for_messages(3, NetworkPlayground::timeout_votes_only)
+            .wait_for_messages(3, NetworkPlayground::timeout_votes_only::<TestPayload>)
             .await;
         // Now wait for a sync info message from 1 to 2.
         playground
-            .wait_for_messages(1, NetworkPlayground::sync_info_only)
+            .wait_for_messages(1, NetworkPlayground::sync_info_only::<TestPayload>)
             .await;
 
         let node2_commit = nodes[2]
@@ -765,16 +769,16 @@ fn aggregate_timeout_votes() {
 
         // Node 0 sends proposals to nodes 1 and 2
         let msg = playground
-            .wait_for_messages(2, NetworkPlayground::proposals_only)
+            .wait_for_messages(2, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
-        let first_proposal = match ConsensusTypes::<TestPayload>::try_from(&msg[0].1).unwrap() {
-            ConsensusTypes::ProposalMsg(proposal) => proposal,
+        let first_proposal = match &msg[0].1 {
+            ConsensusMsg::ProposalMsg(proposal) => proposal,
             _ => panic!("Unexpected message found"),
         };
         let proposal_id = first_proposal.proposal().id();
         // wait for node 0 send vote to 1 and 2
         playground
-            .wait_for_messages(2, NetworkPlayground::votes_only)
+            .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
             .await;
         playground.drop_message_for(&nodes[0].smr.author(), nodes[1].smr.author());
         playground.drop_message_for(&nodes[0].smr.author(), nodes[2].smr.author());
@@ -786,7 +790,7 @@ fn aggregate_timeout_votes() {
 
         // Wait for the timeout messages sent by 1 and 2 to each other
         playground
-            .wait_for_messages(2, NetworkPlayground::timeout_votes_only)
+            .wait_for_messages(2, NetworkPlayground::timeout_votes_only::<TestPayload>)
             .await;
 
         // Node 0 cannot form a QC
@@ -803,7 +807,7 @@ fn aggregate_timeout_votes() {
         // Nodes 1 and 2 form a QC and move to the next round.
         // Wait for the timeout messages from 1 and 2
         playground
-            .wait_for_messages(2, NetworkPlayground::timeout_votes_only)
+            .wait_for_messages(2, NetworkPlayground::timeout_votes_only::<TestPayload>)
             .await;
 
         assert_eq!(
@@ -846,7 +850,7 @@ fn chain_with_nil_blocks() {
         playground
             .wait_for_messages(
                 (num_nodes - 1) * num_proposal,
-                NetworkPlayground::proposals_only,
+                NetworkPlayground::proposals_only::<TestPayload>,
             )
             .await;
         playground.drop_message_for(&nodes[0].smr.author(), nodes[1].smr.author());
@@ -863,7 +867,7 @@ fn chain_with_nil_blocks() {
             .wait_for_messages(
                 // all-to-all broadcast except nodes 0's messages are dropped and self messages don't count
                 (num_nodes - 1) * (num_nodes - 1) * num_timeout,
-                NetworkPlayground::timeout_votes_only,
+                NetworkPlayground::timeout_votes_only::<TestPayload>,
             )
             .await;
         // We can't guarantee the timing of the last timeout processing, the only thing we can
@@ -902,13 +906,13 @@ fn secondary_proposers() {
         let timeout_votes = playground
             .wait_for_messages(
                 (num_nodes - 1) * (num_nodes - 1),
-                NetworkPlayground::timeout_votes_only,
+                NetworkPlayground::timeout_votes_only::<TestPayload>,
             )
             .await;
         let mut secondary_proposal_ids = vec![];
         for msg in timeout_votes {
-            let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&msg.1).unwrap() {
-                ConsensusTypes::VoteMsg(vote_msg) => vote_msg,
+            let vote_msg = match msg.1 {
+                ConsensusMsg::VoteMsg(vote_msg) => vote_msg,
                 _ => panic!("Unexpected message found"),
             };
             assert!(vote_msg.vote().is_timeout());
@@ -928,7 +932,7 @@ fn secondary_proposers() {
         // to predict the rounds with proposer 0 being a leader.
         for _ in 0..10 {
             playground
-                .wait_for_messages(num_nodes - 1, NetworkPlayground::votes_only)
+                .wait_for_messages(num_nodes - 1, NetworkPlayground::votes_only::<TestPayload>)
                 .await;
             // Retrieve all the ids committed by the node to check whether secondary_proposal_id
             // has been committed.
@@ -958,8 +962,8 @@ fn reconfiguration_test() {
             let mut msg = playground
                 .wait_for_messages(1, NetworkPlayground::take_all)
                 .await;
-            let msg = ConsensusTypes::<TestPayload>::try_from(&msg.pop().unwrap().1);
-            if let Ok(ConsensusTypes::<TestPayload>::ValidatorChangeProof(proof)) = msg {
+            let msg = msg.pop().unwrap().1;
+            if let ConsensusMsg::<TestPayload>::ValidatorChangeProof(proof) = msg {
                 if proof.epoch().unwrap() == target_epoch {
                     break;
                 }

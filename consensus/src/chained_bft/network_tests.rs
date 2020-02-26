@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    network::{ConsensusTypes, NetworkReceivers, NetworkSender},
+    network::{NetworkReceivers, NetworkSender},
     network_interface::{
-        ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
-        CONSENSUS_RPC_PROTOCOL,
+        ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender,
+        CONSENSUS_DIRECT_SEND_PROTOCOL, CONSENSUS_RPC_PROTOCOL,
     },
     test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::{
     block::{block_test_utils::certificate_for_genesis, Block},
-    common::Author,
+    common::{Author, Payload},
     proposal_msg::ProposalMsg,
     sync_info::SyncInfo,
     vote::Vote,
@@ -20,15 +20,12 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
-use libra_prost_ext::MessageExt;
 use libra_types::{block_info::BlockInfo, PeerId};
 use network::{
     peer_manager::{conn_status_channel, PeerManagerNotification, PeerManagerRequest},
-    proto::ConsensusMsg,
     protocols::rpc::InboundRpcRequest,
     ProtocolId,
 };
-use prost::Message;
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroUsize,
@@ -181,11 +178,11 @@ impl NetworkPlayground {
 
     /// Deliver a `PeerManagerRequest` from peer `src` to the destination peer.
     /// Returns a copy of the delivered message and the sending peer id.
-    async fn deliver_message(
+    async fn deliver_message<T: Payload>(
         &mut self,
         src: Author,
         msg: PeerManagerRequest,
-    ) -> (Author, ConsensusMsg) {
+    ) -> (Author, ConsensusMsg<T>) {
         // extract destination peer
         let dst = match &msg {
             PeerManagerRequest::SendMessage(dst, _) => *dst,
@@ -218,7 +215,7 @@ impl NetworkPlayground {
         // copy message data
         let msg_copy = match &msg_notif {
             PeerManagerNotification::RecvMessage(src, msg) => {
-                let msg = ConsensusMsg::decode(msg.mdata.as_ref()).unwrap();
+                let msg: ConsensusMsg<T> = lcs::from_bytes(&msg.mdata).unwrap();
                 (*src, msg)
             }
             msg_notif => panic!(
@@ -240,13 +237,13 @@ impl NetworkPlayground {
     /// copy of all messages for verification.
     /// While all the sent messages are delivered, only the messages that satisfy the given
     /// msg inspector are counted.
-    pub async fn wait_for_messages<F>(
+    pub async fn wait_for_messages<T: Payload, F>(
         &mut self,
         num_messages: usize,
         msg_inspector: F,
-    ) -> Vec<(Author, ConsensusMsg)>
+    ) -> Vec<(Author, ConsensusMsg<T>)>
     where
-        F: Fn(&(Author, ConsensusMsg)) -> bool,
+        F: Fn(&(Author, ConsensusMsg<T>)) -> bool,
     {
         let mut msg_copies = vec![];
         while msg_copies.len() < num_messages {
@@ -267,51 +264,51 @@ impl NetworkPlayground {
     }
 
     /// Returns true for any message
-    pub fn take_all(_msg_copy: &(Author, ConsensusMsg)) -> bool {
+    pub fn take_all<T>(_msg_copy: &(Author, ConsensusMsg<T>)) -> bool {
         true
     }
 
     /// Returns true for any message other than timeout
-    pub fn exclude_timeout_msg(msg_copy: &(Author, ConsensusMsg)) -> bool {
+    pub fn exclude_timeout_msg<T>(msg_copy: &(Author, ConsensusMsg<T>)) -> bool {
         !Self::timeout_votes_only(msg_copy)
     }
 
     /// Returns true for proposal messages only.
-    pub fn proposals_only(msg: &(Author, ConsensusMsg)) -> bool {
-        match ConsensusTypes::<TestPayload>::try_from(&msg.1) {
-            Ok(ConsensusTypes::ProposalMsg(_)) => true,
+    pub fn proposals_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
+        match &msg.1 {
+            ConsensusMsg::ProposalMsg(_) => true,
             _ => false,
         }
     }
 
     /// Returns true for vote messages only.
-    pub fn votes_only(msg: &(Author, ConsensusMsg)) -> bool {
-        match ConsensusTypes::<TestPayload>::try_from(&msg.1) {
-            Ok(ConsensusTypes::VoteMsg(_)) => true,
+    pub fn votes_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
+        match &msg.1 {
+            ConsensusMsg::VoteMsg(_) => true,
             _ => false,
         }
     }
 
     /// Returns true for vote messages that carry round signatures only.
-    pub fn timeout_votes_only(msg: &(Author, ConsensusMsg)) -> bool {
-        match ConsensusTypes::<TestPayload>::try_from(&msg.1) {
+    pub fn timeout_votes_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
+        match &msg.1 {
             // Timeout votes carry non-empty round signatures.
-            Ok(ConsensusTypes::VoteMsg(vote_msg)) => vote_msg.vote().timeout_signature().is_some(),
+            ConsensusMsg::VoteMsg(vote_msg) => vote_msg.vote().timeout_signature().is_some(),
             _ => false,
         }
     }
 
     /// Returns true for sync info messages only.
-    pub fn sync_info_only(msg: &(Author, ConsensusMsg)) -> bool {
-        match ConsensusTypes::<TestPayload>::try_from(&msg.1) {
-            Ok(ConsensusTypes::SyncInfo(_)) => true,
+    pub fn sync_info_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
+        match &msg.1 {
+            ConsensusMsg::SyncInfo(_) => true,
             _ => false,
         }
     }
 
-    pub fn epoch_change_only(msg: &(Author, ConsensusMsg)) -> bool {
-        match ConsensusTypes::<TestPayload>::try_from(&msg.1) {
-            Ok(ConsensusTypes::ValidatorChangeProof(_)) => true,
+    pub fn epoch_change_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
+        match &msg.1 {
+            ConsensusMsg::ValidatorChangeProof(_) => true,
             _ => false,
         }
     }
@@ -366,7 +363,6 @@ use consensus_types::block_retrieval::{
 use libra_crypto::HashValue;
 #[cfg(test)]
 use libra_types::crypto_proxies::random_validator_verifier;
-use std::convert::TryFrom;
 
 #[test]
 fn test_network_api() {
@@ -415,23 +411,23 @@ fn test_network_api() {
             .send_vote(vote_msg.clone(), peers[2..5].to_vec())
             .await;
         playground
-            .wait_for_messages(3, NetworkPlayground::take_all)
+            .wait_for_messages(3, NetworkPlayground::take_all::<TestPayload>)
             .await;
         for r in receivers.iter_mut().take(5).skip(2) {
             let (_, msg) = r.consensus_messages.next().await.unwrap();
             match msg {
-                ConsensusTypes::VoteMsg(v) => assert_eq!(*v, vote_msg),
+                ConsensusMsg::VoteMsg(v) => assert_eq!(*v, vote_msg),
                 _ => panic!("unexpected messages"),
             }
         }
         nodes[0].broadcast_proposal(proposal.clone()).await;
         playground
-            .wait_for_messages(4, NetworkPlayground::take_all)
+            .wait_for_messages(4, NetworkPlayground::take_all::<TestPayload>)
             .await;
         for r in receivers.iter_mut().take(num_nodes - 1) {
             let (_, msg) = r.consensus_messages.next().await.unwrap();
             match msg {
-                ConsensusTypes::ProposalMsg(p) => assert_eq!(*p, proposal),
+                ConsensusMsg::ProposalMsg(p) => assert_eq!(*p, proposal),
                 _ => panic!("unexpected messages"),
             }
         }
@@ -496,18 +492,15 @@ fn test_rpc() {
             node0.send_vote(vote_msg.clone(), vec![peer1]).await;
             node0.send_vote(vote_msg.clone(), vec![peer1]).await;
             playground
-                .wait_for_messages(2, NetworkPlayground::votes_only)
+                .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
                 .await;
             let response = BlockRetrievalResponse::<TestPayload>::new(
                 BlockRetrievalStatus::IdNotFound,
                 vec![],
             );
-            let response = ConsensusTypes::BlockRetrievalResponse(Box::new(response));
-            let bytes = ConsensusMsg::try_from(response)
-                .unwrap()
-                .to_bytes()
-                .unwrap();
-            request.response_sender.send(Ok(bytes)).unwrap();
+            let response = ConsensusMsg::BlockRetrievalResponse(Box::new(response));
+            let bytes = lcs::to_bytes(&response).unwrap();
+            request.response_sender.send(Ok(bytes.into())).unwrap();
         }
     };
     runtime.handle().spawn(on_request_block);

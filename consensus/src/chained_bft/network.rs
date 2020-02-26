@@ -2,16 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
+    chained_bft::network_interface::{
+        ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender,
+    },
     counters,
 };
-use anyhow::{anyhow, ensure, Error};
+use anyhow::{anyhow, ensure};
 use bytes::Bytes;
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::{
     block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse},
     common::{Author, Payload},
-    epoch_retrieval::EpochRetrievalRequest,
     proposal_msg::ProposalMsg,
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
@@ -22,50 +23,14 @@ use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::{ValidatorChangeProof, ValidatorVerifier},
 };
-use network::{
-    proto::ConsensusMsg,
-    validator_network::{Event, RpcError},
-};
-use serde::{Deserialize, Serialize};
+use network::protocols::{network::Event, rpc::error::RpcError};
 use std::{
-    convert::TryFrom,
     marker::PhantomData,
     mem::{discriminant, Discriminant},
     num::NonZeroUsize,
     sync::Arc,
     time::{Duration, Instant},
 };
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum ConsensusTypes<T> {
-    BlockRetrievalRequest(Box<BlockRetrievalRequest>),
-    #[serde(bound = "T: Payload")]
-    BlockRetrievalResponse(Box<BlockRetrievalResponse<T>>),
-    EpochRetrievalRequest(Box<EpochRetrievalRequest>),
-    #[serde(bound = "T: Payload")]
-    ProposalMsg(Box<ProposalMsg<T>>),
-    SyncInfo(Box<SyncInfo>),
-    ValidatorChangeProof(Box<ValidatorChangeProof>),
-    VoteMsg(Box<VoteMsg>),
-}
-
-impl<T: Payload> TryFrom<&ConsensusMsg> for ConsensusTypes<T> {
-    type Error = Error;
-
-    fn try_from(value: &ConsensusMsg) -> Result<Self, Self::Error> {
-        Ok(lcs::from_bytes(&value.message)?)
-    }
-}
-
-impl<T: Payload> TryFrom<ConsensusTypes<T>> for ConsensusMsg {
-    type Error = Error;
-
-    fn try_from(value: ConsensusTypes<T>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            message: lcs::to_bytes(&value)?,
-        })
-    }
-}
 
 /// The block retrieval request is used internally for implementing RPC: the callback is executed
 /// for carrying the response
@@ -80,8 +45,8 @@ pub struct IncomingBlockRetrievalRequest {
 pub struct NetworkReceivers<T> {
     /// Provide a LIFO buffer for each (Author, MessageType) key
     pub consensus_messages: libra_channel::Receiver<
-        (AccountAddress, Discriminant<ConsensusTypes<T>>),
-        (AccountAddress, ConsensusTypes<T>),
+        (AccountAddress, Discriminant<ConsensusMsg<T>>),
+        (AccountAddress, ConsensusMsg<T>),
     >,
     pub block_retrieval: libra_channel::Receiver<AccountAddress, IncomingBlockRetrievalRequest>,
 }
@@ -90,11 +55,11 @@ pub struct NetworkReceivers<T> {
 #[derive(Clone)]
 pub struct NetworkSender<T> {
     author: Author,
-    network_sender: ConsensusNetworkSender,
+    network_sender: ConsensusNetworkSender<T>,
     // Self sender and self receivers provide a shortcut for sending the messages to itself.
     // (self sending is not supported by the networking API).
     // Note that we do not support self rpc requests as it might cause infinite recursive calls.
-    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
+    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
     validators: Arc<ValidatorVerifier>,
     marker: PhantomData<T>,
 }
@@ -102,8 +67,8 @@ pub struct NetworkSender<T> {
 impl<T: Payload> NetworkSender<T> {
     pub fn new(
         author: Author,
-        network_sender: ConsensusNetworkSender,
-        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
+        network_sender: ConsensusNetworkSender<T>,
+        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
         validators: Arc<ValidatorVerifier>,
     ) -> Self {
         NetworkSender {
@@ -126,13 +91,11 @@ impl<T: Payload> NetworkSender<T> {
         ensure!(from != self.author, "Retrieve block from self");
         counters::BLOCK_RETRIEVAL_COUNT.inc_by(retrieval_request.num_blocks() as i64);
         let pre_retrieval_instant = Instant::now();
-        let msg = ConsensusMsg::try_from(ConsensusTypes::BlockRetrievalRequest::<T>(Box::new(
-            retrieval_request.clone(),
-        )))?;
+        let msg = ConsensusMsg::BlockRetrievalRequest::<T>(Box::new(retrieval_request.clone()));
         let response_msg = self.network_sender.send_rpc(from, msg, timeout).await?;
         counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
-        let response = match ConsensusTypes::try_from(&response_msg) {
-            Ok(ConsensusTypes::BlockRetrievalResponse(resp)) => *resp,
+        let response = match response_msg {
+            ConsensusMsg::BlockRetrievalResponse(resp) => *resp,
             _ => return Err(anyhow!("Invalid response to request")),
         };
         response
@@ -161,18 +124,12 @@ impl<T: Payload> NetworkSender<T> {
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
     pub async fn broadcast_proposal(&mut self, proposal: ProposalMsg<T>) {
-        let msg = match ConsensusMsg::try_from(ConsensusTypes::ProposalMsg(Box::new(proposal))) {
-            Ok(msg) => msg,
-            Err(e) => {
-                warn!("Failed to serialize ProposalMsg: {:?}", e);
-                return;
-            }
-        };
-        counters::UNWRAPPED_PROPOSAL_SIZE_BYTES.observe(msg.message.len() as f64);
+        let msg = ConsensusMsg::ProposalMsg(Box::new(proposal));
+        // counters::UNWRAPPED_PROPOSAL_SIZE_BYTES.observe(msg.message.len() as f64);
         self.broadcast(msg).await
     }
 
-    async fn broadcast(&mut self, msg: ConsensusMsg) {
+    async fn broadcast(&mut self, msg: ConsensusMsg<T>) {
         // Directly send the message to ourself without going through network.
         let self_msg = Event::Message((self.author, msg.clone()));
         if let Err(err) = self.self_sender.send(Ok(self_msg)).await {
@@ -204,13 +161,7 @@ impl<T: Payload> NetworkSender<T> {
     pub async fn send_vote(&self, vote_msg: VoteMsg, recipients: Vec<Author>) {
         let mut network_sender = self.network_sender.clone();
         let mut self_sender = self.self_sender.clone();
-        let msg = match ConsensusMsg::try_from(ConsensusTypes::VoteMsg::<T>(Box::new(vote_msg))) {
-            Ok(msg) => msg,
-            Err(e) => {
-                warn!("Failed to serialize VoteMsg: {:?}", e);
-                return;
-            }
-        };
+        let msg = ConsensusMsg::VoteMsg::<T>(Box::new(vote_msg));
         for peer in recipients {
             if self.author == peer {
                 let self_msg = Event::Message((self.author, msg.clone()));
@@ -227,13 +178,7 @@ impl<T: Payload> NetworkSender<T> {
 
     /// Broadcasts vote message to all validators
     pub async fn broadcast_vote(&mut self, vote_msg: VoteMsg) {
-        let msg = match ConsensusMsg::try_from(ConsensusTypes::VoteMsg::<T>(Box::new(vote_msg))) {
-            Ok(msg) => msg,
-            Err(e) => {
-                warn!("Failed to serialize VoteMsg: {:?}", e);
-                return;
-            }
-        };
+        let msg = ConsensusMsg::VoteMsg::<T>(Box::new(vote_msg));
         self.broadcast(msg).await
     }
 
@@ -245,13 +190,7 @@ impl<T: Payload> NetworkSender<T> {
             error!("An attempt to deliver sync info msg to itself: ignore.");
             return;
         }
-        let msg = match ConsensusMsg::try_from(ConsensusTypes::SyncInfo::<T>(Box::new(sync_info))) {
-            Ok(msg) => msg,
-            Err(e) => {
-                warn!("Failed to serialize SyncInfo: {:?}", e);
-                return;
-            }
-        };
+        let msg = ConsensusMsg::SyncInfo::<T>(Box::new(sync_info));
         let mut network_sender = self.network_sender.clone();
         if let Err(e) = network_sender.send_to(recipient, msg) {
             warn!(
@@ -264,26 +203,12 @@ impl<T: Payload> NetworkSender<T> {
     /// Broadcast about epoch changes with proof to the current validator set (including self)
     /// when we commit the reconfiguration block
     pub async fn broadcast_epoch_change(&mut self, proof: ValidatorChangeProof) {
-        let msg = ConsensusTypes::ValidatorChangeProof::<T>(Box::new(proof));
-        let msg = match ConsensusMsg::try_from(msg) {
-            Ok(msg) => msg,
-            Err(e) => {
-                warn!("Failed to serialize ValidatorChangeProof: {:?}", e);
-                return;
-            }
-        };
+        let msg = ConsensusMsg::ValidatorChangeProof::<T>(Box::new(proof));
         self.broadcast(msg).await
     }
 
     pub async fn notify_epoch_change(&mut self, proof: ValidatorChangeProof) {
-        let msg = ConsensusTypes::ValidatorChangeProof::<T>(Box::new(proof));
-        let msg = match ConsensusMsg::try_from(msg) {
-            Ok(msg) => msg,
-            Err(e) => {
-                warn!("Failed to serialize ValidatorChangeProof: {:?}", e);
-                return;
-            }
-        };
+        let msg = ConsensusMsg::ValidatorChangeProof::<T>(Box::new(proof));
         let self_msg = Event::Message((self.author, msg));
         if let Err(e) = self.self_sender.send(Ok(self_msg)).await {
             warn!("Failed to notify to self an epoch change {:?}", e);
@@ -293,18 +218,18 @@ impl<T: Payload> NetworkSender<T> {
 
 pub struct NetworkTask<T> {
     consensus_messages_tx: libra_channel::Sender<
-        (AccountAddress, Discriminant<ConsensusTypes<T>>),
-        (AccountAddress, ConsensusTypes<T>),
+        (AccountAddress, Discriminant<ConsensusMsg<T>>),
+        (AccountAddress, ConsensusMsg<T>),
     >,
     block_retrieval_tx: libra_channel::Sender<AccountAddress, IncomingBlockRetrievalRequest>,
-    all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
+    all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg<T>>>> + Send + Unpin>,
 }
 
 impl<T: Payload> NetworkTask<T> {
     /// Establishes the initial connections with the peers and returns the receivers.
     pub fn new(
-        network_events: ConsensusNetworkEvents,
-        self_receiver: channel::Receiver<anyhow::Result<Event<ConsensusMsg>>>,
+        network_events: ConsensusNetworkEvents<T>,
+        self_receiver: channel::Receiver<anyhow::Result<Event<ConsensusMsg<T>>>>,
     ) -> (NetworkTask<T>, NetworkReceivers<T>) {
         let (consensus_messages_tx, consensus_messages) = libra_channel::new(
             QueueStyle::LIFO,
@@ -335,33 +260,32 @@ impl<T: Payload> NetworkTask<T> {
         while let Some(Ok(message)) = self.all_events.next().await {
             match message {
                 Event::Message((peer_id, msg)) => {
-                    if let Err(e) = ConsensusTypes::<T>::try_from(&msg).and_then(|m| {
-                        self.consensus_messages_tx
-                            .push((peer_id, discriminant(&m)), (peer_id, m))
-                    }) {
-                        warn!("Unexpected msg from {}: {:?}, error: {:?}", peer_id, msg, e);
+                    if let Err(e) = self
+                        .consensus_messages_tx
+                        .push((peer_id, discriminant(&msg)), (peer_id, msg))
+                    {
+                        warn!(
+                            "Error pushing consensus msg from {}, error: {:?}",
+                            peer_id, e
+                        );
+                    }
+                }
+                Event::RpcRequest((peer_id, msg, callback)) => match msg {
+                    ConsensusMsg::BlockRetrievalRequest(request) => {
+                        debug!("Received block retrieval request {}", request);
+                        let req_with_callback = IncomingBlockRetrievalRequest {
+                            req: *request,
+                            response_sender: callback,
+                        };
+                        if let Err(e) = self.block_retrieval_tx.push(peer_id, req_with_callback) {
+                            warn!("libra channel closed: {:?}", e);
+                        }
+                    }
+                    _ => {
+                        warn!("Unexpected msg from {}: {:?}", peer_id, msg);
                         continue;
                     }
-                }
-                Event::RpcRequest((peer_id, msg, callback)) => {
-                    match ConsensusTypes::<T>::try_from(&msg) {
-                        Ok(ConsensusTypes::BlockRetrievalRequest(request)) => {
-                            debug!("Received block retrieval request {}", request);
-                            let req_with_callback = IncomingBlockRetrievalRequest {
-                                req: *request,
-                                response_sender: callback,
-                            };
-                            if let Err(e) = self.block_retrieval_tx.push(peer_id, req_with_callback)
-                            {
-                                warn!("libra channel closed: {:?}", e);
-                            }
-                        }
-                        _ => {
-                            warn!("Unexpected msg from {}: {:?}", peer_id, msg);
-                            continue;
-                        }
-                    }
-                }
+                },
                 Event::NewPeer(peer_id) => {
                     debug!("Peer {} connected", peer_id);
                 }

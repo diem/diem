@@ -11,8 +11,8 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
-        network::{ConsensusTypes, IncomingBlockRetrievalRequest, NetworkSender, NetworkTask},
-        network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
+        network::{IncomingBlockRetrievalRequest, NetworkSender, NetworkTask},
+        network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
         network_tests::NetworkPlayground,
         persistent_liveness_storage::RecoveryData,
         test_utils::{
@@ -51,10 +51,9 @@ use libra_types::{
         random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
     },
 };
-use network::{peer_manager::conn_status_channel, proto::ConsensusMsg};
-use prost::Message as _;
+use network::peer_manager::conn_status_channel;
 use safety_rules::{ConsensusState, PersistentSafetyStorage as SafetyStorage, SafetyRulesManager};
-use std::{collections::HashMap, convert::TryFrom, num::NonZeroUsize, sync::Arc, time::Duration};
+use std::{collections::HashMap, num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -238,12 +237,12 @@ fn basic_new_rank_event_test() {
             })
             .await;
         let pending_messages = playground
-            .wait_for_messages(1, NetworkPlayground::proposals_only)
+            .wait_for_messages(1, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
         let pending_proposals: Vec<ProposalMsg<TestPayload>> = pending_messages
             .into_iter()
-            .filter_map(|m| match ConsensusTypes::try_from(&m.1) {
-                Ok(ConsensusTypes::ProposalMsg(proposal)) => Some(*proposal),
+            .filter_map(|m| match m.1 {
+                ConsensusMsg::ProposalMsg(proposal) => Some(*proposal),
                 _ => None,
             })
             .collect::<Vec<_>>();
@@ -301,12 +300,12 @@ fn basic_new_rank_event_test() {
             })
             .await;
         let pending_messages = playground
-            .wait_for_messages(1, NetworkPlayground::proposals_only)
+            .wait_for_messages(1, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
         let pending_proposals: Vec<ProposalMsg<TestPayload>> = pending_messages
             .into_iter()
-            .filter_map(|m| match ConsensusTypes::<TestPayload>::try_from(&m.1) {
-                Ok(ConsensusTypes::ProposalMsg(proposal)) => Some(*proposal),
+            .filter_map(|m| match m.1 {
+                ConsensusMsg::ProposalMsg(proposal) => Some(*proposal),
                 _ => None,
             })
             .collect::<Vec<_>>();
@@ -340,7 +339,7 @@ fn process_successful_proposal_test() {
         let proposal_id = proposal.id();
         node.event_processor.process_proposed_block(proposal).await;
         let pending_messages = playground
-            .wait_for_messages(1, NetworkPlayground::votes_only)
+            .wait_for_messages(1, NetworkPlayground::votes_only::<TestPayload>)
             .await;
         let pending_for_proposer = pending_messages
             .into_iter()
@@ -349,8 +348,8 @@ fn process_successful_proposal_test() {
                     return None;
                 }
 
-                match ConsensusTypes::<TestPayload>::try_from(&m.1) {
-                    Ok(ConsensusTypes::VoteMsg(vote_msg)) => Some(*vote_msg),
+                match m.1 {
+                    ConsensusMsg::VoteMsg(vote_msg) => Some(*vote_msg),
                     _ => None,
                 }
             })
@@ -390,7 +389,7 @@ fn process_old_proposal_test() {
         node.event_processor.process_proposed_block(new_block).await;
         node.event_processor.process_proposed_block(old_block).await;
         let pending_messages = playground
-            .wait_for_messages(1, NetworkPlayground::votes_only)
+            .wait_for_messages(1, NetworkPlayground::votes_only::<TestPayload>)
             .await;
         let pending_for_me = pending_messages
             .into_iter()
@@ -399,8 +398,8 @@ fn process_old_proposal_test() {
                     return None;
                 }
 
-                match ConsensusTypes::<TestPayload>::try_from(&m.1) {
-                    Ok(ConsensusTypes::VoteMsg(vote_msg)) => Some(*vote_msg),
+                match m.1 {
+                    ConsensusMsg::VoteMsg(vote_msg) => Some(*vote_msg),
                     _ => None,
                 }
             })
@@ -709,9 +708,8 @@ fn process_block_retrieval() {
             .await;
         match rx1.await {
             Ok(Ok(bytes)) => {
-                let response = ConsensusMsg::decode(bytes).unwrap();
-                let response = match ConsensusTypes::<TestPayload>::try_from(&response) {
-                    Ok(ConsensusTypes::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
+                let response = match lcs::from_bytes(&bytes) {
+                    Ok(ConsensusMsg::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
                     _ => panic!("block retrieval failure"),
                 };
                 assert_eq!(response.status(), BlockRetrievalStatus::Succeeded);
@@ -732,9 +730,8 @@ fn process_block_retrieval() {
             .await;
         match rx2.await {
             Ok(Ok(bytes)) => {
-                let response = ConsensusMsg::decode(bytes).unwrap();
-                let response = match ConsensusTypes::<TestPayload>::try_from(&response) {
-                    Ok(ConsensusTypes::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
+                let response = match lcs::from_bytes(&bytes) {
+                    Ok(ConsensusMsg::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
                     _ => panic!("block retrieval failure"),
                 };
                 assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
@@ -754,9 +751,8 @@ fn process_block_retrieval() {
             .await;
         match rx3.await {
             Ok(Ok(bytes)) => {
-                let response = ConsensusMsg::decode(bytes).unwrap();
-                let response = match ConsensusTypes::<TestPayload>::try_from(&response) {
-                    Ok(ConsensusTypes::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
+                let response = match lcs::from_bytes(&bytes) {
+                    Ok(ConsensusMsg::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
                     _ => panic!("block retrieval failure"),
                 };
                 assert_eq!(response.status(), BlockRetrievalStatus::NotEnoughBlocks);
@@ -830,10 +826,10 @@ fn nil_vote_on_timeout() {
         // and that the vote extends genesis.
         node.event_processor.process_local_timeout(1).await;
         let msg = &playground
-            .wait_for_messages(1, NetworkPlayground::timeout_votes_only)
+            .wait_for_messages(1, NetworkPlayground::timeout_votes_only::<TestPayload>)
             .await[0];
-        let vote_msg = match ConsensusTypes::<TestPayload>::try_from(&msg.1) {
-            Ok(ConsensusTypes::VoteMsg(vote_msg)) => *vote_msg,
+        let vote_msg = match &msg.1 {
+            ConsensusMsg::VoteMsg(vote_msg) => &*vote_msg,
             _ => panic!("Failed to retrieve VoteMsg"),
         };
 

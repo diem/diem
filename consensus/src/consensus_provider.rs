@@ -15,6 +15,7 @@ use executor::Executor;
 use futures::channel::mpsc;
 use libra_config::config::NodeConfig;
 use libra_mempool::ConsensusRequest;
+use libra_types::transaction::SignedTransaction;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
@@ -36,8 +37,8 @@ pub trait ConsensusProvider {
 /// Helper function to create a ConsensusProvider based on configuration
 pub fn make_consensus_provider(
     node_config: &mut NodeConfig,
-    network_sender: ConsensusNetworkSender,
-    network_receiver: ConsensusNetworkEvents,
+    network_sender: ConsensusNetworkSender<Vec<SignedTransaction>>,
+    network_receiver: ConsensusNetworkEvents<Vec<SignedTransaction>>,
     executor: Arc<Executor<LibraVM>>,
     state_sync_client: Arc<StateSyncClient>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,

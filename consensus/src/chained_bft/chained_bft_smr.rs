@@ -26,8 +26,8 @@ use tokio::runtime::{self, Handle, Runtime};
 /// All these structures need to be moved into EpochManager. Rather than make each one an option
 /// and perform ugly unwraps, they are bundled here.
 pub struct ChainedBftSMRInput<T> {
-    network_sender: ConsensusNetworkSender,
-    network_events: ConsensusNetworkEvents,
+    network_sender: ConsensusNetworkSender<T>,
+    network_events: ConsensusNetworkEvents<T>,
     safety_rules_manager: SafetyRulesManager<T>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     txn_manager: Box<dyn TxnManager<Payload = T>>,
@@ -47,8 +47,8 @@ pub struct ChainedBftSMR<T> {
 
 impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
-        network_sender: ConsensusNetworkSender,
-        network_events: ConsensusNetworkEvents,
+        network_sender: ConsensusNetworkSender<T>,
+        network_events: ConsensusNetworkEvents<T>,
         node_config: &mut NodeConfig,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
