@@ -3,22 +3,8 @@
 
 //! Defines accessors for compiled modules.
 
-use crate::{
-    file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, CompiledModule, CompiledModuleMut, CompiledScript,
-        FieldDefinition, FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex,
-        FunctionHandle, FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex,
-        IdentifierIndex, LocalsSignature, LocalsSignatureIndex, MemberCount, ModuleHandle,
-        ModuleHandleIndex, StructDefinition, StructDefinitionIndex, StructHandle,
-        StructHandleIndex, TypeSignature, TypeSignatureIndex,
-    },
-    internals::ModuleIndex,
-};
-use libra_types::{
-    account_address::AccountAddress,
-    language_storage::ModuleId,
-    vm_error::{StatusCode, VMStatus},
-};
+use crate::{file_format::*, internals::ModuleIndex};
+use libra_types::{account_address::AccountAddress, language_storage::ModuleId};
 use move_core_types::identifier::{IdentStr, Identifier};
 
 /// Represents accessors for a compiled module.
@@ -30,9 +16,7 @@ pub trait ModuleAccess: Sync {
 
     /// Returns the `ModuleHandle` for `self`.
     fn self_handle(&self) -> &ModuleHandle {
-        self.module_handle_at(ModuleHandleIndex::new(
-            CompiledModule::IMPLEMENTED_MODULE_INDEX,
-        ))
+        self.module_handle_at(ModuleHandleIndex(CompiledModule::IMPLEMENTED_MODULE_INDEX))
     }
 
     /// Returns the name of the module.
@@ -57,16 +41,24 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().function_handles[idx.into_index()]
     }
 
-    fn type_signature_at(&self, idx: TypeSignatureIndex) -> &TypeSignature {
-        &self.as_module().as_inner().type_signatures[idx.into_index()]
+    fn field_handle_at(&self, idx: FieldHandleIndex) -> &FieldHandle {
+        &self.as_module().as_inner().field_handles[idx.into_index()]
     }
 
-    fn function_signature_at(&self, idx: FunctionSignatureIndex) -> &FunctionSignature {
-        &self.as_module().as_inner().function_signatures[idx.into_index()]
+    fn struct_instantiation_at(&self, idx: StructDefInstantiationIndex) -> &StructDefInstantiation {
+        &self.as_module().as_inner().struct_def_instantiations[idx.into_index()]
     }
 
-    fn locals_signature_at(&self, idx: LocalsSignatureIndex) -> &LocalsSignature {
-        &self.as_module().as_inner().locals_signatures[idx.into_index()]
+    fn function_instantiation_at(&self, idx: FunctionInstantiationIndex) -> &FunctionInstantiation {
+        &self.as_module().as_inner().function_instantiations[idx.into_index()]
+    }
+
+    fn field_instantiation_at(&self, idx: FieldInstantiationIndex) -> &FieldInstantiation {
+        &self.as_module().as_inner().field_instantiations[idx.into_index()]
+    }
+
+    fn signature_at(&self, idx: SignatureIndex) -> &Signature {
+        &self.as_module().as_inner().signatures[idx.into_index()]
     }
 
     fn identifier_at(&self, idx: IdentifierIndex) -> &IdentStr {
@@ -85,20 +77,10 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().struct_defs[idx.into_index()]
     }
 
-    fn field_def_at(&self, idx: FieldDefinitionIndex) -> &FieldDefinition {
-        &self.as_module().as_inner().field_defs[idx.into_index()]
-    }
-
     fn function_def_at(&self, idx: FunctionDefinitionIndex) -> &FunctionDefinition {
         &self.as_module().as_inner().function_defs[idx.into_index()]
     }
 
-    fn get_field_signature(&self, field_definition_index: FieldDefinitionIndex) -> &TypeSignature {
-        let field_definition = self.field_def_at(field_definition_index);
-        self.type_signature_at(field_definition.signature)
-    }
-
-    // XXX is a partial range required here?
     fn module_handles(&self) -> &[ModuleHandle] {
         &self.as_module().as_inner().module_handles
     }
@@ -111,16 +93,24 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().function_handles
     }
 
-    fn type_signatures(&self) -> &[TypeSignature] {
-        &self.as_module().as_inner().type_signatures
+    fn field_handles(&self) -> &[FieldHandle] {
+        &self.as_module().as_inner().field_handles
     }
 
-    fn function_signatures(&self) -> &[FunctionSignature] {
-        &self.as_module().as_inner().function_signatures
+    fn struct_instantiations(&self) -> &[StructDefInstantiation] {
+        &self.as_module().as_inner().struct_def_instantiations
     }
 
-    fn locals_signatures(&self) -> &[LocalsSignature] {
-        &self.as_module().as_inner().locals_signatures
+    fn function_instantiations(&self) -> &[FunctionInstantiation] {
+        &self.as_module().as_inner().function_instantiations
+    }
+
+    fn field_instantiations(&self) -> &[FieldInstantiation] {
+        &self.as_module().as_inner().field_instantiations
+    }
+
+    fn signatures(&self) -> &[Signature] {
+        &self.as_module().as_inner().signatures
     }
 
     fn byte_array_pool(&self) -> &[Vec<u8>] {
@@ -139,10 +129,6 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().struct_defs
     }
 
-    fn field_defs(&self) -> &[FieldDefinition] {
-        &self.as_module().as_inner().field_defs
-    }
-
     fn function_defs(&self) -> &[FunctionDefinition] {
         &self.as_module().as_inner().function_defs
     }
@@ -153,28 +139,6 @@ pub trait ModuleAccess: Sync {
 
     fn self_id(&self) -> ModuleId {
         self.as_module().self_id()
-    }
-
-    fn field_def_range(
-        &self,
-        field_count: MemberCount,
-        first_field: FieldDefinitionIndex,
-    ) -> &[FieldDefinition] {
-        let first_field = first_field.0 as usize;
-        let field_count = field_count as usize;
-        // Both `first_field` and `field_count` are `u16` before being converted to usize
-        assume!(first_field <= usize::max_value() - field_count);
-        let last_field = first_field + field_count;
-        &self.as_module().as_inner().field_defs[first_field..last_field]
-    }
-
-    fn is_field_in_struct(
-        &self,
-        field_definition_index: FieldDefinitionIndex,
-        struct_handle_index: StructHandleIndex,
-    ) -> bool {
-        let field_definition = self.field_def_at(field_definition_index);
-        struct_handle_index == field_definition.struct_
     }
 }
 
@@ -187,9 +151,7 @@ pub trait ScriptAccess: Sync {
 
     /// Returns the `ModuleHandle` for `self`.
     fn self_handle(&self) -> &ModuleHandle {
-        self.module_handle_at(ModuleHandleIndex::new(
-            CompiledModule::IMPLEMENTED_MODULE_INDEX,
-        ))
+        self.module_handle_at(ModuleHandleIndex(CompiledModule::IMPLEMENTED_MODULE_INDEX))
     }
 
     fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle {
@@ -204,16 +166,8 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().function_handles[idx.into_index()]
     }
 
-    fn type_signature_at(&self, idx: TypeSignatureIndex) -> &TypeSignature {
-        &self.as_script().as_inner().type_signatures[idx.into_index()]
-    }
-
-    fn function_signature_at(&self, idx: FunctionSignatureIndex) -> &FunctionSignature {
-        &self.as_script().as_inner().function_signatures[idx.into_index()]
-    }
-
-    fn locals_signature_at(&self, idx: LocalsSignatureIndex) -> &LocalsSignature {
-        &self.as_script().as_inner().locals_signatures[idx.into_index()]
+    fn signature_at(&self, idx: SignatureIndex) -> &Signature {
+        &self.as_script().as_inner().signatures[idx.into_index()]
     }
 
     fn identifier_at(&self, idx: IdentifierIndex) -> &IdentStr {
@@ -228,6 +182,10 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().address_pool[idx.into_index()]
     }
 
+    fn function_instantiation_at(&self, idx: FunctionInstantiationIndex) -> &FunctionInstantiation {
+        &self.as_script().as_inner().function_instantiations[idx.into_index()]
+    }
+
     fn module_handles(&self) -> &[ModuleHandle] {
         &self.as_script().as_inner().module_handles
     }
@@ -240,16 +198,12 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().function_handles
     }
 
-    fn type_signatures(&self) -> &[TypeSignature] {
-        &self.as_script().as_inner().type_signatures
+    fn function_instantiations(&self) -> &[FunctionInstantiation] {
+        &self.as_script().as_inner().function_instantiations
     }
 
-    fn function_signatures(&self) -> &[FunctionSignature] {
-        &self.as_script().as_inner().function_signatures
-    }
-
-    fn locals_signatures(&self) -> &[LocalsSignature] {
-        &self.as_script().as_inner().locals_signatures
+    fn signatures(&self) -> &[Signature] {
+        &self.as_script().as_inner().signatures
     }
 
     fn byte_array_pool(&self) -> &[Vec<u8>] {
@@ -278,33 +232,5 @@ impl ModuleAccess for CompiledModule {
 impl ScriptAccess for CompiledScript {
     fn as_script(&self) -> &CompiledScript {
         self
-    }
-}
-
-impl CompiledModuleMut {
-    #[inline]
-    pub(crate) fn check_field_range(
-        &self,
-        field_count: MemberCount,
-        first_field: FieldDefinitionIndex,
-    ) -> Option<VMStatus> {
-        let first_field = first_field.into_index();
-        let field_count = field_count as usize;
-        // Both first_field and field_count are u16 so this is guaranteed to not overflow.
-        // Note that last_field is exclusive, i.e. fields are in the range
-        // [first_field, last_field).
-        let last_field = first_field + field_count;
-        if last_field > self.field_defs.len() {
-            let msg = format!(
-                "Field definition range [{},{}) out of range for {}",
-                first_field,
-                last_field,
-                self.field_defs.len()
-            );
-            let status = VMStatus::new(StatusCode::RANGE_OUT_OF_BOUNDS).with_message(msg);
-            Some(status)
-        } else {
-            None
-        }
     }
 }

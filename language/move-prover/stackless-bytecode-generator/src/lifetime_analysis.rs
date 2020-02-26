@@ -317,7 +317,7 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
                         .add_edge(Node::Root, Node::Local(*t));
                 }
             }
-            BorrowField(dest, src, _) => {
+            BorrowField(dest, src, _, _) => {
                 if self.local_types[*src].is_mutable_reference() {
                     after_state.borrow_graph.move_local(*src);
                 }

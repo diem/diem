@@ -16,7 +16,7 @@ module Option {
         return T<E> { v: move(v) };
     }
 
-    public unwrap_or<E: unrestricted>(x: Self.T<E>, e: E): E {
+    public unwrap_or<E: copyable>(x: Self.T<E>, e: E): E {
         let v: vector<E>;
         T<E> { v: v } = move(x);
         if (Vector.is_empty<E>(&v)) {

@@ -25,9 +25,7 @@ use move_vm_types::{
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
-    file_format::{
-        FunctionHandleIndex, FunctionSignature, Kind, SignatureToken, StructDefinitionIndex,
-    },
+    file_format::{FunctionHandleIndex, Kind, Signature, SignatureToken, StructDefinitionIndex},
     gas_schedule::CostTable,
     transaction_metadata::TransactionMetadata,
     CompiledModule, IndexKind,
@@ -118,8 +116,8 @@ impl<'alloc> VMRuntime<'alloc> {
     ) -> VMResult<()> {
         let main = self.script_cache.cache_script(&script, context)?;
 
-        verify_ty_args(&main.signature().type_formals, &ty_args)?;
-        verify_args(main.signature(), &args)?;
+        verify_ty_args(&main.type_parameters(), &ty_args)?;
+        verify_args(main.parameters(), &args)?;
 
         Interpreter::entrypoint(context, self, txn_data, gas_schedule, main, ty_args, args)
     }
@@ -141,9 +139,8 @@ impl<'alloc> VMRuntime<'alloc> {
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         let func_def = loaded_module.function_def_at(*func_idx);
         let func_handle = loaded_module.function_handle_at(func_def.function);
-        let func_sig = loaded_module.function_signature_at(func_handle.signature);
 
-        verify_ty_args(&func_sig.type_formals, &ty_args).map_err(|status| {
+        verify_ty_args(&func_handle.type_parameters, &ty_args).map_err(|status| {
             VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).append(status)
         })?;
 
@@ -175,7 +172,7 @@ impl<'alloc> VMRuntime<'alloc> {
         let struct_idx = module.get_struct_def_index(name)?;
         let def = module.struct_def_at(*struct_idx);
         let handle = module.struct_handle_at(def.struct_handle);
-        verify_ty_args(&handle.type_formals, ty_args)?;
+        verify_ty_args(&handle.type_parameters, ty_args)?;
         self.code_cache
             .resolve_struct_def(module, *struct_idx, ty_args, context)
     }
@@ -223,13 +220,13 @@ impl<'alloc> VMRuntime<'alloc> {
 
 fn verify_ty_args(constraints: &[Kind], ty_args: &[Type]) -> VMResult<()> {
     if constraints.len() != ty_args.len() {
-        return Err(VMStatus::new(StatusCode::NUMBER_OF_TYPE_ACTUALS_MISMATCH));
+        return Err(VMStatus::new(StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH));
     }
     for (ty, expected_k) in ty_args.iter().zip(constraints) {
         let k = if ty.is_resource()? {
             Kind::Resource
         } else {
-            Kind::Unrestricted
+            Kind::Copyable
         };
         if !k.is_sub_kind_of(*expected_k) {
             return Err(VMStatus::new(StatusCode::CONTRAINT_KIND_MISMATCH));
@@ -239,17 +236,17 @@ fn verify_ty_args(constraints: &[Kind], ty_args: &[Type]) -> VMResult<()> {
 }
 
 /// Verify if the transaction arguments match the type signature of the main function.
-fn verify_args(signature: &FunctionSignature, args: &[Value]) -> VMResult<()> {
-    if signature.arg_types.len() != args.len() {
+fn verify_args(signature: &Signature, args: &[Value]) -> VMResult<()> {
+    if signature.len() != args.len() {
         return Err(
             VMStatus::new(StatusCode::TYPE_MISMATCH).with_message(format!(
                 "argument length mismatch: expected {} got {}",
-                signature.arg_types.len(),
+                signature.len(),
                 args.len()
             )),
         );
     }
-    for (arg, ty) in args.iter().zip(signature.arg_types.iter()) {
+    for (arg, ty) in args.iter().zip(signature.0.iter()) {
         if !arg.is_valid_script_arg(ty) {
             return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)
                 .with_message("argument type mismatch".to_string()));

@@ -158,8 +158,8 @@ pub enum Kind {
     All,
     /// `Resource` types must follow move semantics and various resource safety rules.
     Resource,
-    /// `Unrestricted` types do not need to follow the `Resource` rules.
-    Unrestricted,
+    /// `Copyable` types do not need to follow the `Resource` rules.
+    Copyable,
 }
 
 //**************************************************************************************************
@@ -953,12 +953,12 @@ impl FunctionSignature {
     pub fn new(
         formals: Vec<(Var, Type)>,
         return_type: Vec<Type>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_parameters: Vec<(TypeVar, Kind)>,
     ) -> Self {
         FunctionSignature {
             formals,
             return_type,
-            type_formals,
+            type_formals: type_parameters,
         }
     }
 }
@@ -970,12 +970,12 @@ impl Function_ {
         visibility: FunctionVisibility,
         formals: Vec<(Var, Type)>,
         return_type: Vec<Type>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_parameters: Vec<(TypeVar, Kind)>,
         acquires: Vec<StructName>,
         specifications: Vec<Condition>,
         body: FunctionBody,
     ) -> Self {
-        let signature = FunctionSignature::new(formals, return_type, type_formals);
+        let signature = FunctionSignature::new(formals, return_type, type_parameters);
         Function_ {
             visibility,
             signature,
@@ -1231,7 +1231,7 @@ impl fmt::Display for Kind {
             match self {
                 Kind::All => "all",
                 Kind::Resource => "resource",
-                Kind::Unrestricted => "unrestricted",
+                Kind::Copyable => "copyable",
             }
         )
     }

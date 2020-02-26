@@ -74,7 +74,7 @@ static BASE_SIG_TOKENS: Lazy<Vec<SignatureToken>> = Lazy::new(|| {
         SignatureToken::Address,
         // Bogus struct handle index, but it's fine since we disregard this in the generation of
         // instruction arguments.
-        SignatureToken::Struct(StructHandleIndex::new(0), vec![]),
+        SignatureToken::Struct(StructHandleIndex(0)),
     ]
 });
 
@@ -116,7 +116,7 @@ fn ref_values(num: u64) -> Vec<SignatureTy> {
 
 fn ref_resources(num: u64) -> Vec<SignatureTy> {
     (0..num)
-        .map(|_| simple_ref_of_sig_tok(SignatureToken::Struct(StructHandleIndex::new(0), vec![])))
+        .map(|_| simple_ref_of_sig_tok(SignatureToken::Struct(StructHandleIndex(0))))
         .collect()
 }
 
@@ -180,7 +180,7 @@ fn integer_values(num: u64) -> Vec<Vec<SignatureTy>> {
 
 fn resources(num: u64) -> Vec<SignatureTy> {
     (0..num)
-        .map(|_| ty_of_sig_tok(SignatureToken::Struct(StructHandleIndex::new(0), vec![])))
+        .map(|_| ty_of_sig_tok(SignatureToken::Struct(StructHandleIndex(0))))
         .collect()
 }
 
@@ -265,7 +265,9 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
         Bytecode::MutBorrowLoc(_)
         | Bytecode::ImmBorrowLoc(_)
         | Bytecode::ImmBorrowField(_)
-        | Bytecode::MutBorrowField(_) => {
+        | Bytecode::ImmBorrowFieldGeneric(_)
+        | Bytecode::MutBorrowField(_)
+        | Bytecode::MutBorrowFieldGeneric(_) => {
             type_transition! { empty() => ref_values(1), empty() => ref_resources(1) }
         }
         Bytecode::ReadRef => type_transition! { ref_values(1) => values(1) },
@@ -287,7 +289,10 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
             ref_values(1) => empty(),
             ref_resources(1) => empty()
         },
-        Bytecode::Pack(_, _) | Bytecode::Call(_, _) => {
+        Bytecode::Pack(_)
+        | Bytecode::Call(_)
+        | Bytecode::PackGeneric(_)
+        | Bytecode::CallGeneric(_) => {
             let possible_tys = BASE_SIG_TOKENS.clone();
             type_transition! {
                           vec![variable_ty_of_sig_tok(
@@ -296,7 +301,7 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
                           )] => vec![variable_ty_of_sig_tok(possible_tys, 1)]
             }
         }
-        Bytecode::Unpack(_, _) => {
+        Bytecode::Unpack(_) | Bytecode::UnpackGeneric(_) => {
             let possible_tys = BASE_SIG_TOKENS.clone();
             type_transition! {
                 vec![variable_ty_of_sig_tok(
@@ -310,12 +315,21 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
         | Bytecode::GetTxnMaxGasUnits
         | Bytecode::GetGasRemaining => type_transition! { empty() => u64s(1) },
         Bytecode::GetTxnSenderAddress => type_transition! { empty() => simple_addrs(1) },
-        Bytecode::Exists(_, _) => type_transition! { simple_addrs(1) => bools(1) },
-        Bytecode::MutBorrowGlobal(_, _) | Bytecode::ImmBorrowGlobal(_, _) => {
+        Bytecode::Exists(_) | Bytecode::ExistsGeneric(_) => {
+            type_transition! { simple_addrs(1) => bools(1) }
+        }
+        Bytecode::MutBorrowGlobal(_)
+        | Bytecode::ImmBorrowGlobal(_)
+        | Bytecode::MutBorrowGlobalGeneric(_)
+        | Bytecode::ImmBorrowGlobalGeneric(_) => {
             type_transition! { simple_addrs(1) => ref_values(1) }
         }
-        Bytecode::MoveFrom(_, _) => type_transition! { simple_addrs(1) => values(1) },
-        Bytecode::MoveToSender(_, _) => type_transition! { values(1) => empty() },
+        Bytecode::MoveFrom(_) | Bytecode::MoveFromGeneric(_) => {
+            type_transition! { simple_addrs(1) => values(1) }
+        }
+        Bytecode::MoveToSender(_) | Bytecode::MoveToSenderGeneric(_) => {
+            type_transition! { values(1) => empty() }
+        }
         Bytecode::GetTxnPublicKey => type_transition! { empty() => byte_arrays(1) },
         Bytecode::FreezeRef => type_transition! { ref_values(1) => ref_values(1) },
     }

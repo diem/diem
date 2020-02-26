@@ -60,8 +60,8 @@ impl CompiledUnit {
     #[allow(dead_code)]
     pub fn serialize_debug(self) -> Vec<u8> {
         match self {
-            CompiledUnit::Module { module, .. } => format!("{}", module),
-            CompiledUnit::Script { script, .. } => format!("{}", script),
+            CompiledUnit::Module { module, .. } => format!("{:?}", module),
+            CompiledUnit::Script { script, .. } => format!("{:?}", script),
         }
         .into()
     }

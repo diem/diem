@@ -35,8 +35,8 @@ use structopt::StructOpt;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex,
-        FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, NO_TYPE_ACTUALS,
+        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldHandleIndex, FunctionDefinitionIndex,
+        FunctionHandleIndex, StructDefinitionIndex,
     },
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     transaction_metadata::TransactionMetadata,
@@ -77,22 +77,20 @@ fn output_to_csv(path: &Path, data: HashMap<String, Vec<u64>>, output: bool) {
 
 fn size_normalize_cost(instr: &Bytecode, cost: u64, size: AbstractMemorySize<GasCarrier>) -> u64 {
     match instr {
-        Bytecode::MoveToSender(_, _)
-        | Bytecode::Exists(_, _)
-        | Bytecode::MutBorrowGlobal(_, _)
-        | Bytecode::ImmBorrowGlobal(_, _)
+        Bytecode::MoveToSender(_)
+        | Bytecode::Exists(_)
+        | Bytecode::MutBorrowGlobal(_)
+        | Bytecode::ImmBorrowGlobal(_)
         | Bytecode::Eq
         | Bytecode::Neq
         | Bytecode::LdByteArray(_)
         | Bytecode::StLoc(_)
         | Bytecode::CopyLoc(_)
-        | Bytecode::Pack(_, _)
-        | Bytecode::Unpack(_, _)
+        | Bytecode::Pack(_)
+        | Bytecode::Unpack(_)
         | Bytecode::WriteRef
         | Bytecode::ReadRef
-        | Bytecode::MoveFrom(_, _) => {
-            cost / size.get() + if cost % size.get() == 0 { 0 } else { 1 }
-        }
+        | Bytecode::MoveFrom(_) => cost / size.get() + if cost % size.get() == 0 { 0 } else { 1 },
         _ => cost,
     }
 }
@@ -103,21 +101,21 @@ fn stack_instructions(options: &Opt) {
         ReadRef,
         WriteRef,
         FreezeRef,
-        MoveToSender(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
-        Exists(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
-        MutBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
-        ImmBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
-        MoveFrom(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
-        MutBorrowField(FieldDefinitionIndex::new(0)),
-        ImmBorrowField(FieldDefinitionIndex::new(0)),
+        MoveToSender(StructDefinitionIndex(0)),
+        Exists(StructDefinitionIndex(0)),
+        MutBorrowGlobal(StructDefinitionIndex(0)),
+        ImmBorrowGlobal(StructDefinitionIndex(0)),
+        MoveFrom(StructDefinitionIndex(0)),
+        MutBorrowField(FieldHandleIndex(0)),
+        ImmBorrowField(FieldHandleIndex(0)),
         CopyLoc(0),
         MoveLoc(0),
         MutBorrowLoc(0),
         ImmBorrowLoc(0),
         StLoc(0),
-        Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
-        Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
-        Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
+        Unpack(StructDefinitionIndex(0)),
+        Pack(StructDefinitionIndex(0)),
+        Call(FunctionHandleIndex(0)),
         Sub,
         Ret,
         Add,
@@ -142,8 +140,8 @@ fn stack_instructions(options: &Opt) {
         LdFalse,
         LdTrue,
         LdU64(0),
-        LdByteArray(ByteArrayPoolIndex::new(0)),
-        LdAddr(AddressPoolIndex::new(0)),
+        LdByteArray(ByteArrayPoolIndex(0)),
+        LdAddr(AddressPoolIndex(0)),
         BrFalse(0),
         BrTrue(0),
         Branch(0),
@@ -194,7 +192,7 @@ fn stack_instructions(options: &Opt) {
     let mut vm = InterpreterForCostSynthesis::new(&txn_data, &gas_schedule);
 
     // load the entry point
-    let entry_idx = FunctionDefinitionIndex::new(0);
+    let entry_idx = FunctionDefinitionIndex(0);
     let entry_func = FunctionRef::new(&loaded_module, entry_idx);
     vm.push_frame(entry_func, vec![]);
 

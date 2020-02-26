@@ -73,7 +73,7 @@ module LibraAccount {
     // A handle for a event such that:
     // 1. Other modules can emit event to this handle.
     // 2. Storage can use this handle to prove the total number of events that happened in the past.
-    resource EventHandle<T: unrestricted> {
+    resource EventHandle<T: copyable> {
         // Total number of events emitted to this event stream.
         counter: u64,
         // A globally unique ID for this event stream.
@@ -743,14 +743,14 @@ module LibraAccount {
     }
 
     // Use EventHandleGenerator to generate a unique event handle that one can emit an event to.
-    new_event_handle_impl<T: unrestricted>(counter: &mut Self.EventHandleGenerator, sender: address): Self.EventHandle<T>
+    new_event_handle_impl<T: copyable>(counter: &mut Self.EventHandleGenerator, sender: address): Self.EventHandle<T>
         aborts_if counter.counter + 1 > max_u64()
     {
         return EventHandle<T> {counter: 0, guid: Self.fresh_guid(move(counter), move(sender))};
     }
 
     // Use sender's EventHandleGenerator to generate a unique event handle that one can emit an event to.
-    public new_event_handle<T: unrestricted>(): Self.EventHandle<T> acquires T
+    public new_event_handle<T: copyable>(): Self.EventHandle<T> acquires T
         aborts_if global<Self.T>(txn_sender).event_generator.counter + 1 > max_u64()
     {
         let sender_account_ref: &mut Self.T;
@@ -761,7 +761,7 @@ module LibraAccount {
 
     // Emit an event with payload `msg` by using handle's key and counter. Will change the payload from vector<u8> to a
     // generic type parameter once we have generics.
-    public emit_event<T: unrestricted>(handle_ref: &mut Self.EventHandle<T>, msg: T)
+    public emit_event<T: copyable>(handle_ref: &mut Self.EventHandle<T>, msg: T)
         aborts_if handle_ref.counter + 1 > max_u64()
     {
         let count: &mut u64;
@@ -777,11 +777,11 @@ module LibraAccount {
 
     // Native procedure that writes to the actual event stream in Event store
     // This will replace the "native" portion of EmitEvent bytecode
-    native write_to_event_store<T: unrestricted>(guid: vector<u8>, count: u64, msg: T)
+    native write_to_event_store<T: copyable>(guid: vector<u8>, count: u64, msg: T)
         aborts_if false;
 
     // Destroy a unique handle.
-    public destroy_handle<T: unrestricted>(handle: Self.EventHandle<T>)
+    public destroy_handle<T: copyable>(handle: Self.EventHandle<T>)
         aborts_if false
     {
         let guid: vector<u8>;

@@ -254,7 +254,7 @@ pub enum Kind_ {
     // Explicitly copyable types
     Affine,
     // Implicitly copyable types
-    Unrestricted,
+    Copyable,
 }
 pub type Kind = Spanned<Kind_>;
 
@@ -520,7 +520,7 @@ impl Kind_ {
 
     pub fn is_resourceful(&self) -> bool {
         match self {
-            Kind_::Affine | Kind_::Unrestricted => false,
+            Kind_::Affine | Kind_::Copyable => false,
             Kind_::Resource | Kind_::Unknown => true,
         }
     }
@@ -919,7 +919,7 @@ impl AstDebug for (Name, Kind) {
                 w.write(": ");
                 k.ast_debug(w)
             }
-            Kind_::Unrestricted => panic!("ICE 'unrestricted' kind constraint"),
+            Kind_::Copyable => panic!("ICE 'copyable' kind constraint"),
         }
     }
 }
@@ -930,7 +930,7 @@ impl AstDebug for Kind_ {
             Kind_::Unknown => "unknown",
             Kind_::Resource => "resource",
             Kind_::Affine => "copyable",
-            Kind_::Unrestricted => "unrestricted",
+            Kind_::Copyable => "copyable",
         })
     }
 }

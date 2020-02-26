@@ -1,5 +1,5 @@
 //! type-args: u64, u8, 0x0::LibraAccount::T
-main<T1, T2: unrestricted, T3: resource>() {
+main<T1, T2: copyable, T3: resource>() {
     return;
 }
 // check: EXECUTED

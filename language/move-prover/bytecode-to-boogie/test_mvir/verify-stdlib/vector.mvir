@@ -1,4 +1,4 @@
-// A variable-sized container that can hold both unrestricted types and resources.
+// A variable-sized container that can hold both copyable types and resources.
 
 // Except for this comment, this file is just a copy of language/stdlib/modules/vector.mvir
 // This hasn't been specified, yet.  This is only needed for MVIR type checking, since the definitions
@@ -76,15 +76,15 @@ module Vector {
     return Self.length<Element>(move(v)) == 0;
   }
 
-  // Return the `i`th element of the vector. Only available for vectors that contain unrestricted
+  // Return the `i`th element of the vector. Only available for vectors that contain copyable
   // values.
-  public get<Element: unrestricted>(v: &vector<Element>, i: u64): Element {
+  public get<Element: copyable>(v: &vector<Element>, i: u64): Element {
     return *Self.borrow<Element>(move(v), move(i));
   }
 
   // Replace the `i`th element of the vector with the value `v`. Only available for vectors that
-  // contain unrestricted values.
-  public set<Element: unrestricted>(v: &mut vector<Element>, i: u64, e: Element) {
+  // contain copyable values.
+  public set<Element: copyable>(v: &mut vector<Element>, i: u64, e: Element) {
     *(Self.borrow_mut<Element>(move(v), move(i))) = move(e);
     return;
   }

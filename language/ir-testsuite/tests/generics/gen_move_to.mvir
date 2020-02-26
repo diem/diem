@@ -8,7 +8,7 @@ module M {
     // a resource
     resource Value { val: u64 }
 
-    // a generic type either unrestricted or resource
+    // a generic type either copyable or resource
     struct Container<T> { elem: T }
 
     // Functions
@@ -19,8 +19,8 @@ module M {
         return Container<T>{ elem: move(t) };
     }
 
-    // change the elem of a `Container<T>` if T is unrestricted
-    public change_container<T: unrestricted>(c: &mut Self.Container<T>, t: T) {
+    // change the elem of a `Container<T>` if T is copyable
+    public change_container<T: copyable>(c: &mut Self.Container<T>, t: T) {
         *&mut move(c).elem = move(t);
         return;
     }
@@ -112,7 +112,7 @@ module M {
     }
 
     // publish a `Some` under sender account
-    public change_some<T: unrestricted>(val: T) acquires Some {
+    public change_some<T: copyable>(val: T) acquires Some {
         let some: &mut Self.Some<T>;
         some = borrow_global_mut<Some<T>>(get_txn_sender());
         *(&mut move(some).v) = move(val);

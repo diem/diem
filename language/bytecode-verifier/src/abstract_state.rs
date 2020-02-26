@@ -2,16 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines the abstract state for the type and memory safety analysis.
-use crate::absint::{AbstractDomain, JoinResult};
+use crate::{
+    absint::{AbstractDomain, JoinResult},
+    signature::kind,
+};
 use borrow_graph::references::RefID;
 use mirai_annotations::{checked_postcondition, checked_precondition, checked_verify};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::{
+    access::ModuleAccess,
     file_format::{
-        CompiledModule, FieldDefinitionIndex, Kind, LocalIndex, SignatureToken,
+        CompiledModule, FieldHandleIndex, FunctionDefinition, Kind, LocalIndex, SignatureToken,
         StructDefinitionIndex,
     },
-    views::{FunctionDefinitionView, ViewInternals},
 };
 
 type BorrowGraph = borrow_graph::graph::BorrowGraph<(), LabelElem>;
@@ -20,6 +23,17 @@ type BorrowGraph = borrow_graph::graph::BorrowGraph<(), LabelElem>;
 pub struct TypedAbstractValue {
     pub signature: SignatureToken,
     pub value: AbstractValue,
+}
+
+impl TypedAbstractValue {
+    pub fn reference_to(&self, type_sig: &SignatureToken) -> bool {
+        match &self.signature {
+            SignatureToken::Reference(ref_type) | SignatureToken::MutableReference(ref_type) => {
+                ref_type.as_ref() == type_sig
+            }
+            _ => false,
+        }
+    }
 }
 
 /// AbstractValue represents a value either on the evaluation stack or
@@ -48,7 +62,7 @@ impl AbstractValue {
     pub fn is_unrestricted_value(&self) -> bool {
         match self {
             AbstractValue::Reference(_) => false,
-            AbstractValue::Value(Kind::Unrestricted) => true,
+            AbstractValue::Value(Kind::Copyable) => true,
             AbstractValue::Value(Kind::All) | AbstractValue::Value(Kind::Resource) => false,
         }
     }
@@ -57,7 +71,7 @@ impl AbstractValue {
     pub fn is_possibly_resource(&self) -> bool {
         match self {
             AbstractValue::Reference(_) => false,
-            AbstractValue::Value(Kind::Unrestricted) => false,
+            AbstractValue::Value(Kind::Copyable) => false,
             AbstractValue::Value(Kind::All) | AbstractValue::Value(Kind::Resource) => true,
         }
     }
@@ -76,7 +90,7 @@ impl AbstractValue {
 pub enum LabelElem {
     Local(LocalIndex),
     Global(StructDefinitionIndex),
-    Field(FieldDefinitionIndex),
+    Field(FieldHandleIndex),
 }
 
 impl Default for LabelElem {
@@ -96,34 +110,35 @@ pub struct AbstractState {
 
 impl AbstractState {
     /// create a new abstract state
-    pub fn new(function_definition_view: FunctionDefinitionView<CompiledModule>) -> Self {
-        let function_signature_view = function_definition_view.signature();
+    pub fn new(module: &CompiledModule, function_definition: &FunctionDefinition) -> Self {
         let mut locals = BTreeMap::new();
         let mut borrow_graph = BorrowGraph::new();
-        for (arg_idx, arg_type_view) in function_signature_view.arg_tokens().enumerate() {
-            if arg_type_view.is_reference() {
+
+        let func_handle = module.function_handle_at(function_definition.function);
+        let arguments = module.signature_at(func_handle.parameters);
+        for (arg_idx, argument) in arguments.0.iter().enumerate() {
+            if argument.is_reference() {
                 let id = RefID::new(arg_idx);
-                borrow_graph.new_ref(id, arg_type_view.is_mutable_reference());
+                borrow_graph.new_ref(id, argument.is_mutable_reference());
                 locals.insert(
                     arg_idx as LocalIndex,
                     TypedAbstractValue {
-                        signature: arg_type_view.as_inner().clone(),
+                        signature: argument.clone(),
                         value: AbstractValue::Reference(id),
                     },
                 );
             } else {
-                let arg_kind = arg_type_view
-                    .kind(&function_definition_view.signature().as_inner().type_formals);
+                let arg_kind = kind(module, argument, &func_handle.type_parameters);
                 locals.insert(
                     arg_idx as LocalIndex,
                     TypedAbstractValue {
-                        signature: arg_type_view.as_inner().clone(),
+                        signature: argument.clone(),
                         value: AbstractValue::Value(arg_kind),
                     },
                 );
             }
         }
-        let num_locals = function_definition_view.locals_signature().len();
+        let num_locals = module.signature_at(function_definition.code.locals).len();
         // ids in [0, num_locals] are reserved for constructing canonical state
         let next_id = num_locals + 1;
         let mut new_state = AbstractState {
@@ -161,13 +176,13 @@ impl AbstractState {
         match self.locals[&idx].value {
             AbstractValue::Reference(_) => true,
             AbstractValue::Value(Kind::All) | AbstractValue::Value(Kind::Resource) => false,
-            AbstractValue::Value(Kind::Unrestricted) => !self.is_local_borrowed(idx),
+            AbstractValue::Value(Kind::Copyable) => !self.is_local_borrowed(idx),
         }
     }
 
     /// checks if the stack frame of the function being analyzed can be safely destroyed.
     /// safe destruction requires that all references in locals have already been destroyed
-    /// and all values in locals are unrestricted and unborrowed.
+    /// and all values in locals are copyable and unborrowed.
     pub fn is_frame_safe_to_destroy(&self) -> bool {
         self.locals
             .values()
@@ -182,7 +197,7 @@ impl AbstractState {
         match local.value {
             AbstractValue::Reference(id) => self.release(id),
             AbstractValue::Value(kind) => {
-                checked_verify!(kind == Kind::Unrestricted);
+                checked_verify!(kind == Kind::Copyable);
             }
         }
     }
@@ -270,7 +285,7 @@ impl AbstractState {
         &mut self,
         operand: &TypedAbstractValue,
         mut_: bool,
-        idx: FieldDefinitionIndex,
+        idx: FieldHandleIndex,
     ) -> Option<RefID> {
         let id = operand.value.extract_id().unwrap();
         if mut_ {
@@ -420,7 +435,7 @@ impl AbstractState {
                 // Join error, a resource is available along one path but not the other
                 (None, Some(v)) | (Some(v), None) if v.value.is_possibly_resource() => return None,
 
-                // The local has a unrestricted value on one side but not the other, nothing to add
+                // The local has a copyable value on one side but not the other, nothing to add
                 (Some(v), None) => {
                     // A reference exists on one side, but not the other. Release
                     if let AbstractValue::Reference(id) = &v.value {

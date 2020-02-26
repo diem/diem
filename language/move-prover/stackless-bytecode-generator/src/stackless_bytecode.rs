@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use vm::file_format::{
-    AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldDefinitionIndex, FunctionHandleIndex,
-    LocalsSignatureIndex, StructDefinitionIndex,
+    AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FunctionHandleIndex, SignatureIndex,
+    StructDefinitionIndex,
 };
 
 pub type TempIndex = usize;
@@ -22,7 +22,7 @@ pub enum StacklessBytecode {
     Call(
         Vec<TempIndex>,
         FunctionHandleIndex,
-        LocalsSignatureIndex,
+        Option<SignatureIndex>,
         Vec<TempIndex>,
     ), /* t1_vec = call(index) with
         * t2_vec as parameters */
@@ -31,35 +31,35 @@ pub enum StacklessBytecode {
     Pack(
         TempIndex,
         StructDefinitionIndex,
-        LocalsSignatureIndex,
+        Option<SignatureIndex>,
         Vec<TempIndex>,
     ), /* t1 = struct(index) with t2_vec
         * as fields */
     Unpack(
         Vec<TempIndex>,
         StructDefinitionIndex,
-        LocalsSignatureIndex,
+        Option<SignatureIndex>,
         TempIndex,
     ), // t1_vec = t2's fields
-    BorrowField(TempIndex, TempIndex, FieldDefinitionIndex), // t1 = t2.field
-    MoveToSender(TempIndex, StructDefinitionIndex, LocalsSignatureIndex), /* move_to_sender<struct_index>(t) */
+    BorrowField(TempIndex, TempIndex, StructDefinitionIndex, TempIndex), // t1 = t2.field
+    MoveToSender(TempIndex, StructDefinitionIndex, Option<SignatureIndex>), /* move_to_sender<struct_index>(t) */
     MoveFrom(
         TempIndex,
         TempIndex,
         StructDefinitionIndex,
-        LocalsSignatureIndex,
+        Option<SignatureIndex>,
     ), /* t1 = move_from<struct_index>(t2) */
     BorrowGlobal(
         TempIndex,
         TempIndex,
         StructDefinitionIndex,
-        LocalsSignatureIndex,
+        Option<SignatureIndex>,
     ), /* t1 = borrow_global<struct_index>(t2) */
     Exists(
         TempIndex,
         TempIndex,
         StructDefinitionIndex,
-        LocalsSignatureIndex,
+        Option<SignatureIndex>,
     ), /* t1 = exists<struct_index>(t2) */
 
     GetGasRemaining(TempIndex),

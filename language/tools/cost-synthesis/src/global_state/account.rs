@@ -66,7 +66,7 @@ impl Account {
                         .is_nominal_resource;
                     if is_nominal_resource {
                         // Generate the type for the struct
-                        let typ = SignatureToken::Struct(struct_def.struct_handle, vec![]);
+                        let typ = SignatureToken::Struct(struct_def.struct_handle);
                         // Generate a value of that type
                         let (ty, struct_val) = inhabitor.inhabit(&typ);
                         // Now serialize that value into the correct binary blob.

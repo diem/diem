@@ -22,11 +22,10 @@ use vm::{
     access::*,
     errors::VMResult,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, FieldDefinitionIndex,
-        FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex, FunctionSignature,
-        LocalIndex, MemberCount, ModuleHandle, SignatureToken, StructDefinition,
-        StructDefinitionIndex, StructFieldInformation, StructHandleIndex, TableIndex,
-        NO_TYPE_ACTUALS,
+        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, FieldHandleIndex,
+        FunctionDefinition, FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex,
+        LocalIndex, ModuleHandle, SignatureToken, StructDefinition, StructDefinitionIndex,
+        StructFieldInformation, StructHandleIndex, TableIndex,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
 };
@@ -168,21 +167,31 @@ impl<'txn> RandomStackGenerator<'txn> {
     fn is_module_specific_op(&self) -> bool {
         use Bytecode::*;
         matches!(self.op,
-            MoveToSender(_, _) |
-            MoveFrom(_, _) |
-            ImmBorrowGlobal(_, _) |
-            MutBorrowGlobal(_, _) |
-            Exists(_, _) |
-            Unpack(_, _) |
-            Pack(_, _) |
-            Call(_, _) |
+            MoveToSender(_) |
+            MoveToSenderGeneric(_) |
+            MoveFrom(_) |
+            MoveFromGeneric(_) |
+            ImmBorrowGlobal(_) |
+            ImmBorrowGlobalGeneric(_) |
+            MutBorrowGlobal(_) |
+            MutBorrowGlobalGeneric(_) |
+            Exists(_) |
+            ExistsGeneric(_) |
+            Unpack(_) |
+            UnpackGeneric(_) |
+            Pack(_) |
+            PackGeneric(_) |
+            Call(_) |
+            CallGeneric(_) |
             CopyLoc(_) |
             MoveLoc(_) |
             StLoc(_) |
             MutBorrowLoc(_) |
             ImmBorrowLoc(_) |
             ImmBorrowField(_) |
-            MutBorrowField(_)
+            ImmBorrowFieldGeneric(_) |
+            MutBorrowField(_) |
+            MutBorrowFieldGeneric(_)
         )
     }
 
@@ -320,17 +329,15 @@ impl<'txn> RandomStackGenerator<'txn> {
     ) {
         // We pick a random function from the module in which to store the local
         let function_handle_idx = self.next_function_handle_idx();
-        let (module, function_definition, function_def_idx, function_sig) =
+        let (module, function_definition, function_def_idx, function_handle) =
             self.resolve_function_handle(function_handle_idx);
-        let type_sig = &module
-            .locals_signature_at(function_definition.code.locals)
-            .0;
+        let type_sig = &module.signature_at(function_definition.code.locals).0;
         // Pick a random local within that function in which we'll store the local
         let local_index = self.gen.gen_range(0, type_sig.len());
         let type_tok = &type_sig[local_index];
         let stack_local = self.resolve_to_value(type_tok, &[]);
         let mut stack = vec![stack_local];
-        for type_tok in function_sig.arg_types.iter() {
+        for type_tok in module.signature_at(function_handle.parameters).0.iter() {
             stack.push(self.resolve_to_value(type_tok, &[]))
         }
         (module, local_index as LocalIndex, function_def_idx, stack)
@@ -436,12 +443,9 @@ impl<'txn> RandomStackGenerator<'txn> {
         &'txn LoadedModule,
         &'txn FunctionDefinition,
         FunctionDefinitionIndex,
-        &'txn FunctionSignature,
+        &'txn FunctionHandle,
     ) {
         let function_handle = self.root_module.function_handle_at(function_handle_index);
-        let function_signature = self
-            .root_module
-            .function_signature_at(function_handle.signature);
         let function_name = self.root_module.identifier_at(function_handle.name);
         let module_handle = self.root_module.module_handle_at(function_handle.module);
         let module_id = self.to_module_id(module_handle);
@@ -471,7 +475,7 @@ impl<'txn> RandomStackGenerator<'txn> {
             .unwrap();
 
         let function_def = module.function_def_at(function_def_idx);
-        (module, function_def, function_def_idx, function_signature)
+        (module, function_def, function_def_idx, function_handle)
     }
 
     // Build an inhabitant of the type given by `sig_token`. We pass the current stack state in
@@ -493,29 +497,21 @@ impl<'txn> RandomStackGenerator<'txn> {
                     .unwrap();
                 locals.borrow_loc(0).unwrap()
             }
-            SignatureToken::Struct(struct_handle_idx, _) => {
+            SignatureToken::StructInstantiation(struct_handle_idx, _)
+            | SignatureToken::Struct(struct_handle_idx) => {
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
                     .root_module
                     .struct_def_at(self.resolve_struct_handle(*struct_handle_idx).2);
-                let (num_fields, index) = match struct_definition.field_information {
+                let fields = match &struct_definition.field_information {
                     StructFieldInformation::Native => {
                         panic!("[Struct Generation] Unexpected native struct")
                     }
-                    StructFieldInformation::Declared {
-                        field_count,
-                        fields,
-                    } => (field_count, fields),
+                    StructFieldInformation::Declared(fields) => fields,
                 };
-                let fields = self
-                    .root_module
-                    .field_def_range(num_fields as MemberCount, index);
-                let values = fields.iter().map(|field| {
-                    self.resolve_to_value(
-                        &self.root_module.type_signature_at(field.signature).0,
-                        stk,
-                    )
-                });
+                let values = fields
+                    .iter()
+                    .map(|field| self.resolve_to_value(&field.signature.0, stk));
                 Value::struct_(Struct::pack(values))
             }
             SignatureToken::Vector(_) => unimplemented!(),
@@ -547,14 +543,14 @@ impl<'txn> RandomStackGenerator<'txn> {
     fn generate_from_module_info(&mut self) -> StackState<'txn> {
         use Bytecode::*;
         match &self.op {
-            MoveToSender(_, _) => {
+            MoveToSender(_) => {
                 let struct_handle_idx = self.next_resource();
                 // We can just pick a random address -- this is incorrect by the bytecode semantics
                 // (since we're moving to an account that doesn't exist), but since we don't need
                 // correctness beyond this instruction it's OK.
                 let struct_definition = self.root_module.struct_def_at(struct_handle_idx);
                 let struct_stack = self.resolve_to_value(
-                    &SignatureToken::Struct(struct_definition.struct_handle, vec![]),
+                    &SignatureToken::Struct(struct_definition.struct_handle),
                     &[],
                 );
                 let size = struct_stack.size();
@@ -562,12 +558,12 @@ impl<'txn> RandomStackGenerator<'txn> {
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    MoveToSender(struct_handle_idx, NO_TYPE_ACTUALS),
+                    MoveToSender(struct_handle_idx),
                     size,
                     HashMap::new(),
                 )
             }
-            MoveFrom(_, _) => {
+            MoveFrom(_) => {
                 let struct_handle_idx = self.next_resource();
                 let addr = Value::address(*self.account_address);
                 let size = addr.size();
@@ -575,12 +571,12 @@ impl<'txn> RandomStackGenerator<'txn> {
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    MoveFrom(struct_handle_idx, NO_TYPE_ACTUALS),
+                    MoveFrom(struct_handle_idx),
                     size,
                     HashMap::new(),
                 )
             }
-            MutBorrowGlobal(_, _) => {
+            MutBorrowGlobal(_) => {
                 let struct_handle_idx = self.next_resource();
                 let addr = Value::address(*self.account_address);
                 let size = addr.size();
@@ -588,12 +584,12 @@ impl<'txn> RandomStackGenerator<'txn> {
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    MutBorrowGlobal(struct_handle_idx, NO_TYPE_ACTUALS),
+                    MutBorrowGlobal(struct_handle_idx),
                     size,
                     HashMap::new(),
                 )
             }
-            ImmBorrowGlobal(_, _) => {
+            ImmBorrowGlobal(_) => {
                 let struct_handle_idx = self.next_resource();
                 let addr = Value::address(*self.account_address);
                 let size = addr.size();
@@ -601,12 +597,12 @@ impl<'txn> RandomStackGenerator<'txn> {
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    ImmBorrowGlobal(struct_handle_idx, NO_TYPE_ACTUALS),
+                    ImmBorrowGlobal(struct_handle_idx),
                     size,
                     HashMap::new(),
                 )
             }
-            Exists(_, _) => {
+            Exists(_) => {
                 let next_struct_handle_idx = self.next_resource();
                 // Flip a coin to determine if the resource should exist or not.
                 let addr = if self.next_bool() {
@@ -619,19 +615,18 @@ impl<'txn> RandomStackGenerator<'txn> {
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    Exists(next_struct_handle_idx, NO_TYPE_ACTUALS),
+                    Exists(next_struct_handle_idx),
                     size,
                     HashMap::new(),
                 )
             }
-            Call(_, _) => {
+            Call(_) => {
                 let function_handle_idx = self.next_function_handle_idx();
                 let function_handle = self.root_module.function_handle_at(function_handle_idx);
-                let function_sig = self
+                let stack = self
                     .root_module
-                    .function_signature_at(function_handle.signature);
-                let stack = function_sig
-                    .arg_types
+                    .signature_at(function_handle.parameters)
+                    .0
                     .iter()
                     .fold(Vec::new(), |mut acc, sig_tok| {
                         acc.push(self.resolve_to_value(sig_tok, &acc));
@@ -643,36 +638,26 @@ impl<'txn> RandomStackGenerator<'txn> {
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    Call(function_handle_idx, NO_TYPE_ACTUALS),
+                    Call(function_handle_idx),
                     size,
                     HashMap::new(),
                 )
             }
-            Pack(_struct_def_idx, _) => {
+            Pack(_struct_def_idx) => {
                 let struct_def_bound = self.root_module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
                 let struct_definition = self.root_module.struct_def_at(random_struct_idx);
-                let (num_fields, index) = match struct_definition.field_information {
+                let fields = match &struct_definition.field_information {
                     StructFieldInformation::Native => {
                         panic!("[Struct Pack] Unexpected native struct")
                     }
-                    StructFieldInformation::Declared {
-                        field_count,
-                        fields,
-                    } => (field_count as usize, fields),
+                    StructFieldInformation::Declared(fields) => fields,
                 };
-                let fields = self
-                    .root_module
-                    .field_def_range(num_fields as MemberCount, index);
                 let stack: Stack = fields
                     .iter()
                     .map(|field| {
-                        let ty = self
-                            .root_module
-                            .type_signature_at(field.signature)
-                            .0
-                            .clone();
+                        let ty = field.signature.0.clone();
                         self.resolve_to_value(&ty, &[])
                     })
                     .collect();
@@ -682,12 +667,12 @@ impl<'txn> RandomStackGenerator<'txn> {
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    Pack(random_struct_idx, NO_TYPE_ACTUALS),
+                    Pack(random_struct_idx),
                     size,
                     HashMap::new(),
                 )
             }
-            Unpack(_struct_def_idx, _) => {
+            Unpack(_struct_def_idx) => {
                 let struct_def_bound = self.root_module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
@@ -696,12 +681,12 @@ impl<'txn> RandomStackGenerator<'txn> {
                     .struct_def_at(random_struct_idx)
                     .struct_handle;
                 let struct_stack =
-                    self.resolve_to_value(&SignatureToken::Struct(struct_handle_idx, vec![]), &[]);
+                    self.resolve_to_value(&SignatureToken::Struct(struct_handle_idx), &[]);
                 let size = struct_stack.size();
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(vec![struct_stack]),
-                    Unpack(random_struct_idx, NO_TYPE_ACTUALS),
+                    Unpack(random_struct_idx),
                     size,
                     HashMap::new(),
                 )
@@ -718,7 +703,6 @@ impl<'txn> RandomStackGenerator<'txn> {
                 let struct_stack = self.resolve_to_value(
                     &SignatureToken::Reference(Box::new(SignatureToken::Struct(
                         struct_definition.struct_handle,
-                        vec![],
                     ))),
                     &[],
                 );
@@ -729,7 +713,8 @@ impl<'txn> RandomStackGenerator<'txn> {
                     .borrow_field(usize::from(field_index))
                     .expect("[BorrowField] Unable to borrow field of generated struct to get field size.")
                     .size();
-                let fdi = FieldDefinitionIndex::new(field_index);
+                // TODO: this is not making sense...
+                let fdi = FieldHandleIndex(field_index);
                 let op = match self.op {
                     ImmBorrowField(_) => ImmBorrowField(fdi),
                     MutBorrowField(_) => MutBorrowField(fdi),

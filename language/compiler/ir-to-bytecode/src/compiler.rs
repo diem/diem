@@ -26,9 +26,9 @@ use vm::{
     access::ModuleAccess,
     file_format::{
         self, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledScript,
-        CompiledScriptMut, FieldDefinition, FieldDefinitionIndex, FunctionDefinition,
-        FunctionSignature, Kind, LocalsSignature, MemberCount, SignatureToken, StructDefinition,
-        StructFieldInformation, StructHandleIndex, TableIndex, TypeParameterIndex,
+        CompiledScriptMut, FieldDefinition, FunctionDefinition, FunctionSignature, Kind, Signature,
+        SignatureToken, StructDefinition, StructDefinitionIndex, StructFieldInformation,
+        StructHandleIndex, TableIndex, TypeParameterIndex, TypeSignature,
     },
 };
 
@@ -39,10 +39,10 @@ macro_rules! record_src_loc {
             .source_map
             .add_local_mapping($context.current_function_definition_index(), source_name)?;
     }};
-    (field: $context:expr, $field:expr) => {{
+    (field: $context:expr, $idx: expr, $field:expr) => {{
         $context
             .source_map
-            .add_struct_field_mapping($context.current_struct_definition_index(), $field.loc)?;
+            .add_struct_field_mapping($idx, $field.loc)?;
     }};
     (function_type_formals: $context:expr, $var:expr) => {
         for (ty_var, _) in $var.iter() {
@@ -179,7 +179,11 @@ impl InferredType {
             S::Vector(s_inner) => I::Vector(Box::new(Self::from_signature_token_with_subst(
                 subst, s_inner,
             ))),
-            S::Struct(si, sig_tys) => {
+            S::Struct(si) => {
+                let tys = Self::from_signature_tokens_with_subst(subst, &[]);
+                I::Struct(*si, tys)
+            }
+            S::StructInstantiation(si, sig_tys) => {
                 let tys = Self::from_signature_tokens_with_subst(subst, sig_tys);
                 I::Struct(*si, tys)
             }
@@ -232,13 +236,45 @@ impl InferredType {
             InferredType::TypeParameter(_) => bail!("no struct type for type parameter"),
         }
     }
+
+    fn to_signature_token(ty: &Self) -> Result<SignatureToken> {
+        use InferredType as I;
+        use SignatureToken as S;
+        Ok(match ty {
+            I::Bool => S::Bool,
+            I::U8 => S::U8,
+            I::U64 => S::U64,
+            I::U128 => S::U128,
+            I::Address => S::Address,
+            I::Vector(inner) => S::Vector(Box::new(Self::to_signature_token(inner)?)),
+            I::Struct(si, tys) if tys.is_empty() => S::Struct(*si),
+            I::Struct(si, tys) => S::StructInstantiation(*si, Self::build_signature_tokens(tys)?),
+            I::Reference(inner) => S::Reference(Box::new(Self::to_signature_token(inner)?)),
+            I::MutableReference(inner) => {
+                S::MutableReference(Box::new(Self::to_signature_token(inner)?))
+            }
+            I::TypeParameter(s) => match s.parse::<TableIndex>() {
+                Ok(idx) => S::TypeParameter(idx),
+                Err(_) => bail!(
+                    "ICE unsubstituted type parameter when converting back to signature tokens"
+                ),
+            },
+            I::Anything => bail!("Could not infer type"),
+        })
+    }
+
+    fn build_signature_tokens(tys: &[InferredType]) -> Result<Vec<SignatureToken>> {
+        tys.iter()
+            .map(|sig_ty| Self::to_signature_token(sig_ty))
+            .collect()
+    }
 }
 
 // Holds information about a function being compiled.
 #[derive(Debug)]
 struct FunctionFrame {
     locals: HashMap<Var_, u8>,
-    local_types: LocalsSignature,
+    local_types: Signature,
     // i64 to allow the bytecode verifier to catch errors of
     // - negative stack sizes
     // - excessivley large stack sizes
@@ -254,7 +290,7 @@ impl FunctionFrame {
     fn new(type_parameters: HashMap<TypeVar_, TypeParameterIndex>) -> FunctionFrame {
         FunctionFrame {
             locals: HashMap::new(),
-            local_types: LocalsSignature(vec![]),
+            local_types: Signature(vec![]),
             max_stack_depth: 0,
             cur_stack_depth: 0,
             loops: vec![],
@@ -386,12 +422,12 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
             module_handles,
             struct_handles,
             function_handles,
-            type_signatures,
-            function_signatures,
-            locals_signatures,
+            signatures,
             identifiers,
             byte_array_pool,
             address_pool,
+            function_instantiations,
+            ..
         },
         source_map,
     ) = context.materialize_pools();
@@ -399,9 +435,8 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         module_handles,
         struct_handles,
         function_handles,
-        type_signatures,
-        function_signatures,
-        locals_signatures,
+        function_instantiations,
+        signatures,
         identifiers,
         byte_array_pool,
         address_pool,
@@ -451,7 +486,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
 
     // Current module
 
-    let (struct_defs, field_defs) = compile_structs(&mut context, &self_name, module.structs)?;
+    let struct_defs = compile_structs(&mut context, &self_name, module.structs)?;
 
     let function_defs = compile_functions(&mut context, &self_name, module.functions)?;
 
@@ -460,12 +495,14 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
             module_handles,
             struct_handles,
             function_handles,
-            type_signatures,
-            function_signatures,
-            locals_signatures,
+            field_handles,
+            signatures,
             identifiers,
             byte_array_pool,
             address_pool,
+            function_instantiations,
+            struct_def_instantiations,
+            field_instantiations,
         },
         source_map,
     ) = context.materialize_pools();
@@ -473,14 +510,15 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         module_handles,
         struct_handles,
         function_handles,
-        type_signatures,
-        function_signatures,
-        locals_signatures,
+        field_handles,
+        struct_def_instantiations,
+        function_instantiations,
+        field_instantiations,
+        signatures,
         identifiers,
         byte_array_pool,
         address_pool,
         struct_defs,
-        field_defs,
         function_defs,
     };
     compiled_module
@@ -570,7 +608,7 @@ fn kind(ast_k: &ast::Kind) -> Kind {
     match ast_k {
         ast::Kind::All => Kind::All,
         ast::Kind::Resource => Kind::Resource,
-        ast::Kind::Unrestricted => Kind::Unrestricted,
+        ast::Kind::Copyable => Kind::Copyable,
     }
 }
 
@@ -610,8 +648,13 @@ fn compile_type(
         }
         Type::Struct(ident, tys) => {
             let sh_idx = context.struct_handle_index(ident.clone())?;
-            let tokens = compile_types(context, type_parameters, tys)?;
-            SignatureToken::Struct(sh_idx, tokens)
+
+            if tys.is_empty() {
+                SignatureToken::Struct(sh_idx)
+            } else {
+                let tokens = compile_types(context, type_parameters, tys)?;
+                SignatureToken::StructInstantiation(sh_idx, tokens)
+            }
         }
         Type::TypeParameter(ty_var) => {
             let idx = match type_parameters.get(&ty_var) {
@@ -628,17 +671,17 @@ fn function_signature(
     f: &ast::FunctionSignature,
 ) -> Result<FunctionSignature> {
     let m = type_parameter_indexes(&f.type_formals)?;
-    let return_types = compile_types(context, &m, &f.return_type)?;
-    let arg_types = f
+    let return_ = compile_types(context, &m, &f.return_type)?;
+    let parameters = f
         .formals
         .iter()
         .map(|(_, ty)| compile_type(context, &m, ty))
         .collect::<Result<_>>()?;
-    let type_formals = f.type_formals.iter().map(|(_, k)| kind(k)).collect();
+    let type_parameters = f.type_formals.iter().map(|(_, k)| kind(k)).collect();
     Ok(vm::file_format::FunctionSignature {
-        return_types,
-        arg_types,
-        type_formals,
+        return_,
+        parameters,
+        type_parameters,
     })
 }
 
@@ -646,9 +689,8 @@ fn compile_structs(
     context: &mut Context,
     self_name: &ModuleName,
     structs: Vec<ast::StructDefinition>,
-) -> Result<(Vec<StructDefinition>, Vec<FieldDefinition>)> {
+) -> Result<Vec<StructDefinition>> {
     let mut struct_defs = vec![];
-    let mut field_defs = vec![];
     for s in structs {
         let sident = QualifiedStructIdent {
             module: self_name.clone(),
@@ -658,48 +700,38 @@ fn compile_structs(
         record_src_loc!(struct_decl: context, s.loc);
         record_src_loc!(struct_type_formals: context, &s.value.type_formals);
         let m = type_parameter_indexes(&s.value.type_formals)?;
-        let field_information =
-            compile_fields(context, &m, &mut field_defs, sh_idx, s.value.fields)?;
-        context.declare_struct_definition_index(s.value.name)?;
+        let sd_idx = context.declare_struct_definition_index(s.value.name)?;
+        let field_information = compile_fields(context, &m, sh_idx, sd_idx, s.value.fields)?;
         struct_defs.push(StructDefinition {
             struct_handle: sh_idx,
             field_information,
         });
     }
-    Ok((struct_defs, field_defs))
+    Ok(struct_defs)
 }
 
 fn compile_fields(
     context: &mut Context,
     type_parameters: &HashMap<TypeVar_, TypeParameterIndex>,
-    field_pool: &mut Vec<FieldDefinition>,
     sh_idx: StructHandleIndex,
+    sd_idx: StructDefinitionIndex,
     sfields: StructDefinitionFields,
 ) -> Result<StructFieldInformation> {
     Ok(match sfields {
         StructDefinitionFields::Native => StructFieldInformation::Native,
         StructDefinitionFields::Move { fields } => {
-            let pool_len = field_pool.len();
-            let field_count = fields.len();
-
-            let field_information = StructFieldInformation::Declared {
-                field_count: (field_count as MemberCount),
-                fields: FieldDefinitionIndex(pool_len as TableIndex),
-            };
-
+            let mut decl_fields = vec![];
             for (decl_order, (f, ty)) in fields.into_iter().enumerate() {
                 let name = context.identifier_index(f.value.as_inner())?;
-                record_src_loc!(field: context, f);
+                record_src_loc!(field: context, sd_idx, f);
                 let sig_token = compile_type(context, type_parameters, &ty)?;
-                let signature = context.type_signature_index(sig_token.clone())?;
-                context.declare_field(sh_idx, f.value, sig_token, decl_order)?;
-                field_pool.push(FieldDefinition {
-                    struct_: sh_idx,
+                context.declare_field(sh_idx, sd_idx, f.value, sig_token.clone(), decl_order);
+                decl_fields.push(FieldDefinition {
                     name,
-                    signature,
+                    signature: TypeSignature(sig_token),
                 });
             }
-            field_information
+            StructFieldInformation::Declared(decl_fields)
         }
     })
 }
@@ -787,7 +819,7 @@ fn compile_function_body(
     block: Block_,
 ) -> Result<CodeUnit> {
     let mut function_frame = FunctionFrame::new(type_parameters);
-    let mut locals_signature = LocalsSignature(vec![]);
+    let mut locals_signature = Signature(vec![]);
     for (var, t) in formals {
         let sig = compile_type(context, function_frame.type_parameters(), &t)?;
         function_frame.define_local(&var.value, sig.clone())?;
@@ -800,7 +832,7 @@ fn compile_function_body(
         locals_signature.0.push(sig);
         record_src_loc!(local: context, var_);
     }
-    let sig_idx = context.locals_signature_index(locals_signature)?;
+    let sig_idx = context.signature_index(locals_signature)?;
 
     let mut code = vec![];
     compile_block(context, &mut function_frame, &mut code, block)?;
@@ -1004,17 +1036,22 @@ fn compile_command(
             compile_lvalues(context, function_frame, code, lvalues)?;
         }
         Cmd_::Unpack(name, tys, bindings, e) => {
-            let tokens = LocalsSignature(compile_types(
+            let tokens = Signature(compile_types(
                 context,
                 function_frame.type_parameters(),
                 &tys,
             )?);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
 
             compile_expression(context, function_frame, code, *e)?;
 
             let def_idx = context.struct_definition_index(&name)?;
-            push_instr!(cmd.loc, Bytecode::Unpack(def_idx, type_actuals_id));
+            if tys.is_empty() {
+                push_instr!(cmd.loc, Bytecode::Unpack(def_idx));
+            } else {
+                let type_parameters_id = context.signature_index(tokens)?;
+                let si_idx = context.struct_instantiation_index(def_idx, type_parameters_id)?;
+                push_instr!(cmd.loc, Bytecode::UnpackGeneric(si_idx));
+            }
             function_frame.pop()?;
 
             for (field_, lhs_variable) in bindings.iter().rev() {
@@ -1174,8 +1211,8 @@ fn compile_expression(
         Exp_::Pack(name, ast_tys, fields) => {
             let sig_tys = compile_types(context, function_frame.type_parameters(), &ast_tys)?;
             let tys = InferredType::from_signature_tokens(&sig_tys);
-            let tokens = LocalsSignature(sig_tys);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let tokens = Signature(sig_tys);
+            let type_actuals_id = context.signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&name)?;
 
             let self_name = ModuleName::new(ModuleName::self_name().into());
@@ -1195,7 +1232,12 @@ fn compile_expression(
 
                 compile_expression(context, function_frame, code, e)?;
             }
-            push_instr!(exp.loc, Bytecode::Pack(def_idx, type_actuals_id));
+            if tys.is_empty() {
+                push_instr!(exp.loc, Bytecode::Pack(def_idx));
+            } else {
+                let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                push_instr!(exp.loc, Bytecode::PackGeneric(si_idx));
+            }
             for _ in 0..num_fields {
                 function_frame.pop()?;
             }
@@ -1315,19 +1357,35 @@ fn compile_expression(
                 loc_type_opt.ok_or_else(|| format_err!("Impossible no expression to borrow"))?;
             let (sh_idx, tys) = loc_type.get_struct_handle()?;
             let subst = make_type_argument_subst(tys)?;
-            let (fd_idx, field_type, _) = context.field(sh_idx, field)?;
+            let (def_idx, field_type, field_offset) = context.field(sh_idx, field)?;
+
             function_frame.pop()?;
             let inner_token = Box::new(InferredType::from_signature_token_with_subst(
                 &subst,
                 &field_type,
             ));
+
+            let fh_idx = context.field_handle_index(def_idx, field_offset as u16)?;
+            if tys.is_empty() {
+                if is_mutable {
+                    push_instr!(exp.loc, Bytecode::MutBorrowField(fh_idx));
+                } else {
+                    push_instr!(exp.loc, Bytecode::ImmBorrowField(fh_idx));
+                }
+            } else {
+                let inst = InferredType::build_signature_tokens(tys)?;
+                let inst_idx = context.signature_index(Signature(inst))?;
+                let field_inst_idx = context.field_instantiation_index(fh_idx, inst_idx)?;
+                if is_mutable {
+                    push_instr!(exp.loc, Bytecode::MutBorrowFieldGeneric(field_inst_idx));
+                } else {
+                    push_instr!(exp.loc, Bytecode::ImmBorrowFieldGeneric(field_inst_idx));
+                }
+            };
+            function_frame.push()?;
             if is_mutable {
-                push_instr!(exp.loc, Bytecode::MutBorrowField(fd_idx));
-                function_frame.push()?;
                 vec_deque![InferredType::MutableReference(inner_token)]
             } else {
-                push_instr!(exp.loc, Bytecode::ImmBorrowField(fd_idx));
-                function_frame.push()?;
                 vec_deque![InferredType::Reference(inner_token)]
             }
         }
@@ -1365,14 +1423,20 @@ fn compile_call(
                     vec_deque![InferredType::Address]
                 }
                 Builtin::Exists(name, tys) => {
-                    let tokens = LocalsSignature(compile_types(
+                    let tokens = Signature(compile_types(
                         context,
                         function_frame.type_parameters(),
                         &tys,
                     )?);
-                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let type_actuals_id = context.signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    push_instr!(call.loc, Bytecode::Exists(def_idx, type_actuals_id));
+                    if tys.is_empty() {
+                        push_instr!(call.loc, Bytecode::Exists(def_idx));
+                    } else {
+                        let si_idx =
+                            context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                        push_instr!(call.loc, Bytecode::ExistsGeneric(si_idx));
+                    }
                     function_frame.pop()?;
                     function_frame.push()?;
                     vec_deque![InferredType::Bool]
@@ -1381,16 +1445,28 @@ fn compile_call(
                     let sig_tys =
                         compile_types(context, function_frame.type_parameters(), &ast_tys)?;
                     let tys = InferredType::from_signature_tokens(&sig_tys);
-                    let tokens = LocalsSignature(sig_tys);
-                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let tokens = Signature(sig_tys);
+                    let type_actuals_id = context.signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    push_instr! {call.loc,
-                        if mut_ {
-                            Bytecode::MutBorrowGlobal(def_idx, type_actuals_id)
-                        } else {
-                            Bytecode::ImmBorrowGlobal(def_idx, type_actuals_id)
-                        }
-                    };
+                    if tys.is_empty() {
+                        push_instr! {call.loc,
+                            if mut_ {
+                                Bytecode::MutBorrowGlobal(def_idx)
+                            } else {
+                                Bytecode::ImmBorrowGlobal(def_idx)
+                            }
+                        };
+                    } else {
+                        let si_idx =
+                            context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                        push_instr! {call.loc,
+                            if mut_ {
+                                Bytecode::MutBorrowGlobalGeneric(si_idx)
+                            } else {
+                                Bytecode::ImmBorrowGlobalGeneric(si_idx)
+                            }
+                        };
+                    }
                     function_frame.pop()?;
                     function_frame.push()?;
 
@@ -1411,10 +1487,16 @@ fn compile_call(
                     let sig_tys =
                         compile_types(context, function_frame.type_parameters(), &ast_tys)?;
                     let tys = InferredType::from_signature_tokens(&sig_tys);
-                    let tokens = LocalsSignature(sig_tys);
-                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let tokens = Signature(sig_tys);
+                    let type_actuals_id = context.signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    push_instr!(call.loc, Bytecode::MoveFrom(def_idx, type_actuals_id));
+                    if tys.is_empty() {
+                        push_instr!(call.loc, Bytecode::MoveFrom(def_idx));
+                    } else {
+                        let si_idx =
+                            context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                        push_instr!(call.loc, Bytecode::MoveFromGeneric(si_idx));
+                    }
                     function_frame.pop()?; // pop the address
                     function_frame.push()?; // push the return value
 
@@ -1427,15 +1509,20 @@ fn compile_call(
                     vec_deque![InferredType::Struct(sh_idx, tys)]
                 }
                 Builtin::MoveToSender(name, tys) => {
-                    let tokens = LocalsSignature(compile_types(
+                    let tokens = Signature(compile_types(
                         context,
                         function_frame.type_parameters(),
                         &tys,
                     )?);
-                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let type_actuals_id = context.signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-
-                    push_instr!(call.loc, Bytecode::MoveToSender(def_idx, type_actuals_id));
+                    if tys.is_empty() {
+                        push_instr!(call.loc, Bytecode::MoveToSender(def_idx));
+                    } else {
+                        let si_idx =
+                            context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                        push_instr!(call.loc, Bytecode::MoveToSenderGeneric(si_idx));
+                    }
                     function_frame.push()?;
                     vec_deque![]
                 }
@@ -1483,19 +1570,24 @@ fn compile_call(
                 .map(|t| InferredType::from_signature_token(t))
                 .collect::<Vec<_>>();
             let subst = &make_type_argument_subst(&ty_args)?;
-            let tokens = LocalsSignature(ty_arg_tokens);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let tokens = Signature(ty_arg_tokens);
+            let type_actuals_id = context.signature_index(tokens)?;
             let fh_idx = context.function_handle(module.clone(), name.clone())?.1;
-            let fcall = Bytecode::Call(fh_idx, type_actuals_id);
+            let fcall = if type_actuals.is_empty() {
+                Bytecode::Call(fh_idx)
+            } else {
+                let fi_idx = context.function_instantiation_index(fh_idx, type_actuals_id)?;
+                Bytecode::CallGeneric(fi_idx)
+            };
             push_instr!(call.loc, fcall);
             for _ in 0..argument_types.len() {
                 function_frame.pop()?;
             }
             // Return value of current function is pushed onto the stack.
             function_frame.push()?;
-            let signature = &context.function_signature(module, name)?.0;
+            let signature = context.function_signature(module, name)?;
             signature
-                .return_types
+                .return_
                 .iter()
                 .map(|t| InferredType::from_signature_token_with_subst(subst, t))
                 .collect()
@@ -1515,7 +1607,7 @@ fn compile_function_body_bytecode(
     blocks: BytecodeBlocks,
 ) -> Result<CodeUnit> {
     let mut function_frame = FunctionFrame::new(type_parameters);
-    let mut locals_signature = LocalsSignature(vec![]);
+    let mut locals_signature = Signature(vec![]);
     for (var, t) in formals {
         let sig = compile_type(context, function_frame.type_parameters(), &t)?;
         function_frame.define_local(&var.value, sig.clone())?;
@@ -1528,7 +1620,7 @@ fn compile_function_body_bytecode(
         locals_signature.0.push(sig);
         record_src_loc!(local: context, var_);
     }
-    let sig_idx = context.locals_signature_index(locals_signature)?;
+    let sig_idx = context.signature_index(locals_signature)?;
 
     let mut code = vec![];
     let mut label_to_index: HashMap<BlockLabel, u16> = HashMap::new();
@@ -1592,34 +1684,49 @@ fn compile_bytecode(
         IRBytecode_::MoveLoc(sp!(_, v_)) => Bytecode::MoveLoc(function_frame.get_local(&v_)?),
         IRBytecode_::StLoc(sp!(_, v_)) => Bytecode::StLoc(function_frame.get_local(&v_)?),
         IRBytecode_::Call(m, n, tys) => {
-            let tokens = LocalsSignature(compile_types(
+            let tokens = Signature(compile_types(
                 context,
                 function_frame.type_parameters(),
                 &tys,
             )?);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let type_actuals_id = context.signature_index(tokens)?;
             let fh_idx = context.function_handle(m, n)?.1;
-            Bytecode::Call(fh_idx, type_actuals_id)
+            if tys.is_empty() {
+                Bytecode::Call(fh_idx)
+            } else {
+                let fi_idx = context.function_instantiation_index(fh_idx, type_actuals_id)?;
+                Bytecode::CallGeneric(fi_idx)
+            }
         }
         IRBytecode_::Pack(n, tys) => {
-            let tokens = LocalsSignature(compile_types(
+            let tokens = Signature(compile_types(
                 context,
                 function_frame.type_parameters(),
                 &tys,
             )?);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let type_actuals_id = context.signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&n)?;
-            Bytecode::Pack(def_idx, type_actuals_id)
+            if tys.is_empty() {
+                Bytecode::Pack(def_idx)
+            } else {
+                let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                Bytecode::PackGeneric(si_idx)
+            }
         }
         IRBytecode_::Unpack(n, tys) => {
-            let tokens = LocalsSignature(compile_types(
+            let tokens = Signature(compile_types(
                 context,
                 function_frame.type_parameters(),
                 &tys,
             )?);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let type_actuals_id = context.signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&n)?;
-            Bytecode::Unpack(def_idx, type_actuals_id)
+            if tys.is_empty() {
+                Bytecode::Unpack(def_idx)
+            } else {
+                let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                Bytecode::UnpackGeneric(si_idx)
+            }
         }
         IRBytecode_::ReadRef => Bytecode::ReadRef,
         IRBytecode_::WriteRef => Bytecode::WriteRef,
@@ -1630,43 +1737,79 @@ fn compile_bytecode(
         IRBytecode_::ImmBorrowLoc(sp!(_, v_)) => {
             Bytecode::ImmBorrowLoc(function_frame.get_local(&v_)?)
         }
-        IRBytecode_::MutBorrowField(name, _tys, sp!(_, field_)) => {
+        IRBytecode_::MutBorrowField(name, tys, sp!(_, field_)) => {
             let qualified_struct_name = QualifiedStructIdent {
                 module: ModuleName::module_self(),
                 name,
             };
             let sh_idx = context.struct_handle_index(qualified_struct_name)?;
-            let (fd_idx, _, _) = context.field(sh_idx, field_)?;
-            Bytecode::MutBorrowField(fd_idx)
+            let (def_idx, _, field_offset) = context.field(sh_idx, field_)?;
+
+            let fh_idx = context.field_handle_index(def_idx, field_offset as u16)?;
+            if tys.is_empty() {
+                Bytecode::MutBorrowField(fh_idx)
+            } else {
+                let tokens = Signature(compile_types(
+                    context,
+                    function_frame.type_parameters(),
+                    &tys,
+                )?);
+                let type_actuals_id = context.signature_index(tokens)?;
+                let fi_idx = context.field_instantiation_index(fh_idx, type_actuals_id)?;
+                Bytecode::MutBorrowFieldGeneric(fi_idx)
+            }
         }
-        IRBytecode_::ImmBorrowField(name, _tys, sp!(_, field_)) => {
+        IRBytecode_::ImmBorrowField(name, tys, sp!(_, field_)) => {
             let qualified_struct_name = QualifiedStructIdent {
                 module: ModuleName::module_self(),
                 name,
             };
             let sh_idx = context.struct_handle_index(qualified_struct_name)?;
-            let (fd_idx, _, _) = context.field(sh_idx, field_)?;
-            Bytecode::ImmBorrowField(fd_idx)
+            let (def_idx, _, field_offset) = context.field(sh_idx, field_)?;
+
+            let fh_idx = context.field_handle_index(def_idx, field_offset as u16)?;
+            if tys.is_empty() {
+                Bytecode::ImmBorrowField(fh_idx)
+            } else {
+                let tokens = Signature(compile_types(
+                    context,
+                    function_frame.type_parameters(),
+                    &tys,
+                )?);
+                let type_actuals_id = context.signature_index(tokens)?;
+                let fi_idx = context.field_instantiation_index(fh_idx, type_actuals_id)?;
+                Bytecode::ImmBorrowFieldGeneric(fi_idx)
+            }
         }
         IRBytecode_::MutBorrowGlobal(n, tys) => {
-            let tokens = LocalsSignature(compile_types(
+            let tokens = Signature(compile_types(
                 context,
                 function_frame.type_parameters(),
                 &tys,
             )?);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let type_actuals_id = context.signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&n)?;
-            Bytecode::MutBorrowGlobal(def_idx, type_actuals_id)
+            if tys.is_empty() {
+                Bytecode::MutBorrowGlobal(def_idx)
+            } else {
+                let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                Bytecode::MutBorrowGlobalGeneric(si_idx)
+            }
         }
         IRBytecode_::ImmBorrowGlobal(n, tys) => {
-            let tokens = LocalsSignature(compile_types(
+            let tokens = Signature(compile_types(
                 context,
                 function_frame.type_parameters(),
                 &tys,
             )?);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let type_actuals_id = context.signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&n)?;
-            Bytecode::ImmBorrowGlobal(def_idx, type_actuals_id)
+            if tys.is_empty() {
+                Bytecode::ImmBorrowGlobal(def_idx)
+            } else {
+                let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                Bytecode::ImmBorrowGlobalGeneric(si_idx)
+            }
         }
         IRBytecode_::Add => Bytecode::Add,
         IRBytecode_::Sub => Bytecode::Sub,
@@ -1688,34 +1831,49 @@ fn compile_bytecode(
         IRBytecode_::Abort => Bytecode::Abort,
         IRBytecode_::GetTxnSenderAddress => Bytecode::GetTxnSenderAddress,
         IRBytecode_::Exists(n, tys) => {
-            let tokens = LocalsSignature(compile_types(
+            let tokens = Signature(compile_types(
                 context,
                 function_frame.type_parameters(),
                 &tys,
             )?);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let type_actuals_id = context.signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&n)?;
-            Bytecode::Exists(def_idx, type_actuals_id)
+            if tys.is_empty() {
+                Bytecode::Exists(def_idx)
+            } else {
+                let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                Bytecode::ExistsGeneric(si_idx)
+            }
         }
         IRBytecode_::MoveFrom(n, tys) => {
-            let tokens = LocalsSignature(compile_types(
+            let tokens = Signature(compile_types(
                 context,
                 function_frame.type_parameters(),
                 &tys,
             )?);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let type_actuals_id = context.signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&n)?;
-            Bytecode::MoveFrom(def_idx, type_actuals_id)
+            if tys.is_empty() {
+                Bytecode::MoveFrom(def_idx)
+            } else {
+                let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                Bytecode::MoveFromGeneric(si_idx)
+            }
         }
         IRBytecode_::MoveToSender(n, tys) => {
-            let tokens = LocalsSignature(compile_types(
+            let tokens = Signature(compile_types(
                 context,
                 function_frame.type_parameters(),
                 &tys,
             )?);
-            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let type_actuals_id = context.signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&n)?;
-            Bytecode::MoveToSender(def_idx, type_actuals_id)
+            if tys.is_empty() {
+                Bytecode::MoveToSender(def_idx)
+            } else {
+                let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                Bytecode::MoveToSenderGeneric(si_idx)
+            }
         }
         IRBytecode_::Shl => Bytecode::Shl,
         IRBytecode_::Shr => Bytecode::Shr,

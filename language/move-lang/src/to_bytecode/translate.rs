@@ -369,11 +369,11 @@ fn function_signature(context: &mut Context, sig: H::FunctionSignature) -> IR::F
         .into_iter()
         .map(|(v, st)| (var(v), single_type(context, st)))
         .collect();
-    let type_formals = type_parameters(sig.type_parameters);
+    let type_parameters = type_parameters(sig.type_parameters);
     IR::FunctionSignature {
         return_type,
         formals,
-        type_formals,
+        type_formals: type_parameters,
     }
 }
 
@@ -518,7 +518,7 @@ fn kind(sp!(_, k_): &Kind) -> IR::Kind {
     match k_ {
         GK::Unknown => IRK::All,
         GK::Resource => IRK::Resource,
-        GK::Affine | GK::Unrestricted => IRK::Unrestricted,
+        GK::Affine | GK::Copyable => IRK::Copyable,
     }
 }
 

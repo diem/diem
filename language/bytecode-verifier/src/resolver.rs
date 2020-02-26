@@ -3,19 +3,19 @@
 
 //! This module implements a resolver for importing a SignatureToken defined in one module into
 //! another. This functionaliy is used in verify_module_dependencies and verify_script_dependencies.
-use crate::{
-    access::ModuleAccess,
-    file_format::{
-        AddressPoolIndex, FunctionSignature, IdentifierIndex, ModuleHandle, ModuleHandleIndex,
-        SignatureToken, StructHandle, StructHandleIndex,
-    },
-};
 use libra_types::{
     account_address::AccountAddress,
     vm_error::{StatusCode, VMStatus},
 };
 use move_core_types::identifier::Identifier;
 use std::collections::BTreeMap;
+use vm::{
+    access::ModuleAccess,
+    file_format::{
+        AddressPoolIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature,
+        SignatureToken, StructHandle, StructHandleIndex,
+    },
+};
 
 /// Resolution context for importing types
 pub struct Resolver {
@@ -69,7 +69,7 @@ impl Resolver {
             SignatureToken::Vector(ty) => Ok(SignatureToken::Vector(Box::new(
                 self.import_signature_token(dependency, ty)?,
             ))),
-            SignatureToken::Struct(sh_idx, types) => {
+            SignatureToken::Struct(sh_idx) => {
                 let struct_handle = dependency.struct_handle_at(*sh_idx);
                 let defining_module_handle = dependency.module_handle_at(struct_handle.module);
                 let defining_module_address = dependency.address_at(defining_module_handle.address);
@@ -95,14 +95,49 @@ impl Resolver {
                         .get(struct_name)
                         .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
                     is_nominal_resource: struct_handle.is_nominal_resource,
-                    type_formals: struct_handle.type_formals.clone(),
+                    type_parameters: struct_handle.type_parameters.clone(),
                 };
                 Ok(SignatureToken::Struct(
                     *self
                         .struct_handle_map
                         .get(&local_struct_handle)
                         .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
-                    types
+                ))
+            }
+            SignatureToken::StructInstantiation(sh_idx, type_args) => {
+                let struct_handle = dependency.struct_handle_at(*sh_idx);
+                let defining_module_handle = dependency.module_handle_at(struct_handle.module);
+                let defining_module_address = dependency.address_at(defining_module_handle.address);
+                let defining_module_name = dependency.identifier_at(defining_module_handle.name);
+                let local_module_handle = ModuleHandle {
+                    address: *self
+                        .address_map
+                        .get(defining_module_address)
+                        .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
+                    name: *self
+                        .identifier_map
+                        .get(defining_module_name)
+                        .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
+                };
+                let struct_name = dependency.identifier_at(struct_handle.name);
+                let local_struct_handle = StructHandle {
+                    module: *self
+                        .module_handle_map
+                        .get(&local_module_handle)
+                        .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
+                    name: *self
+                        .identifier_map
+                        .get(struct_name)
+                        .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
+                    is_nominal_resource: struct_handle.is_nominal_resource,
+                    type_parameters: struct_handle.type_parameters.clone(),
+                };
+                Ok(SignatureToken::StructInstantiation(
+                    *self
+                        .struct_handle_map
+                        .get(&local_struct_handle)
+                        .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
+                    type_args
                         .iter()
                         .map(|t| self.import_signature_token(dependency, &t))
                         .collect::<Result<Vec<_>, VMStatus>>()?,
@@ -119,25 +154,29 @@ impl Resolver {
         }
     }
 
-    /// given a function signature in dependency, construct an equivalent function signature in the
-    /// context of this resolver and return it; return an error if resolution fails
-    pub fn import_function_signature(
+    pub fn import_signature(
         &self,
+        signature: &Signature,
         dependency: &impl ModuleAccess,
-        func_sig: &FunctionSignature,
-    ) -> Result<FunctionSignature, VMStatus> {
-        let mut return_types = Vec::<SignatureToken>::new();
-        let mut arg_types = Vec::<SignatureToken>::new();
-        for e in &func_sig.return_types {
-            return_types.push(self.import_signature_token(dependency, e)?);
+    ) -> Result<Signature, VMStatus> {
+        let mut imported_signature = Vec::<SignatureToken>::new();
+        for e in &signature.0 {
+            imported_signature.push(self.import_signature_token(dependency, e)?);
         }
-        for e in &func_sig.arg_types {
-            arg_types.push(self.import_signature_token(dependency, e)?);
+        Ok(Signature(imported_signature))
+    }
+
+    pub fn compare_cross_module_signatures(
+        &self,
+        handle_sig: &Signature,
+        def_sig: &Signature,
+        dependency: &impl ModuleAccess,
+    ) -> Result<(), VMStatus> {
+        let imported_signature = self.import_signature(def_sig, dependency)?;
+        if &imported_signature == handle_sig {
+            Ok(())
+        } else {
+            Err(VMStatus::new(StatusCode::TYPE_MISMATCH))
         }
-        Ok(FunctionSignature {
-            return_types,
-            arg_types,
-            type_formals: func_sig.type_formals.clone(),
-        })
     }
 }

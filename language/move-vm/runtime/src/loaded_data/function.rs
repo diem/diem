@@ -7,7 +7,7 @@ use bytecode_verifier::VerifiedModule;
 use move_core_types::identifier::IdentStr;
 use vm::{
     access::ModuleAccess,
-    file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex, FunctionHandle, FunctionSignature},
+    file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex, FunctionHandle, Kind, Signature},
     internals::ModuleIndex,
 };
 
@@ -37,8 +37,14 @@ pub trait FunctionReference<'txn>: Sized + Clone {
     /// Return the name of the function
     fn name(&self) -> &'txn IdentStr;
 
-    /// Returns the signature of the function
-    fn signature(&self) -> &'txn FunctionSignature;
+    /// Returns the parameters of the function
+    fn parameters(&self) -> &'txn Signature;
+
+    /// Returns the "return parameters" of the function
+    fn return_(&self) -> &'txn Signature;
+
+    /// Returns the type parameters of the function
+    fn type_parameters(&self) -> &'txn [Kind];
 }
 
 /// Resolved form of a function handle
@@ -89,20 +95,29 @@ impl<'txn> FunctionReference<'txn> for FunctionRef<'txn> {
         self.module.identifier_at(self.handle.name)
     }
 
-    fn signature(&self) -> &'txn FunctionSignature {
-        self.module.function_signature_at(self.handle.signature)
+    fn parameters(&self) -> &'txn Signature {
+        self.module.signature_at(self.handle.parameters)
+    }
+
+    fn return_(&self) -> &'txn Signature {
+        self.module.signature_at(self.handle.return_)
+    }
+
+    fn type_parameters(&self) -> &'txn [Kind] {
+        &self.handle.type_parameters
     }
 }
 
 impl<'txn> FunctionRef<'txn> {
     pub fn pretty_string(&self) -> String {
-        let signature = self.signature();
+        let parameters = self.parameters();
+        let return_ = self.parameters();
         format!(
             "{}::{}({:?}){:?}",
             self.module().name(),
             self.name().as_str(),
-            signature.arg_types,
-            signature.return_types
+            parameters,
+            return_
         )
     }
 }
@@ -122,19 +137,20 @@ impl FunctionDef {
         let definition = module.function_def_at(idx);
         let code = definition.code.code.clone();
         let handle = module.function_handle_at(definition.function);
-        let function_sig = module.function_signature_at(handle.signature);
+        let parameters = module.signature_at(handle.parameters);
+        let return_ = module.signature_at(handle.return_);
         let flags = definition.flags;
 
         FunctionDef {
             code,
             flags,
-            arg_count: function_sig.arg_types.len(),
-            return_count: function_sig.return_types.len(),
+            arg_count: parameters.len(),
+            return_count: return_.len(),
             // Local count for native function is omitted
             local_count: if (flags & CodeUnit::NATIVE) == CodeUnit::NATIVE {
                 0
             } else {
-                module.locals_signature_at(definition.code.locals).0.len()
+                module.signature_at(definition.code.locals).0.len()
             },
         }
     }

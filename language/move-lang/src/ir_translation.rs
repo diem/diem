@@ -28,8 +28,8 @@ pub fn fix_syntax_and_write(out_path: &Path, contents: String) {
     let contents = replace!(contents, r"copy\((\w+)\)", "copy $1");
     // resource StructName ~> resource struct StructName
     let contents = replace!(contents, r"resource\s+(\w)", "resource struct $1");
-    // unrestricted ~> copyable
-    let contents = replace!(contents, r":\s*unrestricted", NoExpand(": copyable"));
+    // copyable ~> copyable
+    let contents = replace!(contents, r":\s*copyable", NoExpand(": copyable"));
     // import ~> use
     let contents = replace!(contents, r"import", NoExpand("use"));
     // Self. is unnecessary

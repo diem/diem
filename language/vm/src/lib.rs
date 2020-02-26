@@ -17,10 +17,8 @@ pub mod file_format;
 pub mod file_format_common;
 pub mod gas_schedule;
 pub mod internals;
-pub mod printers;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
-pub mod resolver;
 pub mod serializer;
 pub mod transaction_metadata;
 pub mod views;
@@ -36,18 +34,21 @@ pub enum IndexKind {
     ModuleHandle,
     StructHandle,
     FunctionHandle,
+    FieldHandle,
+    FunctionInstantiation,
+    FieldInstantiation,
     StructDefinition,
-    FieldDefinition,
+    StructDefInstantiation,
     FunctionDefinition,
-    TypeSignature,
-    FunctionSignature,
-    LocalsSignature,
+    FieldDefinition,
+    Signature,
     Identifier,
     ByteArrayPool,
     AddressPool,
     LocalPool,
     CodeDefinition,
     TypeParameter,
+    MemberCount,
 }
 
 impl IndexKind {
@@ -60,17 +61,20 @@ impl IndexKind {
             ModuleHandle,
             StructHandle,
             FunctionHandle,
+            FieldHandle,
+            StructDefInstantiation,
+            FunctionInstantiation,
+            FieldInstantiation,
             StructDefinition,
-            FieldDefinition,
             FunctionDefinition,
-            TypeSignature,
-            FunctionSignature,
-            LocalsSignature,
+            FieldDefinition,
+            Signature,
             Identifier,
             AddressPool,
             LocalPool,
             CodeDefinition,
             TypeParameter,
+            MemberCount,
         ]
     }
 }
@@ -83,18 +87,21 @@ impl fmt::Display for IndexKind {
             ModuleHandle => "module handle",
             StructHandle => "struct handle",
             FunctionHandle => "function handle",
+            FieldHandle => "field handle",
+            StructDefInstantiation => "struct instantiation",
+            FunctionInstantiation => "function instantiation",
+            FieldInstantiation => "field instantiation",
             StructDefinition => "struct definition",
-            FieldDefinition => "field definition",
             FunctionDefinition => "function definition",
-            TypeSignature => "type signature",
-            FunctionSignature => "function signature",
-            LocalsSignature => "locals signature",
+            FieldDefinition => "field definition",
+            Signature => "signature",
             Identifier => "identifier",
             ByteArrayPool => "byte_array pool",
             AddressPool => "address pool",
             LocalPool => "local pool",
             CodeDefinition => "code definition pool",
             TypeParameter => "type parameter",
+            MemberCount => "field offset",
         };
 
         f.write_str(desc)

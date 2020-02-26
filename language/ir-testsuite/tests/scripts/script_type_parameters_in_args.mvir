@@ -1,4 +1,4 @@
-main<T: unrestricted>(x: T) {
+main<T: copyable>(x: T) {
     return;
 }
 // check: INVALID_MAIN_FUNCTION_SIGNATURE
@@ -12,7 +12,7 @@ main<T>(x: &T) {
 
 
 //! new-transaction
-main<T: unrestricted>(v: vector<T>) {
+main<T: copyable>(v: vector<T>) {
     return;
 }
 // check: INVALID_MAIN_FUNCTION_SIGNATURE
@@ -28,7 +28,7 @@ module M {
 //! new-transaction
 import {{default}}.M;
 
-main<T: unrestricted>(x: M.Box<M.Box<T>>) {
+main<T: copyable>(x: M.Box<M.Box<T>>) {
     return;
 }
 // check: INVALID_MAIN_FUNCTION_SIGNATURE

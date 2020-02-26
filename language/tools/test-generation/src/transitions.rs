@@ -5,17 +5,20 @@ use crate::{
     abstract_state::{AbstractState, AbstractValue, BorrowState, Mutability},
     config::ALLOW_MEMORY_UNSAFE,
     error::VMError,
+    get_struct_handle_from_reference, get_type_actuals_from_reference, kind, substitute,
 };
 use vm::{
     access::*,
     file_format::{
-        FieldDefinitionIndex, FunctionHandleIndex, Kind, LocalsSignatureIndex, SignatureToken,
-        StructDefinitionIndex,
+        FieldHandleIndex, FieldInstantiationIndex, FunctionHandleIndex, FunctionInstantiationIndex,
+        Kind, SignatureIndex, SignatureToken, StructDefInstantiationIndex, StructDefinitionIndex,
+        StructFieldInformation,
     },
-    views::{FunctionHandleView, SignatureTokenView, StructDefinitionView, ViewInternals},
+    views::{FunctionHandleView, StructDefinitionView, ViewInternals},
 };
 
 use std::collections::HashMap;
+use vm::file_format::TableIndex;
 
 //---------------------------------------------------------------------------
 // Type Instantiations from Unification with the Abstract Stack
@@ -59,8 +62,12 @@ impl Subst {
             // that case has already been taken care of above. This case is added for explicitness,
             // but it could be rolled into the catch-all at the bottom of this match.
             (SignatureToken::TypeParameter(_), _) => false,
+            (SignatureToken::Struct(sig1), SignatureToken::Struct(sig2)) => sig1 == sig2,
             // Build a substitution from recursing into structs
-            (SignatureToken::Struct(sig1, params1), SignatureToken::Struct(sig2, params2)) => {
+            (
+                SignatureToken::StructInstantiation(sig1, params1),
+                SignatureToken::StructInstantiation(sig2, params2),
+            ) => {
                 if sig1 != sig2 {
                     return false;
                 }
@@ -91,8 +98,7 @@ impl Subst {
 /// Given a signature token, returns the kind of this token in the module context, and kind
 /// instantiation for the function.
 pub fn kind_for_token(state: &AbstractState, token: &SignatureToken, kinds: &[Kind]) -> Kind {
-    let context = (&state.module.module.struct_handles()[..], kinds);
-    SignatureToken::kind(context, token)
+    kind(&state.module.module, token, kinds)
 }
 
 /// Given a locals signature index, determine the kind for each signature token. Restricted for
@@ -104,13 +110,7 @@ pub fn kinds_for_instantiation(
 ) -> Vec<Kind> {
     instantiation
         .iter()
-        .map(|token| {
-            let context = (
-                &state.module.module.struct_handles()[..],
-                &state.instantiation[..],
-            );
-            SignatureToken::kind(context, token)
-        })
+        .map(|token| kind(&state.module.module, token, &state.instantiation[..]))
         .collect()
 }
 
@@ -163,7 +163,7 @@ pub fn stack_kind_is(state: &AbstractState, index: usize, kind: Kind) -> bool {
 
 /// Determine if the abstract value at `index` has a kind that is a subkind of the kind for the
 /// instruction kind. e.g. if the instruction takes a type of kind `All` then it is OK to fit in a
-/// value with a type of kind `Unrestricted`.
+/// value with a type of kind `Copyable`.
 pub fn stack_kind_is_subkind(state: &AbstractState, index: usize, instruction_kind: Kind) -> bool {
     if !stack_has(state, index, None) {
         return false;
@@ -346,6 +346,19 @@ pub fn local_place(state: &AbstractState, index: u8) -> Result<AbstractState, VM
 // Struct Predicates and Operations
 //---------------------------------------------------------------------------
 
+pub fn stack_satisfies_struct_instantiation(
+    state: &AbstractState,
+    struct_index: StructDefInstantiationIndex,
+    exact: bool,
+) -> (bool, Subst) {
+    let struct_inst = state.module.module.struct_instantiation_at(struct_index);
+    if exact {
+        stack_satisfies_struct_signature(state, struct_inst.def, Some(struct_inst.type_parameters))
+    } else {
+        stack_satisfies_struct_signature(state, struct_inst.def, None)
+    }
+}
+
 /// Determine whether the struct at the given index can be constructed from the values on
 /// the stack.
 /// Note that this function is bidirectional; if there is an instantiation, we check it. Otherwise,
@@ -353,13 +366,13 @@ pub fn local_place(state: &AbstractState, index: u8) -> Result<AbstractState, VM
 pub fn stack_satisfies_struct_signature(
     state: &AbstractState,
     struct_index: StructDefinitionIndex,
-    instantiation: Option<LocalsSignatureIndex>,
+    instantiation: Option<SignatureIndex>,
 ) -> (bool, Subst) {
     let instantiation = instantiation.map(|index| state.module.instantiantiation_at(index));
     let struct_def = state.module.module.struct_def_at(struct_index);
     let struct_def = StructDefinitionView::new(&state.module.module, struct_def);
     // Get the type formals for the struct, and the kinds that they expect.
-    let type_formals = struct_def.type_formals();
+    let type_parameters = struct_def.type_parameters();
     let field_token_views = struct_def
         .fields()
         .into_iter()
@@ -369,12 +382,12 @@ pub fn stack_satisfies_struct_signature(
     let mut substitution = Subst::new();
     for (i, token_view) in field_token_views.rev().enumerate() {
         let ty = if let Some(subst) = &instantiation {
-            token_view.as_inner().substitute(subst)
+            substitute(token_view.as_inner(), subst)
         } else {
             token_view.as_inner().clone()
         };
         let has = if let SignatureToken::TypeParameter(idx) = &ty {
-            if stack_kind_is_subkind(state, i, type_formals[*idx as usize]) {
+            if stack_kind_is_subkind(state, i, type_parameters[*idx as usize]) {
                 let stack_tok = state.stack_peek(i).unwrap();
                 substitution.check_and_add(state, stack_tok.token, ty)
             } else {
@@ -383,7 +396,7 @@ pub fn stack_satisfies_struct_signature(
         } else {
             let abstract_value = AbstractValue {
                 token: ty,
-                kind: token_view.kind(type_formals),
+                kind: kind(&state.module.module, token_view.as_inner(), type_parameters),
             };
             stack_has(state, i, Some(abstract_value))
         };
@@ -397,21 +410,28 @@ pub fn stack_satisfies_struct_signature(
 
 pub fn get_struct_instantiation_for_state(
     state: &AbstractState,
-    struct_index: StructDefinitionIndex,
-    instantiation: Option<LocalsSignatureIndex>,
-) -> Vec<SignatureToken> {
-    if let Some(index) = instantiation {
-        return state.module.instantiantiation_at(index).clone();
+    struct_inst_idx: StructDefInstantiationIndex,
+    exact: bool,
+) -> (StructDefinitionIndex, Vec<SignatureToken>) {
+    let struct_inst = state.module.struct_instantiantiation_at(struct_inst_idx);
+    if exact {
+        return (
+            struct_inst.def,
+            state
+                .module
+                .instantiantiation_at(struct_inst.type_parameters)
+                .clone(),
+        );
     }
-    let mut partial_instantiation =
-        stack_satisfies_struct_signature(state, struct_index, instantiation).1;
+    let struct_index = struct_inst.def;
+    let mut partial_instantiation = stack_satisfies_struct_signature(state, struct_index, None).1;
     let struct_def = state.module.module.struct_def_at(struct_index);
     let struct_def = StructDefinitionView::new(&state.module.module, struct_def);
-    let typs = struct_def.type_formals();
+    let typs = struct_def.type_parameters();
     for (index, kind) in typs.iter().enumerate() {
         if !partial_instantiation.subst.contains_key(&index) {
             match kind {
-                Kind::All | Kind::Unrestricted => {
+                Kind::All | Kind::Copyable => {
                     partial_instantiation
                         .subst
                         .insert(index, SignatureToken::U64);
@@ -422,33 +442,34 @@ pub fn get_struct_instantiation_for_state(
             }
         }
     }
-    partial_instantiation.instantiation()
+    (struct_index, partial_instantiation.instantiation())
 }
 
 /// Determine if a struct (of the given signature) is at the top of the stack
 /// The `struct_index` can be `Some(index)` to check for a particular struct,
 /// or `None` to just check that there is a a struct.
-pub fn stack_has_struct(
-    state: &AbstractState,
-    struct_index: Option<StructDefinitionIndex>,
-) -> bool {
+pub fn stack_has_struct(state: &AbstractState, struct_index: StructDefinitionIndex) -> bool {
     if state.stack_len() > 0 {
         if let Some(struct_value) = state.stack_peek(0) {
             match struct_value.token {
-                SignatureToken::Struct(struct_handle, _) => match struct_index {
-                    Some(struct_index) => {
-                        let struct_def = state.module.module.struct_def_at(struct_index);
-                        return struct_handle == struct_def.struct_handle;
-                    }
-                    None => {
-                        return true;
-                    }
-                },
+                SignatureToken::Struct(struct_handle)
+                | SignatureToken::StructInstantiation(struct_handle, _) => {
+                    let struct_def = state.module.module.struct_def_at(struct_index);
+                    return struct_handle == struct_def.struct_handle;
+                }
                 _ => return false,
             }
         }
     }
     false
+}
+
+pub fn stack_has_struct_inst(
+    state: &AbstractState,
+    struct_index: StructDefInstantiationIndex,
+) -> bool {
+    let struct_inst = state.module.module.struct_instantiation_at(struct_index);
+    stack_has_struct(state, struct_inst.def)
 }
 
 /// Determine if a struct at the given index is a resource
@@ -457,14 +478,30 @@ pub fn struct_is_resource(state: &AbstractState, struct_index: StructDefinitionI
     StructDefinitionView::new(&state.module.module, struct_def).is_nominal_resource()
 }
 
-pub fn stack_struct_has_field(state: &AbstractState, field_index: FieldDefinitionIndex) -> bool {
-    if let Some(struct_handle_index) = state.stack_peek(0).and_then(|abstract_value| {
-        SignatureToken::get_struct_handle_from_reference(&abstract_value.token)
-    }) {
-        return state
-            .module
-            .module
-            .is_field_in_struct(field_index, struct_handle_index);
+pub fn struct_inst_is_resource(
+    state: &AbstractState,
+    struct_index: StructDefInstantiationIndex,
+) -> bool {
+    let struct_inst = state.module.module.struct_instantiation_at(struct_index);
+    struct_is_resource(state, struct_inst.def)
+}
+
+pub fn stack_struct_has_field_inst(
+    state: &AbstractState,
+    field_index: FieldInstantiationIndex,
+) -> bool {
+    let field_inst = state.module.module.field_instantiation_at(field_index);
+    stack_struct_has_field(state, field_inst.handle)
+}
+
+pub fn stack_struct_has_field(state: &AbstractState, field_index: FieldHandleIndex) -> bool {
+    let field_handle = state.module.module.field_handle_at(field_index);
+    if let Some(struct_handle_index) = state
+        .stack_peek(0)
+        .and_then(|abstract_value| get_struct_handle_from_reference(&abstract_value.token))
+    {
+        let struct_def = state.module.module.struct_def_at(field_handle.owner);
+        return struct_handle_index == struct_def.struct_handle;
     }
     false
 }
@@ -492,6 +529,17 @@ pub fn stack_has_reference(state: &AbstractState, index: usize, mutability: Muta
     false
 }
 
+pub fn stack_struct_inst_popn(
+    state: &AbstractState,
+    struct_inst_index: StructDefInstantiationIndex,
+) -> Result<AbstractState, VMError> {
+    let struct_inst = state
+        .module
+        .module
+        .struct_instantiation_at(struct_inst_index);
+    stack_struct_popn(state, struct_inst.def)
+}
+
 /// Pop the number of stack values required to construct the struct
 /// at `struct_index`
 pub fn stack_struct_popn(
@@ -508,29 +556,56 @@ pub fn stack_struct_popn(
     Ok(state)
 }
 
+pub fn create_struct_from_inst(
+    state: &AbstractState,
+    struct_index: StructDefInstantiationIndex,
+) -> Result<AbstractState, VMError> {
+    let struct_inst = state.module.module.struct_instantiation_at(struct_index);
+    create_struct(state, struct_inst.def, Some(struct_inst.type_parameters))
+}
+
 /// Construct a struct from abstract values on the stack
 /// The struct is stored in the register after creation
 pub fn create_struct(
     state: &AbstractState,
     struct_index: StructDefinitionIndex,
-    instantiation: LocalsSignatureIndex,
+    instantiation: Option<SignatureIndex>,
 ) -> Result<AbstractState, VMError> {
     let state_copy = state.clone();
     let mut state = state.clone();
     let struct_def = state_copy.module.module.struct_def_at(struct_index);
     // Get the type, and kind of this struct
-    let ty_instantiation = state.module.instantiantiation_at(instantiation);
-    let sig_tok = SignatureToken::Struct(struct_def.struct_handle, ty_instantiation.clone());
+    let sig_tok = match instantiation {
+        None => SignatureToken::Struct(struct_def.struct_handle),
+        Some(inst) => {
+            let ty_instantiation = state.module.instantiantiation_at(inst);
+            SignatureToken::StructInstantiation(struct_def.struct_handle, ty_instantiation.clone())
+        }
+    };
     let struct_kind = kind_for_token(&state, &sig_tok, &state.instantiation[..]);
     let struct_value = AbstractValue::new_struct(sig_tok, struct_kind);
     state.register_set(struct_value);
     Ok(state)
 }
 
-pub fn stack_unpack_struct_instantiation(state: &AbstractState) -> Vec<SignatureToken> {
+pub fn stack_unpack_struct_instantiation(
+    state: &AbstractState,
+) -> (StructDefinitionIndex, Vec<SignatureToken>) {
     if let Some(av) = state.stack_peek(0) {
         match av.token {
-            SignatureToken::Struct(_, toks) => toks,
+            SignatureToken::StructInstantiation(handle, toks) => {
+                let mut def_filter = state
+                    .module
+                    .module
+                    .struct_defs()
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, struct_def)| struct_def.struct_handle == handle);
+                match def_filter.next() {
+                    Some((idx, _)) => (StructDefinitionIndex(idx as TableIndex), toks),
+                    None => panic!("Invalid unpack -- non-struct def value found at top of stack"),
+                }
+            }
             _ => panic!("Invalid unpack -- non-struct value found at top of stack"),
         }
     } else {
@@ -538,15 +613,26 @@ pub fn stack_unpack_struct_instantiation(state: &AbstractState) -> Vec<Signature
     }
 }
 
+pub fn stack_unpack_struct_inst(
+    state: &AbstractState,
+    struct_index: StructDefInstantiationIndex,
+) -> Result<AbstractState, VMError> {
+    let struct_inst = state.module.module.struct_instantiation_at(struct_index);
+    stack_unpack_struct(state, struct_inst.def, Some(struct_inst.type_parameters))
+}
+
 /// Push the fields of a struct as `AbstractValue`s to the stack
 pub fn stack_unpack_struct(
     state: &AbstractState,
     struct_index: StructDefinitionIndex,
-    instantiation: LocalsSignatureIndex,
+    instantiation: Option<SignatureIndex>,
 ) -> Result<AbstractState, VMError> {
     let state_copy = state.clone();
     let mut state = state.clone();
-    let ty_instantiation = state.module.instantiantiation_at(instantiation).clone();
+    let ty_instantiation = match instantiation {
+        Some(inst) => state.module.instantiantiation_at(inst).clone(),
+        None => vec![],
+    };
     let kinds = kinds_for_instantiation(&state_copy, &ty_instantiation);
     let struct_def = state_copy.module.module.struct_def_at(struct_index);
     let struct_def_view = StructDefinitionView::new(&state_copy.module.module, struct_def);
@@ -557,7 +643,7 @@ pub fn stack_unpack_struct(
         .map(|field| field.type_signature().token());
     for token_view in token_views {
         let abstract_value = AbstractValue {
-            token: token_view.as_inner().substitute(&ty_instantiation),
+            token: substitute(token_view.as_inner(), &ty_instantiation),
             kind: kind_for_token(&state, &token_view.as_inner(), &kinds),
         };
         state = stack_push(&state, abstract_value)?;
@@ -567,8 +653,8 @@ pub fn stack_unpack_struct(
 
 pub fn struct_ref_instantiation(state: &mut AbstractState) -> Result<Vec<SignatureToken>, VMError> {
     let token = state.register_move().unwrap().token;
-    if let Some(type_actuals) = token.get_type_actuals_from_reference() {
-        Ok(type_actuals.to_vec())
+    if let Some(type_actuals) = get_type_actuals_from_reference(&token) {
+        Ok(type_actuals)
     } else {
         Err(VMError::new("Invalid field borrow".to_string()))
     }
@@ -577,18 +663,23 @@ pub fn struct_ref_instantiation(state: &mut AbstractState) -> Result<Vec<Signatu
 /// Push the field at `field_index` of a struct as an `AbstractValue` to the stack
 pub fn stack_struct_borrow_field(
     state: &AbstractState,
-    field_index: FieldDefinitionIndex,
+    field_index: FieldHandleIndex,
 ) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
     let typs = struct_ref_instantiation(&mut state)?;
     let kinds = kinds_for_instantiation(&state, &typs);
-    let field_signature = state
-        .module
-        .module
-        .get_field_signature(field_index)
-        .0
-        .clone();
-    let reified_field_sig = field_signature.substitute(&typs);
+    let field_handle = state.module.module.field_handle_at(field_index);
+    let struct_def = state.module.module.struct_def_at(field_handle.owner);
+    let field_signature = match &struct_def.field_information {
+        StructFieldInformation::Native => {
+            return Err(VMError::new("Borrow field on a native struct".to_string()));
+        }
+        StructFieldInformation::Declared(fields) => {
+            let field_def = &fields[field_handle.field as usize];
+            &field_def.signature.0
+        }
+    };
+    let reified_field_sig = substitute(field_signature, &typs);
     // NB: We determine the kind on the non-reified_field_sig; we want any local references to
     // type parameters to point to (struct) local type parameters. We could possibly also use the
     // reified_field_sig coupled with the top-level instantiation, but I need to convince myself of
@@ -599,6 +690,14 @@ pub fn stack_struct_borrow_field(
     };
     state = stack_push(&state, abstract_value)?;
     Ok(state)
+}
+
+pub fn stack_struct_borrow_field_inst(
+    state: &AbstractState,
+    field_index: FieldInstantiationIndex,
+) -> Result<AbstractState, VMError> {
+    let field_inst = state.module.module.field_instantiation_at(field_index);
+    stack_struct_borrow_field(state, field_inst.handle)
 }
 
 /// Dereference the value stored in the register. If the value is not a reference, or
@@ -672,25 +771,22 @@ pub fn stack_satisfies_function_signature(
 ) -> (bool, Subst) {
     let state_copy = state.clone();
     let function_handle = state_copy.module.module.function_handle_at(function_index);
-    let function_signature = state_copy
-        .module
-        .module
-        .function_signature_at(function_handle.signature);
-    let type_formals = &function_signature.type_formals;
+    let type_parameters = &function_handle.type_parameters;
     let mut satisfied = true;
     let mut substitution = Subst::new();
-    for (i, arg_type) in function_signature.arg_types.iter().rev().enumerate() {
-        let has = if let SignatureToken::TypeParameter(idx) = arg_type {
-            if stack_kind_is_subkind(state, i, type_formals[*idx as usize]) {
+    let parameters = &state_copy.module.module.signatures()[function_handle.parameters.0 as usize];
+    for (i, parameter) in parameters.0.iter().rev().enumerate() {
+        let has = if let SignatureToken::TypeParameter(idx) = parameter {
+            if stack_kind_is_subkind(state, i, type_parameters[*idx as usize]) {
                 let stack_tok = state.stack_peek(i).unwrap();
-                substitution.check_and_add(state, stack_tok.token, arg_type.clone())
+                substitution.check_and_add(state, stack_tok.token, parameter.clone())
             } else {
                 false
             }
         } else {
-            let kind = SignatureTokenView::new(&state.module.module, arg_type).kind(type_formals);
+            let kind = kind(&state.module.module, parameter, type_parameters);
             let abstract_value = AbstractValue {
-                token: arg_type.clone(),
+                token: parameter.clone(),
                 kind,
             };
             stack_has(&state, i, Some(abstract_value))
@@ -702,6 +798,17 @@ pub fn stack_satisfies_function_signature(
     (satisfied, substitution)
 }
 
+pub fn stack_satisfies_function_inst_signature(
+    state: &AbstractState,
+    function_index: FunctionInstantiationIndex,
+) -> (bool, Subst) {
+    let func_inst = state
+        .module
+        .module
+        .function_instantiation_at(function_index);
+    stack_satisfies_function_signature(state, func_inst.handle)
+}
+
 /// Whether the function acquires any global resources or not
 pub fn function_can_acquire_resource(state: &AbstractState) -> bool {
     !state.acquires_global_resources.is_empty()
@@ -711,20 +818,20 @@ pub fn function_can_acquire_resource(state: &AbstractState) -> bool {
 pub fn stack_function_call(
     state: &AbstractState,
     function_index: FunctionHandleIndex,
-    instantiation: LocalsSignatureIndex,
+    instantiation: Option<SignatureIndex>,
 ) -> Result<AbstractState, VMError> {
     let state_copy = state.clone();
     let mut state = state.clone();
     let function_handle = state_copy.module.module.function_handle_at(function_index);
-    let function_signature = state_copy
-        .module
-        .module
-        .function_signature_at(function_handle.signature);
-    let ty_instantiation = state_copy.module.instantiantiation_at(instantiation);
-    let kinds = kinds_for_instantiation(&state_copy, &ty_instantiation);
-    for return_type in function_signature.return_types.iter() {
+    let return_ = &state_copy.module.module.signatures()[function_handle.return_.0 as usize];
+    let mut ty_instantiation = &vec![];
+    if let Some(inst) = instantiation {
+        ty_instantiation = state_copy.module.instantiantiation_at(inst)
+    }
+    let kinds = kinds_for_instantiation(&state_copy, ty_instantiation);
+    for return_type in return_.0.iter() {
         let abstract_value = AbstractValue {
-            token: return_type.substitute(&ty_instantiation),
+            token: substitute(return_type, &ty_instantiation),
             kind: kind_for_token(&state, return_type, &kinds),
         };
         state = stack_push(&state, abstract_value)?;
@@ -732,19 +839,33 @@ pub fn stack_function_call(
     Ok(state)
 }
 
+pub fn stack_function_inst_call(
+    state: &AbstractState,
+    function_index: FunctionInstantiationIndex,
+) -> Result<AbstractState, VMError> {
+    let func_inst = state
+        .module
+        .module
+        .function_instantiation_at(function_index);
+    stack_function_call(state, func_inst.handle, Some(func_inst.type_parameters))
+}
+
 pub fn get_function_instantiation_for_state(
     state: &AbstractState,
-    function_index: FunctionHandleIndex,
-) -> Vec<SignatureToken> {
-    let mut partial_instantiation = stack_satisfies_function_signature(state, function_index).1;
-    let function_handle = state.module.module.function_handle_at(function_index);
+    function_index: FunctionInstantiationIndex,
+) -> (FunctionHandleIndex, Vec<SignatureToken>) {
+    let func_inst = state
+        .module
+        .module
+        .function_instantiation_at(function_index);
+    let mut partial_instantiation = stack_satisfies_function_signature(state, func_inst.handle).1;
+    let function_handle = state.module.module.function_handle_at(func_inst.handle);
     let function_handle = FunctionHandleView::new(&state.module.module, function_handle);
-    let signature = function_handle.signature();
-    let typs = signature.type_formals();
+    let typs = function_handle.type_parameters();
     for (index, kind) in typs.iter().enumerate() {
         if !partial_instantiation.subst.contains_key(&index) {
             match kind {
-                Kind::All | Kind::Unrestricted => {
+                Kind::All | Kind::Copyable => {
                     partial_instantiation
                         .subst
                         .insert(index, SignatureToken::U64);
@@ -755,7 +876,7 @@ pub fn get_function_instantiation_for_state(
             }
         }
     }
-    partial_instantiation.instantiation()
+    (func_inst.handle, partial_instantiation.instantiation())
 }
 
 /// Pop the number of stack values required to call the function
@@ -767,15 +888,23 @@ pub fn stack_function_popn(
     let state_copy = state.clone();
     let mut state = state.clone();
     let function_handle = state_copy.module.module.function_handle_at(function_index);
-    let function_signature = state_copy
-        .module
-        .module
-        .function_signature_at(function_handle.signature);
-    let number_of_pops = function_signature.arg_types.iter().len();
+    let parameters = &state_copy.module.module.signatures()[function_handle.parameters.0 as usize];
+    let number_of_pops = parameters.0.iter().len();
     for _ in 0..number_of_pops {
         state.stack_pop()?;
     }
     Ok(state)
+}
+
+pub fn stack_function_inst_popn(
+    state: &AbstractState,
+    function_index: FunctionInstantiationIndex,
+) -> Result<AbstractState, VMError> {
+    let func_inst = state
+        .module
+        .module
+        .function_instantiation_at(function_index);
+    stack_function_popn(state, func_inst.handle)
 }
 
 /// TODO: This is a temporary function that represents memory
@@ -957,14 +1086,20 @@ macro_rules! state_stack_ref_polymorphic_eq {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_satisfies_struct_signature {
-    ($e: expr, $is_exact: expr, $exact_instantiation: expr) => {
-        Box::new(move |state| {
-            if $is_exact {
-                stack_satisfies_struct_signature(state, $e, Some($exact_instantiation)).0
-            } else {
-                stack_satisfies_struct_signature(state, $e, None).0
-            }
-        })
+    ($e: expr) => {
+        Box::new(move |state| stack_satisfies_struct_signature(state, $e, None).0)
+    };
+    ($e: expr, $is_exact: expr) => {
+        Box::new(move |state| stack_satisfies_struct_instantiation(state, $e, $is_exact).0)
+    };
+}
+
+/// Wrapper for enclosing the arguments of `state_stack_struct_inst_popn` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_struct_inst_popn {
+    ($e: expr) => {
+        Box::new(move |state| stack_struct_inst_popn(state, $e))
     };
 }
 
@@ -981,8 +1116,15 @@ macro_rules! state_stack_struct_popn {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_create_struct {
-    ($e1: expr, $e2: expr) => {
-        Box::new(move |state| create_struct(state, $e1, $e2))
+    ($e1: expr) => {
+        Box::new(move |state| create_struct(state, $e1, None))
+    };
+}
+
+#[macro_export]
+macro_rules! state_create_struct_from_inst {
+    ($e1: expr) => {
+        Box::new(move |state| create_struct_from_inst(state, $e1))
     };
 }
 
@@ -995,12 +1137,26 @@ macro_rules! state_stack_has_struct {
     };
 }
 
+#[macro_export]
+macro_rules! state_stack_has_struct_inst {
+    ($e: expr) => {
+        Box::new(move |state| stack_has_struct_inst(state, $e))
+    };
+}
+
 /// Wrapper for enclosing the arguments of `stack_unpack_struct` so that only the
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_unpack_struct {
-    ($e: expr, $instantiation: expr) => {
-        Box::new(move |state| stack_unpack_struct(state, $e, $instantiation))
+    ($e: expr) => {
+        Box::new(move |state| stack_unpack_struct(state, $e, None))
+    };
+}
+
+#[macro_export]
+macro_rules! state_stack_unpack_struct_inst {
+    ($e: expr) => {
+        Box::new(move |state| stack_unpack_struct_inst(state, $e))
     };
 }
 
@@ -1013,6 +1169,13 @@ macro_rules! state_struct_is_resource {
     };
 }
 
+#[macro_export]
+macro_rules! state_struct_inst_is_resource {
+    ($e: expr) => {
+        Box::new(move |state| struct_inst_is_resource(state, $e))
+    };
+}
+
 /// Wrapper for enclosing the arguments of `struct_has_field` so that only the
 /// `state` needs to be given.
 #[macro_export]
@@ -1022,12 +1185,26 @@ macro_rules! state_stack_struct_has_field {
     };
 }
 
+#[macro_export]
+macro_rules! state_stack_struct_has_field_inst {
+    ($e: expr) => {
+        Box::new(move |state| stack_struct_has_field_inst(state, $e))
+    };
+}
+
 /// Wrapper for enclosing the arguments of `stack_struct_borrow_field` so that only the
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_struct_borrow_field {
     ($e: expr) => {
         Box::new(move |state| stack_struct_borrow_field(state, $e))
+    };
+}
+
+#[macro_export]
+macro_rules! state_stack_struct_borrow_field_inst {
+    ($e: expr) => {
+        Box::new(move |state| stack_struct_borrow_field_inst(state, $e))
     };
 }
 
@@ -1067,6 +1244,13 @@ macro_rules! state_stack_satisfies_function_signature {
     };
 }
 
+#[macro_export]
+macro_rules! state_stack_satisfies_function_inst_signature {
+    ($e: expr) => {
+        Box::new(move |state| stack_satisfies_function_inst_signature(state, $e).0)
+    };
+}
+
 /// Wrapper for enclosing the arguments of `stack_function_popn` so that only the
 /// `state` needs to be given.
 #[macro_export]
@@ -1076,12 +1260,26 @@ macro_rules! state_stack_function_popn {
     };
 }
 
+#[macro_export]
+macro_rules! state_stack_function_inst_popn {
+    ($e: expr) => {
+        Box::new(move |state| stack_function_inst_popn(state, $e))
+    };
+}
+
 /// Wrapper for enclosing the arguments of `stack_function_call` so that only the
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_function_call {
-    ($e: expr, $instantiation: expr) => {
-        Box::new(move |state| stack_function_call(state, $e, $instantiation))
+    ($e: expr) => {
+        Box::new(move |state| stack_function_call(state, $e, None))
+    };
+}
+
+#[macro_export]
+macro_rules! state_stack_function_inst_call {
+    ($e: expr) => {
+        Box::new(move |state| stack_function_inst_call(state, $e))
     };
 }
 
@@ -1146,14 +1344,8 @@ macro_rules! state_control_flow {
 /// Determine the proper type instantiation for struct in the current state.
 #[macro_export]
 macro_rules! struct_instantiation_for_state {
-    ($e: expr, $is_exact: expr, $exact_instantiation: expr) => {
-        Box::new(move |state| {
-            if $is_exact {
-                get_struct_instantiation_for_state(state, $e, Some($exact_instantiation))
-            } else {
-                get_struct_instantiation_for_state(state, $e, None)
-            }
-        })
+    ($e: expr, $is_exact: expr) => {
+        Box::new(move |state| get_struct_instantiation_for_state(state, $e, $is_exact))
     };
 }
 
@@ -1169,9 +1361,13 @@ macro_rules! unpack_instantiation_for_state {
 /// if the instantiation should be inferred from the current state.
 #[macro_export]
 macro_rules! with_ty_param {
-    (($is_exact: expr, $exact_instantiation: expr) => $ty:ident, $body:expr) => {
-        Box::new(move |$ty| {
-            let $ty = if $is_exact { $exact_instantiation } else { $ty };
+    (($is_exact: expr, $struct_inst_idx: expr) => $s_inst_idx:ident, $body:expr) => {
+        Box::new(move |$s_inst_idx| {
+            let $s_inst_idx = if $is_exact {
+                $struct_inst_idx
+            } else {
+                $s_inst_idx
+            };
             $body
         })
     };

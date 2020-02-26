@@ -3,7 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use vm::file_format::{
-    CodeOffset, FieldDefinitionIndex, FunctionDefinitionIndex, StructDefinitionIndex, TableIndex,
+    CodeOffset, FunctionDefinitionIndex, MemberCount, StructDefinitionIndex, TableIndex,
 };
 
 /// A data structure used to track any markings or extra information that is desired to be exposed
@@ -22,7 +22,7 @@ pub struct FunctionMarking {
 #[derive(Debug, Default)]
 pub struct StructMarking {
     // Field markings
-    pub fields: BTreeMap<FieldDefinitionIndex, Vec<String>>,
+    pub fields: BTreeMap<MemberCount, Vec<String>>,
 
     // Type parameter markings
     pub type_param_offsets: BTreeMap<usize, Vec<String>>,
@@ -70,7 +70,7 @@ impl StructMarking {
         }
     }
 
-    pub fn field(&mut self, field_index: FieldDefinitionIndex, message: String) {
+    pub fn field(&mut self, field_index: MemberCount, message: String) {
         self.fields
             .entry(field_index)
             .or_insert_with(Vec::new)
@@ -120,13 +120,13 @@ impl MarkedSourceMapping {
     pub fn mark_struct_field(
         &mut self,
         struct_definition_index: StructDefinitionIndex,
-        field_def_index: FieldDefinitionIndex,
+        field_index: MemberCount,
         message: String,
     ) {
         self.struct_marks
             .entry(struct_definition_index.0)
             .or_insert_with(StructMarking::new)
-            .field(field_def_index, message)
+            .field(field_index, message)
     }
 
     pub fn mark_struct_type_param(

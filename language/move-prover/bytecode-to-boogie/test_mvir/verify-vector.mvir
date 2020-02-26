@@ -358,7 +358,7 @@ module VerifyVector {
     }
 
     // succeeds. standard vector method.
-    public my_get4<Element: unrestricted>(v: &vector<Element>, i: u64): Element
+    public my_get4<Element: copyable>(v: &vector<Element>, i: u64): Element
     aborts_if i >= len(*v)
     //ensures RET(0) == vector_get(*v, i)
     ensures RET(0) == v[i]
@@ -385,7 +385,7 @@ module VerifyVector {
     }
 
     // succeeds. standard vector method.
-    public my_set3<Element: unrestricted>(v: &mut vector<Element>, i: u64, e: Element)
+    public my_set3<Element: copyable>(v: &mut vector<Element>, i: u64, e: Element)
     aborts_if i >= len(*v)
     ensures *v == old(v[i:=e])
     //ensures *v == old(*v)[i:=e] // mvir parsing errors: ParserError: Invalid token at 11189
@@ -512,7 +512,7 @@ module VerifyVector {
     }
 
     // succeeds. custom vector method.
-    public my_swap3<Element: unrestricted>(v: &mut vector<Element>, i: u64, j: u64)
+    public my_swap3<Element: copyable>(v: &mut vector<Element>, i: u64, j: u64)
     aborts_if i >= len(*v)
     aborts_if j >= len(*v)
     ensures *v == old(v[i:=v[j]][j:=v[i]])

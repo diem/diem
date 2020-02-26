@@ -5,7 +5,7 @@ module TestGenerics {
         v: vector<u64>
     }
 
-    struct T<E: unrestricted> {
+    struct T<E: copyable> {
          v: vector<E>
     }
 
@@ -20,14 +20,14 @@ module TestGenerics {
         return;
     }
 
-    public create<E: unrestricted>(x: E): Self.T<E> {
+    public create<E: copyable>(x: E): Self.T<E> {
         let v: vector<E>;
         v = Vector.empty<E>();
         Vector.push_back<E>(&mut v, move(x));
         return T<E>{ v: move(v) };
     }
 
-    public overcomplicated_equals<E: unrestricted>(x: E, y: E): bool {
+    public overcomplicated_equals<E: copyable>(x: E, y: E): bool {
         let r: bool;
         let x1: Self.T<E>;
         let y1: Self.T<E>;

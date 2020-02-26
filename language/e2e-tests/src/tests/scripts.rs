@@ -8,8 +8,8 @@ use libra_types::{
 };
 use move_core_types::identifier::Identifier;
 use vm::file_format::{
-    empty_script, AddressPoolIndex, Bytecode, FunctionHandle, FunctionHandleIndex,
-    FunctionSignatureIndex, IdentifierIndex, LocalsSignatureIndex, ModuleHandle, ModuleHandleIndex,
+    empty_script, AddressPoolIndex, Bytecode, FunctionHandle, FunctionHandleIndex, IdentifierIndex,
+    ModuleHandle, ModuleHandleIndex, SignatureIndex,
 };
 
 #[test]
@@ -81,15 +81,16 @@ fn script_none_existing_module_dep() {
     let fun_handle = FunctionHandle {
         module: ModuleHandleIndex((script.module_handles.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
-        signature: FunctionSignatureIndex(0),
+        parameters: SignatureIndex(0),
+        return_: SignatureIndex(0),
+        type_parameters: vec![],
     };
     script.function_handles.push(fun_handle);
 
     script.main.code.code = vec![
-        Bytecode::Call(
-            FunctionHandleIndex((script.function_handles.len() - 1) as u16),
-            LocalsSignatureIndex(0),
-        ),
+        Bytecode::Call(FunctionHandleIndex(
+            (script.function_handles.len() - 1) as u16,
+        )),
         Bytecode::Ret,
     ];
     let mut blob = vec![];
@@ -150,15 +151,16 @@ fn script_non_existing_function_dep() {
     let fun_handle = FunctionHandle {
         module: ModuleHandleIndex((script.module_handles.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
-        signature: FunctionSignatureIndex(0),
+        parameters: SignatureIndex(0),
+        return_: SignatureIndex(0),
+        type_parameters: vec![],
     };
     script.function_handles.push(fun_handle);
 
     script.main.code.code = vec![
-        Bytecode::Call(
-            FunctionHandleIndex((script.function_handles.len() - 1) as u16),
-            LocalsSignatureIndex(0),
-        ),
+        Bytecode::Call(FunctionHandleIndex(
+            (script.function_handles.len() - 1) as u16,
+        )),
         Bytecode::Ret,
     ];
     let mut blob = vec![];
@@ -221,15 +223,16 @@ fn script_bad_sig_function_dep() {
     let fun_handle = FunctionHandle {
         module: ModuleHandleIndex((script.module_handles.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
-        signature: FunctionSignatureIndex(0),
+        parameters: SignatureIndex(0),
+        return_: SignatureIndex(0),
+        type_parameters: vec![],
     };
     script.function_handles.push(fun_handle);
 
     script.main.code.code = vec![
-        Bytecode::Call(
-            FunctionHandleIndex((script.function_handles.len() - 1) as u16),
-            LocalsSignatureIndex(0),
-        ),
+        Bytecode::Call(FunctionHandleIndex(
+            (script.function_handles.len() - 1) as u16,
+        )),
         Bytecode::Ret,
     ];
     let mut blob = vec![];
