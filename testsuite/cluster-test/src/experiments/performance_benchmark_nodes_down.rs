@@ -27,9 +27,9 @@ pub struct PerformanceBenchmarkNodesDownParams {
     #[structopt(
         long,
         default_value = "0",
-        help = "Number of nodes which should be down"
+        help = "Percent of nodes which should be down"
     )]
-    pub num_nodes_down: usize,
+    pub percent_nodes_down: usize,
     #[structopt(
         long,
         help = "Whether cluster test should run against validators or full nodes"
@@ -46,16 +46,16 @@ pub struct PerformanceBenchmarkNodesDownParams {
 pub struct PerformanceBenchmarkNodesDown {
     down_instances: Vec<Instance>,
     up_instances: Vec<Instance>,
-    num_nodes_down: usize,
+    percent_nodes_down: usize,
     duration: Duration,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
 
 impl PerformanceBenchmarkNodesDownParams {
-    pub fn new_nodes_down(num_nodes_down: usize) -> Self {
+    pub fn new_nodes_down(percent_nodes_down: usize) -> Self {
         Self {
-            num_nodes_down,
+            percent_nodes_down,
             is_fullnode: false,
             duration: DEFAULT_BENCH_DURATION,
         }
@@ -66,21 +66,23 @@ impl ExperimentParam for PerformanceBenchmarkNodesDownParams {
     type E = PerformanceBenchmarkNodesDown;
     fn build(self, cluster: &Cluster) -> Self::E {
         if self.is_fullnode {
-            let (down_instances, up_instances) =
-                cluster.split_n_fullnodes_random(self.num_nodes_down);
+            let num_nodes = cluster.fullnode_instances().len();
+            let nodes_down = (num_nodes * self.percent_nodes_down) / 100;
+            let (down_instances, up_instances) = cluster.split_n_fullnodes_random(nodes_down);
             Self::E {
                 down_instances: down_instances.into_fullnode_instances(),
                 up_instances: up_instances.into_fullnode_instances(),
-                num_nodes_down: self.num_nodes_down,
+                percent_nodes_down: self.percent_nodes_down,
                 duration: Duration::from_secs(self.duration),
             }
         } else {
-            let (down_instances, up_instances) =
-                cluster.split_n_validators_random(self.num_nodes_down);
+            let num_nodes = cluster.validator_instances().len();
+            let nodes_down = (num_nodes * self.percent_nodes_down) / 100;
+            let (down_instances, up_instances) = cluster.split_n_validators_random(nodes_down);
             Self::E {
                 down_instances: down_instances.into_validator_instances(),
                 up_instances: up_instances.into_validator_instances(),
-                num_nodes_down: self.num_nodes_down,
+                percent_nodes_down: self.percent_nodes_down,
                 duration: Duration::from_secs(self.duration),
             }
         }
@@ -157,10 +159,10 @@ impl Experiment for PerformanceBenchmarkNodesDown {
 
 impl Display for PerformanceBenchmarkNodesDown {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        if self.num_nodes_down == 0 {
+        if self.percent_nodes_down == 0 {
             write!(f, "all up")
         } else {
-            write!(f, "{}% down", self.num_nodes_down)
+            write!(f, "{}% down", self.percent_nodes_down)
         }
     }
 }
