@@ -71,25 +71,6 @@ variable "fullnode_seed" {
   description = "Default seed for fullnode network"
 }
 
-variable "fullnode_distribution" {
-  type        = list(number)
-  default     = [1, 0, 0, 0]
-  description = "List of number of fullnodes on each validator"
-}
-
-# This is to generate a list of fullnode with validator index to indicate
-# which validator they should be connected to
-locals {
-  validator_index = range(0, length(var.fullnode_distribution))
-  fullnode_pair   = zipmap(local.validator_index, var.fullnode_distribution)
-  expanded_fullnodes = {
-    for key, val in local.fullnode_pair : key => [
-      for i in range(val) : format("%d", key)
-    ]
-  }
-  fullnode_list = flatten(values(local.expanded_fullnodes))
-}
-
 variable "validator_type" {
   description = "EC2 instance type of validator instances"
   default     = "c5.large"

@@ -19,7 +19,7 @@ resource "aws_instance" "fullnode" {
   user_data                   = local.user_data
 
   dynamic "root_block_device" {
-    for_each = contains(local.ebs_types, split(var.validator_type, ".")[0]) ? [0] : []
+    for_each = contains(local.ebs_types, split(".", var.validator_type)[0]) ? [0] : []
     content {
       volume_type = "io1"
       volume_size = var.validator_ebs_size
