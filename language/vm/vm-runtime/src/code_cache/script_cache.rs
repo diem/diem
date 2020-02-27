@@ -18,12 +18,12 @@ use libra_types::{
     transaction::SCRIPT_HASH_LENGTH,
     vm_error::{StatusCode, VMStatus},
 };
+use move_vm_cache::{Arena, CacheMap};
 use vm::{
     access::ScriptAccess,
     errors::{vm_error, Location, VMResult},
     file_format::CompiledScript,
 };
-use vm_cache_map::{Arena, CacheMap};
 
 /// The cache for commonly executed scripts. Currently there's no eviction policy, and it maps
 /// hash of script bytes into `FunctionRef`.

@@ -1,8 +1,8 @@
 [package]
-name = "vm-cache-map"
+name = "move-vm-cache"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra vm cache map"
+description = "Cache and arena for Move VM"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"

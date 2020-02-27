@@ -16,6 +16,7 @@ use cost_synthesis::{
 };
 use language_e2e_tests::data_store::FakeDataStore;
 use libra_types::vm_error::StatusCode;
+use move_vm_cache::Arena;
 use move_vm_types::{native_functions::hash, values::Value};
 use std::{
     collections::{HashMap, VecDeque},
@@ -35,7 +36,6 @@ use vm::{
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
-use vm_cache_map::Arena;
 use vm_runtime::{
     chain_state::SystemExecutionContext,
     interpreter::InterpreterForCostSynthesis,
