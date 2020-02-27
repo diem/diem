@@ -1907,9 +1907,18 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, StructDef, Container> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         macro_rules! serialize_vec {
             ($tc: ident, $actuals: expr, $v: expr) => {{
-                // TODO: This can cause a panic. Clean it up when we promote Vector to a primitive type.
-                let layout = &$actuals[0];
-                match layout {
+                let type_actuals = &$actuals;
+                if type_actuals.len() != 1 {
+                    return Err(S::Error::custom(
+                        VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                            format!(
+                                "invalid vector layout -- expected 1 type argument, got {}",
+                                type_actuals.len(),
+                            ),
+                        ),
+                    ));
+                }
+                match &type_actuals[0] {
                     Type::$tc => (),
                     _ => {
                         return Err(S::Error::custom(
@@ -1954,7 +1963,16 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, StructDef, Container> {
                 }),
                 Container::General(v),
             ) => {
-                // TODO: This can cause a panic. Clean it up when we promote Vector to a primitive type.
+                if type_actuals.len() != 1 {
+                    return Err(S::Error::custom(
+                        VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                            format!(
+                                "invalid vector layout -- expected 1 type argument, got {}",
+                                type_actuals.len(),
+                            ),
+                        ),
+                    ));
+                }
                 let layout = &type_actuals[0];
                 let mut t = serializer.serialize_seq(Some(v.len()))?;
                 for val in v {
@@ -2123,7 +2141,16 @@ impl<'d> serde::de::DeserializeSeed<'d> for &StructDef {
                     }};
                 }
 
-                // TODO: This can cause a panic. Clean it up when we promote Vector to a primitive type.
+                if type_actuals.len() != 1 {
+                    return Err(D::Error::custom(
+                        VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                            format!(
+                                "invalid vector layout -- expected 1 type argument, got {}",
+                                type_actuals.len(),
+                            ),
+                        ),
+                    ));
+                }
                 match &type_actuals[0] {
                     Type::U8 => deserialize_specialized_vec!(U8VectorVisitor, U8, u8),
                     Type::U64 => deserialize_specialized_vec!(U64VectorVisitor, U64, u64),
