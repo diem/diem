@@ -29,6 +29,7 @@ jobs:
           docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary
       - name: Launch cluster test
         if: steps.check_ks.outputs.should_run == 'true'
+        # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
           JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
           ./scripts/cti \
@@ -88,6 +89,21 @@ jobs:
               body += " See https://github.com/libra/libra/actions/runs/${{github.run_id}}";
               // Post comment on PR then fail this workflow
               should_fail = true;
+            }
+            // Add repro cmd to message
+            try {
+              let env_vars = process.env;
+              body += "\nRepro cmd:\n";
+              body += `
+                ./scripts/cti --tag dev_${env_vars.LIBRA_GIT_REV} --run bench
+              `;
+            } catch (err) {
+              if (err.code === 'ReferenceError') {
+                console.error("env var $LIBRA_GIT_REV is not set.");
+              } else {
+                body += "[GHA DEBUG]\nFound error in actions/github-script\n";
+                body += err;
+              }
             }
             // Post test result on original pull request
             try {
