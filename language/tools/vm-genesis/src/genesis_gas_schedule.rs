@@ -123,7 +123,7 @@ pub(crate) fn initial_gas_schedule(move_vm: &MoveVM, data_view: &dyn RemoteCache
         .resolve_struct_def_by_name(
             &GAS_SCHEDULE_MODULE,
             &GAS_SCHEDULE_NAME,
-            &mut TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, data_view),
+            &mut TransactionExecutionContext::new(MAXIMUM_NUMBER_OF_GAS_UNITS, data_view),
         )
         .expect("GasSchedule Module must exist");
     Value::simple_deserialize(&INITIAL_GAS_SCHEDULE, Type::Struct(struct_def)).unwrap()

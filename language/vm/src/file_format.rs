@@ -39,11 +39,11 @@ use libra_types::{
 };
 use mirai_annotations::*;
 use num_variants::NumVariants;
-use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
+use ref_cast::RefCast;
 
 /// Generic index into one of the tables in the binary format.
 pub type TableIndex = u16;
@@ -181,10 +181,8 @@ pub type LocalsSignaturePool = Vec<LocalsSignature>;
 
 // TODO: "<SELF>" only passes the validator for identifiers because it is special cased. Whenever
 // "<SELF>" is removed, so should the special case in identifier.rs.
-static SELF_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("<SELF>").unwrap());
-
 pub fn self_module_name() -> &'static IdentStr {
-    &*SELF_MODULE_NAME
+    IdentStr::ref_cast("<SELF>")
 }
 
 /// Index 0 into the LocalsSignaturePool, which is guaranteed to be an empty list.
@@ -730,7 +728,12 @@ impl SignatureToken {
             ),
             Reference(ty) => Reference(Box::new(ty.substitute(tys))),
             MutableReference(ty) => MutableReference(Box::new(ty.substitute(tys))),
-            TypeParameter(idx) => tys[*idx as usize].clone(),
+            TypeParameter(idx) => {
+                // Assume that the caller has previously parsed and verified the structure of the
+                // file and that this guarantees that type parameter indices are always in bounds.
+                assume!((*idx as usize) < tys.len());
+                tys[*idx as usize].clone()
+            }
         }
     }
 
@@ -1689,6 +1692,10 @@ impl CompiledModule {
 
     /// Returns the number of items of a specific `IndexKind`.
     pub fn kind_count(&self, kind: IndexKind) -> usize {
+        precondition!(match kind {
+            IndexKind::LocalPool | IndexKind::CodeDefinition | IndexKind::TypeParameter => false,
+            _ => true,
+        });
         self.as_inner().kind_count(kind)
     }
 
@@ -1710,6 +1717,7 @@ impl CompiledModule {
     /// into_module, i.e., script.into_module().into_script() == script.
     pub fn into_script(self) -> CompiledScript {
         let mut inner = self.into_inner();
+        precondition!(!inner.function_defs.is_empty());
         let main = inner.function_defs.remove(0);
         CompiledScript(CompiledScriptMut {
             module_handles: inner.module_handles,

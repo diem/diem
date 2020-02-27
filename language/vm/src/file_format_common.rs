@@ -207,8 +207,6 @@ impl BinaryData {
 
     pub fn push(&mut self, item: u8) -> Result<()> {
         if self.len().checked_add(1).is_some() {
-            // This assumption tells MIRAI the implication of the success of the check
-            assume!(self._binary.len() < usize::max_value());
             self._binary.push(item);
         } else {
             bail!(
@@ -223,8 +221,6 @@ impl BinaryData {
     pub fn extend(&mut self, vec: &[u8]) -> Result<()> {
         let vec_len: usize = vec.len();
         if self.len().checked_add(vec_len).is_some() {
-            // This assumption tells MIRAI the implication of the success of the check
-            assume!(self._binary.len() <= usize::max_value() - vec_len);
             self._binary.extend(vec);
         } else {
             bail!(
