@@ -1187,16 +1187,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "derivative"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
- "quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "syn 0.15.44 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "difference"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2567,7 +2557,6 @@ dependencies = [
  "libra-proptest-helpers 0.1.0",
  "libra-prost-ext 0.1.0",
  "mirai-annotations 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "num_enum 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3214,26 +3203,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num_enum"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "derivative 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "num_enum_derive 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "num_enum_derive"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "proc-macro-crate 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proc-macro2 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "syn 1.0.16 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "numtoa"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3577,14 +3546,6 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "term 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-width 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "proc-macro-crate"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -6578,7 +6539,6 @@ dependencies = [
 "checksum curve25519-dalek 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "26778518a7f6cffa1d25a44b602b62b979bd88adb9e99ffec546998cf3404839"
 "checksum curve25519-fiat 0.1.4 (git+https://github.com/calibra/rust-curve25519-fiat.git)" = "<none>"
 "checksum data-encoding 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "11c0346158a19b3627234e15596f5e465c360fcdb97d817bcb255e0510f5a788"
-"checksum derivative 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "942ca430eef7a3806595a6737bc388bf51adb888d3fc0dd1b50f1c170167ee3a"
 "checksum difference 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "524cbf6897b527295dff137cec09ecf3a05f4fddffd7dfcd1585403449e74198"
 "checksum digest 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f3d0c8c8752312f9713efd397ff63acb9f85585afbf179282e720e7704954dd5"
 "checksum dirs 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "3fd78930633bd1c6e35c4b42b1df7b0cbc6bc191146e512bb3bedf243fcc3901"
@@ -6710,8 +6670,6 @@ dependencies = [
 "checksum num-rational 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "da4dc79f9e6c81bef96148c8f6b8e72ad4541caa4a24373e900a36da07de03a3"
 "checksum num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)" = "c62be47e61d1842b9170f0fdeec8eba98e60e90e5446449a0545e5152acd7096"
 "checksum num_cpus 1.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "46203554f085ff89c235cd12f7075f3233af9b11ed7c9e16dfe2560d03313ce6"
-"checksum num_enum 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "be601e38e20a6f3d01049d85801cb9b7a34a8da7a0da70df507bbde7735058c8"
-"checksum num_enum_derive 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b59f30f6a043f2606adbd0addbf1eef6f2e28e8c4968918b63b7ff97ac0db2a7"
 "checksum numtoa 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b8f8bdf33df195859076e54ab11ee78a1b208382d3a26ec40d142ffc1ecc49ef"
 "checksum once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b1c601810575c99596d4afc46f78a678c80105117c379eb3650cf99b8a21ce5b"
 "checksum oorandom 11.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ebcec7c9c2a95cacc7cd0ecb89d8a8454eca13906f6deb55258ffff0adeb9405"
@@ -6751,7 +6709,6 @@ dependencies = [
 "checksum pretty 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1891757f8427ce41706957fde1fec1b86aee3e335bd50320257705061507a24c"
 "checksum prettydiff 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5240be0c9ea1bc7887819a36264cb9475eb71c58749808e5b989c8c1fdc67acf"
 "checksum prettytable-rs 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0fd04b170004fa2daccf418a7f8253aaf033c27760b5f225889024cf66d7ac2e"
-"checksum proc-macro-crate 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "e10d4b51f154c8a7fb96fd6dad097cb74b863943ec010ac94b9fd1be8861fe1e"
 "checksum proc-macro-error 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)" = "052b3c9af39c7e5e94245f820530487d19eb285faedcb40e0c3275132293f242"
 "checksum proc-macro-error-attr 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)" = "d175bef481c7902e63e3165627123fff3502f06ac043d3ef42d08c1246da9253"
 "checksum proc-macro-hack 0.5.11 (registry+https://github.com/rust-lang/crates.io-index)" = "ecd45702f76d6d3c75a80564378ae228a85f0b59d2f3ed43c91b4a69eb2ebfc5"
