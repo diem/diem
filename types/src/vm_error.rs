@@ -4,7 +4,6 @@
 #![allow(clippy::unit_arg)]
 
 use anyhow::{Error, Result};
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -249,9 +248,7 @@ impl From<VMStatus> for crate::proto::types::VmStatus {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(
-    Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, IntoPrimitive, TryFromPrimitive,
-)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[repr(u64)]
 /// We don't derive Arbitrary on this enum because it is too large and breaks proptest. It is
 /// written for a subset of these in proptest_types. We test conversion between this and protobuf
@@ -493,6 +490,173 @@ impl<'de> de::Deserialize<'de> for StatusCode {
         }
 
         deserializer.deserialize_u64(StatusCodeVisitor)
+    }
+}
+
+impl TryFrom<u64> for StatusCode {
+    type Error = &'static str;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(StatusCode::UNKNOWN_VALIDATION_STATUS),
+            1 => Ok(StatusCode::INVALID_SIGNATURE),
+            2 => Ok(StatusCode::INVALID_AUTH_KEY),
+            3 => Ok(StatusCode::SEQUENCE_NUMBER_TOO_OLD),
+            4 => Ok(StatusCode::SEQUENCE_NUMBER_TOO_NEW),
+            5 => Ok(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE),
+            6 => Ok(StatusCode::TRANSACTION_EXPIRED),
+            7 => Ok(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST),
+            8 => Ok(StatusCode::REJECTED_WRITE_SET),
+            9 => Ok(StatusCode::INVALID_WRITE_SET),
+            10 => Ok(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE),
+            11 => Ok(StatusCode::UNKNOWN_SCRIPT),
+            12 => Ok(StatusCode::UNKNOWN_MODULE),
+            13 => Ok(StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND),
+            14 => Ok(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS),
+            15 => Ok(StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND),
+            16 => Ok(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND),
+            1000 => Ok(StatusCode::UNKNOWN_VERIFICATION_ERROR),
+            1001 => Ok(StatusCode::INDEX_OUT_OF_BOUNDS),
+            1002 => Ok(StatusCode::RANGE_OUT_OF_BOUNDS),
+            1003 => Ok(StatusCode::INVALID_SIGNATURE_TOKEN),
+            1004 => Ok(StatusCode::INVALID_FIELD_DEF),
+            1005 => Ok(StatusCode::RECURSIVE_STRUCT_DEFINITION),
+            1006 => Ok(StatusCode::INVALID_RESOURCE_FIELD),
+            1007 => Ok(StatusCode::INVALID_FALL_THROUGH),
+            1008 => Ok(StatusCode::JOIN_FAILURE),
+            1009 => Ok(StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK),
+            1010 => Ok(StatusCode::UNBALANCED_STACK),
+            1011 => Ok(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE),
+            1012 => Ok(StatusCode::DUPLICATE_ELEMENT),
+            1013 => Ok(StatusCode::INVALID_MODULE_HANDLE),
+            1014 => Ok(StatusCode::UNIMPLEMENTED_HANDLE),
+            1015 => Ok(StatusCode::INCONSISTENT_FIELDS),
+            1016 => Ok(StatusCode::UNUSED_FIELD),
+            1017 => Ok(StatusCode::LOOKUP_FAILED),
+            1018 => Ok(StatusCode::VISIBILITY_MISMATCH),
+            1019 => Ok(StatusCode::TYPE_RESOLUTION_FAILURE),
+            1020 => Ok(StatusCode::TYPE_MISMATCH),
+            1021 => Ok(StatusCode::MISSING_DEPENDENCY),
+            1022 => Ok(StatusCode::POP_REFERENCE_ERROR),
+            1023 => Ok(StatusCode::POP_RESOURCE_ERROR),
+            1024 => Ok(StatusCode::RELEASEREF_TYPE_MISMATCH_ERROR),
+            1025 => Ok(StatusCode::BR_TYPE_MISMATCH_ERROR),
+            1026 => Ok(StatusCode::ABORT_TYPE_MISMATCH_ERROR),
+            1027 => Ok(StatusCode::STLOC_TYPE_MISMATCH_ERROR),
+            1028 => Ok(StatusCode::STLOC_UNSAFE_TO_DESTROY_ERROR),
+            1029 => Ok(StatusCode::RET_UNSAFE_TO_DESTROY_ERROR),
+            1030 => Ok(StatusCode::RET_TYPE_MISMATCH_ERROR),
+            1031 => Ok(StatusCode::RET_BORROWED_MUTABLE_REFERENCE_ERROR),
+            1032 => Ok(StatusCode::FREEZEREF_TYPE_MISMATCH_ERROR),
+            1033 => Ok(StatusCode::FREEZEREF_EXISTS_MUTABLE_BORROW_ERROR),
+            1034 => Ok(StatusCode::BORROWFIELD_TYPE_MISMATCH_ERROR),
+            1035 => Ok(StatusCode::BORROWFIELD_BAD_FIELD_ERROR),
+            1036 => Ok(StatusCode::BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR),
+            1037 => Ok(StatusCode::COPYLOC_UNAVAILABLE_ERROR),
+            1038 => Ok(StatusCode::COPYLOC_RESOURCE_ERROR),
+            1039 => Ok(StatusCode::COPYLOC_EXISTS_BORROW_ERROR),
+            1040 => Ok(StatusCode::MOVELOC_UNAVAILABLE_ERROR),
+            1041 => Ok(StatusCode::MOVELOC_EXISTS_BORROW_ERROR),
+            1042 => Ok(StatusCode::BORROWLOC_REFERENCE_ERROR),
+            1043 => Ok(StatusCode::BORROWLOC_UNAVAILABLE_ERROR),
+            1044 => Ok(StatusCode::BORROWLOC_EXISTS_BORROW_ERROR),
+            1045 => Ok(StatusCode::CALL_TYPE_MISMATCH_ERROR),
+            1046 => Ok(StatusCode::CALL_BORROWED_MUTABLE_REFERENCE_ERROR),
+            1047 => Ok(StatusCode::PACK_TYPE_MISMATCH_ERROR),
+            1048 => Ok(StatusCode::UNPACK_TYPE_MISMATCH_ERROR),
+            1049 => Ok(StatusCode::READREF_TYPE_MISMATCH_ERROR),
+            1050 => Ok(StatusCode::READREF_RESOURCE_ERROR),
+            1051 => Ok(StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR),
+            1052 => Ok(StatusCode::WRITEREF_TYPE_MISMATCH_ERROR),
+            1053 => Ok(StatusCode::WRITEREF_RESOURCE_ERROR),
+            1054 => Ok(StatusCode::WRITEREF_EXISTS_BORROW_ERROR),
+            1055 => Ok(StatusCode::WRITEREF_NO_MUTABLE_REFERENCE_ERROR),
+            1056 => Ok(StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR),
+            1057 => Ok(StatusCode::BOOLEAN_OP_TYPE_MISMATCH_ERROR),
+            1058 => Ok(StatusCode::EQUALITY_OP_TYPE_MISMATCH_ERROR),
+            1059 => Ok(StatusCode::EXISTS_RESOURCE_TYPE_MISMATCH_ERROR),
+            1060 => Ok(StatusCode::BORROWGLOBAL_TYPE_MISMATCH_ERROR),
+            1061 => Ok(StatusCode::BORROWGLOBAL_NO_RESOURCE_ERROR),
+            1062 => Ok(StatusCode::MOVEFROM_TYPE_MISMATCH_ERROR),
+            1063 => Ok(StatusCode::MOVEFROM_NO_RESOURCE_ERROR),
+            1064 => Ok(StatusCode::MOVETOSENDER_TYPE_MISMATCH_ERROR),
+            1065 => Ok(StatusCode::MOVETOSENDER_NO_RESOURCE_ERROR),
+            1066 => Ok(StatusCode::CREATEACCOUNT_TYPE_MISMATCH_ERROR),
+            1067 => Ok(StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER),
+            1068 => Ok(StatusCode::NO_MODULE_HANDLES),
+            1069 => Ok(StatusCode::POSITIVE_STACK_SIZE_AT_BLOCK_END),
+            1070 => Ok(StatusCode::MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR),
+            1071 => Ok(StatusCode::EXTRANEOUS_ACQUIRES_RESOURCE_ANNOTATION_ERROR),
+            1072 => Ok(StatusCode::DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR),
+            1073 => Ok(StatusCode::INVALID_ACQUIRES_RESOURCE_ANNOTATION_ERROR),
+            1074 => Ok(StatusCode::GLOBAL_REFERENCE_ERROR),
+            1075 => Ok(StatusCode::CONTRAINT_KIND_MISMATCH),
+            1076 => Ok(StatusCode::NUMBER_OF_TYPE_ACTUALS_MISMATCH),
+            1077 => Ok(StatusCode::LOOP_IN_INSTANTIATION_GRAPH),
+            1078 => Ok(StatusCode::UNUSED_LOCALS_SIGNATURE),
+            1079 => Ok(StatusCode::UNUSED_TYPE_SIGNATURE),
+            1080 => Ok(StatusCode::ZERO_SIZED_STRUCT),
+            1081 => Ok(StatusCode::LINKER_ERROR),
+            2000 => Ok(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR),
+            2001 => Ok(StatusCode::OUT_OF_BOUNDS_INDEX),
+            2002 => Ok(StatusCode::OUT_OF_BOUNDS_RANGE),
+            2003 => Ok(StatusCode::EMPTY_VALUE_STACK),
+            2004 => Ok(StatusCode::EMPTY_CALL_STACK),
+            2005 => Ok(StatusCode::PC_OVERFLOW),
+            2006 => Ok(StatusCode::VERIFICATION_ERROR),
+            2007 => Ok(StatusCode::LOCAL_REFERENCE_ERROR),
+            2008 => Ok(StatusCode::STORAGE_ERROR),
+            2009 => Ok(StatusCode::INTERNAL_TYPE_ERROR),
+            2010 => Ok(StatusCode::EVENT_KEY_MISMATCH),
+            2011 => Ok(StatusCode::UNREACHABLE),
+            2012 => Ok(StatusCode::VM_STARTUP_FAILURE),
+            2013 => Ok(StatusCode::NATIVE_FUNCTION_INTERNAL_INCONSISTENCY),
+            3000 => Ok(StatusCode::UNKNOWN_BINARY_ERROR),
+            3001 => Ok(StatusCode::MALFORMED),
+            3002 => Ok(StatusCode::BAD_MAGIC),
+            3003 => Ok(StatusCode::UNKNOWN_VERSION),
+            3004 => Ok(StatusCode::UNKNOWN_TABLE_TYPE),
+            3005 => Ok(StatusCode::UNKNOWN_SIGNATURE_TYPE),
+            3006 => Ok(StatusCode::UNKNOWN_SERIALIZED_TYPE),
+            3007 => Ok(StatusCode::UNKNOWN_OPCODE),
+            3008 => Ok(StatusCode::BAD_HEADER_TABLE),
+            3009 => Ok(StatusCode::UNEXPECTED_SIGNATURE_TYPE),
+            3010 => Ok(StatusCode::DUPLICATE_TABLE),
+            3011 => Ok(StatusCode::VERIFIER_INVARIANT_VIOLATION),
+            4000 => Ok(StatusCode::UNKNOWN_RUNTIME_STATUS),
+            4001 => Ok(StatusCode::EXECUTED),
+            4002 => Ok(StatusCode::OUT_OF_GAS),
+            4003 => Ok(StatusCode::RESOURCE_DOES_NOT_EXIST),
+            4004 => Ok(StatusCode::RESOURCE_ALREADY_EXISTS),
+            4005 => Ok(StatusCode::EVICTED_ACCOUNT_ACCESS),
+            4006 => Ok(StatusCode::ACCOUNT_ADDRESS_ALREADY_EXISTS),
+            4007 => Ok(StatusCode::TYPE_ERROR),
+            4008 => Ok(StatusCode::MISSING_DATA),
+            4009 => Ok(StatusCode::DATA_FORMAT_ERROR),
+            4010 => Ok(StatusCode::INVALID_DATA),
+            4011 => Ok(StatusCode::REMOTE_DATA_ERROR),
+            4012 => Ok(StatusCode::CANNOT_WRITE_EXISTING_RESOURCE),
+            4013 => Ok(StatusCode::VALUE_SERIALIZATION_ERROR),
+            4014 => Ok(StatusCode::VALUE_DESERIALIZATION_ERROR),
+            4015 => Ok(StatusCode::DUPLICATE_MODULE_NAME),
+            4016 => Ok(StatusCode::ABORTED),
+            4017 => Ok(StatusCode::ARITHMETIC_ERROR),
+            4018 => Ok(StatusCode::DYNAMIC_REFERENCE_ERROR),
+            4019 => Ok(StatusCode::CODE_DESERIALIZATION_ERROR),
+            4020 => Ok(StatusCode::EXECUTION_STACK_OVERFLOW),
+            4021 => Ok(StatusCode::CALL_STACK_OVERFLOW),
+            4022 => Ok(StatusCode::NATIVE_FUNCTION_ERROR),
+            4023 => Ok(StatusCode::GAS_SCHEDULE_ERROR),
+            4024 => Ok(StatusCode::CREATE_NULL_ACCOUNT),
+            std::u64::MAX => Ok(StatusCode::UNKNOWN_STATUS),
+            _ => Err("invalid StatusCode"),
+        }
+    }
+}
+
+impl From<StatusCode> for u64 {
+    fn from(status: StatusCode) -> u64 {
+        status as u64
     }
 }
 
