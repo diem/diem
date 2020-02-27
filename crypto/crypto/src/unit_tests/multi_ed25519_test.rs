@@ -24,12 +24,12 @@ fn test_multi_ed25519_public_key_serialization() {
         pub_keys.push(compat::generate_keypair(&mut rng).1);
     }
 
-    #[allow(clippy::all)]
+    #[allow(clippy::redundant_clone)]
     let multi_key_1of10 = MultiEd25519PublicKey::new(pub_keys.clone(), 1);
     let serialized_1of10 = MultiEd25519PublicKey::to_bytes(&multi_key_1of10.unwrap());
     assert_eq!(serialized_1of10.len(), 10 * ED25519_PUBLIC_KEY_LENGTH + 1);
 
-    #[allow(clippy::all)]
+    #[allow(clippy::redundant_clone)]
     let multi_key_10of10 = MultiEd25519PublicKey::new(pub_keys.clone(), 10);
     let mut serialized_10of10 = MultiEd25519PublicKey::to_bytes(&multi_key_10of10.unwrap());
     assert_eq!(serialized_10of10.len(), 10 * ED25519_PUBLIC_KEY_LENGTH);
@@ -69,7 +69,7 @@ fn test_multi_ed25519_public_key_serialization() {
     );
 
     // Cannot add zero threshold.
-    #[allow(clippy::all)]
+    #[allow(clippy::redundant_clone)]
     let multi_key_0of10 = MultiEd25519PublicKey::new(pub_keys.clone(), 0);
     assert!(multi_key_0of10.is_err());
     assert_eq!(
@@ -78,7 +78,7 @@ fn test_multi_ed25519_public_key_serialization() {
     );
 
     // Cannot add bigger than N threshold.
-    #[allow(clippy::all)]
+    #[allow(clippy::redundant_clone)]
     let multi_key_11of10 = MultiEd25519PublicKey::new(pub_keys.clone(), 11);
     assert!(multi_key_11of10.is_err());
     assert_eq!(
@@ -99,12 +99,12 @@ fn test_multi_ed25519_signature_verification() {
         private_keys.push(private_key);
         public_keys.push(public_key);
     }
-    #[allow(clippy::all)]
+    #[allow(clippy::redundant_clone)]
     let multi_private_key_7of10 = MultiEd25519PrivateKey::new(private_keys.clone(), 7).unwrap();
     let multi_public_key_7of10 = MultiEd25519PublicKey::from(&multi_private_key_7of10);
 
     // Check if MultiEd25519PublicKey::from works as expected.
-    #[allow(clippy::all)]
+    #[allow(clippy::redundant_clone)]
     let multi_public_key_7of10_construct =
         MultiEd25519PublicKey::new(public_keys.clone(), 7).unwrap();
     assert_eq!(multi_public_key_7of10, multi_public_key_7of10_construct);
@@ -117,14 +117,14 @@ fn test_multi_ed25519_signature_verification() {
         .is_ok());
 
     // A Public key with bigger threshold should fail.
-    #[allow(clippy::all)]
+    #[allow(clippy::redundant_clone)]
     let multi_public_key_8of10 = MultiEd25519PublicKey::new(public_keys.clone(), 8).unwrap();
     assert!(multi_signature_7of10
         .verify(&message_hash, &multi_public_key_8of10)
         .is_err());
 
     // A Public key with smaller threshold should pass.
-    #[allow(clippy::all)]
+    #[allow(clippy::redundant_clone)]
     let multi_public_key_6of10 = MultiEd25519PublicKey::new(public_keys.clone(), 6).unwrap();
     assert!(multi_signature_7of10
         .verify(&message_hash, &multi_public_key_6of10)

@@ -35,10 +35,8 @@ pub enum CryptoMaterialError {
     SmallSubgroupError,
     /// A curve point (i.e., a public key) does not satisfy the curve equation.
     PointNotOnCurveError,
-    /// BitVec mismatch error in accountable multi-sig schemes.
-    WrongBitVecError,
-    /// Key or signature material is not in the correct format.
-    FormatError,
+    /// BitVec errors in accountable multi-sig schemes.
+    BitVecError,
 }
 
 /// The serialized length of the data that enables macro derived serialization and deserialization.
