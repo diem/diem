@@ -303,7 +303,7 @@ impl MultiEd25519Signature {
             return Err(CryptoMaterialError::WrongLengthError);
         }
 
-        let mut sorted_signatures = signatures.clone();
+        let mut sorted_signatures = signatures;
         sorted_signatures.sort_by(|a, b| a.1.cmp(&b.1));
 
         let mut sigvec: Vec<Ed25519Signature> = Vec::with_capacity(num_of_sigs);
@@ -315,13 +315,13 @@ impl MultiEd25519Signature {
             if item.1 < MAX_NUM_OF_KEYS as u8 {
                 // if an index has been set already (thus, there is a duplicate).
                 if bitvec[i] {
-                    return Err(CryptoMaterialError::FormatError);
+                    return Err(CryptoMaterialError::BitVecError);
                 } else {
                     sigvec[i] = item.0.clone();
                     bitvec.set(i, true);
                 }
             } else {
-                return Err(CryptoMaterialError::FormatError);
+                return Err(CryptoMaterialError::BitVecError);
             }
         }
         Ok(MultiEd25519Signature(sigvec, bitvec))
