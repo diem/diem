@@ -10,9 +10,9 @@ use std::{borrow::Borrow, hash::Hash};
 /// The most common case of `CacheMap`, where references to stored values are handed out.
 pub type CacheRefMap<'a, K, V> = CacheMap<'a, K, V, &'a V>;
 
-/// A map custom designed for the VM runtime caches. Allocations are done in an Arena instead of
-/// directly in a hash table, which allows for new entries to be added while existing entries are
-/// borrowed out.
+/// A map custom designed for Move VM caches. Allocations are done in an Arena instead of directly
+/// in a hash table, which allows for new entries to be added while existing entries are borrowed
+/// out.
 ///
 /// TODO: Entry-like API? Current one is somewhat awkward to use.
 /// TODO: eviction -- how to do it safely?

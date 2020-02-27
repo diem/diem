@@ -15,6 +15,7 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+use move_vm_cache::{Arena, CacheRefMap};
 use move_vm_types::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_structs::dispatch::resolve_native_struct,
@@ -30,7 +31,6 @@ use vm::{
     views::{FunctionHandleView, StructHandleView},
     CompiledModule,
 };
-use vm_cache_map::{Arena, CacheRefMap};
 
 /// Cache for modules that resides in a VM. It is an internally mutable map from module
 /// identifier to a reference to loaded module, where the actual module is owned by the Arena

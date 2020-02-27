@@ -27,11 +27,11 @@ slog-envlogger = "2.1.0"
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 libra-config = { path = "../../../config", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
+move-vm-cache = { path = "../../move-vm/cache", version = "0.1.0" }
 move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 utils = { path = "../utils", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 vm-runtime = { path = "../../vm/vm-runtime", version = "0.1.0" }
-vm-cache-map = { path = "../../vm/vm-runtime/vm-cache-map", version = "0.1.0" }
 language-e2e-tests = { path = "../../e2e-tests", version = "0.1.0" }
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }

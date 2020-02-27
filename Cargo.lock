@@ -926,6 +926,7 @@ dependencies = [
  "language-e2e-tests 0.1.0",
  "libra-crypto 0.1.0",
  "libra-types 0.1.0",
+ "move-vm-cache 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -933,7 +934,6 @@ dependencies = [
  "structopt 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",
  "vm 0.1.0",
- "vm-cache-map 0.1.0",
  "vm-runtime 0.1.0",
 ]
 
@@ -2183,6 +2183,7 @@ dependencies = [
  "libra-proptest-helpers 0.1.0",
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
+ "move-vm-cache 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2191,7 +2192,6 @@ dependencies = [
  "stdlib 0.1.0",
  "transaction-builder 0.1.0",
  "vm 0.1.0",
- "vm-cache-map 0.1.0",
  "vm-genesis 0.1.0",
  "vm-runtime 0.1.0",
 ]
@@ -2966,6 +2966,17 @@ dependencies = [
  "structopt 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
+]
+
+[[package]]
+name = "move-vm-cache"
+version = "0.1.0"
+dependencies = [
+ "chashmap 2.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "crossbeam 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "typed-arena 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5121,6 +5132,7 @@ dependencies = [
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
  "mirai-annotations 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "move-vm-cache 0.1.0",
  "move-vm-types 0.1.0",
  "num_cpus 1.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5132,7 +5144,6 @@ dependencies = [
  "structopt 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",
  "vm 0.1.0",
- "vm-cache-map 0.1.0",
  "vm-runtime 0.1.0",
 ]
 
@@ -6064,17 +6075,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "vm-cache-map"
-version = "0.1.0"
-dependencies = [
- "chashmap 2.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "crossbeam 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "typed-arena 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "vm-genesis"
 version = "0.1.0"
 dependencies = [
@@ -6086,6 +6086,7 @@ dependencies = [
  "libra-proptest-helpers 0.1.0",
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
+ "move-vm-cache 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6095,7 +6096,6 @@ dependencies = [
  "stdlib 0.1.0",
  "transaction-builder 0.1.0",
  "vm 0.1.0",
- "vm-cache-map 0.1.0",
  "vm-runtime 0.1.0",
 ]
 
@@ -6115,6 +6115,7 @@ dependencies = [
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
  "mirai-annotations 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "move-vm-cache 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6122,7 +6123,6 @@ dependencies = [
  "rayon 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rental 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
- "vm-cache-map 0.1.0",
 ]
 
 [[package]]
