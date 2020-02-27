@@ -224,12 +224,17 @@ impl DB {
     pub fn open_readonly<P: AsRef<Path>>(
         path: P,
         cf_opts_map: ColumnFamilyOptionsMap,
-        db_log_dir: &str,
+        db_log_dir: P,
     ) -> Result<Self> {
         let mut db_opts = DBOptions::new();
 
         db_opts.create_if_missing(false);
-        db_opts.set_db_log_dir(db_log_dir);
+        db_opts.set_db_log_dir(db_log_dir.as_ref().to_str().ok_or_else(|| {
+            format_err!(
+                "db_log_dir {:?} can not be converted to string.",
+                db_log_dir.as_ref()
+            )
+        })?);
 
         DB::open_cf_readonly(db_opts, &path, cf_opts_map.into_iter().collect())
     }

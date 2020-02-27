@@ -44,7 +44,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{ensure, Result};
+use anyhow::{ensure, format_err, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_crypto::hash::{CryptoHash, HashValue};
@@ -136,7 +136,7 @@ impl LibraDB {
     pub fn open<P: AsRef<Path> + Clone>(
         db_root_path: P,
         readonly: bool,
-        log_dir: Option<&Path>,
+        log_dir: Option<P>,
     ) -> Result<Self> {
         let cf_opts_map: ColumnFamilyOptionsMap = [
             (
@@ -173,13 +173,10 @@ impl LibraDB {
 
         let db = Arc::new(if readonly {
             ensure!(path.as_path().is_dir(), "libradb directory is not found.");
-            ensure!(
-                log_dir.is_some(),
-                "Must provide log_dir if opening in readonly mode."
-            );
-            let db_log_dir = log_dir.unwrap().to_str().expect("Invalid directory");
-            info!("log stored at {}", db_log_dir);
-            DB::open_readonly(path.clone(), cf_opts_map, db_log_dir)?
+            let db_log_dir = log_dir
+                .ok_or_else(|| format_err!("Must provide log_dir if opening in readonly mode."))?;
+            info!("log stored at {:?}", db_log_dir.as_ref());
+            DB::open_readonly(path.clone(), cf_opts_map, db_log_dir.as_ref().to_path_buf())?
         } else {
             DB::open(path.clone(), cf_opts_map)?
         });
