@@ -26,5 +26,5 @@ storage-client = { path = "../storage/storage-client", version = "0.1.0" }
 storage-proto = { path = "../storage/storage-proto", version = "0.1.0" }
 
 [dev-dependencies]
-reqwest = { version="0.10.1", features=["blocking", "json"], default_features = false }
+reqwest = { version="0.10.3", features=["blocking", "json"], default_features = false }
 storage-service = { path = "../storage/storage-service", version = "0.1.0", features=["testing"] }
