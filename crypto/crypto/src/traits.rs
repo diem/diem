@@ -27,7 +27,7 @@ pub enum CryptoMaterialError {
     DeserializationError,
     /// Key or signature material deserializes, but is otherwise not valid.
     ValidationError,
-    /// Key or signature material does not have the expected size.
+    /// Key, threshold or signature material does not have the expected size.
     WrongLengthError,
     /// Part of the signature or key is not canonical resulting to malleability issues.
     CanonicalRepresentationError,
@@ -35,12 +35,16 @@ pub enum CryptoMaterialError {
     SmallSubgroupError,
     /// A curve point (i.e., a public key) does not satisfy the curve equation.
     PointNotOnCurveError,
+    /// BitVec mismatch error in accountable multi-sig schemes.
+    WrongBitVecError,
+    /// Key or signature material is not in the correct format.
+    FormatError,
 }
 
 /// The serialized length of the data that enables macro derived serialization and deserialization.
 pub trait Length {
     /// The serialized length of the data
-    const LENGTH: usize;
+    fn length(&self) -> usize;
 }
 
 /// Key or more generally crypto material with a notion of byte validation.

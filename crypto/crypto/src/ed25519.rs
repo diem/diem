@@ -198,7 +198,9 @@ impl TryFrom<&[u8]> for Ed25519PrivateKey {
 }
 
 impl Length for Ed25519PrivateKey {
-    const LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
+    fn length(&self) -> usize {
+        ED25519_PRIVATE_KEY_LENGTH
+    }
 }
 
 impl ValidKey for Ed25519PrivateKey {
@@ -221,8 +223,8 @@ impl Genesis for Ed25519PrivateKey {
 
 // Implementing From<&PrivateKey<...>> allows to derive a public key in a more elegant fashion
 impl From<&Ed25519PrivateKey> for Ed25519PublicKey {
-    fn from(secret_key: &Ed25519PrivateKey) -> Self {
-        let secret: &ed25519_dalek::SecretKey = &secret_key.0;
+    fn from(private_key: &Ed25519PrivateKey) -> Self {
+        let secret: &ed25519_dalek::SecretKey = &private_key.0;
         let public: ed25519_dalek::PublicKey = secret.into();
         Ed25519PublicKey(public)
     }
@@ -302,7 +304,9 @@ impl TryFrom<&[u8]> for Ed25519PublicKey {
 }
 
 impl Length for Ed25519PublicKey {
-    const LENGTH: usize = ed25519_dalek::PUBLIC_KEY_LENGTH;
+    fn length(&self) -> usize {
+        ED25519_PUBLIC_KEY_LENGTH
+    }
 }
 
 impl ValidKey for Ed25519PublicKey {
@@ -367,7 +371,9 @@ impl Signature for Ed25519Signature {
 }
 
 impl Length for Ed25519Signature {
-    const LENGTH: usize = ED25519_SIGNATURE_LENGTH;
+    fn length(&self) -> usize {
+        ED25519_SIGNATURE_LENGTH
+    }
 }
 
 impl ValidKey for Ed25519Signature {
@@ -378,8 +384,8 @@ impl ValidKey for Ed25519Signature {
 
 impl std::hash::Hash for Ed25519Signature {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        let encoded_pubkey = self.to_bytes();
-        state.write(&encoded_pubkey);
+        let encoded_signature = self.to_bytes();
+        state.write(&encoded_signature);
     }
 }
 

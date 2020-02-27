@@ -225,7 +225,9 @@ impl TryFrom<&[u8]> for X25519StaticPrivateKey {
 }
 
 impl Length for X25519StaticPrivateKey {
-    const LENGTH: usize = X25519_PRIVATE_KEY_LENGTH;
+    fn length(&self) -> usize {
+        X25519_PRIVATE_KEY_LENGTH
+    }
 }
 
 impl ValidKey for X25519StaticPrivateKey {
@@ -288,7 +290,9 @@ impl TryFrom<&[u8]> for X25519StaticPublicKey {
 }
 
 impl Length for X25519StaticPublicKey {
-    const LENGTH: usize = X25519_PUBLIC_KEY_LENGTH;
+    fn length(&self) -> usize {
+        X25519_PUBLIC_KEY_LENGTH
+    }
 }
 
 impl ValidKey for X25519StaticPublicKey {
