@@ -42,7 +42,13 @@ pub struct Transaction<'a> {
     pub input: String,
 }
 
-/// Commands that can be evaluated by the testing infra.
+/// Commands that drives the operation of LibraVM. Such as:
+/// 1. Execute user transaction
+/// 2. Publish a new block metadata
+///
+/// In the future we will add more commands to mimic the full public API of LibraVM,
+/// including reloading the on-chain configuration that will affect the code path for LibraVM,
+/// cleaning the cache in the LibraVM, etc.
 #[derive(Debug)]
 pub enum Command<'a> {
     Transaction(Transaction<'a>),
