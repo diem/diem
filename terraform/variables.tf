@@ -57,7 +57,7 @@ variable "cfg_num_validators_override" {
 }
 
 variable "num_fullnodes" {
-  default     = 1
+  default     = 2
   description = "Number of full nodes to run per fullnode network"
 }
 
@@ -73,7 +73,7 @@ variable "fullnode_seed" {
 
 variable "fullnode_distribution" {
   type        = list(number)
-  default     = [1, 0, 0, 0]
+  default     = [1, 1, 0, 0]
   description = "List of number of fullnodes on each validator"
 }
 
