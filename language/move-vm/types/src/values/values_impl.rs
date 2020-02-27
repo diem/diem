@@ -1572,7 +1572,7 @@ impl Container {
         match self {
             Self::General(v) => v
                 .iter()
-                .fold(*STRUCT_SIZE, |acc, v| acc.map2(v.size(), Add::add)),
+                .fold(STRUCT_SIZE, |acc, v| acc.map2(v.size(), Add::add)),
             Self::U8(v) => AbstractMemorySize::new((v.len() * size_of::<u8>()) as u64),
             Self::U64(v) => AbstractMemorySize::new((v.len() * size_of::<u64>()) as u64),
             Self::U128(v) => AbstractMemorySize::new((v.len() * size_of::<u128>()) as u64),
@@ -1583,13 +1583,13 @@ impl Container {
 
 impl ContainerRef {
     fn size(&self) -> AbstractMemorySize<GasCarrier> {
-        words_in(*REFERENCE_SIZE)
+        words_in(REFERENCE_SIZE)
     }
 }
 
 impl IndexedRef {
     fn size(&self) -> AbstractMemorySize<GasCarrier> {
-        words_in(*REFERENCE_SIZE)
+        words_in(REFERENCE_SIZE)
     }
 }
 
@@ -1598,7 +1598,7 @@ impl ValueImpl {
         use ValueImpl::*;
 
         match self {
-            Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => *CONST_SIZE,
+            Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => CONST_SIZE,
             Address(_) => AbstractMemorySize::new(ADDRESS_LENGTH as u64),
             ByteArray(key) => AbstractMemorySize::new(key.len() as u64),
             ContainerRef(r) => r.size(),
@@ -1639,7 +1639,7 @@ impl Reference {
 impl GlobalValue {
     pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
         // TODO: should it be self.container.borrow().size()
-        words_in(*REFERENCE_SIZE)
+        words_in(REFERENCE_SIZE)
     }
 }
 

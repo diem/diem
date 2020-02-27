@@ -185,7 +185,7 @@ impl<'input> Lexer<'input> {
         len: usize,
     ) -> Result<(), ParseError<usize, anyhow::Error>> {
         self.token = token;
-        self.cur_end = self.cur_start + len;
+        self.cur_end = self.cur_start.wrapping_add(len); // memory will run out long before this wraps
         Ok(())
     }
 }

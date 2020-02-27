@@ -836,11 +836,13 @@ impl CommonSerializer {
         binary: &mut BinaryData,
         tables: &T,
     ) -> Result<()> {
+        verify!(self.table_count == 0); // Should not be necessary, but it helps MIRAI right now
         self.serialize_module_handles(binary, tables.get_module_handles())?;
         self.serialize_struct_handles(binary, tables.get_struct_handles())?;
         self.serialize_function_handles(binary, tables.get_function_handles())?;
         self.serialize_type_signatures(binary, tables.get_type_signatures())?;
         self.serialize_function_signatures(binary, tables.get_function_signatures())?;
+        verify!(self.table_count < 6); // Should not be necessary, but it helps MIRAI right now
         self.serialize_locals_signatures(binary, tables.get_locals_signatures())?;
         self.serialize_identifiers(binary, tables.get_identifiers())?;
         self.serialize_addresses(binary, tables.get_address_pool())?;
