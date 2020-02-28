@@ -14,7 +14,7 @@ use ir_to_bytecode::{
 use libra_types::account_address::AccountAddress;
 use move_ir_types::ast;
 use std::path::Path;
-use stdlib::{stdlib_modules, StdLibOptions};
+use stdlib::{env_stdlib_modules, stdlib_modules, use_staged, StdLibOptions};
 
 struct IRCompiler {
     deps: Vec<VerifiedModule>,
@@ -52,9 +52,14 @@ impl Compiler for IRCompiler {
         })
     }
 
-    // Use the default genesis
+    // Use the staged genesis/stdlib unless the the
+    // MOVE_NO_USE_STAGED environment variable is set.
     fn stdlib() -> Option<Vec<VerifiedModule>> {
-        None
+        if !use_staged() {
+            Some(env_stdlib_modules().to_vec())
+        } else {
+            None
+        }
     }
 }
 
