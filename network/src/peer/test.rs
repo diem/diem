@@ -12,7 +12,6 @@ use futures::{
     io::{AsyncReadExt, AsyncWriteExt},
     stream::StreamExt,
 };
-use libra_config::config::RoleType;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{
@@ -39,7 +38,7 @@ fn build_test_connection() -> (Yamux<MemorySocket>, Yamux<MemorySocket>) {
 }
 
 fn build_test_identity(peer_id: PeerId) -> Identity {
-    Identity::new(peer_id, Vec::new(), RoleType::Validator)
+    Identity::new(peer_id, Vec::new())
 }
 
 fn build_test_peer(
@@ -154,7 +153,6 @@ async fn assert_new_substream_event<TSubstream>(
 
 async fn assert_peer_disconnected_event<TSubstream>(
     peer_id: PeerId,
-    role: RoleType,
     reason: DisconnectReason,
     peer_notifs_rx: &mut channel::Receiver<PeerNotification<TSubstream>>,
 ) where
@@ -168,7 +166,6 @@ async fn assert_peer_disconnected_event<TSubstream>(
             actual_reason,
         )) => {
             assert_eq!(actual_identity.peer_id(), peer_id);
-            assert_eq!(actual_identity.role(), role);
             assert_eq!(actual_reason, reason);
         }
         event => {
@@ -265,14 +262,12 @@ async fn peer_open_substream_simultaneous() {
         // Check that we received both shutdown events
         assert_peer_disconnected_event(
             peer_handle_a.peer_id,
-            RoleType::Validator,
             DisconnectReason::Requested,
             &mut peer_notifs_rx_a,
         )
         .await;
         assert_peer_disconnected_event(
             peer_handle_b.peer_id,
-            RoleType::Validator,
             DisconnectReason::ConnectionLost,
             &mut peer_notifs_rx_b,
         )
@@ -300,7 +295,6 @@ async fn peer_disconnect_request() {
         peer_handle.disconnect().await;
         assert_peer_disconnected_event(
             peer_handle.peer_id,
-            RoleType::Validator,
             DisconnectReason::Requested,
             &mut peer_notifs_rx,
         )
@@ -326,7 +320,6 @@ async fn peer_disconnect_connection_lost() {
         drop(connection);
         assert_peer_disconnected_event(
             peer_handle.peer_id,
-            RoleType::Validator,
             DisconnectReason::ConnectionLost,
             &mut peer_notifs_rx,
         )

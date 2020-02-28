@@ -29,6 +29,7 @@ use futures::{
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
+use libra_config::config::RoleType;
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{
@@ -211,6 +212,8 @@ where
     executor: Handle,
     /// PeerId of "self".
     own_peer_id: PeerId,
+    /// Our node type.
+    role: RoleType,
     /// Address to listen on for incoming connections.
     listen_addr: Multiaddr,
     /// Connection Listener, listening on `listen_addr`
@@ -264,6 +267,7 @@ where
         executor: Handle,
         transport: TTransport,
         own_peer_id: PeerId,
+        role: RoleType,
         listen_addr: Multiaddr,
         requests_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
         rpc_protocols: HashSet<ProtocolId>,
@@ -299,6 +303,7 @@ where
         Self {
             executor,
             own_peer_id,
+            role,
             listen_addr,
             connection_handler: Some(connection_handler),
             active_peers: HashMap::new(),
@@ -582,7 +587,7 @@ where
         // Initialize a new network stack for this connection.
         let (network_reqs_tx, network_notifs_rx) = NetworkProvider::start(
             self.executor.clone(),
-            identity.clone(),
+            identity,
             address.clone(),
             origin,
             connection,
@@ -611,7 +616,7 @@ where
             }
             // update libra_network_peer counter
             counters::LIBRA_NETWORK_PEERS
-                .with_label_values(&[identity.role().as_str(), "connected"])
+                .with_label_values(&[self.role.as_str(), "connected"])
                 .inc();
         }
     }
@@ -633,7 +638,7 @@ where
         }
         // update libra_network_peer counter
         counters::LIBRA_NETWORK_PEERS
-            .with_label_values(&[identity.role().as_str(), "connected"])
+            .with_label_values(&[self.role.as_str(), "connected"])
             .dec();
         // Remove NetworkRequest sender from `active_peers`.
         self.active_peers.remove(&peer_id);

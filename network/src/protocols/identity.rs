@@ -8,7 +8,6 @@
 use crate::ProtocolId;
 use bytes::BytesMut;
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use libra_config::config::RoleType;
 use libra_types::PeerId;
 use netcore::{
     framing::{read_u16frame, write_u16frame},
@@ -24,25 +23,19 @@ const IDENTITY_PROTOCOL_NAME: &[u8] = b"/identity/0.1.0";
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Identity {
     peer_id: PeerId,
-    role: RoleType,
     supported_protocols: Vec<ProtocolId>,
 }
 
 impl Identity {
-    pub fn new(peer_id: PeerId, supported_protocols: Vec<ProtocolId>, role: RoleType) -> Self {
+    pub fn new(peer_id: PeerId, supported_protocols: Vec<ProtocolId>) -> Self {
         Self {
             peer_id,
-            role,
             supported_protocols,
         }
     }
 
     pub fn peer_id(&self) -> PeerId {
         self.peer_id
-    }
-
-    pub fn role(&self) -> RoleType {
-        self.role
     }
 
     pub fn is_protocol_supported(&self, protocol: &ProtocolId) -> bool {
@@ -104,7 +97,6 @@ mod tests {
         ProtocolId,
     };
     use futures::{executor::block_on, future::join};
-    use libra_config::config::RoleType;
     use libra_types::PeerId;
     use memsocket::MemorySocket;
     use netcore::transport::ConnectionOrigin;
@@ -122,7 +114,6 @@ mod tests {
                 ProtocolId::from_static(b"/proto/1.0.0"),
                 ProtocolId::from_static(b"/proto/2.0.0"),
             ],
-            RoleType::Validator,
         );
         let client_identity = Identity::new(
             PeerId::random(),
@@ -131,7 +122,6 @@ mod tests {
                 ProtocolId::from_static(b"/proto/2.0.0"),
                 ProtocolId::from_static(b"/proto/3.0.0"),
             ],
-            RoleType::Validator,
         );
         let server_identity_config = server_identity.clone();
         let client_identity_config = client_identity.clone();
