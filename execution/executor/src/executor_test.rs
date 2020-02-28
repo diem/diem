@@ -630,7 +630,7 @@ proptest! {
             block.txns[reconfig_txn_index as usize] = encode_reconfiguration_transaction(gen_address(reconfig_txn_index));
             let (executor, committed_trees) = TestExecutor::new();
             let output = executor.execute_block(
-                block.txns.clone(), &committed_trees, &committed_trees,
+                block.txns, &committed_trees, &committed_trees,
             ).unwrap();
         let retry_iter = output.transaction_data().iter().map(TransactionData::status)
             .skip_while(|status| match *status {
