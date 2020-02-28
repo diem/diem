@@ -35,16 +35,9 @@ main() {
 
 // check: EXECUTED
 
-//! new-transaction
-//! sender: viola
-// Run the block prologue. Reconfiguration should be triggered, which will both remove Vivian and
-// add Alice
-// TODO: trigger a BlockMetadata transaction here instead
-import 0x0.LibraSystem;
-main() {
-    LibraSystem.block_prologue(1, h"aa", h"bb", {{viola}});
-    return;
-}
+//! block-prologue
+//! proposer: viola
+//! block-time: 1
 
 // check: ValidatorSetChangeEvent
 // check: DiscoverySetChangeEvent

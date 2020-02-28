@@ -27,17 +27,12 @@ main() {
 // check: events: []
 // check: EXECUTED
 
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-
 // Run the block prologue. No reconfiguration should be triggered, since alice is
 // not a validator
-// TODO: trigger a BlockMetadata transaction here instead
-main() {
-    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
-    return;
-}
+//! block-prologue
+//! proposer: vivian
+//! block-time: 1000000
+
 // check: events: []
 // check: EXECUTED
 
@@ -57,15 +52,11 @@ main() {
 // check: events: []
 // check: EXECUTED
 
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
 // the reconfiguration should be triggered
-main() {
-    LibraSystem.block_prologue(2, h"aa", h"bb", {{vivian}});
-    return;
-}
+//! block-prologue
+//! proposer: vivian
+//! block-time: 2000000
+
 // not: ValidatorSetChangeEvent
 // check: DiscoverySetChangeEvent
 // check: EXECUTED
@@ -96,16 +87,11 @@ main() {
 // check: events: []
 // check: EXECUTED
 
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
 // No reconfiguration should be triggered, since the current and previous values
 // are equal
-main() {
-    LibraSystem.block_prologue(3, h"aa", h"bb", {{vivian}});
-    return;
-}
+//! block-prologue
+//! proposer: vivian
+//! block-time: 3000000
 // check: events: []
 // check: EXECUTED
 
@@ -133,14 +119,9 @@ main() {
 // check: events: []
 // check: EXECUTED
 
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
-main() {
-    LibraSystem.block_prologue(4, h"aa", h"bb", {{vivian}});
-    return;
-}
+//! block-prologue
+//! proposer: vivian
+//! block-time: 4000000
 // not: ValidatorSetChangeEvent
 // check: DiscoverySetChangeEvent
 // check: EXECUTED

@@ -32,16 +32,9 @@ main() {
 }
 
 
-//! new-transaction
-//! sender: vivian
-// Run the block prologue. Reconfiguration should be triggered, which will both add Alice and rotate
-// Vivian's key
-// TODO: trigger a BlockMetadata transaction here instead
-import 0x0.LibraSystem;
-main() {
-    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
-    return;
-}
+//! block-prologue
+//! proposer: vivian
+//! block-time: 1
 
 // check: ValidatorSetChangeEvent
 // check: DiscoverySetChangeEvent
