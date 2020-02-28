@@ -64,7 +64,7 @@ fn build_test_connection() -> (Yamux<MemorySocket>, Yamux<MemorySocket>) {
 }
 
 fn build_test_identity(peer_id: PeerId) -> Identity {
-    Identity::new(peer_id, Vec::new(), RoleType::Validator)
+    Identity::new(peer_id, Vec::new())
 }
 
 fn ordered_peer_ids(num: usize) -> Vec<PeerId> {
@@ -98,8 +98,9 @@ fn build_test_peer_manager(
 
     let peer_manager = PeerManager::new(
         executor,
-        build_test_transport(Identity::new(peer_id, vec![], RoleType::Validator)),
+        build_test_transport(Identity::new(peer_id, vec![])),
         peer_id,
+        RoleType::Validator,
         "/memory/0".parse().unwrap(),
         peer_manager_request_rx,
         HashSet::from_iter([hello_protocol.clone()].iter().cloned()), /* rpc protocols */

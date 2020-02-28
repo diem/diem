@@ -432,7 +432,7 @@ impl NetworkBuilder {
     /// Create the configured transport and start PeerManager.
     /// Return the actual Multiaddr over which this peer is listening.
     pub fn build(mut self) -> Multiaddr {
-        let identity = Identity::new(self.peer_id, self.supported_protocols(), self.role);
+        let identity = Identity::new(self.peer_id, self.supported_protocols());
         // Build network based on the transport type
         let trusted_peers = self.trusted_peers.clone();
         match self.transport {
@@ -474,6 +474,7 @@ impl NetworkBuilder {
             self.executor.clone(),
             transport,
             self.peer_id,
+            self.role,
             self.addr,
             self.pm_reqs_rx,
             HashSet::from_iter(self.rpc_protocols.into_iter()),
