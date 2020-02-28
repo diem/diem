@@ -567,8 +567,8 @@ module VerifyVector {
     // succeeds. standard vector method.
     public my_append2<Element>(lhs: &mut vector<Element>, other: vector<Element>)
     ensures len(*lhs) == old(len(*lhs) + len(other))
-    ensures lhs[0..old(len(*lhs))] == old(*lhs)
     ensures lhs[old(len(*lhs))..len(*lhs)] == old(other)
+    ensures lhs[0..old(len(*lhs))] == old(*lhs)
     {
         Vector.append<Element>(move(lhs), move(other));
         return;
