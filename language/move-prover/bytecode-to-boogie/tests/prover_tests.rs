@@ -85,3 +85,8 @@ fn verify_invariants() {
 fn verify_synthetics() {
     test(VERIFY, &["test_mvir/verify-synthetics.mvir"]);
 }
+
+#[test]
+fn verify_lifetime() {
+    test(VERIFY, &["test_mvir/verify-lifetime.mvir"]);
+}

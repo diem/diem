@@ -2462,7 +2462,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(vlen(v)), __ret0)));
 
     call __t2 := Vector_length(IntegerType(), __t1);
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 23, 9014);
+      assume $DebugTrackAbort(1, 23, 9013);
       goto Label_Abort;
     }
     assume IsValidU64(__t2);
@@ -2470,7 +2470,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(vlen(v)), __ret0)));
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    assume $DebugTrackLocal(1, 23, 1, 9007, __ret0);
+    assume $DebugTrackLocal(1, 23, 1, 9006, __ret0);
     return;
 
 Label_Abort:
@@ -2504,7 +2504,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(vlen(Dereference(__m, v))), __ret0)));
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 24, 0, 9115, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 24, 0, 9114, Dereference(__m, v));
 
     // increase the local counter
     __local_counter := __local_counter + 3;
@@ -2514,7 +2514,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(vlen(Dereference(__m, v))), __ret0)));
 
     call __t2 := Vector_length(IntegerType(), __t1);
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 24, 9209);
+      assume $DebugTrackAbort(1, 24, 9208);
       goto Label_Abort;
     }
     assume IsValidU64(__t2);
@@ -2522,7 +2522,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(vlen(Dereference(__m, v))), __ret0)));
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    assume $DebugTrackLocal(1, 24, 1, 9202, __ret0);
+    assume $DebugTrackLocal(1, 24, 1, 9201, __ret0);
     return;
 
 Label_Abort:
@@ -2556,7 +2556,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(vlen(Dereference(__m, v))), __ret0)));
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 25, 0, 9290, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 25, 0, 9289, Dereference(__m, v));
 
     // increase the local counter
     __local_counter := __local_counter + 3;
@@ -2566,7 +2566,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(vlen(Dereference(__m, v))), __ret0)));
 
     call __t2 := Vector_length(tv0, __t1);
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 25, 9397);
+      assume $DebugTrackAbort(1, 25, 9396);
       goto Label_Abort;
     }
     assume IsValidU64(__t2);
@@ -2574,7 +2574,7 @@ ensures b#Boolean(Boolean(IsEqual(Integer(vlen(Dereference(__m, v))), __ret0)));
     __m := UpdateLocal(__m, __frame + 2, __t2);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    assume $DebugTrackLocal(1, 25, 1, 9390, __ret0);
+    assume $DebugTrackLocal(1, 25, 1, 9389, __ret0);
     return;
 
 Label_Abort:
@@ -2613,10 +2613,10 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(v)))))) ==>
     // process and type check arguments
     assume $Vector_T_is_well_formed(v);
     __m := UpdateLocal(__m, __frame + 0, v);
-    assume $DebugTrackLocal(1, 26, 0, 9458, v);
+    assume $DebugTrackLocal(1, 26, 0, 9457, v);
     assume IsValidU64(i);
     __m := UpdateLocal(__m, __frame + 1, i);
-    assume $DebugTrackLocal(1, 26, 1, 9458, i);
+    assume $DebugTrackLocal(1, 26, 1, 9457, i);
 
     // increase the local counter
     __local_counter := __local_counter + 6;
@@ -2629,7 +2629,7 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(v)))))) ==>
 
     call __t4 := Vector_borrow(IntegerType(), __t2, GetLocal(__m, __frame + 3));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 26, 9620);
+      assume $DebugTrackAbort(1, 26, 9619);
       goto Label_Abort;
     }
     assume IsValidU64(Dereference(__m, __t4)) && IsValidReferenceParameter(__m, __local_counter, __t4);
@@ -2641,7 +2641,7 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(v)))))) ==>
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 5);
-    assume $DebugTrackLocal(1, 26, 2, 9612, __ret0);
+    assume $DebugTrackLocal(1, 26, 2, 9611, __ret0);
     return;
 
 Label_Abort:
@@ -2680,10 +2680,10 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 27, 0, 9730, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 27, 0, 9729, Dereference(__m, v));
     assume IsValidU64(i);
     __m := UpdateLocal(__m, __frame + 1, i);
-    assume $DebugTrackLocal(1, 27, 1, 9730, i);
+    assume $DebugTrackLocal(1, 27, 1, 9729, i);
 
     // increase the local counter
     __local_counter := __local_counter + 6;
@@ -2696,7 +2696,7 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
 
     call __t4 := Vector_borrow(IntegerType(), __t2, GetLocal(__m, __frame + 3));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 27, 9895);
+      assume $DebugTrackAbort(1, 27, 9894);
       goto Label_Abort;
     }
     assume IsValidU64(Dereference(__m, __t4)) && IsValidReferenceParameter(__m, __local_counter, __t4);
@@ -2708,7 +2708,7 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 5);
-    assume $DebugTrackLocal(1, 27, 2, 9887, __ret0);
+    assume $DebugTrackLocal(1, 27, 2, 9886, __ret0);
     return;
 
 Label_Abort:
@@ -2749,10 +2749,10 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 28, 0, 9961, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 28, 0, 9960, Dereference(__m, v));
     assume IsValidU64(i);
     __m := UpdateLocal(__m, __frame + 1, i);
-    assume $DebugTrackLocal(1, 28, 1, 9961, i);
+    assume $DebugTrackLocal(1, 28, 1, 9960, i);
 
     // increase the local counter
     __local_counter := __local_counter + 8;
@@ -2765,7 +2765,7 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
 
     call __t4 := Vector_borrow(IntegerType(), __t2, GetLocal(__m, __frame + 3));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 28, 10151);
+      assume $DebugTrackAbort(1, 28, 10150);
       goto Label_Abort;
     }
     assume IsValidU64(Dereference(__m, __t4)) && IsValidReferenceParameter(__m, __local_counter, __t4);
@@ -2781,13 +2781,13 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
 
     call __tmp := Sub(GetLocal(__m, __frame + 5), GetLocal(__m, __frame + 6));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 28, 10150);
+      assume $DebugTrackAbort(1, 28, 10149);
       goto Label_Abort;
     }
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    assume $DebugTrackLocal(1, 28, 2, 10143, __ret0);
+    assume $DebugTrackLocal(1, 28, 2, 10142, __ret0);
     return;
 
 Label_Abort:
@@ -2826,10 +2826,10 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 29, 0, 10245, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 29, 0, 10244, Dereference(__m, v));
     assume IsValidU64(i);
     __m := UpdateLocal(__m, __frame + 1, i);
-    assume $DebugTrackLocal(1, 29, 1, 10245, i);
+    assume $DebugTrackLocal(1, 29, 1, 10244, i);
 
     // increase the local counter
     __local_counter := __local_counter + 6;
@@ -2842,7 +2842,7 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
 
     call __t4 := Vector_borrow(tv0, __t2, GetLocal(__m, __frame + 3));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 29, 10441);
+      assume $DebugTrackAbort(1, 29, 10440);
       goto Label_Abort;
     }
     assume IsValidReferenceParameter(__m, __local_counter, __t4);
@@ -2853,7 +2853,7 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 5);
-    assume $DebugTrackLocal(1, 29, 2, 10433, __ret0);
+    assume $DebugTrackLocal(1, 29, 2, 10432, __ret0);
     return;
 
 Label_Abort:
@@ -2893,13 +2893,13 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(v)))))) ==>
     // process and type check arguments
     assume $Vector_T_is_well_formed(v);
     __m := UpdateLocal(__m, __frame + 0, v);
-    assume $DebugTrackLocal(1, 30, 0, 10511, v);
+    assume $DebugTrackLocal(1, 30, 0, 10510, v);
     assume IsValidU64(i);
     __m := UpdateLocal(__m, __frame + 1, i);
-    assume $DebugTrackLocal(1, 30, 1, 10511, i);
+    assume $DebugTrackLocal(1, 30, 1, 10510, i);
     assume IsValidU64(e);
     __m := UpdateLocal(__m, __frame + 2, e);
-    assume $DebugTrackLocal(1, 30, 2, 10511, e);
+    assume $DebugTrackLocal(1, 30, 2, 10510, e);
 
     // increase the local counter
     __local_counter := __local_counter + 8;
@@ -2915,22 +2915,22 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(v)))))) ==>
 
     call __t6 := Vector_borrow_mut(IntegerType(), __t4, GetLocal(__m, __frame + 5));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 30, 10650);
+      assume $DebugTrackAbort(1, 30, 10649);
       goto Label_Abort;
     }
     assume IsValidU64(Dereference(__m, __t6)) && IsValidReferenceParameter(__m, __local_counter, __t6);
 
 
-    assume $DebugTrackLocal(1, 30, 0, 10650, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 30, 0, 10649, GetLocal(__m, __frame + 0));
 
     call WriteRef(__t6, GetLocal(__m, __frame + 3));
-    assume $DebugTrackLocal(1, 30, 0, 10648, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 30, 0, 10647, GetLocal(__m, __frame + 0));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    assume $DebugTrackLocal(1, 30, 3, 10710, __ret0);
+    assume $DebugTrackLocal(1, 30, 3, 10709, __ret0);
     return;
 
 Label_Abort:
@@ -2969,13 +2969,13 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 31, 0, 10803, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 31, 0, 10802, Dereference(__m, v));
     assume IsValidU64(i);
     __m := UpdateLocal(__m, __frame + 1, i);
-    assume $DebugTrackLocal(1, 31, 1, 10803, i);
+    assume $DebugTrackLocal(1, 31, 1, 10802, i);
     assume IsValidU64(e);
     __m := UpdateLocal(__m, __frame + 2, e);
-    assume $DebugTrackLocal(1, 31, 2, 10803, e);
+    assume $DebugTrackLocal(1, 31, 2, 10802, e);
 
     // increase the local counter
     __local_counter := __local_counter + 7;
@@ -2991,18 +2991,18 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
 
     call __t6 := Vector_borrow_mut(IntegerType(), __t4, GetLocal(__m, __frame + 5));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 31, 10931);
+      assume $DebugTrackAbort(1, 31, 10930);
       goto Label_Abort;
     }
     assume IsValidU64(Dereference(__m, __t6)) && IsValidReferenceParameter(__m, __local_counter, __t6);
 
 
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 31, 0, 10931, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 31, 0, 10930, Dereference(__m, v));
 
     call WriteRef(__t6, GetLocal(__m, __frame + 3));
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 31, 0, 10929, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 31, 0, 10928, Dereference(__m, v));
 
     return;
 
@@ -3041,12 +3041,12 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 32, 0, 11052, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 32, 0, 11051, Dereference(__m, v));
     assume IsValidU64(i);
     __m := UpdateLocal(__m, __frame + 1, i);
-    assume $DebugTrackLocal(1, 32, 1, 11052, i);
+    assume $DebugTrackLocal(1, 32, 1, 11051, i);
     __m := UpdateLocal(__m, __frame + 2, e);
-    assume $DebugTrackLocal(1, 32, 2, 11052, e);
+    assume $DebugTrackLocal(1, 32, 2, 11051, e);
 
     // increase the local counter
     __local_counter := __local_counter + 7;
@@ -3062,18 +3062,18 @@ ensures old(b#Boolean(Boolean(i#Integer(i) >= i#Integer(Integer(vlen(Dereference
 
     call __t6 := Vector_borrow_mut(tv0, __t4, GetLocal(__m, __frame + 5));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 32, 11305);
+      assume $DebugTrackAbort(1, 32, 11304);
       goto Label_Abort;
     }
     assume IsValidReferenceParameter(__m, __local_counter, __t6);
 
 
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 32, 0, 11305, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 32, 0, 11304, Dereference(__m, v));
 
     call WriteRef(__t6, GetLocal(__m, __frame + 3));
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 32, 0, 11303, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 32, 0, 11302, Dereference(__m, v));
 
     return;
 
@@ -3108,7 +3108,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 33, 0, 11445, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 33, 0, 11444, Dereference(__m, v));
 
     // increase the local counter
     __local_counter := __local_counter + 5;
@@ -3118,7 +3118,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t2 := Vector_length(IntegerType(), __t1);
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 33, 11677);
+      assume $DebugTrackAbort(1, 33, 11676);
       goto Label_Abort;
     }
     assume IsValidU64(__t2);
@@ -3132,7 +3132,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    assume $DebugTrackLocal(1, 33, 1, 11670, __ret0);
+    assume $DebugTrackLocal(1, 33, 1, 11669, __ret0);
     return;
 
 Label_Abort:
@@ -3196,7 +3196,7 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
     // bytecode translation starts here
     call __t2 := Vector_empty(IntegerType());
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 34, 12087);
+      assume $DebugTrackAbort(1, 34, 12086);
       goto Label_Abort;
     }
     assume $Vector_T_is_well_formed(__t2);
@@ -3205,11 +3205,11 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    assume $DebugTrackLocal(1, 34, 0, 12081, __tmp);
+    assume $DebugTrackLocal(1, 34, 0, 12080, __tmp);
 
     call __t3 := Vector_empty(IntegerType());
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 34, 12122);
+      assume $DebugTrackAbort(1, 34, 12121);
       goto Label_Abort;
     }
     assume $Vector_T_is_well_formed(__t3);
@@ -3218,7 +3218,7 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    assume $DebugTrackLocal(1, 34, 1, 12116, __tmp);
+    assume $DebugTrackLocal(1, 34, 1, 12115, __tmp);
 
     call __t4 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
@@ -3227,11 +3227,11 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
 
     call Vector_push_back(IntegerType(), __t4, GetLocal(__m, __frame + 5));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 34, 12151);
+      assume $DebugTrackAbort(1, 34, 12150);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 34, 0, 12151, GetLocal(__m, __frame + 0));
-    assume $DebugTrackLocal(1, 34, 1, 12151, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(1, 34, 0, 12150, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 34, 1, 12150, GetLocal(__m, __frame + 1));
 
     call __t6 := BorrowLoc(__frame + 0, Vector_T_type_value(IntegerType()));
 
@@ -3240,11 +3240,11 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
 
     call Vector_push_back(IntegerType(), __t6, GetLocal(__m, __frame + 7));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 34, 12195);
+      assume $DebugTrackAbort(1, 34, 12194);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 34, 0, 12195, GetLocal(__m, __frame + 0));
-    assume $DebugTrackLocal(1, 34, 1, 12195, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(1, 34, 0, 12194, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 34, 1, 12194, GetLocal(__m, __frame + 1));
 
     call __t8 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
@@ -3253,11 +3253,11 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
 
     call Vector_push_back(IntegerType(), __t8, GetLocal(__m, __frame + 9));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 34, 12240);
+      assume $DebugTrackAbort(1, 34, 12239);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 34, 0, 12240, GetLocal(__m, __frame + 0));
-    assume $DebugTrackLocal(1, 34, 1, 12240, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(1, 34, 0, 12239, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 34, 1, 12239, GetLocal(__m, __frame + 1));
 
     call __t10 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
@@ -3266,11 +3266,11 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
 
     call Vector_push_back(IntegerType(), __t10, GetLocal(__m, __frame + 11));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 34, 12284);
+      assume $DebugTrackAbort(1, 34, 12283);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 34, 0, 12284, GetLocal(__m, __frame + 0));
-    assume $DebugTrackLocal(1, 34, 1, 12284, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(1, 34, 0, 12283, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 34, 1, 12283, GetLocal(__m, __frame + 1));
 
     call __t12 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
@@ -3279,11 +3279,11 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
 
     call Vector_push_back(IntegerType(), __t12, GetLocal(__m, __frame + 13));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 34, 12328);
+      assume $DebugTrackAbort(1, 34, 12327);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 34, 0, 12328, GetLocal(__m, __frame + 0));
-    assume $DebugTrackLocal(1, 34, 1, 12328, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(1, 34, 0, 12327, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 34, 1, 12327, GetLocal(__m, __frame + 1));
 
     call __t14 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
@@ -3292,11 +3292,11 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
 
     call Vector_push_back(IntegerType(), __t14, GetLocal(__m, __frame + 15));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 34, 12372);
+      assume $DebugTrackAbort(1, 34, 12371);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 34, 0, 12372, GetLocal(__m, __frame + 0));
-    assume $DebugTrackLocal(1, 34, 1, 12372, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(1, 34, 0, 12371, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 34, 1, 12371, GetLocal(__m, __frame + 1));
 
     call __t16 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
@@ -3305,11 +3305,11 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
 
     call Vector_push_back(IntegerType(), __t16, GetLocal(__m, __frame + 17));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 34, 12416);
+      assume $DebugTrackAbort(1, 34, 12415);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 34, 0, 12416, GetLocal(__m, __frame + 0));
-    assume $DebugTrackLocal(1, 34, 1, 12416, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(1, 34, 0, 12415, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 34, 1, 12415, GetLocal(__m, __frame + 1));
 
     call __t18 := BorrowLoc(__frame + 1, Vector_T_type_value(IntegerType()));
 
@@ -3318,11 +3318,11 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
 
     call Vector_push_back(IntegerType(), __t18, GetLocal(__m, __frame + 19));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 34, 12460);
+      assume $DebugTrackAbort(1, 34, 12459);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 34, 0, 12460, GetLocal(__m, __frame + 0));
-    assume $DebugTrackLocal(1, 34, 1, 12460, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(1, 34, 0, 12459, GetLocal(__m, __frame + 0));
+    assume $DebugTrackLocal(1, 34, 1, 12459, GetLocal(__m, __frame + 1));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 20, __tmp);
@@ -3331,9 +3331,9 @@ ensures b#Boolean(Boolean(IsEqual(slice_vector(__ret1, i#Integer(Integer(1)), i#
     __m := UpdateLocal(__m, __frame + 21, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 20);
-    assume $DebugTrackLocal(1, 34, 2, 12504, __ret0);
+    assume $DebugTrackLocal(1, 34, 2, 12503, __ret0);
     __ret1 := GetLocal(__m, __frame + 21);
-    assume $DebugTrackLocal(1, 34, 3, 12504, __ret1);
+    assume $DebugTrackLocal(1, 34, 3, 12503, __ret1);
     return;
 
 Label_Abort:
@@ -3376,10 +3376,10 @@ ensures old(b#Boolean(Boolean(IsEqual(e, Integer(9223372036854775807))))) ==> __
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 35, 0, 12594, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 35, 0, 12593, Dereference(__m, v));
     assume IsValidU64(e);
     __m := UpdateLocal(__m, __frame + 1, e);
-    assume $DebugTrackLocal(1, 35, 1, 12594, e);
+    assume $DebugTrackLocal(1, 35, 1, 12593, e);
 
     // increase the local counter
     __local_counter := __local_counter + 8;
@@ -3393,14 +3393,14 @@ ensures old(b#Boolean(Boolean(IsEqual(e, Integer(9223372036854775807))))) ==> __
 
     call __tmp := AddU64(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 35, 12798);
+      assume $DebugTrackAbort(1, 35, 12797);
       goto Label_Abort;
     }
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    assume $DebugTrackLocal(1, 35, 2, 12794, __tmp);
+    assume $DebugTrackLocal(1, 35, 2, 12793, __tmp);
 
     call __t6 := CopyOrMoveRef(v);
 
@@ -3409,11 +3409,11 @@ ensures old(b#Boolean(Boolean(IsEqual(e, Integer(9223372036854775807))))) ==> __
 
     call Vector_push_back(IntegerType(), __t6, GetLocal(__m, __frame + 7));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 35, 12819);
+      assume $DebugTrackAbort(1, 35, 12818);
       goto Label_Abort;
     }
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 35, 0, 12819, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 35, 0, 12818, Dereference(__m, v));
 
     return;
 
@@ -3457,10 +3457,10 @@ ensures old(b#Boolean(Boolean(IsEqual(e, Integer(9223372036854775807))))) ==> __
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 36, 0, 12904, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 36, 0, 12903, Dereference(__m, v));
     assume IsValidU64(e);
     __m := UpdateLocal(__m, __frame + 1, e);
-    assume $DebugTrackLocal(1, 36, 1, 12904, e);
+    assume $DebugTrackLocal(1, 36, 1, 12903, e);
 
     // increase the local counter
     __local_counter := __local_counter + 8;
@@ -3476,18 +3476,18 @@ ensures old(b#Boolean(Boolean(IsEqual(e, Integer(9223372036854775807))))) ==> __
 
     call __tmp := AddU64(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 36, 13181);
+      assume $DebugTrackAbort(1, 36, 13180);
       goto Label_Abort;
     }
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call Vector_push_back(IntegerType(), __t2, GetLocal(__m, __frame + 5));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 36, 13150);
+      assume $DebugTrackAbort(1, 36, 13149);
       goto Label_Abort;
     }
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 36, 0, 13150, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 36, 0, 13149, Dereference(__m, v));
 
     call __t6 := CopyOrMoveRef(v);
 
@@ -3496,11 +3496,11 @@ ensures old(b#Boolean(Boolean(IsEqual(e, Integer(9223372036854775807))))) ==> __
 
     call Vector_push_back(IntegerType(), __t6, GetLocal(__m, __frame + 7));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 36, 13201);
+      assume $DebugTrackAbort(1, 36, 13200);
       goto Label_Abort;
     }
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 36, 0, 13201, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 36, 0, 13200, Dereference(__m, v));
 
     return;
 
@@ -3536,10 +3536,10 @@ ensures b#Boolean(Boolean(IsEqual(old(Dereference(__m, v)), slice_vector(Derefer
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 37, 0, 13335, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 37, 0, 13334, Dereference(__m, v));
     assume IsValidU64(e);
     __m := UpdateLocal(__m, __frame + 1, e);
-    assume $DebugTrackLocal(1, 37, 1, 13335, e);
+    assume $DebugTrackLocal(1, 37, 1, 13334, e);
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -3552,11 +3552,11 @@ ensures b#Boolean(Boolean(IsEqual(old(Dereference(__m, v)), slice_vector(Derefer
 
     call Vector_push_back(IntegerType(), __t2, GetLocal(__m, __frame + 3));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 37, 13510);
+      assume $DebugTrackAbort(1, 37, 13509);
       goto Label_Abort;
     }
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 37, 0, 13510, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 37, 0, 13509, Dereference(__m, v));
 
     return;
 
@@ -3592,9 +3592,9 @@ ensures b#Boolean(Boolean(IsEqual(old(Dereference(__m, v)), slice_vector(Derefer
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 38, 0, 13619, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 38, 0, 13618, Dereference(__m, v));
     __m := UpdateLocal(__m, __frame + 1, e);
-    assume $DebugTrackLocal(1, 38, 1, 13619, e);
+    assume $DebugTrackLocal(1, 38, 1, 13618, e);
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -3607,11 +3607,11 @@ ensures b#Boolean(Boolean(IsEqual(old(Dereference(__m, v)), slice_vector(Derefer
 
     call Vector_push_back(tv0, __t2, GetLocal(__m, __frame + 3));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 38, 13811);
+      assume $DebugTrackAbort(1, 38, 13810);
       goto Label_Abort;
     }
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 38, 0, 13811, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 38, 0, 13810, Dereference(__m, v));
 
     return;
 
@@ -3650,7 +3650,7 @@ ensures old(b#Boolean(Boolean(IsEqual(Integer(vlen(Dereference(__m, v))), Intege
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 39, 0, 13949, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 39, 0, 13948, Dereference(__m, v));
 
     // increase the local counter
     __local_counter := __local_counter + 3;
@@ -3660,17 +3660,17 @@ ensures old(b#Boolean(Boolean(IsEqual(Integer(vlen(Dereference(__m, v))), Intege
 
     call __t2 := Vector_pop_back(IntegerType(), __t1);
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 39, 14161);
+      assume $DebugTrackAbort(1, 39, 14160);
       goto Label_Abort;
     }
     assume IsValidU64(__t2);
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 39, 0, 14161, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 39, 0, 14160, Dereference(__m, v));
 
     __ret0 := GetLocal(__m, __frame + 2);
-    assume $DebugTrackLocal(1, 39, 1, 14154, __ret0);
+    assume $DebugTrackLocal(1, 39, 1, 14153, __ret0);
     return;
 
 Label_Abort:
@@ -3709,7 +3709,7 @@ ensures old(b#Boolean(Boolean(IsEqual(Integer(vlen(Dereference(__m, v))), Intege
     // process and type check arguments
     assume $Vector_T_is_well_formed(Dereference(__m, v)) && IsValidReferenceParameter(__m, __local_counter, v);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 40, 0, 14244, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 40, 0, 14243, Dereference(__m, v));
 
     // increase the local counter
     __local_counter := __local_counter + 3;
@@ -3719,16 +3719,16 @@ ensures old(b#Boolean(Boolean(IsEqual(Integer(vlen(Dereference(__m, v))), Intege
 
     call __t2 := Vector_pop_back(tv0, __t1);
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 40, 14474);
+      assume $DebugTrackAbort(1, 40, 14472);
       goto Label_Abort;
     }
 
     __m := UpdateLocal(__m, __frame + 2, __t2);
     assume $Vector_T_is_well_formed(Dereference(__m, v));
-    assume $DebugTrackLocal(1, 40, 0, 14474, Dereference(__m, v));
+    assume $DebugTrackLocal(1, 40, 0, 14472, Dereference(__m, v));
 
     __ret0 := GetLocal(__m, __frame + 2);
-    assume $DebugTrackLocal(1, 40, 1, 14467, __ret0);
+    assume $DebugTrackLocal(1, 40, 1, 14465, __ret0);
     return;
 
 Label_Abort:

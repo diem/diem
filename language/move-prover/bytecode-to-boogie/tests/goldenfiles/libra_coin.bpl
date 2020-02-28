@@ -207,7 +207,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraCoin_MarketCa
     // bytecode translation starts here
     call __t4 := CopyOrMoveRef(capability);
 
-    // unimplemented instruction: NoOp
+    // unimplemented instruction: Pop(4)
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 5, __tmp);

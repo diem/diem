@@ -45,7 +45,7 @@ fn transform_code_with_refs() {
         FreezeRef(10, 9),
         StLoc(4, 10),
         MoveLoc(11, 4),
-        NoOp,
+        Pop(11),
         MoveLoc(12, 3),
         ReadRef(13, 12),
         Ret(vec![13]),
@@ -578,7 +578,7 @@ fn transform_program_with_generics() {
         BorrowField(5, 4, FieldDefinitionIndex::new(0)),
         StLoc(2, 5),
         MoveLoc(6, 2),
-        NoOp,
+        Pop(6),
         MoveLoc(7, 0),
         Unpack(
             vec![8],

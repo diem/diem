@@ -208,12 +208,12 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(__ret0, TestInvariants_T_i), Integ
     call WriteRef(__t7, GetLocal(__m, __frame + 6));
     assume $DebugTrackLocal(0, 2, 0, 1005, GetLocal(__m, __frame + 0));
 
+    call $TestInvariants_T_update_inv(__before_borrow_0, Dereference(__m, __before_borrow_0_ref));
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 8);
     assume $DebugTrackLocal(0, 2, 2, 1030, __ret0);
-    call $TestInvariants_T_update_inv(__before_borrow_0, Dereference(__m, __before_borrow_0_ref));
     return;
 
 Label_Abort:
@@ -288,12 +288,12 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(__ret0, TestInvariants_T_i), Integ
     call WriteRef(__t7, GetLocal(__m, __frame + 6));
     assume $DebugTrackLocal(0, 3, 0, 1209, GetLocal(__m, __frame + 0));
 
+    call $TestInvariants_T_update_inv(__before_borrow_0, Dereference(__m, __before_borrow_0_ref));
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 8);
     assume $DebugTrackLocal(0, 3, 2, 1234, __ret0);
-    call $TestInvariants_T_update_inv(__before_borrow_0, Dereference(__m, __before_borrow_0_ref));
     return;
 
 Label_Abort:
@@ -367,12 +367,12 @@ ensures b#Boolean(Boolean(IsEqual(SelectField(__ret0, TestInvariants_T_i), Integ
     call WriteRef(__t7, GetLocal(__m, __frame + 5));
     assume $DebugTrackLocal(0, 4, 0, 1424, GetLocal(__m, __frame + 0));
 
+    call $TestInvariants_T_update_inv(__before_borrow_0, Dereference(__m, __before_borrow_0_ref));
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 8);
     assume $DebugTrackLocal(0, 4, 2, 1451, __ret0);
-    call $TestInvariants_T_update_inv(__before_borrow_0, Dereference(__m, __before_borrow_0_ref));
     return;
 
 Label_Abort:

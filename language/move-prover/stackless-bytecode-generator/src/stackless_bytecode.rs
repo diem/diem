@@ -106,7 +106,7 @@ pub enum StacklessBytecode {
     BrFalse(CodeOffset, TempIndex), // if(!t) goto code_offset
 
     Abort(TempIndex), // abort t
-    NoOp,
+    Pop(TempIndex),
 }
 
 impl StacklessBytecode {

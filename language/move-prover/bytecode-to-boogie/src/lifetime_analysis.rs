@@ -60,7 +60,12 @@ impl BorrowGraph {
     /// Mark a local as moved. Notice that moving the local doesn't mean
     /// it's dead and can be removed
     pub fn move_local(&mut self, local: LocalIndex) {
-        self.moved_locals.insert(local);
+        let node = Node::Local(local);
+
+        // Only mark local if it actually exists in the graph
+        if self.graph.contains_key(&node) || self.reverse_graph.contains_key(&node) {
+            self.moved_locals.insert(local);
+        }
     }
 
     /// Replace all appearances of before with after in the graph
@@ -82,6 +87,28 @@ impl BorrowGraph {
                 });
             }
             self.reverse_graph.insert(after, from_neighbors);
+        }
+    }
+
+    /// Copy all appearances of src to dest in the graph
+    pub fn copy_local(&mut self, dest: Node, src: Node) {
+        if self.graph.contains_key(&src) {
+            let to_neighbors = self.graph[&src].clone();
+            for to in &to_neighbors {
+                self.reverse_graph.entry(*to).and_modify(|e| {
+                    e.insert(dest);
+                });
+            }
+            self.graph.insert(dest, to_neighbors);
+        }
+        if self.reverse_graph.contains_key(&src) {
+            let from_neighbors = self.reverse_graph[&src].clone();
+            for from in &from_neighbors {
+                self.graph.entry(*from).and_modify(|e| {
+                    e.insert(dest);
+                });
+            }
+            self.reverse_graph.insert(dest, from_neighbors);
         }
     }
 
@@ -163,8 +190,8 @@ impl BorrowGraph {
     }
 }
 
-pub struct LifetimeAnalysis {
-    local_types: Vec<SignatureToken>,
+pub struct LifetimeAnalysis<'a> {
+    local_types: &'a [SignatureToken],
 }
 
 #[derive(Clone, Debug)]
@@ -209,11 +236,11 @@ impl AbstractDomain for LifetimeState {
     }
 }
 
-impl LifetimeAnalysis {
+impl<'a> LifetimeAnalysis<'a> {
     pub fn analyze(
         cfg: &StacklessControlFlowGraph,
         instrs: &[StacklessBytecode],
-        local_types: Vec<SignatureToken>,
+        local_types: &'a [SignatureToken],
     ) -> BTreeMap<CodeOffset, BTreeSet<LocalIndex>> {
         let mut analyzer = Self { local_types };
         let initial_state = LifetimeState {
@@ -236,7 +263,7 @@ impl LifetimeAnalysis {
     }
 }
 
-impl TransferFunctions for LifetimeAnalysis {
+impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
     type InstrType = StacklessBytecode;
     type State = LifetimeState;
 
@@ -256,9 +283,16 @@ impl TransferFunctions for LifetimeAnalysis {
                         .replace_local(Node::Local(*l), Node::Local(*t as LocalIndex));
                 }
             }
+            CopyLoc(t, l) => {
+                if self.local_types[*t].is_mutable_reference() {
+                    after_state
+                        .borrow_graph
+                        .copy_local(Node::Local(*l), Node::Local(*t as LocalIndex));
+                }
+            }
             StLoc(l, t) => {
                 if self.local_types[*t].is_mutable_reference() {
-                    after_state.borrow_graph.remove_node(Node::Local(*l));
+                    after_state.borrow_graph.move_local(*l);
                     after_state
                         .borrow_graph
                         .replace_local(Node::Local(*t as LocalIndex), Node::Local(*l));
@@ -318,6 +352,9 @@ impl TransferFunctions for LifetimeAnalysis {
                     }
                 }
             }
+            Pop(t) => {
+                after_state.borrow_graph.move_local(*t as LocalIndex);
+            }
             _ => {
                 // Other instructions don't deal with mutable references
             }
@@ -331,4 +368,4 @@ impl TransferFunctions for LifetimeAnalysis {
     }
 }
 
-impl DataflowAnalysis for LifetimeAnalysis {}
+impl<'a> DataflowAnalysis for LifetimeAnalysis<'a> {}
