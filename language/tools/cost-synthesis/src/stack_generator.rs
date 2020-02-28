@@ -32,7 +32,7 @@ use vm::{
 };
 use vm_runtime::{
     chain_state::SystemExecutionContext, interpreter::InterpreterForCostSynthesis,
-    loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
+    loaded_data::loaded_module::LoadedModule, move_vm::MoveVM,
 };
 
 /// Specifies the data to be applied to the execution stack for the next valid stack state.
@@ -82,10 +82,7 @@ impl<'txn> StackState<'txn> {
 
 /// A wrapper around the instruction being synthesized. Holds the internal state that is
 /// used to generate random valid stack states.
-pub struct RandomStackGenerator<'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
+pub struct RandomStackGenerator<'txn> {
     /// The account address that all resources will be published under
     account_address: &'txn AccountAddress,
 
@@ -102,9 +99,9 @@ where
     /// root module that has pointers to all other modules.
     root_module: &'txn LoadedModule,
 
-    /// The VMRuntime, It contains all of the modules in the universe and used for
+    /// The MoveVM instance, It contains all of the modules in the universe and used for
     /// runtime and loading operations.
-    runtime: &'txn VMRuntime<'alloc>,
+    move_vm: &'txn MoveVM,
 
     /// Context for resolution
     ctx: SystemExecutionContext<'txn>,
@@ -133,10 +130,7 @@ where
     table_size: u16,
 }
 
-impl<'alloc, 'txn> RandomStackGenerator<'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
+impl<'txn> RandomStackGenerator<'txn> {
     /// Create a new random stack state generator.
     ///
     /// It initializes each of the internal resolution tables for structs and function handles to
@@ -144,7 +138,7 @@ where
     pub fn new(
         account_address: &'txn AccountAddress,
         root_module: &'txn LoadedModule,
-        runtime: &'txn VMRuntime<'alloc>,
+        move_vm: &'txn MoveVM,
         ctx: SystemExecutionContext<'txn>,
         op: &Bytecode,
         max_stack_size: u64,
@@ -157,7 +151,7 @@ where
             account_address,
             max_stack_size,
             root_module,
-            runtime,
+            move_vm,
             ctx,
             iters,
             table_size: iters,
@@ -414,7 +408,7 @@ where
         let module_handle = self.root_module.module_handle_at(struct_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
-            .runtime
+            .move_vm
             .get_loaded_module(&module_id, &self.ctx)
             .expect("[Module Lookup] Runtime error while looking up module");
         let struct_def_idx = self
@@ -459,7 +453,7 @@ where
         let module_handle = self.root_module.module_handle_at(function_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
-            .runtime
+            .move_vm
             .get_loaded_module(&module_id, &self.ctx)
             .expect("[Module Lookup] Runtime error while looking up module");
         let function_def_idx = *self
@@ -848,7 +842,7 @@ where
         interp: &mut InterpreterForCostSynthesis<'txn>,
         code: &[Bytecode],
     ) -> VMResult<()> {
-        interp.execute_code_snippet(self.runtime, &mut self.ctx, code)
+        interp.execute_code_snippet(self.move_vm, &mut self.ctx, code)
     }
 
     /// Applies the `stack_state` to the VM's execution stack.

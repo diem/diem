@@ -18,13 +18,11 @@ use vm::{
     },
 };
 use vm_runtime::chain_state::SystemExecutionContext;
-use vm_runtime::{loaded_data::loaded_module::LoadedModule, runtime::VMRuntime};
+use vm_runtime::loaded_data::loaded_module::LoadedModule;
+use vm_runtime::move_vm::MoveVM;
 
 /// A wrapper around state that is used to generate random valid inhabitants for types.
-pub struct RandomInhabitor<'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
+pub struct RandomInhabitor<'txn> {
     /// The source of pseudo-randomness.
     gen: StdRng,
 
@@ -34,9 +32,9 @@ where
     /// root module that has pointers to all other modules.
     root_module: &'txn LoadedModule,
 
-    /// The VMRuntime for all the modules in the universe. We need this in order to
+    /// The Move VM for all the modules in the universe. We need this in order to
     /// resolve struct and function handles to other modules other then the root module.
-    runtime: &'txn VMRuntime<'alloc>,
+    move_vm: &'txn MoveVM,
 
     /// Context for resolution
     ctx: &'txn SystemExecutionContext<'txn>,
@@ -46,24 +44,21 @@ where
     struct_handle_table: HashMap<ModuleId, HashMap<Identifier, StructDefinitionIndex>>,
 }
 
-impl<'alloc, 'txn> RandomInhabitor<'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
+impl<'txn> RandomInhabitor<'txn> {
     /// Create a new random type inhabitor.
     ///
     /// It initializes each of the internal resolution tables for structs and function handles to
     /// be empty.
     pub fn new(
         root_module: &'txn LoadedModule,
-        runtime: &'txn VMRuntime<'alloc>,
+        move_vm: &'txn MoveVM,
         ctx: &'txn SystemExecutionContext<'txn>,
     ) -> Self {
         let seed: [u8; 32] = [0; 32];
         Self {
             gen: StdRng::from_seed(seed),
             root_module,
-            runtime,
+            move_vm,
             ctx,
             struct_handle_table: HashMap::new(),
         }
@@ -115,7 +110,7 @@ where
         let module_handle = self.root_module.module_handle_at(struct_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
-            .runtime
+            .move_vm
             .get_loaded_module(&module_id, self.ctx)
             .expect("[Module Lookup] Runtime error while looking up module");
         let struct_def_idx = self

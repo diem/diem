@@ -18,7 +18,6 @@ bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 utils = { path = "../utils", version = "0.1.0" }
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
-move-vm-cache = { path = "../../move-vm/cache", version = "0.1.0" }
 move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 vm-runtime = { path = "../../vm/vm-runtime", version = "0.1.0" }
