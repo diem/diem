@@ -70,4 +70,10 @@ pub trait Storage: Send + Sync {
             _ => Err(Error::UnexpectedValueType),
         }
     }
+
+    /// Resets and clears all data held in the storage engine.
+    /// Note: this should only be exposed and used for testing. Resetting the storage engine is not
+    /// something that should be supported in production.
+    #[cfg(test)]
+    fn reset_and_clear(&mut self) -> Result<(), Error>;
 }

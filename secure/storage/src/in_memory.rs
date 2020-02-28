@@ -62,4 +62,10 @@ impl Storage for InMemoryStorage {
         self.data.insert(key.to_string(), value);
         Ok(())
     }
+
+    #[cfg(test)]
+    fn reset_and_clear(&mut self) -> Result<(), Error> {
+        self.data.clear();
+        Ok(())
+    }
 }
