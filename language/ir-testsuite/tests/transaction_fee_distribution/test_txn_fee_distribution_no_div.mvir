@@ -1,13 +1,35 @@
 // Number of validators doesn't evenly divide the transaction fees collected
 
+//! account: alice, 1000000, 0
 //! account: vivian, 1000000, 0, validator
 //! account: valentina, 1000000, 0, validator
+
 //! sender: vivian
+module BalanceHolder {
+    import 0x0.Vector;
+
+    resource T {
+        balances: vector<u64>,
+    }
+
+    public publish(balances: vector<u64>) {
+        move_to_sender<T>(T { balances: move(balances) });
+        return;
+    }
+
+    public get_balance(i: u64): u64 acquires T {
+        return *Vector.borrow<u64>(&borrow_global<T>(get_txn_sender()).balances, copy(i));
+    }
+}
+
+//! new-transaction
+//! sender: alice
 
 import 0x0.LibraSystem;
 import 0x0.LibraAccount;
 import 0x0.LibraCoin;
 import 0x0.Vector;
+import {{vivian}}.BalanceHolder;
 
 main() {
   let lib_coin: LibraCoin.T;
@@ -15,8 +37,6 @@ main() {
   let index: u64;
   let addr: address;
   let balances: vector<u64>;
-  let old_balance: u64;
-  let new_balance: u64;
 
   index = 0;
   balances = Vector.empty<u64>();
@@ -41,14 +61,39 @@ main() {
   index = 0;
 
   LibraAccount.deposit({{fees}} , move(lib_coin));
-  LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
+  BalanceHolder.publish(move(balances));
+  return;
+}
+//! check:  gas_used: 79382
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 1
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraSystem;
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+import 0x0.Vector;
+import {{vivian}}.BalanceHolder;
+
+main() {
+  let addr: address;
+  let index: u64;
+  let number_of_validators: u64;
+  let old_balance: u64;
+  let new_balance: u64;
+
+  index = 0;
+  number_of_validators = LibraSystem.validator_set_size();
 
   while (copy(index) < copy(number_of_validators)) {
      addr = LibraSystem.get_ith_validator_address(copy(index));
      new_balance = LibraAccount.balance(move(addr));
-     old_balance = *Vector.borrow<u64>(&balances, copy(index));
+     old_balance = BalanceHolder.get_balance(copy(index));
      index = move(index) + 1;
-     assert(move(new_balance) == (move(old_balance) + 10), 1);
+     assert(move(new_balance) == (move(old_balance) + 10 + 79382 / copy(number_of_validators)), 1);
   }
 
   // The remainder in 0xFEE's balance must be less than the number of validators.

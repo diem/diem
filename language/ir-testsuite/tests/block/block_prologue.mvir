@@ -24,3 +24,28 @@ main() {
     assert(LibraTimestamp.now_microseconds() != 2000000, 77);
     return;
 }
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
+
+main() {
+    LibraSystem.block_prologue(10, h"aa", h"bb", {{vivian}});
+
+    return;
+}
+// check: ABORTED
+// check: 33
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraTimestamp;
+
+main() {
+    LibraTimestamp.update_global_time({{vivian}}, 20);
+
+    return;
+}
+// check: ABORTED
+// check: 33

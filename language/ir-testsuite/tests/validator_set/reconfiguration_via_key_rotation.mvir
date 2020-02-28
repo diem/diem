@@ -30,17 +30,12 @@ main() {
 // check: events: []
 // check: EXECUTED
 
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-
 // Run the block prologue. No reconfiguration should be triggered,
 // since alice is not a validator
-// TODO: trigger a BlockMetadata transaction here instead
-main() {
-    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
-    return;
-}
+//! block-prologue
+//! proposer: vivian
+//! block-time: 1
+
 // not: ValidatorSetChangeEvent
 // not: DiscoverySetChangeEvent
 // check: EXECUTED
@@ -58,12 +53,17 @@ main() {
     // check that the validator set contains Vivian's old key before reconfiguration
     info = LibraSystem.get_ith_validator_info(1);
     assert(*LibraSystem.get_consensus_pubkey(&info) != h"40", 98);
-    LibraSystem.block_prologue(2, h"aa", h"bb", {{vivian}});
+    return;
+}
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 2
+
+main() {
     // check that the validator set contains Vivian's new key after reconfiguration
     info = LibraSystem.get_ith_validator_info(1);
     assert(*LibraSystem.get_consensus_pubkey(&info) == h"40", 99);
-
-    return;
 }
 
 // check: ValidatorSetChangeEvent
@@ -79,10 +79,13 @@ import 0x0.ValidatorConfig;
 // ValidatorSetChange event.
 main() {
     ValidatorConfig.rotate_consensus_pubkey(h"40");
-    LibraSystem.block_prologue(3, h"aa", h"bb", {{vivian}});
 
     return;
 }
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 3
 
 // not: ValidatorSetChangeEvent
 // not: DiscoverySetChangeEvent
@@ -116,6 +119,10 @@ main() {
 // check: events: []
 // check: EXECUTED
 
+//! block-prologue
+//! proposer: vivian
+//! block-time: 4
+
 //! new-transaction
 //! sender: vivian
 import 0x0.LibraSystem;
@@ -125,7 +132,6 @@ import 0x0.ValidatorConfig;
 main() {
     let info: LibraSystem.ValidatorInfo;
 
-    LibraSystem.block_prologue(4, h"aa", h"bb", {{vivian}});
     // check that the validator set contains Viola's new key
     info = LibraSystem.get_ith_validator_info(0);
     assert(*LibraSystem.get_validator_address(&info) == {{viola}}, 14);

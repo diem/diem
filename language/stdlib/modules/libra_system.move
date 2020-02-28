@@ -163,6 +163,9 @@ module LibraSystem {
         previous_block_votes: vector<u8>,
         proposer: address
     ) acquires BlockMetadata, ValidatorSet, DiscoverySet, TransactionFees {
+      // Can only be invoked by LibraVM privilege.
+      Transaction::assert(Transaction::sender() == 0x0, 33);
+
       process_block_prologue(timestamp, new_block_hash, previous_block_votes, proposer);
 
       // Currently distribute once per-block.
