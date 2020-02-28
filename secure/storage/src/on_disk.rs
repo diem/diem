@@ -84,4 +84,9 @@ impl Storage for OnDiskStorage {
         data.insert(key.to_string(), value);
         self.write(&data)
     }
+
+    #[cfg(test)]
+    fn reset_and_clear(&mut self) -> Result<(), Error> {
+        self.write(&HashMap::new())
+    }
 }

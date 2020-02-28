@@ -105,4 +105,9 @@ impl Storage for VaultStorage {
         self.set_secret(&key, value)?;
         Ok(())
     }
+
+    #[cfg(test)]
+    fn reset_and_clear(&mut self) -> Result<(), Error> {
+        self.reset()
+    }
 }
