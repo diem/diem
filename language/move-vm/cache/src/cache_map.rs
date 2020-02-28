@@ -4,8 +4,12 @@
 #![forbid(unsafe_code)]
 
 use crate::Arena;
-use chashmap::CHashMap;
-use std::{borrow::Borrow, hash::Hash};
+use std::{
+    borrow::Borrow,
+    collections::hash_map::{Entry, HashMap},
+    hash::Hash,
+    sync::Mutex,
+};
 
 /// The most common case of `CacheMap`, where references to stored values are handed out.
 pub type CacheRefMap<'a, K, V> = CacheMap<'a, K, V, &'a V>;
@@ -17,32 +21,35 @@ pub type CacheRefMap<'a, K, V> = CacheMap<'a, K, V, &'a V>;
 /// TODO: Entry-like API? Current one is somewhat awkward to use.
 /// TODO: eviction -- how to do it safely?
 /// TODO: should the map own the arena?
+/// TODO: Mutex<HashMap> maybe need to be a smarter datastructure if it
+/// affects benchmarking
 pub struct CacheMap<'a, K, V, W> {
     alloc: &'a Arena<V>,
-    map: CHashMap<K, W>,
+    map: Mutex<HashMap<K, W>>,
 }
 
 impl<'a, K, V, W> CacheMap<'a, K, V, W>
 where
-    K: Hash + PartialEq,
+    K: Eq + Hash,
     W: Clone,
 {
     #[inline]
     pub fn new(alloc: &'a Arena<V>) -> Self {
         Self {
             alloc,
-            map: CHashMap::new(),
+            map: Mutex::new(HashMap::new()),
         }
     }
 
     /// Get the value of the given key in the map.
     #[inline]
-    pub fn get<Q: ?Sized>(&self, key: &Q) -> Option<W>
+    pub fn get<Q: Eq + ?Sized>(&self, key: &Q) -> Option<W>
     where
         K: Borrow<Q>,
         Q: Hash + PartialEq,
     {
-        self.map.get(key).map(|value| (*value).clone())
+        let map = self.map.lock().unwrap();
+        map.get(key).map(|value| (*value).clone())
     }
 
     /// Try inserting the value V if missing. The insert function is not called if the value is
@@ -59,18 +66,13 @@ where
     {
         let mut ret: Option<W> = None;
         let ret_mut = &mut ret;
-        self.map.alter(key, move |value| match value {
-            Some(value) => {
-                ret_mut.replace(value.clone());
-                Some(value)
-            }
-            None => {
-                let alloc_value: &'a V = self.alloc.alloc(insert());
-                let value = transform(alloc_value);
-                ret_mut.replace(value.clone());
-                Some(value)
-            }
+        let alloc = self.alloc;
+        let mut map = self.map.lock().unwrap();
+        let value = map.entry(key).or_insert_with(|| {
+            let alloc_value: &'a V = alloc.alloc(insert());
+            transform(alloc_value)
         });
+        ret_mut.replace(value.clone());
         ret.expect("return value should always be initialized")
     }
 
@@ -88,29 +90,22 @@ where
     {
         let mut ret: Option<Result<W, E>> = None;
         let ret_mut = &mut ret;
-        self.map.alter(key, move |value| match value {
-            Some(value) => {
-                ret_mut.replace(Ok(value.clone()));
-                Some(value)
-            }
-            None => {
+        let mut map = self.map.lock().unwrap();
+        let value = match map.entry(key) {
+            Entry::Occupied(oe) => Ok(oe.get().clone()),
+            Entry::Vacant(ve) => {
                 let alloc_value: &'a V = self.alloc.alloc(insert());
-                let res = try_transform(alloc_value);
-                let (cloned_res, stored_value) = match res {
-                    Ok(value) => (Ok(value.clone()), Some(value)),
-                    Err(err) => (Err(err), None),
-                };
-                ret_mut.replace(cloned_res);
-                stored_value
+                try_transform(alloc_value).and_then(|v| Ok(ve.insert(v).clone()))
             }
-        });
+        };
+        ret_mut.replace(value);
         ret.expect("return value should always be initialized")
     }
 }
 
 impl<'a, K, V> CacheRefMap<'a, K, V>
 where
-    K: Hash + PartialEq,
+    K: Eq + Hash,
 {
     /// Insert the value if not present. Discard the value if present.
     ///
