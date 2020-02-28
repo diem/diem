@@ -523,9 +523,9 @@ where
         let mut next_validator_set = None;
 
         let proof_reader = ProofReader::new(account_to_proof);
-        let mut validator_set_change_seen = false;
+        let validator_set_change_event_key = ValidatorSet::change_event_key();
         for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
-            if validator_set_change_seen {
+            if next_validator_set.is_some() {
                 txn_data.push(TransactionData::new(
                     HashMap::new(),
                     vec![],
@@ -536,80 +536,75 @@ where
                     0,
                     None,
                 ));
-            } else {
-                let (blobs, state_tree, num_accounts_created) = Self::process_write_set(
-                    txn,
-                    &mut account_to_state,
-                    &proof_reader,
-                    vm_output.write_set().clone(),
-                    &current_state_tree,
-                )?;
-
-                let event_tree = {
-                    let event_hashes: Vec<_> =
-                        vm_output.events().iter().map(CryptoHash::hash).collect();
-                    InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes)
-                };
-                let mut txn_info_hash = None;
-
-                match vm_output.status() {
-                    TransactionStatus::Keep(status) => {
-                        ensure!(
-                            !vm_output.write_set().is_empty(),
-                            "Transaction with empty write set should be discarded.",
-                        );
-                        // Compute hash for the TransactionInfo object. We need the hash of the
-                        // transaction itself, the state root hash as well as the event root hash.
-                        let txn_info = TransactionInfo::new(
-                            txn.hash(),
-                            state_tree.root_hash(),
-                            event_tree.root_hash(),
-                            vm_output.gas_used(),
-                            status.major_status,
-                        );
-
-                        let real_txn_info_hash = txn_info.hash();
-                        txn_info_hashes.push(real_txn_info_hash);
-                        txn_info_hash = Some(real_txn_info_hash);
-                    }
-                    TransactionStatus::Discard(status) => {
-                        if !vm_output.write_set().is_empty() || !vm_output.events().is_empty() {
-                            crit!(
-                                "Discarded transaction has non-empty write set or events. \
-                                 Transaction: {:?}. Status: {}.",
-                                txn,
-                                status,
-                            );
-                        }
-                    }
-                    TransactionStatus::Retry => (),
-                }
-
-                txn_data.push(TransactionData::new(
-                    blobs,
-                    vm_output.events().to_vec(),
-                    vm_output.status().clone(),
-                    Arc::clone(&state_tree),
-                    Arc::new(event_tree),
-                    vm_output.gas_used(),
-                    num_accounts_created,
-                    txn_info_hash,
-                ));
-                current_state_tree = state_tree;
-
-                // check for change in validator set
-                let validator_set_change_event_key = ValidatorSet::change_event_key();
-                for event in vm_output.events() {
-                    if *event.key() == validator_set_change_event_key {
-                        next_validator_set = Some(ValidatorSet::from_bytes(event.event_data())?);
-                        break;
-                    }
-                }
-
-                if next_validator_set.is_some() {
-                    validator_set_change_seen = true;
-                }
+                continue;
             }
+            let (blobs, state_tree, num_accounts_created) = Self::process_write_set(
+                txn,
+                &mut account_to_state,
+                &proof_reader,
+                vm_output.write_set().clone(),
+                &current_state_tree,
+            )?;
+
+            let event_tree = {
+                let event_hashes: Vec<_> =
+                    vm_output.events().iter().map(CryptoHash::hash).collect();
+                InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes)
+            };
+
+            let mut txn_info_hash = None;
+            match vm_output.status() {
+                TransactionStatus::Keep(status) => {
+                    ensure!(
+                        !vm_output.write_set().is_empty(),
+                        "Transaction with empty write set should be discarded.",
+                    );
+                    // Compute hash for the TransactionInfo object. We need the hash of the
+                    // transaction itself, the state root hash as well as the event root hash.
+                    let txn_info = TransactionInfo::new(
+                        txn.hash(),
+                        state_tree.root_hash(),
+                        event_tree.root_hash(),
+                        vm_output.gas_used(),
+                        status.major_status,
+                    );
+
+                    let real_txn_info_hash = txn_info.hash();
+                    txn_info_hashes.push(real_txn_info_hash);
+                    txn_info_hash = Some(real_txn_info_hash);
+                }
+                TransactionStatus::Discard(status) => {
+                    if !vm_output.write_set().is_empty() || !vm_output.events().is_empty() {
+                        crit!(
+                            "Discarded transaction has non-empty write set or events. \
+                             Transaction: {:?}. Status: {}.",
+                            txn,
+                            status,
+                        );
+                    }
+                }
+                TransactionStatus::Retry => (),
+            }
+
+            txn_data.push(TransactionData::new(
+                blobs,
+                vm_output.events().to_vec(),
+                vm_output.status().clone(),
+                Arc::clone(&state_tree),
+                Arc::new(event_tree),
+                vm_output.gas_used(),
+                num_accounts_created,
+                txn_info_hash,
+            ));
+            current_state_tree = state_tree;
+
+            // check for change in validator set
+            next_validator_set = vm_output
+                .events()
+                .iter()
+                .find(|event| *event.key() == validator_set_change_event_key)
+                .map(|event| ValidatorSet::from_bytes(event.event_data()))
+                .transpose()?
         }
 
         let current_transaction_accumulator =
