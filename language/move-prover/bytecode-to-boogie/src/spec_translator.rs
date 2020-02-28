@@ -347,7 +347,9 @@ impl<'env> SpecTranslator<'env> {
     /// Generates a procedure which asserts the update invariants of the struct.
     ///
     pub fn translate_update_invariant(&self, struct_env: &StructEnv<'env>) {
-        if struct_env.get_update_invariants().is_empty() {
+        if struct_env.get_update_invariants().is_empty()
+            && struct_env.get_data_invariants().is_empty()
+        {
             return;
         }
         emitln!(

@@ -130,8 +130,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
     pub fn generate_bytecode(&mut self, bytecode: &Bytecode) {
         match bytecode {
             Bytecode::Pop => {
-                self.temp_stack.pop();
-                self.code.push(StacklessBytecode::NoOp);
+                let temp_index = self.temp_stack.pop().unwrap();
+                self.code.push(StacklessBytecode::Pop(temp_index));
             }
             Bytecode::BrTrue(code_offset) => {
                 let temp_index = self.temp_stack.pop().unwrap();

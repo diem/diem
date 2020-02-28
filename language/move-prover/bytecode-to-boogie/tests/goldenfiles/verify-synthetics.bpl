@@ -116,6 +116,7 @@ ensures b#Boolean(Boolean(IsEqual(__TestInvariants_syn, Integer(i#Integer(Intege
     call WriteRef(__t11, GetLocal(__m, __frame + 9));
     assume $DebugTrackLocal(0, 0, 1, 658, GetLocal(__m, __frame + 1));
 
+    call $TestInvariants_T_update_inv(__before_borrow_0, Dereference(__m, __before_borrow_0_ref));
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
@@ -126,7 +127,6 @@ ensures b#Boolean(Boolean(IsEqual(__TestInvariants_syn, Integer(i#Integer(Intege
     __m := UpdateLocal(__m, __frame + 3, __tmp);
     assume $DebugTrackLocal(0, 0, 3, 687, __tmp);
 
-    call $TestInvariants_T_update_inv(__before_borrow_0, Dereference(__m, __before_borrow_0_ref));
     return;
 
 Label_Abort:
@@ -214,6 +214,7 @@ ensures b#Boolean(Boolean(IsEqual(__TestInvariants_syn, Integer(i#Integer(old(__
     call WriteRef(__t11, GetLocal(__m, __frame + 9));
     assume $DebugTrackLocal(0, 1, 1, 963, GetLocal(__m, __frame + 1));
 
+    call $TestInvariants_T_update_inv(__before_borrow_0, Dereference(__m, __before_borrow_0_ref));
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
@@ -224,7 +225,6 @@ ensures b#Boolean(Boolean(IsEqual(__TestInvariants_syn, Integer(i#Integer(old(__
     __m := UpdateLocal(__m, __frame + 3, __tmp);
     assume $DebugTrackLocal(0, 1, 3, 992, __tmp);
 
-    call $TestInvariants_T_update_inv(__before_borrow_0, Dereference(__m, __before_borrow_0_ref));
     return;
 
 Label_Abort:

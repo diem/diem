@@ -262,7 +262,7 @@ Label_8:
 
     call __t12 := CopyOrMoveRef(t_ref1);
 
-    // unimplemented instruction: NoOp
+    // unimplemented instruction: Pop(12)
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 13, __tmp);
@@ -279,7 +279,7 @@ Label_8:
 
     call __t15 := CopyOrMoveRef(t_ref2);
 
-    // unimplemented instruction: NoOp
+    // unimplemented instruction: Pop(15)
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 16, __tmp);

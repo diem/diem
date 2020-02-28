@@ -32,7 +32,7 @@ fn test_branching() {
 
                 if (move(cond)) {
                     s_ref = borrow_global_mut<S>(get_txn_sender());
-                    value_ref = &mut move(s_ref).value;
+                    value_ref = &mut copy(s_ref).value;
                 } else {
                     t_ref = borrow_global_mut<T>(get_txn_sender());
                     value_ref = &mut move(t_ref).value;
@@ -49,12 +49,13 @@ fn test_branching() {
     let cfg = StacklessControlFlowGraph::new(&instrs);
 
     // result is a map from CodeOffset to a set of references that go out of scope at that line
-    let res = LifetimeAnalysis::analyze(&cfg, &instrs, local_types);
+    let res = LifetimeAnalysis::analyze(&cfg, &instrs, &local_types);
 
     for (code_offset, dead_refs) in res {
-        // check that all three mutable references go out of scope only at the second last line
+        // Check that t_ref and value_ref go out of scope only at the second last line.
+        // Notice that s_ref is still alive aftr function returns.
         if code_offset == 17 {
-            let expected: BTreeSet<LocalIndex> = vec![7, 11, 14].iter().cloned().collect();
+            let expected: BTreeSet<LocalIndex> = vec![11, 14].iter().cloned().collect();
             assert_eq!(dead_refs, expected);
         } else {
             assert!(dead_refs.is_empty());
@@ -94,7 +95,7 @@ fn test_loop() {
     );
     let (instrs, local_types) = gen_stackless_from_mvir(code);
     let cfg = StacklessControlFlowGraph::new(&instrs);
-    let res = LifetimeAnalysis::analyze(&cfg, &instrs, local_types);
+    let res = LifetimeAnalysis::analyze(&cfg, &instrs, &local_types);
     for (code_offset, dead_refs) in res {
         // check that all three mutable references go out of scope only at WriteRef
         if code_offset == 15 {
@@ -137,7 +138,7 @@ fn test_borrowloc_call() {
 
     let (instrs, local_types) = gen_stackless_from_mvir(code);
     let cfg = StacklessControlFlowGraph::new(&instrs);
-    let res = LifetimeAnalysis::analyze(&cfg, &instrs, local_types);
+    let res = LifetimeAnalysis::analyze(&cfg, &instrs, &local_types);
     for (code_offset, dead_refs) in res {
         // check that all three mutable references go out of scope only at WriteRef
         if code_offset == 10 {

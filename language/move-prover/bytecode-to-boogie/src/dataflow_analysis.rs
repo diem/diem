@@ -8,7 +8,7 @@ use bytecode_verifier::{
     absint::{AbstractDomain, JoinResult},
     control_flow_graph::{BlockId, ControlFlowGraph},
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use vm::file_format::CodeOffset;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -42,7 +42,8 @@ pub trait DataflowAnalysis: TransferFunctions {
     ) -> StateMap<Self::State> {
         let mut state_map: StateMap<Self::State> = StateMap::new();
         let entry_block_id = cfg.entry_block_id();
-        let mut work_list = vec![entry_block_id];
+        let mut work_list = VecDeque::new();
+        work_list.push_back(entry_block_id);
         state_map.insert(
             entry_block_id,
             BlockState {
@@ -51,7 +52,7 @@ pub trait DataflowAnalysis: TransferFunctions {
             },
         );
 
-        while let Some(block_id) = work_list.pop() {
+        while let Some(block_id) = work_list.pop_front() {
             let block_res = state_map
                 .get_mut(&block_id)
                 .unwrap_or_else(|| panic!("Missing result for block {}", block_id));
@@ -73,7 +74,7 @@ pub trait DataflowAnalysis: TransferFunctions {
                             }
                             JoinResult::Changed => {
                                 // The pre changed. Schedule the next block.
-                                work_list.push(*next_block_id);
+                                work_list.push_back(*next_block_id);
                             }
                             _ => unreachable!(), // There shouldn't be any error at this point
                         }
@@ -88,7 +89,7 @@ pub trait DataflowAnalysis: TransferFunctions {
                                 post: initial_state.clone(),
                             },
                         );
-                        work_list.push(*next_block_id);
+                        work_list.push_back(*next_block_id);
                     }
                 }
             }
