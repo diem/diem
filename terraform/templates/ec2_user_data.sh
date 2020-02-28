@@ -27,7 +27,7 @@ systemctl start node_exporter
 cat > /etc/cron.d/metric_collector <<"EOF"
 * * * * * root   docker container ls -q --filter label=vcs-upstream | xargs docker inspect --format='{{.State.StartedAt}}' | xargs date +"\%s" -d | xargs echo "ecs_start_time_seconds " > /var/lib/node_exporter/textfile_collector/ecs_stats.prom
 
-* * * * * root	 docker container ls -q --filter label=vcs-upstream | xargs docker inspect --format='{{$tags := .Config.Labels}}build_info{revision="{{index $tags "org.label-schema.vcs-ref"}}", upstream="{{index $tags "vcs-upstream"}}"} 1' > /var/lib/node_exporter/textfile_collector/build_info.prom
+* * * * * root	 docker container ls -q --filter label=com.amazonaws.ecs.container-name | xargs docker inspect --format='{{$tags := .Config.Labels}}build_info{revision="{{index $tags "org.label-schema.vcs-ref"}}", upstream="{{index $tags "vcs-upstream"}}", container_name="{{index $tags "com.amazonaws.ecs.container-name"}}"} 1' > /var/lib/node_exporter/textfile_collector/build_info.prom
 EOF
 
 cat > /etc/profile.d/libra_prompt.sh <<EOF

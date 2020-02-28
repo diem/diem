@@ -1472,7 +1472,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$validator_peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$validator_peer_id\", container_name=\"validator\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -2168,7 +2168,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$validator_peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$validator_peer_id\", container_name=\"validator\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -2882,7 +2882,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$validator_peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$validator_peer_id\", container_name=\"validator\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
