@@ -44,7 +44,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{ensure, format_err, Result};
+use anyhow::{bail, ensure, format_err, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_crypto::hash::{CryptoHash, HashValue};
@@ -173,9 +173,11 @@ impl LibraDB {
         let instant = Instant::now();
 
         let db = Arc::new(if readonly {
-            ensure!(path.as_path().is_dir(), "libradb directory is not found.");
             let db_log_dir = log_dir
                 .ok_or_else(|| format_err!("Must provide log_dir if opening in readonly mode."))?;
+            if !db_log_dir.as_ref().is_dir() {
+                bail!("Invalid log directory: {:?}", db_log_dir.as_ref());
+            }
             info!("log stored at {:?}", db_log_dir.as_ref());
             DB::open_readonly(path.clone(), cf_opts_map, db_log_dir.as_ref().to_path_buf())?
         } else {
