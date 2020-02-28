@@ -217,7 +217,8 @@ pub fn verify_update_to_latest_ledger_response(
                     .into(),
             ),
         };
-        ledger_info_with_sigs.verify(&new_epoch_info.verifier)?;
+        let new_verifier = VerifierType::TrustedVerifier(new_epoch_info.clone());
+        new_verifier.verify(ledger_info_with_sigs)?;
         Ok(Some(new_epoch_info))
     } else {
         verifier.verify(ledger_info_with_sigs)?;

@@ -22,6 +22,7 @@ use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::{Transaction, TransactionListWithProof, Version},
+    validator_change::VerifierType,
     waypoint::Waypoint,
 };
 use network::protocols::network::Event;
@@ -762,8 +763,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             None => response_li.ledger_info().epoch(),
         };
         self.send_chunk_request(new_version, new_epoch).await?;
-
-        response_li.verify(self.local_state.verifier())?;
+        let verifier = VerifierType::TrustedVerifier(self.local_state.trusted_epoch.clone());
+        verifier.verify(&response_li)?;
         self.validate_and_store_chunk(txn_list_with_proof, response_li, None)
             .await
     }

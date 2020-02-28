@@ -239,7 +239,7 @@ impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
         &self.signatures
     }
 
-    pub fn verify(
+    pub fn verify_signatures(
         &self,
         validator: &ValidatorVerifier<Sig::VerifyingKeyMaterial>,
     ) -> ::std::result::Result<(), VerifyError> {
