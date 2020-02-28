@@ -17,7 +17,7 @@
 pub mod schema;
 
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
-use anyhow::{format_err, Result};
+use anyhow::{bail, format_err, Result};
 use libra_metrics::OpMetrics;
 use once_cell::sync::Lazy;
 use rocksdb::{
@@ -226,6 +226,10 @@ impl DB {
         cf_opts_map: ColumnFamilyOptionsMap,
         db_log_dir: P,
     ) -> Result<Self> {
+        if !db_exists(path.as_ref()) {
+            bail!("DB doesn't exists.");
+        }
+
         let mut db_opts = DBOptions::new();
 
         db_opts.create_if_missing(false);
