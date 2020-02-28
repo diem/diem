@@ -4,7 +4,8 @@
 use super::*;
 use crate::{
     mock_vm::{
-        encode_mint_transaction, encode_transfer_transaction, MockVM, DISCARD_STATUS, KEEP_STATUS,
+        encode_mint_transaction, encode_reconfiguration_transaction, encode_transfer_transaction,
+        MockVM, DISCARD_STATUS, KEEP_STATUS,
     },
     Executor, OP_COUNTERS,
 };
@@ -616,6 +617,31 @@ proptest! {
         });
         prop_assert_eq!(root_hash_c, expected_root_hash_c);
     }
+
+    #[test]
+    fn test_reconfiguration_with_retry_transaction_status(
+        (num_txns, reconfig_txn_index) in (10..100u64).prop_flat_map(|num_txns| {
+            (
+                Just(num_txns),
+                0..num_txns
+            )
+        })) {
+            let mut block = TestBlock::new(0..num_txns, 10, *PRE_GENESIS_BLOCK_ID, gen_block_id(1));
+            block.txns[reconfig_txn_index as usize] = encode_reconfiguration_transaction(gen_address(reconfig_txn_index));
+            let (executor, committed_trees) = TestExecutor::new();
+            let output = executor.execute_block(
+                block.txns.clone(), &committed_trees, &committed_trees,
+            ).unwrap();
+        let retry_iter = output.transaction_data().iter().map(TransactionData::status)
+            .skip_while(|status| match *status {
+                TransactionStatus::Keep(_) => true,
+                _ => false
+            });
+            prop_assert_eq!(retry_iter.take_while(|status| match *status {
+                TransactionStatus::Retry => true,
+                _ => false
+            }).count() as u64, num_txns - reconfig_txn_index - 1);
+        }
 
     #[test]
     fn test_executor_restart(a_size in 0..30u64, b_size in 0..30u64, amount in any::<u32>()) {
