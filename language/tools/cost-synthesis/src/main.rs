@@ -16,7 +16,6 @@ use cost_synthesis::{
 };
 use language_e2e_tests::data_store::FakeDataStore;
 use libra_types::vm_error::StatusCode;
-use move_vm_cache::Arena;
 use move_vm_types::{native_functions::hash, values::Value};
 use std::{
     collections::{HashMap, VecDeque},
@@ -40,7 +39,7 @@ use vm_runtime::{
     chain_state::SystemExecutionContext,
     interpreter::InterpreterForCostSynthesis,
     loaded_data::function::{FunctionRef, FunctionReference},
-    runtime::VMRuntime,
+    move_vm::MoveVM,
 };
 
 #[derive(Debug, StructOpt)]
@@ -167,11 +166,10 @@ fn stack_instructions(options: &Opt) {
     let module_id = root.self_id();
     modules.push(root);
 
-    // create a VMRuntime and populate it with generated modules
-    let allocator = Arena::new();
-    let runtime = VMRuntime::new(&allocator);
+    // create a Move VM and populate it with generated modules
+    let move_vm = MoveVM::new();
     for m in modules.clone() {
-        runtime.cache_module(m);
+        move_vm.cache_module(m);
     }
 
     // create an InterpreterContext for runtime operations
@@ -179,12 +177,12 @@ fn stack_instructions(options: &Opt) {
     let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
 
     // get the root LoadedModule
-    let loaded_module = runtime
+    let loaded_module = move_vm
         .get_loaded_module(&module_id, &ctx)
         .expect("[Module Lookup] Runtime error while looking up module");
 
     // create the inhabitor to build the resources to be published
-    let mut inhabitor = RandomInhabitor::new(&loaded_module, &runtime, &ctx);
+    let mut inhabitor = RandomInhabitor::new(&loaded_module, &move_vm, &ctx);
     account.modules = modules;
     for (access_path, blob) in account.generate_resources(&mut inhabitor).into_iter() {
         data_cache.set(access_path, blob);
@@ -207,7 +205,7 @@ fn stack_instructions(options: &Opt) {
             let mut stack_gen = RandomStackGenerator::new(
                 &account.addr,
                 &loaded_module,
-                &runtime,
+                &move_vm,
                 SystemExecutionContext::new(&data_cache, GasUnits::new(0)),
                 &instruction,
                 options.max_stack_size,
@@ -219,7 +217,7 @@ fn stack_instructions(options: &Opt) {
                 let (instr, size) = RandomStackGenerator::stack_transition(&mut vm, stack_state);
                 let before = Instant::now();
                 let ignore = stack_gen.execute_code_snippet(&mut vm, &[instr]);
-                //let ignore = vm.execute_code_snippet(&runtime, &mut ctx, &[instr]);
+                //let ignore = vm.execute_code_snippet(&move_vm, &mut ctx, &[instr]);
                 let time = before.elapsed().as_nanos();
                 // Check to make sure we didn't error. Need to special case the abort bytecode.
                 if instruction != Bytecode::Abort {

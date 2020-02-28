@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(any(test, feature = "instruction_synthesis"))]
+use crate::move_vm::MoveVM;
 use crate::{
     execution_context::InterpreterContext,
     gas,
@@ -1275,13 +1277,15 @@ impl<'txn> InterpreterForCostSynthesis<'txn> {
 
     pub fn execute_code_snippet(
         &mut self,
-        runtime: &VMRuntime<'_>,
+        move_vm: &MoveVM,
         context: &mut dyn InterpreterContext,
         code: &[Bytecode],
     ) -> VMResult<()> {
         let mut current_frame = self.interpreter.call_stack.pop().expect("frame must exist");
-        self.interpreter
-            .execute_code_unit(runtime, context, &mut current_frame, code)?;
+        move_vm.with_runtime(|runtime| {
+            self.interpreter
+                .execute_code_unit(runtime, context, &mut current_frame, code)
+        })?;
         self.interpreter
             .call_stack
             .push(current_frame)

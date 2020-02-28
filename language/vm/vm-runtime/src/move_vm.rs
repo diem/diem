@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chain_state::ChainState, loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
+    chain_state::ChainState, execution_context::InterpreterContext,
+    loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
 };
 use bytecode_verifier::VerifiedModule;
 use libra_types::{
@@ -102,6 +103,22 @@ impl MoveVM {
     ) -> VMResult<StructDef> {
         self.0
             .rent(|runtime| runtime.resolve_struct_def_by_name(module_id, name, chain_state))
+    }
+
+    /// This is an internal method that is exposed only for tests and cost synthesis.
+    /// TODO: Figure out a better way to do this.
+    pub fn get_loaded_module(
+        &self,
+        id: &ModuleId,
+        data_view: &dyn InterpreterContext,
+    ) -> VMResult<&LoadedModule> {
+        self.0
+            .try_ref_rent(|runtime| runtime.get_loaded_module(id, data_view))
+    }
+
+    #[cfg(any(test, feature = "instruction_synthesis"))]
+    pub(crate) fn with_runtime<T>(&self, f: impl FnOnce(&VMRuntime) -> T) -> T {
+        self.0.rent(|runtime| f(runtime))
     }
 }
 
