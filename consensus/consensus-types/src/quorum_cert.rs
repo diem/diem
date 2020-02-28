@@ -121,7 +121,7 @@ impl QuorumCert {
             return Ok(());
         }
         self.ledger_info()
-            .verify(validator)
+            .verify_signatures(validator)
             .context("Fail to verify QuorumCert")?;
         Ok(())
     }

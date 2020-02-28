@@ -42,7 +42,7 @@ impl VerifierType {
                     epoch_info.epoch == ledger_info.ledger_info().epoch(),
                     "LedgerInfo has unexpected epoch"
                 );
-                ledger_info.verify(epoch_info.verifier.as_ref())?;
+                ledger_info.verify_signatures(epoch_info.verifier.as_ref())?;
                 Ok(())
             }
         }
