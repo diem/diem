@@ -296,7 +296,7 @@ impl<'txn> Interpreter<'txn> {
     /// Execute a Move function until a return or a call opcode is found.
     fn execute_code_unit(
         &mut self,
-        runtime: &'txn VMRuntime<'_>,
+        runtime: &VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         frame: &mut Frame<'txn, FunctionRef<'txn>>,
         code: &[Bytecode],
@@ -838,7 +838,7 @@ impl<'txn> Interpreter<'txn> {
     /// opcode.
     fn global_data_op<F>(
         &mut self,
-        runtime: &'txn VMRuntime<'_>,
+        runtime: &VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         address: AccountAddress,
         idx: StructDefinitionIndex,
@@ -1275,7 +1275,7 @@ impl<'txn> InterpreterForCostSynthesis<'txn> {
 
     pub fn execute_code_snippet(
         &mut self,
-        runtime: &'txn VMRuntime<'_>,
+        runtime: &VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         code: &[Bytecode],
     ) -> VMResult<()> {
