@@ -41,7 +41,7 @@ use vm::{
 ///   in the whitelist, the VM will just reject it in `verify_transaction`.
 /// * Custom scripts, which will allow arbitrary valid scripts, but no module publishing
 /// * Open script and module publishing
-pub struct VMRuntime<'alloc> {
+pub(crate) struct VMRuntime<'alloc> {
     code_cache: VMModuleCache<'alloc>,
     script_cache: ScriptCache<'alloc>,
 }

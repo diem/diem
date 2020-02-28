@@ -20,7 +20,7 @@ rental! {
         use super::*;
 
         #[rental]
-        pub struct MoveVMImpl {
+        pub(super) struct MoveVMImpl {
             alloc: Box<Arena<LoadedModule>>,
             runtime: VMRuntime<'alloc>,
         }
