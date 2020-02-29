@@ -3,13 +3,12 @@
 
 use crate::{
     crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorSet},
-    get_with_proof::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
     ledger_info::LedgerInfo,
     transaction::Version,
-    validator_change::VerifierType,
+    validator_change::{ValidatorChangeProof, VerifierType},
     waypoint::Waypoint,
 };
-use anyhow::{format_err, Context as _, Result};
+use anyhow::{ensure, format_err, Result};
 use std::sync::Arc;
 
 /// `TrustedState` keeps track of our latest trusted state, including the latest
@@ -22,8 +21,8 @@ pub struct TrustedState {
     /// the same as the waypoint version.
     latest_version: Version,
     /// The current verifier. If we're starting up fresh, this is probably a
-    /// waypoint from our config. Otherwise, this is probably generated from the
-    /// validator set in the last known epoch change ledger info.
+    /// waypoint from our config. Otherwise, this is generated from the validator
+    /// set in the last known epoch change ledger info.
     verifier: VerifierType,
 }
 
@@ -46,8 +45,6 @@ pub enum TrustedStateChange<'a> {
         latest_epoch_change_li: &'a LedgerInfoWithSignatures,
         latest_validator_set: &'a ValidatorSet,
     },
-    /// Our current `TrustedState` is more recent.
-    Stale,
 }
 
 impl TrustedState {
@@ -74,23 +71,30 @@ impl TrustedState {
         }
     }
 
-    /// Create an initial trusted state from an epoch change ledger info.
-    pub fn from_epoch_change_ledger_info(epoch_change_li: &LedgerInfo) -> Result<Self> {
+    /// Create an initial trusted state from an epoch change ledger info and
+    /// a version inside that epoch.
+    pub fn from_epoch_change_ledger_info(
+        latest_version: Version,
+        epoch_change_li: &LedgerInfo,
+    ) -> Result<Self> {
+        ensure!(
+            latest_version != epoch_change_li.version(),
+            "A client can only enter an epoch on the boundary; only with a version inside that epoch",
+        );
+        ensure!(
+            latest_version > epoch_change_li.version(),
+            "The given version must be inside the epoch",
+        );
+
+        let validator_set = epoch_change_li.next_validator_set().ok_or_else(|| {
+            format_err!("No ValidatorSet in LedgerInfo; it must not be on an epoch boundary")
+        })?;
+
         // Generate the EpochInfo from the new validator set.
         let epoch_info = EpochInfo {
             epoch: epoch_change_li.epoch() + 1,
-            verifier: Arc::new(
-                epoch_change_li
-                    .next_validator_set()
-                    .ok_or_else(|| {
-                        format_err!(
-                            "No ValidatorSet in LedgerInfo; it must not be on an epoch boundary"
-                        )
-                    })?
-                    .into(),
-            ),
+            verifier: Arc::new(validator_set.into()),
         };
-        let latest_version = epoch_change_li.version();
         let verifier = VerifierType::TrustedVerifier(epoch_info);
 
         Ok(Self {
@@ -99,22 +103,30 @@ impl TrustedState {
         })
     }
 
-    /// Verify and ratchet forward our trusted state from an UpdateToLatestLedger
-    /// request/response.
+    /// Verify and ratchet forward our trusted state using a `ValidatorChangeProof`
+    /// (that moves us into the latest epoch) and a `LedgerInfoWithSignatures`
+    /// inside that epoch.
     ///
     /// For example, a client sends an `UpdateToLatestLedgerRequest` to a
-    /// FullNode and receive some validator change proof along with a latest
+    /// FullNode and receives some validator change proof along with a latest
     /// ledger info inside the `UpdateToLatestLedgerResponse`. This function
-    /// verifies the response, the change proof, and ratchets the trusted state
-    /// version forward if the response successfully moves us into a new epoch
-    /// or a new latest ledger info within our current epoch.
+    /// verifies the change proof and ratchets the trusted state version forward
+    /// if the response successfully moves us into a new epoch or a new latest
+    /// ledger info within our current epoch.
+    ///
+    /// IMPORTANT NOTE: this verification logic is currently only inteded to be
+    /// used by clients and not validators, since their epoch transition logic
+    /// is subtly different. Specifically, a client cannot enter an epoch when
+    /// the latest ledger info is an epoch change but there is no following
+    /// ledger info inside that epoch (i.e., the server is exactly on an epoch
+    /// boundary).
     ///
     /// + If there was a validation error, e.g., the epoch change proof was
     /// invalid, we return an `Err`.
     ///
     /// + If the message was well formed but stale (i.e., the returned latest
-    /// ledger is behind our trusted version), we return
-    /// `Ok(TrustedStateChange::Stale)`.
+    /// ledger is behind our trusted version), we also return an `Err` since
+    /// stale responses should always be rejected.
     ///
     /// + If the response is fresh and there is no epoch change, we just ratchet
     /// our trusted version to the latest ledger info and return
@@ -123,79 +135,66 @@ impl TrustedState {
     /// + If there is a new epoch and the server provides a correct proof, we
     /// ratchet our trusted version forward, update our verifier to contain
     /// the new validator set, and return `Ok(TrustedStateChange::Epoch { .. })`.
-    pub fn verify_and_ratchet_response<'a>(
+    pub fn verify_and_ratchet<'a>(
         &self,
-        req: &UpdateToLatestLedgerRequest,
-        res: &'a UpdateToLatestLedgerResponse,
+        latest_li: &'a LedgerInfoWithSignatures,
+        validator_change_proof: &'a ValidatorChangeProof,
     ) -> Result<TrustedStateChange<'a>> {
-        let res_version = res.ledger_info_with_sigs.ledger_info().version();
-        if res_version < self.latest_version {
-            // The response is stale, so we don't need to update our trusted
-            // state.
-            return Ok(TrustedStateChange::Stale);
-        }
+        let res_version = latest_li.ledger_info().version();
+        ensure!(
+            res_version >= self.latest_version,
+            "The target latest ledger info is stale and behind our current trusted version",
+        );
 
-        let maybe_epoch_info = res
-            .verify(&self.verifier, req)
-            .context("Error verifying UpdateToLatestLedgerResponse")?;
-
-        let trusted_state_change = match maybe_epoch_info {
-            // After processing this UpdateToLatestLedgerResponse, we're able to
-            // enter a new epoch. Move to the latest validator set and ratchet
-            // our version.
-            Some(epoch_info) => {
-                // ratchet our latest version
-
-                let verifier = VerifierType::TrustedVerifier(epoch_info);
-                let latest_li = &res.ledger_info_with_sigs;
-
-                let latest_epoch_change_li = res
-                    .validator_change_proof
-                    .ledger_info_with_sigs
-                    .last()
-                    // TODO(philiphayes): Should this panic? We cannot have moved
-                    // to a new epoch with an empty ValidatorChangeProof.
-                    .ok_or_else(|| format_err!("A valid ValidatorChangeProof cannot be empty"))?;
-
-                let latest_validator_set = latest_epoch_change_li
+        if self
+            .verifier
+            .epoch_change_verification_required(latest_li.ledger_info().epoch())
+        {
+            // Verify the ValidatorChangeProof to move us into the latest epoch.
+            let epoch_change_li = validator_change_proof.verify(&self.verifier)?;
+            let new_validator_set = epoch_change_li
                     .ledger_info()
                     .next_validator_set()
-                    // TODO(philiphayes): Should this panic? We cannot have a
-                    // valid ValidatorChangeProof where an epoch change ledger
-                    // info does not have a new validator set.
-                    .ok_or_else(|| {
-                        format_err!("Epoch change ledger info without a new validator set")
-                    })?;
+                    .ok_or_else(|| format_err!(
+                        "A valid ValidatorChangeProof will never return a non-epoch change ledger info"
+                    ))?;
+            let new_validator_verifier = Arc::new(new_validator_set.into());
+            let new_epoch_info = EpochInfo {
+                epoch: epoch_change_li.ledger_info().epoch() + 1,
+                verifier: new_validator_verifier,
+            };
 
-                let new_state = TrustedState {
-                    latest_version: res_version,
-                    verifier,
-                };
+            // Verify the latest ledger info inside the latest epoch.
+            let new_verifier = VerifierType::TrustedVerifier(new_epoch_info);
+            new_verifier.verify(latest_li)?;
 
-                TrustedStateChange::Epoch {
-                    new_state,
-                    latest_li,
-                    latest_epoch_change_li,
-                    latest_validator_set,
-                }
-            }
-            // We're still in the same epoch, just ratchet the version.
-            None => {
-                let latest_li = &res.ledger_info_with_sigs;
+            let new_state = TrustedState {
+                latest_version: res_version,
+                verifier: new_verifier,
+            };
 
-                let new_state = TrustedState {
-                    latest_version: res_version,
-                    verifier: self.verifier.clone(),
-                };
+            Ok(TrustedStateChange::Epoch {
+                new_state,
+                latest_li,
+                latest_epoch_change_li: epoch_change_li,
+                latest_validator_set: new_validator_set,
+            })
+        } else {
+            // The ValidatorChangeProof is empty, stale, or only gets us into our
+            // current epoch. We then try to verify that the latest ledger info
+            // is this epoch.
+            self.verifier.verify(latest_li)?;
 
-                TrustedStateChange::Version {
-                    new_state,
-                    latest_li,
-                }
-            }
-        };
+            let new_state = TrustedState {
+                latest_version: res_version,
+                verifier: self.verifier.clone(),
+            };
 
-        Ok(trusted_state_change)
+            Ok(TrustedStateChange::Version {
+                new_state,
+                latest_li,
+            })
+        }
     }
 
     pub fn latest_version(&self) -> Version {

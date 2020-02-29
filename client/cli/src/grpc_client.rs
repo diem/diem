@@ -141,11 +141,7 @@ impl GRPCClient {
         let resp = self.client.update_to_latest_ledger(proto_req)?;
         let resp = UpdateToLatestLedgerResponse::try_from(resp)?;
 
-        let trusted_state_change = self
-            .trusted_state
-            .verify_and_ratchet_response(&req, &resp)?;
-
-        match trusted_state_change {
+        match resp.verify(&self.trusted_state, &req)? {
             TrustedStateChange::Epoch {
                 new_state,
                 latest_epoch_change_li,
@@ -163,14 +159,6 @@ impl GRPCClient {
             }
             TrustedStateChange::Version { new_state, .. } => {
                 self.trusted_state = new_state;
-            }
-            TrustedStateChange::Stale => {
-                bail!(
-                    "Server version is stale, discarding response: \
-                    our version: {}, their version: {}",
-                    self.trusted_state.latest_version(),
-                    resp.ledger_info_with_sigs.ledger_info().version(),
-                );
             }
         }
 

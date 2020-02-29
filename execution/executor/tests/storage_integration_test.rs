@@ -12,13 +12,12 @@ use libra_types::{
     account_state_blob::AccountStateWithProof,
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
-    crypto_proxies::{EpochInfo, ValidatorVerifier},
     discovery_set::{DISCOVERY_SET_CHANGE_EVENT_PATH, GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH},
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Script, Transaction, TransactionListWithProof, TransactionWithProof},
-    validator_change::VerifierType,
+    trusted_state::TrustedState,
 };
 use rand::SeedableRng;
 use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
@@ -106,11 +105,9 @@ fn test_genesis() {
         )
         .unwrap();
 
+    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     verify_update_to_latest_ledger_response(
-        &VerifierType::TrustedVerifier(EpochInfo {
-            epoch: 0,
-            verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
-        }),
+        &trusted_state,
         0,
         &request_items,
         &response_items,
@@ -438,11 +435,9 @@ fn test_execution_with_storage() {
             ),
         )
         .unwrap();
+    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     verify_update_to_latest_ledger_response(
-        &VerifierType::TrustedVerifier(EpochInfo {
-            epoch: 0,
-            verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
-        }),
+        &trusted_state,
         0,
         &request_items,
         &response_items,
@@ -668,11 +663,9 @@ fn test_execution_with_storage() {
             ),
         )
         .unwrap();
+    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     verify_update_to_latest_ledger_response(
-        &&VerifierType::TrustedVerifier(EpochInfo {
-            epoch: 0,
-            verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
-        }),
+        &trusted_state,
         0,
         &request_items,
         &response_items,

@@ -8,9 +8,7 @@ use crate::{
         random_validator_verifier, LedgerInfoWithSignatures, ValidatorPublicKeys, ValidatorSet,
         ValidatorSigner,
     },
-    get_with_proof::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
     ledger_info::LedgerInfo,
-    proof::definition::AccumulatorConsistencyProof,
     transaction::Version,
     trusted_state::{TrustedState, TrustedStateChange},
     validator_change::ValidatorChangeProof,
@@ -103,10 +101,6 @@ fn new_mock_ledger_info(
         ),
         HashValue::zero(),
     )
-}
-
-fn new_mock_accumulator_proof() -> AccumulatorConsistencyProof {
-    AccumulatorConsistencyProof::new(vec![])
 }
 
 // A strategy for generating components of an UpdateToLatestLedgerResponse with
@@ -243,12 +237,9 @@ proptest! {
             .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_validator_set());
 
         let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
-        let req = UpdateToLatestLedgerRequest::new(trusted_state.latest_version(), vec![]);
-        let res = UpdateToLatestLedgerResponse::new(vec![], latest_li, change_proof, new_mock_accumulator_proof());
-
         let trusted_state_change = trusted_state
-            .verify_and_ratchet_response(&req, &res)
-            .expect("Should never error when ratcheting from pre-genesis with valid proofs");
+            .verify_and_ratchet(&latest_li, &change_proof)
+            .expect("Should never error or be stale when ratcheting from pre-genesis with valid proofs");
 
         match trusted_state_change {
             TrustedStateChange::Epoch {
@@ -266,11 +257,13 @@ proptest! {
                 new_state,
                 latest_li,
             } => {
-                assert_eq!(new_state.latest_version(), expected_latest_version);
-                assert_eq!(latest_li, &expected_latest_li);
+                panic!(
+                    "Unexpected version-only change, expecting epoch change: \
+                     new_state: {:?}, latest_li: {:?}",
+                    new_state,
+                    latest_li,
+                );
             }
-            TrustedStateChange::Stale =>
-                panic!("Should never be stale since we're ratcheting from pre-genesis"),
         };
     }
 
@@ -297,12 +290,9 @@ proptest! {
             .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_validator_set());
 
         let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
-        let req = UpdateToLatestLedgerRequest::new(trusted_state.latest_version(), vec![]);
-        let res = UpdateToLatestLedgerResponse::new(vec![], latest_li, change_proof, new_mock_accumulator_proof());
-
         let trusted_state_change = trusted_state
-            .verify_and_ratchet_response(&req, &res)
-            .expect("Should never error when ratcheting from waypoint with valid proofs");
+            .verify_and_ratchet(&latest_li, &change_proof)
+            .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
 
         match trusted_state_change {
             TrustedStateChange::Epoch {
@@ -318,8 +308,6 @@ proptest! {
             }
             TrustedStateChange::Version { .. } =>
                 panic!("Ratcheting from a waypoint should always provide the epoch for that waypoint"),
-            TrustedStateChange::Stale =>
-                panic!("Should never be stale since we're ratcheting into a fresh ledger info"),
         };
     }
 
@@ -336,6 +324,7 @@ proptest! {
         // Assume we have already ratcheted into this epoch
         let epoch_change_li = lis_with_sigs.remove(0);
         let trusted_state = TrustedState::from_epoch_change_ledger_info(
+            epoch_change_li.ledger_info().version() + 1,
             epoch_change_li.ledger_info()
         ).unwrap();
 
@@ -344,12 +333,9 @@ proptest! {
 
         // Use an empty epoch change proof
         let change_proof = ValidatorChangeProof::new(vec![], false /* more */);
-        let req = UpdateToLatestLedgerRequest::new(trusted_state.latest_version(), vec![]);
-        let res = UpdateToLatestLedgerResponse::new(vec![], latest_li, change_proof, new_mock_accumulator_proof());
-
         let trusted_state_change = trusted_state
-            .verify_and_ratchet_response(&req, &res)
-            .expect("Should never error when ratcheting from waypoint with valid proofs");
+            .verify_and_ratchet(&latest_li, &change_proof)
+            .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
 
         match trusted_state_change {
             TrustedStateChange::Epoch { ..  } =>
@@ -361,8 +347,6 @@ proptest! {
                 assert_eq!(new_state.latest_version(), expected_latest_version);
                 assert_eq!(latest_li, &expected_latest_li);
             }
-            TrustedStateChange::Stale =>
-                panic!("Should never be stale since we're ratcheting into a fresh ledger info"),
         };
     }
 
@@ -377,14 +361,15 @@ proptest! {
         ),
         trusted_prefix_end_idx in any::<Index>(),
     ) {
-        let initial_version = lis_with_sigs[0].ledger_info().version();
-
         // Let's say we ratcheted to an intermediate epoch concurrently while this
         // update request was fulfilled. If the response still has a fresher state,
         // we should be able to use that and just skip the already trusted prefix.
         let idx = trusted_prefix_end_idx.index(lis_with_sigs.len());
         let intermediate_ledger_info = lis_with_sigs[idx].ledger_info();
-        let trusted_state = TrustedState::from_epoch_change_ledger_info(intermediate_ledger_info).unwrap();
+        let trusted_state = TrustedState::from_epoch_change_ledger_info(
+            intermediate_ledger_info.version() + 1,
+            intermediate_ledger_info,
+        ).unwrap();
 
         let expected_latest_version = latest_li.ledger_info().version();
         let expected_latest_li = latest_li.clone();
@@ -394,12 +379,9 @@ proptest! {
             .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_validator_set());
 
         let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
-        let req = UpdateToLatestLedgerRequest::new(initial_version, vec![]);
-        let res = UpdateToLatestLedgerResponse::new(vec![], latest_li, change_proof, new_mock_accumulator_proof());
-
         let trusted_state_change = trusted_state
-            .verify_and_ratchet_response(&req, &res)
-            .expect("Should never error when ratcheting from waypoint with valid proofs");
+            .verify_and_ratchet(&latest_li, &change_proof)
+            .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
 
         match trusted_state_change {
             TrustedStateChange::Epoch {
@@ -420,8 +402,6 @@ proptest! {
                 assert_eq!(new_state.latest_version(), expected_latest_version);
                 assert_eq!(latest_li, &expected_latest_li);
             }
-            TrustedStateChange::Stale =>
-                panic!("Should never be stale since we're ratcheting into a fresh ledger info"),
         };
     }
 
@@ -437,9 +417,10 @@ proptest! {
         li_gap_idx in any::<Index>(),
     ) {
         let initial_li_with_sigs = lis_with_sigs.remove(0);
-        let initial_version = initial_li_with_sigs.ledger_info().version();
+        let initial_li = initial_li_with_sigs.ledger_info();
         let trusted_state = TrustedState::from_epoch_change_ledger_info(
-            initial_li_with_sigs.ledger_info(),
+            initial_li.version() + 1,
+            initial_li,
         ).unwrap();
 
         // materialize index and remove an epoch change in the proof to add a gap
@@ -447,11 +428,8 @@ proptest! {
         lis_with_sigs.remove(li_gap_idx);
 
         let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
-        let req = UpdateToLatestLedgerRequest::new(initial_version, vec![]);
-        let res = UpdateToLatestLedgerResponse::new(vec![], latest_li, change_proof, new_mock_accumulator_proof());
-
         trusted_state
-            .verify_and_ratchet_response(&req, &res)
+            .verify_and_ratchet(&latest_li, &change_proof)
             .expect_err("Should always return Err with an invalid change proof");
     }
 
@@ -467,9 +445,10 @@ proptest! {
         bad_li_idx in any::<Index>(),
     ) {
         let initial_li_with_sigs = lis_with_sigs.remove(0);
-        let initial_version = initial_li_with_sigs.ledger_info().version();
+        let initial_li = initial_li_with_sigs.ledger_info();
         let trusted_state = TrustedState::from_epoch_change_ledger_info(
-            initial_li_with_sigs.ledger_info(),
+            initial_li.version() + 1,
+            initial_li,
         ).unwrap();
 
         // Swap in a bad ledger info without signatures
@@ -481,12 +460,39 @@ proptest! {
         ::std::mem::replace(bad_li_idx.get_mut(&mut lis_with_sigs), bad_li_with_sigs);
 
         let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
-        let req = UpdateToLatestLedgerRequest::new(initial_version, vec![]);
-        let res = UpdateToLatestLedgerResponse::new(vec![], latest_li, change_proof, new_mock_accumulator_proof());
-
         trusted_state
-            .verify_and_ratchet_response(&req, &res)
+            .verify_and_ratchet(&latest_li, &change_proof)
             .expect_err("Should always return Err with an invalid change proof");
+    }
+
+    #[test]
+    fn test_ratchet_fails_with_latest_li_invalid_signature(
+        (_vsets, mut lis_with_sigs, latest_li) in arb_update_proof(
+            1,    /* start epoch */
+            1,    /* start version */
+            1,    /* version delta */
+            1..5, /* epoch changes */
+            1..5, /* validators per epoch */
+        ),
+    ) {
+        let initial_li_with_sigs = lis_with_sigs.remove(0);
+        let initial_li = initial_li_with_sigs.ledger_info();
+        let trusted_state = TrustedState::from_epoch_change_ledger_info(
+            initial_li.version() + 1,
+            initial_li,
+        ).unwrap();
+
+        // Verifying a latest ledger info (inside the last epoch) with invalid
+        // signatures should fail.
+        let latest_li = LedgerInfoWithSignatures::new(
+            latest_li.ledger_info().clone(),
+            BTreeMap::new(), /* empty signatures */
+        );
+
+        let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
+        trusted_state
+            .verify_and_ratchet(&latest_li, &change_proof)
+            .expect_err("Should always return Err with a invalid latest li sigs");
     }
 }
 
@@ -503,24 +509,17 @@ proptest! {
             1..5, /* validators per epoch */
         ),
     ) {
-        let initial_version = lis_with_sigs[0].ledger_info().version();
-
         // We've ratched beyond the response change proof, so attempting to ratchet
         // that change proof should just return `TrustedStateChange::Stale`.
         let epoch_change_li = new_mock_ledger_info(123 /* epoch */, 456 /* version */, Some(ValidatorSet::empty()));
-        let trusted_state = TrustedState::from_epoch_change_ledger_info(&epoch_change_li).unwrap();
+        let trusted_state = TrustedState::from_epoch_change_ledger_info(
+            epoch_change_li.version() + 1,
+            &epoch_change_li,
+        ).unwrap();
 
         let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
-        let req = UpdateToLatestLedgerRequest::new(initial_version, vec![]);
-        let res = UpdateToLatestLedgerResponse::new(vec![], latest_li, change_proof, new_mock_accumulator_proof());
-
-        let trusted_state_change = trusted_state
-            .verify_and_ratchet_response(&req, &res)
-            .expect("Should never error when ratcheting from waypoint with valid proofs");
-
-        match trusted_state_change {
-            TrustedStateChange::Stale => {},
-            _ => panic!("Unexpected state change, expected Stale, got: {:?}", trusted_state_change),
-        }
+        trusted_state
+            .verify_and_ratchet(&latest_li, &change_proof)
+            .expect_err("Expected stale change, got valid change");
     }
 }
