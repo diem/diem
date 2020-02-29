@@ -1,89 +1,23 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{context::*, labels_to_offsets, remove_fallthrough_jumps};
+use super::{context::*, remove_fallthrough_jumps};
 use crate::{
     cfgir::ast as G,
     errors::*,
-    naming::ast::{BuiltinTypeName_, TParam, TParamID, TypeName_},
+    naming::ast::{BuiltinTypeName_, TParam, TypeName_},
     parser::ast::{
         BinOp, BinOp_, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
-        ModuleIdent_, ModuleName, StructName, UnaryOp, UnaryOp_, Value_, Var,
+        ModuleName, StructName, UnaryOp, UnaryOp_, Value_, Var,
     },
     shared::{unique_map::UniqueMap, *},
 };
-use move_ir_types::location::*;
+use libra_types::{
+    account_address::AccountAddress as LibraAddress, byte_array::ByteArray as LibraByteArray,
+};
+use move_ir_types::{ast as IR, location::*};
 use move_vm::file_format as F;
-use std::{collections::HashMap, convert::TryInto};
-
-//**************************************************************************************************
-// Function Frame
-//**************************************************************************************************
-
-// Holds information about a function being compiled.
-#[derive(Debug)]
-struct FunctionFrame {
-    locals: HashMap<Var, u8>,
-    max_stack_depth: u16,
-    cur_stack_depth: u16,
-}
-
-impl FunctionFrame {
-    fn new(loc: Loc, locals_iter: impl Iterator<Item = Var>) -> Result<FunctionFrame> {
-        let mut locals = HashMap::new();
-
-        for (idx, local) in locals_iter.enumerate() {
-            if idx >= (F::LocalIndex::max_value() as usize) {
-                bail!(
-                    loc,
-                    "Max number of locals reached. The Move VM only supports up to u8::max_value \
-                     locals"
-                );
-            }
-            assert!(locals.insert(local, idx as F::LocalIndex).is_none());
-        }
-        Ok(Self {
-            locals,
-            max_stack_depth: 0,
-            cur_stack_depth: 0,
-        })
-    }
-
-    // Manage the stack info for the function
-    fn push(&mut self, loc: Loc) -> Result<()> {
-        self.pushn(loc, 1)
-    }
-
-    fn pushn(&mut self, loc: Loc, n: usize) -> Result<()> {
-        let n: u16 = n.try_into().unwrap();
-        if self.cur_stack_depth >= u16::max_value() - n {
-            bail!(
-                loc,
-                "ICE Stack depth accounting overflow. The Move VM can only support a maximum stack \
-                depth of up to u16::max_value"
-            )
-        }
-        self.cur_stack_depth += n;
-        self.max_stack_depth = std::cmp::max(self.max_stack_depth, self.cur_stack_depth);
-        Ok(())
-    }
-
-    fn pop(&mut self) {
-        self.popn(1)
-    }
-
-    fn popn(&mut self, n: usize) {
-        let n = n.try_into().unwrap();
-        if self.cur_stack_depth < n {
-            panic!("ICE Stack depth accounting underflow. Type checking failed")
-        }
-        self.cur_stack_depth -= n;
-    }
-
-    fn local(&self, var: &Var) -> u8 {
-        *self.locals.get(var).unwrap()
-    }
-}
+use std::collections::HashMap;
 
 //**************************************************************************************************
 // Compiled Unit
@@ -176,7 +110,7 @@ pub fn verify_units(units: Vec<CompiledUnit>) -> (Vec<CompiledUnit>, Errors) {
 // Entry
 //**************************************************************************************************
 
-pub fn program(prog: G::Program) -> std::result::Result<Vec<CompiledUnit>, Errors> {
+pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
     let mut units = vec![];
     let mut errors = vec![];
 
@@ -187,7 +121,7 @@ pub fn program(prog: G::Program) -> std::result::Result<Vec<CompiledUnit>, Error
             mdef.structs.iter().map(move |(s, sdef)| {
                 let key = (m.clone(), s);
                 let is_nominal_resource = sdef.resource_opt.is_some();
-                let kinds = kinds(sdef.type_parameters.iter().map(|tp| &tp.kind));
+                let kinds = type_parameters(sdef.type_parameters.clone());
                 (key, (is_nominal_resource, kinds))
             })
         })
@@ -198,7 +132,10 @@ pub fn program(prog: G::Program) -> std::result::Result<Vec<CompiledUnit>, Error
         .flat_map(|(m, mdef)| {
             mdef.functions.iter().map(move |(f, fdef)| {
                 let key = (m.clone(), f);
-                (key, fdef.signature.clone())
+                (
+                    key,
+                    function_signature(&mut Context::new(None), fdef.signature.clone()),
+                )
             })
         })
         .collect();
@@ -231,104 +168,68 @@ pub fn program(prog: G::Program) -> std::result::Result<Vec<CompiledUnit>, Error
 fn module(
     ident: ModuleIdent,
     mdef: G::ModuleDefinition,
-    struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<F::Kind>)>,
-    function_declarations: &HashMap<(ModuleIdent, FunctionName), G::FunctionSignature>,
-) -> Result<(ModuleName, F::CompiledModule)> {
-    let mut context = Context::new(&ident, struct_declarations, function_declarations)?;
+    struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
+    function_declarations: &HashMap<(ModuleIdent, FunctionName), IR::FunctionSignature>,
+) -> Result<(ModuleName, F::CompiledModule), Error> {
+    let mut context = Context::new(Some(&ident));
+    let structs = mdef
+        .structs
+        .into_iter()
+        .map(|(s, sdef)| struct_def(&mut context, &ident, s, sdef))
+        .collect();
 
-    let mut struct_defs = vec![];
-    let mut field_defs = vec![];
-    for (s, sdef) in mdef.structs.into_iter() {
-        struct_def(
-            &mut context,
-            &mut struct_defs,
-            &mut field_defs,
-            &ident,
-            s,
-            sdef,
-        )?;
-    }
-
-    let function_defs = mdef
+    let functions = mdef
         .functions
         .into_iter()
-        .map(|(f, fdef)| function(&mut context, &ident, f, fdef))
-        .collect::<Result<Vec<_>>>()?;
+        .map(|(f, fdef)| function(&mut context, Some(&ident), f, fdef))
+        .collect();
 
-    let MaterializedPools {
-        module_handles,
-        struct_handles,
-        function_handles,
-        type_signatures,
-        function_signatures,
-        locals_signatures,
-        identifiers,
-        byte_array_pool,
-        address_pool,
-    } = context.materialize_pools();
-    let compiled_module_mut = F::CompiledModuleMut {
-        module_handles,
-        struct_handles,
-        function_handles,
-        type_signatures,
-        function_signatures,
-        locals_signatures,
-        identifiers,
-        byte_array_pool,
-        address_pool,
-        struct_defs,
-        field_defs,
-        function_defs,
+    let addr = LibraAddress::new(ident.0.value.address.to_u8());
+    let mname = ident.0.value.name.clone();
+    let (imports, explicit_dependency_declarations) =
+        context.materialize(struct_declarations, function_declarations);
+    let ir_module = IR::ModuleDefinition {
+        name: IR::ModuleName::new(mname.0.value.clone()),
+        imports,
+        explicit_dependency_declarations,
+        structs,
+        functions,
+        synthetics: vec![],
     };
-    let compiled_module = compiled_module_mut
-        .freeze()
-        .map_err(|vm_status| vec![(ident.loc(), format!("VM ERROR: {:#?}", vm_status))])?;
-    Ok((ident.0.value.name.clone(), compiled_module))
+    let deps: Vec<&F::CompiledModule> = vec![];
+    let compiled_module = match ir_to_bytecode::compiler::compile_module(addr, ir_module, deps) {
+        Ok((compiled_module, _)) => compiled_module,
+        Err(e) => return Err(vec![(ident.loc(), format!("IR ERROR: {}", e))]),
+    };
+    Ok((mname, compiled_module))
 }
 
 fn main(
-    address: Address,
+    addr: Address,
     main_name: FunctionName,
     fdef: G::Function,
-    struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<F::Kind>)>,
-    function_declarations: &HashMap<(ModuleIdent, FunctionName), G::FunctionSignature>,
-) -> Result<F::CompiledScript> {
+    struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
+    function_declarations: &HashMap<(ModuleIdent, FunctionName), IR::FunctionSignature>,
+) -> Result<F::CompiledScript, Error> {
     let loc = main_name.loc();
-    let current_module_ = ModuleIdent_ {
-        address,
-        name: ModuleName(sp(loc, F::self_module_name().to_owned().to_string())),
-    };
-    let current_module = ModuleIdent(sp(loc, current_module_));
-    let mut context = Context::new(&current_module, struct_declarations, function_declarations)?;
+    let mut context = Context::new(None);
 
-    let main = function(&mut context, &current_module, main_name, fdef)?;
+    let (_, main) = function(&mut context, None, main_name, fdef);
 
-    let MaterializedPools {
-        module_handles,
-        struct_handles,
-        function_handles,
-        type_signatures,
-        function_signatures,
-        locals_signatures,
-        identifiers,
-        byte_array_pool,
-        address_pool,
-    } = context.materialize_pools();
-    let compiled_script = F::CompiledScriptMut {
-        module_handles,
-        struct_handles,
-        function_handles,
-        type_signatures,
-        function_signatures,
-        locals_signatures,
-        identifiers,
-        byte_array_pool,
-        address_pool,
+    let (imports, explicit_dependency_declarations) =
+        context.materialize(struct_declarations, function_declarations);
+    let ir_script = IR::Script {
+        imports,
+        explicit_dependency_declarations,
         main,
     };
-    compiled_script
-        .freeze()
-        .map_err(|vm_status| vec![(loc, format!("VM ERROR: {:#?}", vm_status))])
+    let addr = LibraAddress::new(addr.to_u8());
+    let deps: Vec<&F::CompiledModule> = vec![];
+    let compiled_script = match ir_to_bytecode::compiler::compile_script(addr, ir_script, deps) {
+        Ok((compiled_script, _)) => compiled_script,
+        Err(e) => return Err(vec![(loc, format!("IR ERROR: {}", e))]),
+    };
+    Ok(compiled_script)
 }
 
 //**************************************************************************************************
@@ -337,79 +238,57 @@ fn main(
 
 fn struct_def(
     context: &mut Context,
-    struct_defs: &mut Vec<F::StructDefinition>,
-    field_defs: &mut Vec<F::FieldDefinition>,
     m: &ModuleIdent,
     s: StructName,
     sdef: G::StructDefinition,
-) -> Result<()> {
-    let struct_handle = context.struct_handle_index(m, &s)?;
-    let s_loc = s.loc();
-    bind_type_parameters(context, s_loc, &sdef.type_parameters)?;
-    let idx = context.declare_struct_definition_index(s)?;
-    assert!(idx.0 as usize == struct_defs.len());
-    let field_information = fields(s_loc, context, field_defs, struct_handle, idx, sdef.fields)?;
-    struct_defs.push(F::StructDefinition {
-        struct_handle,
-        field_information,
-    });
-    Ok(())
+) -> IR::StructDefinition {
+    let G::StructDefinition {
+        resource_opt,
+        type_parameters: tys,
+        fields,
+    } = sdef;
+    let loc = s.loc();
+    let name = context.struct_definition_name(m, s);
+    let is_nominal_resource = resource_opt.is_some();
+    let type_formals = type_parameters(tys);
+    let fields = struct_fields(context, loc, fields);
+    sp(
+        loc,
+        IR::StructDefinition_ {
+            name,
+            is_nominal_resource,
+            type_formals,
+            fields,
+            invariants: vec![],
+        },
+    )
 }
 
-fn fields(
-    loc: Loc,
+fn struct_fields(
     context: &mut Context,
-    field_defs: &mut Vec<F::FieldDefinition>,
-    struct_handle: F::StructHandleIndex,
-    struct_def_idx: F::StructDefinitionIndex,
+    loc: Loc,
     gfields: G::StructFields,
-) -> Result<F::StructFieldInformation> {
-    use F::StructFieldInformation as FF;
+) -> IR::StructDefinitionFields {
     use G::StructFields as GF;
-    Ok(match gfields {
-        GF::Native(_) => FF::Native,
+    use IR::StructDefinitionFields as IRF;
+    match gfields {
+        GF::Native(_) => IRF::Native,
         GF::Defined(field_vec) if field_vec.is_empty() => {
             // empty fields are not allowed in the bytecode, add a dummy field
             let fake_field = vec![(
                 Field(sp(loc, "dummy_field".to_string())),
                 G::BaseType_::bool(loc),
             )];
-            fields(
-                loc,
-                context,
-                field_defs,
-                struct_handle,
-                struct_def_idx,
-                GF::Defined(fake_field),
-            )?
+            struct_fields(context, loc, GF::Defined(fake_field))
         }
-
         GF::Defined(field_vec) => {
-            let pool_len = field_defs.len();
-            let field_count = field_vec.len();
-
-            let field_information = FF::Declared {
-                field_count: (field_count as F::MemberCount),
-                fields: F::FieldDefinitionIndex(pool_len as F::TableIndex),
-            };
-
-            for (field, field_ty) in field_vec {
-                let name = context.identifier_index(&field)?;
-                let tloc = field_ty.loc;
-                let st = base_type(context, field_ty)?;
-                let signature = context.type_signature_index(tloc, st)?;
-                let idx = context.declare_field(struct_def_idx, field)?;
-                assert!(idx.0 as usize == field_defs.len());
-                field_defs.push(F::FieldDefinition {
-                    struct_: struct_handle,
-                    name,
-                    signature,
-                });
-            }
-
-            field_information
+            let fields = field_vec
+                .into_iter()
+                .map(|(f, ty)| (field(f), base_type(context, ty)))
+                .collect();
+            IRF::Move { fields }
         }
-    })
+    }
 }
 
 //**************************************************************************************************
@@ -418,271 +297,222 @@ fn fields(
 
 fn function(
     context: &mut Context,
-    m: &ModuleIdent,
+    m: Option<&ModuleIdent>,
     f: FunctionName,
     fdef: G::Function,
-) -> Result<F::FunctionDefinition> {
-    let loc = f.loc();
-    bind_type_parameters(context, f.loc(), &fdef.signature.type_parameters)?;
-    let parameters = fdef.signature.parameters.clone();
-    let idx = match context.function_handle_index(m, &f) {
-        Some(idx) => idx,
-        None => {
-            let signature = function_signature(context, fdef.signature)?;
-            context.declare_function(m.clone(), f, signature)?
-        }
-    };
-
-    let flags = match fdef.visibility {
-        FunctionVisibility::Internal => 0,
-        FunctionVisibility::Public(_) => F::CodeUnit::PUBLIC,
-    } | match &fdef.body.value {
-        G::FunctionBody_::Defined { .. } => 0,
-        G::FunctionBody_::Native => F::CodeUnit::NATIVE,
-    };
-    let acquires_global_resources = fdef
-        .acquires
+) -> (IR::FunctionName, IR::Function) {
+    let G::Function {
+        visibility: v,
+        signature,
+        acquires,
+        body,
+    } = fdef;
+    let v = visibility(v);
+    let parameters = signature.parameters.clone();
+    let signature = function_signature(context, signature);
+    let acquires = acquires
         .into_iter()
-        .map(|s| context.struct_definition_index(&s))
+        .map(|s| context.struct_definition_name(m.unwrap(), s))
         .collect();
-
-    let code = match fdef.body.value {
+    let body = match body.value {
+        G::FunctionBody_::Native => IR::FunctionBody::Native,
         G::FunctionBody_::Defined {
             locals,
             start,
             blocks,
-        } => function_body(context, loc, parameters, locals, start, blocks)?,
-        G::FunctionBody_::Native => {
-            // TODO this is all sorts of wrong. The file format needs a native code unit
-            F::CodeUnit::default()
+        } => {
+            let (locals, code) = function_body(context, parameters, locals, start, blocks);
+            IR::FunctionBody::Bytecode { locals, code }
         }
     };
-
-    Ok(F::FunctionDefinition {
-        function: idx,
-        flags,
-        acquires_global_resources,
-        code,
-    })
+    let loc = f.loc();
+    let name = context.function_definition_name(m, f);
+    let ir_function = IR::Function_ {
+        visibility: v,
+        signature,
+        acquires,
+        specifications: vec![],
+        body,
+    };
+    (name, sp(loc, ir_function))
 }
 
-fn function_signature(
-    context: &mut Context,
-    sig: G::FunctionSignature,
-) -> Result<F::FunctionSignature> {
-    let return_types = types(context, sig.return_type)?;
-    let arg_types = sig
+fn visibility(v: FunctionVisibility) -> IR::FunctionVisibility {
+    match v {
+        FunctionVisibility::Public(_) => IR::FunctionVisibility::Public,
+        FunctionVisibility::Internal => IR::FunctionVisibility::Internal,
+    }
+}
+
+fn function_signature(context: &mut Context, sig: G::FunctionSignature) -> IR::FunctionSignature {
+    let return_type = types(context, sig.return_type);
+    let formals = sig
         .parameters
         .into_iter()
-        .map(|(_, st)| single_type(context, st))
-        .collect::<Result<_>>()?;
-    let type_formals = kinds(sig.type_parameters.iter().map(|tp| &tp.kind));
-    Ok(F::FunctionSignature {
-        return_types,
-        arg_types,
+        .map(|(v, st)| (var(v), single_type(context, st)))
+        .collect();
+    let type_formals = type_parameters(sig.type_parameters);
+    IR::FunctionSignature {
+        return_type,
+        formals,
         type_formals,
-    })
+    }
 }
-
-type Code = Vec<F::Bytecode>;
 
 fn function_body(
     context: &mut Context,
-    loc: Loc,
-    mut parameters: Vec<(Var, G::SingleType)>,
+    parameters: Vec<(Var, G::SingleType)>,
     mut locals_map: UniqueMap<Var, G::SingleType>,
     start: G::Label,
     blocks: G::Blocks,
-) -> Result<F::CodeUnit> {
+) -> (Vec<(IR::Var, IR::Type)>, IR::BytecodeBlocks) {
     parameters
         .iter()
         .for_each(|(var, _)| assert!(locals_map.remove(var).is_some()));
-    locals_map
+    let locals = locals_map
         .into_iter()
-        .for_each(|v_ty| parameters.push(v_ty));
+        .map(|(v, ty)| (var(v), single_type(context, ty)))
+        .collect();
 
-    let (local_vars, local_types): (Vec<_>, Vec<_>) = parameters.into_iter().unzip();
-    let mut ff = FunctionFrame::new(loc, local_vars.into_iter())?;
-
-    let locals_signature = F::LocalsSignature(
-        local_types
-            .into_iter()
-            .map(|st| single_type(context, st))
-            .collect::<Result<_>>()?,
-    );
-    let locals_idx = context.locals_signature_index(loc, locals_signature)?;
-
-    let mut code_blocks = Vec::new();
-    let mut label_map = HashMap::<u16, u16>::new();
-    for (idx, (label, basic_block)) in blocks.into_iter().enumerate() {
+    let mut bytecode_blocks = Vec::new();
+    for (idx, (lbl, basic_block)) in blocks.into_iter().enumerate() {
         // first idx should be the start label
-        assert!(idx != 0 || label == start);
-        assert!(idx == code_blocks.len());
-        assert!(label_map
-            .insert(label.0.try_into().unwrap(), idx.try_into().unwrap())
-            .is_none());
+        assert!(idx != 0 || lbl == start);
+        assert!(idx == bytecode_blocks.len());
 
-        let mut code = Code::new();
+        let mut code = IR::BytecodeBlock::new();
         for cmd in basic_block {
-            command(context, &mut ff, &mut code, cmd)?;
+            command(context, &mut code, cmd);
         }
-        code_blocks.push(code);
+        bytecode_blocks.push((label(lbl), code));
     }
 
-    super::remap_offsets(&mut code_blocks, &label_map);
-    remove_fallthrough_jumps::code(&mut code_blocks);
-    let code = labels_to_offsets::code(code_blocks);
+    remove_fallthrough_jumps::code(&mut bytecode_blocks);
 
-    Ok(F::CodeUnit {
-        max_stack_size: ff.max_stack_depth,
-        locals: locals_idx,
-        code,
-    })
+    (locals, bytecode_blocks)
+}
+
+//**************************************************************************************************
+// Names
+//**************************************************************************************************
+
+fn type_var(sp!(loc, n): Name) -> IR::TypeVar {
+    sp(loc, IR::TypeVar_::new(n))
+}
+
+fn var(v: Var) -> IR::Var {
+    sp(v.0.loc, IR::Var_::new(v.0.value))
+}
+
+fn field(f: Field) -> IR::Field {
+    sp(f.0.loc, IR::Field_::new(f.0.value))
+}
+
+fn struct_definition_name(
+    context: &mut Context,
+    sp!(_, t_): G::Type,
+) -> (IR::StructName, Vec<IR::Type>) {
+    match t_ {
+        G::Type_::Single(st) => struct_definition_name_single(context, st),
+        _ => panic!("ICE expected single type"),
+    }
+}
+
+fn struct_definition_name_single(
+    context: &mut Context,
+    sp!(_, st_): G::SingleType,
+) -> (IR::StructName, Vec<IR::Type>) {
+    match st_ {
+        G::SingleType_::Ref(_, bt) | G::SingleType_::Base(bt) => {
+            struct_definition_name_base(context, bt)
+        }
+    }
+}
+
+fn struct_definition_name_base(
+    context: &mut Context,
+    sp!(_, bt_): G::BaseType,
+) -> (IR::StructName, Vec<IR::Type>) {
+    use TypeName_ as TN;
+    use G::BaseType_ as B;
+    match bt_ {
+        B::Apply(_, sp!(_, TN::ModuleType(m, s)), tys) => (
+            context.struct_definition_name(&m, s),
+            base_types(context, tys),
+        ),
+        _ => panic!("ICE expected module struct type"),
+    }
 }
 
 //**************************************************************************************************
 // Types
 //**************************************************************************************************
 
-fn kinds<'a>(ks: impl Iterator<Item = &'a Kind>) -> Vec<F::Kind> {
-    ks.map(kind).collect()
-}
-
-fn kind(sp!(_, k_): &Kind) -> F::Kind {
+fn kind(sp!(_, k_): &Kind) -> IR::Kind {
     use Kind_ as GK;
-    use F::Kind as FK;
+    use IR::Kind as IRK;
     match k_ {
-        GK::Unknown => FK::All,
-        GK::Resource => FK::Resource,
-        GK::Affine | GK::Unrestricted => FK::Unrestricted,
+        GK::Unknown => IRK::All,
+        GK::Resource => IRK::Resource,
+        GK::Affine | GK::Unrestricted => IRK::Unrestricted,
     }
 }
 
-fn bind_type_parameters(
-    context: &mut Context,
-    loc: Loc,
-    tps: &[TParam],
-) -> Result<HashMap<TParamID, F::TableIndex>> {
-    let mut m = HashMap::new();
-    for (idx, tparam) in tps.iter().enumerate() {
-        assert!(m.insert(tparam.id, idx).is_none());
-    }
-    context.bind_type_parameters(loc, m)
+fn type_parameters(tps: Vec<TParam>) -> Vec<(IR::TypeVar, IR::Kind)> {
+    tps.into_iter()
+        .map(|tp| (type_var(tp.debug), kind(&tp.kind)))
+        .collect()
 }
 
-fn struct_definition_indices_base(
-    context: &mut Context,
-    sp!(loc, b_): G::BaseType,
-) -> Result<(F::StructDefinitionIndex, F::LocalsSignatureIndex)> {
-    use TypeName_ as TN;
-    use G::BaseType_ as B;
-    match b_ {
-        B::Apply(_, sp!(_, TN::ModuleType(m, s)), tys) => {
-            assert!(context.module_handle_index(&m).unwrap().0 == 0);
-            let def_idx = context.struct_definition_index(&s);
-            let local_sig = F::LocalsSignature(base_types(context, tys)?);
-            let tys_idx = context.locals_signature_index(loc, local_sig)?;
-            Ok((def_idx, tys_idx))
-        }
-        _ => panic!("ICE expected struct for struct definition index"),
-    }
-}
-
-fn struct_definition_index_base(
-    context: &mut Context,
-    sp!(_, b_): &G::BaseType,
-) -> F::StructDefinitionIndex {
-    use TypeName_ as TN;
-    use G::BaseType_ as B;
-    match b_ {
-        B::Apply(_, sp!(_, TN::ModuleType(m, s)), _) => {
-            assert!(context.module_handle_index(&m).unwrap().0 == 0);
-            context.struct_definition_index(&s)
-        }
-        _ => panic!("ICE expected struct for struct definition index"),
-    }
-}
-
-fn struct_definition_index_single(
-    context: &mut Context,
-    sp!(_, s_): &G::SingleType,
-) -> F::StructDefinitionIndex {
-    match s_ {
-        G::SingleType_::Base(b) | G::SingleType_::Ref(_, b) => {
-            struct_definition_index_base(context, b)
-        }
-    }
-}
-
-fn struct_definition_index(
-    context: &mut Context,
-    sp!(_, t_): &G::Type,
-) -> F::StructDefinitionIndex {
-    match t_ {
-        G::Type_::Single(s) => struct_definition_index_single(context, s),
-        _ => panic!("ICE expected struct for struct definition index"),
-    }
-}
-
-fn base_types(context: &mut Context, bs: Vec<G::BaseType>) -> Result<Vec<F::SignatureToken>> {
+fn base_types(context: &mut Context, bs: Vec<G::BaseType>) -> Vec<IR::Type> {
     bs.into_iter().map(|b| base_type(context, b)).collect()
 }
 
-fn base_type(context: &mut Context, sp!(_, bt_): G::BaseType) -> Result<F::SignatureToken> {
+fn base_type(context: &mut Context, sp!(_, bt_): G::BaseType) -> IR::Type {
     use BuiltinTypeName_ as BT;
     use TypeName_ as TN;
-    use F::SignatureToken as ST;
     use G::BaseType_ as B;
-    Ok(match bt_ {
+    use IR::Type as IRT;
+    match bt_ {
         B::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
-        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Address))), _) => ST::Address,
-        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U8))), _) => ST::U8,
-        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U64))), _) => ST::U64,
-        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U128))), _) => ST::U128,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Address))), _) => IRT::Address,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U8))), _) => IRT::U8,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U64))), _) => IRT::U64,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U128))), _) => IRT::U128,
 
-        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bool))), _) => ST::Bool,
-        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bytearray))), _) => ST::ByteArray,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bool))), _) => IRT::Bool,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bytearray))), _) => IRT::ByteArray,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Vector))), mut args) => {
             assert!(
                 args.len() == 1,
                 "ICE vector must have exactly 1 type argument"
             );
-            ST::Vector(Box::new(base_type(context, args.pop().unwrap())?))
+            IRT::Vector(Box::new(base_type(context, args.pop().unwrap())))
         }
         B::Apply(_, sp!(_, TN::ModuleType(m, s)), tys) => {
-            let idx = context.struct_handle_index(&m, &s)?;
-            let tokens = base_types(context, tys)?;
-            ST::Struct(idx, tokens)
+            let n = context.qualified_struct_name(&m, s);
+            let tys = base_types(context, tys);
+            IRT::Struct(n, tys)
         }
-        B::Param(TParam { id, .. }) => ST::TypeParameter(context.type_formal_index(id)),
-    })
+        B::Param(TParam { debug, .. }) => IRT::TypeParameter(type_var(debug).value),
+    }
 }
 
-fn single_type(context: &mut Context, sp!(_, st_): G::SingleType) -> Result<F::SignatureToken> {
-    use F::SignatureToken as ST;
+fn single_type(context: &mut Context, sp!(_, st_): G::SingleType) -> IR::Type {
     use G::SingleType_ as S;
+    use IR::Type as IRT;
     match st_ {
         S::Base(bt) => base_type(context, bt),
-        S::Ref(false, bt) => Ok(ST::Reference(Box::new(base_type(context, bt)?))),
-        S::Ref(true, bt) => Ok(ST::MutableReference(Box::new(base_type(context, bt)?))),
+        S::Ref(mut_, bt) => IRT::Reference(mut_, Box::new(base_type(context, bt))),
     }
 }
 
-fn types(context: &mut Context, sp!(_, t_): G::Type) -> Result<Vec<F::SignatureToken>> {
+fn types(context: &mut Context, sp!(_, t_): G::Type) -> Vec<IR::Type> {
     use G::Type_ as T;
     match t_ {
-        T::Unit => Ok(vec![]),
-        T::Single(st) => Ok(vec![single_type(context, st)?]),
+        T::Unit => vec![],
+        T::Single(st) => vec![single_type(context, st)],
         T::Multiple(ss) => ss.into_iter().map(|st| single_type(context, st)).collect(),
-    }
-}
-
-fn type_stack_size(sp!(_, t_): &G::Type) -> usize {
-    use G::Type_ as T;
-    match t_ {
-        T::Unit => 0,
-        T::Single(_) => 1,
-        T::Multiple(ss) => ss.len(),
     }
 }
 
@@ -690,282 +520,185 @@ fn type_stack_size(sp!(_, t_): &G::Type) -> usize {
 // Commands
 //**************************************************************************************************
 
-fn command(
-    context: &mut Context,
-    function_frame: &mut FunctionFrame,
-    code: &mut Code,
-    sp!(_, cmd_): G::Command,
-) -> Result<()> {
-    use F::Bytecode as B;
-    use G::Command_ as C;
-    match cmd_ {
-        C::Assign(ls, e) => {
-            exp(context, function_frame, code, e)?;
-            lvalues(context, function_frame, code, ls)?;
-        }
-        C::Mutate(eref, ervalue) => {
-            exp(context, function_frame, code, ervalue)?;
-            exp(context, function_frame, code, eref)?;
-            code.push(B::WriteRef);
-            function_frame.popn(2);
-        }
-        C::Abort(ecode) => {
-            exp_(context, function_frame, code, ecode)?;
-            code.push(B::Abort);
-            function_frame.pop();
-        }
-        C::Return(e) => {
-            let n = type_stack_size(&e.ty);
-            exp_(context, function_frame, code, e)?;
-            code.push(B::Ret);
-            function_frame.popn(n);
-        }
-        C::IgnoreAndPop { pop_num, exp: e } => {
-            exp_(context, function_frame, code, e)?;
-            for _ in 0..pop_num {
-                code.push(B::Pop);
-            }
-            function_frame.popn(pop_num);
-        }
-        C::Jump(G::Label(lbl)) => {
-            code.push(B::Branch(lbl.try_into().unwrap()));
-        }
-        C::JumpIf {
-            cond,
-            if_true: G::Label(if_true),
-            if_false: G::Label(if_false),
-        } => {
-            exp_(context, function_frame, code, cond)?;
-            code.push(B::BrTrue(if_true.try_into().unwrap()));
-            function_frame.pop();
-            code.push(B::Branch(if_false.try_into().unwrap()));
-        }
-    }
-    Ok(())
+fn label(lbl: G::Label) -> IR::Label {
+    IR::Label(format!("{}", lbl))
 }
 
-fn lvalues(
-    context: &mut Context,
-    function_frame: &mut FunctionFrame,
-    code: &mut Code,
-    ls: Vec<G::LValue>,
-) -> Result<()> {
-    lvalues_(context, function_frame, code, ls.into_iter())
+fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): G::Command) {
+    use G::Command_ as C;
+    use IR::Bytecode_ as B;
+    match cmd_ {
+        C::Assign(ls, e) => {
+            exp(context, code, e);
+            lvalues(context, code, ls);
+        }
+        C::Mutate(eref, ervalue) => {
+            exp(context, code, ervalue);
+            exp(context, code, eref);
+            code.push(sp(loc, B::WriteRef));
+        }
+        C::Abort(ecode) => {
+            exp_(context, code, ecode);
+            code.push(sp(loc, B::Abort));
+        }
+        C::Return(e) => {
+            exp_(context, code, e);
+            code.push(sp(loc, B::Ret));
+        }
+        C::IgnoreAndPop { pop_num, exp: e } => {
+            exp_(context, code, e);
+            for _ in 0..pop_num {
+                code.push(sp(loc, B::Pop));
+            }
+        }
+        C::Jump(lbl) => code.push(sp(loc, B::Branch(label(lbl)))),
+        C::JumpIf {
+            cond,
+            if_true,
+            if_false,
+        } => {
+            exp_(context, code, cond);
+            code.push(sp(loc, B::BrTrue(label(if_true))));
+            code.push(sp(loc, B::Branch(label(if_false))));
+        }
+    }
+}
+
+fn lvalues(context: &mut Context, code: &mut IR::BytecodeBlock, ls: Vec<G::LValue>) {
+    lvalues_(context, code, ls.into_iter())
 }
 
 fn lvalues_(
     context: &mut Context,
-    function_frame: &mut FunctionFrame,
-    code: &mut Code,
+    code: &mut IR::BytecodeBlock,
     ls: impl std::iter::DoubleEndedIterator<Item = G::LValue>,
-) -> Result<()> {
+) {
     for l in ls.rev() {
-        lvalue(context, function_frame, code, l)?
+        lvalue(context, code, l)
     }
-    Ok(())
 }
 
-fn lvalue(
-    context: &mut Context,
-    function_frame: &mut FunctionFrame,
-    code: &mut Code,
-    sp!(loc, l_): G::LValue,
-) -> Result<()> {
-    use F::Bytecode as B;
+fn lvalue(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, l_): G::LValue) {
     use G::LValue_ as L;
+    use IR::Bytecode_ as B;
     match l_ {
         L::Ignore => {
-            code.push(B::Pop);
-            function_frame.pop();
+            code.push(sp(loc, B::Pop));
         }
         L::Var(v, _) => {
-            let loc_idx = function_frame.local(&v);
-            code.push(B::StLoc(loc_idx));
-            function_frame.pop();
+            code.push(sp(loc, B::StLoc(var(v))));
         }
         L::Unpack(s, tys, field_ls) if field_ls.is_empty() => {
-            // empty fields are not allowed in the bytecode, add a dummy field
-            // empty structs have a dummy field of type 'bool' added
-
-            let def_idx = context.struct_definition_index(&s);
-            let local_sig = F::LocalsSignature(base_types(context, tys)?);
-            let local_idx = context.locals_signature_index(loc, local_sig)?;
-
-            function_frame.pop();
-            code.push(B::Unpack(def_idx, local_idx));
+            let n = context.struct_definition_name(context.current_module().unwrap(), s);
+            code.push(sp(loc, B::Unpack(n, base_types(context, tys))));
             // Pop off false
-            function_frame.pushn(loc, 1)?;
-            code.push(B::Pop);
-            function_frame.pop();
+            code.push(sp(loc, B::Pop));
         }
 
         L::Unpack(s, tys, field_ls) => {
-            let def_idx = context.struct_definition_index(&s);
-            let local_sig = F::LocalsSignature(base_types(context, tys)?);
-            let local_idx = context.locals_signature_index(loc, local_sig)?;
+            let n = context.struct_definition_name(context.current_module().unwrap(), s);
+            code.push(sp(loc, B::Unpack(n, base_types(context, tys))));
 
-            function_frame.pop();
-            code.push(B::Unpack(def_idx, local_idx));
-            function_frame.pushn(loc, field_ls.len())?;
-
-            lvalues_(
-                context,
-                function_frame,
-                code,
-                field_ls.into_iter().map(|(_, l)| l),
-            )?;
+            lvalues_(context, code, field_ls.into_iter().map(|(_, l)| l));
         }
     }
-    Ok(())
 }
 
 //**************************************************************************************************
 // Expressions
 //**************************************************************************************************
 
-fn exp(
-    context: &mut Context,
-    function_frame: &mut FunctionFrame,
-    code: &mut Code,
-    e: Box<G::Exp>,
-) -> Result<()> {
-    exp_(context, function_frame, code, *e)
+fn exp(context: &mut Context, code: &mut IR::BytecodeBlock, e: Box<G::Exp>) {
+    exp_(context, code, *e)
 }
 
-fn exp_(
-    context: &mut Context,
-    function_frame: &mut FunctionFrame,
-    code: &mut Code,
-    e: G::Exp,
-) -> Result<()> {
+fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: G::Exp) {
     use Value_ as V;
-    use F::Bytecode as B;
     use G::UnannotatedExp_ as E;
-    let ty = e.ty;
-    let sp!(eloc, e_) = e.exp;
+    use IR::Bytecode_ as B;
+    let sp!(loc, e_) = e.exp;
     match e_ {
         E::Unreachable => panic!("ICE should not compile dead code"),
         E::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
         E::Unit => (),
         E::Value(v) => {
-            code.push(match v.value {
-                V::Address(a) => {
-                    let idx = context.address_index(eloc, a)?;
-                    B::LdAddr(idx)
-                }
-                V::Bytearray(bytes) => {
-                    let idx = context.byte_array_index(eloc, bytes)?;
-                    B::LdByteArray(idx)
-                }
-                V::U8(u) => B::LdU8(u),
-                V::U64(u) => B::LdU64(u),
-                V::U128(u) => B::LdU128(u),
-                V::Bool(b) => {
-                    if b {
-                        B::LdTrue
-                    } else {
-                        B::LdFalse
+            code.push(sp(
+                loc,
+                match v.value {
+                    V::Address(a) => B::LdAddr(LibraAddress::new(a.to_u8())),
+                    V::Bytearray(bytes) => B::LdByteArray(LibraByteArray::new(bytes)),
+                    V::U8(u) => B::LdU8(u),
+                    V::U64(u) => B::LdU64(u),
+                    V::U128(u) => B::LdU128(u),
+                    V::Bool(b) => {
+                        if b {
+                            B::LdTrue
+                        } else {
+                            B::LdFalse
+                        }
                     }
-                }
-            });
-            function_frame.push(eloc)?;
+                },
+            ));
         }
-        E::Move { var, .. } => {
-            let loc_idx = function_frame.local(&var);
-            code.push(B::MoveLoc(loc_idx));
-            function_frame.push(eloc)?;
+        E::Move { var: v, .. } => {
+            code.push(sp(loc, B::MoveLoc(var(v))));
         }
-        E::Copy { var, .. } => {
-            let loc_idx = function_frame.local(&var);
-            code.push(B::CopyLoc(loc_idx));
-            function_frame.push(eloc)?;
-        }
+        E::Copy { var: v, .. } => code.push(sp(loc, B::CopyLoc(var(v)))),
 
         E::ModuleCall(mcall) => {
-            let num_args = type_stack_size(&mcall.arguments.ty);
-            exp(context, function_frame, code, mcall.arguments)?;
-
-            function_frame.popn(num_args);
+            exp(context, code, mcall.arguments);
             call(
                 context,
                 code,
                 mcall.module,
                 mcall.name,
                 mcall.type_arguments,
-            )?;
-            function_frame.pushn(eloc, type_stack_size(&ty))?;
+            );
         }
 
         E::Builtin(b, arg) => {
-            let num_args = type_stack_size(&arg.ty);
-            exp(context, function_frame, code, arg)?;
-
-            function_frame.popn(num_args);
-            builtin(context, code, *b)?;
-            function_frame.pushn(eloc, type_stack_size(&ty))?;
+            exp(context, code, arg);
+            builtin(context, code, *b);
         }
 
         E::Freeze(er) => {
-            exp(context, function_frame, code, er)?;
-
-            function_frame.pop();
-            code.push(B::FreezeRef);
-            function_frame.push(eloc)?;
+            exp(context, code, er);
+            code.push(sp(loc, B::FreezeRef));
         }
 
         E::Dereference(er) => {
-            exp(context, function_frame, code, er)?;
-
-            function_frame.pop();
-            code.push(B::ReadRef);
-            function_frame.push(eloc)?;
+            exp(context, code, er);
+            code.push(sp(loc, B::ReadRef));
         }
 
         E::UnaryExp(op, er) => {
-            exp(context, function_frame, code, er)?;
-
+            exp(context, code, er);
             unary_op(code, op);
-            function_frame.push(eloc)?;
         }
 
         E::BinopExp(el, op, er) => {
-            exp(context, function_frame, code, el)?;
-            exp(context, function_frame, code, er)?;
-
-            function_frame.popn(2);
+            exp(context, code, el);
+            exp(context, code, er);
             binary_op(code, op);
-            function_frame.push(eloc)?;
         }
 
         E::Pack(s, tys, field_args) if field_args.is_empty() => {
             // empty fields are not allowed in the bytecode, add a dummy field
             // empty structs have a dummy field of type 'bool' added
 
-            let def_idx = context.struct_definition_index(&s);
-            let local_sig = F::LocalsSignature(base_types(context, tys)?);
-            let local_idx = context.locals_signature_index(eloc, local_sig)?;
-
             // Push on fake field
-            code.push(B::LdFalse);
-            function_frame.push(eloc)?;
+            code.push(sp(loc, B::LdFalse));
 
-            function_frame.popn(1);
-            code.push(B::Pack(def_idx, local_idx));
-            function_frame.push(eloc)?;
+            let n = context.struct_definition_name(context.current_module().unwrap(), s);
+            code.push(sp(loc, B::Pack(n, base_types(context, tys))))
         }
 
         E::Pack(s, tys, field_args) => {
-            let num_args = field_args.len();
             for (_, _, earg) in field_args {
-                exp_(context, function_frame, code, earg)?;
+                exp_(context, code, earg);
             }
-            let def_idx = context.struct_definition_index(&s);
-            let local_sig = F::LocalsSignature(base_types(context, tys)?);
-            let local_idx = context.locals_signature_index(eloc, local_sig)?;
-
-            function_frame.popn(num_args);
-            code.push(B::Pack(def_idx, local_idx));
-            function_frame.push(eloc)?;
+            let n = context.struct_definition_name(context.current_module().unwrap(), s);
+            code.push(sp(loc, B::Pack(n, base_types(context, tys))))
         }
 
         E::ExpList(items) => {
@@ -973,168 +706,147 @@ fn exp_(
                 let ei = match item {
                     G::ExpListItem::Single(ei, _) | G::ExpListItem::Splat(_, ei, _) => ei,
                 };
-                exp_(context, function_frame, code, ei)?;
+                exp_(context, code, ei);
             }
         }
 
-        E::Borrow(mut_, el, field) => {
-            let sdef_idx = struct_definition_index(context, &el.ty);
-            exp(context, function_frame, code, el)?;
-            let f_idx = context.field(sdef_idx, field);
-
-            function_frame.pop();
-            code.push(if mut_ {
-                B::MutBorrowField(f_idx)
+        E::Borrow(mut_, el, f) => {
+            let (n, _) = struct_definition_name(context, el.ty.clone());
+            exp(context, code, el);
+            let instr = if mut_ {
+                B::MutBorrowField(n, field(f))
             } else {
-                B::ImmBorrowField(f_idx)
-            });
-            function_frame.push(eloc)?;
+                B::ImmBorrowField(n, field(f))
+            };
+            code.push(sp(loc, instr));
         }
 
         E::BorrowLocal(mut_, v) => {
-            let l_idx = function_frame.local(&v);
-            code.push(if mut_ {
-                B::MutBorrowLoc(l_idx)
+            let instr = if mut_ {
+                B::MutBorrowLoc(var(v))
             } else {
-                B::ImmBorrowLoc(l_idx)
-            });
-            function_frame.push(eloc)?;
+                B::ImmBorrowLoc(var(v))
+            };
+            code.push(sp(loc, instr));
         }
 
         E::Cast(el, sp!(_, bt_)) => {
             use BuiltinTypeName_ as BT;
-            exp(context, function_frame, code, el)?;
-            code.push(match bt_ {
+            exp(context, code, el);
+            let instr = match bt_ {
                 BT::U8 => B::CastU8,
                 BT::U64 => B::CastU64,
                 BT::U128 => B::CastU128,
                 _ => panic!("ICE type checking failed"),
-            })
+            };
+            code.push(sp(loc, instr));
         }
     }
-    Ok(())
 }
 
 fn call(
     context: &mut Context,
-    code: &mut Code,
+    code: &mut IR::BytecodeBlock,
     m: ModuleIdent,
     f: FunctionName,
     tys: Vec<G::BaseType>,
-) -> Result<()> {
+) {
     use crate::shared::fake_natives::transaction as TXN;
     use Address as A;
-    use F::Bytecode as B;
+    use IR::Bytecode_ as B;
 
     match (&m.0.value.address, m.0.value.name.value(), f.value()) {
-        (&A::LIBRA_CORE, TXN::MOD, TXN::GAS_PRICE) => code.push(B::GetTxnGasUnitPrice),
-        (&A::LIBRA_CORE, TXN::MOD, TXN::MAX_GAS) => code.push(B::GetTxnMaxGasUnits),
-        (&A::LIBRA_CORE, TXN::MOD, TXN::GAS_REMAINING) => code.push(B::GetGasRemaining),
-        (&A::LIBRA_CORE, TXN::MOD, TXN::SENDER) => code.push(B::GetTxnSenderAddress),
-        (&A::LIBRA_CORE, TXN::MOD, TXN::SEQUENCE_NUM) => code.push(B::GetTxnSequenceNumber),
-        (&A::LIBRA_CORE, TXN::MOD, TXN::PUBLIC_KEY) => code.push(B::GetTxnPublicKey),
+        (&A::LIBRA_CORE, TXN::MOD, TXN::SENDER) => code.push(sp(f.loc(), B::GetTxnSenderAddress)),
         (&A::LIBRA_CORE, TXN::MOD, TXN::ASSERT) => panic!("ICE should have been covered in hlir"),
         (&A::LIBRA_CORE, TXN::MOD, f) => panic!("ICE unknown magic transaction function {}", f),
-        _ => module_call(context, code, m, f, tys)?,
+        _ => module_call(context, code, m, f, tys),
     }
-    Ok(())
 }
 
 fn module_call(
     context: &mut Context,
-    code: &mut Code,
-    m: ModuleIdent,
-    f: FunctionName,
+    code: &mut IR::BytecodeBlock,
+    mident: ModuleIdent,
+    fname: FunctionName,
     tys: Vec<G::BaseType>,
-) -> Result<()> {
-    use F::Bytecode as B;
-    let loc = f.loc();
-    let function_handle_index = match context.function_handle_index(&m, &f) {
-        Some(i) => i,
-        None => {
-            let declaration_sig = context.declaration_function_signature(&m, &f);
-
-            let old_type_parameters =
-                bind_type_parameters(context, loc, &declaration_sig.type_parameters)?;
-            let sig = function_signature(context, declaration_sig)?;
-            let old_map = old_type_parameters
-                .into_iter()
-                .map(|(id, idx)| (id, idx as usize))
-                .collect();
-            context.bind_type_parameters(loc, old_map)?;
-
-            context.declare_function(m, f, sig)?
-        }
-    };
-    let tokens = F::LocalsSignature(base_types(context, tys)?);
-    let type_actuals_id = context.locals_signature_index(loc, tokens)?;
-    code.push(B::Call(function_handle_index, type_actuals_id));
-    Ok(())
+) {
+    use IR::Bytecode_ as B;
+    let loc = fname.loc();
+    let (m, n) = context.qualified_function_name(&mident, fname);
+    code.push(sp(loc, B::Call(m, n, base_types(context, tys))))
 }
 
-fn builtin(context: &mut Context, code: &mut Code, sp!(_, b_): G::BuiltinFunction) -> Result<()> {
-    use F::Bytecode as B;
+fn builtin(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, b_): G::BuiltinFunction) {
     use G::BuiltinFunction_ as GB;
-    code.push(match b_ {
-        GB::MoveToSender(bt) => {
-            let (def_idx, tys_idx) = struct_definition_indices_base(context, bt)?;
-            B::MoveToSender(def_idx, tys_idx)
-        }
-        GB::MoveFrom(bt) => {
-            let (def_idx, tys_idx) = struct_definition_indices_base(context, bt)?;
-            B::MoveFrom(def_idx, tys_idx)
-        }
-        GB::BorrowGlobal(false, bt) => {
-            let (def_idx, tys_idx) = struct_definition_indices_base(context, bt)?;
-            B::ImmBorrowGlobal(def_idx, tys_idx)
-        }
-        GB::BorrowGlobal(true, bt) => {
-            let (def_idx, tys_idx) = struct_definition_indices_base(context, bt)?;
-            B::MutBorrowGlobal(def_idx, tys_idx)
-        }
-        GB::Exists(bt) => {
-            let (def_idx, tys_idx) = struct_definition_indices_base(context, bt)?;
-            B::Exists(def_idx, tys_idx)
-        }
-    });
-    Ok(())
+    use IR::Bytecode_ as B;
+    code.push(sp(
+        loc,
+        match b_ {
+            GB::MoveToSender(bt) => {
+                let (n, tys) = struct_definition_name_base(context, bt);
+                B::MoveToSender(n, tys)
+            }
+            GB::MoveFrom(bt) => {
+                let (n, tys) = struct_definition_name_base(context, bt);
+                B::MoveFrom(n, tys)
+            }
+            GB::BorrowGlobal(false, bt) => {
+                let (n, tys) = struct_definition_name_base(context, bt);
+                B::ImmBorrowGlobal(n, tys)
+            }
+            GB::BorrowGlobal(true, bt) => {
+                let (n, tys) = struct_definition_name_base(context, bt);
+                B::MutBorrowGlobal(n, tys)
+            }
+            GB::Exists(bt) => {
+                let (n, tys) = struct_definition_name_base(context, bt);
+                B::Exists(n, tys)
+            }
+        },
+    ))
 }
 
-fn unary_op(code: &mut Code, sp!(_, op_): UnaryOp) {
+fn unary_op(code: &mut IR::BytecodeBlock, sp!(loc, op_): UnaryOp) {
     use UnaryOp_ as O;
-    use F::Bytecode as B;
-    code.push(match op_ {
-        O::Not => B::Not,
-    });
+    use IR::Bytecode_ as B;
+    code.push(sp(
+        loc,
+        match op_ {
+            O::Not => B::Not,
+        },
+    ));
 }
 
-fn binary_op(code: &mut Code, sp!(_, op_): BinOp) {
+fn binary_op(code: &mut IR::BytecodeBlock, sp!(loc, op_): BinOp) {
     use BinOp_ as O;
-    use F::Bytecode as B;
-    code.push(match op_ {
-        O::Add => B::Add,
-        O::Sub => B::Sub,
-        O::Mul => B::Mul,
-        O::Mod => B::Mod,
-        O::Div => B::Div,
-        O::BitOr => B::BitOr,
-        O::BitAnd => B::BitAnd,
-        O::Xor => B::Xor,
-        O::Shl => B::Shl,
-        O::Shr => B::Shr,
+    use IR::Bytecode_ as B;
+    code.push(sp(
+        loc,
+        match op_ {
+            O::Add => B::Add,
+            O::Sub => B::Sub,
+            O::Mul => B::Mul,
+            O::Mod => B::Mod,
+            O::Div => B::Div,
+            O::BitOr => B::BitOr,
+            O::BitAnd => B::BitAnd,
+            O::Xor => B::Xor,
+            O::Shl => B::Shl,
+            O::Shr => B::Shr,
 
-        O::And => B::And,
-        O::Or => B::Or,
+            O::And => B::And,
+            O::Or => B::Or,
 
-        O::Eq => B::Eq,
-        O::Neq => B::Neq,
+            O::Eq => B::Eq,
+            O::Neq => B::Neq,
 
-        O::Lt => B::Lt,
-        O::Gt => B::Gt,
+            O::Lt => B::Lt,
+            O::Gt => B::Gt,
 
-        O::Le => B::Le,
-        O::Ge => B::Ge,
+            O::Le => B::Le,
+            O::Ge => B::Ge,
 
-        O::Range | O::Implies => panic!("specification operator unexpected"),
-    });
+            O::Range | O::Implies => panic!("specification operator unexpected"),
+        },
+    ));
 }

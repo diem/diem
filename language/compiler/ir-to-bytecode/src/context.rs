@@ -13,11 +13,11 @@ use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex,
-        FunctionHandle, FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex,
-        IdentifierIndex, Kind, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
-        ModuleHandleIndex, SignatureToken, StructDefinitionIndex, StructHandle, StructHandleIndex,
-        TableIndex, TypeSignature, TypeSignatureIndex,
+        AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldDefinitionIndex,
+        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionSignature,
+        FunctionSignatureIndex, IdentifierIndex, Kind, LocalsSignature, LocalsSignatureIndex,
+        ModuleHandle, ModuleHandleIndex, SignatureToken, StructDefinitionIndex, StructHandle,
+        StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
     },
 };
 
@@ -50,6 +50,10 @@ fn get_or_add_item_ref<K: Clone + Eq + Hash>(
 
 fn get_or_add_item<K: Eq + Hash>(m: &mut HashMap<K, TableIndex>, k: K) -> Result<TableIndex> {
     get_or_add_item_macro!(m, &k, k)
+}
+
+pub fn ident_str(s: &str) -> Result<&IdentStr> {
+    IdentStr::new(s)
 }
 
 struct CompiledDependency<'a> {
@@ -106,25 +110,32 @@ impl<'a> CompiledDependency<'a> {
         let handle = self.struct_pool.get(idx.0 as usize)?;
         let module_handle = self.module_pool.get(handle.module.0 as usize)?;
         let address = *self.address_pool.get(module_handle.address.0 as usize)?;
-        let module = ModuleName::new(self.identifiers.get(module_handle.name.0 as usize)?.clone());
+        let module = ModuleName::new(
+            self.identifiers
+                .get(module_handle.name.0 as usize)?
+                .to_string(),
+        );
         assert!(module.as_inner() != ModuleName::self_name());
         let ident = QualifiedModuleIdent {
             address,
             name: module,
         };
-        let name = StructName::new(self.identifiers.get(handle.name.0 as usize)?.clone());
+        let name = StructName::new(self.identifiers.get(handle.name.0 as usize)?.to_string());
         Some((ident, name))
     }
 
     fn struct_handle(&self, name: &QualifiedStructIdent) -> Option<&'a StructHandle> {
         self.structs
-            .get(&(name.module.as_inner(), name.name.as_inner()))
+            .get(&(
+                ident_str(name.module.as_inner()).ok()?,
+                ident_str(name.name.as_inner()).ok()?,
+            ))
             .and_then(|idx| self.struct_pool.get(*idx as usize))
     }
 
     fn function_signature(&self, name: &FunctionName) -> Option<&'a FunctionSignature> {
         self.functions
-            .get(name.as_inner())
+            .get(ident_str(name.as_inner()).ok()?)
             .and_then(|idx| self.function_signatuire_pool.get(*idx as usize))
     }
 }
@@ -164,6 +175,7 @@ pub struct Context<'a> {
     modules: HashMap<ModuleName, (QualifiedModuleIdent, ModuleHandle)>,
     structs: HashMap<QualifiedStructIdent, StructHandle>,
     struct_defs: HashMap<StructName, TableIndex>,
+    labels: HashMap<Label, u16>,
 
     // queryable pools
     fields: HashMap<(StructHandleIndex, Field_), (TableIndex, SignatureToken, usize)>,
@@ -204,7 +216,7 @@ impl<'a> Context<'a> {
             .map(|dep| {
                 let ident = QualifiedModuleIdent {
                     address: *dep.address(),
-                    name: ModuleName::new(dep.name().into()),
+                    name: ModuleName::new(dep.name().to_string()),
                 };
                 Ok((ident, CompiledDependency::new(dep)?))
             })
@@ -215,6 +227,7 @@ impl<'a> Context<'a> {
             modules: HashMap::new(),
             structs: HashMap::new(),
             struct_defs: HashMap::new(),
+            labels: HashMap::new(),
             fields: HashMap::new(),
             function_handles: HashMap::new(),
             function_signatures: HashMap::new(),
@@ -290,6 +303,17 @@ impl<'a> Context<'a> {
         Ok(())
     }
 
+    pub fn build_index_remapping(
+        &mut self,
+        label_to_index: HashMap<Label, u16>,
+    ) -> HashMap<u16, u16> {
+        let labels = std::mem::replace(&mut self.labels, HashMap::new());
+        label_to_index
+            .into_iter()
+            .map(|(lbl, actual_idx)| (labels[&lbl], actual_idx))
+            .collect()
+    }
+
     //**********************************************************************************************
     // Pools
     //**********************************************************************************************
@@ -335,6 +359,11 @@ impl<'a> Context<'a> {
         }
     }
 
+    /// Get the fake offset for the label. Labels will be fixed to real offsets after compilation
+    pub fn label_index(&mut self, label: Label) -> Result<CodeOffset> {
+        Ok(get_or_add_item(&mut self.labels, label)?)
+    }
+
     /// Get the address pool index, adds it if missing.
     pub fn address_index(&mut self, addr: AccountAddress) -> Result<AddressPoolIndex> {
         Ok(AddressPoolIndex(get_or_add_item(
@@ -344,7 +373,8 @@ impl<'a> Context<'a> {
     }
 
     /// Get the identifier pool index, adds it if missing.
-    pub fn identifier_index(&mut self, ident: &IdentStr) -> Result<IdentifierIndex> {
+    pub fn identifier_index(&mut self, s: &str) -> Result<IdentifierIndex> {
+        let ident = ident_str(s)?;
         let m = &mut self.identifiers;
         let idx: Result<TableIndex> = get_or_add_item_macro!(m, ident, ident.to_owned());
         Ok(IdentifierIndex(idx?))

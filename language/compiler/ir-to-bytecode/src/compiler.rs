@@ -8,10 +8,11 @@ use crate::{
 
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
-use libra_types::{account_address::AccountAddress, identifier::Identifier};
+use libra_types::account_address::AccountAddress;
 use move_ir_types::{
-    ast::{self, *},
+    ast::{self, Bytecode as IRBytecode, Bytecode_ as IRBytecode_, *},
     location::*,
+    sp,
 };
 
 use std::{
@@ -33,7 +34,7 @@ use vm::{
 
 macro_rules! record_src_loc {
     (local: $context:expr, $var:expr) => {{
-        let source_name = (Identifier::from($var.value.name()), $var.loc);
+        let source_name = ($var.value.clone().into_inner(), $var.loc);
         $context
             .source_map
             .add_local_mapping($context.current_function_definition_index(), source_name)?;
@@ -45,7 +46,7 @@ macro_rules! record_src_loc {
     }};
     (function_type_formals: $context:expr, $var:expr) => {
         for (ty_var, _) in $var.iter() {
-            let source_name = (Identifier::from(ty_var.value.name()), ty_var.loc);
+            let source_name = (ty_var.value.clone().into_inner(), ty_var.loc);
             $context.source_map.add_function_type_parameter_mapping(
                 $context.current_function_definition_index(),
                 source_name,
@@ -61,7 +62,7 @@ macro_rules! record_src_loc {
     }};
     (struct_type_formals: $context:expr, $var:expr) => {
         for (ty_var, _) in $var.iter() {
-            let source_name = (Identifier::from(ty_var.value.name()), ty_var.loc);
+            let source_name = (ty_var.value.clone().into_inner(), ty_var.loc);
             $context.source_map.add_struct_type_parameter_mapping(
                 $context.current_struct_definition_index(),
                 source_name,
@@ -339,13 +340,17 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
 ) -> Result<(CompiledScript, ModuleSourceMap<Loc>)> {
     let current_module = QualifiedModuleIdent {
         address,
-        name: ModuleName::new(file_format::self_module_name().to_owned()),
+        name: ModuleName::new(file_format::self_module_name().to_string()),
     };
     let mut context = Context::new(dependencies, current_module)?;
     let self_name = ModuleName::new(ModuleName::self_name().into());
 
     compile_imports(&mut context, address, script.imports)?;
-    let main_name = FunctionName::new(Identifier::new("main").unwrap());
+    compile_explicit_dependency_declarations(
+        &mut context,
+        script.explicit_dependency_declarations,
+    )?;
+    let main_name = FunctionName::new("main".to_string());
     let function = script.main;
 
     let sig = function_signature(&mut context, &function.value.signature)?;
@@ -409,6 +414,12 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         context.declare_struct_handle_index(ident, s.value.is_nominal_resource, tys)?;
     }
 
+    // Add explicit handles/dependency declarations to the pools
+    compile_explicit_dependency_declarations(
+        &mut context,
+        module.explicit_dependency_declarations,
+    )?;
+
     for (name, function) in &module.functions {
         let sig = function_signature(&mut context, &function.value.signature)?;
         context.declare_function(self_name.clone(), name.clone(), sig)?;
@@ -452,6 +463,35 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         .freeze()
         .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
         .map(|frozen_module| (frozen_module, source_map))
+}
+
+fn compile_explicit_dependency_declarations(
+    context: &mut Context,
+    dependencies: Vec<ModuleDependency>,
+) -> Result<()> {
+    for dependency in dependencies {
+        let ModuleDependency {
+            name: mname,
+            structs,
+            functions,
+        } = dependency;
+        for struct_dep in structs {
+            let StructDependency {
+                is_nominal_resource,
+                name,
+                type_formals: tys,
+            } = struct_dep;
+            let sname = QualifiedStructIdent::new(mname.clone(), name);
+            let (_, kinds) = type_formals(&tys)?;
+            context.declare_struct_handle_index(sname, is_nominal_resource, kinds)?;
+        }
+        for function_dep in functions {
+            let FunctionDependency { name, signature } = function_dep;
+            let sig = function_signature(context, &signature)?;
+            context.declare_function(mname.clone(), name, sig)?;
+        }
+    }
+    Ok(())
 }
 
 fn compile_imports(
@@ -591,7 +631,7 @@ fn compile_fields(
             };
 
             for (decl_order, (f, ty)) in fields.into_iter().enumerate() {
-                let name = context.identifier_index(f.value.name())?;
+                let name = context.identifier_index(f.value.as_inner())?;
                 record_src_loc!(field: context, f);
                 let sig_token = compile_type(context, &ty)?;
                 let signature = context.type_signature_index(sig_token.clone())?;
@@ -642,6 +682,7 @@ fn compile_function(
         FunctionVisibility::Public => CodeUnit::PUBLIC,
     } | match &ast_function.body {
         FunctionBody::Move { .. } => 0,
+        FunctionBody::Bytecode { .. } => 0,
         FunctionBody::Native => CodeUnit::NATIVE,
     };
     let acquires_global_resources = ast_function
@@ -656,6 +697,12 @@ fn compile_function(
             context.bind_type_formals(m)?;
             compile_function_body(context, ast_function.signature.formals, locals, code)?
         }
+        FunctionBody::Bytecode { locals, code } => {
+            let (m, _) = type_formals(&ast_function.signature.type_formals)?;
+            context.bind_type_formals(m)?;
+            compile_function_body_bytecode(context, ast_function.signature.formals, locals, code)?
+        }
+
         FunctionBody::Native => {
             for (var, _) in ast_function.signature.formals.into_iter() {
                 record_src_loc!(local: context, var)
@@ -1361,4 +1408,197 @@ fn compile_call(
                 .collect()
         }
     })
+}
+
+//**************************************************************************************************
+// Bytecode
+//**************************************************************************************************
+
+fn compile_function_body_bytecode(
+    context: &mut Context,
+    formals: Vec<(Var, Type)>,
+    locals: Vec<(Var, Type)>,
+    blocks: BytecodeBlocks,
+) -> Result<CodeUnit> {
+    let mut function_frame = FunctionFrame::new();
+    let mut locals_signature = LocalsSignature(vec![]);
+    for (var, t) in formals {
+        let sig = compile_type(context, &t)?;
+        function_frame.define_local(&var.value, sig.clone())?;
+        locals_signature.0.push(sig);
+        record_src_loc!(local: context, var);
+    }
+    for (var_, t) in locals {
+        let sig = compile_type(context, &t)?;
+        function_frame.define_local(&var_.value, sig.clone())?;
+        locals_signature.0.push(sig);
+        record_src_loc!(local: context, var_);
+    }
+    let sig_idx = context.locals_signature_index(locals_signature)?;
+
+    let mut code = vec![];
+    let mut label_to_index: HashMap<Label, u16> = HashMap::new();
+    for (label, block) in blocks {
+        label_to_index.insert(label.clone(), code.len() as u16);
+        context.label_index(label)?;
+        compile_bytecode_block(context, &mut function_frame, &mut code, block)?;
+    }
+    let fake_to_actual = context.build_index_remapping(label_to_index);
+    remap_branch_offsets(&mut code, &fake_to_actual);
+    let max_stack_size = u16::max_value();
+    Ok(CodeUnit {
+        locals: sig_idx,
+        max_stack_size,
+        code,
+    })
+}
+
+fn compile_bytecode_block(
+    context: &mut Context,
+    function_frame: &mut FunctionFrame,
+    code: &mut Vec<Bytecode>,
+    block: BytecodeBlock,
+) -> Result<()> {
+    for instr in block {
+        compile_bytecode(context, function_frame, code, instr)?
+    }
+    Ok(())
+}
+
+fn compile_bytecode(
+    context: &mut Context,
+    function_frame: &mut FunctionFrame,
+    code: &mut Vec<Bytecode>,
+    sp!(loc, instr_): IRBytecode,
+) -> Result<()> {
+    make_push_instr!(context, code);
+    let ff_instr = match instr_ {
+        IRBytecode_::Pop => Bytecode::Pop,
+        IRBytecode_::Ret => Bytecode::Ret,
+        IRBytecode_::BrTrue(lbl) => Bytecode::BrTrue(context.label_index(lbl)?),
+        IRBytecode_::BrFalse(lbl) => Bytecode::BrFalse(context.label_index(lbl)?),
+        IRBytecode_::Branch(lbl) => Bytecode::Branch(context.label_index(lbl)?),
+        IRBytecode_::LdU8(u) => Bytecode::LdU8(u),
+        IRBytecode_::LdU64(u) => Bytecode::LdU64(u),
+        IRBytecode_::LdU128(u) => Bytecode::LdU128(u),
+        IRBytecode_::CastU8 => Bytecode::CastU8,
+        IRBytecode_::CastU64 => Bytecode::CastU64,
+        IRBytecode_::CastU128 => Bytecode::CastU128,
+        IRBytecode_::LdByteArray(b) => Bytecode::LdByteArray(context.byte_array_index(&b)?),
+        IRBytecode_::LdAddr(a) => Bytecode::LdAddr(context.address_index(a)?),
+        IRBytecode_::LdTrue => Bytecode::LdTrue,
+        IRBytecode_::LdFalse => Bytecode::LdFalse,
+        IRBytecode_::CopyLoc(sp!(_, v_)) => Bytecode::CopyLoc(function_frame.get_local(&v_)?),
+        IRBytecode_::MoveLoc(sp!(_, v_)) => Bytecode::MoveLoc(function_frame.get_local(&v_)?),
+        IRBytecode_::StLoc(sp!(_, v_)) => Bytecode::StLoc(function_frame.get_local(&v_)?),
+        IRBytecode_::Call(m, n, tys) => {
+            let tokens = LocalsSignature(compile_types(context, &tys)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let fh_idx = context.function_handle(m, n)?.1;
+            Bytecode::Call(fh_idx, type_actuals_id)
+        }
+        IRBytecode_::Pack(n, tys) => {
+            let tokens = LocalsSignature(compile_types(context, &tys)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let def_idx = context.struct_definition_index(&n)?;
+            Bytecode::Pack(def_idx, type_actuals_id)
+        }
+        IRBytecode_::Unpack(n, tys) => {
+            let tokens = LocalsSignature(compile_types(context, &tys)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let def_idx = context.struct_definition_index(&n)?;
+            Bytecode::Unpack(def_idx, type_actuals_id)
+        }
+        IRBytecode_::ReadRef => Bytecode::ReadRef,
+        IRBytecode_::WriteRef => Bytecode::WriteRef,
+        IRBytecode_::FreezeRef => Bytecode::FreezeRef,
+        IRBytecode_::MutBorrowLoc(sp!(_, v_)) => {
+            Bytecode::MutBorrowLoc(function_frame.get_local(&v_)?)
+        }
+        IRBytecode_::ImmBorrowLoc(sp!(_, v_)) => {
+            Bytecode::ImmBorrowLoc(function_frame.get_local(&v_)?)
+        }
+        IRBytecode_::MutBorrowField(name, sp!(_, field_)) => {
+            let qualified_struct_name = QualifiedStructIdent {
+                module: ModuleName::module_self(),
+                name,
+            };
+            let sh_idx = context.struct_handle_index(qualified_struct_name)?;
+            let (fd_idx, _, _) = context.field(sh_idx, field_)?;
+            Bytecode::MutBorrowField(fd_idx)
+        }
+        IRBytecode_::ImmBorrowField(name, sp!(_, field_)) => {
+            let qualified_struct_name = QualifiedStructIdent {
+                module: ModuleName::module_self(),
+                name,
+            };
+            let sh_idx = context.struct_handle_index(qualified_struct_name)?;
+            let (fd_idx, _, _) = context.field(sh_idx, field_)?;
+            Bytecode::ImmBorrowField(fd_idx)
+        }
+        IRBytecode_::MutBorrowGlobal(n, tys) => {
+            let tokens = LocalsSignature(compile_types(context, &tys)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let def_idx = context.struct_definition_index(&n)?;
+            Bytecode::MutBorrowGlobal(def_idx, type_actuals_id)
+        }
+        IRBytecode_::ImmBorrowGlobal(n, tys) => {
+            let tokens = LocalsSignature(compile_types(context, &tys)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let def_idx = context.struct_definition_index(&n)?;
+            Bytecode::ImmBorrowGlobal(def_idx, type_actuals_id)
+        }
+        IRBytecode_::Add => Bytecode::Add,
+        IRBytecode_::Sub => Bytecode::Sub,
+        IRBytecode_::Mul => Bytecode::Mul,
+        IRBytecode_::Mod => Bytecode::Mod,
+        IRBytecode_::Div => Bytecode::Div,
+        IRBytecode_::BitOr => Bytecode::BitOr,
+        IRBytecode_::BitAnd => Bytecode::BitAnd,
+        IRBytecode_::Xor => Bytecode::Xor,
+        IRBytecode_::Or => Bytecode::Or,
+        IRBytecode_::And => Bytecode::And,
+        IRBytecode_::Not => Bytecode::Not,
+        IRBytecode_::Eq => Bytecode::Eq,
+        IRBytecode_::Neq => Bytecode::Neq,
+        IRBytecode_::Lt => Bytecode::Lt,
+        IRBytecode_::Gt => Bytecode::Gt,
+        IRBytecode_::Le => Bytecode::Le,
+        IRBytecode_::Ge => Bytecode::Ge,
+        IRBytecode_::Abort => Bytecode::Abort,
+        IRBytecode_::GetTxnSenderAddress => Bytecode::GetTxnSenderAddress,
+        IRBytecode_::Exists(n, tys) => {
+            let tokens = LocalsSignature(compile_types(context, &tys)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let def_idx = context.struct_definition_index(&n)?;
+            Bytecode::Exists(def_idx, type_actuals_id)
+        }
+        IRBytecode_::MoveFrom(n, tys) => {
+            let tokens = LocalsSignature(compile_types(context, &tys)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let def_idx = context.struct_definition_index(&n)?;
+            Bytecode::MoveFrom(def_idx, type_actuals_id)
+        }
+        IRBytecode_::MoveToSender(n, tys) => {
+            let tokens = LocalsSignature(compile_types(context, &tys)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let def_idx = context.struct_definition_index(&n)?;
+            Bytecode::MoveToSender(def_idx, type_actuals_id)
+        }
+        IRBytecode_::Shl => Bytecode::Shl,
+        IRBytecode_::Shr => Bytecode::Shr,
+    };
+    push_instr!(loc, ff_instr);
+    Ok(())
+}
+
+fn remap_branch_offsets(code: &mut Vec<Bytecode>, fake_to_actual: &HashMap<u16, u16>) {
+    for instr in code {
+        match instr {
+            Bytecode::BrTrue(offset) | Bytecode::BrFalse(offset) | Bytecode::Branch(offset) => {
+                *offset = fake_to_actual[offset]
+            }
+            _ => (),
+        }
+    }
 }

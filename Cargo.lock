@@ -2927,6 +2927,7 @@ dependencies = [
  "difference 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "functional-tests 0.1.0",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ir-to-bytecode 0.1.0",
  "libra-types 0.1.0",
  "move-ir-types 0.1.0",
  "petgraph 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",

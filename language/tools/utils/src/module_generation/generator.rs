@@ -6,7 +6,7 @@ use crate::module_generation::{
 };
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::compiler::compile_module;
-use libra_types::{account_address::AccountAddress, identifier::Identifier};
+use libra_types::account_address::AccountAddress;
 use move_ir_types::{ast::*, location::*};
 use rand::{rngs::StdRng, Rng};
 use std::collections::{BTreeSet, VecDeque};
@@ -33,11 +33,11 @@ pub fn generate_modules(
     assert!(number > 0, "We cannot generate zero modules");
 
     let table_size = options.min_table_size;
-    let (callee_names, callees): (Set<Identifier>, Vec<ModuleDefinition>) = (0..(number - 1))
+    let (callee_names, callees): (Set<String>, Vec<ModuleDefinition>) = (0..(number - 1))
         .map(|_| {
             let module = ModuleGenerator::create(rng, options.clone(), &Set::new());
             let module_name = module.name.as_inner().to_string();
-            (Identifier::new(module_name).unwrap(), module)
+            (module_name, module)
         })
         .unzip();
 
@@ -93,9 +93,9 @@ impl<'a> ModuleGenerator<'a> {
         self.gen.gen_range(0, bound)
     }
 
-    fn identifier(&mut self) -> Identifier {
+    fn identifier(&mut self) -> String {
         let len = self.gen.gen_range(10, self.options.max_string_size);
-        Identifier::new(random_string(&mut self.gen, len)).unwrap()
+        random_string(&mut self.gen, len)
     }
 
     fn base_type(&mut self, ty_param_context: &[(TypeVar, Kind)]) -> Type {
@@ -260,7 +260,7 @@ impl<'a> ModuleGenerator<'a> {
             .push(Spanned::unsafe_no_loc(strct))
     }
 
-    fn imports(callees: &Set<Identifier>) -> Vec<ImportDefinition> {
+    fn imports(callees: &Set<String>) -> Vec<ImportDefinition> {
         callees
             .iter()
             .map(|ident| {
@@ -300,16 +300,17 @@ impl<'a> ModuleGenerator<'a> {
     pub fn create(
         gen: &'a mut StdRng,
         options: ModuleGeneratorOptions,
-        callable_modules: &Set<Identifier>,
+        callable_modules: &Set<String>,
     ) -> ModuleDefinition {
         // TODO: Generation of struct and function handles to the `callable_modules`
         let module_name = {
             let len = gen.gen_range(10, options.max_string_size);
-            Identifier::new(random_string(gen, len)).unwrap()
+            random_string(gen, len)
         };
         let current_module = ModuleDefinition {
             name: ModuleName::new(module_name),
             imports: Self::imports(callable_modules),
+            explicit_dependency_declarations: Vec::new(),
             structs: Vec::new(),
             functions: Vec::new(),
             synthetics: Vec::new(),

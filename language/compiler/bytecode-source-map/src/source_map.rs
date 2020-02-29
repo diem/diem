@@ -21,7 +21,7 @@ use vm::{
 //***************************************************************************
 
 pub type SourceMap<Location> = Vec<ModuleSourceMap<Location>>;
-pub type SourceName<Location> = (Identifier, Location);
+pub type SourceName<Location> = (String, Location);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StructSourceMap<Location: Clone + Eq> {
@@ -124,7 +124,7 @@ impl<Location: Clone + Eq> StructSourceMap<Location> {
 
         for i in 0..struct_handle.type_formals.len() {
             let name = format!("Ty{}", i);
-            self.add_type_parameter((Identifier::new(name)?, default_loc.clone()))
+            self.add_type_parameter((name, default_loc.clone()))
         }
         Ok(())
     }
@@ -223,13 +223,13 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
         // Generate names for each type parameter
         for i in 0..function_signature.type_formals.len() {
             let name = format!("Ty{}", i);
-            self.add_type_parameter((Identifier::new(name)?, default_loc.clone()))
+            self.add_type_parameter((name, default_loc.clone()))
         }
 
         // Generate names for each local of the function
         for i in 0..locals.0.len() {
             let name = format!("loc{}", i);
-            self.add_local_mapping((Identifier::new(name)?, default_loc.clone()))
+            self.add_local_mapping((name, default_loc.clone()))
         }
 
         // We just need to insert the code map at the 0'th index since we represent this with a
@@ -270,8 +270,9 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
 
 impl<Location: Clone + Eq> ModuleSourceMap<Location> {
     pub fn new(module_name: QualifiedModuleIdent) -> Self {
+        let ident = Identifier::new(module_name.name.into_inner()).unwrap();
         Self {
-            module_name: (module_name.address, module_name.name.into_inner()),
+            module_name: (module_name.address, ident),
             struct_map: BTreeMap::new(),
             function_map: BTreeMap::new(),
         }
@@ -442,7 +443,8 @@ impl<Location: Clone + Eq> ModuleSourceMap<Location> {
     /// Create a 'dummy' source map for a compiled module. This is useful for e.g. disassembling
     /// with generated or real names depending upon if the source map is available or not.
     pub fn dummy_from_module(module: &CompiledModule, default_loc: Location) -> Result<Self> {
-        let module_name = ModuleName::new(module.identifier_at(IdentifierIndex::new(0)).to_owned());
+        let module_name =
+            ModuleName::new(module.identifier_at(IdentifierIndex::new(0)).to_string());
         let module_ident =
             QualifiedModuleIdent::new(module_name, *module.address_at(AddressPoolIndex::new(0)));
 

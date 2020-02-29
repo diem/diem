@@ -19,6 +19,7 @@ move-vm = { path = "../vm", package = "vm" }
 move-bytecode-verifier = { path = "../bytecode-verifier", package = "bytecode-verifier" }
 libra-types = { path = "../../types" }
 move-ir-types = {path = "../move-ir/types" }
+ir-to-bytecode = {path = "../compiler/ir-to-bytecode" }
 borrow-graph = { path = "../borrow-graph" }
 
 [dev-dependencies]
