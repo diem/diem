@@ -104,13 +104,15 @@ fn main() {
         std::process::exit(1);
     }
 
+    let file_name = args.source_path.as_path().as_os_str().to_str().unwrap();
+
     if args.list_dependencies {
         let source = fs::read_to_string(args.source_path.clone()).expect("Unable to read file");
         let dependency_list: Vec<AccessPath> = if args.module_input {
-            let module = parse_module(&source).expect("Unable to parse module");
+            let module = parse_module(file_name, &source).expect("Unable to parse module");
             module.get_external_deps()
         } else {
-            let script = parse_script(&source).expect("Unable to parse module");
+            let script = parse_script(file_name, &source).expect("Unable to parse module");
             script.get_external_deps()
         }
         .into_iter()
@@ -154,7 +156,7 @@ fn main() {
             ..Compiler::default()
         };
         let (compiled_program, source_map, dependencies) = compiler
-            .into_compiled_program_and_source_maps_deps(&source)
+            .into_compiled_program_and_source_maps_deps(file_name, &source)
             .expect("Failed to compile program");
 
         let compiled_program = if !args.no_verify {

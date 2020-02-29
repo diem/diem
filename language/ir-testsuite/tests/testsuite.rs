@@ -36,7 +36,7 @@ impl Compiler for IRCompiler {
         address: AccountAddress,
         input: &str,
     ) -> Result<ScriptOrModule> {
-        Ok(match parse_script_or_module(input)? {
+        Ok(match parse_script_or_module("unused_file_name", input)? {
             ast::ScriptOrModule::Script(parsed_script) => {
                 log(format!("{}", &parsed_script));
                 ScriptOrModule::Script(compile_script(address, parsed_script, &self.deps)?.0)

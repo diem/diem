@@ -16,7 +16,8 @@ use itertools::Itertools;
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use log::info;
 use move_ir_types::{
-    ast::{Loc, ModuleDefinition},
+    ast::ModuleDefinition,
+    location::Spanned,
     spec_language_ast::{Condition, Invariant},
 };
 use std::{collections::BTreeMap, fs, path::Path};
@@ -45,7 +46,7 @@ impl Driver {
     pub fn new(options: Options) -> Self {
         Driver {
             env: GlobalEnv::new(options),
-            writer: CodeWriter::new(PSEUDO_PRELUDE_MODULE, Loc::default()),
+            writer: CodeWriter::new(PSEUDO_PRELUDE_MODULE, Spanned::unsafe_no_loc(()).loc),
         }
     }
 
@@ -105,7 +106,8 @@ impl Driver {
             info!("analyzing {}", file_name);
             // Parse module.
             let code = abort_on_error(fs::read_to_string(file_name), "cannot read mvir file");
-            let parsed_module = abort_on_error(parse_module(&code), "mvir parsing errors");
+            let parsed_module =
+                abort_on_error(parse_module(file_name, &code), "mvir parsing errors");
 
             // Extract information from parsed module.
             let mut func_infos = self.extract_function_infos(&parsed_module);
@@ -201,7 +203,7 @@ impl Driver {
         let mut result = BTreeMap::new();
         for (raw_index, def) in parsed_module.structs.iter().enumerate() {
             let index = StructDefinitionIndex(raw_index as u16);
-            result.insert(index, def.invariants.clone());
+            result.insert(index, def.value.invariants.clone());
         }
         result
     }

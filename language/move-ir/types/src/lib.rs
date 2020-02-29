@@ -4,4 +4,5 @@
 //! Base types for the Move IR.
 
 pub mod ast;
+pub mod location;
 pub mod spec_language_ast;

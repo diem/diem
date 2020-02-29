@@ -611,7 +611,7 @@ fn transform_program_with_generics() {
 
 fn generate_code_from_string(code: String) -> (Vec<StacklessBytecode>, Vec<SignatureToken>) {
     let address = AccountAddress::default();
-    let program = parse_program(&code).unwrap();
+    let program = parse_program("file_name", &code).unwrap();
     let deps = stdlib_modules(StdLibOptions::Staged);
     let compiled_program = compile_program(address, program, deps).unwrap().0;
     println!("{:?}", compiled_program);

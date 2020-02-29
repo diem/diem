@@ -13,6 +13,7 @@ use crate::{
     },
     shared::{unique_map::UniqueMap, *},
 };
+use move_ir_types::location::*;
 use std::collections::{BTreeSet, HashMap};
 
 //**************************************************************************************************

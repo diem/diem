@@ -8,9 +8,9 @@ use crate::{
         Type, Type_,
     },
     parser::ast::{Kind, Kind_, Value_},
-    shared::*,
     typing::ast as T,
 };
+use move_ir_types::location::*;
 use std::convert::TryInto;
 
 //**************************************************************************************************

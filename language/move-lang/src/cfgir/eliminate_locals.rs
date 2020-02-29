@@ -279,8 +279,8 @@ mod eliminate {
     use crate::{
         cfgir::{ast, ast::*},
         parser::ast::Var,
-        shared::*,
     };
+    use move_ir_types::location::*;
     use std::collections::{BTreeMap, BTreeSet};
 
     pub struct Context {

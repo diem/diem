@@ -32,7 +32,7 @@ fn bad_module_address() {
     );
 
     // compile with account 1's address
-    let compiled_module = compile_module_with_address(account1.address(), &program);
+    let compiled_module = compile_module_with_address(account1.address(), "file_name", &program);
     // send with account 2's address
     let txn = account2.account().create_signed_txn_impl(
         *account2.address(),
@@ -76,7 +76,7 @@ fn duplicate_module() {
         }
         ",
     );
-    let compiled_module = compile_module_with_address(account.address(), &program);
+    let compiled_module = compile_module_with_address(account.address(), "file_name", &program);
 
     let txn1 = account.account().create_signed_txn_impl(
         *account.address(),
@@ -126,7 +126,7 @@ pub fn test_publishing_no_modules_non_whitelist_script() {
         ",
     );
 
-    let random_script = compile_module_with_address(sender.address(), &program);
+    let random_script = compile_module_with_address(sender.address(), "file_name", &program);
     let txn =
         sender
             .account()
@@ -155,7 +155,7 @@ pub fn test_publishing_allow_modules() {
         ",
     );
 
-    let random_script = compile_module_with_address(sender.address(), &program);
+    let random_script = compile_module_with_address(sender.address(), "file_name", &program);
     let txn =
         sender
             .account()

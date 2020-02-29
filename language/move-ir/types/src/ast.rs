@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::spec_language_ast::{Condition, Invariant, SyntheticDefinition};
+use crate::{
+    location::*,
+    spec_language_ast::{Condition, Invariant, SyntheticDefinition},
+};
 use anyhow::Result;
-use codespan::{ByteIndex, Span};
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
@@ -14,20 +16,7 @@ use once_cell::sync::Lazy;
 use std::{
     collections::{HashSet, VecDeque},
     fmt,
-    ops::Deref,
 };
-
-/// Generic wrapper that keeps file locations for any ast-node
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
-pub struct Spanned<T> {
-    /// The file location
-    pub span: Loc,
-    /// The value being wrapped
-    pub value: T,
-}
-
-/// The file location type
-pub type Loc = Span<ByteIndex>;
 
 //**************************************************************************************************
 // Program
@@ -595,7 +584,7 @@ impl Script {
 
     /// Accessor for the body of the 'main' procedure
     pub fn body(&self) -> &Block_ {
-        match self.main.body {
+        match self.main.value.body {
             FunctionBody::Move { ref code, .. } => &code,
             FunctionBody::Native => panic!("main() can't be native"),
         }
@@ -924,14 +913,14 @@ impl FunctionCall_ {
 
     /// Creates a `FunctionCall::Builtin` variant with no location information
     pub fn builtin(bif: Builtin) -> FunctionCall {
-        Spanned::no_loc(FunctionCall_::Builtin(bif))
+        Spanned::unsafe_no_loc(FunctionCall_::Builtin(bif))
     }
 }
 
 impl Cmd_ {
     /// Creates a command that returns no values
     pub fn return_empty() -> Self {
-        Cmd_::Return(Box::new(Spanned::no_loc(Exp_::ExprList(vec![]))))
+        Cmd_::Return(Box::new(Spanned::unsafe_no_loc(Exp_::ExprList(vec![]))))
     }
 
     /// Creates a command that returns a single value
@@ -996,12 +985,14 @@ impl Block_ {
 impl Exp_ {
     /// Creates a new address `Exp` with no location information
     pub fn address(addr: AccountAddress) -> Exp {
-        Spanned::no_loc(Exp_::Value(Spanned::no_loc(CopyableVal_::Address(addr))))
+        Spanned::unsafe_no_loc(Exp_::Value(Spanned::unsafe_no_loc(CopyableVal_::Address(
+            addr,
+        ))))
     }
 
     /// Creates a new value `Exp` with no location information
     pub fn value(b: CopyableVal_) -> Exp {
-        Spanned::no_loc(Exp_::Value(Spanned::no_loc(b)))
+        Spanned::unsafe_no_loc(Exp_::Value(Spanned::unsafe_no_loc(b)))
     }
 
     /// Creates a new u64 `Exp` with no location information
@@ -1021,12 +1012,12 @@ impl Exp_ {
 
     /// Creates a new pack/struct-instantiation `Exp` with no location information
     pub fn instantiate(n: StructName, tys: Vec<Type>, s: ExpFields) -> Exp {
-        Spanned::no_loc(Exp_::Pack(n, tys, s))
+        Spanned::unsafe_no_loc(Exp_::Pack(n, tys, s))
     }
 
     /// Creates a new binary operator `Exp` with no location information
     pub fn binop(lhs: Exp, op: BinOp, rhs: Exp) -> Exp {
-        Spanned::no_loc(Exp_::BinopExp(Box::new(lhs), op, Box::new(rhs)))
+        Spanned::unsafe_no_loc(Exp_::BinopExp(Box::new(lhs), op, Box::new(rhs)))
     }
 
     /// Creates a new `e+e` `Exp` with no location information
@@ -1041,12 +1032,12 @@ impl Exp_ {
 
     /// Creates a new `*e` `Exp` with no location information
     pub fn dereference(e: Exp) -> Exp {
-        Spanned::no_loc(Exp_::Dereference(Box::new(e)))
+        Spanned::unsafe_no_loc(Exp_::Dereference(Box::new(e)))
     }
 
     /// Creates a new borrow field `Exp` with no location information
     pub fn borrow(is_mutable: bool, exp: Box<Exp>, field: Field_) -> Exp {
-        Spanned::no_loc(Exp_::Borrow {
+        Spanned::unsafe_no_loc(Exp_::Borrow {
             is_mutable,
             exp,
             field,
@@ -1055,21 +1046,21 @@ impl Exp_ {
 
     /// Creates a new copy-local `Exp` with no location information
     pub fn copy(v: Var) -> Exp {
-        Spanned::no_loc(Exp_::Copy(v))
+        Spanned::unsafe_no_loc(Exp_::Copy(v))
     }
 
     /// Creates a new move-local `Exp` with no location information
     pub fn move_(v: Var) -> Exp {
-        Spanned::no_loc(Exp_::Move(v))
+        Spanned::unsafe_no_loc(Exp_::Move(v))
     }
 
     /// Creates a new function call `Exp` with no location information
     pub fn function_call(f: FunctionCall, e: Exp) -> Exp {
-        Spanned::no_loc(Exp_::FunctionCall(f, Box::new(e)))
+        Spanned::unsafe_no_loc(Exp_::FunctionCall(f, Box::new(e)))
     }
 
     pub fn expr_list(exps: Vec<Exp>) -> Exp {
-        Spanned::no_loc(Exp_::ExprList(exps))
+        Spanned::unsafe_no_loc(Exp_::ExprList(exps))
     }
 }
 
@@ -1099,30 +1090,7 @@ impl Iterator for Script {
 
 impl PartialEq for Script {
     fn eq(&self, other: &Script) -> bool {
-        self.imports == other.imports && self.main.body == other.main.body
-    }
-}
-
-impl<T> Deref for Spanned<T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        &self.value
-    }
-}
-
-impl<T> AsRef<T> for Spanned<T> {
-    fn as_ref(&self) -> &T {
-        &self.value
-    }
-}
-
-impl<T> Spanned<T> {
-    pub fn no_loc(value: T) -> Spanned<T> {
-        Spanned {
-            value,
-            span: Span::default(),
-        }
+        self.imports == other.imports && self.main.value.body == other.main.value.body
     }
 }
 
@@ -1137,15 +1105,6 @@ impl Iterator for Block_ {
 //**************************************************************************************************
 // Display
 //**************************************************************************************************
-
-impl<T> fmt::Display for Spanned<T>
-where
-    T: fmt::Display,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
 
 impl fmt::Display for TypeVar_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::ast::*;
-use crate::{
-    errors::*,
-    shared::{ast_debug::*, *},
-};
+use crate::{errors::*, shared::ast_debug::*};
+use move_ir_types::location::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 //**************************************************************************************************

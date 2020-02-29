@@ -9,6 +9,7 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
     typing::core::{self, Subst},
 };
+use move_ir_types::location::*;
 use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************

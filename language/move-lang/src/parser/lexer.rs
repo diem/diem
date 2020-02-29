@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan::{ByteIndex, Span};
+use move_ir_types::location::*;
 use std::fmt;
 
-use crate::{errors::*, shared::*};
+use crate::errors::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tok {

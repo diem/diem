@@ -6,6 +6,7 @@ use crate::{
     parser::ast::Var,
     shared::{unique_map::UniqueMap, *},
 };
+use move_ir_types::location::*;
 
 //**************************************************************************************************
 // Abstract state

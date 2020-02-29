@@ -474,7 +474,7 @@ fn parse_and_compile_modules(s: impl AsRef<str>) -> Vec<CompiledModule> {
         ..Compiler::default()
     };
     compiler
-        .into_compiled_program(s.as_ref())
+        .into_compiled_program("file_name", s.as_ref())
         .expect("Failed to compile program")
         .modules
 }

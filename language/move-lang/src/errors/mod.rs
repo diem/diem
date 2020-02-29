@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::Loc;
 use codespan::{FileId, Files, Span};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
@@ -11,6 +10,7 @@ use codespan_reporting::{
         Config,
     },
 };
+use move_ir_types::location::*;
 use std::collections::{HashMap, HashSet};
 
 pub type Errors = Vec<Error>;

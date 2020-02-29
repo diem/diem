@@ -10,6 +10,7 @@ use crate::{
     },
     shared::{remembering_unique_map::RememberingUniqueMap, unique_map::UniqueMap, *},
 };
+use move_ir_types::location::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 //**************************************************************************************************

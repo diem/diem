@@ -218,7 +218,7 @@ impl GlobalEnv {
     /// Converts a Loc as used by the move-lang compiler to the one we are using here.
     /// TODO: move-lang should use FileId as well so we don't need this here. There is already
     /// a todo in their code to remove the current use of `&'static str` for file names in Loc.
-    pub fn to_loc(&self, loc: &move_lang::shared::Loc) -> Loc {
+    pub fn to_loc(&self, loc: &move_ir_types::location::Loc) -> Loc {
         let file_id = self
             .file_name_map
             .get(loc.file())

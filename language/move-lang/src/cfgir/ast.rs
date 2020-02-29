@@ -9,6 +9,7 @@ use crate::{
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
+use move_ir_types::location::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 // HLIR + Unstructured Control Flow + CFG

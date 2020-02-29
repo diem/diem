@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::{ast_debug::*, sp, Address, Identifier, Loc, Name, Spanned, TName};
+use crate::shared::{ast_debug::*, Address, Identifier, Name, TName};
+use move_ir_types::location::*;
 use std::fmt;
 
 macro_rules! new_name {

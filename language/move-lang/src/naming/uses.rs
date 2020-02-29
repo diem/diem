@@ -5,8 +5,9 @@ use crate::{
     errors::*,
     naming::ast as N,
     parser::ast::{ModuleIdent, StructName},
-    shared::{unique_map::UniqueMap, *},
+    shared::unique_map::UniqueMap,
 };
+use move_ir_types::location::*;
 use petgraph::{
     algo::{astar as petgraph_astar, toposort as petgraph_toposort, Cycle},
     graphmap::DiGraphMap,

@@ -8,7 +8,7 @@ use libra_types::{
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
 };
-use move_ir_types::ast::*;
+use move_ir_types::{ast::*, location::*};
 use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,

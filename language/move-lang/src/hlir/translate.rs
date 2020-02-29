@@ -10,6 +10,7 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
 };
+use move_ir_types::location::*;
 use std::collections::VecDeque;
 
 //**************************************************************************************************

@@ -12,6 +12,7 @@ use crate::{
     },
     shared::{unique_map::UniqueMap, *},
 };
+use move_ir_types::location::*;
 use move_vm::file_format as F;
 use std::{collections::HashMap, convert::TryInto};
 

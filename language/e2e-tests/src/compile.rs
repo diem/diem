@@ -12,10 +12,16 @@ use libra_types::{
 
 /// Compile the provided Move code into a blob which can be used as the code to be published
 /// (a Module).
-pub fn compile_module_with_address(address: &AccountAddress, code: &str) -> TransactionPayload {
+pub fn compile_module_with_address(
+    address: &AccountAddress,
+    file_name: &str,
+    code: &str,
+) -> TransactionPayload {
     let compiler = Compiler {
         address: *address,
         ..Compiler::default()
     };
-    TransactionPayload::Module(Module::new(compiler.into_module_blob(code).unwrap()))
+    TransactionPayload::Module(Module::new(
+        compiler.into_module_blob(file_name, code).unwrap(),
+    ))
 }

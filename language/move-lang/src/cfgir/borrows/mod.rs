@@ -7,7 +7,7 @@ use super::{absint::*, ast::*};
 use crate::{
     errors::*,
     parser::ast::{StructName, Var},
-    shared::{unique_map::UniqueMap, *},
+    shared::unique_map::UniqueMap,
 };
 use state::*;
 use std::collections::{BTreeMap, BTreeSet};

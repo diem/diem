@@ -4,11 +4,13 @@
 #![forbid(unsafe_code)]
 
 use bytecode_source_map::{
-    mapping::SourceMapping, source_map::ModuleSourceMap, utils::module_source_map_from_file,
+    mapping::SourceMapping,
+    source_map::ModuleSourceMap,
+    utils::{module_source_map_from_file, remap_owned_loc_to_loc, OwnedLoc},
 };
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use libra_types::transaction::Module;
-use move_ir_types::ast::Loc;
+use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
 use structopt::StructOpt;
 use vm::file_format::{CompiledModule, CompiledScript};
@@ -72,9 +74,10 @@ fn main() {
 
     let ir_source_path = Path::new(&args.bytecode_file_path).with_extension(mvir_extension);
     let ir_source = fs::read_to_string(&ir_source_path).ok();
-    let source_map = module_source_map_from_file::<Loc>(
+    let source_map = module_source_map_from_file::<OwnedLoc>(
         &Path::new(&args.bytecode_file_path).with_extension(source_map_extension),
-    );
+    )
+    .map(remap_owned_loc_to_loc);
 
     let mut disassembler_options = DisassemblerOptions::new();
     disassembler_options.print_code = args.print_code | args.print_basic_blocks;
@@ -82,18 +85,19 @@ fn main() {
     disassembler_options.print_basic_blocks = args.print_basic_blocks;
     disassembler_options.print_locals = args.print_locals;
 
+    let no_loc = Spanned::unsafe_no_loc(()).loc;
     let mut source_mapping = if args.is_script {
         let compiled_script = CompiledScript::deserialize(module_bytes.code())
             .expect("Script blob can't be deserialized");
         source_map
-            .or_else(|_| ModuleSourceMap::dummy_from_script(&compiled_script))
+            .or_else(|_| ModuleSourceMap::dummy_from_script(&compiled_script, no_loc))
             .and_then(|source_map| Ok(SourceMapping::new_from_script(source_map, compiled_script)))
             .expect("Unable to build source mapping for compiled script")
     } else {
         let compiled_module = CompiledModule::deserialize(module_bytes.code())
             .expect("Module blob can't be deserialized");
         source_map
-            .or_else(|_| ModuleSourceMap::dummy_from_module(&compiled_module))
+            .or_else(|_| ModuleSourceMap::dummy_from_module(&compiled_module, no_loc))
             .and_then(|source_map| Ok(SourceMapping::new(source_map, compiled_module)))
             .expect("Unable to build source mapping for compiled module")
     };

@@ -8,6 +8,7 @@ use crate::{
     shared::*,
     typing::ast as T,
 };
+use move_ir_types::location::*;
 use std::collections::BTreeSet;
 
 pub type Seen = BTreeSet<StructName>;
