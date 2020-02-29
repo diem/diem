@@ -704,7 +704,7 @@ impl<'env> ModuleEnv<'env> {
             .map(|t| self.translate_ast_type(loc, t, type_params))
             .collect_vec();
         if let Some(module_env) = self.env.find_module_by_name(&module_name) {
-            if let Some(struct_env) = module_env.find_struct(struct_name) {
+            if let Some(struct_env) = module_env.find_struct(IdentStr::new(struct_name).unwrap()) {
                 let expected_count = struct_env.get_type_parameters().len();
                 if expected_count != translated_actuals.len() {
                     self.error(
@@ -743,7 +743,7 @@ impl<'env> ModuleEnv<'env> {
         param: &TypeVar_,
         type_params: &[TypeParameter],
     ) -> GlobalType {
-        let name = param.name().as_str();
+        let name = param.name();
         if let Some(pos) = type_params.iter().position(|p| p.0.as_str() == name) {
             GlobalType::TypeParameter(pos as u16)
         } else {
@@ -1128,7 +1128,7 @@ impl<'env> FunctionEnv<'env> {
             .get_function_source_map(self.data.def_idx)
         {
             if let Some((ident, _)) = fmap.get_local_name(idx as u64) {
-                return ident.to_string();
+                return ident;
             }
         }
         format!("__t{}", idx)

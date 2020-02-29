@@ -148,8 +148,14 @@ impl Driver {
                     self.env.create_function_data(
                         &verified_module,
                         def_idx,
-                        arg_names,
-                        type_arg_names,
+                        arg_names
+                            .into_iter()
+                            .map(|s| Identifier::new(s).unwrap())
+                            .collect(),
+                        type_arg_names
+                            .into_iter()
+                            .map(|s| Identifier::new(s).unwrap())
+                            .collect(),
                         specs,
                     )
                 })
@@ -169,7 +175,7 @@ impl Driver {
     fn extract_function_infos(
         &self,
         parsed_module: &ModuleDefinition,
-    ) -> BTreeMap<FunctionDefinitionIndex, (Vec<Identifier>, Vec<Identifier>, Vec<Condition>)> {
+    ) -> BTreeMap<FunctionDefinitionIndex, (Vec<String>, Vec<String>, Vec<Condition>)> {
         let mut result = BTreeMap::new();
         for (raw_index, (_, def)) in parsed_module.functions.iter().enumerate() {
             let type_arg_names = def

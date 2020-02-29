@@ -7,7 +7,7 @@ use bytecode_source_map::{
     source_map::{FunctionSourceMap, SourceName},
 };
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
-use libra_types::identifier::{IdentStr, Identifier};
+use libra_types::identifier::IdentStr;
 use vm::{
     access::ModuleAccess,
     file_format::{
@@ -191,7 +191,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                     )
                 })?
                 .0;
-        Ok(name.to_string())
+        Ok(name)
     }
 
     fn type_for_local(
@@ -414,10 +414,10 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                     .iter()
                     .map(|sig_tok| {
                         Ok((
-                            Identifier::new(self.disassemble_sig_tok(
+                            self.disassemble_sig_tok(
                                 sig_tok.clone(),
                                 &function_source_map.type_parameters,
-                            )?)?,
+                            )?,
                             default_location.clone(),
                         ))
                     })
@@ -438,10 +438,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                     method_idx,
                     fcall_name,
                     Self::format_type_params(
-                        &ty_params
-                            .into_iter()
-                            .map(|x| x.0.to_string())
-                            .collect::<Vec<_>>()
+                        &ty_params.into_iter().map(|(s, _)| s).collect::<Vec<_>>()
                     ),
                     type_arguments,
                     Self::format_ret_type(&type_rets)

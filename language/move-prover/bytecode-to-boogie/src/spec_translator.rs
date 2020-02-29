@@ -11,7 +11,7 @@ use std::{
 use itertools::Itertools;
 use num::{BigInt, Num};
 
-use libra_types::account_address::AccountAddress;
+use libra_types::{account_address::AccountAddress, identifier::IdentStr};
 use move_ir_types::{
     ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Type},
     location::{Loc, Spanned},
@@ -1053,7 +1053,8 @@ impl<'env> SpecTranslator<'env> {
         if let GlobalType::Struct(module_index, struct_index, _actuals) = sig {
             let module_env = self.module_env.env.get_module(*module_index);
             let struct_env = module_env.get_struct(*struct_index);
-            if let Some(field_env) = struct_env.find_field(field.name()) {
+            if let Some(field_env) = struct_env.find_field(IdentStr::new(field.as_inner()).unwrap())
+            {
                 (
                     boogie_field_name(&field_env),
                     if is_ref {

@@ -6,7 +6,11 @@ use codespan::{ByteIndex, Span};
 use std::{fmt, str::FromStr};
 
 use crate::lexer::*;
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
+use libra_types::{
+    account_address::AccountAddress,
+    byte_array::ByteArray,
+    identifier::{IdentStr, Identifier},
+};
 use move_ir_types::{ast::*, location::*, spec_language_ast::*};
 
 // FIXME: The following simplified version of ParseError copied from
@@ -182,7 +186,7 @@ fn parse_account_address<'input>(
 // };
 
 fn parse_var_<'input>(tokens: &mut Lexer<'input>) -> Result<Var_, ParseError<Loc, anyhow::Error>> {
-    Ok(Var_::parse(parse_name(tokens)?)?)
+    Ok(Var_::new(parse_name(tokens)?))
 }
 
 fn parse_var<'input>(tokens: &mut Lexer<'input>) -> Result<Var, ParseError<Loc, anyhow::Error>> {
@@ -200,7 +204,7 @@ fn parse_field<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<Field, ParseError<Loc, anyhow::Error>> {
     let start_loc = tokens.start_loc();
-    let f = parse_field_(parse_name(tokens)?)?;
+    let f = Field_::new(parse_name(tokens)?);
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, f))
 }
@@ -404,8 +408,8 @@ fn parse_qualified_function_name<'input>(
             let v: Vec<&str> = module_dot_name.split('.').collect();
             assert!(v.len() == 2);
             FunctionCall_::ModuleFunctionCall {
-                module: ModuleName::parse(v[0])?,
-                name: FunctionName::parse(v[1])?,
+                module: ModuleName::new(v[0].to_string()),
+                name: FunctionName::new(v[1].to_string()),
                 type_actuals,
             }
         }
@@ -454,7 +458,7 @@ fn parse_borrow_field_<'input>(
         parse_unary_exp(tokens)?
     };
     consume_token(tokens, Tok::Period)?;
-    let f = parse_field_(parse_name(tokens)?)?;
+    let f = parse_field(tokens)?.value;
     Ok(Exp_::Borrow {
         is_mutable: mutable,
         exp: Box::new(e),
@@ -583,7 +587,7 @@ fn parse_pack_<'input>(
     let fs = parse_comma_list(tokens, &[Tok::RBrace], parse_field_exp, true)?;
     consume_token(tokens, Tok::RBrace)?;
     Ok(Exp_::Pack(
-        StructName::parse(name)?,
+        StructName::new(name.to_string()),
         type_actuals,
         fs.into_iter().collect::<Vec<_>>(),
     ))
@@ -643,7 +647,7 @@ fn parse_term_<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, ParseError<Lo
 fn parse_struct_name<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<StructName, ParseError<Loc, anyhow::Error>> {
-    Ok(StructName::parse(parse_name(tokens)?)?)
+    Ok(StructName::new(parse_name(tokens)?))
 }
 
 // QualifiedStructIdent : QualifiedStructIdent = {
@@ -656,8 +660,8 @@ fn parse_qualified_struct_ident<'input>(
     let module_dot_struct = parse_dot_name(tokens)?;
     let v: Vec<&str> = module_dot_struct.split('.').collect();
     assert!(v.len() == 2);
-    let m: ModuleName = ModuleName::parse(v[0])?;
-    let n: StructName = StructName::parse(v[1])?;
+    let m: ModuleName = ModuleName::new(v[0].to_string());
+    let n: StructName = StructName::new(v[1].to_string());
     Ok(QualifiedStructIdent::new(m, n))
 }
 
@@ -668,7 +672,7 @@ fn parse_qualified_struct_ident<'input>(
 fn parse_module_name<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<ModuleName, ParseError<Loc, anyhow::Error>> {
-    Ok(ModuleName::parse(parse_name(tokens)?)?)
+    Ok(ModuleName::new(parse_name(tokens)?))
 }
 
 fn consume_end_of_generics<'input>(
@@ -705,7 +709,7 @@ fn parse_builtin<'input>(
             tokens.advance()?;
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             consume_end_of_generics(tokens)?;
-            Ok(Builtin::Exists(StructName::parse(name)?, type_actuals))
+            Ok(Builtin::Exists(StructName::new(name), type_actuals))
         }
         Tok::BorrowGlobal => {
             tokens.advance()?;
@@ -713,7 +717,7 @@ fn parse_builtin<'input>(
             consume_end_of_generics(tokens)?;
             Ok(Builtin::BorrowGlobal(
                 false,
-                StructName::parse(name)?,
+                StructName::new(name),
                 type_actuals,
             ))
         }
@@ -723,7 +727,7 @@ fn parse_builtin<'input>(
             consume_end_of_generics(tokens)?;
             Ok(Builtin::BorrowGlobal(
                 true,
-                StructName::parse(name)?,
+                StructName::new(name),
                 type_actuals,
             ))
         }
@@ -735,16 +739,13 @@ fn parse_builtin<'input>(
             tokens.advance()?;
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             consume_end_of_generics(tokens)?;
-            Ok(Builtin::MoveFrom(StructName::parse(name)?, type_actuals))
+            Ok(Builtin::MoveFrom(StructName::new(name), type_actuals))
         }
         Tok::MoveToSender => {
             tokens.advance()?;
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             consume_end_of_generics(tokens)?;
-            Ok(Builtin::MoveToSender(
-                StructName::parse(name)?,
-                type_actuals,
-            ))
+            Ok(Builtin::MoveToSender(StructName::new(name), type_actuals))
         }
         Tok::Freeze => {
             tokens.advance()?;
@@ -824,7 +825,7 @@ fn parse_field_bindings<'input>(
             f.clone(),
             Spanned {
                 loc: f.loc,
-                value: Var_::new(f.value.name().into()),
+                value: Var_::new(f.value.into_inner()),
             },
         ))
     }
@@ -866,7 +867,7 @@ fn parse_unpack_<'input>(
     consume_token(tokens, Tok::Equal)?;
     let e = parse_exp(tokens)?;
     Ok(Cmd_::Unpack(
-        StructName::parse(name)?,
+        StructName::new(name.to_string()),
         type_actuals,
         bindings.into_iter().collect(),
         Box::new(e),
@@ -1207,7 +1208,7 @@ fn parse_type<'input>(tokens: &mut Lexer<'input>) -> Result<Type, ParseError<Loc
             tokens.advance()?;
             Type::Reference(true, Box::new(parse_type(tokens)?))
         }
-        Tok::NameValue => Type::TypeParameter(TypeVar_::parse(parse_name(tokens)?)?),
+        Tok::NameValue => Type::TypeParameter(TypeVar_::new(parse_name(tokens)?)),
         _ => {
             return Err(ParseError::InvalidToken {
                 location: current_token_loc(tokens),
@@ -1226,7 +1227,7 @@ fn parse_type_var<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<TypeVar, ParseError<Loc, anyhow::Error>> {
     let start_loc = tokens.start_loc();
-    let type_var = TypeVar_::parse(parse_name(tokens)?)?;
+    let type_var = TypeVar_::new(parse_name(tokens)?);
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, type_var))
 }
@@ -1379,8 +1380,8 @@ fn spec_parse_qualified_struct_ident<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<QualifiedStructIdent, ParseError<Loc, anyhow::Error>> {
     let (m_string, n_string) = spec_parse_dot_name(tokens)?;
-    let m: ModuleName = ModuleName::parse(m_string)?;
-    let n: StructName = StructName::parse(n_string)?;
+    let m: ModuleName = ModuleName::new(m_string);
+    let n: StructName = StructName::new(n_string);
     Ok(QualifiedStructIdent::new(m, n))
 }
 
@@ -1704,7 +1705,9 @@ fn parse_synthetic_<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<SyntheticDefinition_, ParseError<Loc, anyhow::Error>> {
     consume_token(tokens, Tok::Synthetic)?;
-    let name = Identifier::from(parse_field(tokens)?.value.name());
+    let field = parse_field(tokens)?;
+    let istr = IdentStr::new(field.value.as_inner())?;
+    let name = Identifier::from(istr);
     consume_token(tokens, Tok::Colon)?;
     let type_ = parse_type(tokens)?;
     consume_token(tokens, Tok::Semicolon)?;
@@ -1775,7 +1778,7 @@ fn parse_function_decl<'input>(
         specifications.push(spanned(tokens.file_name(), start_loc, end_loc, cond));
     }
 
-    let func_name = FunctionName::parse(name)?;
+    let func_name = FunctionName::new(name);
     let func = Function_::new(
         if is_public {
             FunctionVisibility::Public
@@ -1866,7 +1869,7 @@ fn parse_program<'input>(
         );
         Ok(Program::new(
             vec![m],
-            Script::new(vec![], spanned(tokens.file_name(), loc, loc, main)),
+            Script::new(vec![], vec![], spanned(tokens.file_name(), loc, loc, main)),
         ))
     } else {
         let modules = if tokens.peek() == Tok::Modules {
@@ -1908,7 +1911,7 @@ fn parse_script<'input>(
         FunctionBody::Move { locals, code: body },
     );
     let main = spanned(tokens.file_name(), start_loc, end_loc, main);
-    Ok(Script::new(imports, main))
+    Ok(Script::new(imports, vec![], main))
 }
 
 // StructKind: bool = {
@@ -2019,7 +2022,7 @@ fn parse_module_ident<'input>(
     if ident != "Transaction" {
         panic!("Ident = {} which is not Transaction", ident);
     }
-    let m: ModuleName = ModuleName::parse(v[1])?;
+    let m: ModuleName = ModuleName::new(v[1].to_string());
     Ok(ModuleIdent::Transaction(m))
 }
 
@@ -2106,7 +2109,12 @@ fn parse_module<'input>(
     tokens.advance()?; // consume the RBrace
 
     Ok(ModuleDefinition::new(
-        name, imports, structs, functions, synthetics,
+        name,
+        imports,
+        vec![],
+        structs,
+        functions,
+        synthetics,
     )?)
 }
 
