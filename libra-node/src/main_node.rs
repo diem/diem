@@ -190,26 +190,21 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         validator_network_provider = Some((network.peer_id, runtime, network_builder));
     }
 
-    for i in 0..node_config.full_node_networks.len() {
+    for mut full_node_network in node_config.full_node_networks.iter_mut() {
         let (runtime, mut network_builder) =
-            setup_network(&mut node_config.full_node_networks[i], RoleType::FullNode);
+            setup_network(&mut full_node_network, RoleType::FullNode);
+
+        network_runtimes.push(runtime);
         state_sync_network_handles.push(state_synchronizer::network::add_to_network(
             &mut network_builder,
         ));
-
         let (mempool_sender, mempool_events) =
             libra_mempool::network::add_to_network(&mut network_builder);
-        mempool_network_handles.push((
-            node_config.full_node_networks[i].peer_id,
-            mempool_sender,
-            mempool_events,
-        ));
+        mempool_network_handles.push((full_node_network.peer_id, mempool_sender, mempool_events));
 
-        let network = &node_config.full_node_networks[i];
         // Start the network provider.
         let _listen_addr = network_builder.build();
-        network_runtimes.push(runtime);
-        debug!("Network started for peer_id: {}", network.peer_id);
+        debug!("Network started for peer_id: {}", full_node_network.peer_id);
     }
 
     let debug_if = setup_debug_interface(&node_config);
