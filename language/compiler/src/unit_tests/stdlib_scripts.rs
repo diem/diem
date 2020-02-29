@@ -19,6 +19,7 @@ fn compile_libra_coin() {
 
 #[test]
 fn compile_account_module() {
+    let vector_code = include_str!("../ir_stdlib/modules/vector.mvir");
     let address_util_code = include_str!("../ir_stdlib/modules/address_util.mvir");
     let u64_util_code = include_str!("../ir_stdlib/modules/u64_util.mvir");
     let bytearray_util_code = include_str!("../ir_stdlib/modules/bytearray_util.mvir");
@@ -29,6 +30,7 @@ fn compile_account_module() {
     let ttl_code = include_str!("../ir_stdlib/modules/libra_transaction_timeout.mvir");
     let account_code = include_str!("../ir_stdlib/modules/libra_account.mvir");
 
+    let vector_module = compile_module_string(vector_code).unwrap();
     let address_util_module = compile_module_string(address_util_code).unwrap();
     let u64_util_module = compile_module_string(u64_util_code).unwrap();
     let bytearray_util_module = compile_module_string(bytearray_util_code).unwrap();
@@ -41,6 +43,7 @@ fn compile_account_module() {
     let _compiled_module = compile_module_string_with_deps(
         account_code,
         vec![
+            vector_module,
             hash_module,
             address_util_module,
             u64_util_module,

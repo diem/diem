@@ -8,7 +8,6 @@ use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     block_metadata::BlockMetadata,
-    byte_array::ByteArray,
     transaction::{Script, Transaction, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
 use std::{collections::HashSet, iter::FromIterator};
@@ -55,7 +54,7 @@ pub fn encode_transfer_with_metadata_script(
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U64(amount),
-            TransactionArgument::ByteArray(ByteArray::new(metadata)),
+            TransactionArgument::U8Vector(metadata),
         ],
     )
 }
@@ -123,12 +122,12 @@ pub fn encode_register_validator_script(
     Script::new(
         REGISTER_VALIDATOR_TXN.clone(),
         vec![
-            TransactionArgument::ByteArray(ByteArray::new(consensus_pubkey)),
-            TransactionArgument::ByteArray(ByteArray::new(validator_network_signing_pubkey)),
-            TransactionArgument::ByteArray(ByteArray::new(validator_network_identity_pubkey)),
-            TransactionArgument::ByteArray(ByteArray::new(validator_network_address)),
-            TransactionArgument::ByteArray(ByteArray::new(fullnodes_network_identity_pubkey)),
-            TransactionArgument::ByteArray(ByteArray::new(fullnodes_network_address)),
+            TransactionArgument::U8Vector(consensus_pubkey),
+            TransactionArgument::U8Vector(validator_network_signing_pubkey),
+            TransactionArgument::U8Vector(validator_network_identity_pubkey),
+            TransactionArgument::U8Vector(validator_network_address),
+            TransactionArgument::U8Vector(fullnodes_network_identity_pubkey),
+            TransactionArgument::U8Vector(fullnodes_network_address),
         ],
     )
 }
@@ -146,7 +145,7 @@ pub fn encode_remove_validator_script(to_remove: &AccountAddress) -> Script {
 pub fn encode_rotate_consensus_pubkey_script(new_key: Vec<u8>) -> Script {
     Script::new(
         ROTATE_CONSENSUS_PUBKEY_TXN.clone(),
-        vec![TransactionArgument::ByteArray(ByteArray::new(new_key))],
+        vec![TransactionArgument::U8Vector(new_key)],
     )
 }
 
@@ -155,9 +154,7 @@ pub fn encode_rotate_consensus_pubkey_script(new_key: Vec<u8>) -> Script {
 pub fn rotate_authentication_key_script(new_hashed_key: Vec<u8>) -> Script {
     Script::new(
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),
-        vec![TransactionArgument::ByteArray(ByteArray::new(
-            new_hashed_key,
-        ))],
+        vec![TransactionArgument::U8Vector(new_hashed_key)],
     )
 }
 

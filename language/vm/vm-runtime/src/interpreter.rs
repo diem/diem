@@ -19,7 +19,6 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
-    byte_array::ByteArray,
     contract_event::ContractEvent,
     event::EventKey,
     identifier::IdentStr,
@@ -355,15 +354,14 @@ impl<'txn> Interpreter<'txn> {
                             .push(Value::address(*frame.module().address_at(*idx)))?;
                     }
                     Bytecode::LdByteArray(idx) => {
-                        let byte_array = frame.module().byte_array_at(*idx);
+                        let v = frame.module().byte_array_at(*idx).to_vec();
                         gas!(
                             instr: context,
                             self,
                             Opcodes::LD_BYTEARRAY,
-                            AbstractMemorySize::new(byte_array.len() as GasCarrier)
+                            AbstractMemorySize::new(v.len() as GasCarrier)
                         )?;
-                        self.operand_stack
-                            .push(Value::byte_array(byte_array.clone()))?;
+                        self.operand_stack.push(Value::vector_u8(v))?;
                     }
                     Bytecode::LdTrue => {
                         gas!(const_instr: context, self, Opcodes::LD_TRUE)?;
@@ -777,8 +775,8 @@ impl<'txn> Interpreter<'txn> {
             .simple_serialize(&layout)
             .ok_or_else(|| VMStatus::new(StatusCode::DATA_FORMAT_ERROR))?;
         let count = self.operand_stack.pop_as::<u64>()?;
-        let key = self.operand_stack.pop_as::<ByteArray>()?;
-        let guid = EventKey::try_from(key.as_bytes())
+        let key = self.operand_stack.pop_as::<Vec<u8>>()?;
+        let guid = EventKey::try_from(key.as_slice())
             .map_err(|_| VMStatus::new(StatusCode::EVENT_KEY_MISMATCH))?;
         context.push_event(ContractEvent::new(guid, count, type_tag, msg));
         Ok(())

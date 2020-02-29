@@ -17,7 +17,7 @@ pub fn libra_LibraAccountResource_from_safe(
     match AccountResource::try_from(&blob) {
         Ok(account_resource) => {
             let mut authentication_key = [0u8; ED25519_PUBLIC_KEY_LENGTH];
-            authentication_key.copy_from_slice(account_resource.authentication_key().as_bytes());
+            authentication_key.copy_from_slice(account_resource.authentication_key());
 
             let mut sent_key_copy = [0u8; EVENT_KEY_LENGTH];
             sent_key_copy.copy_from_slice(account_resource.sent_events().key().as_bytes());
@@ -88,7 +88,6 @@ mod tests {
         use libra_types::{
             account_address::AccountAddress,
             account_config::{AccountResource, ACCOUNT_RESOURCE_PATH},
-            byte_array::ByteArray,
             event::{EventHandle, EventKey},
         };
         use std::collections::BTreeMap;
@@ -101,7 +100,7 @@ mod tests {
         let ar = AccountResource::new(
             987_654_321,
             123_456_789,
-            ByteArray::new(addr.to_vec()),
+            addr.to_vec(),
             true,
             false,
             EventHandle::new(EventKey::new_from_address(&addr, 0), 777),
@@ -128,10 +127,7 @@ mod tests {
 
         assert_eq!(result.balance, ar.balance());
         assert_eq!(result.sequence, ar.sequence_number());
-        assert_eq!(
-            result.authentication_key,
-            ar.authentication_key().as_bytes()
-        );
+        assert_eq!(result.authentication_key, ar.authentication_key());
         assert_eq!(
             result.delegated_key_rotation_capability,
             ar.delegated_key_rotation_capability()

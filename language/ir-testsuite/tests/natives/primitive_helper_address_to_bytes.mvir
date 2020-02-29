@@ -1,8 +1,8 @@
 import 0x0.AddressUtil;
 
 main() {
-    let output: bytearray;
-    let expected_output: bytearray;
+    let output: vector<u8>;
+    let expected_output: vector<u8>;
     let addr : address;
     addr = 0x0111111111111111111111111111111111111011111111111111111111111110;
 

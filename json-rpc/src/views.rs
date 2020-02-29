@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use hex;
-use libra_types::{account_config::AccountResource, byte_array::ByteArray};
+use libra_types::account_config::AccountResource;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -29,8 +29,8 @@ impl AccountView {
 #[derive(Serialize)]
 pub struct BytesView(String);
 
-impl From<&ByteArray> for BytesView {
-    fn from(byte_array: &ByteArray) -> Self {
-        Self(hex::encode(byte_array.as_bytes()))
+impl From<&[u8]> for BytesView {
+    fn from(bytes: &[u8]) -> Self {
+        Self(hex::encode(bytes))
     }
 }

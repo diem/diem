@@ -19,7 +19,7 @@ use std::{collections::BTreeMap, fmt};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{append_err_info, verification_error},
-    file_format::{CompiledModule, CompiledProgram, CompiledScript},
+    file_format::{CompiledModule, CompiledProgram, CompiledScript, SignatureToken},
     resolver::Resolver,
     views::{ModuleView, ViewInternals},
     IndexKind,
@@ -309,7 +309,9 @@ pub fn verify_main_signature(script: &CompiledScript) -> Vec<VMStatus> {
         return vec![VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE)];
     }
     for arg_type in &function_signature.arg_types {
-        if !arg_type.is_primitive() {
+        if !(arg_type.is_primitive()
+            || *arg_type == SignatureToken::Vector(Box::new(SignatureToken::U8)))
+        {
             return vec![VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE)];
         }
     }

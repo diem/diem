@@ -7,9 +7,9 @@ module ApprovalGroup {
 
         // for simplicity just use the plain public key here. We could
         // also use the hash here as how auth key works
-        pk1: bytearray,
-        pk2: bytearray,
-        pk3: bytearray,
+        pk1: vector<u8>,
+        pk2: vector<u8>,
+        pk3: vector<u8>,
 
         // the threshold policy
         threshold: u64,
@@ -19,9 +19,9 @@ module ApprovalGroup {
     }
 
     // create a new approval group
-    public create(pk1: bytearray,
-               pk2: bytearray,
-               pk3: bytearray): Self.T {
+    public create(pk1: vector<u8>,
+               pk2: vector<u8>,
+               pk3: vector<u8>): Self.T {
         return T {
             pk1: move(pk1),
             pk2: move(pk2),
@@ -33,11 +33,11 @@ module ApprovalGroup {
     // evaluate whether the approval group can exercise its authority
     // right now only the threshold policy is checked
     public has_authority(group: &Self.T,
-                      pk1: bytearray,
-                      sig1: bytearray,
-                      pk2: bytearray,
-                      sig2: bytearray,
-                      hash: bytearray): bool {
+                      pk1: vector<u8>,
+                      sig1: vector<u8>,
+                      pk2: vector<u8>,
+                      sig2: vector<u8>,
+                      hash: vector<u8>): bool {
         let result1: bool;
         let result2: bool;
         assert(copy(pk1) != copy(pk2), 1000);
@@ -48,7 +48,7 @@ module ApprovalGroup {
     }
 
     // helper function to evaluate the threshold policy
-    verify_sig(group: &Self.T, pk: bytearray, sig: bytearray, hash: bytearray): bool {
+    verify_sig(group: &Self.T, pk: vector<u8>, sig: vector<u8>, hash: vector<u8>): bool {
         let result: bool;
         if ((copy(pk) == *& copy(group).pk1) ||
             (copy(pk) == *& copy(group).pk2) ||
@@ -69,11 +69,11 @@ module ApprovalGroup {
 module ColdWallet {
     import 0x0.AddressUtil;
     import 0x0.U64Util;
-    import 0x0.BytearrayUtil;
     import 0x0.Hash;
     import 0x0.LibraCoin;
     import 0x0.LibraAccount;
-    import Transaction.ApprovalGroup;
+    import 0x0.Vector;
+    import {{default}}.ApprovalGroup;
 
     resource T {
         balance: LibraCoin.T,
@@ -128,16 +128,16 @@ module ColdWallet {
         payer: address,
         payee: address,
         amount: u64,
-        pk1: bytearray,
-        sig1: bytearray,
-        pk2: bytearray,
-        sig2: bytearray
+        pk1: vector<u8>,
+        sig1: vector<u8>,
+        pk2: vector<u8>,
+        sig2: vector<u8>
     ) acquires T {
 
         let payer_ref: &mut Self.T;
-        let transaction_bytes: bytearray;
-        let prefix: bytearray;
-        let hash: bytearray;
+        let transaction_bytes: vector<u8>;
+        let prefix: vector<u8>;
+        let hash: vector<u8>;
         let seq: u64;
         let withdraw_amount: LibraCoin.T;
         let has_authority: bool;
@@ -175,30 +175,32 @@ module ColdWallet {
 
     // helper to get the expected serialization of a transaction
     // serialization format: 'prefix' || payee_address || amount || sequence_number
-    get_transaction_bytes(payer: address, payee: address, amount: u64, wallet: &mut Self.T): bytearray {
-        let constant: bytearray;
-        let prefix: bytearray;
-        let payer_bytes: bytearray;
-        let payee_bytes: bytearray;
-        let amount_bytes: bytearray;
-        let seq_bytes: bytearray;
-        let first_two: bytearray;
-        let first_three: bytearray;
-        let transaction_bytes: bytearray;
+    get_transaction_bytes(payer: address, payee: address, amount: u64, wallet: &mut Self.T): vector<u8> {
+        let constant: vector<u8>;
+        let payer_bytes: vector<u8>;
+        let payee_bytes: vector<u8>;
+        let amount_bytes: vector<u8>;
+        let seq_bytes: vector<u8>;
+        let first_two: vector<u8>;
+        let first_three: vector<u8>;
+        let transaction_bytes: vector<u8>;
 
         // TODO: consider moving into resource
         // TODO: move doesn't support string now. As a workaround,
         // TODO: the prefix is the hex encoding of "coldwallet.transaction"
         constant = h"636F6C6477616C6C65742E7472616E73616374696F6E";
         payer_bytes = AddressUtil.address_to_bytes(move(payer));
-        prefix = BytearrayUtil.bytearray_concat(move(payer_bytes), move(constant));
+
+        transaction_bytes = move(payer_bytes);
+        Vector.append<u8>(&mut transaction_bytes, move(constant));
 
         payee_bytes = AddressUtil.address_to_bytes(move(payee));
         amount_bytes = U64Util.u64_to_bytes(move(amount));
         seq_bytes = U64Util.u64_to_bytes(*&move(wallet).sequence_num);
-        first_two = BytearrayUtil.bytearray_concat(move(prefix), move(payee_bytes));
-        first_three = BytearrayUtil.bytearray_concat(move(first_two), move(amount_bytes));
-        transaction_bytes = BytearrayUtil.bytearray_concat(move(first_three), move(seq_bytes));
+
+        Vector.append<u8>(&mut transaction_bytes, move(payee_bytes));
+        Vector.append<u8>(&mut transaction_bytes, move(amount_bytes));
+        Vector.append<u8>(&mut transaction_bytes, move(seq_bytes));
         return move(transaction_bytes);
     }
 }
@@ -206,13 +208,13 @@ module ColdWallet {
 
 
 //! new-transaction
-import Transaction.ApprovalGroup;
-import Transaction.ColdWallet;
+import {{default}}.ApprovalGroup;
+import {{default}}.ColdWallet;
 main() {
     let genesis_group: ApprovalGroup.T;
-    let pk1: bytearray;
-    let pk2: bytearray;
-    let pk3: bytearray;
+    let pk1: vector<u8>;
+    let pk2: vector<u8>;
+    let pk3: vector<u8>;
     let wallet : ColdWallet.T;
 
     pk1 = h"1234";

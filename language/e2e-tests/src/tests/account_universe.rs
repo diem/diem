@@ -169,8 +169,9 @@ pub(crate) fn assert_accounts_match(
         let resource = executor
             .read_account_resource(&account.account())
             .expect("resource for this account must exist");
+        let auth_key = account.account().auth_key();
         prop_assert_eq!(
-            &account.account().auth_key(),
+            auth_key.as_slice(),
             resource.authentication_key(),
             "account {} should have correct auth key",
             idx

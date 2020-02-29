@@ -544,7 +544,7 @@ impl Arbitrary for TransactionArgument {
         prop_oneof![
             any::<u64>().prop_map(TransactionArgument::U64),
             any::<AccountAddress>().prop_map(TransactionArgument::Address),
-            any::<ByteArray>().prop_map(TransactionArgument::ByteArray),
+            vec(any::<u8>(), 0..10).prop_map(TransactionArgument::U8Vector),
         ]
         .boxed()
     }
@@ -655,7 +655,7 @@ impl AccountResourceGen {
         AccountResource::new(
             self.balance,
             account_info.sequence_number,
-            ByteArray::new(account_info.public_key.to_bytes().to_vec()),
+            account_info.public_key.to_bytes().to_vec(),
             self.delegated_key_rotation_capability,
             self.delegated_withdrawal_capability,
             account_info.sent_event_handle.clone(),

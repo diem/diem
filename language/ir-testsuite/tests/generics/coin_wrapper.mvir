@@ -3,7 +3,7 @@ module M {
     resource Foo<T: resource> { x: T }
     resource CoinWrapper { f: Self.Foo<LibraCoin.T> }
     resource InnerWrapper { f: Self.Foo<Self.Inner>}
-    resource Inner { b: bytearray }
+    resource Inner { b: vector<u8> }
 
     public coin_wrapper(c: LibraCoin.T) {
         let foo: Self.Foo<LibraCoin.T>;
@@ -15,7 +15,7 @@ module M {
         return;
     }
 
-    public inner_wrapper(b: bytearray) {
+    public inner_wrapper(b: vector<u8>) {
         let foo: Self.Foo<Self.Inner>;
         let inner_wrapper: Self.InnerWrapper;
         let inner: Self.Inner;
@@ -39,7 +39,7 @@ module M {
         return LibraCoin.value(move(coin_ref));
     }
 
-    public get_inner(): bytearray acquires InnerWrapper {
+    public get_inner(): vector<u8> acquires InnerWrapper {
         let inner_wrapper_ref: &Self.InnerWrapper;
         let foo_ref: &Self.Foo<Self.Inner>;
         let inner_ref: &Self.Inner;
@@ -71,7 +71,7 @@ import 0x0.LibraCoin;
 
 main() {
   let coin: LibraCoin.T;
-  let byte: bytearray;
+  let byte: vector<u8>;
 
   byte = h"bac1ac";
   coin = LibraAccount.withdraw_from_sender(1000);
@@ -88,7 +88,7 @@ import 0x0.LibraCoin;
 
 main() {
   let coin: LibraCoin.T;
-  let byte: bytearray;
+  let byte: vector<u8>;
 
   byte = h"bac1ac";
   assert(M.get_coin_value() == 1000, 4);

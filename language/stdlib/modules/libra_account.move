@@ -6,15 +6,15 @@ module LibraAccount {
     use 0x0::Hash;
     use 0x0::U64Util;
     use 0x0::AddressUtil;
-    use 0x0::BytearrayUtil;
     use 0x0::LibraTransactionTimeout;
     use 0x0::Transaction;
+    use 0x0::Vector;
 
     // Every Libra account has a LibraAccount::T resource
     resource struct T {
         // The current authentication key.
         // This can be different than the key used to create the account
-        authentication_key: bytearray,
+        authentication_key: vector<u8>,
         // The coins stored in this account
         balance: LibraCoin::T,
         // If true, the authority to rotate the authentication key of this account resides elsewhere
@@ -53,7 +53,7 @@ module LibraAccount {
         // The address that was paid
         payee: address,
         // Metadata associated with the payment
-        metadata: bytearray,
+        metadata: vector<u8>,
     }
 
     // Message for received events
@@ -63,7 +63,7 @@ module LibraAccount {
         // The address that sent the coin
         payer: address,
         // Metadata associated with the payment
-        metadata: bytearray,
+        metadata: vector<u8>,
     }
 
     /// Events
@@ -81,22 +81,22 @@ module LibraAccount {
         // Total number of events emitted to this event stream.
         counter: u64,
         // A globally unique ID for this event stream.
-        guid: bytearray,
+        guid: vector<u8>,
     }
 
     // Deposits the `to_deposit` coin into the `payee`'s account
     public fun deposit(payee: address, to_deposit: LibraCoin::T) acquires T {
-        // Since we don't have bytearray literals in the source language at
+        // Since we don't have vector<u8> literals in the source language at
         // the moment.
-        // FIXME: Update this once we have bytearray literals
-        deposit_with_metadata(payee, to_deposit, U64Util::u64_to_bytes(0));
+        // FIXME: Update this once we have vector<u8> literals
+        deposit_with_metadata(payee, to_deposit, Vector::empty());
     }
 
     // Deposits the `to_deposit` coin into the `payee`'s account with the attached `metadata`
     public fun deposit_with_metadata(
         payee: address,
         to_deposit: LibraCoin::T,
-        metadata: bytearray
+        metadata: vector<u8>
     ) acquires T {
         deposit_with_sender_and_metadata(
             payee,
@@ -112,7 +112,7 @@ module LibraAccount {
         payee: address,
         sender: address,
         to_deposit: LibraCoin::T,
-        metadata: bytearray
+        metadata: vector<u8>
     ) acquires T {
         // Check that the `to_deposit` coin is non-zero
         let deposit_value = LibraCoin::value(&to_deposit);
@@ -126,7 +126,7 @@ module LibraAccount {
             SentPaymentEvent {
                 amount: deposit_value,
                 payee: payee,
-                metadata: metadata
+                metadata: *&metadata
             },
         );
 
@@ -211,7 +211,7 @@ module LibraAccount {
         payee: address,
         cap: &WithdrawalCapability,
         amount: u64,
-        metadata: bytearray
+        metadata: vector<u8>
     ) acquires T {
         if (!exists(payee)) {
             create_account(payee);
@@ -230,7 +230,7 @@ module LibraAccount {
     public fun pay_from_sender_with_metadata(
         payee: address,
         amount: u64,
-        metadata: bytearray
+        metadata: vector<u8>
     ) acquires T {
         if (!exists(payee)) create_account(payee);
         deposit_with_metadata(
@@ -244,17 +244,17 @@ module LibraAccount {
     // to the `payee` address
     // Creates the `payee` account if it does not exist
     public fun pay_from_sender(payee: address, amount: u64) acquires T {
-        // FIXME: Update this once we have bytearray literals
-        pay_from_sender_with_metadata(payee, amount, U64Util::u64_to_bytes(0));
+        // FIXME: Update this once we have vector<u8> literals
+        pay_from_sender_with_metadata(payee, amount, Vector::empty());
     }
 
-    fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: bytearray) {
+    fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: vector<u8>) {
       account.authentication_key = new_authentication_key;
     }
 
     // Rotate the transaction sender's authentication key
     // The new key will be used for signing future transactions
-    public fun rotate_authentication_key(new_authentication_key: bytearray) acquires T {
+    public fun rotate_authentication_key(new_authentication_key: vector<u8>) acquires T {
         let sender_account = borrow_global_mut<T>(Transaction::sender());
         // The sender has delegated the privilege to rotate her key elsewhere--abort
         Transaction::assert(!sender_account.delegated_key_rotation_capability, 11);
@@ -268,7 +268,7 @@ module LibraAccount {
     // Rotate the authentication key for the account under cap.account_address
     public fun rotate_authentication_key_with_capability(
         cap: &KeyRotationCapability,
-        new_authentication_key: bytearray,
+        new_authentication_key: vector<u8>,
     ) acquires T  {
         rotate_authentication_key_for_account(
             borrow_global_mut<T>(*&cap.account_address),
@@ -302,6 +302,7 @@ module LibraAccount {
     // reserved address for the MoveVM.
     public fun create_account(fresh_address: address) {
         let generator = EventHandleGenerator {counter: 0};
+
         save_account(
             fresh_address,
             T {
@@ -382,7 +383,7 @@ module LibraAccount {
     // - That the sequence number matches the transaction's sequence key
     fun prologue(
         txn_sequence_number: u64,
-        txn_public_key: bytearray,
+        txn_public_key: vector<u8>,
         txn_gas_price: u64,
         txn_max_gas_units: u64,
         txn_expiration_time: u64,
@@ -398,7 +399,7 @@ module LibraAccount {
 
         // Check that the hash of the transaction's public key matches the account's auth key
         Transaction::assert(
-            Hash::sha3_256(txn_public_key) == sender_account.authentication_key,
+            Hash::sha3_256(txn_public_key) == *&sender_account.authentication_key,
             2
         );
 
@@ -446,19 +447,21 @@ module LibraAccount {
 
     /// Events
     //
-    // Derive a fresh unique id by using sender's EventHandleGenerator. The generated bytearray is indeed unique because it
+    // Derive a fresh unique id by using sender's EventHandleGenerator. The generated vector<u8> is indeed unique because it
     // was derived from the hash(sender's EventHandleGenerator || sender_address). This module guarantees that the
     // EventHandleGenerator is only going to be monotonically increased and there's no way to revert it or destroy it. Thus
     // such counter is going to give distinct value for each of the new event stream under each sender. And since we
     // hash it with the sender's address, the result is guaranteed to be globally unique.
-    fun fresh_guid(counter: &mut EventHandleGenerator, sender: address): bytearray {
+    fun fresh_guid(counter: &mut EventHandleGenerator, sender: address): vector<u8> {
         let sender_bytes = AddressUtil::address_to_bytes(sender);
 
         let count_bytes = U64Util::u64_to_bytes(counter.counter);
         counter.counter = counter.counter + 1;
 
         // EventHandleGenerator goes first just in case we want to extend address in the future.
-        BytearrayUtil::bytearray_concat(count_bytes, sender_bytes)
+        Vector::append(&mut count_bytes, sender_bytes);
+
+        count_bytes
     }
 
     // Use EventHandleGenerator to generate a unique event handle that one can emit an event to.
@@ -472,10 +475,10 @@ module LibraAccount {
         new_event_handle_impl<E>(&mut sender_account_ref.event_generator, Transaction::sender())
     }
 
-    // Emit an event with payload `msg` by using handle's key and counter. Will change the payload from bytearray to a
+    // Emit an event with payload `msg` by using handle's key and counter. Will change the payload from vector<u8> to a
     // generic type parameter once we have generics.
     public fun emit_event<T: copyable>(handle_ref: &mut EventHandle<T>, msg: T) {
-        let guid = handle_ref.guid;
+        let guid = *&handle_ref.guid;
 
         write_to_event_store<T>(guid, handle_ref.counter, msg);
         handle_ref.counter = handle_ref.counter + 1;
@@ -483,7 +486,7 @@ module LibraAccount {
 
     // Native procedure that writes to the actual event stream in Event store
     // This will replace the "native" portion of EmitEvent bytecode
-    native fun write_to_event_store<T: copyable>(guid: bytearray, count: u64, msg: T);
+    native fun write_to_event_store<T: copyable>(guid: vector<u8>, count: u64, msg: T);
 
     // Destroy a unique handle.
     public fun destroy_handle<T: copyable>(handle: EventHandle<T>) {

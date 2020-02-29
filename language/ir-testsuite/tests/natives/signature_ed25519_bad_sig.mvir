@@ -1,9 +1,9 @@
 import 0x0.Signature;
 
 main() {
-    let message: bytearray;
-    let public_key: bytearray;
-    let signature: bytearray;
+    let message: vector<u8>;
+    let public_key: vector<u8>;
+    let signature: vector<u8>;
 
     let output: bool;
     let expected_output: bool;

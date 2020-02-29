@@ -8,7 +8,6 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
-    byte_array::ByteArray,
     event::EventHandle,
     transaction::{
         RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionPayload,
@@ -117,8 +116,8 @@ impl Account {
     /// Computes the authentication key for this account, as stored on the chain.
     ///
     /// This is the same as the account's address if the keys have never been rotated.
-    pub fn auth_key(&self) -> ByteArray {
-        ByteArray::new(AccountAddress::from_public_key(&self.pubkey).to_vec())
+    pub fn auth_key(&self) -> Vec<u8> {
+        AccountAddress::from_public_key(&self.pubkey).to_vec()
     }
 
     //
@@ -320,12 +319,18 @@ impl AccountData {
 
     pub fn layout() -> StructDef {
         StructDef::new(vec![
-            Type::ByteArray,
+            Type::Vector(Box::new(Type::U8)),
             Type::Struct(StructDef::new(vec![Type::U64])),
             Type::Bool,
             Type::Bool,
-            Type::Struct(StructDef::new(vec![Type::U64, Type::ByteArray])),
-            Type::Struct(StructDef::new(vec![Type::U64, Type::ByteArray])),
+            Type::Struct(StructDef::new(vec![
+                Type::U64,
+                Type::Vector(Box::new(Type::U8)),
+            ])),
+            Type::Struct(StructDef::new(vec![
+                Type::U64,
+                Type::Vector(Box::new(Type::U8)),
+            ])),
             Type::U64,
             Type::Struct(StructDef::new(vec![Type::U64])),
         ])
@@ -336,19 +341,17 @@ impl AccountData {
         // TODO: publish some concept of Account
         let coin = Value::struct_(Struct::pack(vec![Value::u64(self.balance)]));
         Value::struct_(Struct::pack(vec![
-            Value::byte_array(ByteArray::new(
-                AccountAddress::from_public_key(&self.account.pubkey).to_vec(),
-            )),
+            Value::vector_u8(AccountAddress::from_public_key(&self.account.pubkey).to_vec()),
             coin,
             Value::bool(self.delegated_key_rotation_capability),
             Value::bool(self.delegated_withdrawal_capability),
             Value::struct_(Struct::pack(vec![
                 Value::u64(self.received_events.count()),
-                Value::byte_array(ByteArray::new(self.received_events.key().to_vec())),
+                Value::vector_u8(self.received_events.key().to_vec()),
             ])),
             Value::struct_(Struct::pack(vec![
                 Value::u64(self.sent_events.count()),
-                Value::byte_array(ByteArray::new(self.sent_events.key().to_vec())),
+                Value::vector_u8(self.sent_events.key().to_vec()),
             ])),
             Value::u64(self.sequence_number),
             Value::struct_(Struct::pack(vec![Value::u64(self.event_generator)])),

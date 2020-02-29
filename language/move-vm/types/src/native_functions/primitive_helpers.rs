@@ -63,7 +63,7 @@ pub fn native_address_to_bytes(
         NativeCostIndex::ADDRESS_TO_BYTES,
         return_val.len(),
     );
-    let return_values = vec![Value::byte_array(ByteArray::new(return_val))];
+    let return_values = vec![Value::vector_u8(return_val)];
     Ok(NativeResult::ok(cost, return_values))
 }
 
@@ -83,6 +83,6 @@ pub fn native_u64_to_bytes(
     let return_val: Vec<u8> = arg.to_le_bytes().to_vec();
 
     let cost = native_gas(cost_table, NativeCostIndex::U64_TO_BYTES, return_val.len());
-    let return_values = vec![Value::byte_array(ByteArray::new(return_val))];
+    let return_values = vec![Value::vector_u8(return_val)];
     Ok(NativeResult::ok(cost, return_values))
 }

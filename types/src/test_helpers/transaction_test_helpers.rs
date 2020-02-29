@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 static PLACEHOLDER_SCRIPT: &[u8] = include_bytes!("fixtures/scripts/placeholder_script.mvbin");
 
-const MAX_GAS_AMOUNT: u64 = 140_000;
+const MAX_GAS_AMOUNT: u64 = 400_000;
 const MAX_GAS_PRICE: u64 = 1;
 
 // Test helper for transaction creation

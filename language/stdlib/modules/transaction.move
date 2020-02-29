@@ -6,7 +6,7 @@ module Transaction {
     native public fun gas_remaining(): u64;
     native public fun sender(): address;
     native public fun sequence_number(): u64;
-    native public fun public_key(): bytearray;
+    native public fun public_key(): vector<u8>;
 
     // inlined
     public fun assert(check: bool, code: u64) {

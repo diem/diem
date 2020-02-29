@@ -70,6 +70,7 @@ fn verify_libra_account() {
             verified_std_mvir("u64_util").as_str(),
             verified_std_mvir("address_util").as_str(),
             verified_std_mvir("bytearray_util").as_str(),
+            verified_std_mvir("vector").as_str(),
             verified_std_mvir("libra_account").as_str(),
         ],
     )

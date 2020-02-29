@@ -2,12 +2,12 @@
 // given keys under their account
 
 fun main(
-    consensus_pubkey: bytearray,
-    validator_network_signing_pubkey: bytearray,
-    validator_network_identity_pubkey: bytearray,
-    validator_network_address: bytearray,
-    fullnodes_network_identity_pubkey: bytearray,
-    fullnodes_network_address: bytearray,
+    consensus_pubkey: vector<u8>,
+    validator_network_signing_pubkey: vector<u8>,
+    validator_network_identity_pubkey: vector<u8>,
+    validator_network_address: vector<u8>,
+    fullnodes_network_identity_pubkey: vector<u8>,
+    fullnodes_network_address: vector<u8>,
 ) {
   0x0::ValidatorConfig::register_candidate_validator(
       consensus_pubkey,
