@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::unit_tests::testutils::{
-    compile_module_string, compile_module_string_with_deps, compile_script_string_with_stdlib,
-};
+use crate::unit_tests::testutils::{compile_module_string, compile_module_string_with_deps};
 
 #[test]
 fn compile_native_hash() {
@@ -53,28 +51,4 @@ fn compile_account_module() {
         ],
     )
     .unwrap();
-}
-
-#[test]
-fn compile_create_account_script() {
-    let code = include_str!("../ir_stdlib/transaction_scripts/create_account.mvir");
-    let _compiled_script = compile_script_string_with_stdlib(code).unwrap();
-}
-
-#[test]
-fn compile_mint_script() {
-    let code = include_str!("../ir_stdlib/transaction_scripts/mint.mvir");
-    let _compiled_script = compile_script_string_with_stdlib(code).unwrap();
-}
-
-#[test]
-fn compile_rotate_authentication_key_script() {
-    let code = include_str!("../ir_stdlib/transaction_scripts/rotate_authentication_key.mvir");
-    let _compiled_script = compile_script_string_with_stdlib(code).unwrap();
-}
-
-#[test]
-fn compile_peer_to_peer_transfer_script() {
-    let code = include_str!("../ir_stdlib/transaction_scripts/peer_to_peer_transfer.mvir");
-    let _compiled_script = compile_script_string_with_stdlib(code).unwrap();
 }

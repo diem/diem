@@ -32,7 +32,7 @@ impl AUTransactionGen for RotateKeyGen {
     ) -> (SignedTransaction, (TransactionStatus, u64)) {
         let sender = universe.pick(self.sender).1;
 
-        let new_key_hash = AccountAddress::from_public_key(&self.new_key.1);
+        let new_key_hash = AccountAddress::authentication_key(&self.new_key.1).to_vec();
         let txn = rotate_key_txn(sender.account(), new_key_hash, sender.sequence_number);
 
         // This should work all the time except for if the balance is too low for gas.

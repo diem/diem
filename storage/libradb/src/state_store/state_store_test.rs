@@ -126,7 +126,7 @@ fn test_state_store_reader_writer() {
             (address3, value3.clone()),
         ],
         1, /* version */
-        4, /* expected_nodes_created */
+        6, /* expected_nodes_created */
         1, /* expected_nodes_retired */
         1, /* expected_blobs_retired */
     );
@@ -161,7 +161,7 @@ fn test_retired_records() {
         store,
         vec![(address1, value1.clone()), (address2, value2)],
         0, /* version */
-        3, /* expected_nodes_created */
+        5, /* expected_nodes_created */
         0, /* expected_nodes_retired */
         0, /* expected_blobs_retired */
     );
@@ -172,8 +172,8 @@ fn test_retired_records() {
             (address3, value3.clone()),
         ],
         1, /* version */
-        3, /* expected_nodes_created */
-        2, /* expected_nodes_retired */
+        5, /* expected_nodes_created */
+        4, /* expected_nodes_retired */
         1, /* expected_blobs_retired */
     );
     let root2 = put_account_state_set(

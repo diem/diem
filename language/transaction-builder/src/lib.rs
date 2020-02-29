@@ -6,7 +6,7 @@
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
 use libra_types::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, ADDRESS_LENGTH, AUTHENTICATION_KEY_LENGTH},
     block_metadata::BlockMetadata,
     transaction::{Script, Transaction, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
@@ -18,6 +18,16 @@ use stdlib::transaction_scripts::{
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use vm::file_format::{Bytecode, CompiledScript};
+
+fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
+    let auth_key_prefix_length = auth_key_prefix.len();
+    assert!(
+        auth_key_prefix_length == 0
+            || auth_key_prefix_length == AUTHENTICATION_KEY_LENGTH - ADDRESS_LENGTH,
+        "Bad auth key prefix length {}",
+        auth_key_prefix_length
+    );
+}
 
 /// Encode a program adding `new_validator` to the pending validator set. Fails if the
 /// `new_validator` address is already in the validator set, already in the pending valdiator set,
@@ -31,11 +41,17 @@ pub fn encode_add_validator_script(new_validator: &AccountAddress) -> Script {
 
 /// Encode a program transferring `amount` coins from `sender` to `recipient`. Fails if there is no
 /// account at the recipient address or if the sender's balance is lower than `amount`.
-pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script {
+pub fn encode_transfer_script(
+    recipient: &AccountAddress,
+    auth_key_prefix: Vec<u8>,
+    amount: u64,
+) -> Script {
+    validate_auth_key_prefix(&auth_key_prefix);
     Script::new(
         PEER_TO_PEER_TRANSFER_TXN.clone(),
         vec![
             TransactionArgument::Address(*recipient),
+            TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U64(amount),
         ],
     )
@@ -46,20 +62,23 @@ pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script
 /// balance is lower than `amount`.
 pub fn encode_transfer_with_metadata_script(
     recipient: &AccountAddress,
+    auth_key_prefix: Vec<u8>,
     amount: u64,
     metadata: Vec<u8>,
 ) -> Script {
+    validate_auth_key_prefix(&auth_key_prefix);
     Script::new(
         PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN.clone(),
         vec![
             TransactionArgument::Address(*recipient),
+            TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U64(amount),
             TransactionArgument::U8Vector(metadata),
         ],
     )
 }
 
-/// Encode a program transferring `amount` coins from `sender` to `recipient` but padd the output
+/// Encode a program transferring `amount` coins from `sender` to `recipient` but pad the output
 /// bytecode with unreachable instructions.
 #[cfg(any(test, feature = "fuzzing"))]
 pub fn encode_transfer_script_with_padding(
@@ -86,6 +105,7 @@ pub fn encode_transfer_script_with_padding(
         script_bytes,
         vec![
             TransactionArgument::Address(*recipient),
+            TransactionArgument::U8Vector(vec![]), // use empty auth key prefix
             TransactionArgument::U64(amount),
         ],
     )
@@ -96,12 +116,15 @@ pub fn encode_transfer_script_with_padding(
 /// `account_address` or if the sender's balance is lower than `initial_balance`.
 pub fn encode_create_account_script(
     account_address: &AccountAddress,
+    auth_key_prefix: Vec<u8>,
     initial_balance: u64,
 ) -> Script {
+    validate_auth_key_prefix(&auth_key_prefix);
     Script::new(
         CREATE_ACCOUNT_TXN.clone(),
         vec![
             TransactionArgument::Address(*account_address),
+            TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U64(initial_balance),
         ],
     )
@@ -160,11 +183,17 @@ pub fn rotate_authentication_key_script(new_hashed_key: Vec<u8>) -> Script {
 
 // TODO: this should go away once we are no longer using it in tests
 /// Encode a program creating `amount` coins for sender
-pub fn encode_mint_script(sender: &AccountAddress, amount: u64) -> Script {
+pub fn encode_mint_script(
+    sender: &AccountAddress,
+    auth_key_prefix: Vec<u8>,
+    amount: u64,
+) -> Script {
+    validate_auth_key_prefix(&auth_key_prefix);
     Script::new(
         MINT_TXN.clone(),
         vec![
             TransactionArgument::Address(*sender),
+            TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U64(amount),
         ],
     )

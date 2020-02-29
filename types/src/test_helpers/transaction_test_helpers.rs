@@ -9,7 +9,8 @@ use crate::{
 use libra_crypto::{ed25519::*, hash::CryptoHash, traits::*};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-static PLACEHOLDER_SCRIPT: &[u8] = include_bytes!("fixtures/scripts/placeholder_script.mvbin");
+static PLACEHOLDER_SCRIPT: &[u8] =
+    include_bytes!("../../../language/stdlib/staged/transaction_scripts/placeholder_script.mv");
 
 const MAX_GAS_AMOUNT: u64 = 400_000;
 const MAX_GAS_PRICE: u64 = 1;

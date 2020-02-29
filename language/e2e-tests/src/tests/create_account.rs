@@ -65,7 +65,6 @@ fn create_account_zero_balance() {
             output.status(),
             &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
         );
-        println!("write set {:?}", output.write_set());
         executor.apply_write_set(output.write_set());
 
         // check that numbers in stored DB are correct

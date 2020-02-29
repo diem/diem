@@ -66,7 +66,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // declare local variables
     var v: Value; // Vector_T_type_value(IntegerType())
     var r: Value; // TestGenerics_R_type_value()
-    var __t4: Value; // Vector_T_type_value(IntegerType())
+    var __t4: Value; // Vector_T_type_value(tv0)
     var __t5: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
     var __t6: Value; // IntegerType()
     var __t7: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
@@ -86,10 +86,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume IsValidU64(x1);
     __m := UpdateLocal(__m, __frame + 0, x1);
-    assume $DebugTrackLocal(1, 0, 0, 162, x1);
+    assume $DebugTrackLocal(1, 0, 0, 158, x1);
     assume IsValidU64(x2);
     __m := UpdateLocal(__m, __frame + 1, x2);
-    assume $DebugTrackLocal(1, 0, 1, 162, x2);
+    assume $DebugTrackLocal(1, 0, 1, 158, x2);
 
     // increase the local counter
     __local_counter := __local_counter + 12;
@@ -97,7 +97,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // bytecode translation starts here
     call __t4 := Vector_empty(IntegerType());
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 0, 260);
+      assume $DebugTrackAbort(1, 0, 254);
       goto Label_Abort;
     }
     assume $Vector_T_is_well_formed(__t4);
@@ -106,7 +106,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    assume $DebugTrackLocal(1, 0, 2, 256, __tmp);
+    assume $DebugTrackLocal(1, 0, 2, 250, __tmp);
 
     call __t5 := BorrowLoc(__frame + 2, Vector_T_type_value(IntegerType()));
 
@@ -115,10 +115,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call Vector_push_back(IntegerType(), __t5, GetLocal(__m, __frame + 6));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 0, 289);
+      assume $DebugTrackAbort(1, 0, 283);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 0, 2, 289, GetLocal(__m, __frame + 2));
+    assume $DebugTrackLocal(1, 0, 2, 283, GetLocal(__m, __frame + 2));
 
     call __t7 := BorrowLoc(__frame + 2, Vector_T_type_value(IntegerType()));
 
@@ -127,27 +127,27 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call Vector_push_back(IntegerType(), __t7, GetLocal(__m, __frame + 8));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 0, 338);
+      assume $DebugTrackAbort(1, 0, 332);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 0, 2, 338, GetLocal(__m, __frame + 2));
+    assume $DebugTrackLocal(1, 0, 2, 332, GetLocal(__m, __frame + 2));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
 
-    call __tmp := Pack_TestGenerics_R(1, 0, 3, 391, GetLocal(__m, __frame + 9));
+    call __tmp := Pack_TestGenerics_R(1, 0, 3, 385, GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 10));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    assume $DebugTrackLocal(1, 0, 3, 387, __tmp);
+    assume $DebugTrackLocal(1, 0, 3, 381, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 11, __tmp);
 
     call MoveToSender(TestGenerics_R_type_value(), GetLocal(__m, __frame + 11));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 0, 416);
+      assume $DebugTrackAbort(1, 0, 410);
       goto Label_Abort;
     }
 
@@ -185,7 +185,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     // process and type check arguments
     __m := UpdateLocal(__m, __frame + 0, x);
-    assume $DebugTrackLocal(1, 1, 0, 471, x);
+    assume $DebugTrackLocal(1, 1, 0, 465, x);
 
     // increase the local counter
     __local_counter := __local_counter + 7;
@@ -193,7 +193,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // bytecode translation starts here
     call __t2 := Vector_empty(tv0);
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 1, 561);
+      assume $DebugTrackAbort(1, 1, 553);
       goto Label_Abort;
     }
     assume $Vector_T_is_well_formed(__t2);
@@ -202,7 +202,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    assume $DebugTrackLocal(1, 1, 1, 557, __tmp);
+    assume $DebugTrackLocal(1, 1, 1, 549, __tmp);
 
     call __t3 := BorrowLoc(__frame + 1, Vector_T_type_value(tv0));
 
@@ -211,10 +211,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call Vector_push_back(tv0, __t3, GetLocal(__m, __frame + 4));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 1, 588);
+      assume $DebugTrackAbort(1, 1, 580);
       goto Label_Abort;
     }
-    assume $DebugTrackLocal(1, 1, 1, 588, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(1, 1, 1, 580, GetLocal(__m, __frame + 1));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
@@ -223,7 +223,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    assume $DebugTrackLocal(1, 1, 2, 634, __ret0);
+    assume $DebugTrackLocal(1, 1, 2, 626, __ret0);
     return;
 
 Label_Abort:
@@ -264,9 +264,9 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     // process and type check arguments
     __m := UpdateLocal(__m, __frame + 0, x);
-    assume $DebugTrackLocal(1, 2, 0, 672, x);
+    assume $DebugTrackLocal(1, 2, 0, 664, x);
     __m := UpdateLocal(__m, __frame + 1, y);
-    assume $DebugTrackLocal(1, 2, 1, 672, y);
+    assume $DebugTrackLocal(1, 2, 1, 664, y);
 
     // increase the local counter
     __local_counter := __local_counter + 13;
@@ -277,7 +277,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t6 := TestGenerics_create(tv0, GetLocal(__m, __frame + 5));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 2, 827);
+      assume $DebugTrackAbort(1, 2, 819);
       goto Label_Abort;
     }
     assume $TestGenerics_T_is_well_formed(__t6);
@@ -286,14 +286,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    assume $DebugTrackLocal(1, 2, 3, 822, __tmp);
+    assume $DebugTrackLocal(1, 2, 3, 814, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     call __t8 := TestGenerics_create(tv0, GetLocal(__m, __frame + 7));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 2, 865);
+      assume $DebugTrackAbort(1, 2, 857);
       goto Label_Abort;
     }
     assume $TestGenerics_T_is_well_formed(__t8);
@@ -302,7 +302,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
-    assume $DebugTrackLocal(1, 2, 4, 860, __tmp);
+    assume $DebugTrackLocal(1, 2, 4, 852, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -315,13 +315,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 11));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    assume $DebugTrackLocal(1, 2, 2, 898, __tmp);
+    assume $DebugTrackLocal(1, 2, 2, 890, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 12);
-    assume $DebugTrackLocal(1, 2, 5, 932, __ret0);
+    assume $DebugTrackLocal(1, 2, 5, 924, __ret0);
     return;
 
 Label_Abort:
@@ -368,7 +368,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t3 := TestGenerics_overcomplicated_equals(IntegerType(), GetLocal(__m, __frame + 1), GetLocal(__m, __frame + 2));
     if (__abort_flag) {
-      assume $DebugTrackAbort(1, 3, 1010);
+      assume $DebugTrackAbort(1, 3, 1002);
       goto Label_Abort;
     }
     assume is#Boolean(__t3);
@@ -377,13 +377,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    assume $DebugTrackLocal(1, 3, 0, 1006, __tmp);
+    assume $DebugTrackLocal(1, 3, 0, 998, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    assume $DebugTrackLocal(1, 3, 1, 1056, __ret0);
+    assume $DebugTrackLocal(1, 3, 1, 1048, __ret0);
     return;
 
 Label_Abort:

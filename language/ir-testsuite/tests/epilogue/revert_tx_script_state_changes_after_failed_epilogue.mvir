@@ -10,9 +10,10 @@
 //! sender: alice
 //! args: 1000000
 import 0x0.LibraAccount;
+import 0x0.Vector;
 
 main(amount: u64) {
-    LibraAccount.pay_from_sender({{carol}}, move(amount));
+    LibraAccount.pay_from_sender({{carol}}, Vector.empty<u8>(), move(amount));
     return;
 }
 
@@ -27,9 +28,10 @@ main(amount: u64) {
 //! sender: bob
 //! args: 1000
 import 0x0.LibraAccount;
+import 0x0.Vector;
 
 main(amount: u64) {
-    LibraAccount.pay_from_sender({{carol}}, move(amount));
+    LibraAccount.pay_from_sender({{carol}}, Vector.empty<u8>(), move(amount));
     return;
 }
 

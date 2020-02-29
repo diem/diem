@@ -525,28 +525,31 @@ fn transform_program_with_script() {
     let code = String::from(
         "
         import 0x0.LibraAccount;
-        main (payee: address, amount: u64) {
-            LibraAccount.pay_from_sender(move(payee), move(amount));
+        main (payee: address, prefix: vector<u8>, amount: u64) {
+            LibraAccount.pay_from_sender(move(payee), move(prefix), move(amount));
             return;
         }
         ",
     );
     let (actual_code, actual_types) = generate_code_from_string(code);
     let expected_code = vec![
-        MoveLoc(2, 0),
-        MoveLoc(3, 1),
+        MoveLoc(3, 0),
+        MoveLoc(4, 1),
+        MoveLoc(5, 2),
         Call(
             vec![],
             FunctionHandleIndex::new(1),
             LocalsSignatureIndex::new(1),
-            vec![2, 3],
+            vec![3, 4, 5],
         ),
         Ret(vec![]),
     ];
     let expected_types = vec![
         SignatureToken::Address,
+        SignatureToken::Vector(Box::new(SignatureToken::U8)),
         SignatureToken::U64,
         SignatureToken::Address,
+        SignatureToken::Vector(Box::new(SignatureToken::U8)),
         SignatureToken::U64,
     ];
     assert_eq!(actual_code, expected_code);

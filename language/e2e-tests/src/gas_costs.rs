@@ -245,7 +245,7 @@ pub static ROTATE_KEY: Lazy<u64> = Lazy::new(|| {
     let sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
     let (_privkey, pubkey) = compat::generate_keypair(None);
-    let new_key_hash = AccountAddress::from_public_key(&pubkey);
+    let new_key_hash = AccountAddress::authentication_key(&pubkey).to_vec();
 
     let txn = rotate_key_txn(sender.account(), new_key_hash, 10);
     compute_gas_used(txn, &mut executor)

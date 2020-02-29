@@ -40,6 +40,7 @@ fn generate_genesis_blob(stdlib_modules: &'static [VerifiedModule]) -> Vec<u8> {
         encode_genesis_transaction_with_validator_and_modules(
             &GENESIS_KEYPAIR.0,
             GENESIS_KEYPAIR.1.clone(),
+            &swarm.nodes,
             swarm.validator_set,
             swarm.discovery_set,
             stdlib_modules,

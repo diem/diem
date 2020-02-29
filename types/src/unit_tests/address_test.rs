@@ -9,7 +9,7 @@ use std::convert::{AsRef, TryFrom};
 
 #[test]
 fn test_address_bytes() {
-    let hex = Vec::from_hex("ca843279e3427144cead5e4d5999a3d0ccf92b8e124793820837625638742903")
+    let hex = Vec::from_hex("ca843279e3427144cead5e4d5999a3d0")
         .expect("You must provide a valid Hex format");
 
     assert_eq!(
@@ -22,7 +22,7 @@ fn test_address_bytes() {
     );
     let address = AccountAddress::try_from(&hex[..]).unwrap_or_else(|_| {
         panic!(
-            "The address {:?} is of invalid length. Addresses must be 32-bytes long",
+            "The address {:?} is of invalid length. Addresses must be 16-bytes long",
             &hex
         )
     });
@@ -32,7 +32,7 @@ fn test_address_bytes() {
 
 #[test]
 fn test_address() {
-    let hex = Vec::from_hex("ca843279e3427144cead5e4d5999a3d0ccf92b8e124793820837625638742903")
+    let hex = Vec::from_hex("ca843279e3427144cead5e4d5999a3d0")
         .expect("You must provide a valid Hex format");
 
     assert_eq!(
@@ -46,13 +46,13 @@ fn test_address() {
 
     let address: AccountAddress = AccountAddress::try_from(&hex[..]).unwrap_or_else(|_| {
         panic!(
-            "The address {:?} is of invalid length. Addresses must be 32-bytes long",
+            "The address {:?} is of invalid length. Addresses must be 16-bytes long",
             &hex
         )
     });
 
     let hash_vec =
-        &Vec::from_hex("84a1bb90a6130da458abde12cc8ea21f29c6e0bcda007491fff1852561b830a7")
+        &Vec::from_hex("2f06a55a39cbe1bdfbb3a1ca7a770674af51849d48a9ce5a9beb6f82bde14e6f")
             .expect("You must provide a valid Hex format");
 
     let mut hash = [0u8; 32];
@@ -65,7 +65,7 @@ fn test_address() {
 
 #[test]
 fn test_ref() {
-    let address = AccountAddress::new([1u8; 32]);
+    let address = AccountAddress::new([1u8; ADDRESS_LENGTH]);
     let _: &[u8] = address.as_ref();
 }
 

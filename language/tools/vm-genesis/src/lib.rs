@@ -8,11 +8,12 @@ mod genesis_gas_schedule;
 use crate::genesis_gas_schedule::initial_gas_schedule;
 use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
+use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::*, traits::ValidKey};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
-    account_address::AccountAddress,
+    account_address::{AccountAddress, AuthenticationKey},
     account_config,
     contract_event::ContractEvent,
     crypto_proxies::ValidatorSet,
@@ -70,12 +71,14 @@ static EPILOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unw
 pub fn encode_genesis_transaction_with_validator(
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
+    nodes: &[NodeConfig],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
 ) -> SignatureCheckedTransaction {
     encode_genesis_transaction_with_validator_and_modules(
         private_key,
         public_key,
+        nodes,
         validator_set,
         discovery_set,
         stdlib_modules(StdLibOptions::Staged), // Must use staged stdlib
@@ -85,6 +88,7 @@ pub fn encode_genesis_transaction_with_validator(
 pub fn encode_genesis_transaction_with_validator_and_modules(
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
+    nodes: &[NodeConfig],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
     stdlib_modules: &[VerifiedModule],
@@ -124,6 +128,7 @@ pub fn encode_genesis_transaction_with_validator_and_modules(
                 &move_vm,
                 &gas_schedule,
                 &mut interpreter_context,
+                &nodes,
                 &validator_set,
                 &discovery_set,
             );
@@ -164,12 +169,15 @@ fn create_and_initialize_main_accounts(
             gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![Value::address(association_addr)],
+            vec![
+                Value::address(association_addr),
+                Value::vector_u8(association_addr.to_vec()),
+            ],
         )
-        .unwrap_or_else(|_| {
+        .unwrap_or_else(|e| {
             panic!(
-                "Failure creating association account {:?}",
-                association_addr
+                "Failure creating association account {:?}: {}",
+                association_addr, e
             )
         });
 
@@ -182,12 +190,15 @@ fn create_and_initialize_main_accounts(
             gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![Value::address(transaction_fee_address)],
+            vec![
+                Value::address(transaction_fee_address),
+                Value::vector_u8(transaction_fee_address.to_vec()),
+            ],
         )
-        .unwrap_or_else(|_| {
+        .unwrap_or_else(|e| {
             panic!(
-                "Failure creating transaction fee account {:?}",
-                transaction_fee_address
+                "Failure creating transaction fee account {:?}: {}",
+                transaction_fee_address, e
             )
         });
 
@@ -244,12 +255,13 @@ fn create_and_initialize_main_accounts(
             &txn_data,
             vec![
                 Value::address(association_addr),
+                Value::vector_u8(association_addr.to_vec()),
                 Value::u64(ASSOCIATION_INIT_BALANCE),
             ],
         )
         .expect("Failure minting to association");
 
-    let genesis_auth_key = AccountAddress::from_public_key(public_key).to_vec();
+    let genesis_auth_key = AuthenticationKey::from_public_key(public_key).to_vec();
     move_vm
         .execute_function(
             &account_config::ACCOUNT_MODULE,
@@ -299,6 +311,7 @@ fn create_and_initialize_validator_and_discovery_set(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
+    nodes: &[NodeConfig],
     validator_set: &ValidatorSet,
     discovery_set: &DiscoverySet,
 ) {
@@ -308,6 +321,7 @@ fn create_and_initialize_validator_and_discovery_set(
         move_vm,
         gas_schedule,
         interpreter_context,
+        nodes,
         validator_set,
         discovery_set,
     );
@@ -330,12 +344,15 @@ fn create_and_initialize_validator_set(
             gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![Value::address(validator_set_address)],
+            vec![
+                Value::address(validator_set_address),
+                Value::vector_u8(validator_set_address.to_vec()),
+            ],
         )
-        .unwrap_or_else(|_| {
+        .unwrap_or_else(|e| {
             panic!(
-                "Failure creating validator set account {:?}",
-                validator_set_address
+                "Failure creating validator set account {:?}: {}",
+                validator_set_address, e
             )
         });
 
@@ -368,12 +385,15 @@ fn create_and_initialize_discovery_set(
             gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![Value::address(discovery_set_address)],
+            vec![
+                Value::address(discovery_set_address),
+                Value::vector_u8(discovery_set_address.to_vec()),
+            ],
         )
-        .unwrap_or_else(|_| {
+        .unwrap_or_else(|e| {
             panic!(
-                "Failure creating discovery set account {:?}",
-                discovery_set_address
+                "Failure creating discovery set account {:?}: {}",
+                discovery_set_address, e
             )
         });
 
@@ -389,11 +409,37 @@ fn create_and_initialize_discovery_set(
         .expect("Failure initializing discovery set");
 }
 
+// TODO: refactor ValidatorSet / NodeConfig to make it possible to  do this resolution without a
+// linear search through nodes
+/// Return an authentication key in `nodes` whose derived address is equal to `address`
+fn get_validator_authentication_key(
+    nodes: &[NodeConfig],
+    address: &AccountAddress,
+) -> Option<AuthenticationKey> {
+    for node in nodes {
+        let public_key = node
+            .test
+            .as_ref()
+            .unwrap()
+            .account_keypair
+            .as_ref()
+            .unwrap()
+            .public();
+        let validator_authentication_key = AuthenticationKey::from_public_key(public_key);
+        let derived_address = validator_authentication_key.derived_address();
+        if derived_address == *address {
+            return Some(validator_authentication_key);
+        }
+    }
+    None
+}
+
 /// Initialize each validator.
 fn initialize_validators(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
+    nodes: &[NodeConfig],
     validator_set: &ValidatorSet,
     discovery_set: &DiscoverySet,
 ) {
@@ -403,6 +449,13 @@ fn initialize_validators(
     for (validator_keys, discovery_info) in validator_set.iter().zip(discovery_set.iter()).rev() {
         // First, add a ValidatorConfig resource under each account
         let validator_address = *validator_keys.account_address();
+        let validator_authentication_key =
+            get_validator_authentication_key(nodes, &validator_address).unwrap_or_else(|| {
+                panic!(
+                    "Couldn't find authentication key for validator address {}",
+                    validator_address
+                )
+            });
         move_vm
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
@@ -410,10 +463,16 @@ fn initialize_validators(
                 gas_schedule,
                 interpreter_context,
                 &txn_data,
-                vec![Value::address(validator_address)],
+                vec![
+                    Value::address(validator_address),
+                    Value::vector_u8(validator_authentication_key.prefix().to_vec()),
+                ],
             )
-            .unwrap_or_else(|_| {
-                panic!("Failure creating validator account {:?}", validator_address)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failure creating validator account {:?}: {}",
+                    validator_address, e
+                )
             });
 
         let mut validator_txn_data = TransactionMetadata::default();

@@ -1,7 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{commands::is_address, libra_client::LibraClient, AccountData, AccountStatus};
+use crate::{
+    commands::{is_address, is_authentication_key},
+    libra_client::LibraClient,
+    AccountData, AccountStatus,
+};
 use anyhow::{bail, ensure, format_err, Error, Result};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
@@ -14,7 +18,9 @@ use libra_logger::prelude::*;
 use libra_temppath::TempPath;
 use libra_types::{
     access_path::AccessPath,
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::{
+        AccountAddress, AuthenticationKey, ADDRESS_LENGTH, AUTHENTICATION_KEY_LENGTH,
+    },
     account_config::{
         association_address, AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
         CORE_CODE_ADDRESS,
@@ -138,6 +144,7 @@ impl ClientProxy {
                 Some(KeyPair::<Ed25519PrivateKey, _>::from(
                     faucet_account_keypair.private_key,
                 )),
+                None,
             )?;
             // Load the keypair from file
             Some(faucet_account_data)
@@ -181,13 +188,13 @@ impl ClientProxy {
 
     /// Returns the account index that should be used by user to reference this account
     pub fn create_next_account(&mut self, sync_with_validator: bool) -> Result<AddressAndIndex> {
-        let (address, _) = self.wallet.new_address()?;
-
+        let (auth_key, _) = self.wallet.new_address()?;
         let account_data = Self::get_account_data_from_address(
             &mut self.client,
-            address,
+            auth_key.derived_address(),
             sync_with_validator,
             None,
+            Some(auth_key.to_vec()),
         )?;
 
         Ok(self.insert_account_data(account_data))
@@ -248,7 +255,7 @@ impl ClientProxy {
             space_delim_strings.len() == 2,
             "Invalid number of arguments for getting balance"
         );
-        let address = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         self.get_account_resource_and_update(address).map(|res| {
             let whole_num = res.balance() / 1_000_000;
             let remainder = res.balance() % 1_000_000;
@@ -262,7 +269,7 @@ impl ClientProxy {
             space_delim_strings.len() == 2 || space_delim_strings.len() == 3,
             "Invalid number of arguments for getting sequence number"
         );
-        let address = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let sequence_number = self
             .get_account_resource_and_update(address)?
             .sequence_number();
@@ -299,14 +306,22 @@ impl ClientProxy {
             space_delim_strings.len() == 3,
             "Invalid number of arguments for mint"
         );
-        let receiver = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (receiver, receiver_auth_key_opt) =
+            self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let receiver_auth_key = receiver_auth_key_opt.ok_or_else(|| {
+            format_err!("Need authentication key to create new account via minting")
+        })?;
         let num_coins = Self::convert_to_micro_libras(space_delim_strings[2])?;
 
         ensure!(num_coins > 0, "Invalid number of coins to mint.");
 
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
-                transaction_builder::encode_mint_script(&receiver, num_coins),
+                transaction_builder::encode_mint_script(
+                    &receiver,
+                    receiver_auth_key.prefix().to_vec(),
+                    num_coins,
+                ),
                 is_blocking,
             ),
             None => self.mint_coins_with_faucet_service(&receiver, num_coins, is_blocking),
@@ -323,7 +338,8 @@ impl ClientProxy {
             space_delim_strings.len() == 2,
             "Invalid number of arguments for removing validator"
         );
-        let account_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (account_address, _) =
+            self.get_account_address_from_parameter(space_delim_strings[1])?;
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
                 transaction_builder::encode_remove_validator_script(&account_address),
@@ -339,7 +355,8 @@ impl ClientProxy {
             space_delim_strings.len() == 2,
             "Invalid number of arguments for adding validator"
         );
-        let account_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (account_address, _) =
+            self.get_account_address_from_parameter(space_delim_strings[1])?;
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
                 transaction_builder::encode_add_validator_script(&account_address),
@@ -359,7 +376,7 @@ impl ClientProxy {
             space_delim_strings.len() == 9,
             "Invalid number of arguments for registering validator"
         );
-        let address = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
         let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
         let network_signing_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[4])?;
@@ -374,6 +391,7 @@ impl ClientProxy {
             address,
             true,
             Some(KeyPair::from(private_key)),
+            None,
         )?;
         let program = encode_register_validator_script(
             consensus_public_key.to_bytes().to_vec(),
@@ -434,6 +452,7 @@ impl ClientProxy {
         &mut self,
         sender_account_ref_id: usize,
         receiver_address: &AccountAddress,
+        receiver_auth_key_prefix: Vec<u8>,
         num_coins: u64,
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
@@ -445,8 +464,11 @@ impl ClientProxy {
             let sender = self.accounts.get(sender_account_ref_id).ok_or_else(|| {
                 format_err!("Unable to find sender account: {}", sender_account_ref_id)
             })?;
-
-            let program = transaction_builder::encode_transfer_script(&receiver_address, num_coins);
+            let program = transaction_builder::encode_transfer_script(
+                &receiver_address,
+                receiver_auth_key_prefix,
+                num_coins,
+            );
             let txn = self.create_txn_to_submit(
                 TransactionPayload::Script(program),
                 sender,
@@ -480,11 +502,16 @@ impl ClientProxy {
         sender_address: AccountAddress,
         sender_sequence_number: u64,
         receiver_address: AccountAddress,
+        receiver_auth_key_prefix: Vec<u8>,
         num_coins: u64,
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
     ) -> Result<RawTransaction> {
-        let program = transaction_builder::encode_transfer_script(&receiver_address, num_coins);
+        let program = transaction_builder::encode_transfer_script(
+            &receiver_address,
+            receiver_auth_key_prefix,
+            num_coins,
+        );
 
         Ok(create_unsigned_txn(
             TransactionPayload::Script(program),
@@ -507,9 +534,10 @@ impl ClientProxy {
             "Invalid number of arguments for transfer"
         );
 
-        let sender_account_address =
+        let (sender_account_address, _) =
             self.get_account_address_from_parameter(space_delim_strings[1])?;
-        let receiver_address = self.get_account_address_from_parameter(space_delim_strings[2])?;
+        let (receiver_address, receiver_auth_key_opt) =
+            self.get_account_address_from_parameter(space_delim_strings[2])?;
 
         let num_coins = Self::convert_to_micro_libras(space_delim_strings[3])?;
 
@@ -540,10 +568,14 @@ impl ClientProxy {
         };
 
         let sender_account_ref_id = self.get_account_ref_id(&sender_account_address)?;
+        let receiver_auth_key_prefix = receiver_auth_key_opt.map_or(Vec::new(), |auth_key| {
+            AuthenticationKey::prefix(&auth_key).to_vec()
+        });
 
         self.transfer_coins_int(
             sender_account_ref_id,
             &receiver_address,
+            receiver_auth_key_prefix,
             num_coins,
             gas_unit_price,
             max_gas_amount,
@@ -553,7 +585,7 @@ impl ClientProxy {
 
     /// Compile move program
     pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<String> {
-        let address = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let file_path = space_delim_strings[2];
         let is_module = match space_delim_strings[3] {
             "module" => true,
@@ -658,7 +690,8 @@ impl ClientProxy {
         space_delim_strings: &[&str],
         program: TransactionPayload,
     ) -> Result<()> {
-        let sender_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (sender_address, _) =
+            self.get_account_address_from_parameter(space_delim_strings[1])?;
         let sender_ref_id = self.get_account_ref_id(&sender_address)?;
         let sender = self.accounts.get(sender_ref_id).unwrap();
         let sequence_number = sender.sequence_number;
@@ -701,7 +734,7 @@ impl ClientProxy {
             space_delim_strings.len() == 2,
             "Invalid number of arguments to get latest account state"
         );
-        let account = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (account, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         self.get_account_state_and_update(account)
     }
 
@@ -714,7 +747,7 @@ impl ClientProxy {
             space_delim_strings.len() == 4,
             "Invalid number of arguments to get transaction by account and sequence number"
         );
-        let account = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (account, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let sequence_number = space_delim_strings[2].parse::<u64>().map_err(|error| {
             format_parse_data_error(
                 "account_sequence_number",
@@ -775,11 +808,18 @@ impl ClientProxy {
             .get_txn_by_range(start_version, limit, fetch_events)
     }
 
-    /// Get account address from parameter. If the parameter is string of address, try to convert
-    /// it to address, otherwise, try to convert to u64 and looking at TestClient::accounts.
-    pub fn get_account_address_from_parameter(&self, para: &str) -> Result<AccountAddress> {
-        if is_address(para) {
-            ClientProxy::address_from_strings(para)
+    /// Get account address and (if applicable) authentication key from parameter. If the parameter
+    /// is string of address, try to convert it to address, otherwise, try to convert to u64 and
+    /// looking at TestClient::accounts.
+    pub fn get_account_address_from_parameter(
+        &self,
+        para: &str,
+    ) -> Result<(AccountAddress, Option<AuthenticationKey>)> {
+        if is_authentication_key(para) {
+            let auth_key = ClientProxy::authentication_key_from_string(para)?;
+            Ok((auth_key.derived_address(), Some(auth_key)))
+        } else if is_address(para) {
+            Ok((ClientProxy::address_from_strings(para)?, None))
         } else {
             let account_ref_id = para.parse::<usize>().map_err(|error| {
                 format_parse_data_error(
@@ -796,7 +836,14 @@ impl ClientProxy {
                     account_ref_id
                 )
             })?;
-            Ok(account_data.address)
+            Ok((
+                account_data.address,
+                account_data
+                    .authentication_key
+                    .clone()
+                    .map(|bytes| AuthenticationKey::try_from(bytes).ok())
+                    .flatten(),
+            ))
         }
     }
 
@@ -809,7 +856,7 @@ impl ClientProxy {
             space_delim_strings.len() == 6,
             "Invalid number of arguments to get events by access path"
         );
-        let account = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (account, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let path = match space_delim_strings[2] {
             "sent" => ACCOUNT_SENT_EVENT_PATH.to_vec(),
             "received" => ACCOUNT_RECEIVED_EVENT_PATH.to_vec(),
@@ -874,6 +921,7 @@ impl ClientProxy {
                 &mut self.client,
                 address,
                 self.sync_on_wallet_recovery,
+                None,
                 None,
             )?);
         }
@@ -944,26 +992,33 @@ impl ClientProxy {
         address: AccountAddress,
         sync_with_validator: bool,
         key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        authentication_key_opt: Option<Vec<u8>>,
     ) -> Result<AccountData> {
-        let (sequence_number, status) = if sync_with_validator {
+        let (sequence_number, authentication_key, status) = if sync_with_validator {
             match client.get_account_blob(address) {
                 Ok(resp) => match resp.0 {
-                    Some(account_state_blob) => (
-                        AccountResource::try_from(&account_state_blob)?.sequence_number(),
-                        AccountStatus::Persisted,
-                    ),
-                    None => (0, AccountStatus::Local),
+                    Some(account_state_blob) => {
+                        let account_resource = AccountResource::try_from(&account_state_blob)?;
+
+                        (
+                            account_resource.sequence_number(),
+                            Some(account_resource.authentication_key().to_vec()),
+                            AccountStatus::Persisted,
+                        )
+                    }
+                    None => (0, authentication_key_opt, AccountStatus::Local),
                 },
                 Err(e) => {
                     error!("Failed to get account state from validator, error: {:?}", e);
-                    (0, AccountStatus::Unknown)
+                    (0, authentication_key_opt, AccountStatus::Unknown)
                 }
             }
         } else {
-            (0, AccountStatus::Local)
+            (0, authentication_key_opt, AccountStatus::Local)
         };
         Ok(AccountData {
             address,
+            authentication_key,
             key_pair,
             sequence_number,
             status,
@@ -1014,7 +1069,7 @@ impl ClientProxy {
         let account_vec: Vec<u8> = hex::decode(data.parse::<String>()?)?;
         ensure!(
             account_vec.len() == ADDRESS_LENGTH,
-            "The address {:?} is of invalid length. Addresses must be 32-bytes long"
+            "The address {:?} is of invalid length. Addresses must be 16-bytes long"
         );
         let account = AccountAddress::try_from(&account_vec[..]).map_err(|error| {
             format_err!(
@@ -1024,6 +1079,23 @@ impl ClientProxy {
             )
         })?;
         Ok(account)
+    }
+
+    fn authentication_key_from_string(data: &str) -> Result<AuthenticationKey> {
+        let bytes_vec: Vec<u8> = hex::decode(data.parse::<String>()?)?;
+        ensure!(
+            bytes_vec.len() == AUTHENTICATION_KEY_LENGTH,
+            "The authentication key string {:?} is of invalid length. Authentication keys must be 32-bytes long"
+        );
+
+        let auth_key = AuthenticationKey::try_from(&bytes_vec[..]).map_err(|error| {
+            format_err!(
+                "The authentication key {:?} is invalid, error: {:?}",
+                &bytes_vec,
+                error,
+            )
+        })?;
+        Ok(auth_key)
     }
 
     fn association_transaction_with_local_faucet_account(

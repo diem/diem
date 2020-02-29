@@ -31,7 +31,7 @@ use crate::{
     SignatureTokenKind,
 };
 use libra_types::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, ADDRESS_LENGTH},
     byte_array::ByteArray,
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
@@ -498,7 +498,7 @@ pub enum SignatureToken {
     U128,
     /// ByteArray, variable size, immutable byte array.
     ByteArray,
-    /// Address, a 32 bytes immutable type.
+    /// Address, a 16 byte immutable type.
     Address,
     /// Vector
     Vector(Box<SignatureToken>),
@@ -1849,7 +1849,7 @@ pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
 
 /// Return a simple script that contains only a return in the main()
 pub fn empty_script() -> CompiledScriptMut {
-    let default_address = AccountAddress::new([3u8; 32]);
+    let default_address = AccountAddress::new([3u8; ADDRESS_LENGTH]);
     let self_module_name = self_module_name().to_owned();
     let main_name = Identifier::new("main").unwrap();
     let void_void_sig = FunctionSignature {

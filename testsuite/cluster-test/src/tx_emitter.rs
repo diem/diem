@@ -25,7 +25,7 @@ use libra_crypto::{
 };
 use libra_logger::{debug, info};
 use libra_types::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, AuthenticationKey},
     account_config::{association_address, AccountResource},
     get_with_proof::ResponseItem,
     proto::types::{
@@ -205,9 +205,11 @@ impl TxEmitter {
         )
         .await?;
         let faucet_address = faucet_account.address;
+        let auth_key_prefix = faucet_account.auth_key_prefix();
         let mint_txn = gen_mint_request(
             &mut faucet_account,
             &faucet_address,
+            auth_key_prefix,
             LIBRA_PER_NEW_ACCOUNT * num_accounts as u64,
         );
         execute_and_wait_transactions(
@@ -374,7 +376,7 @@ impl SubmissionWorker {
                 .all_addresses
                 .choose(&mut rng)
                 .expect("all_addresses can't be empty");
-            let request = gen_transfer_txn_request(sender, receiver, 1);
+            let request = gen_transfer_txn_request(sender, receiver, Vec::new(), 1);
             requests.push(request);
         }
         requests
@@ -499,10 +501,11 @@ fn gen_submit_transaction_request(
 fn gen_mint_request(
     sender: &mut AccountData,
     receiver: &AccountAddress,
+    receiver_auth_key_prefix: Vec<u8>,
     num_coins: u64,
 ) -> SubmitTransactionRequest {
     gen_submit_transaction_request(
-        transaction_builder::encode_mint_script(receiver, num_coins),
+        transaction_builder::encode_mint_script(receiver, receiver_auth_key_prefix, num_coins),
         sender,
     )
 }
@@ -510,10 +513,11 @@ fn gen_mint_request(
 fn gen_transfer_txn_request(
     sender: &mut AccountData,
     receiver: &AccountAddress,
+    receiver_auth_key_prefix: Vec<u8>,
     num_coins: u64,
 ) -> SubmitTransactionRequest {
     gen_submit_transaction_request(
-        transaction_builder::encode_transfer_script(receiver, num_coins),
+        transaction_builder::encode_transfer_script(receiver, receiver_auth_key_prefix, num_coins),
         sender,
     )
 }
@@ -542,7 +546,14 @@ fn gen_transfer_txn_requests(
 ) -> Vec<SubmitTransactionRequest> {
     accounts
         .iter()
-        .map(|account| gen_transfer_txn_request(source_account, &account.address, amount))
+        .map(|account| {
+            gen_transfer_txn_request(
+                source_account,
+                &account.address,
+                account.auth_key_prefix(),
+                amount,
+            )
+        })
         .collect()
 }
 
@@ -643,6 +654,14 @@ struct AccountData {
     pub address: AccountAddress,
     pub key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
     pub sequence_number: u64,
+}
+
+impl AccountData {
+    pub fn auth_key_prefix(&self) -> Vec<u8> {
+        AuthenticationKey::from_public_key(&self.key_pair.public_key)
+            .prefix()
+            .to_vec()
+    }
 }
 
 fn is_accepted(resp: &SubmitTransactionResponse) -> bool {

@@ -149,10 +149,14 @@ module LibraAccount {
     // and those account will be charged for gas. If those account don't have enough gas to pay
     // for the transaction cost they will fail minting.
     // However those account can also mint to themselves so that is a decent workaround
-    public fun mint_to_address(payee: address, amount: u64) acquires T {
+    public fun mint_to_address(
+        payee: address,
+        auth_key_prefix: vector<u8>,
+        amount: u64
+    ) acquires T {
         // Create an account if it does not exist
         if (!exists(payee)) {
-            create_account(payee);
+            create_account(payee, auth_key_prefix);
         };
 
         // Mint and deposit the coin
@@ -209,12 +213,13 @@ module LibraAccount {
     // into the `payee`'s account. Creates the `payee` account if it doesn't exist.
     public fun pay_from_capability(
         payee: address,
+        auth_key_prefix: vector<u8>,
         cap: &WithdrawalCapability,
         amount: u64,
         metadata: vector<u8>
     ) acquires T {
         if (!exists(payee)) {
-            create_account(payee);
+            create_account(payee, auth_key_prefix);
         };
         deposit_with_sender_and_metadata(
             payee,
@@ -229,10 +234,13 @@ module LibraAccount {
     // Creates the `payee` account if it does not exist
     public fun pay_from_sender_with_metadata(
         payee: address,
+        auth_key_prefix: vector<u8>,
         amount: u64,
         metadata: vector<u8>
     ) acquires T {
-        if (!exists(payee)) create_account(payee);
+        if (!exists(payee)) {
+            create_account(payee, auth_key_prefix);
+        };
         deposit_with_metadata(
             payee,
             withdraw_from_sender(amount),
@@ -243,12 +251,18 @@ module LibraAccount {
     // Withdraw `amount` LibraCoin::T from the transaction sender's account and send the coin
     // to the `payee` address
     // Creates the `payee` account if it does not exist
-    public fun pay_from_sender(payee: address, amount: u64) acquires T {
+    public fun pay_from_sender(
+        payee: address,
+        auth_key_prefix: vector<u8>,
+        amount: u64
+    ) acquires T {
         // FIXME: Update this once we have vector<u8> literals
-        pay_from_sender_with_metadata(payee, amount, Vector::empty());
+        pay_from_sender_with_metadata(payee, auth_key_prefix, amount, Vector::empty());
     }
 
     fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: vector<u8>) {
+      // Don't allow rotating to clearly invalid key
+      Transaction::assert(Vector::length(&new_authentication_key) == 32, 12);
       account.authentication_key = new_authentication_key;
     }
 
@@ -297,16 +311,20 @@ module LibraAccount {
         account.delegated_key_rotation_capability = false;
     }
 
-    // Creates a new account at `fresh_address` with an initial balance of zero
-    // Creating an account at 0x0 will cause runtime failure as it is a
+    // Creates a new account at `fresh_address` with an initial balance of zero and authentication
+    // key `auth_key_prefix` | `fresh_address`
+    // Creating an account at address 0x0 will cause runtime failure as it is a
     // reserved address for the MoveVM.
-    public fun create_account(fresh_address: address) {
+    public fun create_account(fresh_address: address, auth_key_prefix: vector<u8>) {
         let generator = EventHandleGenerator {counter: 0};
+        let authentication_key = auth_key_prefix;
+        Vector::append(&mut authentication_key, AddressUtil::address_to_bytes(fresh_address));
+        Transaction::assert(Vector::length(&authentication_key) == 32, 12);
 
         save_account(
             fresh_address,
             T {
-                authentication_key: AddressUtil::address_to_bytes(fresh_address),
+                authentication_key,
                 balance: LibraCoin::zero(),
                 delegated_key_rotation_capability: false,
                 delegated_withdrawal_capability: false,
@@ -320,15 +338,23 @@ module LibraAccount {
 
     // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
     // transaction sender's account
-    public fun create_new_account(fresh_address: address, initial_balance: u64) acquires T {
-        create_account(fresh_address);
+    public fun create_new_account(
+        fresh_address: address,
+        auth_key_prefix: vector<u8>,
+        initial_balance: u64
+    ) acquires T {
+        create_account(fresh_address, auth_key_prefix);
         if (initial_balance > 0) {
-            pay_from_sender(fresh_address, initial_balance);
+            deposit_with_metadata(
+                fresh_address,
+                withdraw_from_sender(initial_balance),
+                Vector::empty(),
+            );
         }
     }
 
     // Save an account to a given address if the address does not have an account resource yet
-    native fun save_account(addr: address, account: Self::T);
+    native fun save_account(fresh_address: address, account: Self::T);
 
     // Helper to return u64 value of the `balance` field for given `account`
     fun balance_for_account(account: &T): u64 {

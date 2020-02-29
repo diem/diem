@@ -10,7 +10,7 @@ main() {
     // check that one of the addresses we expect is in there...
     assert(
         LibraSystem.is_validator(
-            0x5181c01f6005d3236cb950f21a83c22489b9f9d1fadc027cf9532d6f99041522
+            0x89b9f9d1fadc027cf9532d6f99041522
         ),
         79
     );

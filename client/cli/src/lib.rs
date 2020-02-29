@@ -35,6 +35,8 @@ mod transfer_commands;
 pub struct AccountData {
     /// Address of the account.
     pub address: AccountAddress,
+    /// Authentication key of the account.
+    pub authentication_key: Option<Vec<u8>>,
     /// (private_key, public_key) pair if the account is not managed by wallet.
     pub key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
     /// Latest sequence number maintained by client, it can be different from validator.

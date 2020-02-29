@@ -5,7 +5,7 @@ main() {
     let account_exists: bool;
     let account_balance: u64;
 
-    addr = 0x0111111111111111111111111111111111111111111111111111111111111110;
+    addr = 0x011111111111111110;
     account_exists = LibraAccount.exists(copy(addr));
     account_balance = LibraAccount.balance(move(addr));
     return;

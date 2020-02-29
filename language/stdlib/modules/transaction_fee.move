@@ -5,6 +5,7 @@ module TransactionFee {
     use 0x0::LibraSystem;
     use 0x0::AddressUtil;
     use 0x0::Transaction;
+    use 0x0::Vector;
 
     ///////////////////////////////////////////////////////////////////////////
     // Transaction Fee Distribution
@@ -79,6 +80,7 @@ module TransactionFee {
 
             LibraAccount::pay_from_capability(
                 addr,
+                Vector::empty(),
                 &distribution_resource.fee_withdrawal_capability,
                 amount_to_distribute_per_validator,
                 // FIXME: Update this once we have bytearray literals

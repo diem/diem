@@ -6,7 +6,7 @@ use anyhow::{bail, Result};
 use executor_types::ExecutedTrees;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, AuthenticationKey},
     block_info::BlockInfo,
     crypto_proxies::{
         LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorSet, ValidatorSigner,
@@ -165,8 +165,9 @@ impl MockStorage {
 
     fn gen_mock_user_txn() -> Transaction {
         let sender = AccountAddress::random();
-        let receiver = AccountAddress::random();
-        let program = encode_transfer_script(&receiver, 1);
+        let receiver = AuthenticationKey::random();
+        let program =
+            encode_transfer_script(&receiver.derived_address(), receiver.prefix().to_vec(), 1);
         Transaction::UserTransaction(get_test_signed_txn(
             sender,
             0, // sequence number

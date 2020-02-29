@@ -4,7 +4,8 @@
 use crate::{account::AccountData, executor::test_all_genesis, gas_costs};
 use libra_config::config::VMPublishingOption;
 use libra_types::{
-    account_address::AccountAddress, transaction::TransactionStatus, vm_error::StatusCode,
+    account_address::AccountAddress, account_address::ADDRESS_LENGTH,
+    transaction::TransactionStatus, vm_error::StatusCode,
 };
 use move_core_types::identifier::Identifier;
 use vm::file_format::{
@@ -66,7 +67,9 @@ fn script_non_existing_module_dep() {
         // create a bogus script
         let mut script = empty_script();
         // make a non existent external module
-        script.address_pool.push(AccountAddress::new([1u8; 32]));
+        script
+            .address_pool
+            .push(AccountAddress::new([1u8; ADDRESS_LENGTH]));
         script.identifiers.push(Identifier::new("module").unwrap());
         let module_handle = ModuleHandle {
             address: AddressPoolIndex((script.address_pool.len() - 1) as u16),
@@ -130,7 +133,9 @@ fn script_non_existing_function_dep() {
         // create a bogus script
         let mut script = empty_script();
         // AddressUtil module
-        script.address_pool.push(AccountAddress::new([0u8; 32]));
+        script
+            .address_pool
+            .push(AccountAddress::new([0u8; ADDRESS_LENGTH]));
         script
             .identifiers
             .push(Identifier::new("AddressUtil").unwrap());
@@ -196,7 +201,9 @@ fn script_bad_sig_function_dep() {
         // create a bogus script
         let mut script = empty_script();
         // AddressUtil module
-        script.address_pool.push(AccountAddress::new([0u8; 32]));
+        script
+            .address_pool
+            .push(AccountAddress::new([0u8; ADDRESS_LENGTH]));
         script
             .identifiers
             .push(Identifier::new("AddressUtil").unwrap());
