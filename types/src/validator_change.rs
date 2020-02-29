@@ -98,7 +98,7 @@ impl ValidatorChangeProof {
     /// pass a waypoint in case it's not needed).
     ///
     /// We will also skip any stale ledger info's in the [`ValidatorChangeProof`].
-    pub fn verify(&self, verifier: &VerifierType) -> Result<LedgerInfoWithSignatures> {
+    pub fn verify(&self, verifier: &VerifierType) -> Result<&LedgerInfoWithSignatures> {
         ensure!(
             !self.ledger_info_with_sigs.is_empty(),
             "The ValidatorChangeProof is empty"
@@ -153,7 +153,7 @@ impl ValidatorChangeProof {
                     .ok_or_else(|| format_err!("LedgerInfo doesn't carry a ValidatorSet"))
             })?;
 
-        Ok(self.ledger_info_with_sigs.last().unwrap().clone())
+        Ok(self.ledger_info_with_sigs.last().unwrap())
     }
 }
 

@@ -9,7 +9,7 @@ use crate::{
     account_config::AccountResource,
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
-    crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorChangeProof},
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     ledger_info::LedgerInfo,
     proof::AccumulatorConsistencyProof,
     proto::types::{
@@ -19,7 +19,7 @@ use crate::{
         GetEventsByEventAccessPathResponse, GetTransactionsRequest, GetTransactionsResponse,
     },
     transaction::{TransactionListWithProof, TransactionWithProof, Version},
-    validator_change::VerifierType,
+    trusted_state::{TrustedState, TrustedStateChange},
 };
 use anyhow::{bail, ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -29,7 +29,6 @@ use std::{
     cmp,
     convert::{TryFrom, TryInto},
     mem,
-    sync::Arc,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -156,13 +155,13 @@ impl UpdateToLatestLedgerResponse {
     ///
     /// After calling this one can trust the info in the response items without further
     /// verification.
-    pub fn verify(
-        &self,
-        verifier: &VerifierType,
+    pub fn verify<'a>(
+        &'a self,
+        trusted_state: &TrustedState,
         request: &UpdateToLatestLedgerRequest,
-    ) -> Result<Option<EpochInfo>> {
+    ) -> Result<TrustedStateChange<'a>> {
         verify_update_to_latest_ledger_response(
-            verifier,
+            trusted_state,
             request.client_known_version,
             &request.requested_items,
             &self.response_items,
@@ -175,14 +174,14 @@ impl UpdateToLatestLedgerResponse {
 /// Verifies content of an [`UpdateToLatestLedgerResponse`] against the proofs it
 /// carries and the content of the corresponding [`UpdateToLatestLedgerRequest`]
 /// Return EpochInfo if there're validator change events.
-pub fn verify_update_to_latest_ledger_response(
-    verifier: &VerifierType,
+pub fn verify_update_to_latest_ledger_response<'a>(
+    trusted_state: &TrustedState,
     req_client_known_version: u64,
     req_request_items: &[RequestItem],
     response_items: &[ResponseItem],
-    ledger_info_with_sigs: &LedgerInfoWithSignatures,
-    validator_change_proof: &ValidatorChangeProof,
-) -> Result<Option<EpochInfo>> {
+    ledger_info_with_sigs: &'a LedgerInfoWithSignatures,
+    validator_change_proof: &'a ValidatorChangeProof,
+) -> Result<TrustedStateChange<'a>> {
     let ledger_info = ledger_info_with_sigs.ledger_info();
 
     // Verify that the same or a newer ledger info is returned.
@@ -192,6 +191,11 @@ pub fn verify_update_to_latest_ledger_response(
         ledger_info.version(),
         req_client_known_version,
     );
+
+    // Verify any validator change proof and latest ledger info. Provide an
+    // updated trusted state if the proof is correct and not stale.
+    let trusted_state_change =
+        trusted_state.verify_and_ratchet(ledger_info_with_sigs, validator_change_proof)?;
 
     // Verify each sub response.
     ensure!(
@@ -204,26 +208,7 @@ pub fn verify_update_to_latest_ledger_response(
         .map(|(req, res)| verify_response_item(ledger_info, req, res))
         .collect::<Result<Vec<_>>>()?;
 
-    // Verify ledger info signatures and potential epoch changes
-    if verifier.epoch_change_verification_required(ledger_info.epoch()) {
-        let epoch_change_li = validator_change_proof.verify(verifier)?;
-        let new_epoch_info = EpochInfo {
-            epoch: epoch_change_li.ledger_info().epoch() + 1,
-            verifier: Arc::new(
-                epoch_change_li
-                    .ledger_info()
-                    .next_validator_set()
-                    .ok_or_else(|| format_err!("No ValidatorSet in EpochProof"))?
-                    .into(),
-            ),
-        };
-        let new_verifier = VerifierType::TrustedVerifier(new_epoch_info.clone());
-        new_verifier.verify(ledger_info_with_sigs)?;
-        Ok(Some(new_epoch_info))
-    } else {
-        verifier.verify(ledger_info_with_sigs)?;
-        Ok(None)
-    }
+    Ok(trusted_state_change)
 }
 
 fn verify_response_item(
