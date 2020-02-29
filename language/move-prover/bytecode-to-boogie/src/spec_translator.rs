@@ -13,7 +13,8 @@ use num::{BigInt, Num};
 
 use libra_types::account_address::AccountAddress;
 use move_ir_types::{
-    ast::{BinOp, CopyableVal_, Field_, Loc, QualifiedStructIdent, Type},
+    ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Type},
+    location::{Loc, Spanned},
     spec_language_ast::{Condition_, FieldOrIndex, SpecExp, StorageLocation},
 };
 
@@ -69,7 +70,7 @@ impl<'env> SpecTranslator<'env> {
         SpecTranslator {
             module_env,
             writer,
-            current_loc: RefCell::new(Loc::default()),
+            current_loc: RefCell::new(Spanned::unsafe_no_loc(()).loc),
             symtab: RefCell::new(LinkedList::new()),
             in_old: RefCell::new(false),
             type_parameters,
@@ -77,10 +78,13 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
+    fn current_loc(&self) -> Loc {
+        *self.current_loc.borrow()
+    }
+
     /// Reports a type checking error.
     fn error<T>(&self, msg: &str, pass_through: T) -> T {
-        self.module_env
-            .error(*self.current_loc.borrow(), msg, pass_through)
+        self.module_env.error(self.current_loc(), msg, pass_through)
     }
 
     /// Returns an error expression.
@@ -92,7 +96,7 @@ impl<'env> SpecTranslator<'env> {
     /// above for type checking errors and the CodeWriter for being able to map boogie errors
     /// back to the source.
     fn update_location(&self, loc: Loc) -> (ModuleIndex, Loc) {
-        *self.current_loc.borrow_mut() = loc;
+        self.current_loc.replace(loc);
         self.writer
             .set_location(self.module_env.get_module_idx(), loc)
     }
@@ -149,10 +153,10 @@ impl<'env> SpecTranslator<'env> {
     fn define_synthetics(&self) {
         for (syn, ty) in self.module_env.get_synthetics() {
             self.define_symbol(
-                syn.name.as_str(),
+                syn.value.name.as_str(),
                 false,
                 BoogieExpr(
-                    boogie_synthetic_name(self.module_env, syn.name.as_str()),
+                    boogie_synthetic_name(self.module_env, syn.value.name.as_str()),
                     ty.clone(),
                 ),
             );
@@ -192,7 +196,7 @@ impl<'env> SpecTranslator<'env> {
         let conds = func_env.get_specification();
         for cond in conds {
             if let Condition_::Requires(expr) = &cond.value {
-                self.update_location(cond.span);
+                self.update_location(cond.loc);
                 emitln!(
                     self.writer,
                     "requires b#Boolean({});",
@@ -209,7 +213,7 @@ impl<'env> SpecTranslator<'env> {
             .iter()
             .filter_map(|c| match &c.value {
                 Condition_::SucceedsIf(expr) => {
-                    self.update_location(c.span);
+                    self.update_location(c.loc);
                     Some(format!("b#Boolean({})", self.translate_expr(expr).result()))
                 }
                 _ => None,
@@ -222,7 +226,7 @@ impl<'env> SpecTranslator<'env> {
             .iter()
             .filter_map(|c| match &c.value {
                 Condition_::AbortsIf(expr) => {
-                    self.update_location(c.span);
+                    self.update_location(c.loc);
                     Some(format!("b#Boolean({})", self.translate_expr(expr).result()))
                 }
                 _ => None,
@@ -251,7 +255,7 @@ impl<'env> SpecTranslator<'env> {
             if let Condition_::Ensures(expr) = &cond.value {
                 // FIXME: Do we really need to check whether succeeds_if & aborts_if are
                 // empty, below?
-                self.update_location(cond.span);
+                self.update_location(cond.loc);
                 emitln!(
                     self.writer,
                     "ensures {}b#Boolean({});",
@@ -330,10 +334,10 @@ impl<'env> SpecTranslator<'env> {
 
         // Emit invariant assumptions.
         for inv in struct_env.get_data_invariants() {
-            if inv.target.is_some() {
+            if inv.value.target.is_some() {
                 self.error("a data invariant cannot have a synthetic assignment", ());
             }
-            let cond = self.translate_expr_require_type(&inv.exp, &GlobalType::Bool);
+            let cond = self.translate_expr_require_type(&inv.value.exp, &GlobalType::Bool);
             assumptions.push(format!("b#Boolean({})", cond));
         }
 
@@ -364,11 +368,11 @@ impl<'env> SpecTranslator<'env> {
         self.define_invariant_symbols(struct_env, "__before", true);
         self.define_invariant_symbols(struct_env, "__after", false);
         for inv in struct_env.get_update_invariants() {
-            let saved = self.update_location(inv.span);
-            if let Some(syn_name) = &inv.target {
+            let saved = self.update_location(inv.loc);
+            if let Some(syn_name) = &inv.value.target {
                 let syn_ty = self.get_synthetic_type(struct_env, syn_name);
                 // Assignment to a synthetic variable.
-                let value = self.translate_expr_require_type(&inv.exp, &syn_ty);
+                let value = self.translate_expr_require_type(&inv.value.exp, &syn_ty);
                 emitln!(
                     self.writer,
                     "{} := {};",
@@ -377,7 +381,7 @@ impl<'env> SpecTranslator<'env> {
                 );
             } else {
                 // Delta invariant
-                let cond = self.translate_expr_require_type(&inv.exp, &GlobalType::Bool);
+                let cond = self.translate_expr_require_type(&inv.value.exp, &GlobalType::Bool);
                 emitln!(self.writer, &format!("assert b#Boolean({});", cond));
             }
             self.restore_saved_location(saved);
@@ -388,11 +392,11 @@ impl<'env> SpecTranslator<'env> {
         self.enter_scope();
         self.define_invariant_symbols(struct_env, "__after", false);
         for inv in struct_env.get_data_invariants() {
-            let saved = self.update_location(inv.span);
-            if inv.target.is_some() {
+            let saved = self.update_location(inv.loc);
+            if inv.value.target.is_some() {
                 self.error("a data invariant cannot have a synthetic assignment", ());
             }
-            let cond = self.translate_expr_require_type(&inv.exp, &GlobalType::Bool);
+            let cond = self.translate_expr_require_type(&inv.value.exp, &GlobalType::Bool);
             emitln!(self.writer, &format!("assert b#Boolean({});", cond));
             self.restore_saved_location(saved);
         }
@@ -414,21 +418,21 @@ impl<'env> SpecTranslator<'env> {
 
         // Emmit data assertions.
         for inv in struct_env.get_data_invariants() {
-            let saved = self.update_location(inv.span);
-            if inv.target.is_some() {
+            let saved = self.update_location(inv.loc);
+            if inv.value.target.is_some() {
                 self.error("a data invariant cannot have a synthetic assignment", ());
             }
-            let cond = self.translate_expr_require_type(&inv.exp, &GlobalType::Bool);
+            let cond = self.translate_expr_require_type(&inv.value.exp, &GlobalType::Bool);
             emitln!(self.writer, &format!("assert b#Boolean({});", cond));
             self.restore_saved_location(saved);
         }
 
         // Emit synthetic variable updates.
         for inv in struct_env.get_pack_invariants() {
-            self.update_location(inv.span);
-            if let Some(syn_name) = &inv.target {
+            self.update_location(inv.loc);
+            if let Some(syn_name) = &inv.value.target {
                 let syn_ty = self.get_synthetic_type(struct_env, syn_name);
-                let value = self.translate_expr_require_type(&inv.exp, &syn_ty);
+                let value = self.translate_expr_require_type(&inv.value.exp, &syn_ty);
                 emitln!(
                     self.writer,
                     "{} := {};",
@@ -450,10 +454,10 @@ impl<'env> SpecTranslator<'env> {
         self.enter_scope();
         self.define_invariant_symbols(struct_env, target, false);
         for inv in struct_env.get_unpack_invariants() {
-            let saved = self.update_location(inv.span);
-            if let Some(syn_name) = &inv.target {
+            let saved = self.update_location(inv.loc);
+            if let Some(syn_name) = &inv.value.target {
                 let syn_ty = self.get_synthetic_type(struct_env, syn_name);
-                let value = self.translate_expr_require_type(&inv.exp, &syn_ty);
+                let value = self.translate_expr_require_type(&inv.value.exp, &syn_ty);
                 emitln!(
                     self.writer,
                     "{} := {};",
@@ -1004,7 +1008,7 @@ impl<'env> SpecTranslator<'env> {
         type_actuals: &[Type],
     ) -> (String, GlobalType) {
         let resource_type = self.module_env.translate_struct_ast_type(
-            *self.current_loc.borrow(),
+            self.current_loc(),
             id,
             type_actuals,
             &self.type_parameters,

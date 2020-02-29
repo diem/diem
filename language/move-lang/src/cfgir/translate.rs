@@ -10,8 +10,9 @@ use crate::{
     errors::Errors,
     hlir::ast as H,
     parser::ast::{FunctionName, ModuleIdent, StructName},
-    shared::{unique_map::UniqueMap, *},
+    shared::unique_map::UniqueMap,
 };
+use move_ir_types::location::*;
 use std::{collections::BTreeSet, mem};
 
 //**************************************************************************************************

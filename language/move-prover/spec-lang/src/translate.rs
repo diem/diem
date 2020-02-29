@@ -117,7 +117,7 @@ impl<'env> Translator<'env> {
     }
 
     /// Shortcut for translating a Move AST location into ours.
-    pub fn to_loc(&self, loc: &move_lang::shared::Loc) -> Loc {
+    pub fn to_loc(&self, loc: &move_ir_types::location::Loc) -> Loc {
         self.env.to_loc(loc)
     }
 
@@ -1073,7 +1073,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             })
             .collect();
         let source_map = source_map.unwrap_or_else(|| {
-            ModuleSourceMap::dummy_from_module(&module).expect("cannot create dummy source map")
+            let default = move_ir_types::location::Spanned::unsafe_no_loc(())
+                .loc
+                .span();
+            ModuleSourceMap::dummy_from_module(&module, default)
+                .expect("cannot create dummy source map")
         });
         let spec_vars = std::mem::replace(&mut self.spec_vars, vec![]);
         let spec_funs = std::mem::replace(&mut self.spec_funs, vec![]);
@@ -1157,7 +1161,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 
     /// Shortcut for translating a Move AST location into ours.
-    fn to_loc(&self, loc: &move_lang::shared::Loc) -> Loc {
+    fn to_loc(&self, loc: &move_ir_types::location::Loc) -> Loc {
         self.parent.parent.env.to_loc(loc)
     }
 

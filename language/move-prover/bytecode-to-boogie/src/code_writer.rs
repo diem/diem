@@ -5,9 +5,9 @@
 
 use std::collections::{BTreeMap, Bound};
 
-use codespan::{ByteIndex, ColumnIndex, FileName, LineIndex};
+use codespan::{ByteIndex, ColumnIndex, FileId, Files, LineIndex};
 
-use move_ir_types::ast::Loc;
+use move_ir_types::location::Loc;
 
 use crate::env::ModuleIndex;
 use std::cell::RefCell;
@@ -104,14 +104,18 @@ impl CodeWriter {
     }
 
     /// Given line/column location, determine ByteIndex of that location.
-    pub fn get_output_byte_index(&self, line: LineIndex, column: ColumnIndex) -> Option<ByteIndex> {
+    pub fn get_output_byte_index(
+        &self,
+        id: FileId,
+        line: LineIndex,
+        column: ColumnIndex,
+    ) -> Option<ByteIndex> {
         self.process_result(|s| {
-            let fmap = codespan::FileMap::new(FileName::real("dummy"), s);
-            if let Ok(index) = fmap.byte_index(line, column) {
-                Some(index)
-            } else {
-                None
-            }
+            let mut fmap = Files::new();
+            fmap.add("dummy", s);
+            fmap.line_span(id, line).ok().map(|line_span| {
+                ByteIndex((line_span.start().to_usize() + column.to_usize()) as u32)
+            })
         })
     }
 

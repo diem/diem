@@ -9,9 +9,10 @@ use crate::translate::{ModuleTranslator, Translator};
 use anyhow::anyhow;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use itertools::Itertools;
+use move_ir_types::location::Loc;
 use move_lang::errors::Errors;
 use move_lang::expansion::ast::Program;
-use move_lang::shared::{Address, Loc};
+use move_lang::shared::Address;
 use move_lang::to_bytecode::translate::CompiledUnit;
 use move_lang::{move_compile_no_report, move_compile_to_expansion_no_report};
 

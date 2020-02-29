@@ -19,7 +19,7 @@ use libra_types::{
     account_address::AccountAddress,
     transaction::{Script, TransactionArgument},
 };
-use move_ir_types::ast::Loc;
+use move_ir_types::location::Loc;
 use std::mem;
 use stdlib::{stdlib_modules, StdLibOptions};
 use vm::file_format::{CompiledModule, CompiledProgram, CompiledScript};
@@ -50,43 +50,46 @@ pub struct Compiler {
 
 impl Compiler {
     /// Compiles into a `CompiledProgram` where the bytecode hasn't been serialized.
-    pub fn into_compiled_program(mut self, code: &str) -> Result<CompiledProgram> {
-        Ok(self.compile_impl(code)?.0)
+    pub fn into_compiled_program(mut self, file_name: &str, code: &str) -> Result<CompiledProgram> {
+        Ok(self.compile_impl(file_name, code)?.0)
     }
 
     pub fn into_compiled_program_and_source_maps(
         mut self,
+        file_name: &str,
         code: &str,
     ) -> Result<(CompiledProgram, SourceMap<Loc>)> {
-        let (compiled_program, source_maps, _) = self.compile_impl(code)?;
+        let (compiled_program, source_maps, _) = self.compile_impl(file_name, code)?;
         Ok((compiled_program, source_maps))
     }
 
     pub fn into_compiled_program_and_source_maps_deps(
         mut self,
+        file_name: &str,
         code: &str,
     ) -> Result<(CompiledProgram, SourceMap<Loc>, Vec<VerifiedModule>)> {
-        Ok(self.compile_impl(code)?)
+        Ok(self.compile_impl(file_name, code)?)
     }
 
     /// Compiles into a `CompiledProgram` and also returns the dependencies.
     pub fn into_compiled_program_and_deps(
         mut self,
+        file_name: &str,
         code: &str,
     ) -> Result<(CompiledProgram, Vec<VerifiedModule>)> {
-        let (compiled_program, _, deps) = self.compile_impl(code)?;
+        let (compiled_program, _, deps) = self.compile_impl(file_name, code)?;
         Ok((compiled_program, deps))
     }
 
     /// Compiles into a `CompiledScript`.
-    pub fn into_script(mut self, code: &str) -> Result<CompiledScript> {
-        let compiled_program = self.compile_impl(code)?.0;
+    pub fn into_script(mut self, file_name: &str, code: &str) -> Result<CompiledScript> {
+        let compiled_program = self.compile_impl(file_name, code)?.0;
         Ok(compiled_program.script)
     }
 
     /// Compiles the script into a serialized form.
-    pub fn into_script_blob(mut self, code: &str) -> Result<Vec<u8>> {
-        let compiled_program = self.compile_impl(code)?.0;
+    pub fn into_script_blob(mut self, file_name: &str, code: &str) -> Result<Vec<u8>> {
+        let compiled_program = self.compile_impl(file_name, code)?.0;
 
         let mut serialized_script = Vec::<u8>::new();
         compiled_program.script.serialize(&mut serialized_script)?;
@@ -94,13 +97,13 @@ impl Compiler {
     }
 
     /// Compiles the module.
-    pub fn into_compiled_module(mut self, code: &str) -> Result<CompiledModule> {
-        Ok(self.compile_mod(code)?.0)
+    pub fn into_compiled_module(mut self, file_name: &str, code: &str) -> Result<CompiledModule> {
+        Ok(self.compile_mod(file_name, code)?.0)
     }
 
     /// Compiles the module into a serialized form.
-    pub fn into_module_blob(mut self, code: &str) -> Result<Vec<u8>> {
-        let compiled_module = self.compile_mod(code)?.0;
+    pub fn into_module_blob(mut self, file_name: &str, code: &str) -> Result<Vec<u8>> {
+        let compiled_module = self.compile_mod(file_name, code)?.0;
 
         let mut serialized_module = Vec::<u8>::new();
         compiled_module.serialize(&mut serialized_module)?;
@@ -108,15 +111,21 @@ impl Compiler {
     }
 
     /// Compiles the code and arguments into a `Script` -- the bytecode is serialized.
-    pub fn into_program(self, code: &str, args: Vec<TransactionArgument>) -> Result<Script> {
-        Ok(Script::new(self.into_script_blob(code)?, args))
+    pub fn into_program(
+        self,
+        file_name: &str,
+        code: &str,
+        args: Vec<TransactionArgument>,
+    ) -> Result<Script> {
+        Ok(Script::new(self.into_script_blob(file_name, code)?, args))
     }
 
     fn compile_impl(
         &mut self,
+        file_name: &str,
         code: &str,
     ) -> Result<(CompiledProgram, SourceMap<Loc>, Vec<VerifiedModule>)> {
-        let parsed_program = parse_program(code)?;
+        let parsed_program = parse_program(file_name, code)?;
         let deps = self.deps();
         let (compiled_program, source_maps) = compile_program(self.address, parsed_program, &deps)?;
         Ok((compiled_program, source_maps, deps))
@@ -124,9 +133,10 @@ impl Compiler {
 
     fn compile_mod(
         &mut self,
+        file_name: &str,
         code: &str,
     ) -> Result<(CompiledModule, ModuleSourceMap<Loc>, Vec<VerifiedModule>)> {
-        let parsed_program = parse_program(code)?;
+        let parsed_program = parse_program(file_name, code)?;
         let deps = self.deps();
         let mut modules = parsed_program.modules;
         assert_eq!(modules.len(), 1, "Must have single module");

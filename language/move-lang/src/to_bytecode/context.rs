@@ -12,6 +12,7 @@ use libra_types::{
     account_address::AccountAddress as LibraAddress, byte_array::ByteArray as LibraByteArray,
     identifier::Identifier as LibraIdentifier,
 };
+use move_ir_types::location::*;
 use move_vm::file_format::{
     self as F, AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionHandle,
     FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, IdentifierIndex,

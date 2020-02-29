@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::syntax::ParseError;
+use codespan::{ByteIndex, Span};
+use move_ir_types::location::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tok {
@@ -127,6 +129,7 @@ impl Tok {
 
 pub struct Lexer<'input> {
     pub spec_mode: bool,
+    file: &'static str,
     text: &'input str,
     prev_end: usize,
     cur_start: usize,
@@ -135,9 +138,10 @@ pub struct Lexer<'input> {
 }
 
 impl<'input> Lexer<'input> {
-    pub fn new(s: &'input str) -> Lexer {
+    pub fn new(file: &'static str, s: &'input str) -> Lexer<'input> {
         Lexer {
             spec_mode: false, // read tokens without trailing punctuation during specs.
+            file,
             text: s,
             prev_end: 0,
             cur_start: 0,
@@ -154,6 +158,10 @@ impl<'input> Lexer<'input> {
         &self.text[self.cur_start..self.cur_end]
     }
 
+    pub fn file_name(&self) -> &'static str {
+        self.file
+    }
+
     pub fn start_loc(&self) -> usize {
         self.cur_start
     }
@@ -162,18 +170,18 @@ impl<'input> Lexer<'input> {
         self.prev_end
     }
 
-    pub fn lookahead(&self) -> Result<Tok, ParseError<usize, anyhow::Error>> {
+    pub fn lookahead(&self) -> Result<Tok, ParseError<Loc, anyhow::Error>> {
         let text = self.text[self.cur_end..].trim_start();
         let offset = self.text.len() - text.len();
-        let (tok, _) = find_token(text, offset, self.spec_mode)?;
+        let (tok, _) = self.find_token(text, offset)?;
         Ok(tok)
     }
 
-    pub fn advance(&mut self) -> Result<(), ParseError<usize, anyhow::Error>> {
+    pub fn advance(&mut self) -> Result<(), ParseError<Loc, anyhow::Error>> {
         self.prev_end = self.cur_end;
         let text = self.text[self.cur_end..].trim_start();
         self.cur_start = self.text.len() - text.len();
-        let (token, len) = find_token(text, self.cur_start, self.spec_mode)?;
+        let (token, len) = self.find_token(text, self.cur_start)?;
         self.cur_end = self.cur_start + len;
         self.token = token;
         Ok(())
@@ -183,176 +191,176 @@ impl<'input> Lexer<'input> {
         &mut self,
         token: Tok,
         len: usize,
-    ) -> Result<(), ParseError<usize, anyhow::Error>> {
+    ) -> Result<(), ParseError<Loc, anyhow::Error>> {
         self.token = token;
         self.cur_end = self.cur_start.wrapping_add(len); // memory will run out long before this wraps
         Ok(())
     }
-}
 
-// Find the next token and its length without changing the state of the lexer.
-fn find_token(
-    text: &str,
-    start_offset: usize,
-    spec_mode: bool,
-) -> Result<(Tok, usize), ParseError<usize, anyhow::Error>> {
-    let c: char = match text.chars().next() {
-        Some(next_char) => next_char,
-        None => {
-            return Ok((Tok::EOF, 0));
-        }
-    };
-    let (tok, len) = match c {
-        '0'..='9' => {
-            if (text.starts_with("0x") || text.starts_with("0X")) && text.len() > 2 {
-                let hex_len = get_hex_digits_len(&text[2..]);
-                if hex_len == 0 {
-                    // Fall back to treating this as a "0" token.
-                    (Tok::U64Value, 1)
+    // Find the next token and its length without changing the state of the lexer.
+    fn find_token(
+        &self,
+        text: &str,
+        start_offset: usize,
+    ) -> Result<(Tok, usize), ParseError<Loc, anyhow::Error>> {
+        let c: char = match text.chars().next() {
+            Some(next_char) => next_char,
+            None => {
+                return Ok((Tok::EOF, 0));
+            }
+        };
+        let (tok, len) = match c {
+            '0'..='9' => {
+                if (text.starts_with("0x") || text.starts_with("0X")) && text.len() > 2 {
+                    let hex_len = get_hex_digits_len(&text[2..]);
+                    if hex_len == 0 {
+                        // Fall back to treating this as a "0" token.
+                        (Tok::U64Value, 1)
+                    } else {
+                        (Tok::AccountAddressValue, 2 + hex_len)
+                    }
                 } else {
-                    (Tok::AccountAddressValue, 2 + hex_len)
+                    get_decimal_number(&text)
                 }
-            } else {
-                get_decimal_number(&text)
             }
-        }
-        'a'..='z' | 'A'..='Z' | '$' | '_' => {
-            let len = get_name_len(&text);
-            let name = &text[..len];
-            if !spec_mode {
-                match &text[len..].chars().next() {
-                    Some('"') => {
-                        // Special case for ByteArrayValue: h\"[0-9A-Fa-f]*\"
-                        let mut bvlen = 0;
-                        if name == "h" && {
-                            bvlen = get_byte_array_value_len(&text[(len + 1)..]);
-                            bvlen > 0
-                        } {
-                            (Tok::ByteArrayValue, 2 + bvlen)
-                        } else {
-                            (get_name_token(name), len)
+            'a'..='z' | 'A'..='Z' | '$' | '_' => {
+                let len = get_name_len(&text);
+                let name = &text[..len];
+                if !self.spec_mode {
+                    match &text[len..].chars().next() {
+                        Some('"') => {
+                            // Special case for ByteArrayValue: h\"[0-9A-Fa-f]*\"
+                            let mut bvlen = 0;
+                            if name == "h" && {
+                                bvlen = get_byte_array_value_len(&text[(len + 1)..]);
+                                bvlen > 0
+                            } {
+                                (Tok::ByteArrayValue, 2 + bvlen)
+                            } else {
+                                (get_name_token(name), len)
+                            }
                         }
-                    }
-                    Some('.') => {
-                        let len2 = get_name_len(&text[(len + 1)..]);
-                        if len2 > 0 {
-                            (Tok::DotNameValue, len + 1 + len2)
-                        } else {
-                            (get_name_token(name), len)
+                        Some('.') => {
+                            let len2 = get_name_len(&text[(len + 1)..]);
+                            if len2 > 0 {
+                                (Tok::DotNameValue, len + 1 + len2)
+                            } else {
+                                (get_name_token(name), len)
+                            }
                         }
+                        Some('<') => match name {
+                            "vector" => (Tok::Vector, len),
+                            "borrow_global" => (Tok::BorrowGlobal, len + 1),
+                            "borrow_global_mut" => (Tok::BorrowGlobalMut, len + 1),
+                            "exists" => (Tok::Exists, len + 1),
+                            "move_from" => (Tok::MoveFrom, len + 1),
+                            "move_to_sender" => (Tok::MoveToSender, len + 1),
+                            _ => (Tok::NameBeginTyValue, len + 1),
+                        },
+                        Some('(') => match name {
+                            "assert" => (Tok::Assert, len + 1),
+                            "copy" => (Tok::Copy, len + 1),
+                            "move" => (Tok::Move, len + 1),
+                            _ => (get_name_token(name), len),
+                        },
+                        Some(':') => match name {
+                            "modules" => (Tok::Modules, len + 1),
+                            "script" => (Tok::Script, len + 1),
+                            _ => (get_name_token(name), len),
+                        },
+                        _ => (get_name_token(name), len),
                     }
-                    Some('<') => match name {
-                        "vector" => (Tok::Vector, len),
-                        "borrow_global" => (Tok::BorrowGlobal, len + 1),
-                        "borrow_global_mut" => (Tok::BorrowGlobalMut, len + 1),
-                        "exists" => (Tok::Exists, len + 1),
-                        "move_from" => (Tok::MoveFrom, len + 1),
-                        "move_to_sender" => (Tok::MoveToSender, len + 1),
-                        _ => (Tok::NameBeginTyValue, len + 1),
-                    },
-                    Some('(') => match name {
-                        "assert" => (Tok::Assert, len + 1),
-                        "copy" => (Tok::Copy, len + 1),
-                        "move" => (Tok::Move, len + 1),
-                        _ => (get_name_token(name), len),
-                    },
-                    Some(':') => match name {
-                        "modules" => (Tok::Modules, len + 1),
-                        "script" => (Tok::Script, len + 1),
-                        _ => (get_name_token(name), len),
-                    },
-                    _ => (get_name_token(name), len),
+                } else {
+                    (get_name_token(name), len) // just return the name in spec_mode
                 }
-            } else {
-                (get_name_token(name), len) // just return the name in spec_mode
             }
-        }
-        '&' => {
-            if text.starts_with("&mut ") {
-                (Tok::AmpMut, 5)
-            } else if text.starts_with("&&") {
-                (Tok::AmpAmp, 2)
-            } else {
-                (Tok::Amp, 1)
+            '&' => {
+                if text.starts_with("&mut ") {
+                    (Tok::AmpMut, 5)
+                } else if text.starts_with("&&") {
+                    (Tok::AmpAmp, 2)
+                } else {
+                    (Tok::Amp, 1)
+                }
             }
-        }
-        '|' => {
-            if text.starts_with("||") {
-                (Tok::PipePipe, 2)
-            } else {
-                (Tok::Pipe, 1)
+            '|' => {
+                if text.starts_with("||") {
+                    (Tok::PipePipe, 2)
+                } else {
+                    (Tok::Pipe, 1)
+                }
             }
-        }
-        '=' => {
-            if text.starts_with("==>") {
-                (Tok::EqualEqualGreater, 3)
-            } else if text.starts_with("==") {
-                (Tok::EqualEqual, 2)
-            } else {
-                (Tok::Equal, 1)
+            '=' => {
+                if text.starts_with("==>") {
+                    (Tok::EqualEqualGreater, 3)
+                } else if text.starts_with("==") {
+                    (Tok::EqualEqual, 2)
+                } else {
+                    (Tok::Equal, 1)
+                }
             }
-        }
-        '!' => {
-            if text.starts_with("!=") {
-                (Tok::ExclaimEqual, 2)
-            } else {
-                (Tok::Exclaim, 1)
+            '!' => {
+                if text.starts_with("!=") {
+                    (Tok::ExclaimEqual, 2)
+                } else {
+                    (Tok::Exclaim, 1)
+                }
             }
-        }
-        '<' => {
-            if text.starts_with("<=") {
-                (Tok::LessEqual, 2)
-            } else if text.starts_with("<<") {
-                (Tok::LessLess, 2)
-            } else {
-                (Tok::Less, 1)
+            '<' => {
+                if text.starts_with("<=") {
+                    (Tok::LessEqual, 2)
+                } else if text.starts_with("<<") {
+                    (Tok::LessLess, 2)
+                } else {
+                    (Tok::Less, 1)
+                }
             }
-        }
-        '>' => {
-            if text.starts_with(">=") {
-                (Tok::GreaterEqual, 2)
-            } else if text.starts_with(">>") {
-                (Tok::GreaterGreater, 2)
-            } else {
-                (Tok::Greater, 1)
+            '>' => {
+                if text.starts_with(">=") {
+                    (Tok::GreaterEqual, 2)
+                } else if text.starts_with(">>") {
+                    (Tok::GreaterGreater, 2)
+                } else {
+                    (Tok::Greater, 1)
+                }
             }
-        }
-        '%' => (Tok::Percent, 1),
-        '(' => (Tok::LParen, 1),
-        ')' => (Tok::RParen, 1),
-        '*' => (Tok::Star, 1),
-        '+' => (Tok::Plus, 1),
-        ',' => (Tok::Comma, 1),
-        '-' => (Tok::Minus, 1),
-        '.' => {
-            if text.starts_with("..") {
-                (Tok::PeriodPeriod, 2) // range, for specs
-            } else {
-                (Tok::Period, 1)
+            '%' => (Tok::Percent, 1),
+            '(' => (Tok::LParen, 1),
+            ')' => (Tok::RParen, 1),
+            '*' => (Tok::Star, 1),
+            '+' => (Tok::Plus, 1),
+            ',' => (Tok::Comma, 1),
+            '-' => (Tok::Minus, 1),
+            '.' => {
+                if text.starts_with("..") {
+                    (Tok::PeriodPeriod, 2) // range, for specs
+                } else {
+                    (Tok::Period, 1)
+                }
             }
-        }
-        '/' => (Tok::Slash, 1),
-        ':' => {
-            if text.starts_with(":=") {
-                (Tok::ColonEqual, 2) // spec update
-            } else {
-                (Tok::Colon, 1)
+            '/' => (Tok::Slash, 1),
+            ':' => {
+                if text.starts_with(":=") {
+                    (Tok::ColonEqual, 2) // spec update
+                } else {
+                    (Tok::Colon, 1)
+                }
             }
-        }
-        ';' => (Tok::Semicolon, 1),
-        '^' => (Tok::Caret, 1),
-        '{' => (Tok::LBrace, 1),
-        '}' => (Tok::RBrace, 1),
-        '[' => (Tok::LSquare, 1), // for vector specs
-        ']' => (Tok::RSquare, 1), // for vector specs
-        _ => {
-            return Err(ParseError::InvalidToken {
-                location: start_offset,
-            });
-        }
-    };
+            ';' => (Tok::Semicolon, 1),
+            '^' => (Tok::Caret, 1),
+            '{' => (Tok::LBrace, 1),
+            '}' => (Tok::RBrace, 1),
+            '[' => (Tok::LSquare, 1), // for vector specs
+            ']' => (Tok::RSquare, 1), // for vector specs
+            _ => {
+                let idx = ByteIndex(start_offset as u32);
+                let location = Loc::new(self.file_name(), Span::new(idx, idx));
+                return Err(ParseError::InvalidToken { location });
+            }
+        };
 
-    Ok((tok, len))
+        Ok((tok, len))
+    }
 }
 
 // Return the length of the substring matching [a-zA-Z$_][a-zA-Z0-9$_]

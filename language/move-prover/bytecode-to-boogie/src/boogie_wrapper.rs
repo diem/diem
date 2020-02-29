@@ -10,12 +10,13 @@ use std::{
     process::Command,
 };
 
-use codespan::{
-    ByteIndex, ByteOffset, ByteSpan, CodeMap, ColumnIndex, FileName, LineIndex, RawIndex,
-};
+use codespan::{ByteIndex, ByteOffset, ColumnIndex, FileId, Files, LineIndex, RawIndex, Span};
 use codespan_reporting::{
-    termcolor::{ColorChoice, StandardStream},
-    Diagnostic, Label, Severity,
+    diagnostic::{Diagnostic, Label, Severity},
+    term::{
+        termcolor::{ColorChoice, StandardStream},
+        Config,
+    },
 };
 use itertools::Itertools;
 use log::{debug, error, info, warn};
@@ -23,7 +24,7 @@ use num::BigInt;
 use pretty::RcDoc;
 use regex::Regex;
 
-use move_ir_types::ast::Loc;
+use move_ir_types::location::Loc;
 use vm::file_format::{FunctionDefinitionIndex, StructDefinitionIndex};
 
 use crate::{
@@ -133,23 +134,30 @@ impl<'env> BoogieWrapper<'env> {
                     "cannot write boogie log file",
                 );
 
+                let mut codemap = Files::new();
+                let diag_id = codemap.add("dummy", "");
                 let mut diag_on_target = vec![];
                 for error in &errors {
-                    self.add_error(error, &mut diag_on_target);
+                    self.add_error(error, diag_id, &mut diag_on_target);
                 }
                 if !diag_on_target.is_empty() {
                     // Report diagnostic which could not be associated with a module directly
                     // on the boogie source.
                     self.writer.process_result(|boogie_code| {
-                        let mut codemap = CodeMap::new();
-                        codemap.add_filemap(
-                            FileName::real(&self.env.options.output_path),
-                            boogie_code.to_string(),
-                        );
+                        let mut codemap = Files::new();
+                        let id =
+                            codemap.add(&self.env.options.output_path, boogie_code.to_string());
+                        assert!(id == diag_id);
+
                         for diag in &diag_on_target {
-                            let writer = StandardStream::stderr(ColorChoice::Auto);
-                            codespan_reporting::emit(writer, &codemap, diag)
-                                .expect("emitting diagnostic failed")
+                            let writer = &mut StandardStream::stderr(ColorChoice::Auto);
+                            codespan_reporting::term::emit(
+                                writer,
+                                &Config::default(),
+                                &codemap,
+                                diag,
+                            )
+                            .expect("emitting diagnostic failed")
                         }
                     });
                 }
@@ -159,21 +167,25 @@ impl<'env> BoogieWrapper<'env> {
     }
 
     /// Helper to add a boogie error as a codespan Diagnostic.
-    fn add_error(&self, error: &BoogieError, diags_on_target: &mut Vec<Diagnostic>) {
-        let (index, location) = self.get_locations(error.position);
+    fn add_error(&self, error: &BoogieError, id: FileId, diags_on_target: &mut Vec<Diagnostic>) {
+        let (index, location) = self.get_locations(id, error.position);
 
         // Determine whether we report this error on the source
         let on_source =
             error.kind.is_from_verification() && self.to_proper_source_location(location).is_some();
 
         // Create label (position information) for main error.
-        let label = Label::new_primary(if on_source {
-            // Location is on original source.
-            location.unwrap().1
-        } else {
-            // Location is on generated boogie.
-            ByteSpan::new(index, index)
-        });
+        let label = Label::new(
+            id,
+            if on_source {
+                // Location is on original source.
+                location.unwrap().1.span()
+            } else {
+                // Location is on generated boogie.
+                Span::new(index, index)
+            },
+            "",
+        );
 
         // Helper to add a diag either to source module or to target
         let mut add_diag = |diag| {
@@ -185,17 +197,15 @@ impl<'env> BoogieWrapper<'env> {
         };
 
         // Add error
-        add_diag(
-            Diagnostic::new(
-                if on_source {
-                    Severity::Error
-                } else {
-                    Severity::Bug
-                },
-                &error.message,
-            )
-            .with_label(label),
-        );
+        add_diag(Diagnostic::new(
+            if on_source {
+                Severity::Error
+            } else {
+                Severity::Bug
+            },
+            &error.message,
+            label.clone(),
+        ));
 
         // Now add trace diagnostics.
         if error.kind.is_from_verification() && !error.execution_trace.is_empty() {
@@ -208,7 +218,7 @@ impl<'env> BoogieWrapper<'env> {
                 .filter_map(|(pos, kind, msg)| {
                     // If trace entry has no source location or is from prelude, skip
                     let trace_location =
-                        self.to_proper_source_location(self.get_locations(*pos).1)?;
+                        self.to_proper_source_location(self.get_locations(id, *pos).1)?;
 
                     // If trace info is not about function code, skip.
                     let module_emv = self.env.get_module(trace_location.0);
@@ -240,7 +250,7 @@ impl<'env> BoogieWrapper<'env> {
                     aborted = if let Some(model) = &error.model {
                         model
                             .tracked_aborts
-                            .get(&(module_env.get_module_idx(), loc.start()))
+                            .get(&(module_env.get_module_idx(), loc.span().start()))
                             .is_some()
                     } else {
                         false
@@ -282,9 +292,9 @@ impl<'env> BoogieWrapper<'env> {
                     }
                 })
                 .collect_vec();
-            add_diag(Diagnostic::new(
-                Severity::Help,
+            add_diag(Diagnostic::new_help(
                 &format!("Execution trace for previous error:\n{}", trace.join("\n")),
+                label,
             ))
         }
     }
@@ -319,8 +329,8 @@ impl<'env> BoogieWrapper<'env> {
 
     /// Gets the code byte index and source location (if available) from a target line/column
     /// position.
-    fn get_locations(&self, pos: Position) -> (ByteIndex, Option<(ModuleIndex, Loc)>) {
-        let index = self.writer.get_output_byte_index(pos.0, pos.1).unwrap();
+    fn get_locations(&self, id: FileId, pos: Position) -> (ByteIndex, Option<(ModuleIndex, Loc)>) {
+        let index = self.writer.get_output_byte_index(id, pos.0, pos.1).unwrap();
         (index, self.writer.get_source_location(index))
     }
 
@@ -341,13 +351,19 @@ impl<'env> BoogieWrapper<'env> {
                 // Narrow location to the beginning of the function.
                 // Do not narrow location if this is the last trace entry --
                 // otherwise we wont show variables at this point.
-                loc = Loc::new(loc.start(), loc.start() + ByteOffset(1));
+                loc = Loc::new(
+                    loc.file(),
+                    Span::new(loc.span().start(), loc.span().start() + ByteOffset(1)),
+                );
                 " (entry)"
             }
             TraceKind::ExitFunction => {
                 // Narrow location to the end of the function.
-                if loc.end().0 > 0 {
-                    loc = Loc::new(loc.end() - ByteOffset(1), loc.end());
+                if loc.span().end().0 > 0 {
+                    loc = Loc::new(
+                        loc.file(),
+                        Span::new(loc.span().end() - ByteOffset(1), loc.span().end()),
+                    );
                 }
                 " (exit)"
             }
@@ -362,11 +378,14 @@ impl<'env> BoogieWrapper<'env> {
             if is_last {
                 // If this is the last trace entry, set the location to the end of the function.
                 // This ensures that all variables which haven't yet will be printed
-                let mut end = func_env.get_loc().end().to_usize();
+                let mut end = func_env.get_loc().span().end().to_usize();
                 if end > 0 {
                     end -= 1;
                 }
-                loc = Loc::new(ByteIndex(end as u32), ByteIndex((end + 1) as u32));
+                loc = Loc::new(
+                    loc.file(),
+                    Span::new(ByteIndex(end as u32), ByteIndex((end + 1) as u32)),
+                );
             }
             let model_info = if let Some(model) = model_opt {
                 let displayed_info = model
@@ -737,7 +756,7 @@ impl Model {
         locals_shown: &mut BTreeSet<(CodeIndex, LocalDescriptor)>,
     ) -> Vec<(LocalDescriptor, ModelValue)> {
         let module_idx = func_env.module_env.get_module_idx();
-        let range = (module_idx, func_env.get_loc().start())..(module_idx, loc.end());
+        let range = (module_idx, func_env.get_loc().span().start())..(module_idx, loc.span().end());
         self.tracked_locals
             .range(range)
             .flat_map(|(idx, vars)| {

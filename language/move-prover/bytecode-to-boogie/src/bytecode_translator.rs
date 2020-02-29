@@ -10,8 +10,9 @@ use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info};
 
+use codespan::Span;
 use libra_types::{account_address::AccountAddress, language_storage::ModuleId};
-use move_ir_types::ast::Loc;
+use move_ir_types::location::{Loc, Spanned};
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
     stackless_bytecode_generator::{StacklessFunction, StacklessModuleGenerator},
@@ -84,8 +85,10 @@ impl<'env> ModuleTranslator<'env> {
     fn translate(&mut self) {
         if !is_module_provided_by_prelude(self.module_env.get_id()) {
             info!("translating module {}", self.module_env.get_id().name());
-            self.writer
-                .set_location(self.module_env.get_module_idx(), Loc::default());
+            self.writer.set_location(
+                self.module_env.get_module_idx(),
+                Spanned::unsafe_no_loc(()).loc,
+            );
             self.translate_synthetics();
             self.translate_structs();
             self.translate_functions();
@@ -100,10 +103,10 @@ impl<'env> ModuleTranslator<'env> {
         );
         let mut seen = BTreeSet::new();
         for (syn, ty) in self.module_env.get_synthetics() {
-            if !seen.insert(syn.name.to_string()) {
+            if !seen.insert(syn.value.name.to_string()) {
                 self.module_env.error(
-                    syn.span,
-                    &format!("duplicate declaration of synthetic `{}`", syn.name),
+                    syn.loc,
+                    &format!("duplicate declaration of synthetic `{}`", syn.value.name),
                     (),
                 );
                 continue;
@@ -113,13 +116,13 @@ impl<'env> ModuleTranslator<'env> {
             }
             if ty.is_reference() {
                 self.module_env.error(
-                    syn.span,
-                    &format!("synthetic `{}` cannot have reference type", syn.name),
+                    syn.loc,
+                    &format!("synthetic `{}` cannot have reference type", syn.value.name),
                     (),
                 );
                 continue;
             }
-            let boogie_name = boogie_synthetic_name(&self.module_env, syn.name.as_str());
+            let boogie_name = boogie_synthetic_name(&self.module_env, syn.value.name.as_str());
             emitln!(
                 self.writer,
                 &boogie_declare_global(&self.module_env.env, &boogie_name, &ty)
@@ -138,7 +141,7 @@ impl<'env> ModuleTranslator<'env> {
             // Set the location to the PSEUDO module so we don't see locations of pack/unpack
             // in execution traces.
             self.writer
-                .set_location(PSEUDO_PRELUDE_MODULE, Loc::default());
+                .set_location(PSEUDO_PRELUDE_MODULE, Spanned::unsafe_no_loc(()).loc);
             self.translate_struct_type(&struct_env);
             if !struct_env.is_native() {
                 self.translate_struct_accessors(&struct_env);
@@ -422,7 +425,7 @@ impl<'env> ModuleTranslator<'env> {
             "if (__abort_flag) {{\n  assume $DebugTrackAbort({}, {}, {});\n  goto Label_Abort;\n}}",
             func_env.module_env.get_module_idx(),
             func_env.get_def_idx(),
-            loc.start(),
+            loc.span().start(),
         );
         match bytecode {
             Branch(target) => emitln!(self.writer, "goto Label_{};", target),
@@ -630,7 +633,7 @@ impl<'env> ModuleTranslator<'env> {
                 let track_args =
                     if effective_dest < func_env.get_local_count() {
                         format!("{}, {}, {}, {}", func_env.module_env.get_module_idx(),
-                                func_env.get_def_idx(), effective_dest_func(*dest), loc.start())
+                                func_env.get_def_idx(), effective_dest_func(*dest), loc.span().start())
                     } else {
                         "0, 0, 0, 0".to_string()
                     };
@@ -1010,7 +1013,7 @@ impl<'env> ModuleTranslator<'env> {
                     "if (true) {{ assume $DebugTrackAbort({}, {}, {}); }}",
                     func_env.module_env.get_module_idx(),
                     func_env.get_def_idx(),
-                    loc.start(),
+                    loc.span().start(),
                 );
                 emitln!(self.writer, "goto Label_Abort;")
             },
@@ -1108,7 +1111,7 @@ impl<'env> ModuleTranslator<'env> {
     fn generate_verify_function_body(&self, func_env: &FunctionEnv<'_>) {
         // Set the location to pseudo module so it won't be counted for execution traces
         self.writer
-            .set_location(PSEUDO_PRELUDE_MODULE, Loc::default());
+            .set_location(PSEUDO_PRELUDE_MODULE, Spanned::unsafe_no_loc(()).loc);
 
         let args = func_env
             .get_type_parameters()
@@ -1338,8 +1341,11 @@ impl<'env> ModuleTranslator<'env> {
 
         // Generate abort exit.
         let mut end_loc = func_env.get_loc();
-        if end_loc.end().0 > 0 {
-            end_loc = Loc::new(end_loc.end() - ByteOffset(1), end_loc.end())
+        if end_loc.span().end().0 > 0 {
+            end_loc = Loc::new(
+                end_loc.file(),
+                Span::new(end_loc.span().end() - ByteOffset(1), end_loc.span().end()),
+            );
         }
         self.writer
             .set_location(self.module_env.get_module_idx(), end_loc);
@@ -1450,7 +1456,7 @@ impl<'env> ModuleTranslator<'env> {
                 func_env.module_env.get_module_idx(),
                 func_env.get_def_idx(),
                 idx,
-                loc.start(),
+                loc.span().start(),
                 deref
             )
         } else {
@@ -1459,7 +1465,7 @@ impl<'env> ModuleTranslator<'env> {
                 func_env.module_env.get_module_idx(),
                 func_env.get_def_idx(),
                 idx,
-                loc.start(),
+                loc.span().start(),
                 value
             )
         }

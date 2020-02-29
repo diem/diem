@@ -13,6 +13,7 @@ use crate::{
     parser::ast::{Field, StructName, Var},
     shared::*,
 };
+use move_ir_types::location::*;
 
 use crate::shared::unique_map::UniqueMap;
 use borrow_graph::references::RefID;

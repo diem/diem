@@ -10,6 +10,7 @@ use crate::{
     parser::ast::{Kind_, StructName, Var},
     shared::{unique_map::UniqueMap, *},
 };
+use move_ir_types::location::*;
 use state::*;
 use std::collections::{BTreeMap, BTreeSet};
 

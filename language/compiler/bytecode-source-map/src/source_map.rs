@@ -24,7 +24,7 @@ pub type SourceMap<Location> = Vec<ModuleSourceMap<Location>>;
 pub type SourceName<Location> = (Identifier, Location);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct StructSourceMap<Location: Clone + Eq + Default> {
+pub struct StructSourceMap<Location: Clone + Eq> {
     /// The source declaration location of the struct
     pub decl_location: Location,
 
@@ -37,7 +37,7 @@ pub struct StructSourceMap<Location: Clone + Eq + Default> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct FunctionSourceMap<Location: Clone + Eq + Default> {
+pub struct FunctionSourceMap<Location: Clone + Eq> {
     /// The source location for the definition of this entire function. Note that in certain
     /// instances this will have no valid source location e.g. the "main" function for modules that
     /// are treated as programs are synthesized and therefore have no valid source location.
@@ -55,7 +55,7 @@ pub struct FunctionSourceMap<Location: Clone + Eq + Default> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ModuleSourceMap<Location: Clone + Eq + Default> {
+pub struct ModuleSourceMap<Location: Clone + Eq> {
     /// The name <address.module_name> for module that this source map is for
     pub module_name: (AccountAddress, Identifier),
 
@@ -66,7 +66,21 @@ pub struct ModuleSourceMap<Location: Clone + Eq + Default> {
     function_map: BTreeMap<TableIndex, FunctionSourceMap<Location>>,
 }
 
-impl<Location: Clone + Eq + Default> StructSourceMap<Location> {
+pub fn remap_locations_source_name<Location: Clone + Eq, Other: Clone + Eq>(
+    (id, loc): SourceName<Location>,
+    f: &mut impl FnMut(Location) -> Other,
+) -> SourceName<Other> {
+    (id, f(loc))
+}
+
+pub fn remap_locations_source_map<Location: Clone + Eq, Other: Clone + Eq>(
+    map: SourceMap<Location>,
+    f: &mut impl FnMut(Location) -> Other,
+) -> SourceMap<Other> {
+    map.into_iter().map(|m| m.remap_locations(f)).collect()
+}
+
+impl<Location: Clone + Eq> StructSourceMap<Location> {
     pub fn new(decl_location: Location) -> Self {
         Self {
             decl_location,
@@ -98,24 +112,47 @@ impl<Location: Clone + Eq + Default> StructSourceMap<Location> {
         &mut self,
         module: &CompiledModule,
         struct_def: &StructDefinition,
+        default_loc: Location,
     ) -> Result<()> {
         let struct_handle = module.struct_handle_at(struct_def.struct_handle);
 
         // Add dummy locations for the fields
         match struct_def.declared_field_count() {
             Err(_) => (),
-            Ok(count) => (0..count).for_each(|_| self.fields.push(Location::default())),
+            Ok(count) => (0..count).for_each(|_| self.fields.push(default_loc.clone())),
         }
 
         for i in 0..struct_handle.type_formals.len() {
             let name = format!("Ty{}", i);
-            self.add_type_parameter((Identifier::new(name)?, Location::default()));
+            self.add_type_parameter((Identifier::new(name)?, default_loc.clone()))
         }
         Ok(())
     }
+
+    pub fn remap_locations<Other: Clone + Eq>(
+        self,
+        f: &mut impl FnMut(Location) -> Other,
+    ) -> StructSourceMap<Other> {
+        let StructSourceMap {
+            decl_location,
+            type_parameters,
+            fields,
+        } = self;
+        let decl_location = f(decl_location);
+        let type_parameters = type_parameters
+            .into_iter()
+            .map(|n| remap_locations_source_name(n, f))
+            .collect();
+        let fields = fields.into_iter().map(|loc| f(loc)).collect();
+        StructSourceMap {
+            decl_location,
+            type_parameters,
+            fields,
+        }
+    }
 }
 
-impl<Location: Clone + Eq + Default> FunctionSourceMap<Location> {
+impl<Location: Clone + Eq> FunctionSourceMap<Location> {
     pub fn new(decl_location: Location) -> Self {
         Self {
             decl_location,
@@ -176,6 +213,7 @@ impl<Location: Clone + Eq + Default> FunctionSourceMap<Location> {
         &mut self,
         module: &CompiledModule,
         function_def: &FunctionDefinition,
+        default_loc: Location,
     ) -> Result<()> {
         let function_handle = module.function_handle_at(function_def.function);
         let function_signature = module.function_signature_at(function_handle.signature);
@@ -185,24 +223,52 @@ impl<Location: Clone + Eq + Default> FunctionSourceMap<Location> {
         // Generate names for each type parameter
         for i in 0..function_signature.type_formals.len() {
             let name = format!("Ty{}", i);
-            self.add_type_parameter((Identifier::new(name)?, Location::default()));
+            self.add_type_parameter((Identifier::new(name)?, default_loc.clone()))
         }
 
         // Generate names for each local of the function
         for i in 0..locals.0.len() {
             let name = format!("loc{}", i);
-            self.add_local_mapping((Identifier::new(name)?, Location::default()));
+            self.add_local_mapping((Identifier::new(name)?, default_loc.clone()))
         }
 
         // We just need to insert the code map at the 0'th index since we represent this with a
         // segment map
-        self.add_code_mapping(0, Location::default());
+        self.add_code_mapping(0, default_loc);
 
         Ok(())
     }
+
+    pub fn remap_locations<Other: Clone + Eq>(
+        self,
+        f: &mut impl FnMut(Location) -> Other,
+    ) -> FunctionSourceMap<Other> {
+        let FunctionSourceMap {
+            decl_location,
+            type_parameters,
+            locals,
+            code_map,
+        } = self;
+        let decl_location = f(decl_location);
+        let type_parameters = type_parameters
+            .into_iter()
+            .map(|n| remap_locations_source_name(n, f))
+            .collect();
+        let locals = locals
+            .into_iter()
+            .map(|n| remap_locations_source_name(n, f))
+            .collect();
+        let code_map = code_map.into_iter().map(|(i, loc)| (i, f(loc))).collect();
+        FunctionSourceMap {
+            decl_location,
+            type_parameters,
+            locals,
+            code_map,
+        }
+    }
 }
 
-impl<Location: Clone + Eq + Default> ModuleSourceMap<Location> {
+impl<Location: Clone + Eq> ModuleSourceMap<Location> {
     pub fn new(module_name: QualifiedModuleIdent) -> Self {
         Self {
             module_name: (module_name.address, module_name.name.into_inner()),
@@ -375,7 +441,7 @@ impl<Location: Clone + Eq + Default> ModuleSourceMap<Location> {
 
     /// Create a 'dummy' source map for a compiled module. This is useful for e.g. disassembling
     /// with generated or real names depending upon if the source map is available or not.
-    pub fn dummy_from_module(module: &CompiledModule) -> Result<Self> {
+    pub fn dummy_from_module(module: &CompiledModule, default_loc: Location) -> Result<Self> {
         let module_name = ModuleName::new(module.identifier_at(IdentifierIndex::new(0)).to_owned());
         let module_ident =
             QualifiedModuleIdent::new(module_name, *module.address_at(AddressPoolIndex::new(0)));
@@ -385,31 +451,55 @@ impl<Location: Clone + Eq + Default> ModuleSourceMap<Location> {
         for (function_idx, function_def) in module.function_defs().iter().enumerate() {
             empty_source_map.add_top_level_function_mapping(
                 FunctionDefinitionIndex(function_idx as TableIndex),
-                Location::default(),
+                default_loc.clone(),
             )?;
             empty_source_map
                 .function_map
                 .get_mut(&(function_idx as TableIndex))
                 .ok_or_else(|| format_err!("Unable to get function map while generating dummy"))?
-                .dummy_function_map(&module, &function_def)?;
+                .dummy_function_map(&module, &function_def, default_loc.clone())?;
         }
 
         for (struct_idx, struct_def) in module.struct_defs().iter().enumerate() {
             empty_source_map.add_top_level_struct_mapping(
                 StructDefinitionIndex(struct_idx as TableIndex),
-                Location::default(),
+                default_loc.clone(),
             )?;
             empty_source_map
                 .struct_map
                 .get_mut(&(struct_idx as TableIndex))
                 .ok_or_else(|| format_err!("Unable to get struct map while generating dummy"))?
-                .dummy_struct_map(&module, &struct_def)?;
+                .dummy_struct_map(&module, &struct_def, default_loc.clone())?;
         }
 
         Ok(empty_source_map)
     }
 
-    pub fn dummy_from_script(script: &CompiledScript) -> Result<Self> {
-        Self::dummy_from_module(&script.clone().into_module())
+    pub fn dummy_from_script(script: &CompiledScript, default_loc: Location) -> Result<Self> {
+        Self::dummy_from_module(&script.clone().into_module(), default_loc)
+    }
+
+    pub fn remap_locations<Other: Clone + Eq>(
+        self,
+        f: &mut impl FnMut(Location) -> Other,
+    ) -> ModuleSourceMap<Other> {
+        let ModuleSourceMap {
+            module_name,
+            struct_map,
+            function_map,
+        } = self;
+        let struct_map = struct_map
+            .into_iter()
+            .map(|(n, m)| (n, m.remap_locations(f)))
+            .collect();
+        let function_map = function_map
+            .into_iter()
+            .map(|(n, m)| (n, m.remap_locations(f)))
+            .collect();
+        ModuleSourceMap {
+            module_name,
+            struct_map,
+            function_map,
+        }
     }
 }

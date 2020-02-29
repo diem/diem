@@ -9,7 +9,11 @@ use crate::{
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
-use move_ir_types::ast::{self, *};
+use move_ir_types::{
+    ast::{self, *},
+    location::*,
+};
+
 use std::{
     clone::Clone,
     collections::{
@@ -29,7 +33,7 @@ use vm::{
 
 macro_rules! record_src_loc {
     (local: $context:expr, $var:expr) => {{
-        let source_name = (Identifier::from($var.name()), $var.span);
+        let source_name = (Identifier::from($var.value.name()), $var.loc);
         $context
             .source_map
             .add_local_mapping($context.current_function_definition_index(), source_name)?;
@@ -37,11 +41,11 @@ macro_rules! record_src_loc {
     (field: $context:expr, $field:expr) => {{
         $context
             .source_map
-            .add_struct_field_mapping($context.current_struct_definition_index(), $field.span)?;
+            .add_struct_field_mapping($context.current_struct_definition_index(), $field.loc)?;
     }};
     (function_type_formals: $context:expr, $var:expr) => {
         for (ty_var, _) in $var.iter() {
-            let source_name = (Identifier::from(ty_var.name()), ty_var.span);
+            let source_name = (Identifier::from(ty_var.value.name()), ty_var.loc);
             $context.source_map.add_function_type_parameter_mapping(
                 $context.current_function_definition_index(),
                 source_name,
@@ -57,7 +61,7 @@ macro_rules! record_src_loc {
     }};
     (struct_type_formals: $context:expr, $var:expr) => {
         for (ty_var, _) in $var.iter() {
-            let source_name = (Identifier::from(ty_var.name()), ty_var.span);
+            let source_name = (Identifier::from(ty_var.value.name()), ty_var.loc);
             $context.source_map.add_struct_type_parameter_mapping(
                 $context.current_struct_definition_index(),
                 source_name,
@@ -344,7 +348,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     let main_name = FunctionName::new(Identifier::new("main").unwrap());
     let function = script.main;
 
-    let sig = function_signature(&mut context, &function.signature)?;
+    let sig = function_signature(&mut context, &function.value.signature)?;
     context.declare_function(self_name.clone(), main_name.clone(), sig)?;
     let main = compile_function(&mut context, &self_name, main_name, function, 0)?;
 
@@ -399,14 +403,14 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
     for s in &module.structs {
         let ident = QualifiedStructIdent {
             module: self_name.clone(),
-            name: s.name.clone(),
+            name: s.value.name.clone(),
         };
-        let (_, tys) = type_formals(&s.type_formals)?;
-        context.declare_struct_handle_index(ident, s.is_nominal_resource, tys)?;
+        let (_, tys) = type_formals(&s.value.type_formals)?;
+        context.declare_struct_handle_index(ident, s.value.is_nominal_resource, tys)?;
     }
 
     for (name, function) in &module.functions {
-        let sig = function_signature(&mut context, &function.signature)?;
+        let sig = function_signature(&mut context, &function.value.signature)?;
         context.declare_function(self_name.clone(), name.clone(), sig)?;
     }
 
@@ -552,12 +556,12 @@ fn compile_structs(
     for s in structs {
         let sident = QualifiedStructIdent {
             module: self_name.clone(),
-            name: s.name.clone(),
+            name: s.value.name.clone(),
         };
         let sh_idx = context.struct_handle_index(sident.clone())?;
-        record_src_loc!(struct_decl: context, s.span);
-        record_src_loc!(struct_type_formals: context, &s.type_formals);
-        let (map, _) = type_formals(&s.type_formals)?;
+        record_src_loc!(struct_decl: context, s.loc);
+        record_src_loc!(struct_type_formals: context, &s.value.type_formals);
+        let (map, _) = type_formals(&s.value.type_formals)?;
         context.bind_type_formals(map)?;
         let field_information = compile_fields(context, &mut field_defs, sh_idx, s.value.fields)?;
         context.declare_struct_definition_index(s.value.name)?;
@@ -587,7 +591,7 @@ fn compile_fields(
             };
 
             for (decl_order, (f, ty)) in fields.into_iter().enumerate() {
-                let name = context.identifier_index(f.name())?;
+                let name = context.identifier_index(f.value.name())?;
                 record_src_loc!(field: context, f);
                 let sig_token = compile_type(context, &ty)?;
                 let signature = context.type_signature_index(sig_token.clone())?;
@@ -624,10 +628,10 @@ fn compile_function(
     ast_function: Function,
     function_index: usize,
 ) -> Result<FunctionDefinition> {
-    record_src_loc!(function_decl: context, ast_function.span, function_index);
+    record_src_loc!(function_decl: context, ast_function.loc, function_index);
     record_src_loc!(
         function_type_formals: context,
-        &ast_function.signature.type_formals
+        &ast_function.value.signature.type_formals
     );
     let fh_idx = context.function_handle(self_name.clone(), name)?.1;
 
@@ -677,7 +681,7 @@ fn compile_function_body(
     let mut locals_signature = LocalsSignature(vec![]);
     for (var, t) in formals {
         let sig = compile_type(context, &t)?;
-        function_frame.define_local(&var, sig.clone())?;
+        function_frame.define_local(&var.value, sig.clone())?;
         locals_signature.0.push(sig);
         record_src_loc!(local: context, var);
     }
@@ -742,7 +746,7 @@ fn compile_if_else(
     if_else: IfElse,
 ) -> Result<ControlFlowInfo> {
     make_push_instr!(context, code);
-    let cond_span = if_else.cond.span;
+    let cond_span = if_else.cond.loc;
     compile_expression(context, function_frame, code, if_else.cond)?;
 
     let brfalse_ins_loc = code.len();
@@ -762,7 +766,7 @@ fn compile_if_else(
             let branch_ins_loc = code.len();
             if !if_cf_info.terminal_node {
                 // placeholder, final branch target replaced later
-                push_instr!(else_block.span, Bytecode::Branch(0));
+                push_instr!(else_block.loc, Bytecode::Branch(0));
                 else_block_location += 1;
             }
             let else_cf_info = compile_block(context, function_frame, code, else_block.value)?;
@@ -786,7 +790,7 @@ fn compile_while(
     while_: While,
 ) -> Result<ControlFlowInfo> {
     make_push_instr!(context, code);
-    let cond_span = while_.cond.span;
+    let cond_span = while_.cond.loc;
     let loop_start_loc = code.len();
     function_frame.push_loop(loop_start_loc)?;
     compile_expression(context, function_frame, code, while_.cond)?;
@@ -798,7 +802,7 @@ fn compile_while(
     function_frame.pop()?;
 
     compile_block(context, function_frame, code, while_.block.value)?;
-    push_instr!(while_.block.span, Bytecode::Branch(loop_start_loc as u16));
+    push_instr!(while_.block.loc, Bytecode::Branch(loop_start_loc as u16));
 
     let loop_end_loc = code.len() as u16;
     code[brfalse_loc] = Bytecode::BrFalse(loop_end_loc);
@@ -833,7 +837,7 @@ fn compile_loop(
     function_frame.push_loop(loop_start_loc)?;
 
     let body_cf_info = compile_block(context, function_frame, code, loop_.block.value)?;
-    push_instr!(loop_.block.span, Bytecode::Branch(loop_start_loc as u16));
+    push_instr!(loop_.block.loc, Bytecode::Branch(loop_start_loc as u16));
 
     let loop_end_loc = code.len() as u16;
     let breaks = function_frame.get_loop_breaks()?;
@@ -877,13 +881,13 @@ fn compile_command(
     match cmd.value {
         Cmd_::Return(exps) => {
             compile_expression(context, function_frame, code, *exps)?;
-            push_instr!(cmd.span, Bytecode::Ret);
+            push_instr!(cmd.loc, Bytecode::Ret);
         }
         Cmd_::Abort(exp_opt) => {
             if let Some(exp) = exp_opt {
                 compile_expression(context, function_frame, code, *exp)?;
             }
-            push_instr!(cmd.span, Bytecode::Abort);
+            push_instr!(cmd.loc, Bytecode::Abort);
             function_frame.pop()?;
         }
         Cmd_::Assign(lvalues, rhs_expressions) => {
@@ -897,23 +901,23 @@ fn compile_command(
             compile_expression(context, function_frame, code, *e)?;
 
             let def_idx = context.struct_definition_index(&name)?;
-            push_instr!(cmd.span, Bytecode::Unpack(def_idx, type_actuals_id));
+            push_instr!(cmd.loc, Bytecode::Unpack(def_idx, type_actuals_id));
             function_frame.pop()?;
 
             for (field_, lhs_variable) in bindings.iter().rev() {
                 let loc_idx = function_frame.get_local(&lhs_variable.value)?;
                 let st_loc = Bytecode::StLoc(loc_idx);
-                push_instr!(field_.span, st_loc);
+                push_instr!(field_.loc, st_loc);
             }
         }
         Cmd_::Continue => {
             let loc = function_frame.get_loop_start()?;
-            push_instr!(cmd.span, Bytecode::Branch(loc as u16));
+            push_instr!(cmd.loc, Bytecode::Branch(loc as u16));
         }
         Cmd_::Break => {
             function_frame.push_loop_break(code.len())?;
             // placeholder, to be replaced when the enclosing while is compiled
-            push_instr!(cmd.span, Bytecode::Branch(0));
+            push_instr!(cmd.loc, Bytecode::Branch(0));
         }
         Cmd_::Exp(e) => {
             compile_expression(context, function_frame, code, *e)?;
@@ -936,17 +940,17 @@ fn compile_lvalues(
         match lvalue_.value {
             LValue_::Var(v) => {
                 let loc_idx = function_frame.get_local(&v.value)?;
-                push_instr!(lvalue_.span, Bytecode::StLoc(loc_idx));
+                push_instr!(lvalue_.loc, Bytecode::StLoc(loc_idx));
                 function_frame.pop()?;
             }
             LValue_::Mutate(e) => {
                 compile_expression(context, function_frame, code, e)?;
-                push_instr!(lvalue_.span, Bytecode::WriteRef);
+                push_instr!(lvalue_.loc, Bytecode::WriteRef);
                 function_frame.pop()?;
                 function_frame.pop()?;
             }
             LValue_::Pop => {
-                push_instr!(lvalue_.span, Bytecode::Pop);
+                push_instr!(lvalue_.loc, Bytecode::Pop);
                 function_frame.pop()?;
             }
         }
@@ -987,7 +991,7 @@ fn compile_expression(
         Exp_::Move(v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
             let load_loc = Bytecode::MoveLoc(loc_idx);
-            push_instr!(exp.span, load_loc);
+            push_instr!(exp.loc, load_loc);
             function_frame.push()?;
             let loc_type = function_frame.get_local_type(loc_idx)?;
             vec_deque![InferredType::from_signature_token(loc_type)]
@@ -995,7 +999,7 @@ fn compile_expression(
         Exp_::Copy(v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
             let load_loc = Bytecode::CopyLoc(loc_idx);
-            push_instr!(exp.span, load_loc);
+            push_instr!(exp.loc, load_loc);
             function_frame.push()?;
             let loc_type = function_frame.get_local_type(loc_idx)?;
             vec_deque![InferredType::from_signature_token(loc_type)]
@@ -1005,11 +1009,11 @@ fn compile_expression(
             let loc_type = function_frame.get_local_type(loc_idx)?;
             let inner_token = Box::new(InferredType::from_signature_token(loc_type));
             if is_mutable {
-                push_instr!(exp.span, Bytecode::MutBorrowLoc(loc_idx));
+                push_instr!(exp.loc, Bytecode::MutBorrowLoc(loc_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::MutableReference(inner_token)]
             } else {
-                push_instr!(exp.span, Bytecode::ImmBorrowLoc(loc_idx));
+                push_instr!(exp.loc, Bytecode::ImmBorrowLoc(loc_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::Reference(inner_token)]
             }
@@ -1017,33 +1021,33 @@ fn compile_expression(
         Exp_::Value(cv) => match cv.value {
             CopyableVal_::Address(address) => {
                 let addr_idx = context.address_index(address)?;
-                push_instr!(exp.span, Bytecode::LdAddr(addr_idx));
+                push_instr!(exp.loc, Bytecode::LdAddr(addr_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::Address]
             }
             CopyableVal_::U8(i) => {
-                push_instr!(exp.span, Bytecode::LdU8(i));
+                push_instr!(exp.loc, Bytecode::LdU8(i));
                 function_frame.push()?;
                 vec_deque![InferredType::U8]
             }
             CopyableVal_::U64(i) => {
-                push_instr!(exp.span, Bytecode::LdU64(i));
+                push_instr!(exp.loc, Bytecode::LdU64(i));
                 function_frame.push()?;
                 vec_deque![InferredType::U64]
             }
             CopyableVal_::U128(i) => {
-                push_instr!(exp.span, Bytecode::LdU128(i));
+                push_instr!(exp.loc, Bytecode::LdU128(i));
                 function_frame.push()?;
                 vec_deque![InferredType::U128]
             }
             CopyableVal_::ByteArray(buf) => {
                 let buf_idx = context.byte_array_index(&buf)?;
-                push_instr!(exp.span, Bytecode::LdByteArray(buf_idx));
+                push_instr!(exp.loc, Bytecode::LdByteArray(buf_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::ByteArray]
             }
             CopyableVal_::Bool(b) => {
-                push_instr! {exp.span,
+                push_instr! {exp.loc,
                     if b {
                         Bytecode::LdTrue
                     } else {
@@ -1076,7 +1080,7 @@ fn compile_expression(
 
                 compile_expression(context, function_frame, code, e)?;
             }
-            push_instr!(exp.span, Bytecode::Pack(def_idx, type_actuals_id));
+            push_instr!(exp.loc, Bytecode::Pack(def_idx, type_actuals_id));
             for _ in 0..num_fields {
                 function_frame.pop()?;
             }
@@ -1088,7 +1092,7 @@ fn compile_expression(
             compile_expression(context, function_frame, code, *e)?;
             match op {
                 UnaryOp::Not => {
-                    push_instr!(exp.span, Bytecode::Not);
+                    push_instr!(exp.loc, Bytecode::Not);
                     vec_deque![InferredType::Bool]
                 }
             }
@@ -1100,75 +1104,75 @@ fn compile_expression(
             function_frame.pop()?;
             match op {
                 BinOp::Add => {
-                    push_instr!(exp.span, Bytecode::Add);
+                    push_instr!(exp.loc, Bytecode::Add);
                     vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Sub => {
-                    push_instr!(exp.span, Bytecode::Sub);
+                    push_instr!(exp.loc, Bytecode::Sub);
                     vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Mul => {
-                    push_instr!(exp.span, Bytecode::Mul);
+                    push_instr!(exp.loc, Bytecode::Mul);
                     vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Mod => {
-                    push_instr!(exp.span, Bytecode::Mod);
+                    push_instr!(exp.loc, Bytecode::Mod);
                     vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Div => {
-                    push_instr!(exp.span, Bytecode::Div);
+                    push_instr!(exp.loc, Bytecode::Div);
                     vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::BitOr => {
-                    push_instr!(exp.span, Bytecode::BitOr);
+                    push_instr!(exp.loc, Bytecode::BitOr);
                     vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::BitAnd => {
-                    push_instr!(exp.span, Bytecode::BitAnd);
+                    push_instr!(exp.loc, Bytecode::BitAnd);
                     vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Xor => {
-                    push_instr!(exp.span, Bytecode::Xor);
+                    push_instr!(exp.loc, Bytecode::Xor);
                     vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Shl => {
-                    push_instr!(exp.span, Bytecode::Shl);
+                    push_instr!(exp.loc, Bytecode::Shl);
                     tys1
                 }
                 BinOp::Shr => {
-                    push_instr!(exp.span, Bytecode::Shr);
+                    push_instr!(exp.loc, Bytecode::Shr);
                     tys1
                 }
                 BinOp::Or => {
-                    push_instr!(exp.span, Bytecode::Or);
+                    push_instr!(exp.loc, Bytecode::Or);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::And => {
-                    push_instr!(exp.span, Bytecode::And);
+                    push_instr!(exp.loc, Bytecode::And);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Eq => {
-                    push_instr!(exp.span, Bytecode::Eq);
+                    push_instr!(exp.loc, Bytecode::Eq);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Neq => {
-                    push_instr!(exp.span, Bytecode::Neq);
+                    push_instr!(exp.loc, Bytecode::Neq);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Lt => {
-                    push_instr!(exp.span, Bytecode::Lt);
+                    push_instr!(exp.loc, Bytecode::Lt);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Gt => {
-                    push_instr!(exp.span, Bytecode::Gt);
+                    push_instr!(exp.loc, Bytecode::Gt);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Le => {
-                    push_instr!(exp.span, Bytecode::Le);
+                    push_instr!(exp.loc, Bytecode::Le);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Ge => {
-                    push_instr!(exp.span, Bytecode::Ge);
+                    push_instr!(exp.loc, Bytecode::Ge);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Subrange => {
@@ -1178,7 +1182,7 @@ fn compile_expression(
         }
         Exp_::Dereference(e) => {
             let loc_type = compile_expression(context, function_frame, code, *e)?.pop_front();
-            push_instr!(exp.span, Bytecode::ReadRef);
+            push_instr!(exp.loc, Bytecode::ReadRef);
             match loc_type {
                 Some(InferredType::MutableReference(sig_ref_token)) => vec_deque![*sig_ref_token],
                 Some(InferredType::Reference(sig_ref_token)) => vec_deque![*sig_ref_token],
@@ -1199,11 +1203,11 @@ fn compile_expression(
             function_frame.pop()?;
             let inner_token = Box::new(InferredType::from_signature_token(&field_type));
             if is_mutable {
-                push_instr!(exp.span, Bytecode::MutBorrowField(fd_idx));
+                push_instr!(exp.loc, Bytecode::MutBorrowField(fd_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::MutableReference(inner_token)]
             } else {
-                push_instr!(exp.span, Bytecode::ImmBorrowField(fd_idx));
+                push_instr!(exp.loc, Bytecode::ImmBorrowField(fd_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::Reference(inner_token)]
             }
@@ -1237,7 +1241,7 @@ fn compile_call(
         FunctionCall_::Builtin(function) => {
             match function {
                 Builtin::GetTxnSender => {
-                    push_instr!(call.span, Bytecode::GetTxnSenderAddress);
+                    push_instr!(call.loc, Bytecode::GetTxnSenderAddress);
                     function_frame.push()?;
                     vec_deque![InferredType::Address]
                 }
@@ -1245,7 +1249,7 @@ fn compile_call(
                     let tokens = LocalsSignature(compile_types(context, &tys)?);
                     let type_actuals_id = context.locals_signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    push_instr!(call.span, Bytecode::Exists(def_idx, type_actuals_id));
+                    push_instr!(call.loc, Bytecode::Exists(def_idx, type_actuals_id));
                     function_frame.pop()?;
                     function_frame.push()?;
                     vec_deque![InferredType::Bool]
@@ -1254,7 +1258,7 @@ fn compile_call(
                     let tokens = LocalsSignature(compile_types(context, &tys)?);
                     let type_actuals_id = context.locals_signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    push_instr! {call.span,
+                    push_instr! {call.loc,
                         if mut_ {
                             Bytecode::MutBorrowGlobal(def_idx, type_actuals_id)
                         } else {
@@ -1281,7 +1285,7 @@ fn compile_call(
                     let tokens = LocalsSignature(compile_types(context, &tys)?);
                     let type_actuals_id = context.locals_signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    push_instr!(call.span, Bytecode::MoveFrom(def_idx, type_actuals_id));
+                    push_instr!(call.loc, Bytecode::MoveFrom(def_idx, type_actuals_id));
                     function_frame.pop()?; // pop the address
                     function_frame.push()?; // push the return value
 
@@ -1298,12 +1302,12 @@ fn compile_call(
                     let type_actuals_id = context.locals_signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
 
-                    push_instr!(call.span, Bytecode::MoveToSender(def_idx, type_actuals_id));
+                    push_instr!(call.loc, Bytecode::MoveToSender(def_idx, type_actuals_id));
                     function_frame.push()?;
                     vec_deque![]
                 }
                 Builtin::Freeze => {
-                    push_instr!(call.span, Bytecode::FreezeRef);
+                    push_instr!(call.loc, Bytecode::FreezeRef);
                     function_frame.pop()?; // pop mut ref
                     function_frame.push()?; // push imm ref
                     let inner_token = match argument_types.pop_front() {
@@ -1315,19 +1319,19 @@ fn compile_call(
                     vec_deque![InferredType::Reference(inner_token)]
                 }
                 Builtin::ToU8 => {
-                    push_instr!(call.span, Bytecode::CastU8);
+                    push_instr!(call.loc, Bytecode::CastU8);
                     function_frame.pop()?;
                     function_frame.push()?;
                     vec_deque![InferredType::U8]
                 }
                 Builtin::ToU64 => {
-                    push_instr!(call.span, Bytecode::CastU64);
+                    push_instr!(call.loc, Bytecode::CastU64);
                     function_frame.pop()?;
                     function_frame.push()?;
                     vec_deque![InferredType::U64]
                 }
                 Builtin::ToU128 => {
-                    push_instr!(call.span, Bytecode::CastU128);
+                    push_instr!(call.loc, Bytecode::CastU128);
                     function_frame.pop()?;
                     function_frame.push()?;
                     vec_deque![InferredType::U128]
@@ -1343,7 +1347,7 @@ fn compile_call(
             let type_actuals_id = context.locals_signature_index(tokens)?;
             let fh_idx = context.function_handle(module.clone(), name.clone())?.1;
             let fcall = Bytecode::Call(fh_idx, type_actuals_id);
-            push_instr!(call.span, fcall);
+            push_instr!(call.loc, fcall);
             for _ in 0..argument_types.len() {
                 function_frame.pop()?;
             }

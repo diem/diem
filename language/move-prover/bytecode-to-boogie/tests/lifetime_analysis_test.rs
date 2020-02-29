@@ -150,7 +150,7 @@ fn test_borrowloc_call() {
     }
 }
 fn gen_stackless_from_mvir(code: String) -> (Vec<StacklessBytecode>, Vec<SignatureToken>) {
-    let parsed_module = parse_module(&code).unwrap();
+    let parsed_module = parse_module("file_name", &code).unwrap();
     let address = AccountAddress::default();
     let (compiled_module, _) =
         compile_module(address, parsed_module, &Vec::<VerifiedModule>::new()).unwrap();

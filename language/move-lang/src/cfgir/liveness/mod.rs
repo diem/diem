@@ -10,11 +10,8 @@ use super::{
     cfg::{BlockCFG, ReverseBlockCFG, CFG},
     locals,
 };
-use crate::{
-    errors::*,
-    parser::ast::Var,
-    shared::{unique_map::UniqueMap, *},
-};
+use crate::{errors::*, parser::ast::Var, shared::unique_map::UniqueMap};
+use move_ir_types::location::*;
 use state::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -182,6 +179,7 @@ mod last_usage {
         parser::ast::Var,
         shared::{unique_map::*, *},
     };
+    use move_ir_types::location::*;
     use std::collections::{BTreeSet, VecDeque};
 
     struct Context<'a, 'b> {

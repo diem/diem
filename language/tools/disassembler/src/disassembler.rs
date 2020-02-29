@@ -44,13 +44,13 @@ impl DisassemblerOptions {
     }
 }
 
-pub struct Disassembler<Location: Clone + Eq + Default> {
+pub struct Disassembler<Location: Clone + Eq> {
     source_mapper: SourceMapping<Location>,
     // The various options that we can set for disassembly.
     options: DisassemblerOptions,
 }
 
-impl<Location: Clone + Eq + Default> Disassembler<Location> {
+impl<Location: Clone + Eq> Disassembler<Location> {
     pub fn new(source_mapper: SourceMapping<Location>, options: DisassemblerOptions) -> Self {
         Self {
             source_mapper,
@@ -303,6 +303,7 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
         instruction: &Bytecode,
         locals_sigs: &LocalsSignature,
         function_source_map: &FunctionSourceMap<Location>,
+        default_location: &Location,
     ) -> Result<String> {
         match instruction {
             Bytecode::LdAddr(address_idx) => {
@@ -417,7 +418,7 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
                                 sig_tok.clone(),
                                 &function_source_map.type_parameters,
                             )?)?,
-                            Location::default(),
+                            default_location.clone(),
                         ))
                     })
                     .collect::<Result<Vec<_>>>()?;
@@ -469,12 +470,18 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
             .source_map
             .get_function_source_map(function_definition_index)?;
 
+        let decl_location = &function_source_map.decl_location;
         let instrs: Vec<String> = function_def
             .code
             .code
             .iter()
             .map(|instruction| {
-                self.disassemble_instruction(instruction, locals_sigs, function_source_map)
+                self.disassemble_instruction(
+                    instruction,
+                    locals_sigs,
+                    function_source_map,
+                    &decl_location,
+                )
             })
             .collect::<Result<Vec<String>>>()?;
 

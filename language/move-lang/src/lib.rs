@@ -3,7 +3,9 @@
 
 #![forbid(unsafe_code)]
 
-#[macro_use]
+#[macro_use(sp)]
+extern crate move_ir_types;
+
 pub mod shared;
 
 pub mod errors;
@@ -23,8 +25,9 @@ pub mod test_utils;
 
 use codespan::{ByteIndex, Span};
 use errors::*;
+use move_ir_types::location::*;
 use parser::syntax::parse_file_string;
-use shared::{Address, Loc};
+use shared::Address;
 use std::{
     collections::HashMap,
     fs::File,
