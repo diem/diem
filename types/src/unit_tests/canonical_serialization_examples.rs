@@ -6,7 +6,6 @@
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    byte_array::ByteArray,
     transaction::{ChangeSet, RawTransaction, Script, TransactionArgument, TransactionPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -154,7 +153,7 @@ fn test_transaction_argument_address_canonical_serialization_example() {
 
 #[test]
 fn test_transaction_argument_byte_array_canonical_serialization_example() {
-    let input = TransactionArgument::ByteArray(ByteArray::new(vec![0xCA, 0xFE, 0xD0, 0x0D]));
+    let input = TransactionArgument::U8Vector(vec![0xCA, 0xFE, 0xD0, 0x0D]);
 
     let expected_output: Vec<u8> = vec![
         0x02, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xCA, 0xFE, 0xD0, 0x0D,

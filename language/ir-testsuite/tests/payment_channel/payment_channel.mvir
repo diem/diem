@@ -3,7 +3,7 @@ module PaymentChannel {
     import 0x0.LibraCoin;
     import 0x0.LibraAccount;
     import 0x0.U64Util;
-    import 0x0.BytearrayUtil;
+    import 0x0.Vector;
 
     // This is the PaymentChannel resource
     // It keeps track of the balances for funder and counterparty
@@ -12,8 +12,8 @@ module PaymentChannel {
         funder_capacity: LibraCoin.T,
         counterparty_capacity: LibraCoin.T,
         seq_id: u64,
-        funder_pk: bytearray,
-        counterparty_pk: bytearray,
+        funder_pk: vector<u8>,
+        counterparty_pk: vector<u8>,
         funder_addr: address,
     }
 
@@ -39,14 +39,14 @@ module PaymentChannel {
         return move(seq_id);
     }
 
-    funder_pk(this: &Self.T): bytearray {
-        let funder_pk: bytearray;
+    funder_pk(this: &Self.T): vector<u8> {
+        let funder_pk: vector<u8>;
         funder_pk = *&move(this).funder_pk;
         return move(funder_pk);
     }
 
-    counterparty_pk(this: &Self.T): bytearray {
-        let counterparty_pk: bytearray;
+    counterparty_pk(this: &Self.T): vector<u8> {
+        let counterparty_pk: vector<u8>;
         counterparty_pk = *&move(this).counterparty_pk;
         return move(counterparty_pk);
     }
@@ -57,7 +57,7 @@ module PaymentChannel {
         return move(funder);
     }
 
-    public new_payment_channel(funding: LibraCoin.T, funder_pk: bytearray, counterparty_pk: bytearray): Self.T {
+    public new_payment_channel(funding: LibraCoin.T, funder_pk: vector<u8>, counterparty_pk: vector<u8>): Self.T {
 	let sender: address;
         let counterparty_capacity: LibraCoin.T;
 	sender = get_txn_sender();
@@ -73,12 +73,12 @@ module PaymentChannel {
         };
     }
 
-   ver(this: &Self.T, amt_to_transfer: u64, new_seq_id: u64, public_key: bytearray, signature: bytearray): bool {
+   ver(this: &Self.T, amt_to_transfer: u64, new_seq_id: u64, public_key: vector<u8>, signature: vector<u8>): bool {
         let seq_id: u64;
         let ver: bool;
-        let message: bytearray;
-	let amt_to_transfer_bytes: bytearray;
-	let new_seq_id_bytes: bytearray;
+        let message: vector<u8>;
+	    let amt_to_transfer_bytes: vector<u8>;
+	    let new_seq_id_bytes: vector<u8>;
 
         seq_id = Self.seq_id(move(this));
 
@@ -89,18 +89,19 @@ module PaymentChannel {
         amt_to_transfer_bytes = U64Util.u64_to_bytes(move(amt_to_transfer));
         new_seq_id_bytes = U64Util.u64_to_bytes(move(new_seq_id));
 
-        message = BytearrayUtil.bytearray_concat(move(amt_to_transfer_bytes), move(new_seq_id_bytes));
+        message = move(amt_to_transfer_bytes);
+        Vector.append<u8>(&mut message, move(new_seq_id_bytes));
         ver = Signature.ed25519_verify(move(signature), move(public_key), move(message));
         return move(ver);
     }
 
-    public update(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray) {
+    public update(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>) {
         let ver_funder: bool;
         let ver_counterparty: bool;
         let ref: &Self.T;
         let transfer_amt: LibraCoin.T;
-        let funder_pk: bytearray;
-        let counterparty_pk: bytearray;
+        let funder_pk: vector<u8>;
+        let counterparty_pk: vector<u8>;
 
         ref = freeze(copy(this));
 
@@ -121,7 +122,7 @@ module PaymentChannel {
         return;
     }
 
-    public close(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray) {
+    public close(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>) {
         let funder_addr: address;
         let counterparty_addr: address;
 

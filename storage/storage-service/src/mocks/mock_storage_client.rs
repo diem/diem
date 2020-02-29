@@ -226,7 +226,7 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
     let account_resource = libra_types::account_config::AccountResource::new(
         100,
         0,
-        libra_types::byte_array::ByteArray::new(vec![]),
+        vec![],
         false,
         false,
         EventHandle::random_handle(0),

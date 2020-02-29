@@ -4,8 +4,8 @@
 
 fun main(
     timestamp: u64,
-    new_block_hash: bytearray,
-    previous_block_votes: bytearray,
+    new_block_hash: vector<u8>,
+    previous_block_votes: vector<u8>,
     proposer: address
 ) {
   0x0::LibraSystem::block_prologue(

@@ -18,7 +18,6 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
-    byte_array::ByteArray,
     contract_event::ContractEvent,
     crypto_proxies::ValidatorSet,
     discovery_info::DiscoveryInfo,
@@ -287,7 +286,7 @@ fn create_and_initialize_main_accounts(
         )
         .expect("Failure minting to association");
 
-    let genesis_auth_key = ByteArray::new(AccountAddress::from_public_key(public_key).to_vec());
+    let genesis_auth_key = AccountAddress::from_public_key(public_key).to_vec();
     move_vm
         .execute_function(
             &account_config::ACCOUNT_MODULE,
@@ -295,7 +294,7 @@ fn create_and_initialize_main_accounts(
             &gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![Value::byte_array(genesis_auth_key)],
+            vec![Value::vector_u8(genesis_auth_key)],
         )
         .expect("Failure rotating association key");
 
@@ -465,38 +464,32 @@ fn initialize_validators(
                 &validator_txn_data,
                 vec![
                     // consensus_pubkey
-                    Value::byte_array(ByteArray::new(
-                        validator_keys.consensus_public_key().to_bytes().to_vec(),
-                    )),
+                    Value::vector_u8(validator_keys.consensus_public_key().to_bytes().to_vec()),
                     // network_signing_pubkey
-                    Value::byte_array(ByteArray::new(
+                    Value::vector_u8(
                         validator_keys
                             .network_signing_public_key()
                             .to_bytes()
                             .to_vec(),
-                    )),
+                    ),
                     // validator_network_identity_pubkey
-                    Value::byte_array(ByteArray::new(
+                    Value::vector_u8(
                         discovery_info
                             .validator_network_identity_pubkey()
                             .to_bytes()
                             .to_vec(),
-                    )),
+                    ),
                     // validator_network_address placeholder
-                    Value::byte_array(ByteArray::new(
-                        discovery_info.validator_network_address().to_vec(),
-                    )),
+                    Value::vector_u8(discovery_info.validator_network_address().to_vec()),
                     // fullnodes_network_identity_pubkey placeholder
-                    Value::byte_array(ByteArray::new(
+                    Value::vector_u8(
                         discovery_info
                             .fullnodes_network_identity_pubkey()
                             .to_bytes()
                             .to_vec(),
-                    )),
+                    ),
                     // fullnodes_network_address placeholder
-                    Value::byte_array(ByteArray::new(
-                        discovery_info.fullnodes_network_address().to_vec(),
-                    )),
+                    Value::vector_u8(discovery_info.fullnodes_network_address().to_vec()),
                 ],
             )
             .unwrap_or_else(|_| panic!("Failure initializing validator {:?}", validator_address));

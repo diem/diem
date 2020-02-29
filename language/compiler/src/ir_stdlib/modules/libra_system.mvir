@@ -7,10 +7,10 @@ module LibraSystem {
 
     struct ValidatorInfo {
         addr: address,
-        consensus_pubkey: bytearray,
+        consensus_pubkey: vector<u8>,
         consensus_voting_power: u64,
-        network_signing_pubkey: bytearray,
-        network_identity_pubkey: bytearray,
+        network_signing_pubkey: vector<u8>,
+        network_identity_pubkey: vector<u8>,
     }
 
     struct ValidatorSetChangeEvent {
@@ -30,10 +30,10 @@ module LibraSystem {
 
     struct DiscoveryInfo {
         addr: address,
-        validator_network_identity_pubkey: bytearray,
-        validator_network_address: bytearray,
-        fullnodes_network_identity_pubkey: bytearray,
-        fullnodes_network_address: bytearray,
+        validator_network_identity_pubkey: vector<u8>,
+        validator_network_address: vector<u8>,
+        fullnodes_network_identity_pubkey: vector<u8>,
+        fullnodes_network_address: vector<u8>,
     }
 
     struct DiscoverySetChangeEvent {
@@ -53,7 +53,7 @@ module LibraSystem {
       height: u64,
 
       // Hash of the current block of transactions.
-      id: bytearray,
+      id: vector<u8>,
 
       // Proposer of the current block.
       proposer: address,
@@ -113,7 +113,7 @@ module LibraSystem {
       return &move(v).addr;
     }
 
-    public get_consensus_pubkey(v: &Self.ValidatorInfo): &bytearray {
+    public get_consensus_pubkey(v: &Self.ValidatorInfo): &vector<u8> {
       return &move(v).consensus_pubkey;
     }
 
@@ -121,11 +121,11 @@ module LibraSystem {
       return &move(v).consensus_voting_power;
     }
 
-    public get_network_signing_pubkey(v: &Self.ValidatorInfo): &bytearray {
+    public get_network_signing_pubkey(v: &Self.ValidatorInfo): &vector<u8> {
       return &move(v).network_signing_pubkey;
     }
 
-    public get_network_identity_pubkey(v: &Self.ValidatorInfo): &bytearray {
+    public get_network_identity_pubkey(v: &Self.ValidatorInfo): &vector<u8> {
       return &move(v).network_identity_pubkey;
     }
 
@@ -135,19 +135,19 @@ module LibraSystem {
         return &move(d).addr;
     }
 
-    public get_validator_network_identity_pubkey(d: &Self.DiscoveryInfo): &bytearray {
+    public get_validator_network_identity_pubkey(d: &Self.DiscoveryInfo): &vector<u8> {
         return &move(d).validator_network_identity_pubkey;
     }
 
-    public get_validator_network_address(d: &Self.DiscoveryInfo): &bytearray {
+    public get_validator_network_address(d: &Self.DiscoveryInfo): &vector<u8> {
         return &move(d).validator_network_address;
     }
 
-    public get_fullnodes_network_identity_pubkey(d: &Self.DiscoveryInfo): &bytearray {
+    public get_fullnodes_network_identity_pubkey(d: &Self.DiscoveryInfo): &vector<u8> {
         return &move(d).fullnodes_network_identity_pubkey;
     }
 
-    public get_fullnodes_network_address(d: &Self.DiscoveryInfo): &bytearray {
+    public get_fullnodes_network_address(d: &Self.DiscoveryInfo): &vector<u8> {
         return &move(d).fullnodes_network_address;
     }
 
@@ -158,8 +158,8 @@ module LibraSystem {
     //          Resource?
     public block_prologue(
         timestamp: u64,
-        new_block_hash: bytearray,
-        previous_block_votes: bytearray,
+        new_block_hash: vector<u8>,
+        previous_block_votes: vector<u8>,
         proposer: address
     ) acquires BlockMetadata, ValidatorSet, DiscoverySet, TransactionFees {
       Self.process_block_prologue(move(timestamp), move(new_block_hash), move(previous_block_votes), move(proposer));
@@ -176,8 +176,8 @@ module LibraSystem {
     // Update the BlockMetadata resource with the new blockmetada coming from the consensus.
     process_block_prologue(
         timestamp: u64,
-        new_block_hash: bytearray,
-        previous_block_votes: bytearray,
+        new_block_hash: vector<u8>,
+        previous_block_votes: vector<u8>,
         proposer: address
     ) acquires BlockMetadata, ValidatorSet {
         let block_metadata_ref: &mut Self.BlockMetadata;
@@ -202,7 +202,7 @@ module LibraSystem {
     }
 
     // Get the current block id
-    public get_current_block_id(): bytearray acquires BlockMetadata {
+    public get_current_block_id(): vector<u8> acquires BlockMetadata {
       return *&(borrow_global<BlockMetadata>(0xA550C18)).id;
     }
 
@@ -325,9 +325,9 @@ module LibraSystem {
     // the differing fields. Aborts if there is no ValidatorConfig at
     // validator_info.addr
     public copy_validator_info(validator_info: &mut Self.ValidatorInfo): bool {
-        let consensus_pubkey: bytearray;
-        let network_signing_pubkey: bytearray;
-        let network_identity_pubkey: bytearray;
+        let consensus_pubkey: vector<u8>;
+        let network_signing_pubkey: vector<u8>;
+        let network_identity_pubkey: vector<u8>;
         let config: ValidatorConfig.Config;
         let changed: bool;
 
@@ -373,10 +373,10 @@ module LibraSystem {
     // the differing fields. Aborts if there is no ValidatorConfig at
     // discovery_info.addr
     public copy_discovery_info(discovery_info: &mut Self.DiscoveryInfo): bool {
-        let validator_network_identity_pubkey: bytearray;
-        let validator_network_address: bytearray;
-        let fullnodes_network_identity_pubkey: bytearray;
-        let fullnodes_network_address: bytearray;
+        let validator_network_identity_pubkey: vector<u8>;
+        let validator_network_address: vector<u8>;
+        let fullnodes_network_identity_pubkey: vector<u8>;
+        let fullnodes_network_address: vector<u8>;
         let config: ValidatorConfig.Config;
         let changed: bool;
 

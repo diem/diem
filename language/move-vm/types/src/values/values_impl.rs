@@ -211,6 +211,10 @@ impl Value {
             (SignatureToken::Bool, ValueImpl::Bool(_)) => true,
             (SignatureToken::Address, ValueImpl::Address(_)) => true,
             (SignatureToken::ByteArray, ValueImpl::ByteArray(_)) => true,
+            (SignatureToken::Vector(ty), ValueImpl::Container(r)) => match (&**ty, &*r.borrow()) {
+                (SignatureToken::U8, Container::U8(_)) => true,
+                _ => false,
+            },
             _ => false,
         }
     }
@@ -847,6 +851,11 @@ impl Value {
     pub fn struct_(s: Struct) -> Self {
         Self(ValueImpl::new_container(s.0))
     }
+
+    // TODO: consider whether we want to replace this with fn vector(v: Vec<Value>).
+    pub fn vector_u8(v: Vec<u8>) -> Self {
+        Self(ValueImpl::new_container(Container::U8(v)))
+    }
 }
 
 /***************************************************************************************
@@ -940,6 +949,20 @@ impl VMValueCast<Struct> for Value {
 impl VMValueCast<StructRef> for Value {
     fn cast(self) -> VMResult<StructRef> {
         Ok(StructRef(VMValueCast::cast(self)?))
+    }
+}
+
+impl VMValueCast<Vec<u8>> for Value {
+    fn cast(self) -> VMResult<Vec<u8>> {
+        match self.0 {
+            ValueImpl::Container(r) => match take_unique_ownership(r)? {
+                Container::U8(v) => Ok(v),
+                v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                    .with_message(format!("cannot cast {:?} to vector<u8>", v,))),
+            },
+            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!("cannot cast {:?} to vector<u8>", v,))),
+        }
     }
 }
 
@@ -1315,9 +1338,13 @@ pub mod vector {
     }
 
     macro_rules! err_vector_elem_ty_mismatch {
-        () => {{
-            return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                .with_message("vector elem type mismatch".to_string()));
+        ($tag: expr, $val: expr) => {{
+            return Err(
+                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(format!(
+                    "vector elem type mismatch -- expected {:?}, got {:?}",
+                    $tag, $val
+                )),
+            );
         }};
     }
 
@@ -1367,7 +1394,7 @@ pub mod vector {
             | (TypeTag::ByteArray, Container::General(v))
             | (TypeTag::Address, Container::General(v)) => v.len(),
 
-            _ => err_vector_elem_ty_mismatch!(),
+            (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
         };
 
         Ok(NativeResult::ok(cost, vec![Value::u64(len as u64)]))
@@ -1400,7 +1427,7 @@ pub mod vector {
             | (TypeTag::ByteArray, Container::General(v))
             | (TypeTag::Address, Container::General(v)) => v.push(e.0),
 
-            _ => err_vector_elem_ty_mismatch!(),
+            (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
         }
 
         Ok(NativeResult::ok(cost, vec![]))
@@ -1478,7 +1505,7 @@ pub mod vector {
                 None => err_pop_empty_vec!(),
             },
 
-            _ => err_vector_elem_ty_mismatch!(),
+            (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
         };
 
         Ok(NativeResult::ok(cost, vec![res]))
@@ -1505,7 +1532,7 @@ pub mod vector {
             | (TypeTag::ByteArray, Container::General(v))
             | (TypeTag::Address, Container::General(v)) => v.is_empty(),
 
-            _ => err_vector_elem_ty_mismatch!(),
+            (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
         };
 
         if is_empty {
@@ -1547,12 +1574,14 @@ pub mod vector {
         }
 
         match (&ty_args[0], &mut *v) {
+            (TypeTag::U8, Container::U8(v)) => swap!(v),
             (TypeTag::U64, Container::U64(v)) => swap!(v),
+            (TypeTag::U128, Container::U128(v)) => swap!(v),
             (TypeTag::Bool, Container::Bool(v)) => swap!(v),
             (TypeTag::Struct(_), Container::General(v))
             | (TypeTag::Address, Container::General(v))
             | (TypeTag::ByteArray, Container::General(v)) => swap!(v),
-            _ => err_vector_elem_ty_mismatch!(),
+            (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
         }
 
         Ok(NativeResult::ok(cost, vec![]))

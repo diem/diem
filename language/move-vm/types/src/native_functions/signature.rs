@@ -12,7 +12,6 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::{
-    byte_array::ByteArray,
     language_storage::TypeTag,
     vm_error::{StatusCode, VMStatus},
 };
@@ -57,13 +56,13 @@ pub fn native_ed25519_signature_verification(
         );
         return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
     }
-    let msg = pop_arg!(arguments, ByteArray);
-    let pubkey = pop_arg!(arguments, ByteArray);
-    let signature = pop_arg!(arguments, ByteArray);
+    let msg = pop_arg!(arguments, Vec<u8>);
+    let pubkey = pop_arg!(arguments, Vec<u8>);
+    let signature = pop_arg!(arguments, Vec<u8>);
 
     let cost = native_gas(cost_table, NativeCostIndex::ED25519_VERIFY, msg.len());
 
-    let sig = match ed25519::Ed25519Signature::try_from(signature.as_bytes()) {
+    let sig = match ed25519::Ed25519Signature::try_from(signature.as_slice()) {
         Ok(sig) => sig,
         Err(_) => {
             return Ok(NativeResult::err(
@@ -73,7 +72,7 @@ pub fn native_ed25519_signature_verification(
             ));
         }
     };
-    let pk = match ed25519::Ed25519PublicKey::try_from(pubkey.as_bytes()) {
+    let pk = match ed25519::Ed25519PublicKey::try_from(pubkey.as_slice()) {
         Ok(pk) => pk,
         Err(_) => {
             return Ok(NativeResult::err(
@@ -84,7 +83,7 @@ pub fn native_ed25519_signature_verification(
         }
     };
 
-    let bool_value = sig.verify_arbitrary_msg(msg.as_bytes(), &pk).is_ok();
+    let bool_value = sig.verify_arbitrary_msg(msg.as_slice(), &pk).is_ok();
     let return_values = vec![Value::bool(bool_value)];
     Ok(NativeResult::ok(cost, return_values))
 }
@@ -102,10 +101,10 @@ pub fn native_ed25519_threshold_signature_verification(
         );
         return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
     }
-    let message = pop_arg!(arguments, ByteArray);
-    let public_keys = pop_arg!(arguments, ByteArray);
-    let signatures = pop_arg!(arguments, ByteArray);
-    let bitmap = pop_arg!(arguments, ByteArray);
+    let message = pop_arg!(arguments, Vec<u8>);
+    let public_keys = pop_arg!(arguments, Vec<u8>);
+    let signatures = pop_arg!(arguments, Vec<u8>);
+    let bitmap = pop_arg!(arguments, Vec<u8>);
 
     Ok(ed25519_threshold_signature_verification(
         &bitmap,
@@ -117,13 +116,13 @@ pub fn native_ed25519_threshold_signature_verification(
 }
 
 fn ed25519_threshold_signature_verification(
-    bitmap: &ByteArray,
-    signatures: &ByteArray,
-    public_keys: &ByteArray,
-    message: &ByteArray,
+    bitmap: &[u8],
+    signatures: &[u8],
+    public_keys: &[u8],
+    message: &[u8],
     cost_table: &CostTable,
 ) -> NativeResult {
-    let bitvec = BitVec::from_bytes(bitmap.as_bytes());
+    let bitvec = BitVec::from_bytes(bitmap);
 
     let num_of_sigs = match sanity_check(&bitvec, &signatures, &public_keys, cost_table) {
         Ok(sig_count) => sig_count,
@@ -136,7 +135,6 @@ fn ed25519_threshold_signature_verification(
     );
 
     let sig_chunks: ::std::result::Result<Vec<_>, _> = signatures
-        .as_bytes()
         .chunks(64)
         .map(Ed25519Signature::try_from)
         .collect();
@@ -144,7 +142,6 @@ fn ed25519_threshold_signature_verification(
     match sig_chunks {
         Ok(signatures) => {
             let key_chunks: ::std::result::Result<Vec<_>, _> = public_keys
-                .as_bytes()
                 .chunks(32)
                 .map(Ed25519PublicKey::try_from)
                 .collect();
@@ -153,7 +150,7 @@ fn ed25519_threshold_signature_verification(
                 Ok(keys) => {
                     let keys_and_signatures =
                         matching_keys_and_signatures(num_of_sigs, bitvec, signatures, keys);
-                    let hash_value = match HashValue::from_slice(message.as_bytes()) {
+                    let hash_value = match HashValue::from_slice(message) {
                         Err(_) => {
                             return NativeResult::err(
                                 cost,
@@ -231,8 +228,8 @@ fn matching_keys_and_signatures(
 // valid.
 fn sanity_check(
     bitmap: &BitVec<u32>,
-    signatures: &ByteArray,
-    pubkeys: &ByteArray,
+    signatures: &[u8],
+    pubkeys: &[u8],
     cost_table: &CostTable,
 ) -> std::result::Result<u64, NativeResult> {
     let bitmap_len = bitmap.len();

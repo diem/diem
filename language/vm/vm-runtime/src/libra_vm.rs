@@ -17,7 +17,6 @@ use libra_state_view::StateView;
 use libra_types::{
     account_config,
     block_metadata::BlockMetadata,
-    byte_array::ByteArray,
     transaction::{
         ChangeSet, SignatureCheckedTransaction, SignedTransaction, Transaction,
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
@@ -423,8 +422,8 @@ impl LibraVM {
         if let Ok((id, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
             let args = vec![
                 Value::u64(timestamp),
-                Value::byte_array(id),
-                Value::byte_array(previous_vote),
+                Value::vector_u8(id),
+                Value::vector_u8(previous_vote),
                 Value::address(proposer),
             ];
             self.move_vm.execute_function(
@@ -468,7 +467,7 @@ impl LibraVM {
                         &txn_data,
                         vec![
                             Value::u64(txn_sequence_number),
-                            Value::byte_array(ByteArray::new(txn_public_key)),
+                            Value::vector_u8(txn_public_key),
                             Value::u64(txn_gas_price),
                             Value::u64(txn_max_gas_units),
                             Value::u64(txn_expiration_time),
@@ -747,7 +746,7 @@ fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
             TransactionArgument::U64(i) => Value::u64(i),
             TransactionArgument::Address(a) => Value::address(a),
             TransactionArgument::Bool(b) => Value::bool(b),
-            TransactionArgument::ByteArray(b) => Value::byte_array(b),
+            TransactionArgument::U8Vector(v) => Value::vector_u8(v),
         })
         .collect()
 }

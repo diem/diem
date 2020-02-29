@@ -207,14 +207,27 @@ impl NativeFunction {
             }};
         }
         Some(match self {
-            Self::HashSha2_256 => simple!(vec![ByteArray], vec![ByteArray]),
-            Self::HashSha3_256 => simple!(vec![ByteArray], vec![ByteArray]),
-            Self::SigED25519Verify => simple!(vec![ByteArray, ByteArray, ByteArray], vec![Bool]),
-            Self::SigED25519ThresholdVerify => {
-                simple!(vec![ByteArray, ByteArray, ByteArray, ByteArray], vec![U64])
-            }
-            Self::AddrUtilToBytes => simple!(vec![Address], vec![ByteArray]),
-            Self::U64UtilToBytes => simple!(vec![U64], vec![ByteArray]),
+            Self::HashSha2_256 => simple!(vec![Vector(Box::new(U8))], vec![Vector(Box::new(U8))]),
+            Self::HashSha3_256 => simple!(vec![Vector(Box::new(U8))], vec![Vector(Box::new(U8))]),
+            Self::SigED25519Verify => simple!(
+                vec![
+                    Vector(Box::new(U8)),
+                    Vector(Box::new(U8)),
+                    Vector(Box::new(U8))
+                ],
+                vec![Bool]
+            ),
+            Self::SigED25519ThresholdVerify => simple!(
+                vec![
+                    Vector(Box::new(U8)),
+                    Vector(Box::new(U8)),
+                    Vector(Box::new(U8)),
+                    Vector(Box::new(U8))
+                ],
+                vec![U64]
+            ),
+            Self::AddrUtilToBytes => simple!(vec![Address], vec![Vector(Box::new(U8))]),
+            Self::U64UtilToBytes => simple!(vec![U64], vec![Vector(Box::new(U8))]),
             Self::BytearrayConcat => simple!(vec![ByteArray, ByteArray], vec![ByteArray]),
             Self::VectorLength => simple!(
                 vec![Kind::All],
@@ -270,7 +283,7 @@ impl NativeFunction {
             ),
             Self::AccountWriteEvent => simple!(
                 vec![Kind::Unrestricted],
-                vec![ByteArray, U64, TypeParameter(0)],
+                vec![Vector(Box::new(U8)), U64, TypeParameter(0)],
                 vec![]
             ),
             Self::AccountSaveAccount => {

@@ -5,7 +5,6 @@ use crate::language_storage::ModuleId;
 use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
-    byte_array::ByteArray,
     event::EventHandle,
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
@@ -117,7 +116,7 @@ pub fn received_payment_tag() -> StructTag {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountResource {
-    authentication_key: ByteArray,
+    authentication_key: Vec<u8>,
     balance: u64,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
@@ -132,7 +131,7 @@ impl AccountResource {
     pub fn new(
         balance: u64,
         sequence_number: u64,
-        authentication_key: ByteArray,
+        authentication_key: Vec<u8>,
         delegated_key_rotation_capability: bool,
         delegated_withdrawal_capability: bool,
         sent_events: EventHandle,
@@ -162,7 +161,7 @@ impl AccountResource {
     }
 
     /// Return the authentication_key field for the given AccountResource
-    pub fn authentication_key(&self) -> &ByteArray {
+    pub fn authentication_key(&self) -> &[u8] {
         &self.authentication_key
     }
 

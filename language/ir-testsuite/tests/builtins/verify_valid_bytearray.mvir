@@ -1,5 +1,5 @@
 main() {
-    let byte_array: bytearray;
+    let byte_array: vector<u8>;
     byte_array = h"deadbeefdeadbeef";
     assert(move(byte_array) == h"deadbeefdeadbeef", 42);
     return;

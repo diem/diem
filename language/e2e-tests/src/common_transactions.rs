@@ -6,7 +6,6 @@
 use crate::{account::Account, gas_costs};
 use libra_types::{
     account_address::AccountAddress,
-    byte_array::ByteArray,
     transaction::{SignedTransaction, TransactionArgument},
 };
 use stdlib::transaction_scripts::{
@@ -86,12 +85,12 @@ pub fn register_validator_txn(
     seq_num: u64,
 ) -> SignedTransaction {
     let args = vec![
-        TransactionArgument::ByteArray(ByteArray::new(consensus_pubkey)),
-        TransactionArgument::ByteArray(ByteArray::new(validator_network_signing_pubkey)),
-        TransactionArgument::ByteArray(ByteArray::new(validator_network_identity_pubkey)),
-        TransactionArgument::ByteArray(ByteArray::new(validator_network_address)),
-        TransactionArgument::ByteArray(ByteArray::new(fullnodes_network_identity_pubkey)),
-        TransactionArgument::ByteArray(ByteArray::new(fullnodes_network_address)),
+        TransactionArgument::U8Vector(consensus_pubkey),
+        TransactionArgument::U8Vector(validator_network_signing_pubkey),
+        TransactionArgument::U8Vector(validator_network_identity_pubkey),
+        TransactionArgument::U8Vector(validator_network_address),
+        TransactionArgument::U8Vector(fullnodes_network_identity_pubkey),
+        TransactionArgument::U8Vector(fullnodes_network_address),
     ];
     sender.create_signed_txn_with_args(
         REGISTER_VALIDATOR_TXN.clone(),
@@ -108,9 +107,7 @@ pub fn rotate_key_txn(
     new_key_hash: AccountAddress,
     seq_num: u64,
 ) -> SignedTransaction {
-    let args = vec![TransactionArgument::ByteArray(ByteArray::new(
-        new_key_hash.to_vec(),
-    ))];
+    let args = vec![TransactionArgument::U8Vector(new_key_hash.to_vec())];
     sender.create_signed_txn_with_args(
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),
         args,

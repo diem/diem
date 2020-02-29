@@ -166,7 +166,7 @@ fn test_reconfiguration() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_transfer_script(&validator_account, 200_000)),
+        Some(encode_transfer_script(&validator_account, 1_000_000)),
     );
     // rotate the validator's connsensus pubkey to trigger a reconfiguration
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
@@ -252,26 +252,26 @@ fn test_execution_with_storage() {
         Some(encode_create_account_script(&account1, 2_000_000)),
     );
 
-    // Create account2 with 200k coins.
+    // Create account2 with 1.2M coins.
     let txn2 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_account_script(&account2, 200_000)),
+        Some(encode_create_account_script(&account2, 1_200_000)),
     );
 
-    // Create account3 with 100k coins.
+    // Create account3 with 1M coins.
     let txn3 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 3,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_account_script(&account3, 100_000)),
+        Some(encode_create_account_script(&account3, 1_000_000)),
     );
 
     // Transfer 20k coins from account1 to account2.
-    // balance: <1.98M, 220k, 100k
+    // balance: <1.98M, 1.22M, 1M
     let txn4 = get_test_signed_transaction(
         account1,
         /* sequence_number = */ 0,
@@ -281,7 +281,7 @@ fn test_execution_with_storage() {
     );
 
     // Transfer 10k coins from account2 to account3.
-    // balance: <1.98M, <210k, 110k
+    // balance: <1.98M, <1.21M, 1.01M
     let txn5 = get_test_signed_transaction(
         account2,
         /* sequence_number = */ 0,
@@ -291,7 +291,7 @@ fn test_execution_with_storage() {
     );
 
     // Transfer 70k coins from account1 to account3.
-    // balance: <1.91M, <210k, 180k
+    // balance: <1.91M, <1.21M, 1.08M
     let txn6 = get_test_signed_transaction(
         account1,
         /* sequence_number = */ 1,
@@ -520,14 +520,14 @@ fn test_execution_with_storage() {
         .unwrap()
         .into_get_account_state_response()
         .unwrap();
-    verify_account_balance(&account2_state_with_proof, |x| x < 210_000).unwrap();
+    verify_account_balance(&account2_state_with_proof, |x| x < 1_210_000).unwrap();
 
     let account3_state_with_proof = response_items
         .pop()
         .unwrap()
         .into_get_account_state_response()
         .unwrap();
-    verify_account_balance(&account3_state_with_proof, |x| x == 180_000).unwrap();
+    verify_account_balance(&account3_state_with_proof, |x| x == 1_080_000).unwrap();
 
     let transaction_list_with_proof = response_items
         .pop()
@@ -708,7 +708,7 @@ fn test_execution_with_storage() {
         .unwrap()
         .into_get_account_state_response()
         .unwrap();
-    verify_account_balance(&account3_state_with_proof, |x| x == 320_000).unwrap();
+    verify_account_balance(&account3_state_with_proof, |x| x == 1_220_000).unwrap();
 
     let transaction_list_with_proof = response_items
         .pop()

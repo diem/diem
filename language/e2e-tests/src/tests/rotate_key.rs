@@ -38,10 +38,7 @@ fn rotate_key() {
         let updated_sender = executor
             .read_account_resource(sender.account())
             .expect("sender must exist");
-        assert_eq!(
-            new_key_hash.as_ref(),
-            updated_sender.authentication_key().as_bytes(),
-        );
+        assert_eq!(new_key_hash.as_ref(), updated_sender.authentication_key(),);
         assert_eq!(balance, updated_sender.balance());
         assert_eq!(11, updated_sender.sequence_number());
 

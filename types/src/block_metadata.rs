@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_address::AccountAddress, byte_array::ByteArray};
+use crate::account_address::AccountAddress;
 use anyhow::Result;
 use libra_crypto::{ed25519::Ed25519Signature, HashValue};
 use serde::{Deserialize, Serialize};
@@ -44,9 +44,9 @@ impl BlockMetadata {
         }
     }
 
-    pub fn into_inner(self) -> Result<(ByteArray, u64, ByteArray, AccountAddress)> {
-        let id = ByteArray::new(self.id.to_vec());
-        let vote_maps = ByteArray::new(lcs::to_bytes(&self.previous_block_votes)?);
+    pub fn into_inner(self) -> Result<(Vec<u8>, u64, Vec<u8>, AccountAddress)> {
+        let id = self.id.to_vec();
+        let vote_maps = lcs::to_bytes(&self.previous_block_votes)?;
         Ok((id, self.timestamp_usecs, vote_maps, self.proposer))
     }
 }

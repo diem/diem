@@ -39,6 +39,7 @@ fn test_access_path() {
     test(
         &["--native-stubs"],
         &[
+            &std_mvir("vector"),
             &std_mvir("u64_util"),
             &std_mvir("address_util"),
             &std_mvir("bytearray_util"),

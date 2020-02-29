@@ -3,9 +3,9 @@ module PaymentChannel {
     import 0x0.LibraCoin;
     import 0x0.LibraAccount;
     import 0x0.AddressUtil;
-    import 0x0.BytearrayUtil;
     import 0x0.U64Util;
     import 0x0.Hash;
+    import 0x0.Vector;
 
     // This is the PaymentChannel resource.
     // It keeps track of the balances for funder and counterparty,
@@ -19,8 +19,8 @@ module PaymentChannel {
         funder_capacity: LibraCoin.T,
         counterparty_capacity: LibraCoin.T,
         seq_id: u64,
-        funder_pk: bytearray,
-        counterparty_pk: bytearray,
+        funder_pk: vector<u8>,
+        counterparty_pk: vector<u8>,
         funder_addr: address,
     }
 
@@ -50,15 +50,15 @@ module PaymentChannel {
     }
 
     // Getter for the public key of the funder
-    funder_pk(this: &Self.T): bytearray {
-        let funder_pk: bytearray;
+    funder_pk(this: &Self.T): vector<u8> {
+        let funder_pk: vector<u8>;
         funder_pk = *&move(this).funder_pk;
         return move(funder_pk);
     }
 
     // Getter for the public key of the counterparty
-    counterparty_pk(this: &Self.T): bytearray {
-        let counterparty_pk: bytearray;
+    counterparty_pk(this: &Self.T): vector<u8> {
+        let counterparty_pk: vector<u8>;
         counterparty_pk = *&move(this).counterparty_pk;
         return move(counterparty_pk);
     }
@@ -74,7 +74,7 @@ module PaymentChannel {
     // Constructor for the new payment channel
     // Due to the lack of a time API in the Move VM, this payment channel is forced to be
     // uni-directional. Therefore, only the funder is funding the channel.
-    public new_payment_channel(funding: LibraCoin.T, funder_pk: bytearray, counterparty_pk: bytearray): Self.T {
+    public new_payment_channel(funding: LibraCoin.T, funder_pk: vector<u8>, counterparty_pk: vector<u8>): Self.T {
 	let sender: address;
         let counterparty_capacity: LibraCoin.T;
 	sender = get_txn_sender();
@@ -122,16 +122,14 @@ module PaymentChannel {
    //       but the counterparty address can change on every off-chain update.
    //       In general, the counterparty would always use the same commit_address,
    //       but in general needn't do so.
-   ver(this: &Self.T, amt_to_transfer: u64, new_seq_id: u64, public_key: bytearray, signature: bytearray, commit_address: address, preimage: bytearray): bool {
+   ver(this: &Self.T, amt_to_transfer: u64, new_seq_id: u64, public_key: vector<u8>, signature: vector<u8>, commit_address: address, preimage: vector<u8>): bool {
         let seq_id: u64;
         let ver: bool;
-        let message: bytearray;
-	let amt_to_transfer_bytes: bytearray;
-        let commit_to_bytes: bytearray;
-        let partial_concat: bytearray;
-        let partial_with_hash: bytearray;
-	let new_seq_id_bytes: bytearray;
-        let hash: bytearray;
+        let message: vector<u8>;
+	    let amt_to_transfer_bytes: vector<u8>;
+        let commit_to_bytes: vector<u8>;
+	    let new_seq_id_bytes: vector<u8>;
+        let hash: vector<u8>;
 
         seq_id = Self.seq_id(move(this));
 
@@ -145,9 +143,10 @@ module PaymentChannel {
 
         hash = Hash.sha3_256(move(preimage));
 
-        partial_concat = BytearrayUtil.bytearray_concat(move(amt_to_transfer_bytes), move(new_seq_id_bytes));
-        partial_with_hash = BytearrayUtil.bytearray_concat(move(partial_concat), move(hash));
-        message = BytearrayUtil.bytearray_concat(move(partial_with_hash), move(commit_to_bytes));
+        message = move(amt_to_transfer_bytes);
+        Vector.append<u8>(&mut message, move(new_seq_id_bytes));
+        Vector.append<u8>(&mut message, move(hash));
+        Vector.append<u8>(&mut message, move(commit_to_bytes));
         ver = Signature.ed25519_verify(move(signature), move(public_key), move(message));
         return move(ver);
     }
@@ -155,14 +154,14 @@ module PaymentChannel {
     // Public on-chain update function that allows to update the internal state of the payment channel.
     // This function is called by the `close` method before withdrawing the funds in order to update the
     // on-chain state of the contract before moving the LibraCoin resources to their respective parties.
-    public update(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray, preimage: bytearray) {
+    public update(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>, preimage: vector<u8>) {
         let sender: address;
         let ver_funder: bool;
         let ver_counterparty: bool;
         let ref: &Self.T;
         let transfer_amt: LibraCoin.T;
-        let funder_pk: bytearray;
-        let counterparty_pk: bytearray;
+        let funder_pk: vector<u8>;
+        let counterparty_pk: vector<u8>;
 
         ref = freeze(copy(this));
         sender = get_txn_sender();
@@ -185,7 +184,7 @@ module PaymentChannel {
     }
 
     // Public method for closing the channel. Invokes the update method and then pays out the LibraCoin to each party
-    public close(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray, preimage: bytearray) {
+    public close(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>, preimage: vector<u8>) {
         let funder_addr: address;
         let counterparty_addr: address;
 

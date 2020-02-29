@@ -74,8 +74,8 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().identifiers[idx.into_index()]
     }
 
-    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &ByteArray {
-        &self.as_module().as_inner().byte_array_pool[idx.into_index()]
+    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &[u8] {
+        self.as_module().as_inner().byte_array_pool[idx.into_index()].as_bytes()
     }
 
     fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
@@ -221,8 +221,8 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().identifiers[idx.into_index()]
     }
 
-    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &ByteArray {
-        &self.as_script().as_inner().byte_array_pool[idx.into_index()]
+    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &[u8] {
+        self.as_script().as_inner().byte_array_pool[idx.into_index()].as_bytes()
     }
 
     fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {

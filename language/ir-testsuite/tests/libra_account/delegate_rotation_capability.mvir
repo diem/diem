@@ -27,7 +27,7 @@ module SharedKeyRotation {
 
     // Rotate the auth key for the account at wallet_address/SharedKeyRotation.T/cap/address to
     // new_key
-    public rotate(wallet_address: address, new_key: bytearray) acquires T {
+    public rotate(wallet_address: address, new_key: vector<u8>) acquires T {
         let wallet_ref: &mut Self.T;
         let sender: address;
 

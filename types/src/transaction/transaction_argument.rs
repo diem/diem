@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_address::AccountAddress, byte_array::ByteArray};
+use crate::account_address::AccountAddress;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
@@ -11,7 +11,7 @@ use thiserror::Error;
 pub enum TransactionArgument {
     U64(u64),
     Address(AccountAddress),
-    ByteArray(ByteArray),
+    U8Vector(Vec<u8>),
     Bool(bool),
 }
 
@@ -21,8 +21,8 @@ impl fmt::Debug for TransactionArgument {
             TransactionArgument::U64(value) => write!(f, "{{U64: {}}}", value),
             TransactionArgument::Bool(boolean) => write!(f, "{{BOOL: {}}}", boolean),
             TransactionArgument::Address(address) => write!(f, "{{ADDRESS: {:?}}}", address),
-            TransactionArgument::ByteArray(byte_array) => {
-                write!(f, "{{ByteArray: 0x{}}}", byte_array)
+            TransactionArgument::U8Vector(vector) => {
+                write!(f, "{{U8Vector: 0x{}}}", hex::encode(vector))
             }
         }
     }
@@ -62,22 +62,20 @@ pub fn parse_as_address(s: &str) -> Result<TransactionArgument> {
 }
 
 /// Parses the given string as bytearray.
-pub fn parse_as_byte_array(s: &str) -> Result<TransactionArgument> {
+pub fn parse_as_u8_vector(s: &str) -> Result<TransactionArgument> {
     if s.starts_with("b\"") && s.ends_with('"') && s.len() >= 3 {
         let s = &s[2..s.len() - 1];
         if s.is_empty() {
-            return Err(ErrorKind::ParseError("byte array cannot be empty".to_string()).into());
+            return Err(ErrorKind::ParseError("vector<u8> cannot be empty".to_string()).into());
         }
         let s = if s.len() % 2 == 0 {
             s.to_string()
         } else {
             format!("0{}", s)
         };
-        Ok(TransactionArgument::ByteArray(ByteArray::new(hex::decode(
-            &s,
-        )?)))
+        Ok(TransactionArgument::U8Vector(hex::decode(&s)?))
     } else {
-        Err(ErrorKind::ParseError(format!("\"{}\" is not a byte array", s)).into())
+        Err(ErrorKind::ParseError(format!("\"{}\" is not a vector<u8>", s)).into())
     }
 }
 
@@ -104,7 +102,7 @@ pub fn parse_as_transaction_argument(s: &str) -> Result<TransactionArgument> {
     return_if_ok!(parse_as_address(s));
     return_if_ok!(parse_as_u64(s));
     return_if_ok!(parse_as_bool(s));
-    return_if_ok!(parse_as_byte_array(s));
+    return_if_ok!(parse_as_u8_vector(s));
     Err(ErrorKind::ParseError(format!("cannot parse \"{}\" as transaction argument", s)).into())
 }
 
@@ -155,11 +153,11 @@ mod test_transaction_argument {
     #[test]
     fn parse_byte_array() {
         for s in &["0", "00", "deadbeef", "aaa"] {
-            parse_as_byte_array(&format!("b\"{}\"", s)).unwrap();
+            parse_as_u8_vector(&format!("b\"{}\"", s)).unwrap();
         }
 
         for s in &["", "b\"\"", "123", "b\"G\""] {
-            parse_as_byte_array(s).unwrap_err();
+            parse_as_u8_vector(s).unwrap_err();
         }
     }
 
