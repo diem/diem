@@ -58,58 +58,62 @@ main() {
     return;
 }
 
-//! new-transaction
-//! sender: alice
-import 0x0.AddressUtil;
-import {{alice}}.SharedKeyRotation;
-import 0x0.LibraAccount;
-// Alice can rotate her key. Here, she rotates it to its original value
-main() {
-    assert(LibraAccount.sequence_number({{alice}}) == 2, 78);
-    SharedKeyRotation.rotate({{alice}}, AddressUtil.address_to_bytes({{alice}}));
-    return;
-}
+// TODO: fix when porting to source lang. These are too painful without proper vector<u8> literals
+// //! new-transaction
+// //! sender: alice
+// import 0x0.AddressUtil;
+// import {{alice}}.SharedKeyRotation;
+// import 0x0.LibraAccount;
+// // Alice can rotate her key. Here, she rotates it to its original value
+// main() {
+//     assert(LibraAccount.sequence_number({{alice}}) == 2, 78);
+//     SharedKeyRotation.rotate(
+//         {{alice}},
+//         h"8a88082abf9fbb576bdb6969143ee6384066e363c48e041c8da1e08b9fc931f",
+//     );
+//     return;
+// }
 
-//! new-transaction
-//! sender: bob
-import {{alice}}.SharedKeyRotation;
-import 0x0.LibraAccount;
-// Bob can too. Here, he zeroes it out to stop Alice from sending any transactions
-main() {
-    assert(LibraAccount.sequence_number({{alice}}) == 3, 78);
-    SharedKeyRotation.rotate({{alice}}, h"00");
-    return;
-}
+// //! new-transaction
+// //! sender: bob
+// import {{alice}}.SharedKeyRotation;
+// import 0x0.LibraAccount;
+// // Bob can too. Here, he zeroes it out to stop Alice from sending any transactions
+// main() {
+//     assert(LibraAccount.sequence_number({{alice}}) == 3, 78);
+//     SharedKeyRotation.rotate({{alice}}, h"00");
+//     return;
+// }
 
-//! new-transaction
-//! sender: alice
-// Alice should no longer be able to send a tx from her account
-main() {
-    return;
-}
+// //! new-transaction
+// //! sender: alice
+// // Alice should no longer be able to send a tx from her account
+// main() {
+//     return;
+// }
 
-// check: DiscardedTransaction INVALID_AUTH_KEY
+// // check: DiscardedTransaction INVALID_AUTH_KEY
 
-//! new-transaction
-//! sender: bob
-import 0x0.AddressUtil;
-import {{alice}}.SharedKeyRotation;
-import 0x0.LibraAccount;
-// Bob now rotates the key back to its old value
-main() {
-    assert(LibraAccount.sequence_number({{alice}}) == 3, 78);
-    SharedKeyRotation.rotate({{alice}}, AddressUtil.address_to_bytes({{alice}}));
-    return;
-}
+// //! new-transaction
+// //! sender: bob
+// import 0x0.AddressUtil;
+// import {{alice}}.SharedKeyRotation;
+// import 0x0.LibraAccount;
+// // Bob now rotates the key back to its old value
+// main() {
+//     assert(LibraAccount.sequence_number({{alice}}) == 3, 78);
+//     SharedKeyRotation.rotate({{alice}}, h"8a88082abf9fbb576bdb6969143ee6384066e363c48e041c8da1e08b9fc931f"));
+//     return;
+// }
 
-//! new-transaction
-//! sender: alice
-import 0x0.LibraAccount;
-// And then Alice should be able to send a tx once again
-main() {
-    assert(LibraAccount.sequence_number({{alice}}) == 3, 79);
-    // TODO: seems that this code isn't getting run because the test passes...
-    assert(LibraAccount.sequence_number({{alice}}) == 33, 80);
-    return;
-}
-// check: ABORTED 80
+// //! new-transaction
+// //! sender: alice
+// import 0x0.LibraAccount;
+// // And then Alice should be able to send a tx once again
+// main() {
+//     assert(LibraAccount.sequence_number({{alice}}) == 3, 79);
+//     // TODO: seems that this code isn't getting run because the test passes...
+//     assert(LibraAccount.sequence_number({{alice}}) == 33, 80);
+//     return;
+// }
+// // check: ABORTED 80

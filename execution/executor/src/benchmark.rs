@@ -9,7 +9,7 @@ use libra_crypto::{
 };
 use libra_logger::prelude::*;
 use libra_types::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, AuthenticationKey},
     account_config::{association_address, AccountResource},
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -31,6 +31,14 @@ struct AccountData {
     public_key: Ed25519PublicKey,
     address: AccountAddress,
     sequence_number: u64,
+}
+
+impl AccountData {
+    pub fn auth_key_prefix(&self) -> Vec<u8> {
+        AuthenticationKey::from_public_key(&self.public_key)
+            .prefix()
+            .to_vec()
+    }
 }
 
 struct TransactionGenerator {
@@ -101,7 +109,11 @@ impl TransactionGenerator {
                     (i * block_size + j + 1) as u64,
                     &self.genesis_key,
                     self.genesis_key.public_key(),
-                    encode_create_account_script(&account.address, init_account_balance),
+                    encode_create_account_script(
+                        &account.address,
+                        account.auth_key_prefix(),
+                        init_account_balance,
+                    ),
                 );
                 transactions.push(txn);
             }
@@ -130,7 +142,11 @@ impl TransactionGenerator {
                     sender.sequence_number,
                     &sender.private_key,
                     sender.public_key.clone(),
-                    encode_transfer_script(&receiver.address, 1 /* amount */),
+                    encode_transfer_script(
+                        &receiver.address,
+                        receiver.auth_key_prefix(),
+                        1, /* amount */
+                    ),
                 );
                 transactions.push(txn);
 

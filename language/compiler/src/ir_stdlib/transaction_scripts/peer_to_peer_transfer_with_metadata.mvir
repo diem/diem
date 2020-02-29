@@ -1,5 +1,10 @@
 import 0x0.LibraAccount;
-main (payee: address, amount: u64, metadata: vector<u8>) {
-  LibraAccount.pay_from_sender_with_metadata(move(payee), move(amount), move(metadata));
+main (payee: address, auth_key_prefix: vector<u8>, amount: u64, metadata: vector<u8>) {
+  LibraAccount.pay_from_sender_with_metadata(
+      move(payee),
+      move(auth_key_prefix),
+      move(amount),
+      move(metadata)
+  );
   return;
 }

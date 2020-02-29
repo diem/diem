@@ -86,7 +86,7 @@ mod tests {
     fn test_get_accountresource() {
         use libra_crypto::ed25519::compat;
         use libra_types::{
-            account_address::AccountAddress,
+            account_address::AuthenticationKey,
             account_config::{AccountResource, ACCOUNT_RESOURCE_PATH},
             event::{EventHandle, EventKey},
         };
@@ -96,11 +96,12 @@ mod tests {
 
         // Figure out how to use Libra code to generate AccountStateBlob directly, not involving btreemap directly
         let mut map: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
-        let addr = AccountAddress::from_public_key(&keypair.1);
+        let auth_key = AuthenticationKey::from_public_key(&keypair.1);
+        let addr = auth_key.derived_address();
         let ar = AccountResource::new(
             987_654_321,
             123_456_789,
-            addr.to_vec(),
+            auth_key.to_vec(),
             true,
             false,
             EventHandle::new(EventKey::new_from_address(&addr, 0), 777),

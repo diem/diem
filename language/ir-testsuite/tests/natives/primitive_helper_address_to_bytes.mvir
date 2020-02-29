@@ -4,9 +4,9 @@ main() {
     let output: vector<u8>;
     let expected_output: vector<u8>;
     let addr : address;
-    addr = 0x0111111111111111111111111111111111111011111111111111111111111110;
+    addr = 0x89b9f9d1fadc027cf9532d6f99041522;
 
-    expected_output = h"0111111111111111111111111111111111111011111111111111111111111110";
+    expected_output = h"89b9f9d1fadc027cf9532d6f99041522";
 
     output = AddressUtil.address_to_bytes(move(addr));
     assert(move(output) == move(expected_output), 42);

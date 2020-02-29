@@ -34,7 +34,7 @@ main() {
     exists1 = Token.has(copy(sender));
     assert(copy(exists1), 42);
 
-    addr1 = 0x0111111111111111111111111111111111111111111111111111111111111110;
+    addr1 = 0x0111111111111111111111110;
     exists2 = Token.has(copy(addr1));
     assert(!copy(exists2), 42);
 

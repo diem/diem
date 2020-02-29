@@ -201,6 +201,7 @@ impl ValidatorConfig {
             vm_genesis::encode_genesis_transaction_with_validator(
                 &faucet_key,
                 faucet_key.public_key(),
+                &nodes,
                 validator_set,
                 discovery_set,
             )

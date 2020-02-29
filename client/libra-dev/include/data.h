@@ -12,8 +12,8 @@ extern "C" {
 
 #define LIBRA_PUBKEY_SIZE 32
 #define LIBRA_PRIVKEY_SIZE 32
-#define LIBRA_ADDRESS_SIZE 32
-#define LIBRA_EVENT_KEY_SIZE 40
+#define LIBRA_ADDRESS_SIZE 16
+#define LIBRA_EVENT_KEY_SIZE 24
 
 enum LibraStatus {
     Ok = 0,

@@ -8,7 +8,7 @@ use libra_logger::prelude::*;
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, AuthenticationKey},
     account_config::association_address,
     ledger_info::LedgerInfo,
     transaction::{TransactionArgument, TransactionPayload},
@@ -619,19 +619,25 @@ fn test_external_transaction_signer() {
     let public_key = key_pair.1;
 
     // create transfer parameters
-    let sender_address = AccountAddress::from_public_key(&public_key);
-    let receiver_address = client_proxy
+    let sender_auth_key = AuthenticationKey::from_public_key(&public_key);
+    let sender_address = sender_auth_key.derived_address();
+    let (receiver_address, receiver_auth_key_opt) = client_proxy
         .get_account_address_from_parameter(
             "1bfb3b36384dabd29e38b4a0eafd9797b75141bb007cea7943f8a4714d3d784a",
         )
         .unwrap();
+    assert!(
+        receiver_auth_key_opt.is_some(),
+        "Failed to look up receiver auth key from parameter"
+    );
+    let receiver_auth_key = receiver_auth_key_opt.unwrap();
     let amount = ClientProxy::convert_to_micro_libras("1").unwrap();
     let gas_unit_price = 123;
     let max_gas_amount = 1000;
 
     // mint to the sender address
     client_proxy
-        .mint_coins(&["mintb", &format!("{}", sender_address), "10"], true)
+        .mint_coins(&["mintb", &format!("{}", sender_auth_key), "10"], true)
         .unwrap();
 
     // prepare transfer transaction
@@ -644,6 +650,7 @@ fn test_external_transaction_signer() {
             sender_address,
             sequence_number,
             receiver_address,
+            receiver_auth_key.prefix().to_vec(),
             amount,
             Some(gas_unit_price),
             Some(max_gas_amount),
@@ -682,20 +689,23 @@ fn test_external_transaction_signer() {
     assert_eq!(submitted_signed_txn.max_gas_amount(), max_gas_amount);
     match submitted_signed_txn.payload() {
         TransactionPayload::Script(program) => match program.args().len() {
-            2 => match (&program.args()[0], &program.args()[1]) {
+            3 => match (&program.args()[0], &program.args()[1], &program.args()[2]) {
                 (
                     TransactionArgument::Address(arg_receiver),
+                    TransactionArgument::U8Vector(arg_auth_key_prefix),
                     TransactionArgument::U64(arg_amount),
                 ) => {
                     assert_eq!(arg_receiver.clone(), receiver_address);
+                    assert_eq!(arg_auth_key_prefix.clone(), receiver_auth_key.prefix());
                     assert_eq!(arg_amount.clone(), amount);
                 }
                 _ => panic!(
-                    "The first argument for payment transaction must be recipient address \
-                     and the second argument must be amount."
+                    "The first argument for payment transaction must be recipient address, \
+                     the second argument must be recipient auth key prefix, and the third \
+                     must be amount."
                 ),
             },
-            _ => panic!("Signed transaction payload arguments must have two arguments."),
+            _ => panic!("Signed transaction payload arguments must have three arguments."),
         },
         _ => panic!("Signed transaction payload expected to be of struct Script"),
     }
@@ -716,6 +726,10 @@ fn test_full_node_basic_flow() {
     let mut validator_ac_client = env.get_validator_ac_client(1, None);
     let mut full_node_client = env.get_full_node_ac_client(1, None);
     let mut full_node_client_2 = env.get_full_node_ac_client(0, None);
+
+    // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
+    let sender_account = association_address();
+    full_node_client.wait_for_transaction(sender_account, 4);
     for idx in 0..3 {
         validator_ac_client.create_next_account(false).unwrap();
         full_node_client.create_next_account(false).unwrap();
@@ -730,7 +744,6 @@ fn test_full_node_basic_flow() {
         );
     }
 
-    let sender_account = association_address();
     // mint from full node and check both validator and full node have correct balance
     let account3 = validator_ac_client
         .create_next_account(false)
@@ -739,8 +752,6 @@ fn test_full_node_basic_flow() {
     full_node_client.create_next_account(false).unwrap();
     full_node_client_2.create_next_account(false).unwrap();
 
-    // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
-    full_node_client.wait_for_transaction(sender_account, 4);
     let sequence_reset = format!("sequence {} true", sender_account);
     let sequence_reset_command: Vec<_> = sequence_reset.split(' ').collect();
     full_node_client

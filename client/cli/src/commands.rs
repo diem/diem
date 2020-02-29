@@ -7,7 +7,7 @@ use crate::{
 };
 use anyhow::Error;
 use libra_metrics::counters::*;
-use libra_types::account_address::ADDRESS_LENGTH;
+use libra_types::account_address::{ADDRESS_LENGTH, AUTHENTICATION_KEY_LENGTH};
 use std::{collections::HashMap, sync::Arc};
 
 /// Print the error and bump up error counter.
@@ -45,6 +45,14 @@ pub fn debug_format_cmd(cmd: &str) -> bool {
 pub fn is_address(data: &str) -> bool {
     match hex::decode(data) {
         Ok(vec) => vec.len() == ADDRESS_LENGTH,
+        Err(_) => false,
+    }
+}
+
+/// Check whether the input string is a valid libra authentication key.
+pub fn is_authentication_key(data: &str) -> bool {
+    match hex::decode(data) {
+        Ok(vec) => vec.len() == AUTHENTICATION_KEY_LENGTH,
         Err(_) => false,
     }
 }

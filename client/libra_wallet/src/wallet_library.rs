@@ -20,7 +20,7 @@ use crate::{
 use anyhow::Result;
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, AuthenticationKey},
     transaction::{helpers::TransactionSigner, RawTransaction, SignedTransaction},
 };
 use rand::{rngs::EntropyRng, Rng};
@@ -102,18 +102,22 @@ impl WalletLibrary {
         child_number: ChildNumber,
     ) -> Result<AccountAddress> {
         let child = self.key_factory.private_child(child_number)?;
-        child.get_address()
+        Ok(child.get_address())
     }
 
     /// Function that generates a new key and adds it to the addr_map and subsequently returns the
-    /// AccountAddress associated to the PrivateKey, along with it's ChildNumber
-    pub fn new_address(&mut self) -> Result<(AccountAddress, ChildNumber)> {
+    /// AuthenticationKey associated to the PrivateKey, along with it's ChildNumber
+    pub fn new_address(&mut self) -> Result<(AuthenticationKey, ChildNumber)> {
         let child = self.key_factory.private_child(self.key_leaf)?;
-        let address = child.get_address()?;
+        let authentication_key = child.get_authentication_key();
         let old_key_leaf = self.key_leaf;
         self.key_leaf.increment();
-        if self.addr_map.insert(address, old_key_leaf).is_none() {
-            Ok((address, old_key_leaf))
+        if self
+            .addr_map
+            .insert(authentication_key.derived_address(), old_key_leaf)
+            .is_none()
+        {
+            Ok((authentication_key, old_key_leaf))
         } else {
             Err(WalletError::LibraWalletGeneric(
                 "This address is already in your wallet".to_string(),

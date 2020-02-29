@@ -6,7 +6,7 @@
 use libra_crypto::ed25519::*;
 use libra_types::{
     access_path::AccessPath,
-    account_address::AccountAddress,
+    account_address::{AccountAddress, AuthenticationKey},
     account_config,
     event::EventHandle,
     transaction::{
@@ -117,7 +117,14 @@ impl Account {
     ///
     /// This is the same as the account's address if the keys have never been rotated.
     pub fn auth_key(&self) -> Vec<u8> {
-        AccountAddress::from_public_key(&self.pubkey).to_vec()
+        AuthenticationKey::from_public_key(&self.pubkey).to_vec()
+    }
+
+    /// Return the first 16 bytes of the account's auth key
+    pub fn auth_key_prefix(&self) -> Vec<u8> {
+        AuthenticationKey::from_public_key(&self.pubkey)
+            .prefix()
+            .to_vec()
     }
 
     //
@@ -341,7 +348,8 @@ impl AccountData {
         // TODO: publish some concept of Account
         let coin = Value::struct_(Struct::pack(vec![Value::u64(self.balance)]));
         Value::struct_(Struct::pack(vec![
-            Value::vector_u8(AccountAddress::from_public_key(&self.account.pubkey).to_vec()),
+            // TODO: this needs to compute the auth key instead
+            Value::vector_u8(AccountAddress::authentication_key(&self.account.pubkey).to_vec()),
             coin,
             Value::bool(self.delegated_key_rotation_capability),
             Value::bool(self.delegated_withdrawal_capability),

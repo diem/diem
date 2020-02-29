@@ -175,7 +175,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $GasSchedule_T_is_well_formed(gas_schedule);
     __m := UpdateLocal(__m, __frame + 0, gas_schedule);
-    assume $DebugTrackLocal(6, 0, 0, 1239, gas_schedule);
+    assume $DebugTrackLocal(6, 0, 0, 1235, gas_schedule);
 
     // increase the local counter
     __local_counter := __local_counter + 7;
@@ -199,7 +199,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
-    if (true) { assume $DebugTrackAbort(6, 0, 1320); }
+    if (true) { assume $DebugTrackAbort(6, 0, 1316); }
     goto Label_Abort;
 
 Label_7:
@@ -208,7 +208,7 @@ Label_7:
 
     call MoveToSender(GasSchedule_T_type_value(), GetLocal(__m, __frame + 6));
     if (__abort_flag) {
-      assume $DebugTrackAbort(6, 0, 1332);
+      assume $DebugTrackAbort(6, 0, 1328);
       goto Label_Abort;
     }
 
@@ -257,13 +257,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), GasSchedule_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(6, 1, 1532);
+      assume $DebugTrackAbort(6, 1, 1528);
       goto Label_Abort;
     }
 
     call table := CopyOrMoveRef(__t3);
     assume $GasSchedule_T_is_well_formed(Dereference(__m, table));
-    assume $DebugTrackLocal(6, 1, 0, 1524, Dereference(__m, table));
+    assume $DebugTrackLocal(6, 1, 0, 1520, Dereference(__m, table));
 
     call __t4 := CopyOrMoveRef(table);
 
@@ -271,7 +271,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t6 := Vector_length(GasSchedule_Cost_type_value(), __t5);
     if (__abort_flag) {
-      assume $DebugTrackAbort(6, 1, 1593);
+      assume $DebugTrackAbort(6, 1, 1589);
       goto Label_Abort;
     }
     assume IsValidU64(__t6);
@@ -280,13 +280,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    assume $DebugTrackLocal(6, 1, 1, 1569, __tmp);
+    assume $DebugTrackLocal(6, 1, 1, 1565, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    assume $DebugTrackLocal(6, 1, 2, 1662, __ret0);
+    assume $DebugTrackLocal(6, 1, 2, 1658, __ret0);
     return;
 
 Label_Abort:
@@ -333,13 +333,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), GasSchedule_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(6, 2, 1833);
+      assume $DebugTrackAbort(6, 2, 1829);
       goto Label_Abort;
     }
 
     call table := CopyOrMoveRef(__t3);
     assume $GasSchedule_T_is_well_formed(Dereference(__m, table));
-    assume $DebugTrackLocal(6, 2, 0, 1825, Dereference(__m, table));
+    assume $DebugTrackLocal(6, 2, 0, 1821, Dereference(__m, table));
 
     call __t4 := CopyOrMoveRef(table);
 
@@ -347,7 +347,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t6 := Vector_length(GasSchedule_Cost_type_value(), __t5);
     if (__abort_flag) {
-      assume $DebugTrackAbort(6, 2, 1889);
+      assume $DebugTrackAbort(6, 2, 1885);
       goto Label_Abort;
     }
     assume IsValidU64(__t6);
@@ -356,13 +356,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    assume $DebugTrackLocal(6, 2, 1, 1870, __tmp);
+    assume $DebugTrackLocal(6, 2, 1, 1866, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    assume $DebugTrackLocal(6, 2, 2, 1953, __ret0);
+    assume $DebugTrackLocal(6, 2, 2, 1949, __ret0);
     return;
 
 Label_Abort:
@@ -399,26 +399,26 @@ axiom ValidatorConfig_Config_fullnodes_network_identity_pubkey == 4;
 const ValidatorConfig_Config_fullnodes_network_address: FieldName;
 axiom ValidatorConfig_Config_fullnodes_network_address == 5;
 function ValidatorConfig_Config_type_value(): TypeValue {
-    StructType(ValidatorConfig_Config, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, ByteArrayType()), ByteArrayType()), ByteArrayType()), ByteArrayType()), ByteArrayType()), ByteArrayType()))
+    StructType(ValidatorConfig_Config, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, Vector_T_type_value(IntegerType())), Vector_T_type_value(IntegerType())), Vector_T_type_value(IntegerType())), Vector_T_type_value(IntegerType())), Vector_T_type_value(IntegerType())), Vector_T_type_value(IntegerType())))
 }
 function {:inline 1} $ValidatorConfig_Config_is_well_formed(__this: Value): bool {
     is#Vector(__this)
-        && is#ByteArray(SelectField(__this, ValidatorConfig_Config_consensus_pubkey))
-        && is#ByteArray(SelectField(__this, ValidatorConfig_Config_validator_network_signing_pubkey))
-        && is#ByteArray(SelectField(__this, ValidatorConfig_Config_validator_network_identity_pubkey))
-        && is#ByteArray(SelectField(__this, ValidatorConfig_Config_validator_network_address))
-        && is#ByteArray(SelectField(__this, ValidatorConfig_Config_fullnodes_network_identity_pubkey))
-        && is#ByteArray(SelectField(__this, ValidatorConfig_Config_fullnodes_network_address))
+        && $Vector_T_is_well_formed(SelectField(__this, ValidatorConfig_Config_consensus_pubkey))
+        && $Vector_T_is_well_formed(SelectField(__this, ValidatorConfig_Config_validator_network_signing_pubkey))
+        && $Vector_T_is_well_formed(SelectField(__this, ValidatorConfig_Config_validator_network_identity_pubkey))
+        && $Vector_T_is_well_formed(SelectField(__this, ValidatorConfig_Config_validator_network_address))
+        && $Vector_T_is_well_formed(SelectField(__this, ValidatorConfig_Config_fullnodes_network_identity_pubkey))
+        && $Vector_T_is_well_formed(SelectField(__this, ValidatorConfig_Config_fullnodes_network_address))
 }
 
 procedure {:inline 1} Pack_ValidatorConfig_Config(module_idx: int, func_idx: int, var_idx: int, code_idx: int, consensus_pubkey: Value, validator_network_signing_pubkey: Value, validator_network_identity_pubkey: Value, validator_network_address: Value, fullnodes_network_identity_pubkey: Value, fullnodes_network_address: Value) returns (_struct: Value)
 {
-    assume is#ByteArray(consensus_pubkey);
-    assume is#ByteArray(validator_network_signing_pubkey);
-    assume is#ByteArray(validator_network_identity_pubkey);
-    assume is#ByteArray(validator_network_address);
-    assume is#ByteArray(fullnodes_network_identity_pubkey);
-    assume is#ByteArray(fullnodes_network_address);
+    assume $Vector_T_is_well_formed(consensus_pubkey);
+    assume $Vector_T_is_well_formed(validator_network_signing_pubkey);
+    assume $Vector_T_is_well_formed(validator_network_identity_pubkey);
+    assume $Vector_T_is_well_formed(validator_network_address);
+    assume $Vector_T_is_well_formed(fullnodes_network_identity_pubkey);
+    assume $Vector_T_is_well_formed(fullnodes_network_address);
     _struct := Vector(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(ExtendValueArray(EmptyValueArray, consensus_pubkey), validator_network_signing_pubkey), validator_network_identity_pubkey), validator_network_address), fullnodes_network_identity_pubkey), fullnodes_network_address));
     if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
@@ -427,17 +427,17 @@ procedure {:inline 1} Unpack_ValidatorConfig_Config(_struct: Value) returns (con
 {
     assume is#Vector(_struct);
     consensus_pubkey := SelectField(_struct, ValidatorConfig_Config_consensus_pubkey);
-    assume is#ByteArray(consensus_pubkey);
+    assume $Vector_T_is_well_formed(consensus_pubkey);
     validator_network_signing_pubkey := SelectField(_struct, ValidatorConfig_Config_validator_network_signing_pubkey);
-    assume is#ByteArray(validator_network_signing_pubkey);
+    assume $Vector_T_is_well_formed(validator_network_signing_pubkey);
     validator_network_identity_pubkey := SelectField(_struct, ValidatorConfig_Config_validator_network_identity_pubkey);
-    assume is#ByteArray(validator_network_identity_pubkey);
+    assume $Vector_T_is_well_formed(validator_network_identity_pubkey);
     validator_network_address := SelectField(_struct, ValidatorConfig_Config_validator_network_address);
-    assume is#ByteArray(validator_network_address);
+    assume $Vector_T_is_well_formed(validator_network_address);
     fullnodes_network_identity_pubkey := SelectField(_struct, ValidatorConfig_Config_fullnodes_network_identity_pubkey);
-    assume is#ByteArray(fullnodes_network_identity_pubkey);
+    assume $Vector_T_is_well_formed(fullnodes_network_identity_pubkey);
     fullnodes_network_address := SelectField(_struct, ValidatorConfig_Config_fullnodes_network_address);
-    assume is#ByteArray(fullnodes_network_address);
+    assume $Vector_T_is_well_formed(fullnodes_network_address);
 }
 
 const unique ValidatorConfig_T: TypeName;
@@ -487,7 +487,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    assume $DebugTrackLocal(7, 0, 0, 645, addr);
+    assume $DebugTrackLocal(7, 0, 0, 651, addr);
 
     // increase the local counter
     __local_counter := __local_counter + 3;
@@ -500,7 +500,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    assume $DebugTrackLocal(7, 0, 1, 687, __ret0);
+    assume $DebugTrackLocal(7, 0, 1, 693, __ret0);
     return;
 
 Label_Abort:
@@ -537,7 +537,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    assume $DebugTrackLocal(7, 1, 0, 907, addr);
+    assume $DebugTrackLocal(7, 1, 0, 913, addr);
 
     // increase the local counter
     __local_counter := __local_counter + 7;
@@ -548,13 +548,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), ValidatorConfig_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(7, 1, 1007);
+      assume $DebugTrackAbort(7, 1, 1013);
       goto Label_Abort;
     }
 
     call t_ref := CopyOrMoveRef(__t3);
     assume $ValidatorConfig_T_is_well_formed(Dereference(__m, t_ref));
-    assume $DebugTrackLocal(7, 1, 1, 999, Dereference(__m, t_ref));
+    assume $DebugTrackLocal(7, 1, 1, 1005, Dereference(__m, t_ref));
 
     call __t4 := CopyOrMoveRef(t_ref);
 
@@ -565,7 +565,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    assume $DebugTrackLocal(7, 1, 2, 1045, __ret0);
+    assume $DebugTrackLocal(7, 1, 2, 1051, __ret0);
     return;
 
 Label_Abort:
@@ -585,8 +585,8 @@ requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
     var __t1: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var __t2: Reference; // ReferenceType(ByteArrayType())
-    var __t3: Value; // ByteArrayType()
+    var __t2: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t3: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -599,7 +599,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref)) && IsValidReferenceParameter(__m, __local_counter, config_ref);
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref));
-    assume $DebugTrackLocal(7, 2, 0, 1129, Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 2, 0, 1135, Dereference(__m, config_ref));
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -610,11 +610,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t2 := BorrowField(__t1, ValidatorConfig_Config_consensus_pubkey);
 
     call __tmp := ReadRef(__t2);
-    assume is#ByteArray(__tmp);
+    assume $Vector_T_is_well_formed(__tmp);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    assume $DebugTrackLocal(7, 2, 1, 1200, __ret0);
+    assume $DebugTrackLocal(7, 2, 1, 1207, __ret0);
     return;
 
 Label_Abort:
@@ -634,8 +634,8 @@ requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
     var __t1: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var __t2: Reference; // ReferenceType(ByteArrayType())
-    var __t3: Value; // ByteArrayType()
+    var __t2: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t3: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -648,7 +648,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref)) && IsValidReferenceParameter(__m, __local_counter, config_ref);
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref));
-    assume $DebugTrackLocal(7, 3, 0, 1315, Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 3, 0, 1322, Dereference(__m, config_ref));
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -659,11 +659,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t2 := BorrowField(__t1, ValidatorConfig_Config_validator_network_signing_pubkey);
 
     call __tmp := ReadRef(__t2);
-    assume is#ByteArray(__tmp);
+    assume $Vector_T_is_well_formed(__tmp);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    assume $DebugTrackLocal(7, 3, 1, 1402, __ret0);
+    assume $DebugTrackLocal(7, 3, 1, 1410, __ret0);
     return;
 
 Label_Abort:
@@ -683,8 +683,8 @@ requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
     var __t1: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var __t2: Reference; // ReferenceType(ByteArrayType())
-    var __t3: Value; // ByteArrayType()
+    var __t2: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t3: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -697,7 +697,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref)) && IsValidReferenceParameter(__m, __local_counter, config_ref);
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref));
-    assume $DebugTrackLocal(7, 4, 0, 1534, Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 4, 0, 1542, Dereference(__m, config_ref));
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -708,11 +708,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t2 := BorrowField(__t1, ValidatorConfig_Config_validator_network_identity_pubkey);
 
     call __tmp := ReadRef(__t2);
-    assume is#ByteArray(__tmp);
+    assume $Vector_T_is_well_formed(__tmp);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    assume $DebugTrackLocal(7, 4, 1, 1622, __ret0);
+    assume $DebugTrackLocal(7, 4, 1, 1631, __ret0);
     return;
 
 Label_Abort:
@@ -732,8 +732,8 @@ requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
     var __t1: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var __t2: Reference; // ReferenceType(ByteArrayType())
-    var __t3: Value; // ByteArrayType()
+    var __t2: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t3: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -746,7 +746,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref)) && IsValidReferenceParameter(__m, __local_counter, config_ref);
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref));
-    assume $DebugTrackLocal(7, 5, 0, 1747, Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 5, 0, 1756, Dereference(__m, config_ref));
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -757,11 +757,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t2 := BorrowField(__t1, ValidatorConfig_Config_validator_network_address);
 
     call __tmp := ReadRef(__t2);
-    assume is#ByteArray(__tmp);
+    assume $Vector_T_is_well_formed(__tmp);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    assume $DebugTrackLocal(7, 5, 1, 1827, __ret0);
+    assume $DebugTrackLocal(7, 5, 1, 1837, __ret0);
     return;
 
 Label_Abort:
@@ -781,8 +781,8 @@ requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
     var __t1: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var __t2: Reference; // ReferenceType(ByteArrayType())
-    var __t3: Value; // ByteArrayType()
+    var __t2: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t3: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -795,7 +795,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref)) && IsValidReferenceParameter(__m, __local_counter, config_ref);
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref));
-    assume $DebugTrackLocal(7, 6, 0, 1952, Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 6, 0, 1962, Dereference(__m, config_ref));
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -806,11 +806,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t2 := BorrowField(__t1, ValidatorConfig_Config_fullnodes_network_identity_pubkey);
 
     call __tmp := ReadRef(__t2);
-    assume is#ByteArray(__tmp);
+    assume $Vector_T_is_well_formed(__tmp);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    assume $DebugTrackLocal(7, 6, 1, 2040, __ret0);
+    assume $DebugTrackLocal(7, 6, 1, 2051, __ret0);
     return;
 
 Label_Abort:
@@ -830,8 +830,8 @@ requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
     var __t1: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var __t2: Reference; // ReferenceType(ByteArrayType())
-    var __t3: Value; // ByteArrayType()
+    var __t2: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t3: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -844,7 +844,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref)) && IsValidReferenceParameter(__m, __local_counter, config_ref);
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref));
-    assume $DebugTrackLocal(7, 7, 0, 2165, Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 7, 0, 2176, Dereference(__m, config_ref));
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -855,11 +855,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t2 := BorrowField(__t1, ValidatorConfig_Config_fullnodes_network_address);
 
     call __tmp := ReadRef(__t2);
-    assume is#ByteArray(__tmp);
+    assume $Vector_T_is_well_formed(__tmp);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    assume $DebugTrackLocal(7, 7, 1, 2245, __ret0);
+    assume $DebugTrackLocal(7, 7, 1, 2257, __ret0);
     return;
 
 Label_Abort:
@@ -878,12 +878,12 @@ procedure {:inline 1} ValidatorConfig_register_candidate_validator (consensus_pu
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var __t6: Value; // ByteArrayType()
-    var __t7: Value; // ByteArrayType()
-    var __t8: Value; // ByteArrayType()
-    var __t9: Value; // ByteArrayType()
-    var __t10: Value; // ByteArrayType()
-    var __t11: Value; // ByteArrayType()
+    var __t6: Value; // Vector_T_type_value(IntegerType())
+    var __t7: Value; // Vector_T_type_value(IntegerType())
+    var __t8: Value; // Vector_T_type_value(IntegerType())
+    var __t9: Value; // Vector_T_type_value(IntegerType())
+    var __t10: Value; // Vector_T_type_value(IntegerType())
+    var __t11: Value; // Vector_T_type_value(IntegerType())
     var __t12: Value; // ValidatorConfig_Config_type_value()
     var __t13: Value; // ValidatorConfig_T_type_value()
     var __tmp: Value;
@@ -896,24 +896,24 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#ByteArray(consensus_pubkey);
+    assume $Vector_T_is_well_formed(consensus_pubkey);
     __m := UpdateLocal(__m, __frame + 0, consensus_pubkey);
-    assume $DebugTrackLocal(7, 8, 0, 2532, consensus_pubkey);
-    assume is#ByteArray(validator_network_signing_pubkey);
+    assume $DebugTrackLocal(7, 8, 0, 2544, consensus_pubkey);
+    assume $Vector_T_is_well_formed(validator_network_signing_pubkey);
     __m := UpdateLocal(__m, __frame + 1, validator_network_signing_pubkey);
-    assume $DebugTrackLocal(7, 8, 1, 2532, validator_network_signing_pubkey);
-    assume is#ByteArray(validator_network_identity_pubkey);
+    assume $DebugTrackLocal(7, 8, 1, 2544, validator_network_signing_pubkey);
+    assume $Vector_T_is_well_formed(validator_network_identity_pubkey);
     __m := UpdateLocal(__m, __frame + 2, validator_network_identity_pubkey);
-    assume $DebugTrackLocal(7, 8, 2, 2532, validator_network_identity_pubkey);
-    assume is#ByteArray(validator_network_address);
+    assume $DebugTrackLocal(7, 8, 2, 2544, validator_network_identity_pubkey);
+    assume $Vector_T_is_well_formed(validator_network_address);
     __m := UpdateLocal(__m, __frame + 3, validator_network_address);
-    assume $DebugTrackLocal(7, 8, 3, 2532, validator_network_address);
-    assume is#ByteArray(fullnodes_network_identity_pubkey);
+    assume $DebugTrackLocal(7, 8, 3, 2544, validator_network_address);
+    assume $Vector_T_is_well_formed(fullnodes_network_identity_pubkey);
     __m := UpdateLocal(__m, __frame + 4, fullnodes_network_identity_pubkey);
-    assume $DebugTrackLocal(7, 8, 4, 2532, fullnodes_network_identity_pubkey);
-    assume is#ByteArray(fullnodes_network_address);
+    assume $DebugTrackLocal(7, 8, 4, 2544, fullnodes_network_identity_pubkey);
+    assume $Vector_T_is_well_formed(fullnodes_network_address);
     __m := UpdateLocal(__m, __frame + 5, fullnodes_network_address);
-    assume $DebugTrackLocal(7, 8, 5, 2532, fullnodes_network_address);
+    assume $DebugTrackLocal(7, 8, 5, 2544, fullnodes_network_address);
 
     // increase the local counter
     __local_counter := __local_counter + 14;
@@ -945,7 +945,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call MoveToSender(ValidatorConfig_T_type_value(), GetLocal(__m, __frame + 13));
     if (__abort_flag) {
-      assume $DebugTrackAbort(7, 8, 2870);
+      assume $DebugTrackAbort(7, 8, 2888);
       goto Label_Abort;
     }
 
@@ -968,15 +968,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // declare local variables
     var t_ref: Reference; // ReferenceType(ValidatorConfig_T_type_value())
     var config_ref: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var key_ref: Reference; // ReferenceType(ByteArrayType())
+    var key_ref: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
     var __t4: Value; // AddressType()
     var __t5: Reference; // ReferenceType(ValidatorConfig_T_type_value())
     var __t6: Reference; // ReferenceType(ValidatorConfig_T_type_value())
     var __t7: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
     var __t8: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var __t9: Reference; // ReferenceType(ByteArrayType())
-    var __t10: Value; // ByteArrayType()
-    var __t11: Reference; // ReferenceType(ByteArrayType())
+    var __t9: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t10: Value; // Vector_T_type_value(IntegerType())
+    var __t11: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -987,9 +987,9 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#ByteArray(consensus_pubkey);
+    assume $Vector_T_is_well_formed(consensus_pubkey);
     __m := UpdateLocal(__m, __frame + 0, consensus_pubkey);
-    assume $DebugTrackLocal(7, 9, 0, 3648, consensus_pubkey);
+    assume $DebugTrackLocal(7, 9, 0, 3666, consensus_pubkey);
 
     // increase the local counter
     __local_counter := __local_counter + 12;
@@ -1000,13 +1000,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t5 := BorrowGlobal(GetLocal(__m, __frame + 4), ValidatorConfig_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(7, 9, 3849);
+      assume $DebugTrackAbort(7, 9, 3869);
       goto Label_Abort;
     }
 
     call t_ref := CopyOrMoveRef(__t5);
     assume $ValidatorConfig_T_is_well_formed(Dereference(__m, t_ref));
-    assume $DebugTrackLocal(7, 9, 1, 3841, Dereference(__m, t_ref));
+    assume $DebugTrackLocal(7, 9, 1, 3861, Dereference(__m, t_ref));
 
     call __t6 := CopyOrMoveRef(t_ref);
 
@@ -1014,15 +1014,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call config_ref := CopyOrMoveRef(__t7);
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref));
-    assume $DebugTrackLocal(7, 9, 2, 3897, Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 9, 2, 3917, Dereference(__m, config_ref));
 
     call __t8 := CopyOrMoveRef(config_ref);
 
     call __t9 := BorrowField(__t8, ValidatorConfig_Config_consensus_pubkey);
 
     call key_ref := CopyOrMoveRef(__t9);
-    assume is#ByteArray(Dereference(__m, key_ref));
-    assume $DebugTrackLocal(7, 9, 3, 3943, Dereference(__m, key_ref));
+    assume $Vector_T_is_well_formed(Dereference(__m, key_ref));
+    assume $DebugTrackLocal(7, 9, 3, 3963, Dereference(__m, key_ref));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
@@ -1051,15 +1051,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // declare local variables
     var t_ref: Reference; // ReferenceType(ValidatorConfig_T_type_value())
     var config_ref: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var key_ref: Reference; // ReferenceType(ByteArrayType())
+    var key_ref: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
     var __t4: Value; // AddressType()
     var __t5: Reference; // ReferenceType(ValidatorConfig_T_type_value())
     var __t6: Reference; // ReferenceType(ValidatorConfig_T_type_value())
     var __t7: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
     var __t8: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var __t9: Reference; // ReferenceType(ByteArrayType())
-    var __t10: Value; // ByteArrayType()
-    var __t11: Reference; // ReferenceType(ByteArrayType())
+    var __t9: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t10: Value; // Vector_T_type_value(IntegerType())
+    var __t11: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -1070,9 +1070,9 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#ByteArray(validator_network_identity_pubkey);
+    assume $Vector_T_is_well_formed(validator_network_identity_pubkey);
     __m := UpdateLocal(__m, __frame + 0, validator_network_identity_pubkey);
-    assume $DebugTrackLocal(7, 10, 0, 4265, validator_network_identity_pubkey);
+    assume $DebugTrackLocal(7, 10, 0, 4285, validator_network_identity_pubkey);
 
     // increase the local counter
     __local_counter := __local_counter + 12;
@@ -1083,13 +1083,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t5 := BorrowGlobal(GetLocal(__m, __frame + 4), ValidatorConfig_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(7, 10, 4510);
+      assume $DebugTrackAbort(7, 10, 4532);
       goto Label_Abort;
     }
 
     call t_ref := CopyOrMoveRef(__t5);
     assume $ValidatorConfig_T_is_well_formed(Dereference(__m, t_ref));
-    assume $DebugTrackLocal(7, 10, 1, 4502, Dereference(__m, t_ref));
+    assume $DebugTrackLocal(7, 10, 1, 4524, Dereference(__m, t_ref));
 
     call __t6 := CopyOrMoveRef(t_ref);
 
@@ -1097,15 +1097,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call config_ref := CopyOrMoveRef(__t7);
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref));
-    assume $DebugTrackLocal(7, 10, 2, 4558, Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 10, 2, 4580, Dereference(__m, config_ref));
 
     call __t8 := CopyOrMoveRef(config_ref);
 
     call __t9 := BorrowField(__t8, ValidatorConfig_Config_validator_network_identity_pubkey);
 
     call key_ref := CopyOrMoveRef(__t9);
-    assume is#ByteArray(Dereference(__m, key_ref));
-    assume $DebugTrackLocal(7, 10, 3, 4604, Dereference(__m, key_ref));
+    assume $Vector_T_is_well_formed(Dereference(__m, key_ref));
+    assume $DebugTrackLocal(7, 10, 3, 4626, Dereference(__m, key_ref));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
@@ -1134,15 +1134,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // declare local variables
     var t_ref: Reference; // ReferenceType(ValidatorConfig_T_type_value())
     var config_ref: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var key_ref: Reference; // ReferenceType(ByteArrayType())
+    var key_ref: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
     var __t4: Value; // AddressType()
     var __t5: Reference; // ReferenceType(ValidatorConfig_T_type_value())
     var __t6: Reference; // ReferenceType(ValidatorConfig_T_type_value())
     var __t7: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
     var __t8: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
-    var __t9: Reference; // ReferenceType(ByteArrayType())
-    var __t10: Value; // ByteArrayType()
-    var __t11: Reference; // ReferenceType(ByteArrayType())
+    var __t9: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t10: Value; // Vector_T_type_value(IntegerType())
+    var __t11: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -1153,9 +1153,9 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#ByteArray(validator_network_address);
+    assume $Vector_T_is_well_formed(validator_network_address);
     __m := UpdateLocal(__m, __frame + 0, validator_network_address);
-    assume $DebugTrackLocal(7, 11, 0, 4890, validator_network_address);
+    assume $DebugTrackLocal(7, 11, 0, 4912, validator_network_address);
 
     // increase the local counter
     __local_counter := __local_counter + 12;
@@ -1166,13 +1166,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t5 := BorrowGlobal(GetLocal(__m, __frame + 4), ValidatorConfig_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(7, 11, 5119);
+      assume $DebugTrackAbort(7, 11, 5143);
       goto Label_Abort;
     }
 
     call t_ref := CopyOrMoveRef(__t5);
     assume $ValidatorConfig_T_is_well_formed(Dereference(__m, t_ref));
-    assume $DebugTrackLocal(7, 11, 1, 5111, Dereference(__m, t_ref));
+    assume $DebugTrackLocal(7, 11, 1, 5135, Dereference(__m, t_ref));
 
     call __t6 := CopyOrMoveRef(t_ref);
 
@@ -1180,15 +1180,15 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call config_ref := CopyOrMoveRef(__t7);
     assume $ValidatorConfig_Config_is_well_formed(Dereference(__m, config_ref));
-    assume $DebugTrackLocal(7, 11, 2, 5167, Dereference(__m, config_ref));
+    assume $DebugTrackLocal(7, 11, 2, 5191, Dereference(__m, config_ref));
 
     call __t8 := CopyOrMoveRef(config_ref);
 
     call __t9 := BorrowField(__t8, ValidatorConfig_Config_validator_network_address);
 
     call key_ref := CopyOrMoveRef(__t9);
-    assume is#ByteArray(Dereference(__m, key_ref));
-    assume $DebugTrackLocal(7, 11, 3, 5213, Dereference(__m, key_ref));
+    assume $Vector_T_is_well_formed(Dereference(__m, key_ref));
+    assume $DebugTrackLocal(7, 11, 3, 5237, Dereference(__m, key_ref));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
@@ -2871,10 +2871,10 @@ const LibraAccount_T_sequence_number: FieldName;
 axiom LibraAccount_T_sequence_number == 6;
 const LibraAccount_T_event_generator: FieldName;
 axiom LibraAccount_T_event_generator == 7;
-axiom LibraAccount_T_type_value() == StructType(LibraAccount_T, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, ByteArrayType()), LibraCoin_T_type_value()), BooleanType()), BooleanType()), LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value())), LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value())), IntegerType()), LibraAccount_EventHandleGenerator_type_value()));
+axiom LibraAccount_T_type_value() == StructType(LibraAccount_T, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, Vector_T_type_value(IntegerType())), LibraCoin_T_type_value()), BooleanType()), BooleanType()), LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value())), LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value())), IntegerType()), LibraAccount_EventHandleGenerator_type_value()));
 function {:inline 1} $LibraAccount_T_is_well_formed(__this: Value): bool {
     is#Vector(__this)
-        && is#ByteArray(SelectField(__this, LibraAccount_T_authentication_key))
+        && $Vector_T_is_well_formed(SelectField(__this, LibraAccount_T_authentication_key))
         && $LibraCoin_T_is_well_formed(SelectField(__this, LibraAccount_T_balance))
         && is#Boolean(SelectField(__this, LibraAccount_T_delegated_key_rotation_capability))
         && is#Boolean(SelectField(__this, LibraAccount_T_delegated_withdrawal_capability))
@@ -2886,7 +2886,7 @@ function {:inline 1} $LibraAccount_T_is_well_formed(__this: Value): bool {
 
 procedure {:inline 1} Pack_LibraAccount_T(module_idx: int, func_idx: int, var_idx: int, code_idx: int, authentication_key: Value, balance: Value, delegated_key_rotation_capability: Value, delegated_withdrawal_capability: Value, received_events: Value, sent_events: Value, sequence_number: Value, event_generator: Value) returns (_struct: Value)
 {
-    assume is#ByteArray(authentication_key);
+    assume $Vector_T_is_well_formed(authentication_key);
     assume $LibraCoin_T_is_well_formed(balance);
     assume is#Boolean(delegated_key_rotation_capability);
     assume is#Boolean(delegated_withdrawal_capability);
@@ -2902,7 +2902,7 @@ procedure {:inline 1} Unpack_LibraAccount_T(_struct: Value) returns (authenticat
 {
     assume is#Vector(_struct);
     authentication_key := SelectField(_struct, LibraAccount_T_authentication_key);
-    assume is#ByteArray(authentication_key);
+    assume $Vector_T_is_well_formed(authentication_key);
     balance := SelectField(_struct, LibraAccount_T_balance);
     assume $LibraCoin_T_is_well_formed(balance);
     delegated_key_rotation_capability := SelectField(_struct, LibraAccount_T_delegated_key_rotation_capability);
@@ -2977,20 +2977,20 @@ axiom LibraAccount_SentPaymentEvent_payee == 1;
 const LibraAccount_SentPaymentEvent_metadata: FieldName;
 axiom LibraAccount_SentPaymentEvent_metadata == 2;
 function LibraAccount_SentPaymentEvent_type_value(): TypeValue {
-    StructType(LibraAccount_SentPaymentEvent, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), AddressType()), ByteArrayType()))
+    StructType(LibraAccount_SentPaymentEvent, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), AddressType()), Vector_T_type_value(IntegerType())))
 }
 function {:inline 1} $LibraAccount_SentPaymentEvent_is_well_formed(__this: Value): bool {
     is#Vector(__this)
         && IsValidU64(SelectField(__this, LibraAccount_SentPaymentEvent_amount))
         && is#Address(SelectField(__this, LibraAccount_SentPaymentEvent_payee))
-        && is#ByteArray(SelectField(__this, LibraAccount_SentPaymentEvent_metadata))
+        && $Vector_T_is_well_formed(SelectField(__this, LibraAccount_SentPaymentEvent_metadata))
 }
 
 procedure {:inline 1} Pack_LibraAccount_SentPaymentEvent(module_idx: int, func_idx: int, var_idx: int, code_idx: int, amount: Value, payee: Value, metadata: Value) returns (_struct: Value)
 {
     assume IsValidU64(amount);
     assume is#Address(payee);
-    assume is#ByteArray(metadata);
+    assume $Vector_T_is_well_formed(metadata);
     _struct := Vector(ExtendValueArray(ExtendValueArray(ExtendValueArray(EmptyValueArray, amount), payee), metadata));
     if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
@@ -3003,7 +3003,7 @@ procedure {:inline 1} Unpack_LibraAccount_SentPaymentEvent(_struct: Value) retur
     payee := SelectField(_struct, LibraAccount_SentPaymentEvent_payee);
     assume is#Address(payee);
     metadata := SelectField(_struct, LibraAccount_SentPaymentEvent_metadata);
-    assume is#ByteArray(metadata);
+    assume $Vector_T_is_well_formed(metadata);
 }
 
 const unique LibraAccount_ReceivedPaymentEvent: TypeName;
@@ -3014,20 +3014,20 @@ axiom LibraAccount_ReceivedPaymentEvent_payer == 1;
 const LibraAccount_ReceivedPaymentEvent_metadata: FieldName;
 axiom LibraAccount_ReceivedPaymentEvent_metadata == 2;
 function LibraAccount_ReceivedPaymentEvent_type_value(): TypeValue {
-    StructType(LibraAccount_ReceivedPaymentEvent, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), AddressType()), ByteArrayType()))
+    StructType(LibraAccount_ReceivedPaymentEvent, ExtendTypeValueArray(ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), AddressType()), Vector_T_type_value(IntegerType())))
 }
 function {:inline 1} $LibraAccount_ReceivedPaymentEvent_is_well_formed(__this: Value): bool {
     is#Vector(__this)
         && IsValidU64(SelectField(__this, LibraAccount_ReceivedPaymentEvent_amount))
         && is#Address(SelectField(__this, LibraAccount_ReceivedPaymentEvent_payer))
-        && is#ByteArray(SelectField(__this, LibraAccount_ReceivedPaymentEvent_metadata))
+        && $Vector_T_is_well_formed(SelectField(__this, LibraAccount_ReceivedPaymentEvent_metadata))
 }
 
 procedure {:inline 1} Pack_LibraAccount_ReceivedPaymentEvent(module_idx: int, func_idx: int, var_idx: int, code_idx: int, amount: Value, payer: Value, metadata: Value) returns (_struct: Value)
 {
     assume IsValidU64(amount);
     assume is#Address(payer);
-    assume is#ByteArray(metadata);
+    assume $Vector_T_is_well_formed(metadata);
     _struct := Vector(ExtendValueArray(ExtendValueArray(ExtendValueArray(EmptyValueArray, amount), payer), metadata));
     if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
@@ -3040,7 +3040,7 @@ procedure {:inline 1} Unpack_LibraAccount_ReceivedPaymentEvent(_struct: Value) r
     payer := SelectField(_struct, LibraAccount_ReceivedPaymentEvent_payer);
     assume is#Address(payer);
     metadata := SelectField(_struct, LibraAccount_ReceivedPaymentEvent_metadata);
-    assume is#ByteArray(metadata);
+    assume $Vector_T_is_well_formed(metadata);
 }
 
 const unique LibraAccount_EventHandleGenerator: TypeName;
@@ -3074,18 +3074,18 @@ axiom LibraAccount_EventHandle_counter == 0;
 const LibraAccount_EventHandle_guid: FieldName;
 axiom LibraAccount_EventHandle_guid == 1;
 function LibraAccount_EventHandle_type_value(tv0: TypeValue): TypeValue {
-    StructType(LibraAccount_EventHandle, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), ByteArrayType()))
+    StructType(LibraAccount_EventHandle, ExtendTypeValueArray(ExtendTypeValueArray(EmptyTypeValueArray, IntegerType()), Vector_T_type_value(IntegerType())))
 }
 function {:inline 1} $LibraAccount_EventHandle_is_well_formed(__this: Value): bool {
     is#Vector(__this)
         && IsValidU64(SelectField(__this, LibraAccount_EventHandle_counter))
-        && is#ByteArray(SelectField(__this, LibraAccount_EventHandle_guid))
+        && $Vector_T_is_well_formed(SelectField(__this, LibraAccount_EventHandle_guid))
 }
 
 procedure {:inline 1} Pack_LibraAccount_EventHandle(module_idx: int, func_idx: int, var_idx: int, code_idx: int, tv0: TypeValue, counter: Value, guid: Value) returns (_struct: Value)
 {
     assume IsValidU64(counter);
-    assume is#ByteArray(guid);
+    assume $Vector_T_is_well_formed(guid);
     _struct := Vector(ExtendValueArray(ExtendValueArray(EmptyValueArray, counter), guid));
     if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }
 }
@@ -3096,7 +3096,7 @@ procedure {:inline 1} Unpack_LibraAccount_EventHandle(_struct: Value) returns (c
     counter := SelectField(_struct, LibraAccount_EventHandle_counter);
     assume IsValidU64(counter);
     guid := SelectField(_struct, LibraAccount_EventHandle_guid);
-    assume is#ByteArray(guid);
+    assume $Vector_T_is_well_formed(guid);
 }
 
 
@@ -3122,10 +3122,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    assume $DebugTrackLocal(11, 0, 0, 3305, payee);
+    assume $DebugTrackLocal(11, 0, 0, 3302, payee);
     assume $LibraCoin_T_is_well_formed(to_deposit);
     __m := UpdateLocal(__m, __frame + 1, to_deposit);
-    assume $DebugTrackLocal(11, 0, 1, 3305, to_deposit);
+    assume $DebugTrackLocal(11, 0, 1, 3302, to_deposit);
 
     // increase the local counter
     __local_counter := __local_counter + 5;
@@ -3141,7 +3141,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call LibraAccount_deposit_with_metadata(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 0, 3382);
+      assume $DebugTrackAbort(11, 0, 3379);
       goto Label_Abort;
     }
 
@@ -3165,7 +3165,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __t3: Value; // AddressType()
     var __t4: Value; // AddressType()
     var __t5: Value; // LibraCoin_T_type_value()
-    var __t6: Value; // ByteArrayType()
+    var __t6: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -3178,13 +3178,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    assume $DebugTrackLocal(11, 1, 0, 3567, payee);
+    assume $DebugTrackLocal(11, 1, 0, 3564, payee);
     assume $LibraCoin_T_is_well_formed(to_deposit);
     __m := UpdateLocal(__m, __frame + 1, to_deposit);
-    assume $DebugTrackLocal(11, 1, 1, 3567, to_deposit);
-    assume is#ByteArray(metadata);
+    assume $DebugTrackLocal(11, 1, 1, 3564, to_deposit);
+    assume $Vector_T_is_well_formed(metadata);
     __m := UpdateLocal(__m, __frame + 2, metadata);
-    assume $DebugTrackLocal(11, 1, 2, 3567, metadata);
+    assume $DebugTrackLocal(11, 1, 2, 3564, metadata);
 
     // increase the local counter
     __local_counter := __local_counter + 7;
@@ -3204,7 +3204,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call LibraAccount_deposit_with_sender_and_metadata(GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 5), GetLocal(__m, __frame + 6));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 1, 3709);
+      assume $DebugTrackAbort(11, 1, 3707);
       goto Label_Abort;
     }
 
@@ -3241,7 +3241,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __t17: Reference; // ReferenceType(LibraAccount_EventHandle_type_value(LibraAccount_SentPaymentEvent_type_value()))
     var __t18: Value; // IntegerType()
     var __t19: Value; // AddressType()
-    var __t20: Value; // ByteArrayType()
+    var __t20: Value; // Vector_T_type_value(IntegerType())
     var __t21: Value; // LibraAccount_SentPaymentEvent_type_value()
     var __t22: Value; // AddressType()
     var __t23: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -3252,7 +3252,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __t28: Reference; // ReferenceType(LibraAccount_EventHandle_type_value(LibraAccount_ReceivedPaymentEvent_type_value()))
     var __t29: Value; // IntegerType()
     var __t30: Value; // AddressType()
-    var __t31: Value; // ByteArrayType()
+    var __t31: Value; // Vector_T_type_value(IntegerType())
     var __t32: Value; // LibraAccount_ReceivedPaymentEvent_type_value()
     var __tmp: Value;
     var __frame: int;
@@ -3266,16 +3266,16 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    assume $DebugTrackLocal(11, 2, 0, 4018, payee);
+    assume $DebugTrackLocal(11, 2, 0, 4016, payee);
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
-    assume $DebugTrackLocal(11, 2, 1, 4018, sender);
+    assume $DebugTrackLocal(11, 2, 1, 4016, sender);
     assume $LibraCoin_T_is_well_formed(to_deposit);
     __m := UpdateLocal(__m, __frame + 2, to_deposit);
-    assume $DebugTrackLocal(11, 2, 2, 4018, to_deposit);
-    assume is#ByteArray(metadata);
+    assume $DebugTrackLocal(11, 2, 2, 4016, to_deposit);
+    assume $Vector_T_is_well_formed(metadata);
     __m := UpdateLocal(__m, __frame + 3, metadata);
-    assume $DebugTrackLocal(11, 2, 3, 4018, metadata);
+    assume $DebugTrackLocal(11, 2, 3, 4016, metadata);
 
     // increase the local counter
     __local_counter := __local_counter + 33;
@@ -3285,7 +3285,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t8 := LibraCoin_value(__t7);
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 2, 4383);
+      assume $DebugTrackAbort(11, 2, 4382);
       goto Label_Abort;
     }
     assume IsValidU64(__t8);
@@ -3294,7 +3294,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 8));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
-    assume $DebugTrackLocal(11, 2, 4, 4367, __tmp);
+    assume $DebugTrackLocal(11, 2, 4, 4366, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -3314,7 +3314,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(7);
     __m := UpdateLocal(__m, __frame + 13, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 2, 4453); }
+    if (true) { assume $DebugTrackAbort(11, 2, 4452); }
     goto Label_Abort;
 
 Label_10:
@@ -3323,13 +3323,13 @@ Label_10:
 
     call __t15 := BorrowGlobal(GetLocal(__m, __frame + 14), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 2, 4524);
+      assume $DebugTrackAbort(11, 2, 4523);
       goto Label_Abort;
     }
 
     call sender_account_ref := CopyOrMoveRef(__t15);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, sender_account_ref));
-    assume $DebugTrackLocal(11, 2, 6, 4503, Dereference(__m, sender_account_ref));
+    assume $DebugTrackLocal(11, 2, 6, 4502, Dereference(__m, sender_account_ref));
 
     call __t16 := CopyOrMoveRef(sender_account_ref);
 
@@ -3349,7 +3349,7 @@ Label_10:
 
     call LibraAccount_emit_event(LibraAccount_SentPaymentEvent_type_value(), __t17, GetLocal(__m, __frame + 21));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 2, 4596);
+      assume $DebugTrackAbort(11, 2, 4595);
       goto Label_Abort;
     }
 
@@ -3358,13 +3358,13 @@ Label_10:
 
     call __t23 := BorrowGlobal(GetLocal(__m, __frame + 22), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 2, 4935);
+      assume $DebugTrackAbort(11, 2, 4934);
       goto Label_Abort;
     }
 
     call payee_account_ref := CopyOrMoveRef(__t23);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, payee_account_ref));
-    assume $DebugTrackLocal(11, 2, 5, 4915, Dereference(__m, payee_account_ref));
+    assume $DebugTrackLocal(11, 2, 5, 4914, Dereference(__m, payee_account_ref));
 
     call __t24 := CopyOrMoveRef(payee_account_ref);
 
@@ -3375,7 +3375,7 @@ Label_10:
 
     call LibraCoin_deposit(__t25, GetLocal(__m, __frame + 26));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 2, 5019);
+      assume $DebugTrackAbort(11, 2, 5018);
       goto Label_Abort;
     }
 
@@ -3397,7 +3397,7 @@ Label_10:
 
     call LibraAccount_emit_event(LibraAccount_ReceivedPaymentEvent_type_value(), __t28, GetLocal(__m, __frame + 32));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 2, 5134);
+      assume $DebugTrackAbort(11, 2, 5133);
       goto Label_Abort;
     }
 
@@ -3437,10 +3437,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    assume $DebugTrackLocal(11, 3, 0, 5776, payee);
+    assume $DebugTrackLocal(11, 3, 0, 5775, payee);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    assume $DebugTrackLocal(11, 3, 1, 5776, amount);
+    assume $DebugTrackLocal(11, 3, 1, 5775, amount);
 
     // increase the local counter
     __local_counter := __local_counter + 9;
@@ -3463,7 +3463,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call LibraAccount_create_account(GetLocal(__m, __frame + 5));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 3, 5942);
+      assume $DebugTrackAbort(11, 3, 5941);
       goto Label_Abort;
     }
 
@@ -3476,7 +3476,7 @@ Label_6:
 
     call __t8 := LibraCoin_mint_with_default_capability(GetLocal(__m, __frame + 7));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 3, 6058);
+      assume $DebugTrackAbort(11, 3, 6057);
       goto Label_Abort;
     }
     assume $LibraCoin_T_is_well_formed(__t8);
@@ -3485,7 +3485,7 @@ Label_6:
 
     call LibraAccount_deposit(GetLocal(__m, __frame + 6), GetLocal(__m, __frame + 8));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 3, 6032);
+      assume $DebugTrackAbort(11, 3, 6031);
       goto Label_Abort;
     }
 
@@ -3524,10 +3524,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account)) && IsValidReferenceParameter(__m, __local_counter, account);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account));
-    assume $DebugTrackLocal(11, 4, 0, 6237, Dereference(__m, account));
+    assume $DebugTrackLocal(11, 4, 0, 6236, Dereference(__m, account));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    assume $DebugTrackLocal(11, 4, 1, 6237, amount);
+    assume $DebugTrackLocal(11, 4, 1, 6236, amount);
 
     // increase the local counter
     __local_counter := __local_counter + 8;
@@ -3542,24 +3542,24 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t6 := LibraCoin_withdraw(__t4, GetLocal(__m, __frame + 5));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 4, 6370);
+      assume $DebugTrackAbort(11, 4, 6369);
       goto Label_Abort;
     }
     assume $LibraCoin_T_is_well_formed(__t6);
 
     __m := UpdateLocal(__m, __frame + 6, __t6);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account));
-    assume $DebugTrackLocal(11, 4, 0, 6370, Dereference(__m, account));
+    assume $DebugTrackLocal(11, 4, 0, 6369, Dereference(__m, account));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    assume $DebugTrackLocal(11, 4, 2, 6356, __tmp);
+    assume $DebugTrackLocal(11, 4, 2, 6355, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    assume $DebugTrackLocal(11, 4, 3, 6440, __ret0);
+    assume $DebugTrackLocal(11, 4, 3, 6439, __ret0);
     return;
 
 Label_Abort:
@@ -3600,7 +3600,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 0, amount);
-    assume $DebugTrackLocal(11, 5, 0, 6552, amount);
+    assume $DebugTrackLocal(11, 5, 0, 6551, amount);
 
     // increase the local counter
     __local_counter := __local_counter + 11;
@@ -3611,13 +3611,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 5, 6686);
+      assume $DebugTrackAbort(11, 5, 6685);
       goto Label_Abort;
     }
 
     call sender_account := CopyOrMoveRef(__t3);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, sender_account));
-    assume $DebugTrackLocal(11, 5, 1, 6669, Dereference(__m, sender_account));
+    assume $DebugTrackLocal(11, 5, 1, 6668, Dereference(__m, sender_account));
 
     call __t4 := CopyOrMoveRef(sender_account);
 
@@ -3633,7 +3633,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 5, 6909); }
+    if (true) { assume $DebugTrackAbort(11, 5, 6908); }
     goto Label_Abort;
 
 Label_9:
@@ -3644,7 +3644,7 @@ Label_9:
 
     call __t10 := LibraAccount_withdraw_from_account(__t8, GetLocal(__m, __frame + 9));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 5, 7031);
+      assume $DebugTrackAbort(11, 5, 7030);
       goto Label_Abort;
     }
     assume $LibraCoin_T_is_well_formed(__t10);
@@ -3652,7 +3652,7 @@ Label_9:
     __m := UpdateLocal(__m, __frame + 10, __t10);
 
     __ret0 := GetLocal(__m, __frame + 10);
-    assume $DebugTrackLocal(11, 5, 2, 7024, __ret0);
+    assume $DebugTrackLocal(11, 5, 2, 7023, __ret0);
     return;
 
 Label_Abort:
@@ -3691,10 +3691,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_WithdrawalCapability_is_well_formed(Dereference(__m, cap)) && IsValidReferenceParameter(__m, __local_counter, cap);
     assume $LibraAccount_WithdrawalCapability_is_well_formed(Dereference(__m, cap));
-    assume $DebugTrackLocal(11, 6, 0, 7192, Dereference(__m, cap));
+    assume $DebugTrackLocal(11, 6, 0, 7191, Dereference(__m, cap));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    assume $DebugTrackLocal(11, 6, 1, 7192, amount);
+    assume $DebugTrackLocal(11, 6, 1, 7191, amount);
 
     // increase the local counter
     __local_counter := __local_counter + 10;
@@ -3710,13 +3710,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t6 := BorrowGlobal(GetLocal(__m, __frame + 5), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 6, 7364);
+      assume $DebugTrackAbort(11, 6, 7363);
       goto Label_Abort;
     }
 
     call account := CopyOrMoveRef(__t6);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account));
-    assume $DebugTrackLocal(11, 6, 2, 7354, Dereference(__m, account));
+    assume $DebugTrackLocal(11, 6, 2, 7353, Dereference(__m, account));
 
     call __t7 := CopyOrMoveRef(account);
 
@@ -3725,7 +3725,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t9 := LibraAccount_withdraw_from_account(__t7, GetLocal(__m, __frame + 8));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 6, 7430);
+      assume $DebugTrackAbort(11, 6, 7429);
       goto Label_Abort;
     }
     assume $LibraCoin_T_is_well_formed(__t9);
@@ -3733,7 +3733,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 9, __t9);
 
     __ret0 := GetLocal(__m, __frame + 9);
-    assume $DebugTrackLocal(11, 6, 3, 7423, __ret0);
+    assume $DebugTrackLocal(11, 6, 3, 7422, __ret0);
     return;
 
 Label_Abort:
@@ -3787,20 +3787,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    assume $DebugTrackLocal(11, 7, 0, 7802, __tmp);
+    assume $DebugTrackLocal(11, 7, 0, 7801, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     call __t5 := BorrowGlobal(GetLocal(__m, __frame + 4), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 7, 7854);
+      assume $DebugTrackAbort(11, 7, 7853);
       goto Label_Abort;
     }
 
     call sender_account := CopyOrMoveRef(__t5);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, sender_account));
-    assume $DebugTrackLocal(11, 7, 1, 7837, Dereference(__m, sender_account));
+    assume $DebugTrackLocal(11, 7, 1, 7836, Dereference(__m, sender_account));
 
     call __t6 := CopyOrMoveRef(sender_account);
 
@@ -3808,7 +3808,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call delegated_ref := CopyOrMoveRef(__t7);
     assume is#Boolean(Dereference(__m, delegated_ref));
-    assume $DebugTrackLocal(11, 7, 2, 7898, Dereference(__m, delegated_ref));
+    assume $DebugTrackLocal(11, 7, 2, 7897, Dereference(__m, delegated_ref));
 
     call __t8 := CopyOrMoveRef(delegated_ref);
 
@@ -3822,7 +3822,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 10, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 7, 8108); }
+    if (true) { assume $DebugTrackAbort(11, 7, 8107); }
     goto Label_Abort;
 
 Label_13:
@@ -3841,7 +3841,7 @@ Label_13:
     __m := UpdateLocal(__m, __frame + 14, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 14);
-    assume $DebugTrackLocal(11, 7, 3, 8228, __ret0);
+    assume $DebugTrackLocal(11, 7, 3, 8227, __ret0);
     return;
 
 Label_Abort:
@@ -3881,7 +3881,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_WithdrawalCapability_is_well_formed(cap);
     __m := UpdateLocal(__m, __frame + 0, cap);
-    assume $DebugTrackLocal(11, 8, 0, 8391, cap);
+    assume $DebugTrackLocal(11, 8, 0, 8390, cap);
 
     // increase the local counter
     __local_counter := __local_counter + 10;
@@ -3895,20 +3895,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    assume $DebugTrackLocal(11, 8, 1, 8611, __tmp);
+    assume $DebugTrackLocal(11, 8, 1, 8610, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __t6 := BorrowGlobal(GetLocal(__m, __frame + 5), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 8, 8660);
+      assume $DebugTrackAbort(11, 8, 8659);
       goto Label_Abort;
     }
 
     call account := CopyOrMoveRef(__t6);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account));
-    assume $DebugTrackLocal(11, 8, 2, 8650, Dereference(__m, account));
+    assume $DebugTrackLocal(11, 8, 2, 8649, Dereference(__m, account));
 
     call __tmp := LdFalse();
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -3948,7 +3948,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __t12: Reference; // ReferenceType(LibraAccount_WithdrawalCapability_type_value())
     var __t13: Value; // IntegerType()
     var __t14: Value; // LibraCoin_T_type_value()
-    var __t15: Value; // ByteArrayType()
+    var __t15: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -3961,16 +3961,16 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    assume $DebugTrackLocal(11, 9, 0, 9236, payee);
+    assume $DebugTrackLocal(11, 9, 0, 9235, payee);
     assume $LibraAccount_WithdrawalCapability_is_well_formed(Dereference(__m, cap)) && IsValidReferenceParameter(__m, __local_counter, cap);
     assume $LibraAccount_WithdrawalCapability_is_well_formed(Dereference(__m, cap));
-    assume $DebugTrackLocal(11, 9, 1, 9236, Dereference(__m, cap));
+    assume $DebugTrackLocal(11, 9, 1, 9235, Dereference(__m, cap));
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 2, amount);
-    assume $DebugTrackLocal(11, 9, 2, 9236, amount);
-    assume is#ByteArray(metadata);
+    assume $DebugTrackLocal(11, 9, 2, 9235, amount);
+    assume $Vector_T_is_well_formed(metadata);
     __m := UpdateLocal(__m, __frame + 3, metadata);
-    assume $DebugTrackLocal(11, 9, 3, 9236, metadata);
+    assume $DebugTrackLocal(11, 9, 3, 9235, metadata);
 
     // increase the local counter
     __local_counter := __local_counter + 16;
@@ -4056,7 +4056,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __t7: Value; // AddressType()
     var __t8: Value; // IntegerType()
     var __t9: Value; // LibraCoin_T_type_value()
-    var __t10: Value; // ByteArrayType()
+    var __t10: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -4073,7 +4073,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
     assume $DebugTrackLocal(11, 10, 1, 9947, amount);
-    assume is#ByteArray(metadata);
+    assume $Vector_T_is_well_formed(metadata);
     __m := UpdateLocal(__m, __frame + 2, metadata);
     assume $DebugTrackLocal(11, 10, 2, 9947, metadata);
 
@@ -4098,7 +4098,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call LibraAccount_create_account(GetLocal(__m, __frame + 6));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 10, 10128);
+      assume $DebugTrackAbort(11, 10, 10129);
       goto Label_Abort;
     }
 
@@ -4111,7 +4111,7 @@ Label_6:
 
     call __t9 := LibraAccount_withdraw_from_sender(GetLocal(__m, __frame + 8));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 10, 10245);
+      assume $DebugTrackAbort(11, 10, 10246);
       goto Label_Abort;
     }
     assume $LibraCoin_T_is_well_formed(__t9);
@@ -4123,7 +4123,7 @@ Label_6:
 
     call LibraAccount_deposit_with_metadata(GetLocal(__m, __frame + 7), GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 10));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 10, 10180);
+      assume $DebugTrackAbort(11, 10, 10181);
       goto Label_Abort;
     }
 
@@ -4159,10 +4159,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(payee);
     __m := UpdateLocal(__m, __frame + 0, payee);
-    assume $DebugTrackLocal(11, 11, 0, 10530, payee);
+    assume $DebugTrackLocal(11, 11, 0, 10531, payee);
     assume IsValidU64(amount);
     __m := UpdateLocal(__m, __frame + 1, amount);
-    assume $DebugTrackLocal(11, 11, 1, 10530, amount);
+    assume $DebugTrackLocal(11, 11, 1, 10531, amount);
 
     // increase the local counter
     __local_counter := __local_counter + 5;
@@ -4178,7 +4178,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call LibraAccount_pay_from_sender_with_metadata(GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 3), GetLocal(__m, __frame + 4));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 11, 10603);
+      assume $DebugTrackAbort(11, 11, 10604);
       goto Label_Abort;
     }
 
@@ -4199,9 +4199,9 @@ procedure {:inline 1} LibraAccount_rotate_authentication_key_for_account (accoun
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var __t2: Value; // ByteArrayType()
+    var __t2: Value; // Vector_T_type_value(IntegerType())
     var __t3: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var __t4: Reference; // ReferenceType(ByteArrayType())
+    var __t4: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -4214,10 +4214,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account)) && IsValidReferenceParameter(__m, __local_counter, account);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account));
-    assume $DebugTrackLocal(11, 12, 0, 10698, Dereference(__m, account));
-    assume is#ByteArray(new_authentication_key);
+    assume $DebugTrackLocal(11, 12, 0, 10699, Dereference(__m, account));
+    assume $Vector_T_is_well_formed(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 1, new_authentication_key);
-    assume $DebugTrackLocal(11, 12, 1, 10698, new_authentication_key);
+    assume $DebugTrackLocal(11, 12, 1, 10699, new_authentication_key);
 
     // increase the local counter
     __local_counter := __local_counter + 5;
@@ -4232,7 +4232,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call WriteRef(__t4, GetLocal(__m, __frame + 2));
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account));
-    assume $DebugTrackLocal(11, 12, 0, 10803, Dereference(__m, account));
+    assume $DebugTrackLocal(11, 12, 0, 10805, Dereference(__m, account));
 
     return;
 
@@ -4259,7 +4259,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __t6: Value; // BooleanType()
     var __t7: Value; // IntegerType()
     var __t8: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var __t9: Value; // ByteArrayType()
+    var __t9: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -4270,9 +4270,9 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __frame := __local_counter;
 
     // process and type check arguments
-    assume is#ByteArray(new_authentication_key);
+    assume $Vector_T_is_well_formed(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 0, new_authentication_key);
-    assume $DebugTrackLocal(11, 13, 0, 11025, new_authentication_key);
+    assume $DebugTrackLocal(11, 13, 0, 11027, new_authentication_key);
 
     // increase the local counter
     __local_counter := __local_counter + 10;
@@ -4283,13 +4283,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 13, 11173);
+      assume $DebugTrackAbort(11, 13, 11176);
       goto Label_Abort;
     }
 
     call sender_account := CopyOrMoveRef(__t3);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, sender_account));
-    assume $DebugTrackLocal(11, 13, 1, 11156, Dereference(__m, sender_account));
+    assume $DebugTrackLocal(11, 13, 1, 11159, Dereference(__m, sender_account));
 
     call __t4 := CopyOrMoveRef(sender_account);
 
@@ -4305,7 +4305,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 7, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 13, 11386); }
+    if (true) { assume $DebugTrackAbort(11, 13, 11389); }
     goto Label_Abort;
 
 Label_9:
@@ -4316,7 +4316,7 @@ Label_9:
 
     call LibraAccount_rotate_authentication_key_for_account(__t8, GetLocal(__m, __frame + 9));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 13, 11503);
+      assume $DebugTrackAbort(11, 13, 11506);
       goto Label_Abort;
     }
 
@@ -4341,7 +4341,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __t3: Reference; // ReferenceType(AddressType())
     var __t4: Value; // AddressType()
     var __t5: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var __t6: Value; // ByteArrayType()
+    var __t6: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -4354,10 +4354,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_KeyRotationCapability_is_well_formed(Dereference(__m, cap)) && IsValidReferenceParameter(__m, __local_counter, cap);
     assume $LibraAccount_KeyRotationCapability_is_well_formed(Dereference(__m, cap));
-    assume $DebugTrackLocal(11, 14, 0, 11765, Dereference(__m, cap));
-    assume is#ByteArray(new_authentication_key);
+    assume $DebugTrackLocal(11, 14, 0, 11768, Dereference(__m, cap));
+    assume $Vector_T_is_well_formed(new_authentication_key);
     __m := UpdateLocal(__m, __frame + 1, new_authentication_key);
-    assume $DebugTrackLocal(11, 14, 1, 11765, new_authentication_key);
+    assume $DebugTrackLocal(11, 14, 1, 11768, new_authentication_key);
 
     // increase the local counter
     __local_counter := __local_counter + 7;
@@ -4373,7 +4373,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t5 := BorrowGlobal(GetLocal(__m, __frame + 4), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 14, 11984);
+      assume $DebugTrackAbort(11, 14, 11988);
       goto Label_Abort;
     }
 
@@ -4382,7 +4382,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call LibraAccount_rotate_authentication_key_for_account(__t5, GetLocal(__m, __frame + 6));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 14, 11928);
+      assume $DebugTrackAbort(11, 14, 11932);
       goto Label_Abort;
     }
 
@@ -4436,14 +4436,14 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 0, __tmp);
-    assume $DebugTrackLocal(11, 15, 0, 12375, __tmp);
+    assume $DebugTrackLocal(11, 15, 0, 12379, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     call __t4 := BorrowGlobal(GetLocal(__m, __frame + 3), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 15, 12431);
+      assume $DebugTrackAbort(11, 15, 12435);
       goto Label_Abort;
     }
 
@@ -4451,7 +4451,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call delegated_ref := CopyOrMoveRef(__t5);
     assume is#Boolean(Dereference(__m, delegated_ref));
-    assume $DebugTrackLocal(11, 15, 1, 12410, Dereference(__m, delegated_ref));
+    assume $DebugTrackLocal(11, 15, 1, 12414, Dereference(__m, delegated_ref));
 
     call __t6 := CopyOrMoveRef(delegated_ref);
 
@@ -4465,7 +4465,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(11);
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 15, 12638); }
+    if (true) { assume $DebugTrackAbort(11, 15, 12642); }
     goto Label_Abort;
 
 Label_11:
@@ -4484,7 +4484,7 @@ Label_11:
     __m := UpdateLocal(__m, __frame + 12, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 12);
-    assume $DebugTrackLocal(11, 15, 2, 12758, __ret0);
+    assume $DebugTrackLocal(11, 15, 2, 12762, __ret0);
     return;
 
 Label_Abort:
@@ -4524,7 +4524,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_KeyRotationCapability_is_well_formed(cap);
     __m := UpdateLocal(__m, __frame + 0, cap);
-    assume $DebugTrackLocal(11, 16, 0, 12924, cap);
+    assume $DebugTrackLocal(11, 16, 0, 12928, cap);
 
     // increase the local counter
     __local_counter := __local_counter + 10;
@@ -4538,20 +4538,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    assume $DebugTrackLocal(11, 16, 1, 13148, __tmp);
+    assume $DebugTrackLocal(11, 16, 1, 13152, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     call __t6 := BorrowGlobal(GetLocal(__m, __frame + 5), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 16, 13197);
+      assume $DebugTrackAbort(11, 16, 13201);
       goto Label_Abort;
     }
 
     call account := CopyOrMoveRef(__t6);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account));
-    assume $DebugTrackLocal(11, 16, 2, 13187, Dereference(__m, account));
+    assume $DebugTrackLocal(11, 16, 2, 13191, Dereference(__m, account));
 
     call __tmp := LdFalse();
     __m := UpdateLocal(__m, __frame + 7, __tmp);
@@ -4585,7 +4585,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __t3: Value; // LibraAccount_EventHandleGenerator_type_value()
     var __t4: Value; // AddressType()
     var __t5: Value; // AddressType()
-    var __t6: Value; // ByteArrayType()
+    var __t6: Value; // Vector_T_type_value(IntegerType())
     var __t7: Value; // LibraCoin_T_type_value()
     var __t8: Value; // BooleanType()
     var __t9: Value; // BooleanType()
@@ -4610,7 +4610,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(fresh_address);
     __m := UpdateLocal(__m, __frame + 0, fresh_address);
-    assume $DebugTrackLocal(11, 17, 0, 13761, fresh_address);
+    assume $DebugTrackLocal(11, 17, 0, 13765, fresh_address);
 
     // increase the local counter
     __local_counter := __local_counter + 19;
@@ -4619,12 +4619,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
-    call __tmp := Pack_LibraAccount_EventHandleGenerator(11, 17, 1, 13880, GetLocal(__m, __frame + 2));
+    call __tmp := Pack_LibraAccount_EventHandleGenerator(11, 17, 1, 13884, GetLocal(__m, __frame + 2));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    assume $DebugTrackLocal(11, 17, 1, 13868, __tmp);
+    assume $DebugTrackLocal(11, 17, 1, 13872, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 4, __tmp);
@@ -4634,16 +4634,16 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t6 := AddressUtil_address_to_bytes(GetLocal(__m, __frame + 5));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 17, 14027);
+      assume $DebugTrackAbort(11, 17, 14031);
       goto Label_Abort;
     }
-    assume is#ByteArray(__t6);
+    assume $Vector_T_is_well_formed(__t6);
 
     __m := UpdateLocal(__m, __frame + 6, __t6);
 
     call __t7 := LibraCoin_zero();
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 17, 14103);
+      assume $DebugTrackAbort(11, 17, 14107);
       goto Label_Abort;
     }
     assume $LibraCoin_T_is_well_formed(__t7);
@@ -4663,13 +4663,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t12 := LibraAccount_new_event_handle_impl(LibraAccount_ReceivedPaymentEvent_type_value(), __t10, GetLocal(__m, __frame + 11));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 17, 14268);
+      assume $DebugTrackAbort(11, 17, 14272);
       goto Label_Abort;
     }
     assume $LibraAccount_EventHandle_is_well_formed(__t12);
 
     __m := UpdateLocal(__m, __frame + 12, __t12);
-    assume $DebugTrackLocal(11, 17, 1, 14268, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(11, 17, 1, 14272, GetLocal(__m, __frame + 1));
 
     call __t13 := BorrowLoc(__frame + 1, LibraAccount_EventHandleGenerator_type_value());
 
@@ -4678,13 +4678,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t15 := LibraAccount_new_event_handle_impl(LibraAccount_SentPaymentEvent_type_value(), __t13, GetLocal(__m, __frame + 14));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 17, 14389);
+      assume $DebugTrackAbort(11, 17, 14393);
       goto Label_Abort;
     }
     assume $LibraAccount_EventHandle_is_well_formed(__t15);
 
     __m := UpdateLocal(__m, __frame + 15, __t15);
-    assume $DebugTrackLocal(11, 17, 1, 14389, GetLocal(__m, __frame + 1));
+    assume $DebugTrackLocal(11, 17, 1, 14393, GetLocal(__m, __frame + 1));
 
     call __tmp := LdConst(0);
     __m := UpdateLocal(__m, __frame + 16, __tmp);
@@ -4697,7 +4697,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call LibraAccount_save_account(GetLocal(__m, __frame + 4), GetLocal(__m, __frame + 18));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 17, 13923);
+      assume $DebugTrackAbort(11, 17, 13927);
       goto Label_Abort;
     }
 
@@ -4736,10 +4736,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(fresh_address);
     __m := UpdateLocal(__m, __frame + 0, fresh_address);
-    assume $DebugTrackLocal(11, 18, 0, 14744, fresh_address);
+    assume $DebugTrackLocal(11, 18, 0, 14748, fresh_address);
     assume IsValidU64(initial_balance);
     __m := UpdateLocal(__m, __frame + 1, initial_balance);
-    assume $DebugTrackLocal(11, 18, 1, 14744, initial_balance);
+    assume $DebugTrackLocal(11, 18, 1, 14748, initial_balance);
 
     // increase the local counter
     __local_counter := __local_counter + 8;
@@ -4750,7 +4750,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call LibraAccount_create_account(GetLocal(__m, __frame + 2));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 18, 14837);
+      assume $DebugTrackAbort(11, 18, 14841);
       goto Label_Abort;
     }
 
@@ -4774,7 +4774,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call LibraAccount_pay_from_sender(GetLocal(__m, __frame + 6), GetLocal(__m, __frame + 7));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 18, 14932);
+      assume $DebugTrackAbort(11, 18, 14936);
       goto Label_Abort;
     }
 
@@ -4816,7 +4816,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account)) && IsValidReferenceParameter(__m, __local_counter, account);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account));
-    assume $DebugTrackLocal(11, 20, 0, 15265, Dereference(__m, account));
+    assume $DebugTrackLocal(11, 20, 0, 15269, Dereference(__m, account));
 
     // increase the local counter
     __local_counter := __local_counter + 6;
@@ -4828,7 +4828,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t4 := LibraCoin_value(__t3);
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 20, 15366);
+      assume $DebugTrackAbort(11, 20, 15370);
       goto Label_Abort;
     }
     assume IsValidU64(__t4);
@@ -4837,13 +4837,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    assume $DebugTrackLocal(11, 20, 1, 15350, __tmp);
+    assume $DebugTrackLocal(11, 20, 1, 15354, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 5);
-    assume $DebugTrackLocal(11, 20, 2, 15415, __ret0);
+    assume $DebugTrackLocal(11, 20, 2, 15419, __ret0);
     return;
 
 Label_Abort:
@@ -4877,7 +4877,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    assume $DebugTrackLocal(11, 21, 0, 15535, addr);
+    assume $DebugTrackLocal(11, 21, 0, 15539, addr);
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -4888,13 +4888,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t2 := BorrowGlobal(GetLocal(__m, __frame + 1), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 21, 15623);
+      assume $DebugTrackAbort(11, 21, 15627);
       goto Label_Abort;
     }
 
     call __t3 := LibraAccount_balance_for_account(__t2);
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 21, 15598);
+      assume $DebugTrackAbort(11, 21, 15602);
       goto Label_Abort;
     }
     assume IsValidU64(__t3);
@@ -4902,7 +4902,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    assume $DebugTrackLocal(11, 21, 1, 15591, __ret0);
+    assume $DebugTrackLocal(11, 21, 1, 15595, __ret0);
     return;
 
 Label_Abort:
@@ -4936,7 +4936,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account)) && IsValidReferenceParameter(__m, __local_counter, account);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, account));
-    assume $DebugTrackLocal(11, 22, 0, 15735, Dereference(__m, account));
+    assume $DebugTrackLocal(11, 22, 0, 15739, Dereference(__m, account));
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -4951,7 +4951,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    assume $DebugTrackLocal(11, 22, 1, 15796, __ret0);
+    assume $DebugTrackLocal(11, 22, 1, 15800, __ret0);
     return;
 
 Label_Abort:
@@ -4985,7 +4985,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    assume $DebugTrackLocal(11, 23, 0, 15901, addr);
+    assume $DebugTrackLocal(11, 23, 0, 15905, addr);
 
     // increase the local counter
     __local_counter := __local_counter + 4;
@@ -4996,13 +4996,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t2 := BorrowGlobal(GetLocal(__m, __frame + 1), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 23, 16005);
+      assume $DebugTrackAbort(11, 23, 16009);
       goto Label_Abort;
     }
 
     call __t3 := LibraAccount_sequence_number_for_account(__t2);
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 23, 15972);
+      assume $DebugTrackAbort(11, 23, 15976);
       goto Label_Abort;
     }
     assume IsValidU64(__t3);
@@ -5010,7 +5010,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 3, __t3);
 
     __ret0 := GetLocal(__m, __frame + 3);
-    assume $DebugTrackLocal(11, 23, 1, 15965, __ret0);
+    assume $DebugTrackLocal(11, 23, 1, 15969, __ret0);
     return;
 
 Label_Abort:
@@ -5045,7 +5045,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    assume $DebugTrackLocal(11, 24, 0, 16132, addr);
+    assume $DebugTrackLocal(11, 24, 0, 16136, addr);
 
     // increase the local counter
     __local_counter := __local_counter + 5;
@@ -5056,7 +5056,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t2 := BorrowGlobal(GetLocal(__m, __frame + 1), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 24, 16225);
+      assume $DebugTrackAbort(11, 24, 16229);
       goto Label_Abort;
     }
 
@@ -5067,7 +5067,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    assume $DebugTrackLocal(11, 24, 1, 16215, __ret0);
+    assume $DebugTrackLocal(11, 24, 1, 16219, __ret0);
     return;
 
 Label_Abort:
@@ -5102,7 +5102,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(addr);
     __m := UpdateLocal(__m, __frame + 0, addr);
-    assume $DebugTrackLocal(11, 25, 0, 16385, addr);
+    assume $DebugTrackLocal(11, 25, 0, 16389, addr);
 
     // increase the local counter
     __local_counter := __local_counter + 5;
@@ -5113,7 +5113,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t2 := BorrowGlobal(GetLocal(__m, __frame + 1), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 25, 16476);
+      assume $DebugTrackAbort(11, 25, 16480);
       goto Label_Abort;
     }
 
@@ -5124,7 +5124,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 4, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 4);
-    assume $DebugTrackLocal(11, 25, 1, 16466, __ret0);
+    assume $DebugTrackLocal(11, 25, 1, 16470, __ret0);
     return;
 
 Label_Abort:
@@ -5157,7 +5157,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_WithdrawalCapability_is_well_formed(Dereference(__m, cap)) && IsValidReferenceParameter(__m, __local_counter, cap);
     assume $LibraAccount_WithdrawalCapability_is_well_formed(Dereference(__m, cap));
-    assume $DebugTrackLocal(11, 26, 0, 16640, Dereference(__m, cap));
+    assume $DebugTrackLocal(11, 26, 0, 16644, Dereference(__m, cap));
 
     // increase the local counter
     __local_counter := __local_counter + 3;
@@ -5169,7 +5169,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     __ret0 := __t2;
     assume is#Address(Dereference(__m, __ret0));
-    assume $DebugTrackLocal(11, 26, 1, 16730, Dereference(__m, __ret0));
+    assume $DebugTrackLocal(11, 26, 1, 16734, Dereference(__m, __ret0));
     return;
 
 Label_Abort:
@@ -5202,7 +5202,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_KeyRotationCapability_is_well_formed(Dereference(__m, cap)) && IsValidReferenceParameter(__m, __local_counter, cap);
     assume $LibraAccount_KeyRotationCapability_is_well_formed(Dereference(__m, cap));
-    assume $DebugTrackLocal(11, 27, 0, 16867, Dereference(__m, cap));
+    assume $DebugTrackLocal(11, 27, 0, 16871, Dereference(__m, cap));
 
     // increase the local counter
     __local_counter := __local_counter + 3;
@@ -5214,7 +5214,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     __ret0 := __t2;
     assume is#Address(Dereference(__m, __ret0));
-    assume $DebugTrackLocal(11, 27, 1, 16960, Dereference(__m, __ret0));
+    assume $DebugTrackLocal(11, 27, 1, 16964, Dereference(__m, __ret0));
     return;
 
 Label_Abort:
@@ -5247,7 +5247,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume is#Address(check_addr);
     __m := UpdateLocal(__m, __frame + 0, check_addr);
-    assume $DebugTrackLocal(11, 28, 0, 17057, check_addr);
+    assume $DebugTrackLocal(11, 28, 0, 17061, check_addr);
 
     // increase the local counter
     __local_counter := __local_counter + 3;
@@ -5260,7 +5260,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 2, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 2);
-    assume $DebugTrackLocal(11, 28, 1, 17108, __ret0);
+    assume $DebugTrackLocal(11, 28, 1, 17112, __ret0);
     return;
 
 Label_Abort:
@@ -5292,11 +5292,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __t15: Value; // IntegerType()
     var __t16: Value; // AddressType()
     var __t17: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var __t18: Value; // ByteArrayType()
-    var __t19: Value; // ByteArrayType()
+    var __t18: Value; // Vector_T_type_value(IntegerType())
+    var __t19: Value; // Vector_T_type_value(IntegerType())
     var __t20: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var __t21: Reference; // ReferenceType(ByteArrayType())
-    var __t22: Value; // ByteArrayType()
+    var __t21: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t22: Value; // Vector_T_type_value(IntegerType())
     var __t23: Value; // BooleanType()
     var __t24: Value; // BooleanType()
     var __t25: Value; // IntegerType()
@@ -5341,19 +5341,19 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume IsValidU64(txn_sequence_number);
     __m := UpdateLocal(__m, __frame + 0, txn_sequence_number);
-    assume $DebugTrackLocal(11, 29, 0, 17457, txn_sequence_number);
-    assume is#ByteArray(txn_public_key);
+    assume $DebugTrackLocal(11, 29, 0, 17461, txn_sequence_number);
+    assume $Vector_T_is_well_formed(txn_public_key);
     __m := UpdateLocal(__m, __frame + 1, txn_public_key);
-    assume $DebugTrackLocal(11, 29, 1, 17457, txn_public_key);
+    assume $DebugTrackLocal(11, 29, 1, 17461, txn_public_key);
     assume IsValidU64(txn_gas_price);
     __m := UpdateLocal(__m, __frame + 2, txn_gas_price);
-    assume $DebugTrackLocal(11, 29, 2, 17457, txn_gas_price);
+    assume $DebugTrackLocal(11, 29, 2, 17461, txn_gas_price);
     assume IsValidU64(txn_max_gas_units);
     __m := UpdateLocal(__m, __frame + 3, txn_max_gas_units);
-    assume $DebugTrackLocal(11, 29, 3, 17457, txn_max_gas_units);
+    assume $DebugTrackLocal(11, 29, 3, 17461, txn_max_gas_units);
     assume IsValidU64(txn_expiration_time);
     __m := UpdateLocal(__m, __frame + 4, txn_expiration_time);
-    assume $DebugTrackLocal(11, 29, 4, 17457, txn_expiration_time);
+    assume $DebugTrackLocal(11, 29, 4, 17461, txn_expiration_time);
 
     // increase the local counter
     __local_counter := __local_counter + 55;
@@ -5364,7 +5364,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 11));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
-    assume $DebugTrackLocal(11, 29, 5, 17892, __tmp);
+    assume $DebugTrackLocal(11, 29, 5, 17897, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 12, __tmp);
@@ -5381,7 +5381,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(5);
     __m := UpdateLocal(__m, __frame + 15, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 29, 18100); }
+    if (true) { assume $DebugTrackAbort(11, 29, 18105); }
     goto Label_Abort;
 
 Label_8:
@@ -5390,23 +5390,23 @@ Label_8:
 
     call __t17 := BorrowGlobal(GetLocal(__m, __frame + 16), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 29, 18179);
+      assume $DebugTrackAbort(11, 29, 18184);
       goto Label_Abort;
     }
 
     call sender_account := CopyOrMoveRef(__t17);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, sender_account));
-    assume $DebugTrackLocal(11, 29, 6, 18162, Dereference(__m, sender_account));
+    assume $DebugTrackLocal(11, 29, 6, 18167, Dereference(__m, sender_account));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 18, __tmp);
 
     call __t19 := Hash_sha3_256(GetLocal(__m, __frame + 18));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 29, 18350);
+      assume $DebugTrackAbort(11, 29, 18355);
       goto Label_Abort;
     }
-    assume is#ByteArray(__t19);
+    assume $Vector_T_is_well_formed(__t19);
 
     __m := UpdateLocal(__m, __frame + 19, __t19);
 
@@ -5415,7 +5415,7 @@ Label_8:
     call __t21 := BorrowField(__t20, LibraAccount_T_authentication_key);
 
     call __tmp := ReadRef(__t21);
-    assume is#ByteArray(__tmp);
+    assume $Vector_T_is_well_formed(__tmp);
     __m := UpdateLocal(__m, __frame + 22, __tmp);
 
     __tmp := Boolean(IsEqual(GetLocal(__m, __frame + 19), GetLocal(__m, __frame + 22)));
@@ -5430,7 +5430,7 @@ Label_8:
     call __tmp := LdConst(2);
     __m := UpdateLocal(__m, __frame + 25, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 29, 18446); }
+    if (true) { assume $DebugTrackAbort(11, 29, 18451); }
     goto Label_Abort;
 
 Label_21:
@@ -5442,14 +5442,14 @@ Label_21:
 
     call __tmp := MulU64(GetLocal(__m, __frame + 26), GetLocal(__m, __frame + 27));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 29, 18562);
+      assume $DebugTrackAbort(11, 29, 18567);
       goto Label_Abort;
     }
     __m := UpdateLocal(__m, __frame + 28, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 28));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
-    assume $DebugTrackLocal(11, 29, 8, 18540, __tmp);
+    assume $DebugTrackLocal(11, 29, 8, 18545, __tmp);
 
     call __t29 := CopyOrMoveRef(sender_account);
 
@@ -5457,13 +5457,13 @@ Label_21:
 
     call imm_sender_account := CopyOrMoveRef(__t30);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, imm_sender_account));
-    assume $DebugTrackLocal(11, 29, 7, 18617, Dereference(__m, imm_sender_account));
+    assume $DebugTrackLocal(11, 29, 7, 18622, Dereference(__m, imm_sender_account));
 
     call __t31 := CopyOrMoveRef(imm_sender_account);
 
     call __t32 := LibraAccount_balance_for_account(__t31);
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 29, 18693);
+      assume $DebugTrackAbort(11, 29, 18698);
       goto Label_Abort;
     }
     assume IsValidU64(__t32);
@@ -5472,7 +5472,7 @@ Label_21:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 32));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
-    assume $DebugTrackLocal(11, 29, 9, 18676, __tmp);
+    assume $DebugTrackLocal(11, 29, 9, 18681, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 33, __tmp);
@@ -5492,7 +5492,7 @@ Label_21:
     call __tmp := LdConst(6);
     __m := UpdateLocal(__m, __frame + 37, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 29, 18811); }
+    if (true) { assume $DebugTrackAbort(11, 29, 18816); }
     goto Label_Abort;
 
 Label_38:
@@ -5506,7 +5506,7 @@ Label_38:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 40));
     __m := UpdateLocal(__m, __frame + 10, __tmp);
-    assume $DebugTrackLocal(11, 29, 10, 18921, __tmp);
+    assume $DebugTrackLocal(11, 29, 10, 18926, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 41, __tmp);
@@ -5526,7 +5526,7 @@ Label_38:
     call __tmp := LdConst(3);
     __m := UpdateLocal(__m, __frame + 45, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 29, 19064); }
+    if (true) { assume $DebugTrackAbort(11, 29, 19069); }
     goto Label_Abort;
 
 Label_49:
@@ -5548,7 +5548,7 @@ Label_49:
     call __tmp := LdConst(4);
     __m := UpdateLocal(__m, __frame + 50, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 29, 19141); }
+    if (true) { assume $DebugTrackAbort(11, 29, 19146); }
     goto Label_Abort;
 
 Label_56:
@@ -5557,7 +5557,7 @@ Label_56:
 
     call __t52 := LibraTransactionTimeout_is_valid_transaction_timestamp(GetLocal(__m, __frame + 51));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 29, 19160);
+      assume $DebugTrackAbort(11, 29, 19165);
       goto Label_Abort;
     }
     assume is#Boolean(__t52);
@@ -5573,7 +5573,7 @@ Label_56:
     call __tmp := LdConst(7);
     __m := UpdateLocal(__m, __frame + 54, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 29, 19243); }
+    if (true) { assume $DebugTrackAbort(11, 29, 19248); }
     goto Label_Abort;
 
 Label_62:
@@ -5639,16 +5639,16 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume IsValidU64(txn_sequence_number);
     __m := UpdateLocal(__m, __frame + 0, txn_sequence_number);
-    assume $DebugTrackLocal(11, 30, 0, 19386, txn_sequence_number);
+    assume $DebugTrackLocal(11, 30, 0, 19391, txn_sequence_number);
     assume IsValidU64(txn_gas_price);
     __m := UpdateLocal(__m, __frame + 1, txn_gas_price);
-    assume $DebugTrackLocal(11, 30, 1, 19386, txn_gas_price);
+    assume $DebugTrackLocal(11, 30, 1, 19391, txn_gas_price);
     assume IsValidU64(txn_max_gas_units);
     __m := UpdateLocal(__m, __frame + 2, txn_max_gas_units);
-    assume $DebugTrackLocal(11, 30, 2, 19386, txn_max_gas_units);
+    assume $DebugTrackLocal(11, 30, 2, 19391, txn_max_gas_units);
     assume IsValidU64(gas_units_remaining);
     __m := UpdateLocal(__m, __frame + 3, gas_units_remaining);
-    assume $DebugTrackLocal(11, 30, 3, 19386, gas_units_remaining);
+    assume $DebugTrackLocal(11, 30, 3, 19391, gas_units_remaining);
 
     // increase the local counter
     __local_counter := __local_counter + 37;
@@ -5659,13 +5659,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t10 := BorrowGlobal(GetLocal(__m, __frame + 9), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 30, 19832);
+      assume $DebugTrackAbort(11, 30, 19837);
       goto Label_Abort;
     }
 
     call sender_account := CopyOrMoveRef(__t10);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, sender_account));
-    assume $DebugTrackLocal(11, 30, 4, 19815, Dereference(__m, sender_account));
+    assume $DebugTrackLocal(11, 30, 4, 19820, Dereference(__m, sender_account));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 11, __tmp);
@@ -5678,21 +5678,21 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := Sub(GetLocal(__m, __frame + 12), GetLocal(__m, __frame + 13));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 30, 19967);
+      assume $DebugTrackAbort(11, 30, 19972);
       goto Label_Abort;
     }
     __m := UpdateLocal(__m, __frame + 14, __tmp);
 
     call __tmp := MulU64(GetLocal(__m, __frame + 11), GetLocal(__m, __frame + 14));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 30, 19944);
+      assume $DebugTrackAbort(11, 30, 19949);
       goto Label_Abort;
     }
     __m := UpdateLocal(__m, __frame + 15, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 15));
     __m := UpdateLocal(__m, __frame + 7, __tmp);
-    assume $DebugTrackLocal(11, 30, 7, 19907, __tmp);
+    assume $DebugTrackLocal(11, 30, 7, 19912, __tmp);
 
     call __t16 := CopyOrMoveRef(sender_account);
 
@@ -5700,13 +5700,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call imm_sender_account := CopyOrMoveRef(__t17);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, imm_sender_account));
-    assume $DebugTrackLocal(11, 30, 6, 20029, Dereference(__m, imm_sender_account));
+    assume $DebugTrackLocal(11, 30, 6, 20034, Dereference(__m, imm_sender_account));
 
     call __t18 := CopyOrMoveRef(imm_sender_account);
 
     call __t19 := LibraAccount_balance_for_account(__t18);
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 30, 20108);
+      assume $DebugTrackAbort(11, 30, 20113);
       goto Label_Abort;
     }
     assume IsValidU64(__t19);
@@ -5728,7 +5728,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __tmp := LdConst(6);
     __m := UpdateLocal(__m, __frame + 23, __tmp);
 
-    if (true) { assume $DebugTrackAbort(11, 30, 20204); }
+    if (true) { assume $DebugTrackAbort(11, 30, 20209); }
     goto Label_Abort;
 
 Label_20:
@@ -5739,7 +5739,7 @@ Label_20:
 
     call __t26 := LibraAccount_withdraw_from_account(__t24, GetLocal(__m, __frame + 25));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 30, 20255);
+      assume $DebugTrackAbort(11, 30, 20260);
       goto Label_Abort;
     }
     assume $LibraCoin_T_is_well_formed(__t26);
@@ -5748,7 +5748,7 @@ Label_20:
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 26));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
-    assume $DebugTrackLocal(11, 30, 8, 20225, __tmp);
+    assume $DebugTrackLocal(11, 30, 8, 20230, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 0));
     __m := UpdateLocal(__m, __frame + 27, __tmp);
@@ -5758,7 +5758,7 @@ Label_20:
 
     call __tmp := AddU64(GetLocal(__m, __frame + 27), GetLocal(__m, __frame + 28));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 30, 20473);
+      assume $DebugTrackAbort(11, 30, 20478);
       goto Label_Abort;
     }
     __m := UpdateLocal(__m, __frame + 29, __tmp);
@@ -5775,13 +5775,13 @@ Label_20:
 
     call __t33 := BorrowGlobal(GetLocal(__m, __frame + 32), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 30, 20602);
+      assume $DebugTrackAbort(11, 30, 20607);
       goto Label_Abort;
     }
 
     call transaction_fee_account := CopyOrMoveRef(__t33);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, transaction_fee_account));
-    assume $DebugTrackLocal(11, 30, 5, 20576, Dereference(__m, transaction_fee_account));
+    assume $DebugTrackLocal(11, 30, 5, 20581, Dereference(__m, transaction_fee_account));
 
     call __t34 := CopyOrMoveRef(transaction_fee_account);
 
@@ -5792,7 +5792,7 @@ Label_20:
 
     call LibraCoin_deposit(__t35, GetLocal(__m, __frame + 36));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 30, 20639);
+      assume $DebugTrackAbort(11, 30, 20644);
       goto Label_Abort;
     }
 
@@ -5814,25 +5814,25 @@ requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
     var count: Reference; // ReferenceType(IntegerType())
-    var count_bytes: Value; // ByteArrayType()
-    var preimage: Value; // ByteArrayType()
-    var sender_bytes: Value; // ByteArrayType()
+    var count_bytes: Value; // Vector_T_type_value(IntegerType())
+    var preimage: Value; // Vector_T_type_value(IntegerType())
+    var sender_bytes: Value; // Vector_T_type_value(IntegerType())
     var __t6: Reference; // ReferenceType(LibraAccount_EventHandleGenerator_type_value())
     var __t7: Reference; // ReferenceType(IntegerType())
     var __t8: Value; // AddressType()
-    var __t9: Value; // ByteArrayType()
+    var __t9: Value; // Vector_T_type_value(IntegerType())
     var __t10: Reference; // ReferenceType(IntegerType())
     var __t11: Value; // IntegerType()
-    var __t12: Value; // ByteArrayType()
+    var __t12: Value; // Vector_T_type_value(IntegerType())
     var __t13: Reference; // ReferenceType(IntegerType())
     var __t14: Value; // IntegerType()
     var __t15: Value; // IntegerType()
     var __t16: Value; // IntegerType()
     var __t17: Reference; // ReferenceType(IntegerType())
-    var __t18: Value; // ByteArrayType()
-    var __t19: Value; // ByteArrayType()
-    var __t20: Value; // ByteArrayType()
-    var __t21: Value; // ByteArrayType()
+    var __t18: Value; // Vector_T_type_value(IntegerType())
+    var __t19: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t20: Value; // Vector_T_type_value(IntegerType())
+    var __t21: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -5845,10 +5845,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_EventHandleGenerator_is_well_formed(Dereference(__m, counter)) && IsValidReferenceParameter(__m, __local_counter, counter);
     assume $LibraAccount_EventHandleGenerator_is_well_formed(Dereference(__m, counter));
-    assume $DebugTrackLocal(11, 31, 0, 21344, Dereference(__m, counter));
+    assume $DebugTrackLocal(11, 31, 0, 21350, Dereference(__m, counter));
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
-    assume $DebugTrackLocal(11, 31, 1, 21344, sender);
+    assume $DebugTrackLocal(11, 31, 1, 21350, sender);
 
     // increase the local counter
     __local_counter := __local_counter + 22;
@@ -5860,23 +5860,23 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call count := CopyOrMoveRef(__t7);
     assume IsValidU64(Dereference(__m, count));
-    assume $DebugTrackLocal(11, 31, 2, 21570, Dereference(__m, count));
+    assume $DebugTrackLocal(11, 31, 2, 21580, Dereference(__m, count));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 1));
     __m := UpdateLocal(__m, __frame + 8, __tmp);
 
     call __t9 := AddressUtil_address_to_bytes(GetLocal(__m, __frame + 8));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 31, 21629);
+      assume $DebugTrackAbort(11, 31, 21639);
       goto Label_Abort;
     }
-    assume is#ByteArray(__t9);
+    assume $Vector_T_is_well_formed(__t9);
 
     __m := UpdateLocal(__m, __frame + 9, __t9);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 9));
     __m := UpdateLocal(__m, __frame + 5, __tmp);
-    assume $DebugTrackLocal(11, 31, 5, 21614, __tmp);
+    assume $DebugTrackLocal(11, 31, 5, 21624, __tmp);
 
     call __t10 := CopyOrMoveRef(count);
 
@@ -5886,16 +5886,16 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t12 := U64Util_u64_to_bytes(GetLocal(__m, __frame + 11));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 31, 21696);
+      assume $DebugTrackAbort(11, 31, 21706);
       goto Label_Abort;
     }
-    assume is#ByteArray(__t12);
+    assume $Vector_T_is_well_formed(__t12);
 
     __m := UpdateLocal(__m, __frame + 12, __t12);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 12));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    assume $DebugTrackLocal(11, 31, 3, 21682, __tmp);
+    assume $DebugTrackLocal(11, 31, 3, 21692, __tmp);
 
     call __t13 := CopyOrMoveRef(count);
 
@@ -5908,7 +5908,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 14), GetLocal(__m, __frame + 15));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 31, 21755);
+      assume $DebugTrackAbort(11, 31, 21765);
       goto Label_Abort;
     }
     __m := UpdateLocal(__m, __frame + 16, __tmp);
@@ -5916,33 +5916,36 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t17 := CopyOrMoveRef(count);
 
     call WriteRef(__t17, GetLocal(__m, __frame + 16));
+    assume $DebugTrackLocal(11, 31, 4, 21750, GetLocal(__m, __frame + 4));
     assume $LibraAccount_EventHandleGenerator_is_well_formed(Dereference(__m, counter));
-    assume $DebugTrackLocal(11, 31, 0, 21740, Dereference(__m, counter));
+    assume $DebugTrackLocal(11, 31, 0, 21750, Dereference(__m, counter));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 18, __tmp);
 
-    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
-    __m := UpdateLocal(__m, __frame + 19, __tmp);
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 18));
+    __m := UpdateLocal(__m, __frame + 4, __tmp);
+    assume $DebugTrackLocal(11, 31, 4, 21889, __tmp);
 
-    call __t20 := BytearrayUtil_bytearray_concat(GetLocal(__m, __frame + 18), GetLocal(__m, __frame + 19));
+    call __t19 := BorrowLoc(__frame + 4, Vector_T_type_value(IntegerType()));
+
+    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
+    __m := UpdateLocal(__m, __frame + 20, __tmp);
+
+    call Vector_append(IntegerType(), __t19, GetLocal(__m, __frame + 20));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 31, 21890);
+      assume $DebugTrackAbort(11, 31, 21927);
       goto Label_Abort;
     }
-    assume is#ByteArray(__t20);
-
-    __m := UpdateLocal(__m, __frame + 20, __t20);
-
-    call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 20));
-    __m := UpdateLocal(__m, __frame + 4, __tmp);
-    assume $DebugTrackLocal(11, 31, 4, 21879, __tmp);
+    assume $DebugTrackLocal(11, 31, 4, 21927, GetLocal(__m, __frame + 4));
+    assume $LibraAccount_EventHandleGenerator_is_well_formed(Dereference(__m, counter));
+    assume $DebugTrackLocal(11, 31, 0, 21927, Dereference(__m, counter));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 21, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 21);
-    assume $DebugTrackLocal(11, 31, 6, 21970, __ret0);
+    assume $DebugTrackLocal(11, 31, 6, 21989, __ret0);
     return;
 
 Label_Abort:
@@ -5964,7 +5967,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     var __t2: Value; // IntegerType()
     var __t3: Reference; // ReferenceType(LibraAccount_EventHandleGenerator_type_value())
     var __t4: Value; // AddressType()
-    var __t5: Value; // ByteArrayType()
+    var __t5: Value; // Vector_T_type_value(IntegerType())
     var __t6: Value; // LibraAccount_EventHandle_type_value(tv0)
     var __tmp: Value;
     var __frame: int;
@@ -5978,10 +5981,10 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_EventHandleGenerator_is_well_formed(Dereference(__m, counter)) && IsValidReferenceParameter(__m, __local_counter, counter);
     assume $LibraAccount_EventHandleGenerator_is_well_formed(Dereference(__m, counter));
-    assume $DebugTrackLocal(11, 32, 0, 22101, Dereference(__m, counter));
+    assume $DebugTrackLocal(11, 32, 0, 22120, Dereference(__m, counter));
     assume is#Address(sender);
     __m := UpdateLocal(__m, __frame + 1, sender);
-    assume $DebugTrackLocal(11, 32, 1, 22101, sender);
+    assume $DebugTrackLocal(11, 32, 1, 22120, sender);
 
     // increase the local counter
     __local_counter := __local_counter + 7;
@@ -5997,20 +6000,20 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t5 := LibraAccount_fresh_guid(__t3, GetLocal(__m, __frame + 4));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 32, 22270);
+      assume $DebugTrackAbort(11, 32, 22289);
       goto Label_Abort;
     }
-    assume is#ByteArray(__t5);
+    assume $Vector_T_is_well_formed(__t5);
 
     __m := UpdateLocal(__m, __frame + 5, __t5);
     assume $LibraAccount_EventHandleGenerator_is_well_formed(Dereference(__m, counter));
-    assume $DebugTrackLocal(11, 32, 0, 22270, Dereference(__m, counter));
+    assume $DebugTrackLocal(11, 32, 0, 22289, Dereference(__m, counter));
 
     call __tmp := Pack_LibraAccount_EventHandle(0, 0, 0, 0, tv0, GetLocal(__m, __frame + 2), GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     __ret0 := GetLocal(__m, __frame + 6);
-    assume $DebugTrackLocal(11, 32, 2, 22229, __ret0);
+    assume $DebugTrackLocal(11, 32, 2, 22248, __ret0);
     return;
 
 Label_Abort:
@@ -6030,7 +6033,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
     var sender_account_ref: Reference; // ReferenceType(LibraAccount_T_type_value())
-    var sender_bytes: Value; // ByteArrayType()
+    var sender_bytes: Value; // Vector_T_type_value(IntegerType())
     var __t2: Value; // AddressType()
     var __t3: Reference; // ReferenceType(LibraAccount_T_type_value())
     var __t4: Reference; // ReferenceType(LibraAccount_T_type_value())
@@ -6057,13 +6060,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t3 := BorrowGlobal(GetLocal(__m, __frame + 2), LibraAccount_T_type_value());
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 33, 22622);
+      assume $DebugTrackAbort(11, 33, 22642);
       goto Label_Abort;
     }
 
     call sender_account_ref := CopyOrMoveRef(__t3);
     assume $LibraAccount_T_is_well_formed(Dereference(__m, sender_account_ref));
-    assume $DebugTrackLocal(11, 33, 0, 22601, Dereference(__m, sender_account_ref));
+    assume $DebugTrackLocal(11, 33, 0, 22621, Dereference(__m, sender_account_ref));
 
     call __t4 := CopyOrMoveRef(sender_account_ref);
 
@@ -6074,7 +6077,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __t7 := LibraAccount_new_event_handle_impl(tv0, __t5, GetLocal(__m, __frame + 6));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 33, 22677);
+      assume $DebugTrackAbort(11, 33, 22697);
       goto Label_Abort;
     }
     assume $LibraAccount_EventHandle_is_well_formed(__t7);
@@ -6082,7 +6085,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     __m := UpdateLocal(__m, __frame + 7, __t7);
 
     __ret0 := GetLocal(__m, __frame + 7);
-    assume $DebugTrackLocal(11, 33, 2, 22670, __ret0);
+    assume $DebugTrackLocal(11, 33, 2, 22690, __ret0);
     return;
 
 Label_Abort:
@@ -6102,13 +6105,13 @@ requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
     var count: Reference; // ReferenceType(IntegerType())
-    var guid: Value; // ByteArrayType()
+    var guid: Value; // Vector_T_type_value(IntegerType())
     var __t4: Reference; // ReferenceType(LibraAccount_EventHandle_type_value(tv0))
-    var __t5: Reference; // ReferenceType(ByteArrayType())
-    var __t6: Value; // ByteArrayType()
+    var __t5: Reference; // ReferenceType(Vector_T_type_value(IntegerType()))
+    var __t6: Value; // Vector_T_type_value(IntegerType())
     var __t7: Reference; // ReferenceType(LibraAccount_EventHandle_type_value(tv0))
     var __t8: Reference; // ReferenceType(IntegerType())
-    var __t9: Value; // ByteArrayType()
+    var __t9: Value; // Vector_T_type_value(IntegerType())
     var __t10: Reference; // ReferenceType(IntegerType())
     var __t11: Value; // IntegerType()
     var __t12: Value; // tv0
@@ -6129,9 +6132,9 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_EventHandle_is_well_formed(Dereference(__m, handle_ref)) && IsValidReferenceParameter(__m, __local_counter, handle_ref);
     assume $LibraAccount_EventHandle_is_well_formed(Dereference(__m, handle_ref));
-    assume $DebugTrackLocal(11, 34, 0, 22958, Dereference(__m, handle_ref));
+    assume $DebugTrackLocal(11, 34, 0, 22979, Dereference(__m, handle_ref));
     __m := UpdateLocal(__m, __frame + 1, msg);
-    assume $DebugTrackLocal(11, 34, 1, 22958, msg);
+    assume $DebugTrackLocal(11, 34, 1, 22979, msg);
 
     // increase the local counter
     __local_counter := __local_counter + 18;
@@ -6142,12 +6145,12 @@ requires ExistsTxnSenderAccount(__m, __txn);
     call __t5 := BorrowField(__t4, LibraAccount_EventHandle_guid);
 
     call __tmp := ReadRef(__t5);
-    assume is#ByteArray(__tmp);
+    assume $Vector_T_is_well_formed(__tmp);
     __m := UpdateLocal(__m, __frame + 6, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 6));
     __m := UpdateLocal(__m, __frame + 3, __tmp);
-    assume $DebugTrackLocal(11, 34, 3, 23108, __tmp);
+    assume $DebugTrackLocal(11, 34, 3, 23130, __tmp);
 
     call __t7 := CopyOrMoveRef(handle_ref);
 
@@ -6155,7 +6158,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call count := CopyOrMoveRef(__t8);
     assume IsValidU64(Dereference(__m, count));
-    assume $DebugTrackLocal(11, 34, 2, 23148, Dereference(__m, count));
+    assume $DebugTrackLocal(11, 34, 2, 23170, Dereference(__m, count));
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 3));
     __m := UpdateLocal(__m, __frame + 9, __tmp);
@@ -6171,7 +6174,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call LibraAccount_write_to_event_store(tv0, GetLocal(__m, __frame + 9), GetLocal(__m, __frame + 11), GetLocal(__m, __frame + 12));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 34, 23196);
+      assume $DebugTrackAbort(11, 34, 23218);
       goto Label_Abort;
     }
 
@@ -6186,7 +6189,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := AddU64(GetLocal(__m, __frame + 14), GetLocal(__m, __frame + 15));
     if (__abort_flag) {
-      assume $DebugTrackAbort(11, 34, 23286);
+      assume $DebugTrackAbort(11, 34, 23308);
       goto Label_Abort;
     }
     __m := UpdateLocal(__m, __frame + 16, __tmp);
@@ -6195,7 +6198,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call WriteRef(__t17, GetLocal(__m, __frame + 16));
     assume $LibraAccount_EventHandle_is_well_formed(Dereference(__m, handle_ref));
-    assume $DebugTrackLocal(11, 34, 0, 23271, Dereference(__m, handle_ref));
+    assume $DebugTrackLocal(11, 34, 0, 23293, Dereference(__m, handle_ref));
 
     return;
 
@@ -6217,11 +6220,11 @@ procedure {:inline 1} LibraAccount_destroy_handle (tv0: TypeValue, handle: Value
 requires ExistsTxnSenderAccount(__m, __txn);
 {
     // declare local variables
-    var guid: Value; // ByteArrayType()
+    var guid: Value; // Vector_T_type_value(IntegerType())
     var count: Value; // IntegerType()
     var __t3: Value; // LibraAccount_EventHandle_type_value(tv0)
     var __t4: Value; // IntegerType()
-    var __t5: Value; // ByteArrayType()
+    var __t5: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -6234,7 +6237,7 @@ requires ExistsTxnSenderAccount(__m, __txn);
     // process and type check arguments
     assume $LibraAccount_EventHandle_is_well_formed(handle);
     __m := UpdateLocal(__m, __frame + 0, handle);
-    assume $DebugTrackLocal(11, 36, 0, 23597, handle);
+    assume $DebugTrackLocal(11, 36, 0, 23620, handle);
 
     // increase the local counter
     __local_counter := __local_counter + 6;
@@ -6249,11 +6252,11 @@ requires ExistsTxnSenderAccount(__m, __txn);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 5));
     __m := UpdateLocal(__m, __frame + 1, __tmp);
-    assume $DebugTrackLocal(11, 36, 1, 23752, __tmp);
+    assume $DebugTrackLocal(11, 36, 1, 23776, __tmp);
 
     call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + 4));
     __m := UpdateLocal(__m, __frame + 2, __tmp);
-    assume $DebugTrackLocal(11, 36, 2, 23745, __tmp);
+    assume $DebugTrackLocal(11, 36, 2, 23769, __tmp);
 
     return;
 

@@ -12,7 +12,7 @@ use libra_crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
     Uniform, ValidKey,
 };
-use libra_types::PeerId;
+use libra_types::{account_address::AuthenticationKey, PeerId};
 use parity_multiaddr::Multiaddr;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
@@ -128,7 +128,9 @@ impl NetworkConfig {
         // TODO(joshlind): investigate the implications of removing these checks.
         if let Some(network_keypairs) = &self.network_keypairs {
             let identity_key = network_keypairs.identity_keys.public();
-            let peer_id = PeerId::try_from(identity_key.to_bytes()).unwrap();
+            let peer_id = AuthenticationKey::try_from(identity_key.to_bytes())
+                .unwrap()
+                .derived_address();
 
             // If PeerId is not set, derive the PeerId from identity_key.
             if self.peer_id == PeerId::default() {
@@ -179,7 +181,9 @@ impl NetworkConfig {
         self.peer_id = if let Some(peer_id) = peer_id {
             peer_id
         } else {
-            PeerId::try_from(network_keypairs.identity_keys.public().to_bytes()).unwrap()
+            AuthenticationKey::try_from(network_keypairs.identity_keys.public().to_bytes())
+                .unwrap()
+                .derived_address()
         };
         self.network_keypairs = Some(network_keypairs);
     }

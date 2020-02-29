@@ -9,7 +9,7 @@ use crate::unit_tests::testutils::{
 fn compile_script_with_imports() {
     let code = String::from(
         "
-        import 0x0000000000000000000000000000000000000000000000000000000000000000.LibraCoin;
+        import 0x0.LibraCoin;
 
         main() {
             let x: u64;

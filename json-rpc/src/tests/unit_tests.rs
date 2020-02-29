@@ -4,7 +4,9 @@
 use crate::{
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
-    views::{AccountView, BlockMetadata, StateProofView, TransactionDataView, TransactionView},
+    views::{
+        AccountView, BlockMetadata, EventView, StateProofView, TransactionDataView, TransactionView,
+    },
 };
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
@@ -306,15 +308,20 @@ proptest! {
         let client = reqwest::blocking::Client::new();
         let url = format!("http://{}", address);
 
-        let event_key = hex::encode(mock_db.events.iter().next().unwrap().1.key().as_bytes());
+
+        let event_index = 0;
+        let mock_db_events = mock_db.events;
+        let (first_event_version, first_event) = mock_db_events[event_index].clone();
+        let event_key = hex::encode(first_event.key().as_bytes());
         let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_events", "params": [event_key, 0, 10], "id": 1});
-        let _resp = client.post(&url).json(&request).send().unwrap();
-        // TODO: flaky tests
-        // let mut events: Vec<EventView> = fetch_data(resp);
-        // let event = events.remove(0);
-        // assert_eq!(event.sequence_number, 0);
-        // assert_eq!(event.transaction_version, 0);
+        let resp = client.post(&url).json(&request).send().unwrap();
+        let events: Vec<EventView> = fetch_data(resp);
+
+        let fetched_event = &events[event_index];
+        assert_eq!(fetched_event.sequence_number, first_event.sequence_number(), "Seq number wrong");
+        assert_eq!(fetched_event.transaction_version, first_event_version, "Tx version wrong");
     }
+
     #[test]
     fn test_get_transactions(blocks in arb_blocks_to_commit()) {
         test_get_transactions_impl(blocks);

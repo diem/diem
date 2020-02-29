@@ -3,9 +3,10 @@
 
 //! sender: alice
 import 0x0.LibraAccount;
+import 0x0.Vector;
 
 main() {
-    LibraAccount.pay_from_sender({{bob}}, 514);
+    LibraAccount.pay_from_sender({{bob}}, Vector.empty<u8>(), 514);
     assert(false, 42);
     return;
 }

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_address::AccountAddress;
+use crate::{account_address::AccountAddress, account_address::ADDRESS_LENGTH};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
@@ -47,11 +47,15 @@ pub fn parse_as_address(s: &str) -> Result<TransactionArgument> {
         s = format!("0x0{}", &s[2..]);
     }
     let mut addr = hex::decode(&s[2..])?;
-    if addr.len() > 32 {
-        return Err(ErrorKind::ParseError("address must be 32 bytes or less".to_string()).into());
+    if addr.len() > ADDRESS_LENGTH {
+        return Err(ErrorKind::ParseError(format!(
+            "address must be {} bytes or less",
+            ADDRESS_LENGTH
+        ))
+        .into());
     }
-    if addr.len() < 32 {
-        addr = vec![0u8; 32 - addr.len()]
+    if addr.len() < ADDRESS_LENGTH {
+        addr = vec![0u8; ADDRESS_LENGTH - addr.len()]
             .into_iter()
             .chain(addr.into_iter())
             .collect();
@@ -134,7 +138,7 @@ mod test_transaction_argument {
             "0x00",
             "0x05",
             "0x100",
-            "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "0x0123456789ABCDEF0123456789ABCDEF",
         ] {
             parse_as_address(s).unwrap();
         }
@@ -144,7 +148,7 @@ mod test_transaction_argument {
             "100",
             "",
             "0xG",
-            "0xBBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "0x0123456789ABCDEF0123456789ABCDEFA",
         ] {
             parse_as_address(s).unwrap_err();
         }

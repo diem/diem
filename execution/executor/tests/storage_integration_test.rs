@@ -7,7 +7,7 @@ use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
 use libra_types::{
     access_path::AccessPath,
-    account_address::AccountAddress,
+    account_address::{AccountAddress, AuthenticationKey},
     account_config::{association_address, AccountResource},
     account_state_blob::AccountStateWithProof,
     block_info::BlockInfo,
@@ -156,6 +156,12 @@ fn test_reconfiguration() {
         .unwrap();
     let validator_privkey = keys.take_private().unwrap();
     let validator_pubkey = keys.public().clone();
+    let auth_key = AuthenticationKey::from_public_key(&validator_pubkey);
+    let validator_auth_key_prefix = auth_key.prefix().to_vec();
+    assert!(
+        auth_key.derived_address() == validator_account,
+        "Address derived from validator auth key does not match validator account address"
+    );
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(
@@ -163,7 +169,11 @@ fn test_reconfiguration() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_transfer_script(&validator_account, 1_000_000)),
+        Some(encode_transfer_script(
+            &validator_account,
+            validator_auth_key_prefix,
+            1_000_000,
+        )),
     );
     // rotate the validator's connsensus pubkey to trigger a reconfiguration
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
@@ -231,13 +241,17 @@ fn test_execution_with_storage() {
     assert!(seed != TEST_SEED);
     let mut rng = ::rand::rngs::StdRng::from_seed(seed);
     let (privkey1, pubkey1) = compat::generate_keypair(&mut rng);
-    let account1 = AccountAddress::from_public_key(&pubkey1);
+    let account1_auth_key = AuthenticationKey::from_public_key(&pubkey1);
+    let account1 = account1_auth_key.derived_address();
     let (privkey2, pubkey2) = compat::generate_keypair(&mut rng);
-    let account2 = AccountAddress::from_public_key(&pubkey2);
+    let account2_auth_key = AuthenticationKey::from_public_key(&pubkey2);
+    let account2 = account2_auth_key.derived_address();
     let (_privkey3, pubkey3) = compat::generate_keypair(&mut rng);
-    let account3 = AccountAddress::from_public_key(&pubkey3);
+    let account3_auth_key = AuthenticationKey::from_public_key(&pubkey3);
+    let account3 = account3_auth_key.derived_address();
     let (_privkey4, pubkey4) = compat::generate_keypair(&mut rng);
-    let account4 = AccountAddress::from_public_key(&pubkey4); // non-existent account
+    let account4_auth_key = AuthenticationKey::from_public_key(&pubkey4); // non-existent account
+    let account4 = account4_auth_key.derived_address();
     let genesis_account = association_address();
 
     // Create account1 with 2M coins.
@@ -246,7 +260,11 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_account_script(&account1, 2_000_000)),
+        Some(encode_create_account_script(
+            &account1,
+            account1_auth_key.prefix().to_vec(),
+            2_000_000,
+        )),
     );
 
     // Create account2 with 1.2M coins.
@@ -255,7 +273,11 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_account_script(&account2, 1_200_000)),
+        Some(encode_create_account_script(
+            &account2,
+            account2_auth_key.prefix().to_vec(),
+            1_200_000,
+        )),
     );
 
     // Create account3 with 1M coins.
@@ -264,7 +286,11 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 3,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_account_script(&account3, 1_000_000)),
+        Some(encode_create_account_script(
+            &account3,
+            account3_auth_key.prefix().to_vec(),
+            1_000_000,
+        )),
     );
 
     // Transfer 20k coins from account1 to account2.
@@ -274,7 +300,11 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         privkey1.clone(),
         pubkey1.clone(),
-        Some(encode_transfer_script(&account2, 20_000)),
+        Some(encode_transfer_script(
+            &account2,
+            account2_auth_key.prefix().to_vec(),
+            20_000,
+        )),
     );
 
     // Transfer 10k coins from account2 to account3.
@@ -284,7 +314,11 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         privkey2,
         pubkey2,
-        Some(encode_transfer_script(&account3, 10_000)),
+        Some(encode_transfer_script(
+            &account3,
+            account3_auth_key.prefix().to_vec(),
+            10_000,
+        )),
     );
 
     // Transfer 70k coins from account1 to account3.
@@ -294,7 +328,11 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 1,
         privkey1.clone(),
         pubkey1.clone(),
-        Some(encode_transfer_script(&account3, 70_000)),
+        Some(encode_transfer_script(
+            &account3,
+            account3_auth_key.prefix().to_vec(),
+            70_000,
+        )),
     );
 
     let block1 = vec![txn1, txn2, txn3, txn4, txn5, txn6];
@@ -310,7 +348,11 @@ fn test_execution_with_storage() {
             /* sequence_number = */ i,
             privkey1.clone(),
             pubkey1.clone(),
-            Some(encode_transfer_script(&account3, 10_000)),
+            Some(encode_transfer_script(
+                &account3,
+                account3_auth_key.prefix().to_vec(),
+                10_000,
+            )),
         ));
     }
 

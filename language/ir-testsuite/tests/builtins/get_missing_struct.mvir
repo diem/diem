@@ -20,7 +20,7 @@ module Token {
         let addr1: address;
         let struct1: &mut Self.T;
 
-        addr1 = 0x0111111111111111111111111111111111111111111111111111111111111110;
+        addr1 = 0x01111111111111110;
         struct1 = borrow_global_mut<T>(move(addr1));
         _ = move(struct1);
 

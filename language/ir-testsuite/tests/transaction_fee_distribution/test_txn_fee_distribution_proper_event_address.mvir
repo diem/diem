@@ -27,6 +27,5 @@ main() {
 //! proposer: vivian
 //! block-time: 1
 
-// check: "key: EventKey([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 238])"
 // check: SentPaymentEvent
 // check: 0fee

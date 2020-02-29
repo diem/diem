@@ -11,7 +11,9 @@ use crate::{
 use lcs::to_bytes;
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::{
+        AccountAddress, AuthenticationKey, ADDRESS_LENGTH, AUTHENTICATION_KEY_LENGTH,
+    },
     transaction::{
         helpers::TransactionSigner, RawTransaction, SignedTransaction, TransactionArgument,
         TransactionPayload,
@@ -55,18 +57,25 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         update_last_error("receiver parameter must not be null.".to_string());
         return LibraStatus::InvalidArgument;
     }
-    let receiver_buf = slice::from_raw_parts(receiver, ADDRESS_LENGTH);
-    let receiver_address = match AccountAddress::try_from(receiver_buf) {
+    let receiver_buf = slice::from_raw_parts(receiver, AUTHENTICATION_KEY_LENGTH);
+    let receiver_auth_key = match AuthenticationKey::try_from(receiver_buf) {
         Ok(result) => result,
         Err(e) => {
-            update_last_error(format!("Invalid receiver address: {}", e.to_string()));
+            update_last_error(format!(
+                "Invalid receiver authentication key: {}",
+                e.to_string()
+            ));
             return LibraStatus::InvalidArgument;
         }
     };
-
+    let receiver_address = receiver_auth_key.derived_address();
     let expiration_time = Duration::from_secs(expiration_time_secs);
 
-    let program = encode_transfer_script(&receiver_address, num_coins);
+    let program = encode_transfer_script(
+        &receiver_address,
+        receiver_auth_key.prefix().to_vec(),
+        num_coins,
+    );
     let payload = TransactionPayload::Script(program);
     let raw_txn = RawTransaction::new(
         sender_address,
@@ -143,17 +152,25 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         update_last_error("receiver parameter must not be null.".to_string());
         return LibraStatus::InvalidArgument;
     }
-    let receiver_buf = slice::from_raw_parts(receiver, ADDRESS_LENGTH);
-    let receiver_address = match AccountAddress::try_from(receiver_buf) {
+    let receiver_buf = slice::from_raw_parts(receiver, AUTHENTICATION_KEY_LENGTH);
+    let receiver_auth_key = match AuthenticationKey::try_from(receiver_buf) {
         Ok(result) => result,
         Err(e) => {
-            update_last_error(format!("Invalid receiver address: {}", e.to_string()));
+            update_last_error(format!(
+                "Invalid receiver authentication key: {}",
+                e.to_string()
+            ));
             return LibraStatus::InvalidArgument;
         }
     };
+    let receiver_address = receiver_auth_key.derived_address();
     let expiration_time = Duration::from_secs(expiration_time_secs);
 
-    let program = encode_transfer_script(&receiver_address, num_coins);
+    let program = encode_transfer_script(
+        &receiver_address,
+        receiver_auth_key.prefix().to_vec(),
+        num_coins,
+    );
     let payload = TransactionPayload::Script(program);
     let raw_txn = RawTransaction::new(
         sender_address,
@@ -410,7 +427,7 @@ fn test_lcs_signed_transaction() {
 
     // create transfer parameters
     let sender_address = AccountAddress::from_public_key(&public_key);
-    let receiver_address = AccountAddress::random();
+    let receiver_auth_key = AuthenticationKey::random();
     let sequence = 0;
     let amount = 100_000_000;
     let gas_unit_price = 123;
@@ -424,7 +441,7 @@ fn test_lcs_signed_transaction() {
     let result = unsafe {
         libra_SignedTransactionBytes_from(
             private_key_bytes.as_ptr(),
-            receiver_address.as_ref().as_ptr(),
+            receiver_auth_key.as_ref().as_ptr(),
             sequence,
             amount,
             max_gas_amount,
@@ -459,7 +476,7 @@ fn test_lcs_signed_transaction() {
     let result2 = unsafe {
         libra_SignedTransactionBytes_from(
             private_key_bytes.as_ptr(),
-            receiver_address.as_ref().as_ptr(),
+            receiver_auth_key.as_ref().as_ptr(),
             sequence,
             amount,
             max_gas_amount,
@@ -501,7 +518,7 @@ fn test_libra_raw_transaction_bytes_from() {
 
     // create transfer parameters
     let sender_address = AccountAddress::from_public_key(&public_key);
-    let receiver_address = AccountAddress::random();
+    let receiver_auth_key = AuthenticationKey::random();
     let sequence = 0;
     let amount = 100_000_000;
     let gas_unit_price = 123;
@@ -515,7 +532,7 @@ fn test_libra_raw_transaction_bytes_from() {
     unsafe {
         libra_RawTransactionBytes_from(
             sender_address.as_ref().as_ptr(),
-            receiver_address.as_ref().as_ptr(),
+            receiver_auth_key.as_ref().as_ptr(),
             sequence,
             amount,
             max_gas_amount,
@@ -580,7 +597,7 @@ fn test_libra_signed_transaction_deserialize() {
 
     let keypair = compat::generate_keypair(None);
     let sender = AccountAddress::random();
-    let receiver = AccountAddress::random();
+    let receiver_auth_key = AuthenticationKey::random();
     let sequence_number = 1;
     let amount = 10_000_000;
     let max_gas_amount = 10;
@@ -589,7 +606,11 @@ fn test_libra_signed_transaction_deserialize() {
     let public_key = keypair.1;
     let signature = Ed25519Signature::try_from(&[1u8; ED25519_SIGNATURE_LENGTH][..]).unwrap();
 
-    let program = encode_transfer_script(&receiver, amount);
+    let program = encode_transfer_script(
+        &receiver_auth_key.derived_address(),
+        receiver_auth_key.prefix().to_vec(),
+        amount,
+    );
     let signed_txn = SignedTransaction::new(
         RawTransaction::new_script(
             sender,
@@ -643,7 +664,7 @@ fn test_libra_signed_transaction_deserialize() {
             libra_signed_txn.raw_txn.payload.txn_type
         );
         assert_eq!(
-            receiver,
+            receiver_auth_key.derived_address(),
             AccountAddress::new(libra_signed_txn.raw_txn.payload.args.address)
         );
         assert_eq!(amount, libra_signed_txn.raw_txn.payload.args.value);

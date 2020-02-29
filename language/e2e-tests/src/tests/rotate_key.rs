@@ -21,8 +21,8 @@ fn rotate_key() {
         executor.add_account_data(&sender);
 
         let (privkey, pubkey) = compat::generate_keypair(None);
-        let new_key_hash = AccountAddress::from_public_key(&pubkey);
-        let txn = rotate_key_txn(sender.account(), new_key_hash, 10);
+        let new_key_hash = AccountAddress::authentication_key(&pubkey).to_vec();
+        let txn = rotate_key_txn(sender.account(), new_key_hash.clone(), 10);
 
         // execute transaction
         let output = &executor.execute_transaction(txn);
@@ -38,7 +38,7 @@ fn rotate_key() {
         let updated_sender = executor
             .read_account_resource(sender.account())
             .expect("sender must exist");
-        assert_eq!(new_key_hash.as_ref(), updated_sender.authentication_key(),);
+        assert_eq!(new_key_hash, updated_sender.authentication_key().to_vec());
         assert_eq!(balance, updated_sender.balance());
         assert_eq!(11, updated_sender.sequence_number());
 

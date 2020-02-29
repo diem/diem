@@ -124,14 +124,16 @@ impl FakeExecutor {
         let genesis_write_set = if genesis_modules.is_none() && validator_set.is_none() {
             GENESIS_WRITE_SET.clone()
         } else {
-            let validator_set = validator_set
-                .unwrap_or_else(|| generator::validator_swarm_for_testing(10).validator_set);
+            let validator_set_len: usize = validator_set.as_ref().map_or(10, |s| s.len());
+            let swarm = generator::validator_swarm_for_testing(validator_set_len);
+            let validator_set = validator_set.unwrap_or(swarm.validator_set);
             let discovery_set = mock_discovery_set(&validator_set);
             let stdlib_modules =
                 genesis_modules.unwrap_or_else(|| stdlib_modules(StdLibOptions::Staged).to_vec());
             match vm_genesis::encode_genesis_transaction_with_validator_and_modules(
                 &GENESIS_KEYPAIR.0,
                 GENESIS_KEYPAIR.1.clone(),
+                &swarm.nodes,
                 validator_set,
                 discovery_set,
                 &stdlib_modules,

@@ -32,7 +32,7 @@ fn verify_signature() {
         executor.add_account_data(&sender);
         // Generate a new key pair to try and sign things with.
         let (private_key, _public_key) = compat::generate_keypair(None);
-        let program = encode_transfer_script(sender.address(), 100);
+        let program = encode_transfer_script(sender.address(), vec![], 100);
         let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
             *sender.address(),
             0,
@@ -56,7 +56,7 @@ fn verify_reserved_sender() {
         executor.add_account_data(&sender);
         // Generate a new key pair to try and sign things with.
         let (private_key, public_key) = compat::generate_keypair(None);
-        let program = encode_transfer_script(sender.address(), 100);
+        let program = encode_transfer_script(sender.address(), vec![], 100);
         let signed_txn = transaction_test_helpers::get_test_signed_txn(
             CORE_CODE_ADDRESS,
             0,

@@ -1,8 +1,10 @@
+import 0x0.AddressUtil;
 import 0x0.LibraAccount;
+import 0x0.Vector;
 
 main() {
   //try to create account on 0x0.
-  LibraAccount.create_account(0x0);
+  LibraAccount.create_account(0x0, AddressUtil.address_to_bytes(0x0));
 
   return;
 }
