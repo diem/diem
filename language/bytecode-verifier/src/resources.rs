@@ -21,22 +21,18 @@ impl<'a> ResourceTransitiveChecker<'a> {
         let mut errors = vec![];
         for (idx, struct_def) in self.module_view.structs().enumerate() {
             if !struct_def.is_nominal_resource() {
-                match struct_def.fields() {
-                    None => (),
-                    Some(mut fields) => {
-                        let any_resource_field = fields.any(|field| {
-                            field
-                                .type_signature()
-                                .contains_nominal_resource(struct_def.type_formals())
-                        });
-                        if any_resource_field {
-                            errors.push(verification_error(
-                                IndexKind::StructDefinition,
-                                idx,
-                                StatusCode::INVALID_RESOURCE_FIELD,
-                            ));
-                        }
-                    }
+                let mut fields = struct_def.fields().unwrap();
+                let any_resource_field = fields.any(|field| {
+                    field
+                        .type_signature()
+                        .contains_nominal_resource(struct_def.type_formals())
+                });
+                if any_resource_field {
+                    errors.push(verification_error(
+                        IndexKind::StructDefinition,
+                        idx,
+                        StatusCode::INVALID_RESOURCE_FIELD,
+                    ));
                 }
             }
         }

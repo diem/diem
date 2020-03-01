@@ -374,6 +374,9 @@ impl<T: Payload> EventProcessor<T> {
     /// proposal and votes.
     /// 3) If neither primary nor secondary proposals are available, vote for a NIL block.
     pub async fn process_local_timeout(&mut self, round: Round) {
+        if round == 3 {
+            panic!("nope");
+        }
         if !self.pacemaker.process_local_timeout(round) {
             // The timeout event is late: the node has already moved to another round.
             return;
