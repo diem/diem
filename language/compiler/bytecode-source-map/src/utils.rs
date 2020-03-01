@@ -39,20 +39,16 @@ where
 }
 
 pub fn render_errors(source_mapper: &SourceMapping<Loc>, errors: Errors) -> Result<()> {
-    if let Some((source_file_name, source_string)) = &source_mapper.source_code {
-        let mut codemap = CodeMap::new();
-        codemap.add_filemap(FileName::real(source_file_name), source_string.to_string());
-        for err in errors {
-            let diagnostic = create_diagnostic(err);
-            let writer = StandardStream::stderr(ColorChoice::Auto);
-            emit(writer, &codemap, &diagnostic).unwrap();
-        }
-        Ok(())
-    } else {
-        Err(format_err!(
-            "Unable to render errors since source file information is not available"
-        ))
+    let (source_file_name, source_string) = source_mapper.source_code.as_ref().unwrap();
+
+    let mut codemap = CodeMap::new();
+    codemap.add_filemap(FileName::real(source_file_name), source_string.to_string());
+    for err in errors {
+        let diagnostic = create_diagnostic(err);
+        let writer = StandardStream::stderr(ColorChoice::Auto);
+        emit(writer, &codemap, &diagnostic).unwrap();
     }
+    Ok(())
 }
 
 pub fn create_diagnostic(error: Error) -> Diagnostic {
