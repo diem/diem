@@ -1116,13 +1116,13 @@ impl Arbitrary for DiscoveryInfo {
                     fullnodes_network_identity_pubkey,
                     fullnodes_network_address,
                 )| {
-                    DiscoveryInfo::new(
+                    DiscoveryInfo {
                         account_address,
                         validator_network_identity_pubkey,
                         validator_network_address,
                         fullnodes_network_identity_pubkey,
                         fullnodes_network_address,
-                    )
+                    }
                 },
             )
             .boxed()

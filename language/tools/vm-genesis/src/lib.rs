@@ -85,20 +85,17 @@ static EPILOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unw
 // TODO(philiphayes): remove this after integrating on-chain discovery with config.
 /// Make a placeholder `DiscoverySet` from the `ValidatorSet`.
 pub fn make_placeholder_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
+    let mock_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
     let discovery_set = validator_set
         .iter()
-        .map(|validator_pubkeys| {
-            DiscoveryInfo::new(
-                *validator_pubkeys.account_address(),
-                // validator_network_identity_pubkey
-                validator_pubkeys.network_identity_public_key().clone(),
-                // validator_network_address PLACEHOLDER
-                Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap(),
-                // fullnodes_network_identity_pubkey PLACEHOLDER
-                PLACEHOLDER_PUBKEY.clone(),
-                // fullnodes_network_address PLACEHOLDER
-                Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap(),
-            )
+        .map(|validator_pubkeys| DiscoveryInfo {
+            account_address: *validator_pubkeys.account_address(),
+            validator_network_identity_pubkey: validator_pubkeys
+                .network_identity_public_key()
+                .clone(),
+            validator_network_address: mock_addr.clone(),
+            fullnodes_network_identity_pubkey: PLACEHOLDER_PUBKEY.clone(),
+            fullnodes_network_address: mock_addr.clone(),
         })
         .collect::<Vec<_>>();
     DiscoverySet::new(discovery_set)
@@ -473,23 +470,13 @@ fn initialize_validators(
                             .to_vec(),
                     ),
                     // validator_network_identity_pubkey
-                    Value::vector_u8(
-                        discovery_info
-                            .validator_network_identity_pubkey()
-                            .to_bytes()
-                            .to_vec(),
-                    ),
-                    // validator_network_address placeholder
-                    Value::vector_u8(discovery_info.validator_network_address().to_vec()),
-                    // fullnodes_network_identity_pubkey placeholder
-                    Value::vector_u8(
-                        discovery_info
-                            .fullnodes_network_identity_pubkey()
-                            .to_bytes()
-                            .to_vec(),
-                    ),
-                    // fullnodes_network_address placeholder
-                    Value::vector_u8(discovery_info.fullnodes_network_address().to_vec()),
+                    Value::vector_u8(discovery_info.validator_network_identity_pubkey.to_bytes()),
+                    // validator_network_address
+                    Value::vector_u8(discovery_info.validator_network_address.to_vec()),
+                    // fullnodes_network_identity_pubkey
+                    Value::vector_u8(discovery_info.fullnodes_network_identity_pubkey.to_bytes()),
+                    // fullnodes_network_address
+                    Value::vector_u8(discovery_info.fullnodes_network_address.to_vec()),
                 ],
             )
             .unwrap_or_else(|_| panic!("Failure initializing validator {:?}", validator_address));
