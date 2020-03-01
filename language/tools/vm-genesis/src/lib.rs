@@ -8,11 +8,7 @@ mod genesis_gas_schedule;
 use crate::genesis_gas_schedule::initial_gas_schedule;
 use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
-use libra_crypto::{
-    ed25519::*,
-    traits::ValidKey,
-    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
-};
+use libra_crypto::{ed25519::*, traits::ValidKey};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -20,7 +16,6 @@ use libra_types::{
     account_config,
     contract_event::ContractEvent,
     crypto_proxies::ValidatorSet,
-    discovery_info::DiscoveryInfo,
     discovery_set::DiscoverySet,
     transaction::{ChangeSet, RawTransaction, SignatureCheckedTransaction},
 };
@@ -33,9 +28,7 @@ use move_vm_state::{
 };
 use move_vm_types::{chain_state::ChainState, values::Value};
 use once_cell::sync::Lazy;
-use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
-use std::str::FromStr;
 use stdlib::{stdlib_modules, StdLibOptions};
 use vm::{
     access::ModuleAccess,
@@ -52,14 +45,6 @@ pub const ASSOCIATION_INIT_BALANCE: u64 = 1_000_000_000_000_000;
 pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::new(|| {
     let mut rng = StdRng::from_seed(GENESIS_SEED);
     compat::generate_keypair(&mut rng)
-});
-// TODO(philiphayes): remove this when we add discovery set to genesis config.
-static PLACEHOLDER_PUBKEY: Lazy<X25519StaticPublicKey> = Lazy::new(|| {
-    let salt = None;
-    let seed = [69u8; 32];
-    let app_info = None;
-    let (_, pubkey) = X25519StaticPrivateKey::derive_keypair_from_seed(salt, &seed, app_info);
-    pubkey
 });
 
 // Identifiers for well-known functions.
@@ -81,25 +66,6 @@ static REGISTER_CANDIDATE_VALIDATOR: Lazy<Identifier> =
 static ROTATE_AUTHENTICATION_KEY: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("rotate_authentication_key").unwrap());
 static EPILOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unwrap());
-
-// TODO(philiphayes): remove this after integrating on-chain discovery with config.
-/// Make a placeholder `DiscoverySet` from the `ValidatorSet`.
-pub fn make_placeholder_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
-    let mock_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
-    let discovery_set = validator_set
-        .iter()
-        .map(|validator_pubkeys| DiscoveryInfo {
-            account_address: *validator_pubkeys.account_address(),
-            validator_network_identity_pubkey: validator_pubkeys
-                .network_identity_public_key()
-                .clone(),
-            validator_network_address: mock_addr.clone(),
-            fullnodes_network_identity_pubkey: PLACEHOLDER_PUBKEY.clone(),
-            fullnodes_network_address: mock_addr.clone(),
-        })
-        .collect::<Vec<_>>();
-    DiscoverySet::new(discovery_set)
-}
 
 pub fn encode_genesis_transaction_with_validator(
     private_key: &Ed25519PrivateKey,

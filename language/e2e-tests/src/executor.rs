@@ -17,6 +17,7 @@ use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,
     crypto_proxies::ValidatorSet,
+    discovery_set::mock::mock_discovery_set,
     language_storage::ModuleId,
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionPayload, TransactionStatus,
@@ -125,7 +126,7 @@ impl FakeExecutor {
         } else {
             let validator_set = validator_set
                 .unwrap_or_else(|| generator::validator_swarm_for_testing(10).validator_set);
-            let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
+            let discovery_set = mock_discovery_set(&validator_set);
             let stdlib_modules =
                 genesis_modules.unwrap_or_else(|| stdlib_modules(StdLibOptions::Staged).to_vec());
             match vm_genesis::encode_genesis_transaction_with_validator_and_modules(

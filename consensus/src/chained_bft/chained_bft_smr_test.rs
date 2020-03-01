@@ -124,6 +124,7 @@ impl SMRNode {
         let ValidatorSwarm {
             mut nodes,
             validator_set,
+            ..
         } = generator::validator_swarm_for_testing(num_nodes);
 
         let executor_validator_set = if executor_with_reconfig {
