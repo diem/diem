@@ -3,12 +3,17 @@
 
 pub mod cluster_swarm_kube;
 
+use crate::instance::Instance;
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::{future::try_join_all, try_join};
 
 #[async_trait]
 pub trait ClusterSwarm {
+    async fn validator_instances(&self) -> Vec<Instance>;
+
+    async fn fullnode_instances(&self) -> Vec<Instance>;
+
     /// Inserts a validator into the ClusterSwarm if it doesn't exist. If it
     /// exists, then updates the validator.
     async fn upsert_validator(
@@ -142,4 +147,6 @@ pub trait ClusterSwarm {
 
     /// Deletes all validators and fullnodes in this cluster
     async fn delete_all(&self) -> Result<()>;
+
+    async fn get_grafana_baseurl(&self) -> Result<String>;
 }

@@ -12,7 +12,8 @@ use std::{collections::HashMap, time::Duration};
 pub struct Prometheus {
     url: Url,
     client: reqwest::blocking::Client,
-    public_url: Url,
+    grafana_base_url: Url,
+    k8s: bool,
 }
 
 pub struct MatrixResponse {
@@ -24,25 +25,32 @@ pub struct TimeSeries {
 }
 
 impl Prometheus {
-    pub fn new(ip: &str, workspace: &str) -> Self {
-        let url = format!("http://{}:9091", ip)
-            .parse()
-            .expect("Failed to parse prometheus url");
-        let public_url = format!("http://prometheus.{}.aws.hlw3truzy4ls.com:9091", workspace)
+    pub fn new(ip: &str, grafana_base_url: String, k8s: bool) -> Self {
+        let url = if k8s {
+            format!("http://{}:80", ip)
+                .parse()
+                .expect("Failed to parse prometheus url")
+        } else {
+            format!("http://{}:9091", ip)
+                .parse()
+                .expect("Failed to parse prometheus url")
+        };
+        let grafana_base_url = grafana_base_url
             .parse()
             .expect("Failed to parse prometheus public url");
         let client = reqwest::blocking::Client::new();
         Self {
             url,
             client,
-            public_url,
+            grafana_base_url,
+            k8s,
         }
     }
 
     pub fn link_to_dashboard(&self, start: Duration, end: Duration) -> String {
         format!(
             "{}d/overview10/overview?orgId=1&from={}&to={}",
-            self.public_url,
+            self.grafana_base_url,
             start.as_millis(),
             end.as_millis()
         )
@@ -55,10 +63,16 @@ impl Prometheus {
         end: &Duration,
         step: u64,
     ) -> Result<MatrixResponse> {
+        let proxy_prefix = if self.k8s {
+            ""
+        } else {
+            "api/datasources/proxy/1/"
+        };
         let url = self
             .url
             .join(&format!(
-                "api/datasources/proxy/1/api/v1/query_range?query={}&start={}&end={}&step={}",
+                "{}api/v1/query_range?query={}&start={}&end={}&step={}",
+                proxy_prefix,
                 query,
                 start.as_secs(),
                 end.as_secs(),
