@@ -17,7 +17,7 @@ memsocket = { path = "../memsocket", version = "0.1.0" }
 parity-multiaddr = { version = "0.7.2", default-features = false }
 pin-project = "0.4.2"
 tokio = { version = "0.2.12", features = ["full"] }
-yamux = { version = "0.4.3", default-features = false }
+yamux = { version = "0.4.4", default-features = false }
 
 [dev-dependencies]
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
