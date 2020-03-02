@@ -25,7 +25,7 @@ consensus = { path = "../consensus", version = "0.1.0" }
 crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 executable-helpers = { path = "../common/executable-helpers", version = "0.1.0" }
-executor = { path = "../executor", version = "0.1.0" }
+executor = { path = "../execution/executor", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }

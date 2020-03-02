@@ -26,7 +26,7 @@ rand = "0.6.5"
 
 config-builder = { path = "../config/config-builder", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-executor = { path = "../executor", version = "0.1.0" }
+executor = { path = "../execution/executor", version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
