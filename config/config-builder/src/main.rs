@@ -135,6 +135,9 @@ struct ValidatorCommonArgs {
     #[structopt(short = "n", long, default_value = "1")]
     /// Specify the number of nodes to configure
     nodes: usize,
+    #[structopt(short = "g", long)]
+    /// Specify the number of nodes coded in genesis blob, will use all nodes if unspecified
+    nodes_in_genesis: Option<usize>,
     #[structopt(long, parse(from_str = parse_socket_addr))]
     /// Specify the IP:Port for Safety rules. If this is not defined, SafetyRules will run in its
     /// default configuration.
@@ -294,6 +297,7 @@ fn build_validator(args: ValidatorArgs) {
         .index(args.validator_common.index)
         .listen(args.listen)
         .nodes(args.validator_common.nodes)
+        .nodes_in_genesis(args.validator_common.nodes_in_genesis)
         .safety_rules_addr(args.validator_common.safety_rules_addr)
         .safety_rules_backend(args.validator_common.safety_rules_backend)
         .safety_rules_host(args.validator_common.safety_rules_host)

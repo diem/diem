@@ -11,6 +11,7 @@ use libra_config::{
     generator,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::transaction::Transaction;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -26,6 +27,7 @@ pub struct ValidatorConfig {
     index: usize,
     listen: Multiaddr,
     nodes: usize,
+    nodes_in_genesis: Option<usize>,
     safety_rules_addr: Option<SocketAddr>,
     safety_rules_backend: Option<String>,
     safety_rules_host: Option<String>,
@@ -42,6 +44,7 @@ impl Default for ValidatorConfig {
             index: 0,
             listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
             nodes: 1,
+            nodes_in_genesis: None,
             safety_rules_addr: None,
             safety_rules_backend: None,
             safety_rules_host: None,
@@ -79,6 +82,11 @@ impl ValidatorConfig {
 
     pub fn nodes(&mut self, nodes: usize) -> &mut Self {
         self.nodes = nodes;
+        self
+    }
+
+    pub fn nodes_in_genesis(&mut self, nodes_in_genesis: Option<usize>) -> &mut Self {
+        self.nodes_in_genesis = nodes_in_genesis;
         self
     }
 
@@ -168,8 +176,16 @@ impl ValidatorConfig {
                 found: validator_swarm.nodes.len()
             }
         );
+        let nodes_in_genesis = self.nodes_in_genesis.unwrap_or(self.nodes);
 
-        let validator_set = validator_swarm.validator_set.clone();
+        let validator_set = ValidatorSet::new(
+            validator_swarm
+                .validator_set
+                .clone()
+                .into_iter()
+                .take(nodes_in_genesis)
+                .collect(),
+        );
         let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
 
         let genesis = Some(Transaction::UserTransaction(
