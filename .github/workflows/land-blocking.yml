@@ -31,6 +31,8 @@ jobs:
         if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
+          export CTI_OUTPUT_LOG=$(mktemp)
+          echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
           JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
           ./scripts/cti \
             --marker land \
@@ -62,6 +64,7 @@ jobs:
             }
             // Read and check cluster test results
             let should_fail = false;
+            let env_vars = process.env;
             let body;
             const fsp = require('fs').promises;
             try {
@@ -82,7 +85,25 @@ jobs:
               }
             } catch (err) {
               if (err.code === 'ENOENT') {
-                body = "Cluster Test failed - no test report found.";
+                body = "Cluster Test failed - no test report found.\n";
+                // Check Cluster Test output log for infra error
+                try {
+                  cti_log = await fsp.readFile(env_vars.CTI_OUTPUT_LOG, 'utf-8');
+                  let re = /.*(^Failed\sto\s.*\"Service\sUnavailable.\sPlease\stry\sagain\slater\.\".*)/;
+                  if (re.test(cti_log)) {
+                    let match = re.exec(cti_log);
+                    body += " There was service infra error:\n";
+                    body += `
+                    ${match[1]}
+                    `
+                    + "\n"
+                    ;
+                    body += "To retry, comment your PR with `@bors-libra retry`.";
+                    body += " If that doesn't trigger re-run, amend and push again.";
+                  }
+                } catch (err) {
+                  console.error("Failed to check infra error in CT output log.\n", err);
+                }
               } else {
                 body = "Cluster Test failed - test report processing failed.";
               }
@@ -92,7 +113,6 @@ jobs:
             }
             // Add repro cmd to message
             try {
-              let env_vars = process.env;
               body += "\nRepro cmd:\n";
               body += `
                 ./scripts/cti --tag dev_${env_vars.LIBRA_GIT_REV} --run bench
