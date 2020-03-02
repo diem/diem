@@ -90,7 +90,7 @@ if [ -z "$TAG" ]; then
     echo "**TIP Use cti -T $TAG <...> to restart this run with same tag without rebuilding it"
 fi
 
-OUTPUT_TEE=$(mktemp)
+OUTPUT_TEE=${CTI_OUTPUT_LOG:-$(mktemp)}
 
 echo "**********"
 echo "Copy of this output: $OUTPUT_TEE"
