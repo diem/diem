@@ -143,8 +143,6 @@ pub struct Discovery<TTicker> {
     signer: Signer,
     /// Current state, maintaining the most recent Note for each peer, alongside parsed PeerInfo.
     known_peers: HashMap<PeerId, VerifiedNote>,
-    /// Info for seed peers.
-    seed_peers: HashMap<PeerId, PeerInfo>,
     /// Currently connected peers.
     connected_peers: HashSet<PeerId>,
     /// Ticker to trigger state send to a random peer. In production, the ticker is likely to be
@@ -169,7 +167,6 @@ where
         role: RoleType,
         self_addrs: Vec<Multiaddr>,
         signer: Signer,
-        seed_peers: HashMap<PeerId, PeerInfo>,
         trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
         ticker: TTicker,
         network_reqs_tx: DiscoveryNetworkSender,
@@ -192,7 +189,6 @@ where
             peer_id: self_peer_id,
             role,
             dns_seed_addr: Bytes::from_static(dns_seed_addr),
-            seed_peers,
             trusted_peers,
             signer,
             known_peers,
@@ -205,27 +201,6 @@ where
         }
     }
 
-    // Connect with all the seed peers. If current node is also a seed peer, remove it from the
-    // list.
-    async fn connect_to_seed_peers(&mut self) {
-        debug!("Connecting to {} seed peers", self.seed_peers.len());
-        self.record_num_discovery_notes();
-        let self_peer_id = self.peer_id;
-        for (peer_id, peer_info) in self
-            .seed_peers
-            .iter()
-            .filter(|(peer_id, _)| **peer_id != self_peer_id)
-        {
-            self.conn_mgr_reqs_tx
-                .send(ConnectivityRequest::UpdateAddresses(
-                    *peer_id,
-                    peer_info.addrs.clone(),
-                ))
-                .await
-                .expect("ConnectivityRequest::UpdateAddresses send");
-        }
-    }
-
     // Starts the main event loop for the discovery actor. We bootstrap by first dialing all the
     // seed peers, and then entering the event handling loop. Messages are received from:
     // - a ticker to trigger discovery message send to a random connected peer
@@ -233,8 +208,9 @@ where
     // - an internal task once it has processed incoming messages from a peer, and wishes for
     // discovery actor to update its state.
     pub async fn start(mut self) {
-        // Bootstrap by connecting to seed peers.
-        self.connect_to_seed_peers().await;
+        // Ensure our metrics counter has an initial value.
+        self.record_num_discovery_notes();
+
         debug!("Starting Discovery actor event loop");
         loop {
             futures::select! {
@@ -396,13 +372,7 @@ where
                         note = self.note.clone();
                     } else {
                         // The multiaddrs in the peer's discovery Note.
-                        let mut peer_addrs: Vec<Multiaddr> = note.as_note().addrs().clone();
-
-                        // Append the addrs in the seed PeerInfo if this peer is
-                        // configured as one of our seed peers.
-                        if let Some(seed_info) = self.seed_peers.get(&note.as_note().peer_id) {
-                            peer_addrs.extend(seed_info.addrs.clone());
-                        }
+                        let peer_addrs = note.as_note().addrs().clone();
 
                         self.conn_mgr_reqs_tx
                             .send(ConnectivityRequest::UpdateAddresses(
@@ -541,10 +511,6 @@ pub struct PeerInfo {
 }
 
 impl PeerInfo {
-    pub fn new(addrs: Vec<Multiaddr>, epoch: u64) -> Self {
-        Self { addrs, epoch }
-    }
-
     fn sign(self, signer: &Signer) -> SignedPeerInfo {
         let peer_info_bytes = lcs::to_bytes(&self).expect("LCS serialization fails");
         let signature = signer
