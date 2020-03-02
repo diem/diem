@@ -17,7 +17,7 @@ use crate::{
     common::NetworkPublicKeys,
     peer_manager::{self, conn_status_channel, PeerManagerError, PeerManagerRequestSender},
 };
-use channel::{self};
+use channel;
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
@@ -42,6 +42,12 @@ mod test;
 pub struct ConnectivityManager<TTicker, TBackoff> {
     /// Nodes which are eligible to join the network.
     eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+    /// For some networks, we need an initial set of seed peers to bootstrap from.
+    /// `ConnectivityManager` will attempt to connect to these seed peers on
+    /// startup. Even after receiving fresher information on peer addresses, we
+    /// will still use these configured seed addresses, just as the lowest
+    /// priority backup when attemping to connect.
+    seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
     /// PeerId and address of remote peers to which this peer is connected.
     connected: HashMap<PeerId, Multiaddr>,
     /// Addresses of peers received from Discovery module.
@@ -105,7 +111,9 @@ where
 {
     /// Creates a new instance of the [`ConnectivityManager`] actor.
     pub fn new(
+        self_peer_id: PeerId,
         eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+        seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
         ticker: TTicker,
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         control_notifs_rx: conn_status_channel::Receiver,
@@ -113,10 +121,19 @@ where
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
     ) -> Self {
+        // Ensure seed peers doesn't contain our own address (we want to avoid
+        // pointless self-dials).
+        let peer_addresses = seed_peers
+            .clone()
+            .into_iter()
+            .filter(|(peer_id, _)| *peer_id != self_peer_id)
+            .collect::<HashMap<PeerId, _>>();
+
         Self {
             eligible,
+            seed_peers,
             connected: HashMap::new(),
-            peer_addresses: HashMap::new(),
+            peer_addresses,
             ticker,
             peer_mgr_reqs_tx,
             control_notifs_rx,
@@ -138,7 +155,12 @@ where
         // 3. Notifications from PeerManager when we establish a new connection or lose an existing
         //    connection with a peer.
         let mut pending_dials = FuturesUnordered::new();
-        trace!("Started connection manager");
+
+        // When we first startup, let's attempt to connect with our seed peers.
+        info!("Connecting to {} seed peers...", self.seed_peers.len());
+        self.check_connectivity(&mut pending_dials).await;
+
+        trace!("Starting connection manager");
         loop {
             self.event_id += 1;
             ::futures::select! {
@@ -328,7 +350,7 @@ where
                     "Received updated addresses for peer: {}",
                     peer_id.short_str()
                 );
-                self.peer_addresses.insert(peer_id, addrs);
+                self.update_peer_addrs(peer_id, addrs);
                 // Ensure that the next dial attempt starts from the first addr.
                 if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
                     dial_state.reset_addr();
@@ -342,6 +364,19 @@ where
                 sender.send(self.dial_queue.len()).unwrap();
             }
         }
+    }
+
+    fn update_peer_addrs(&mut self, peer_id: PeerId, mut addrs: Vec<Multiaddr>) {
+        // Append any seed addresses for this peer as low-priority backups.
+        if let Some(seed_addrs) = self.seed_peers.get(&peer_id) {
+            for seed_addr in seed_addrs {
+                if !addrs.contains(seed_addr) {
+                    addrs.push(seed_addr.clone());
+                }
+            }
+        }
+
+        self.peer_addresses.insert(peer_id, addrs);
     }
 
     fn handle_control_notification(&mut self, notif: peer_manager::ConnectionStatusNotification) {

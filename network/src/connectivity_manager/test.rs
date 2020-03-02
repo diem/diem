@@ -18,34 +18,40 @@ use tokio_retry::strategy::FixedInterval;
 
 fn setup_conn_mgr(
     rt: &mut Runtime,
-    seed_peer_id: PeerId,
+    eligible_peers: Vec<PeerId>,
+    seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
 ) -> (
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     conn_status_channel::Sender,
     channel::Sender<ConnectivityRequest>,
     channel::Sender<()>,
 ) {
+    let self_peer_id = PeerId::random();
     let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (control_notifs_tx, control_notifs_rx) = conn_status_channel::new();
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let mut rng = StdRng::from_seed(TEST_SEED);
-    let (_, signing_public_key) = compat::generate_keypair(&mut rng);
-    let (_, identity_public_key) = x25519::compat::generate_keypair(&mut rng);
+
+    let eligible_peers = eligible_peers
+        .into_iter()
+        .map(|peer_id| {
+            let (_, signing_public_key) = compat::generate_keypair(&mut rng);
+            let (_, identity_public_key) = x25519::compat::generate_keypair(&mut rng);
+            let pubkeys = NetworkPublicKeys {
+                identity_public_key,
+                signing_public_key,
+            };
+            (peer_id, pubkeys)
+        })
+        .collect::<HashMap<_, _>>();
+
     let conn_mgr = {
         ConnectivityManager::new(
-            Arc::new(RwLock::new(
-                vec![(
-                    seed_peer_id,
-                    NetworkPublicKeys {
-                        identity_public_key,
-                        signing_public_key,
-                    },
-                )]
-                .into_iter()
-                .collect(),
-            )),
+            self_peer_id,
+            Arc::new(RwLock::new(eligible_peers)),
+            seed_peers,
             ticker_rx,
             PeerManagerRequestSender::new(peer_mgr_reqs_tx),
             control_notifs_rx,
@@ -174,53 +180,41 @@ async fn expect_dial_request(
 }
 
 #[test]
-fn addr_change() {
+fn connect_to_seeds_on_startup() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
+    let seed_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+    let seed_peers = vec![(seed_peer_id, vec![seed_addr.clone()])]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+    let eligible_peers = vec![seed_peer_id];
+
     info!("Seed peer_id is {}", seed_peer_id.short_str());
     let (mut peer_mgr_reqs_rx, mut control_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, seed_peer_id);
+        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
-        let seed_address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-
-        // Send address of seed peer.
-        info!("Sending address of seed peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                seed_peer_id,
-                vec![seed_address.clone()],
-            ))
-            .await
-            .unwrap();
-
-        // Trigger connectivity check.
-        info!("Sending tick to trigger connectivity check");
-        ticker_tx.send(()).await.unwrap();
-
-        // Peer manager receives a request to connect to the seed peer.
+        // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_address.clone(),
+            seed_addr.clone(),
             Ok(()),
         )
         .await;
 
-        // Send request to connect to seed peer at old address. ConnectivityManager should not
-        // dial, since we are already connected at the new address. The absence of another dial
-        // attempt is hard to test explicitly. It will get implicitly tested if the dial
-        // attempt arrives in place of some other expected message in the future.
+        // Sending an UpdateAddresses with the same seed address should not
+        // trigger any dials.
         info!("Sending same address of seed peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 seed_peer_id,
-                vec![seed_address.clone()],
+                vec![seed_addr.clone()],
             ))
             .await
             .unwrap();
@@ -229,13 +223,13 @@ fn addr_change() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        let seed_address_new = Multiaddr::from_str("/ip4/127.0.1.1/tcp/8080").unwrap();
+        let new_seed_addr = Multiaddr::from_str("/ip4/127.0.1.1/tcp/8080").unwrap();
         // Send new address of seed peer.
         info!("Sending new address of seed peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 seed_peer_id,
-                vec![seed_address_new.clone()],
+                vec![new_seed_addr.clone()],
             ))
             .await
             .unwrap();
@@ -251,7 +245,7 @@ fn addr_change() {
             seed_peer_id,
             peer_manager::ConnectionStatusNotification::LostPeer(
                 seed_peer_id,
-                seed_address,
+                seed_addr.clone(),
                 DisconnectReason::ConnectionLost,
             ),
         )
@@ -261,14 +255,136 @@ fn addr_change() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager then receives a request to connect to the seed peer at new address.
+        // We should try to connect to both the new address and seed address.
         info!("Waiting to receive dial request to seed peer at new address");
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_address_new,
+            new_seed_addr,
+            Err(PeerManagerError::IoError(io::Error::from(
+                io::ErrorKind::ConnectionRefused,
+            ))),
+        )
+        .await;
+
+        // Trigger connectivity check.
+        info!("Sending tick to trigger connectivity check");
+        ticker_tx.send(()).await.unwrap();
+
+        info!("Waiting to receive dial request to seed peer at seed address");
+        expect_dial_request(
+            &mut peer_mgr_reqs_rx,
+            &mut control_notifs_tx,
+            &mut conn_mgr_reqs_tx,
+            seed_peer_id,
+            seed_addr,
+            Ok(()),
+        )
+        .await;
+    };
+    rt.block_on(f_peer_mgr);
+}
+
+#[test]
+fn addr_change() {
+    ::libra_logger::try_init_for_testing();
+    let mut rt = Runtime::new().unwrap();
+    let other_peer_id = PeerId::random();
+    let eligible_peers = vec![other_peer_id];
+    let seed_peers = HashMap::new();
+    info!("Other peer_id is {}", other_peer_id.short_str());
+    let (mut peer_mgr_reqs_rx, mut control_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+
+    // Fake peer manager and discovery.
+    let f_peer_mgr = async move {
+        let other_address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+
+        // Send address of other peer.
+        info!("Sending address of other peer");
+        conn_mgr_reqs_tx
+            .send(ConnectivityRequest::UpdateAddresses(
+                other_peer_id,
+                vec![other_address.clone()],
+            ))
+            .await
+            .unwrap();
+
+        // Trigger connectivity check.
+        info!("Sending tick to trigger connectivity check");
+        ticker_tx.send(()).await.unwrap();
+
+        // Peer manager receives a request to connect to the other peer.
+        info!("Waiting to receive dial request");
+        expect_dial_request(
+            &mut peer_mgr_reqs_rx,
+            &mut control_notifs_tx,
+            &mut conn_mgr_reqs_tx,
+            other_peer_id,
+            other_address.clone(),
+            Ok(()),
+        )
+        .await;
+
+        // Send request to connect to other peer at old address. ConnectivityManager should not
+        // dial, since we are already connected at the new address. The absence of another dial
+        // attempt is hard to test explicitly. It will get implicitly tested if the dial
+        // attempt arrives in place of some other expected message in the future.
+        info!("Sending same address of other peer");
+        conn_mgr_reqs_tx
+            .send(ConnectivityRequest::UpdateAddresses(
+                other_peer_id,
+                vec![other_address.clone()],
+            ))
+            .await
+            .unwrap();
+
+        // Trigger connectivity check.
+        info!("Sending tick to trigger connectivity check");
+        ticker_tx.send(()).await.unwrap();
+
+        let other_address_new = Multiaddr::from_str("/ip4/127.0.1.1/tcp/8080").unwrap();
+        // Send new address of other peer.
+        info!("Sending new address of other peer");
+        conn_mgr_reqs_tx
+            .send(ConnectivityRequest::UpdateAddresses(
+                other_peer_id,
+                vec![other_address_new.clone()],
+            ))
+            .await
+            .unwrap();
+
+        // Trigger connectivity check.
+        info!("Sending tick to trigger connectivity check");
+        ticker_tx.send(()).await.unwrap();
+
+        // We expect the peer which changed its address to also disconnect.
+        info!("Sending lost peer notification for other peer at old address");
+        send_notification_await_delivery(
+            &mut control_notifs_tx,
+            other_peer_id,
+            peer_manager::ConnectionStatusNotification::LostPeer(
+                other_peer_id,
+                other_address,
+                DisconnectReason::ConnectionLost,
+            ),
+        )
+        .await;
+
+        // Trigger connectivity check.
+        info!("Sending tick to trigger connectivity check");
+        ticker_tx.send(()).await.unwrap();
+
+        // Peer manager then receives a request to connect to the other peer at new address.
+        info!("Waiting to receive dial request to other peer at new address");
+        expect_dial_request(
+            &mut peer_mgr_reqs_rx,
+            &mut control_notifs_tx,
+            &mut conn_mgr_reqs_tx,
+            other_peer_id,
+            other_address_new,
             Ok(()),
         )
         .await;
@@ -280,21 +396,23 @@ fn addr_change() {
 fn lost_connection() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let seed_peer_id = PeerId::random();
-    info!("Seed peer_id is {}", seed_peer_id.short_str());
+    let other_peer_id = PeerId::random();
+    let eligible_peers = vec![other_peer_id];
+    let seed_peers = HashMap::new();
+    info!("Other peer_id is {}", other_peer_id.short_str());
     let (mut peer_mgr_reqs_rx, mut control_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, seed_peer_id);
+        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
-        let seed_address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+        let other_address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
 
-        // Send address of seed peer.
-        info!("Sending address of seed peer");
+        // Send address of other peer.
+        info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
-                seed_peer_id,
-                vec![seed_address.clone()],
+                other_peer_id,
+                vec![other_address.clone()],
             ))
             .await
             .unwrap();
@@ -303,26 +421,26 @@ fn lost_connection() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager receives a request to connect to the seed peer.
+        // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_address.clone(),
+            other_peer_id,
+            other_address.clone(),
             Ok(()),
         )
         .await;
 
-        // Notify connectivity actor of loss of connection to seed_peer.
+        // Notify connectivity actor of loss of connection to other_peer.
         info!("Sending LostPeer event to signal connection loss");
         send_notification_await_delivery(
             &mut control_notifs_tx,
-            seed_peer_id,
+            other_peer_id,
             peer_manager::ConnectionStatusNotification::LostPeer(
-                seed_peer_id,
-                seed_address.clone(),
+                other_peer_id,
+                other_address.clone(),
                 DisconnectReason::ConnectionLost,
             ),
         )
@@ -332,15 +450,15 @@ fn lost_connection() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager receives a request to connect to the seed peer after loss of
+        // Peer manager receives a request to connect to the other peer after loss of
         // connection.
         info!("Waiting to receive dial request");
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_address.clone(),
+            other_peer_id,
+            other_address.clone(),
             Ok(()),
         )
         .await;
@@ -352,20 +470,22 @@ fn lost_connection() {
 fn disconnect() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let seed_peer_id = PeerId::random();
-    info!("Seed peer_id is {}", seed_peer_id.short_str());
+    let other_peer_id = PeerId::random();
+    let eligible_peers = vec![other_peer_id];
+    let seed_peers = HashMap::new();
+    info!("Other peer_id is {}", other_peer_id.short_str());
     let (mut peer_mgr_reqs_rx, mut control_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, seed_peer_id);
+        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     let events_f = async move {
-        let seed_address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+        let other_address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
 
-        // Send address of seed peer.
-        info!("Sending address of seed peer");
+        // Send address of other peer.
+        info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
-                seed_peer_id,
-                vec![seed_address.clone()],
+                other_peer_id,
+                vec![other_address.clone()],
             ))
             .await
             .unwrap();
@@ -374,20 +494,20 @@ fn disconnect() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager receives a request to connect to the seed peer.
+        // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_address.clone(),
+            other_peer_id,
+            other_address.clone(),
             Ok(()),
         )
         .await;
 
-        // Send request to make seed peer ineligible.
-        info!("Sending request to make seed peer ineligible");
+        // Send request to make other peer ineligible.
+        info!("Sending request to make other peer ineligible");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateEligibleNodes(HashMap::new()))
             .await
@@ -397,13 +517,13 @@ fn disconnect() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager receives a request to connect to the seed peer.
+        // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive disconnect request");
         expect_disconnect_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
-            seed_peer_id,
-            seed_address.clone(),
+            other_peer_id,
+            other_address.clone(),
             Ok(()),
         )
         .await;
@@ -416,20 +536,22 @@ fn disconnect() {
 fn retry_on_failure() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let seed_peer_id = PeerId::random();
-    info!("Seed peer_id is {}", seed_peer_id.short_str());
+    let other_peer_id = PeerId::random();
+    let eligible_peers = vec![other_peer_id];
+    let seed_peers = HashMap::new();
+    info!("Other peer_id is {}", other_peer_id.short_str());
     let (mut peer_mgr_reqs_rx, mut control_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, seed_peer_id);
+        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     let events_f = async move {
-        let seed_address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+        let other_address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
 
-        // Send address of seed peer.
-        info!("Sending address of seed peer");
+        // Send address of other peer.
+        info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
-                seed_peer_id,
-                vec![seed_address.clone()],
+                other_peer_id,
+                vec![other_address.clone()],
             ))
             .await
             .unwrap();
@@ -438,14 +560,14 @@ fn retry_on_failure() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager receives a request to connect to the seed peer.
+        // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_address.clone(),
+            other_peer_id,
+            other_address.clone(),
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::ConnectionRefused,
             ))),
@@ -456,20 +578,20 @@ fn retry_on_failure() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager again receives a request to connect to the seed peer.
+        // Peer manager again receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_address.clone(),
+            other_peer_id,
+            other_address.clone(),
             Ok(()),
         )
         .await;
 
-        // Send request to make seed peer ineligible.
-        info!("Sending request to make seed peer ineligible");
+        // Send request to make other peer ineligible.
+        info!("Sending request to make other peer ineligible");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateEligibleNodes(HashMap::new()))
             .await
@@ -479,13 +601,13 @@ fn retry_on_failure() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager receives a request to disconnect from the seed peer, which fails.
+        // Peer manager receives a request to disconnect from the other peer, which fails.
         info!("Waiting to receive disconnect request");
         expect_disconnect_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
-            seed_peer_id,
-            seed_address.clone(),
+            other_peer_id,
+            other_address.clone(),
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::Interrupted,
             ))),
@@ -496,14 +618,14 @@ fn retry_on_failure() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager receives another request to disconnect from the seed peer, which now
+        // Peer manager receives another request to disconnect from the other peer, which now
         // succeeds.
         info!("Waiting to receive disconnect request");
         expect_disconnect_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
-            seed_peer_id,
-            seed_address.clone(),
+            other_peer_id,
+            other_address.clone(),
             Ok(()),
         )
         .await;
@@ -517,20 +639,22 @@ fn retry_on_failure() {
 fn no_op_requests() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let seed_peer_id = PeerId::random();
-    info!("Seed peer_id is {}", seed_peer_id.short_str());
+    let other_peer_id = PeerId::random();
+    let eligible_peers = vec![other_peer_id];
+    let seed_peers = HashMap::new();
+    info!("Other peer_id is {}", other_peer_id.short_str());
     let (mut peer_mgr_reqs_rx, mut control_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, seed_peer_id);
+        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     let events_f = async move {
-        let seed_address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+        let other_address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
 
-        // Send address of seed peer.
-        info!("Sending address of seed peer");
+        // Send address of other peer.
+        info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
-                seed_peer_id,
-                vec![seed_address.clone()],
+                other_peer_id,
+                vec![other_address.clone()],
             ))
             .await
             .unwrap();
@@ -539,24 +663,27 @@ fn no_op_requests() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager receives a request to connect to the seed peer.
+        // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_address.clone(),
-            Err(PeerManagerError::AlreadyConnected(seed_address.clone())),
+            other_peer_id,
+            other_address.clone(),
+            Err(PeerManagerError::AlreadyConnected(other_address.clone())),
         )
         .await;
 
         // Send a delayed NewPeer notification.
-        info!("Sending delayed NewPeer notification for seed peer");
+        info!("Sending delayed NewPeer notification for other peer");
         send_notification_await_delivery(
             &mut control_notifs_tx,
-            seed_peer_id,
-            peer_manager::ConnectionStatusNotification::NewPeer(seed_peer_id, seed_address.clone()),
+            other_peer_id,
+            peer_manager::ConnectionStatusNotification::NewPeer(
+                other_peer_id,
+                other_address.clone(),
+            ),
         )
         .await;
 
@@ -564,8 +691,8 @@ fn no_op_requests() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Send request to make seed peer ineligible.
-        info!("Sending request to make seed peer ineligible");
+        // Send request to make other peer ineligible.
+        info!("Sending request to make other peer ineligible");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateEligibleNodes(HashMap::new()))
             .await
@@ -575,24 +702,24 @@ fn no_op_requests() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Peer manager receives a request to disconnect from the seed peer, which fails.
+        // Peer manager receives a request to disconnect from the other peer, which fails.
         info!("Waiting to receive disconnect request");
         expect_disconnect_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
-            seed_peer_id,
-            seed_address.clone(),
-            Err(PeerManagerError::NotConnected(seed_peer_id)),
+            other_peer_id,
+            other_address.clone(),
+            Err(PeerManagerError::NotConnected(other_peer_id)),
         )
         .await;
 
-        // Send delayed LostPeer notification for seed peer.
+        // Send delayed LostPeer notification for other peer.
         send_notification_await_delivery(
             &mut control_notifs_tx,
-            seed_peer_id,
+            other_peer_id,
             peer_manager::ConnectionStatusNotification::LostPeer(
-                seed_peer_id,
-                seed_address.clone(),
+                other_peer_id,
+                other_address.clone(),
                 DisconnectReason::ConnectionLost,
             ),
         )
@@ -611,10 +738,10 @@ fn no_op_requests() {
 fn backoff_on_failure() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let seed_peer_id = PeerId::random();
-    info!("Seed peer_id is {}", seed_peer_id.short_str());
+    let eligible_peers = vec![];
+    let seed_peers = HashMap::new();
     let (mut peer_mgr_reqs_rx, mut control_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, seed_peer_id);
+        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     let events_f = async move {
         let (peer_a, peer_a_keys) = gen_peer();
@@ -696,24 +823,26 @@ fn backoff_on_failure() {
 fn multiple_addrs_basic() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let seed_peer_id = PeerId::random();
-    info!("Seed peer_id is {}", seed_peer_id.short_str());
+    let other_peer_id = PeerId::random();
+    let eligible_peers = vec![other_peer_id];
+    let seed_peers = HashMap::new();
+    info!("Other peer_id is {}", other_peer_id.short_str());
     let (mut peer_mgr_reqs_rx, mut control_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, seed_peer_id);
+        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
         // For this test, the peer advertises multiple listen addresses. Assume
         // that the first addr fails to connect while the second addr succeeds.
-        let seed_addr_1 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
-        let seed_addr_2 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
+        let other_addr_1 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
+        let other_addr_2 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
 
-        // Send addresses of seed peer.
-        info!("Sending address of seed peer");
+        // Send addresses of other peer.
+        info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
-                seed_peer_id,
-                vec![seed_addr_1.clone(), seed_addr_2.clone()],
+                other_peer_id,
+                vec![other_addr_1.clone(), other_addr_2.clone()],
             ))
             .await
             .unwrap();
@@ -728,8 +857,8 @@ fn multiple_addrs_basic() {
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_addr_1.clone(),
+            other_peer_id,
+            other_addr_1.clone(),
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::ConnectionRefused,
             ))),
@@ -740,7 +869,7 @@ fn multiple_addrs_basic() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Since the last connection attempt failed for seed_addr_1, we should
+        // Since the last connection attempt failed for other_addr_1, we should
         // attempt the next available listener address. In this case, the call
         // succeeds and we should connect to the peer.
         info!("Waiting to receive dial request");
@@ -748,8 +877,8 @@ fn multiple_addrs_basic() {
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_addr_2.clone(),
+            other_peer_id,
+            other_addr_2.clone(),
             Ok(()),
         )
         .await;
@@ -763,22 +892,24 @@ fn multiple_addrs_basic() {
 fn multiple_addrs_wrapping() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let seed_peer_id = PeerId::random();
-    info!("Seed peer_id is {}", seed_peer_id.short_str());
+    let other_peer_id = PeerId::random();
+    let eligible_peers = vec![other_peer_id];
+    let seed_peers = HashMap::new();
+    info!("Other peer_id is {}", other_peer_id.short_str());
     let (mut peer_mgr_reqs_rx, mut control_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, seed_peer_id);
+        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
-        let seed_addr_1 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
-        let seed_addr_2 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
+        let other_addr_1 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
+        let other_addr_2 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
 
-        // Send addresses of seed peer.
-        info!("Sending address of seed peer");
+        // Send addresses of other peer.
+        info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
-                seed_peer_id,
-                vec![seed_addr_1.clone(), seed_addr_2.clone()],
+                other_peer_id,
+                vec![other_addr_1.clone(), other_addr_2.clone()],
             ))
             .await
             .unwrap();
@@ -793,8 +924,8 @@ fn multiple_addrs_wrapping() {
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_addr_1.clone(),
+            other_peer_id,
+            other_addr_1.clone(),
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::ConnectionRefused,
             ))),
@@ -811,8 +942,8 @@ fn multiple_addrs_wrapping() {
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_addr_2.clone(),
+            other_peer_id,
+            other_addr_2.clone(),
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::ConnectionRefused,
             ))),
@@ -829,8 +960,8 @@ fn multiple_addrs_wrapping() {
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_addr_1.clone(),
+            other_peer_id,
+            other_addr_1.clone(),
             Ok(()),
         )
         .await;
@@ -844,26 +975,28 @@ fn multiple_addrs_wrapping() {
 fn multiple_addrs_shrinking() {
     ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let seed_peer_id = PeerId::random();
-    info!("Seed peer_id is {}", seed_peer_id.short_str());
+    let other_peer_id = PeerId::random();
+    let eligible_peers = vec![other_peer_id];
+    let seed_peers = HashMap::new();
+    info!("Other peer_id is {}", other_peer_id.short_str());
     let (mut peer_mgr_reqs_rx, mut control_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, seed_peer_id);
+        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
-        let seed_addr_1 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
-        let seed_addr_2 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
-        let seed_addr_3 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
+        let other_addr_1 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
+        let other_addr_2 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
+        let other_addr_3 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
 
-        // Send addresses of seed peer.
-        info!("Sending address of seed peer");
+        // Send addresses of other peer.
+        info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
-                seed_peer_id,
+                other_peer_id,
                 vec![
-                    seed_addr_1.clone(),
-                    seed_addr_2.clone(),
-                    seed_addr_3.clone(),
+                    other_addr_1.clone(),
+                    other_addr_2.clone(),
+                    other_addr_3.clone(),
                 ],
             ))
             .await
@@ -879,23 +1012,23 @@ fn multiple_addrs_shrinking() {
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_addr_1,
+            other_peer_id,
+            other_addr_1,
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::ConnectionRefused,
             ))),
         )
         .await;
 
-        let seed_addr_4 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9094").unwrap();
-        let seed_addr_5 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9095").unwrap();
+        let other_addr_4 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9094").unwrap();
+        let other_addr_5 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9095").unwrap();
 
         // The peer issues a new, smaller set of listen addrs.
-        info!("Sending address of seed peer");
+        info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
-                seed_peer_id,
-                vec![seed_addr_4.clone(), seed_addr_5.clone()],
+                other_peer_id,
+                vec![other_addr_4.clone(), other_addr_5.clone()],
             ))
             .await
             .unwrap();
@@ -905,14 +1038,14 @@ fn multiple_addrs_shrinking() {
         ticker_tx.send(()).await.unwrap();
 
         // After updating the addresses, we should dial the first new address,
-        // seed_addr_4 in this case.
+        // other_addr_4 in this case.
         info!("Waiting to receive dial request");
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut control_notifs_tx,
             &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_addr_4,
+            other_peer_id,
+            other_addr_4,
             Ok(()),
         )
         .await;

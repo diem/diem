@@ -18,7 +18,7 @@ use crate::{
         PeerManagerRequestSender,
     },
     protocols::{
-        discovery::{self, Discovery, PeerInfo},
+        discovery::{self, Discovery},
         health_checker::{self, HealthChecker},
         identity::Identity,
     },
@@ -84,7 +84,7 @@ pub struct NetworkBuilder {
     addr: Multiaddr,
     role: RoleType,
     advertised_address: Option<Multiaddr>,
-    seed_peers: HashMap<PeerId, PeerInfo>,
+    seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     transport: TransportType,
     channel_size: usize,
@@ -187,10 +187,7 @@ impl NetworkBuilder {
 
     /// Set seed peers to bootstrap discovery
     pub fn seed_peers(&mut self, seed_peers: HashMap<PeerId, Vec<Multiaddr>>) -> &mut Self {
-        self.seed_peers = seed_peers
-            .into_iter()
-            .map(|(peer_id, seed_addrs)| (peer_id, PeerInfo::new(seed_addrs, 0)))
-            .collect();
+        self.seed_peers = seed_peers;
         self
     }
 
@@ -353,14 +350,17 @@ impl NetworkBuilder {
             &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
         );
         self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx.clone());
-        // peer_event_handlers.push(pm_conn_mgr_notifs_tx);
+        let peer_id = self.peer_id;
         let trusted_peers = self.trusted_peers.clone();
+        let seed_peers = self.seed_peers.clone();
         let max_connection_delay_ms = self.max_connection_delay_ms;
         let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
         let (pm_reqs_tx, pm_conn_mgr_notifs_rx) = self.add_connection_event_listener();
         let conn_mgr = self.executor.enter(|| {
             ConnectivityManager::new(
+                peer_id,
                 trusted_peers,
+                seed_peers,
                 interval(Duration::from_millis(connectivity_check_interval_ms)).fuse(),
                 PeerManagerRequestSender::new(pm_reqs_tx),
                 pm_conn_mgr_notifs_rx,
@@ -381,12 +381,10 @@ impl NetworkBuilder {
         let signer = ValidatorSigner::new(self.peer_id, signing_private_key);
         // Get handles for network events and sender.
         let (discovery_network_tx, discovery_network_rx) = discovery::add_to_network(self);
-        let peer_id = self.peer_id;
         let addrs = vec![self
             .advertised_address
             .clone()
             .unwrap_or_else(|| self.addr.clone())];
-        let seed_peers = self.seed_peers.clone();
         let trusted_peers = self.trusted_peers.clone();
         let role = self.role;
         let discovery_interval_ms = self.discovery_interval_ms;
@@ -396,7 +394,6 @@ impl NetworkBuilder {
                 role,
                 addrs,
                 signer,
-                seed_peers,
                 trusted_peers,
                 interval(Duration::from_millis(discovery_interval_ms)).fuse(),
                 discovery_network_tx,
