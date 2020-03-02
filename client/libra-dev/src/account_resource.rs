@@ -4,6 +4,7 @@ use crate::{
     data::{LibraAccountResource, LibraEventHandle, LibraStatus},
     error::*,
 };
+use libra_crypto::ed25519::ED25519_PUBLIC_KEY_LENGTH;
 use libra_types::{
     account_config::AccountResource, account_state_blob::AccountStateBlob, event::EVENT_KEY_LENGTH,
 };
@@ -15,7 +16,7 @@ pub fn libra_LibraAccountResource_from_safe(
     clear_error();
     match AccountResource::try_from(&blob) {
         Ok(account_resource) => {
-            let mut authentication_key = [0u8; 32];
+            let mut authentication_key = [0u8; ED25519_PUBLIC_KEY_LENGTH];
             authentication_key.copy_from_slice(account_resource.authentication_key().as_bytes());
 
             let mut sent_key_copy = [0u8; EVENT_KEY_LENGTH];
@@ -140,24 +141,15 @@ mod tests {
             ar.delegated_withdrawal_capability()
         );
         assert_eq!(result.sent_events.count, ar.sent_events().count());
-        // Array comparision only work to 32
         assert_eq!(
-            result.sent_events.key[..32],
-            ar.sent_events().key().as_bytes()[..32]
+            EventKey::new(result.sent_events.key),
+            *ar.sent_events().key()
         );
-        assert_eq!(
-            result.sent_events.key[32..],
-            ar.sent_events().key().as_bytes()[32..]
-        );
+
         assert_eq!(result.received_events.count, ar.received_events().count());
-        // Array comparision only work to 32
         assert_eq!(
-            result.received_events.key[..32],
-            ar.received_events().key().as_bytes()[..32]
-        );
-        assert_eq!(
-            result.received_events.key[32..],
-            ar.received_events().key().as_bytes()[32..]
+            EventKey::new(result.received_events.key),
+            *ar.received_events().key()
         );
     }
 }
