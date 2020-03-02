@@ -108,13 +108,17 @@ where
     }
 
     /// Seeks to the first key.
-    pub fn seek_to_first(&mut self) -> bool {
-        self.db_iter.seek(rocksdb::SeekKey::Start)
+    pub fn seek_to_first(&mut self) -> Result<bool> {
+        self.db_iter
+            .seek(rocksdb::SeekKey::Start)
+            .map_err(convert_rocksdb_err)
     }
 
     /// Seeks to the last key.
-    pub fn seek_to_last(&mut self) -> bool {
-        self.db_iter.seek(rocksdb::SeekKey::End)
+    pub fn seek_to_last(&mut self) -> Result<bool> {
+        self.db_iter
+            .seek(rocksdb::SeekKey::End)
+            .map_err(convert_rocksdb_err)
     }
 
     /// Seeks to the first key whose binary representation is equal to or greater than that of the
@@ -124,7 +128,9 @@ where
         SK: SeekKeyCodec<S>,
     {
         let key = <SK as SeekKeyCodec<S>>::encode_seek_key(seek_key)?;
-        Ok(self.db_iter.seek(rocksdb::SeekKey::Key(&key)))
+        self.db_iter
+            .seek(rocksdb::SeekKey::Key(&key))
+            .map_err(convert_rocksdb_err)
     }
 
     /// Seeks to the last key whose binary representation is less than or equal to that of the
@@ -136,15 +142,13 @@ where
         SK: SeekKeyCodec<S>,
     {
         let key = <SK as SeekKeyCodec<S>>::encode_seek_key(seek_key)?;
-        Ok(self.db_iter.seek_for_prev(rocksdb::SeekKey::Key(&key)))
+        self.db_iter
+            .seek_for_prev(rocksdb::SeekKey::Key(&key))
+            .map_err(convert_rocksdb_err)
     }
 
     fn next_impl(&mut self) -> Result<Option<(S::Key, S::Value)>> {
-        // If the iterator is not valid, we first check if there is an error, then we return None
-        // if there is no error. See
-        // https://github.com/facebook/rocksdb/wiki/Iterator#error-handling
-        self.db_iter.status().map_err(convert_rocksdb_err)?;
-        if !self.db_iter.valid() {
+        if !self.db_iter.valid().map_err(convert_rocksdb_err)? {
             return Ok(None);
         }
 
@@ -152,7 +156,7 @@ where
         let raw_value = self.db_iter.value();
         let key = <S::Key as KeyCodec<S>>::decode_key(&raw_key)?;
         let value = <S::Value as ValueCodec<S>>::decode_value(&raw_value)?;
-        self.db_iter.next();
+        self.db_iter.next().map_err(convert_rocksdb_err)?;
         Ok(Some((key, value)))
     }
 }

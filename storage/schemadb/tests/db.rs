@@ -187,7 +187,7 @@ fn collect_values<S: Schema>(db: &TestDB) -> Vec<(S::Key, S::Value)> {
     let mut iter = db
         .iter::<S>(Default::default())
         .expect("Failed to create iterator.");
-    iter.seek_to_first();
+    iter.seek_to_first().unwrap();
     iter.collect::<Result<Vec<_>>>().unwrap()
 }
 
