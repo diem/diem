@@ -3,10 +3,12 @@
 
 use crate::{utils::project_root, Result};
 use anyhow::anyhow;
+use log::info;
 use std::{
     ffi::{OsStr, OsString},
     path::Path,
     process::{Command, Output, Stdio},
+    time::Instant,
 };
 
 pub struct Cargo {
@@ -86,19 +88,35 @@ impl Cargo {
 
     pub fn run(&mut self) -> Result<()> {
         self.inner.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-        self.do_run().map(|_| ())
+        self.do_run(true).map(|_| ())
     }
 
     pub fn run_with_output(&mut self) -> Result<Vec<u8>> {
         self.inner.stderr(Stdio::inherit());
-        self.do_run().map(|o| o.stdout)
+        // Since system out hijacked don't log for this command
+        self.do_run(false).map(|o| o.stdout)
     }
 
-    fn do_run(&mut self) -> Result<Output> {
+    fn do_run(&mut self, log: bool) -> Result<Output> {
         if !self.pass_through_args.is_empty() {
             self.inner.arg("--").args(&self.pass_through_args);
         }
+        // once all the arguments are added to the command we can log it.
+        if log {
+            info!("Executing: {:?}", &self.inner);
+        }
+        let now = Instant::now();
         let output = self.inner.output()?;
+        // once all the command has been executed we log it's success or failure.
+        if log {
+            let status = if output.status.success() {
+                "Completed"
+            } else {
+                "Failed"
+            };
+            let elapsed = now.elapsed().as_millis();
+            info!("{} in {} millis: {:?}", status, elapsed, &self.inner);
+        }
         if !output.status.success() {
             return Err(anyhow!("failed to run cargo command"));
         }

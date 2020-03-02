@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use env_logger::Env;
 use structopt::StructOpt;
 
 mod bench;
@@ -46,6 +47,11 @@ enum Command {
 }
 
 fn main() -> Result<()> {
+    let env = Env::default()
+        .filter_or("MY_LOG_LEVEL", "info")
+        .write_style_or("MY_LOG_STYLE", "always");
+    env_logger::init_from_env(env);
+
     let args = Args::from_args();
     let config = config::Config::from_project_root()?;
 

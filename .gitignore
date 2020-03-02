@@ -38,5 +38,8 @@ Temporary Items
 # Generated VM config in vm-genesis
 language/tools/vm-genesis/genesis/vm_config.toml
 
+#vscode config
+.vscode/
+
 # Terraform
 .terraform/
