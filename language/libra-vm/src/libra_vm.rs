@@ -353,7 +353,6 @@ impl LibraVM {
                 .and_then(|_| get_transaction_output(&mut gas_free_ctx, txn_data, status))
                 .unwrap_or_else(discard_error_output),
             TransactionStatus::Discard(status) => discard_error_output(status),
-            // impossible to reach here
             TransactionStatus::Retry => unreachable!(),
         }
     }

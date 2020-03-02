@@ -588,7 +588,7 @@ impl TransactionStatus {
         match self {
             TransactionStatus::Discard(_) => true,
             TransactionStatus::Keep(_) => false,
-            TransactionStatus::Retry => false,
+            TransactionStatus::Retry => true,
         }
     }
 }

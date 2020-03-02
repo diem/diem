@@ -626,7 +626,7 @@ proptest! {
                 0..num_txns
             )
         })) {
-            let mut block = TestBlock::new(0..num_txns, 10, *PRE_GENESIS_BLOCK_ID, gen_block_id(1));
+            let mut block = TestBlock::new(0..num_txns, 10, gen_block_id(1));
             block.txns[reconfig_txn_index as usize] = encode_reconfiguration_transaction(gen_address(reconfig_txn_index));
             let (executor, committed_trees) = TestExecutor::new();
             let output = executor.execute_block(
