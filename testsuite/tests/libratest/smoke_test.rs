@@ -736,8 +736,10 @@ fn test_full_node_basic_flow() {
     full_node_client.create_next_account(false).unwrap();
     full_node_client_2.create_next_account(false).unwrap();
 
-    let mint_result = full_node_client.mint_coins(&["mintb", "3", "10"], true);
-    assert!(mint_result.is_ok());
+    full_node_client
+        .mint_coins(&["mintb", "3", "10"], true)
+        .expect("Fail to mint!");
+
     assert_eq!(
         Decimal::from_f64(10.0),
         Decimal::from_str(&full_node_client.get_balance(&["b", "3"]).unwrap()).ok()
