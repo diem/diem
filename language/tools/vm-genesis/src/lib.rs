@@ -252,7 +252,7 @@ fn create_and_initialize_main_accounts(
 
     move_vm
         .execute_function(
-            &LIBRA_SYSTEM_MODULE,
+            &LIBRA_BLOCK_MODULE,
             &INITIALIZE_BLOCK,
             &gas_schedule,
             interpreter_context,
@@ -321,7 +321,7 @@ fn create_and_initialize_main_accounts(
     txn_data.sender = account_config::transaction_fee_address();
     move_vm
         .execute_function(
-            &LIBRA_SYSTEM_MODULE,
+            &TRANSACTION_FEE_MODULE,
             &INITIALIZE_TXN_FEES,
             &gas_schedule,
             interpreter_context,
@@ -524,8 +524,7 @@ fn reconfigure(
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
 ) {
-    let mut txn_data = TransactionMetadata::default();
-    txn_data.sender = account_config::validator_set_address();
+    let txn_data = TransactionMetadata::default();
 
     // TODO: Direct write set transactions cannot specify emitted events, so this currently
     // will not work.

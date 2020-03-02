@@ -34,11 +34,25 @@ pub static LIBRA_SYSTEM_MODULE: Lazy<ModuleId> = Lazy::new(|| {
         Identifier::new("LibraSystem").unwrap(),
     )
 });
+/// The ModuleId for the libra block module
+pub static LIBRA_BLOCK_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("LibraBlock").unwrap(),
+    )
+});
 /// The ModuleId for the gas schedule module
 pub static GAS_SCHEDULE_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
         Identifier::new("GasSchedule").unwrap(),
+    )
+});
+/// The ModuleId for the transaction fee module
+pub static TRANSACTION_FEE_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("TransactionFee").unwrap(),
     )
 });
 
