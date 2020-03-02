@@ -32,7 +32,7 @@ members = [
     "consensus/safety-rules",
     "crypto/crypto",
     "crypto/crypto-derive",
-    "executor",
+    "execution/executor",
     "json-rpc",
     "language/move-lang",
     "language/benchmarks",
