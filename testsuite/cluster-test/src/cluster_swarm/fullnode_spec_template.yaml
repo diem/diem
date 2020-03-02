@@ -9,13 +9,14 @@ metadata:
     prometheus.io/should_be_scraped: "true"
 spec:
   hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
   serviceAccountName: fullnode
   nodeSelector:
     nodeType: validators
   nodeName: "{node_name}"
   initContainers:
   - name: init
-    image: bitnami/kubectl:1.17
+    image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_init:{image_tag}
     volumeMounts:
     - mountPath: /opt/libra/data
       name: data
@@ -60,9 +61,9 @@ spec:
     - name: CFG_FULLNODE_INDEX
       value: "{fullnode_index}"
     - name: CFG_SEED
-      value: "1337133713371337133713371337133713371337133713371337133713371337"
+      value: "{cfg_seed}"
     - name: CFG_FULLNODE_SEED
-      value: "2674267426742674267426742674267426742674267426742674267426742674"
+      value: "{cfg_fullnode_seed}"
     - name: RUST_LOG
       value: "debug"
     - name: RUST_BACKTRACE
@@ -80,7 +81,7 @@ spec:
         set -x;
         export CFG_LISTEN_ADDR=$MY_POD_IP;
         export CFG_SEED_PEER_IP=$(cat /opt/libra/data/seed_peer_ip);
-        exec bash /docker-run-dynamic-fullnode.sh
+        exec bash /docker-run-dynamic-fullnode.sh &> /opt/libra/data/libra.log
   volumes:
   - name: data
     hostPath:

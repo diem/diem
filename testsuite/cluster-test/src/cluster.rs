@@ -48,6 +48,26 @@ impl Cluster {
         }
     }
 
+    fn get_mint_key_pair() -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
+        let seed = "1337133713371337133713371337133713371337133713371337133713371337";
+        let seed = hex::decode(seed).expect("Invalid hex in seed.");
+        let seed = seed[..32].try_into().expect("Invalid seed");
+        let mint_key = ValidatorConfig::new().seed(seed).build_faucet_client();
+        KeyPair::from(mint_key)
+    }
+
+    pub fn new_k8s(
+        validator_instances: Vec<Instance>,
+        fullnode_instances: Vec<Instance>,
+    ) -> Result<Self> {
+        Ok(Self {
+            validator_instances,
+            fullnode_instances,
+            prometheus_ip: None,
+            mint_key_pair: Self::get_mint_key_pair(),
+        })
+    }
+
     pub fn discover(aws: &Aws) -> Result<Self> {
         let mut validator_instances = vec![];
         let mut fullnode_instances = vec![];
@@ -123,11 +143,7 @@ impl Cluster {
         );
         let prometheus_ip =
             prometheus_ip.ok_or_else(|| format_err!("Prometheus was not found in workspace"))?;
-        let seed = "1337133713371337133713371337133713371337133713371337133713371337";
-        let seed = hex::decode(seed).expect("Invalid hex in seed.");
-        let seed = seed[..32].try_into().expect("Invalid seed");
-        let mint_key = ValidatorConfig::new().seed(seed).build_faucet_client();
-        let mint_key_pair = KeyPair::from(mint_key);
+        let mint_key_pair = Self::get_mint_key_pair();
         Ok(Self {
             validator_instances,
             fullnode_instances,

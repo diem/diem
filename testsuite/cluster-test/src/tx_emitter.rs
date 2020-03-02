@@ -168,8 +168,8 @@ impl TxEmitter {
         let tokio_handle = Handle::current();
         for instance in &req.instances {
             for _ in 0..workers_per_ac {
-                let client = Self::make_client(&instance);
-                let instance = instance.clone();
+                let client =
+                    NamedAdmissionControlClient(instance.clone(), Self::make_client(&instance));
                 let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
                 let all_addresses = all_addresses.clone();
                 let stop = stop.clone();
@@ -177,7 +177,6 @@ impl TxEmitter {
                 let stats = Arc::clone(&stats);
                 let worker = SubmissionWorker {
                     accounts,
-                    instance,
                     client,
                     all_addresses,
                     stop,
@@ -186,7 +185,6 @@ impl TxEmitter {
                 };
                 let join_handle = tokio_handle.spawn(worker.run().boxed());
                 workers.push(Worker { join_handle });
-                thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
             }
         }
         Ok(EmitJob {
@@ -292,7 +290,7 @@ impl TxEmitter {
         emit_job_request: EmitJobRequest,
     ) -> Result<TxStats> {
         let job = self.start_job(emit_job_request).await?;
-        thread::sleep(duration);
+        tokio::time::delay_for(duration).await;
         let stats = self.stop_job(job);
         Ok(stats)
     }
@@ -304,8 +302,7 @@ struct Worker {
 
 struct SubmissionWorker {
     accounts: Vec<AccountData>,
-    instance: Instance,
-    client: AdmissionControlClientAsync,
+    client: NamedAdmissionControlClient,
     all_addresses: Arc<Vec<AccountAddress>>,
     stop: Arc<AtomicBool>,
     params: EmitThreadParams,
@@ -325,21 +322,19 @@ impl SubmissionWorker {
                 let resp = self.client.submit_transaction(request).await;
                 match resp {
                     Err(e) => {
-                        info!("[{}] Failed to submit request: {:?}", self.instance, e);
+                        info!("[{}] Failed to submit request: {:?}", self.client.0, e);
                     }
                     Ok(r) => {
                         let r = SubmitTransactionResponse::try_from(r)
                             .expect("Failed to parse SubmitTransactionResponse");
                         if !is_accepted(&r) {
-                            info!("[{}] Request declined: {:?}", self.instance, r);
+                            info!("[{}] Request declined: {:?}", self.client.0, r);
                         }
                     }
                 }
                 let now = Instant::now();
                 if wait_util > now {
                     time::delay_for(wait_util - now).await;
-                } else {
-                    debug!("[{}] Thread won't sleep", self.instance);
                 }
             }
             if self.params.wait_committed {
@@ -354,7 +349,7 @@ impl SubmissionWorker {
                         .fetch_add(uncommitted.len() as u64, Ordering::Relaxed);
                     info!(
                         "[{}] Transactions were not committed before expiration: {:?}",
-                        self.instance, uncommitted
+                        self.client.0, uncommitted
                     );
                 } else {
                     self.stats
@@ -387,14 +382,17 @@ impl SubmissionWorker {
 }
 
 async fn wait_for_accounts_sequence(
-    client: &mut AdmissionControlClientAsync,
+    client: &mut NamedAdmissionControlClient,
     accounts: &mut [AccountData],
 ) -> Result<(), Vec<(AccountAddress, u64)>> {
     let deadline = Instant::now() + TXN_MAX_WAIT;
     let addresses: Vec<_> = accounts.iter().map(|d| d.address).collect();
     loop {
         match query_sequence_numbers(client, &addresses).await {
-            Err(e) => info!("Failed to query ledger info: {:?}", e),
+            Err(e) => info!(
+                "Failed to query ledger info for instance {} : {:?}",
+                client.0, e
+            ),
             Ok(sequence_numbers) => {
                 if is_sequence_equal(accounts, &sequence_numbers) {
                     break;

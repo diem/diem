@@ -23,6 +23,9 @@ use libra_config::config::AdmissionControlConfig;
 
 const DEFAULT_NAMESPACE: &str = "default";
 
+const CFG_SEED: &str = "1337133713371337133713371337133713371337133713371337133713371337";
+const CFG_FULLNODE_SEED: &str = "2674267426742674267426742674267426742674267426742674267426742674";
+
 const ERROR_NOT_FOUND: u16 = 404;
 
 pub struct ClusterSwarmKube {
@@ -57,6 +60,11 @@ impl ClusterSwarmKube {
         image_tag: &str,
         delete_data: bool,
     ) -> Result<Vec<u8>> {
+        let cfg_fullnode_seed = if num_fullnodes > 0 {
+            CFG_FULLNODE_SEED
+        } else {
+            ""
+        };
         let pod_yaml = format!(
             include_str!("validator_spec_template.yaml"),
             index = index,
@@ -66,6 +74,8 @@ impl ClusterSwarmKube {
             node_name = node_name,
             cfg_overrides = "",
             delete_data = delete_data,
+            cfg_seed = CFG_SEED,
+            cfg_fullnode_seed = cfg_fullnode_seed,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
         serde_json::to_vec(&pod_spec).map_err(|e| format_err!("serde_json::to_vec failed: {}", e))
@@ -91,6 +101,8 @@ impl ClusterSwarmKube {
             image_tag = image_tag,
             cfg_overrides = "",
             delete_data = delete_data,
+            cfg_seed = CFG_SEED,
+            cfg_fullnode_seed = CFG_FULLNODE_SEED,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
         serde_json::to_vec(&pod_spec).map_err(|e| format_err!("serde_json::to_vec failed: {}", e))
@@ -131,7 +143,7 @@ impl ClusterSwarmKube {
         debug!("Deleting Pod {}", name);
         let pod_api = Api::v1Pod(self.client.clone()).within(DEFAULT_NAMESPACE);
         pod_api.delete(name, &Default::default()).await?;
-        retry::retry_async(retry::fixed_retry_strategy(2000, 30), || {
+        retry::retry_async(retry::fixed_retry_strategy(5000, 30), || {
             let pod_api = pod_api.clone();
             let name = name.to_string();
             Box::pin(async move {
@@ -141,6 +153,7 @@ impl ClusterSwarmKube {
                     }
                     Err(kube::Error::Api(ae)) => {
                         if ae.code == ERROR_NOT_FOUND {
+                            debug!("Pod {} deleted successfully", name);
                             Ok(())
                         } else {
                             bail!("Waiting for pod to be deleted..")
@@ -157,6 +170,24 @@ impl ClusterSwarmKube {
 
 #[async_trait]
 impl ClusterSwarm for ClusterSwarmKube {
+    async fn validator_instances(&self) -> Vec<Instance> {
+        self.validator_to_node
+            .lock()
+            .await
+            .values()
+            .cloned()
+            .collect()
+    }
+
+    async fn fullnode_instances(&self) -> Vec<Instance> {
+        self.fullnode_to_node
+            .lock()
+            .await
+            .values()
+            .cloned()
+            .collect()
+    }
+
     async fn upsert_validator(
         &self,
         index: u32,
@@ -293,5 +324,20 @@ impl ClusterSwarm for ClusterSwarmKube {
         let delete_futures = pod_names.iter().map(|pod_name| self.delete_pod(pod_name));
         try_join_all(delete_futures).await?;
         Ok(())
+    }
+
+    async fn get_grafana_baseurl(&self) -> Result<String> {
+        let data = Api::v1ConfigMap(self.client.clone())
+            .within(DEFAULT_NAMESPACE)
+            .get("workspace")
+            .await?
+            .data;
+        let workspace = data
+            .get("workspace")
+            .ok_or_else(|| format_err!("Failed to find workspace"))?;
+        Ok(format!(
+            "http://grafana.{}-k8s-testnet.aws.hlw3truzy4ls.com",
+            workspace
+        ))
     }
 }
