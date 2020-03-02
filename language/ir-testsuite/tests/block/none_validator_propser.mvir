@@ -6,12 +6,12 @@
 //! block-time: 1000000
 
 //! new-transaction
-import 0x0.LibraSystem;
+import 0x0.LibraBlock;
 import 0x0.LibraTimestamp;
 
 main() {
-     assert(LibraSystem.get_current_block_height() == 1, 77);
-    assert(LibraSystem.get_current_proposer() == {{vivian}}, 77);
+     assert(LibraBlock.get_current_block_height() == 1, 77);
+    assert(LibraBlock.get_current_proposer() == {{vivian}}, 77);
     assert(LibraTimestamp.now_microseconds() == 1000000, 78);
     return;
 }

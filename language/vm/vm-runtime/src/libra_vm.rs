@@ -427,7 +427,7 @@ impl LibraVM {
                 Value::address(proposer),
             ];
             self.move_vm.execute_function(
-                &LIBRA_SYSTEM_MODULE,
+                &LIBRA_BLOCK_MODULE,
                 &BLOCK_PROLOGUE,
                 &gas_schedule,
                 &mut interpreter_context,

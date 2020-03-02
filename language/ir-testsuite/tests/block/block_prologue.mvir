@@ -5,19 +5,18 @@
 //! block-time: 1000000
 
 //! new-transaction
-import 0x0.LibraSystem;
 import 0x0.LibraTimestamp;
+import 0x0.LibraBlock;
 
 main() {
-    assert(LibraSystem.get_current_block_height() == 1, 73);
-    assert(LibraSystem.get_current_proposer() == {{vivian}}, 75);
+    assert(LibraBlock.get_current_block_height() == 1, 73);
+    assert(LibraBlock.get_current_proposer() == {{vivian}}, 75);
     assert(LibraTimestamp.now_microseconds() == 1000000, 76);
 
     return;
 }
 
 //! new-transaction
-import 0x0.LibraSystem;
 import 0x0.LibraTimestamp;
 
 main() {
@@ -27,11 +26,11 @@ main() {
 
 //! new-transaction
 //! sender: vivian
-import 0x0.LibraSystem;
+import 0x0.LibraBlock;
 import 0x0.LibraTimestamp;
 
 main() {
-    LibraSystem.block_prologue(10, h"aa", h"bb", {{vivian}});
+    LibraBlock.block_prologue(10, h"aa", h"bb", {{vivian}});
 
     return;
 }
