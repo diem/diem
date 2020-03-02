@@ -22,7 +22,8 @@ use futures::{
     },
     future::join_all,
     stream::select_all,
-    FutureExt, SinkExt, Stream, StreamExt,
+//    FutureExt,
+    SinkExt, Stream, StreamExt,
 };
 use libra_config::config::{MempoolConfig, NodeConfig};
 use libra_logger::prelude::*;
@@ -915,16 +916,19 @@ async fn outbound_sync_task<V>(
         None => (false, default_trigger()),
     };
 
-    // queue of timestamps of scheduled broadcasts
-    let mut queue = Vec::new();
-    // initialize this future with a dummy placeholder until an actual scheduled broadcast is scheduled
-    let mut curr_future = ScheduledBroadcast::new(
-        Instant::now() + Duration::from_secs(60 * 60 * 24),
-        PeerId::random(),
-        executor.clone(),
-    )
-    .fuse();
-    let mut is_broadcast_kickstarted = false;
+//    // queue of timestamps of scheduled broadcasts
+//    let mut queue = Vec::new();
+//    // initialize this future with a dummy placeholder until an actual scheduled broadcast is scheduled
+//    let mut curr_future = ScheduledBroadcast::new(
+//        Instant::now() + Duration::from_secs(60 * 60 * 24),
+//        PeerId::random(),
+//        executor.clone(),
+//    )
+//    .fuse();
+//    let mut is_broadcast_kickstarted = false;
+
+    let mut sched = futures::stream::FuturesUnordered::new();
+
 
     loop {
         if is_trigger {
@@ -936,30 +940,41 @@ async fn outbound_sync_task<V>(
                 // TODO add logic for receiving broadcast trigger that is earlier
                 broadcast_single_peer(new_peer, &peer_info, &mempool, network_senders.clone(), batch_size).await;
 
-                // schedule
-                queue.push((Instant::now() + Duration::from_millis(50), new_peer));
+                // schedule next broadcast
+                sched.push(ScheduledBroadcast::new(Instant::now() + Duration::from_millis(50), new_peer, executor.clone()));
 
-                if is_broadcast_kickstarted {
-                    continue;
-                }
-
-                // replace the placeholder `curr_future` with the first real scheduled broadcast
-                queue.sort();
-                let (next_time, next_peer) = queue.remove(0);
-                curr_future = ScheduledBroadcast::new(next_time, next_peer, executor.clone()).fuse();
-                is_broadcast_kickstarted = true;
+//                // schedule
+//                queue.push((Instant::now() + Duration::from_millis(50), new_peer));
+//
+//                if is_broadcast_kickstarted {
+//                    continue;
+//                }
+//
+//                // replace the placeholder `curr_future` with the first real scheduled broadcast
+//                queue.sort();
+//                let (next_time, next_peer) = queue.remove(0);
+//                curr_future = ScheduledBroadcast::new(next_time, next_peer, executor.clone()).fuse();
+//                is_broadcast_kickstarted = true;
             }
-            peer_id = curr_future => {
+//            peer_id = curr_future => {
+//                // broadcast
+//                broadcast_single_peer(peer_id, &peer_info, &mempool, network_senders.clone(), batch_size).await;
+//
+////                // schedule next broadcast
+////                queue.push((Instant::now() + Duration::from_millis(50), peer_id));
+////
+////                // choose next scheduled broadcast
+////                queue.sort();
+////                let (next_time, next_peer) = queue.remove(0);
+////                curr_future = ScheduledBroadcast::new(next_time, next_peer, executor.clone()).fuse();
+//            }
+
+            peer_id = sched.select_next_some() => {
                 // broadcast
                 broadcast_single_peer(peer_id, &peer_info, &mempool, network_senders.clone(), batch_size).await;
 
                 // schedule next broadcast
-                queue.push((Instant::now() + Duration::from_millis(50), peer_id));
-
-                // choose next scheduled broadcast
-                queue.sort();
-                let (next_time, next_peer) = queue.remove(0);
-                curr_future = ScheduledBroadcast::new(next_time, next_peer, executor.clone()).fuse();
+                sched.push(ScheduledBroadcast::new(Instant::now() + Duration::from_millis(50), peer_id, executor.clone()));
             }
         }
     }
