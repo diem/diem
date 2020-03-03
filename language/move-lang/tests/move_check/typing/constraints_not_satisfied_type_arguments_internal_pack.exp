@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:3:5 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:8:9 ───
    │
  8 │         Box<CupC<R>>{};
    │         ^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:2:20 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:8:13 ───
    │
  8 │         Box<CupC<R>>{};
    │             ^^^^^^^ Constraint not satisfied.
@@ -31,7 +31,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:3:5 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:9:9 ───
    │
  9 │         Box<R>{};
    │         ^^^^^^^^ Cannot ignore resource values. The value must be used

@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:2:14 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:2:17 ───
    │
  2 │     struct S<T, T> {}
    │                 ^ Duplicate type parameter declared with name 'T'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:3:15 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:3:28 ───
    │
  3 │     struct S2<T: copyable, T: resource, T> {}
    │                            ^ Duplicate type parameter declared with name 'T'
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:3:28 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:3:41 ───
    │
  3 │     struct S2<T: copyable, T: resource, T> {}
    │                                         ^ Duplicate type parameter declared with name 'T'
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:4:14 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:4:17 ───
    │
  4 │     struct R<T, T> {}
    │                 ^ Duplicate type parameter declared with name 'T'
@@ -44,7 +44,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:5:15 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:5:28 ───
    │
  5 │     struct R2<T: copyable, T: resource, T> {}
    │                            ^ Duplicate type parameter declared with name 'T'
@@ -55,7 +55,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:5:28 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:5:41 ───
    │
  5 │     struct R2<T: copyable, T: resource, T> {}
    │                                         ^ Duplicate type parameter declared with name 'T'

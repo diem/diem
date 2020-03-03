@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_local_twice_invalid.move:4:18 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_local_twice_invalid.move:6:9 ───
    │
  6 │         *r2 = 2;
    │         ^^^^^^^ Invalid mutation of reference.

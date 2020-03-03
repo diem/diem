@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-codespan = { version = "0.5.0", features = ["serialization"] }
+codespan = { version = "0.8.0", features = ["serialization"] }
 hex = "0.4.2"
 move-ir-types = { path = "../../../move-ir/types", version = "0.1.0" }
 libra-types = { path = "../../../../types", version = "0.1.0" }

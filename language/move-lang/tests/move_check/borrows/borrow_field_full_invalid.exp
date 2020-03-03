@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:13:17 ───
+    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:14:18 ───
     │
  14 │         let f1 = &inner.f1;
     │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:22:17 ───
+    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:23:18 ───
     │
  23 │         let f1 = &inner.f1;
     │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:31:17 ───
+    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:32:18 ───
     │
  32 │         let f1 = &mut inner.f1;
     │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:40:17 ───
+    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:41:18 ───
     │
  41 │         let f1 = &mut inner.f1;
     │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.

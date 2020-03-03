@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/type_variable_join_single_pack_invalid.move:5:27 ───
+   ┌── tests/move_check/typing/type_variable_join_single_pack_invalid.move:5:38 ───
    │
  5 │         let b = Box { f1: false, f2: 1 };
    │                                      ^ Invalid argument for field 'f2' for '0x8675309::M::Box'
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/type_variable_join_single_pack_invalid.move:6:28 ───
+   ┌── tests/move_check/typing/type_variable_join_single_pack_invalid.move:6:55 ───
    │
  6 │         let b2 = Box { f1: Box { f1: 0, f2: 0 }, f2:  Box { f1: false, f2: false } };
    │                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid argument for field 'f2' for '0x8675309::M::Box'

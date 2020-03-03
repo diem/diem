@@ -27,7 +27,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:21:9 ───
     │
  21 │         S,
     │         ^ Invalid acquires item. Expected a nominal resource.
@@ -87,7 +87,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:34:17 ───
     │
  34 │         destroy(move_from<S>(a));
     │                 ^^^^^^^^^^^^^^^ Invalid call to move_from.
@@ -142,7 +142,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:40:9 ───
     │
  40 │         borrow_global<S>(a);
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
@@ -197,7 +197,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:46:9 ───
     │
  46 │         borrow_global_mut<S>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
@@ -252,7 +252,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:52:9 ───
     │
  52 │         exists<S>(a);
     │         ^^^^^^^^^^^^ Invalid call to exists.
@@ -315,7 +315,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:58:9 ───
     │
  58 │         move_to_sender<S>(any());
     │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.

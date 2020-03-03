@@ -61,7 +61,7 @@ fn hashable_error(error: &ErrorSlice) -> HashableError {
 
 fn render_errors<W: WriteColor>(
     writer: &mut W,
-    files: &Files,
+    files: &Files<String>,
     file_mapping: &FileMapping,
     mut errors: Errors,
 ) {
@@ -82,7 +82,7 @@ fn render_errors<W: WriteColor>(
     }
 }
 
-fn convert_loc(files: &Files, file_mapping: &FileMapping, loc: Loc) -> (FileId, Span) {
+fn convert_loc(files: &Files<String>, file_mapping: &FileMapping, loc: Loc) -> (FileId, Span) {
     let fname = loc.file();
     let id = *file_mapping.get(fname).unwrap();
     let offset = files.source_span(id).start().to_usize();
@@ -91,7 +91,7 @@ fn convert_loc(files: &Files, file_mapping: &FileMapping, loc: Loc) -> (FileId, 
     (id, Span::new(begin_index, end_index))
 }
 
-fn render_error(files: &Files, file_mapping: &FileMapping, mut error: Error) -> Diagnostic {
+fn render_error(files: &Files<String>, file_mapping: &FileMapping, mut error: Error) -> Diagnostic {
     let mk_lbl = |err: (Loc, String)| -> Label {
         let (id, span) = convert_loc(files, file_mapping, err.0);
         Label::new(id, span, err.1)

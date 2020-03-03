@@ -64,12 +64,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
+    ┌── tests/move_check/typing/mutate_invalid.move:11:9 ───
     │
  11 │         baz().f = false;
     │         ^^^^^^^ Invalid mutation. New value is not valid for the reference
     ·
- 2 │     struct S { f: u64 }
+  2 │     struct S { f: u64 }
     │                   --- The type: 'u64'
     ·
  11 │         baz().f = false;
@@ -78,12 +78,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
+    ┌── tests/move_check/typing/mutate_invalid.move:12:10 ───
     │
  12 │         *&mut baz().f = false;
     │          ^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
     ·
- 2 │     struct S { f: u64 }
+  2 │     struct S { f: u64 }
     │                   --- The type: 'u64'
     ·
  12 │         *&mut baz().f = false;
@@ -92,7 +92,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_invalid.move:16:22 ───
+    ┌── tests/move_check/typing/mutate_invalid.move:17:10 ───
     │
  17 │         *r = X { f: 1 };
     │          ^ Invalid mutation. New value is not valid for the reference

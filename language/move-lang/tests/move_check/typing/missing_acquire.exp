@@ -2,7 +2,7 @@ error:
 
     ┌── tests/move_check/typing/missing_acquire.move:8:9 ───
     │
- 8 │         r1(a);
+  8 │         r1(a);
     │         ^^^^^ Invalid call to '0x8675309::M::r1'
     ·
  14 │     fun r1(a: address) acquires R1 {

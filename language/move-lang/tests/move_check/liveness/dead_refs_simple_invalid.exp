@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:4:21 ───
+   ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:5:13 ───
    │
  5 │         _ = x;
    │             ^ Invalid copy of local 'x'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:4:21 ───
+   ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:6:13 ───
    │
  6 │         _ = move x;
    │             ^^^^^^ Invalid move of local 'x'
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:12:21 ───
+    ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:13:13 ───
     │
  13 │         _ = x;
     │             ^ Invalid copy of local 'x'
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:12:21 ───
+    ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:14:13 ───
     │
  14 │         _ = move x;
     │             ^^^^^^ Invalid move of local 'x'

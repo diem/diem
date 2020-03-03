@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/expansion/standalone_mname_with_type_args.move:3:22 ───
+   ┌── tests/move_check/expansion/standalone_mname_with_type_args.move:3:27 ───
    │
  3 │         let _ = 0 + M<u64>;
    │                           ^ Unexpected ';'

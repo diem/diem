@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_on_mut_trivial_invalid.move:10:28 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_on_mut_trivial_invalid.move:12:59 ───
     │
  12 │         0x0::Transaction::assert(*returned_ref == *freeze(&mut x_ref.f) + 1, 42);
     │                                                           ^^^^^^^^^^^^ Invalid mutable borrow at field 'f'.

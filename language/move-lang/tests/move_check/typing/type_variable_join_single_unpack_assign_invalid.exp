@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_single_unpack_assign_invalid.move:12:14 ───
+    ┌── tests/move_check/typing/type_variable_join_single_unpack_assign_invalid.move:13:14 ───
     │
  13 │         (f2: bool);
     │              ^^^^ Invalid type annotation
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_single_unpack_assign_invalid.move:17:18 ───
+    ┌── tests/move_check/typing/type_variable_join_single_unpack_assign_invalid.move:18:14 ───
     │
  18 │         (f2: Box<bool>);
     │              ^^^^^^^^^ Invalid type annotation

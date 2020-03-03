@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:14:17 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:15:9 ───
     │
  15 │         mut_imm(s1, f);
     │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:16:17 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:17:9 ───
     │
  17 │         mut_imm(s1, f);
     │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:18:17 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:19:9 ───
     │
  19 │         mut_imm(&mut s1.f, f);
     │         ^^^^^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:20:17 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:21:9 ───
     │
  21 │         id_mut(&mut s1.f); f;
     │         ^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
@@ -55,7 +55,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:24:17 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:25:9 ───
     │
  25 │         mut_mut(s1, f);
     │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
@@ -77,7 +77,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:27:17 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:28:9 ───
     │
  28 │         id_mut(s1);
     │         ^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
@@ -88,7 +88,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:30:17 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:31:9 ───
     │
  31 │         mut_mut(s1, f);
     │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed

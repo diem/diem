@@ -8,7 +8,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/use_before_assign.move:2:9 ───
+   ┌── tests/move_check/translated_ir_tests/commands/use_before_assign.move:3:13 ───
    │
  3 │     let y = x;
    │             ^ Invalid local usage. Local 'x' was declared but could not infer the type. Try annotating the type here

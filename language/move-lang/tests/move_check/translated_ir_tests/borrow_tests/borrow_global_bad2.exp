@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_bad2.move:7:21 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_bad2.move:8:22 ───
    │
  8 │         T { v: _ } = move_from<T>(sender);
    │                      ^^^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'T'

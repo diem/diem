@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:10:15 ───
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:11:9 ───
     │
  11 │         loop { if (false) break }
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:14:15 ───
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:15:9 ───
     │
  15 │         loop { let x = 0; break }
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression

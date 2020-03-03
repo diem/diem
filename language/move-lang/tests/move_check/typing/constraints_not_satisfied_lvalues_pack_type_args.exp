@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:2:20 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:8:15 ───
    │
  8 │         let B<CupC<R>> {} = abort 0;
    │               ^^^^^^^ Constraint not satisfied.
@@ -17,7 +17,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:2:20 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:9:11 ───
    │
  9 │         B<CupC<R>> {} = abort 0;
    │           ^^^^^^^ Constraint not satisfied.

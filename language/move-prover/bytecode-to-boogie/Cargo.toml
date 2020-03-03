@@ -19,8 +19,8 @@ stackless-bytecode-generator = { path = "../stackless-bytecode-generator", versi
 
 # external dependencies
 clap = "2.33.0"
-codespan = "0.5.0"
-codespan-reporting = "0.5.0"
+codespan = "0.8.0"
+codespan-reporting = "0.8.0"
 itertools = "0.8.0"
 log = "0.4.8"
 num = "0.2.0"

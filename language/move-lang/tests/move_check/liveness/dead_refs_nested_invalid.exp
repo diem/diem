@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:4:21 ───
+   ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:9:17 ───
    │
  9 │             _ = x;
    │                 ^ Invalid copy of local 'x'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:15:21 ───
+    ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:19:20 ───
     │
  19 │                _ = x;
     │                    ^ Invalid copy of local 'x'
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:27:21 ───
+    ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:29:71 ───
     │
  29 │             if (cond) { _ = x_ref; break } else { while (!cond) { _ = x } }
     │                                                                       ^ Invalid copy of local 'x'

@@ -22,7 +22,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/borrow_field_from_non_struct.move:5:15 ───
+   ┌── tests/move_check/typing/borrow_field_from_non_struct.move:8:10 ───
    │
  8 │         &u.value;
    │          ^^^^^^^ Unbound field 'value'
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/borrow_field_from_non_struct.move:5:26 ───
+   ┌── tests/move_check/typing/borrow_field_from_non_struct.move:9:10 ───
    │
  9 │         &cond.value;
    │          ^^^^^^^^^^ Unbound field 'value'
@@ -44,23 +44,23 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/borrow_field_from_non_struct.move:5:38 ───
+    ┌── tests/move_check/typing/borrow_field_from_non_struct.move:10:10 ───
     │
  10 │         &addr.R;
     │          ^^^^^^ Unbound field 'R'
     ·
- 5 │     fun t0(u: u64, cond: bool, addr: address) {
+  5 │     fun t0(u: u64, cond: bool, addr: address) {
     │                                      ------- Expected a struct type in the current module but got: 'address'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/borrow_field_from_non_struct.move:5:38 ───
+    ┌── tests/move_check/typing/borrow_field_from_non_struct.move:11:10 ───
     │
  11 │         &addr.f;
     │          ^^^^^^ Unbound field 'f'
     ·
- 5 │     fun t0(u: u64, cond: bool, addr: address) {
+  5 │     fun t0(u: u64, cond: bool, addr: address) {
     │                                      ------- Expected a struct type in the current module but got: 'address'
     │
 

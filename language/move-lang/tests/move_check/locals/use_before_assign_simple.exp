@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/locals/use_before_assign_simple.move:5:13 ───
+   ┌── tests/move_check/locals/use_before_assign_simple.move:6:17 ───
    │
  6 │         let _ = move x + 1;
    │                 ^^^^^^ Invalid usage of local 'x'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/locals/use_before_assign_simple.move:8:13 ───
+   ┌── tests/move_check/locals/use_before_assign_simple.move:9:19 ───
    │
  9 │         let _s2 = s;
    │                   ^ Invalid usage of local 's'
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/use_before_assign_simple.move:13:13 ───
+    ┌── tests/move_check/locals/use_before_assign_simple.move:14:17 ───
     │
  14 │         let _ = x + 1;
     │                 ^ Invalid usage of local 'x'
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/use_before_assign_simple.move:16:13 ───
+    ┌── tests/move_check/locals/use_before_assign_simple.move:17:19 ───
     │
  17 │         let _s3 = copy s;
     │                   ^^^^^^ Invalid usage of local 's'
@@ -44,7 +44,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/use_before_assign_simple.move:21:13 ───
+    ┌── tests/move_check/locals/use_before_assign_simple.move:22:17 ───
     │
  22 │         let _ = &x;
     │                 ^^ Invalid usage of local 'x'
@@ -55,7 +55,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/use_before_assign_simple.move:24:13 ───
+    ┌── tests/move_check/locals/use_before_assign_simple.move:25:19 ───
     │
  25 │         let _s2 = &s;
     │                   ^^ Invalid usage of local 's'

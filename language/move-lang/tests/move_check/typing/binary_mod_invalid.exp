@@ -11,7 +11,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/binary_mod_invalid.move:8:9 ───
+   ┌── tests/move_check/typing/binary_mod_invalid.move:8:17 ───
    │
  8 │         false % true;
    │                 ^^^^ Invalid argument to '%'
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/binary_mod_invalid.move:9:9 ───
+   ┌── tests/move_check/typing/binary_mod_invalid.move:9:13 ───
    │
  9 │         1 % false;
    │             ^^^^^ Incompatible arguments to '%'
@@ -47,7 +47,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:10:9 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:10:17 ───
     │
  10 │         false % 1;
     │                 ^ Incompatible arguments to '%'
@@ -61,7 +61,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:10:9 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:10:17 ───
     │
  10 │         false % 1;
     │                 ^ Invalid argument to '%'
@@ -83,7 +83,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:11:9 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:11:15 ───
     │
  11 │         0x0 % 0x1;
     │               ^^^ Invalid argument to '%'
@@ -94,7 +94,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:12:13 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:12:19 ───
     │
  12 │         (0: u8) % (1: u128);
     │                   ^^^^^^^^^ Incompatible arguments to '%'
@@ -108,59 +108,59 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:7:23 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:13:9 ───
     │
  13 │         r % r;
     │         ^ Invalid argument to '%'
     ·
- 7 │     fun t0(x: u64, r: R, s: S) {
+  7 │     fun t0(x: u64, r: R, s: S) {
     │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:3:5 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:13:9 ───
     │
  13 │         r % r;
     │         ^^^^^ Cannot ignore resource values. The value must be used
     ·
- 7 │     fun t0(x: u64, r: R, s: S) {
+  7 │     fun t0(x: u64, r: R, s: S) {
     │                       - The type: '0x8675309::M::R'
     ·
- 3 │     resource struct R {
+  3 │     resource struct R {
     │     -------- Is found to be a non-copyable type here
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:7:23 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:13:13 ───
     │
  13 │         r % r;
     │             ^ Invalid argument to '%'
     ·
- 7 │     fun t0(x: u64, r: R, s: S) {
+  7 │     fun t0(x: u64, r: R, s: S) {
     │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:7:29 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:14:9 ───
     │
  14 │         s % s;
     │         ^ Invalid argument to '%'
     ·
- 7 │     fun t0(x: u64, r: R, s: S) {
+  7 │     fun t0(x: u64, r: R, s: S) {
     │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:7:29 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:14:13 ───
     │
  14 │         s % s;
     │             ^ Invalid argument to '%'
     ·
- 7 │     fun t0(x: u64, r: R, s: S) {
+  7 │     fun t0(x: u64, r: R, s: S) {
     │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
     │
 
@@ -188,7 +188,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:15:9 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:15:13 ───
     │
  15 │         1 % false % 0x0 % 0;
     │             ^^^^^ Incompatible arguments to '%'
@@ -202,7 +202,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:15:13 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:15:21 ───
     │
  15 │         1 % false % 0x0 % 0;
     │                     ^^^ Invalid argument to '%'
@@ -213,7 +213,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:15:21 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:15:27 ───
     │
  15 │         1 % false % 0x0 % 0;
     │                           ^ Incompatible arguments to '%'
@@ -227,7 +227,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:15:21 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:15:27 ───
     │
  15 │         1 % false % 0x0 % 0;
     │                           ^ Invalid argument to '%'
@@ -249,7 +249,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:16:9 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:16:14 ───
     │
  16 │         () % ();
     │              ^^ Invalid argument to '%'
@@ -260,7 +260,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:17:9 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:17:13 ───
     │
  17 │         1 % ();
     │             ^^ Incompatible arguments to '%'
@@ -285,7 +285,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:18:9 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:18:18 ───
     │
  18 │         (0, 1) % (0, 1, 2);
     │                  ^^^^^^^^^ Incompatible arguments to '%'
@@ -299,7 +299,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:18:9 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:18:18 ───
     │
  18 │         (0, 1) % (0, 1, 2);
     │                  ^^^^^^^^^ Invalid argument to '%'
@@ -321,7 +321,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:19:9 ───
+    ┌── tests/move_check/typing/binary_mod_invalid.move:19:18 ───
     │
  19 │         (1, 2) % (0, 1);
     │                  ^^^^^^ Invalid argument to '%'

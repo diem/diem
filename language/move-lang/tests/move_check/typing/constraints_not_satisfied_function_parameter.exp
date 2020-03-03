@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_function_parameter.move:2:20 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_function_parameter.move:5:16 ───
    │
  5 │     fun foo(x: CupC<R>) {}
    │                ^^^^^^^ Constraint not satisfied.

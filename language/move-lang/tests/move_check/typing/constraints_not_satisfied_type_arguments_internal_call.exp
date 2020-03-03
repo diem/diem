@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_call.move:2:20 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_call.move:9:13 ───
    │
  9 │         box<CupC<R>>();
    │             ^^^^^^^ Constraint not satisfied.

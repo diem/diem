@@ -8,7 +8,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/locals/assign_resource.move:5:13 ───
+   ┌── tests/move_check/locals/assign_resource.move:6:9 ───
    │
  6 │         r = R{};
    │         ^ Invalid assignment to local 'r'
@@ -19,7 +19,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:11:13 ───
+    ┌── tests/move_check/locals/assign_resource.move:12:21 ───
     │
  12 │         if (cond) { r = R{}; };
     │                     ^ Invalid assignment to local 'r'
@@ -30,7 +30,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:17:13 ───
+    ┌── tests/move_check/locals/assign_resource.move:18:29 ───
     │
  18 │         if (cond) {} else { r = R{}; };
     │                             ^ Invalid assignment to local 'r'
@@ -41,7 +41,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:23:13 ───
+    ┌── tests/move_check/locals/assign_resource.move:24:24 ───
     │
  24 │         while (cond) { r = R{} };
     │                        ^ Invalid assignment to local 'r'
@@ -60,7 +60,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:29:13 ───
+    ┌── tests/move_check/locals/assign_resource.move:30:16 ───
     │
  30 │         loop { r = R{}; R {} = r }
     │                ^ Invalid assignment to local 'r'
@@ -71,7 +71,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:33:15 ───
+    ┌── tests/move_check/locals/assign_resource.move:34:9 ───
     │
  34 │         x = y;
     │         ^ Invalid assignment to local 'x'

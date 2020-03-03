@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/unpack_wrong_type.move:5:29 ───
+   ┌── tests/move_check/translated_ir_tests/commands/unpack_wrong_type.move:6:9 ───
    │
  6 │         X { b: _ } = t;
    │         ^^^^^^^^^^ Invalid deconstruction assignment

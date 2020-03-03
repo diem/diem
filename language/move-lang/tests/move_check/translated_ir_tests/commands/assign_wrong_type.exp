@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/assign_wrong_type.move:4:12 ───
+   ┌── tests/move_check/translated_ir_tests/commands/assign_wrong_type.move:5:5 ───
    │
  5 │     x = false
    │     ^ Invalid assignment to local 'x'

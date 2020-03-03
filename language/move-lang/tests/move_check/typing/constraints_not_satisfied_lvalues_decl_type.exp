@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_lvalues_decl_type.move:2:20 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_lvalues_decl_type.move:6:16 ───
    │
  6 │         let x: CupC<R>;
    │                ^^^^^^^ Constraint not satisfied.

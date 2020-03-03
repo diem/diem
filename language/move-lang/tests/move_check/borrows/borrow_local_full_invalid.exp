@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:12:17 ───
+    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:14:9 ───
     │
  14 │         *y;
     │         ^^ Invalid dereference.
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:17:17 ───
+    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:18:17 ───
     │
  18 │         let y = id_mut(&mut v);
     │                 ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:22:17 ───
+    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:24:9 ───
     │
  24 │         *y = 0;
     │         ^^^^^^ Invalid mutation of reference.
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:32:17 ───
+    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:33:17 ───
     │
  33 │         let y = &v;
     │                 ^^ Invalid borrow of local 'v'

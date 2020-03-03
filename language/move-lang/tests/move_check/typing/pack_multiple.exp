@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/pack_multiple.move:2:16 ───
+   ┌── tests/move_check/typing/pack_multiple.move:5:9 ───
    │
  5 │         Box { f: (0, 1) };
    │         ^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/pack_multiple.move:5:9 ───
+   ┌── tests/move_check/typing/pack_multiple.move:5:18 ───
    │
  5 │         Box { f: (0, 1) };
    │                  ^^^^^^ Invalid argument for field 'f' for '0x8675309::M::Box'
@@ -36,7 +36,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/pack_multiple.move:2:16 ───
+   ┌── tests/move_check/typing/pack_multiple.move:6:9 ───
    │
  6 │         Box { f: (0, 1, 2) };
    │         ^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
@@ -58,7 +58,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/pack_multiple.move:6:9 ───
+   ┌── tests/move_check/typing/pack_multiple.move:6:18 ───
    │
  6 │         Box { f: (0, 1, 2) };
    │                  ^^^^^^^^^ Invalid argument for field 'f' for '0x8675309::M::Box'
@@ -72,7 +72,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/pack_multiple.move:2:16 ───
+   ┌── tests/move_check/typing/pack_multiple.move:7:9 ───
    │
  7 │         Box { f: (true, Box { f: 0 }) };
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
@@ -94,7 +94,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/pack_multiple.move:7:9 ───
+   ┌── tests/move_check/typing/pack_multiple.move:7:18 ───
    │
  7 │         Box { f: (true, Box { f: 0 }) };
    │                  ^^^^^^^^^^^^^^^^^^^^ Invalid argument for field 'f' for '0x8675309::M::Box'

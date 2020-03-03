@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_struct_field.move:2:20 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_struct_field.move:6:12 ───
    │
  6 │         f: CupC<R>,
    │            ^^^^^^^ Constraint not satisfied.

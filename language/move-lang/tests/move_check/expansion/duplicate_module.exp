@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/expansion/duplicate_module.move:1:8 ───
+   ┌── tests/move_check/expansion/duplicate_module.move:2:8 ───
    │
  2 │ module M {}
    │        ^ Duplicate definition for module '0x8675309::M'

@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/naming/nominal_resource_field_in_struct_shallow.move:2:5 ───
+   ┌── tests/move_check/naming/nominal_resource_field_in_struct_shallow.move:4:9 ───
    │
  4 │         f: R
    │         ^ Invalid resource field 'f' for struct 'S'. Structs cannot contain resource types, except through type parameters
@@ -17,7 +17,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/nominal_resource_field_in_struct_shallow.move:2:5 ───
+   ┌── tests/move_check/naming/nominal_resource_field_in_struct_shallow.move:7:9 ───
    │
  7 │         f: R
    │         ^ Invalid resource field 'f' for struct 'S2'. Structs cannot contain resource types, except through type parameters

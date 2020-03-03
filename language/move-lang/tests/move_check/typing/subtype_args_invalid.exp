@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/typing/subtype_args_invalid.move:4:19 ───
+    ┌── tests/move_check/typing/subtype_args_invalid.move:10:9 ───
     │
  10 │         mut<u64>(&0);
     │         ^^^^^^^^^^^^ Invalid call of '0x8675309::M::mut'. Invalid argument for parameter 'x'
@@ -8,13 +8,13 @@ error:
  10 │         mut<u64>(&0);
     │                  -- The type: '&{integer}'
     ·
- 4 │     fun mut<T>(x: &mut T) {}
+  4 │     fun mut<T>(x: &mut T) {}
     │                   ------ Is not a subtype of: '&mut u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_args_invalid.move:4:19 ───
+    ┌── tests/move_check/typing/subtype_args_invalid.move:11:9 ───
     │
  11 │         mut<u64>(&S{});
     │         ^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::mut'. Invalid argument for parameter 'x'
@@ -22,13 +22,13 @@ error:
  11 │         mut<u64>(&S{});
     │                  ---- The type: '&0x8675309::M::S'
     ·
- 4 │     fun mut<T>(x: &mut T) {}
+  4 │     fun mut<T>(x: &mut T) {}
     │                   ------ Is not a subtype of: '&mut u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_args_invalid.move:5:30 ───
+    ┌── tests/move_check/typing/subtype_args_invalid.move:15:9 ───
     │
  15 │         imm_mut<u64>(&0, &0);
     │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::imm_mut'. Invalid argument for parameter 'y'
@@ -36,13 +36,13 @@ error:
  15 │         imm_mut<u64>(&0, &0);
     │                          -- The type: '&{integer}'
     ·
- 5 │     fun imm_mut<T>(x: &T, y: &mut T) {}
+  5 │     fun imm_mut<T>(x: &T, y: &mut T) {}
     │                              ------ Is not a subtype of: '&mut u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_args_invalid.move:6:23 ───
+    ┌── tests/move_check/typing/subtype_args_invalid.move:16:9 ───
     │
  16 │         mut_imm<u64>(&0, &0);
     │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::mut_imm'. Invalid argument for parameter 'x'
@@ -50,13 +50,13 @@ error:
  16 │         mut_imm<u64>(&0, &0);
     │                      -- The type: '&{integer}'
     ·
- 6 │     fun mut_imm<T>(x: &mut T, y: &T) {}
+  6 │     fun mut_imm<T>(x: &mut T, y: &T) {}
     │                       ------ Is not a subtype of: '&mut u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_args_invalid.move:7:23 ───
+    ┌── tests/move_check/typing/subtype_args_invalid.move:17:9 ───
     │
  17 │         mut_mut<u64>(&0, &0);
     │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::mut_mut'. Invalid argument for parameter 'x'
@@ -64,13 +64,13 @@ error:
  17 │         mut_mut<u64>(&0, &0);
     │                      -- The type: '&{integer}'
     ·
- 7 │     fun mut_mut<T>(x: &mut T, y: &mut T) {}
+  7 │     fun mut_mut<T>(x: &mut T, y: &mut T) {}
     │                       ------ Is not a subtype of: '&mut u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_args_invalid.move:7:34 ───
+    ┌── tests/move_check/typing/subtype_args_invalid.move:17:9 ───
     │
  17 │         mut_mut<u64>(&0, &0);
     │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::mut_mut'. Invalid argument for parameter 'y'
@@ -78,7 +78,7 @@ error:
  17 │         mut_mut<u64>(&0, &0);
     │                          -- The type: '&{integer}'
     ·
- 7 │     fun mut_mut<T>(x: &mut T, y: &mut T) {}
+  7 │     fun mut_mut<T>(x: &mut T, y: &mut T) {}
     │                                  ------ Is not a subtype of: '&mut u64'
     │
 

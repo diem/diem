@@ -42,7 +42,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/if_condition_invalid.move:8:28 ───
+   ┌── tests/move_check/typing/if_condition_invalid.move:9:13 ───
    │
  9 │         if (x) () else ();
    │             ^ Invalid if condition
