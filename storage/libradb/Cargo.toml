@@ -22,7 +22,7 @@ proptest-derive = { version = "0.1.2", optional = true }
 prometheus = { version = "0.7.0", default-features = false }
 rand = "0.6.5"
 strum = "0.18.0"
-strum_macros = "0.17.1"
+strum_macros = "0.18.0"
 serde = "1.0.96"
 thiserror = "1.0"
 
