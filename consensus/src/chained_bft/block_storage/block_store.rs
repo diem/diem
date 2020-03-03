@@ -15,7 +15,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate,
 };
 use debug_interface::event;
-use executor::{ExecutedTrees, ProcessedVMOutput};
+use executor_types::{ExecutedTrees, ProcessedVMOutput};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 

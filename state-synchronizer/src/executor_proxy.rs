@@ -3,7 +3,8 @@
 
 use crate::SynchronizerState;
 use anyhow::{ensure, format_err, Result};
-use executor::{ExecutedTrees, Executor};
+use executor::Executor;
+use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},

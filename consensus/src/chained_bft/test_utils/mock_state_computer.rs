@@ -7,7 +7,7 @@ use crate::{
 };
 use anyhow::{format_err, Result};
 use consensus_types::{block::Block, executed_block::ExecutedBlock};
-use executor::{ExecutedTrees, ProcessedVMOutput};
+use executor_types::{ExecutedTrees, ProcessedVMOutput};
 use futures::channel::mpsc;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorSet};

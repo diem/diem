@@ -3,7 +3,7 @@
 
 use crate::{state_replication::TxnManager, txn_manager::MempoolProxy};
 use anyhow::Result;
-use executor::StateComputeResult;
+use executor_types::StateComputeResult;
 use futures::channel::mpsc;
 use libra_mempool::ConsensusRequest;
 use libra_types::{

@@ -35,6 +35,7 @@ consensus-types = { path = "consensus-types", version = "0.1.0", default-feature
 crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 executor = { path = "../execution/executor", version = "0.1.0" }
+executor-types = { path = "../execution/executor-types", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../config", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }

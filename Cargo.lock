@@ -818,6 +818,7 @@ dependencies = [
  "crash-handler 0.1.0",
  "debug-interface 0.1.0",
  "executor 0.1.0",
+ "executor-types 0.1.0",
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
@@ -858,7 +859,7 @@ name = "consensus-types"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "executor 0.1.0",
+ "executor-types 0.1.0",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
@@ -1333,6 +1334,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
+ "executor-types 0.1.0",
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
@@ -1357,6 +1359,17 @@ dependencies = [
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "vm-genesis 0.1.0",
+]
+
+[[package]]
+name = "executor-types"
+version = "0.1.0"
+dependencies = [
+ "libra-crypto 0.1.0",
+ "libra-types 0.1.0",
+ "scratchpad 0.1.0",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage-proto 0.1.0",
 ]
 
 [[package]]
@@ -4863,6 +4876,7 @@ dependencies = [
  "channel 0.1.0",
  "config-builder 0.1.0",
  "executor 0.1.0",
+ "executor-types 0.1.0",
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",

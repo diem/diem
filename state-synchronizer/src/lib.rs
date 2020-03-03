@@ -10,7 +10,7 @@
 #[macro_use]
 extern crate prometheus;
 
-use executor::ExecutedTrees;
+use executor_types::ExecutedTrees;
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::{EpochInfo, LedgerInfoWithSignatures, ValidatorVerifier},

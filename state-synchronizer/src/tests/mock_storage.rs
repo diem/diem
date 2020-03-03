@@ -3,7 +3,7 @@
 
 use crate::SynchronizerState;
 use anyhow::{bail, Result};
-use executor::ExecutedTrees;
+use executor_types::ExecutedTrees;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     account_address::AccountAddress,
