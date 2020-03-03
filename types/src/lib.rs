@@ -20,6 +20,7 @@ pub mod get_with_proof;
 pub mod identifier;
 pub mod language_storage;
 pub mod ledger_info;
+pub mod mempool_status;
 pub mod proof;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;

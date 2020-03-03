@@ -64,7 +64,7 @@ extern crate prometheus;
 pub mod mocks;
 pub use shared_mempool::{
     bootstrap, CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest,
-    ConsensusResponse, TransactionExclusion,
+    ConsensusResponse, MempoolClientSender, SubmissionStatus, TransactionExclusion,
 };
 
 mod core_mempool;

@@ -1,0 +1,15 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package types;
+
+import "language_storage.proto";
+
+// The statuses and errors produced by the Mempool during transaction insertion
+message MempoolStatus {
+  // e.g. assertion violation
+  uint64 code = 1;
+  string message = 5;
+}
