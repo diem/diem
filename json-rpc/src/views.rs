@@ -27,6 +27,12 @@ impl AccountView {
 }
 
 #[derive(Serialize)]
+pub struct BlockMetadata {
+    pub version: u64,
+    pub timestamp: u64,
+}
+
+#[derive(Serialize)]
 pub struct BytesView(String);
 
 impl From<&[u8]> for BytesView {

@@ -355,6 +355,12 @@ impl LibraDB {
             .version())
     }
 
+    pub fn get_latest_commit_metadata(&self) -> Result<(Version, u64)> {
+        let latest_ledger_info = self.ledger_store.get_latest_ledger_info()?;
+        let ledger_info = latest_ledger_info.ledger_info();
+        Ok((ledger_info.version(), ledger_info.timestamp_usecs()))
+    }
+
     /// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no
     /// more than `MAX_NUM_EPOCH_CHANGE_LEDGER_INFO` results, this function returns all of them,
     /// otherwise the first `MAX_NUM_EPOCH_CHANGE_LEDGER_INFO` results are returned and a flag
