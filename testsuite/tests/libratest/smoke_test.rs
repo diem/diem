@@ -724,10 +724,7 @@ fn test_full_node_basic_flow() {
         );
     }
 
-    let sender_account = &format!(
-        "{}",
-        validator_ac_client.faucet_account.clone().unwrap().address
-    );
+    let sender_account = association_address();
     // mint from full node and check both validator and full node have correct balance
     let account3 = validator_ac_client
         .create_next_account(false)
@@ -736,6 +733,13 @@ fn test_full_node_basic_flow() {
     full_node_client.create_next_account(false).unwrap();
     full_node_client_2.create_next_account(false).unwrap();
 
+    // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
+    full_node_client.wait_for_transaction(sender_account, 4);
+    let sequence_reset = format!("sequence {} true", sender_account);
+    let sequence_reset_command: Vec<_> = sequence_reset.split(' ').collect();
+    full_node_client
+        .get_sequence_number(&sequence_reset_command)
+        .unwrap();
     full_node_client
         .mint_coins(&["mintb", "3", "10"], true)
         .expect("Fail to mint!");
@@ -745,12 +749,9 @@ fn test_full_node_basic_flow() {
         Decimal::from_str(&full_node_client.get_balance(&["b", "3"]).unwrap()).ok()
     );
     let sequence = full_node_client
-        .get_sequence_number(&["sequence", sender_account, "true"])
+        .get_sequence_number(&sequence_reset_command)
         .unwrap();
-    validator_ac_client.wait_for_transaction(
-        validator_ac_client.faucet_account.clone().unwrap().address,
-        sequence,
-    );
+    validator_ac_client.wait_for_transaction(sender_account, sequence);
     assert_eq!(
         Decimal::from_f64(10.0),
         Decimal::from_str(&validator_ac_client.get_balance(&["b", "3"]).unwrap()).ok()
@@ -758,10 +759,10 @@ fn test_full_node_basic_flow() {
 
     // reset sequence number for sender account
     validator_ac_client
-        .get_sequence_number(&["sequence", sender_account, "true"])
+        .get_sequence_number(&sequence_reset_command)
         .unwrap();
     full_node_client
-        .get_sequence_number(&["sequence", sender_account, "true"])
+        .get_sequence_number(&sequence_reset_command)
         .unwrap();
 
     // mint from validator and check both nodes have correct balance
@@ -773,12 +774,9 @@ fn test_full_node_basic_flow() {
         .mint_coins(&["mintb", "4", "10"], true)
         .unwrap();
     let sequence = validator_ac_client
-        .get_sequence_number(&["sequence", sender_account, "true"])
+        .get_sequence_number(&sequence_reset_command)
         .unwrap();
-    full_node_client.wait_for_transaction(
-        validator_ac_client.faucet_account.clone().unwrap().address,
-        sequence,
-    );
+    full_node_client.wait_for_transaction(sender_account, sequence);
 
     assert_eq!(
         Decimal::from_f64(10.0),
