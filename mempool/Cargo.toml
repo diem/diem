@@ -33,7 +33,7 @@ libra-security-logger = { path = "../common/security-logger", version = "0.1.0" 
 libra-types = { path = "../types", version = "0.1.0" }
 mirai-annotations = "1.5.0"
 network = { path = "../network", version = "0.1.0" }
-prometheus = { version = "0.7.0", default-features = false }
+prometheus = { version = "0.8.0", default-features = false }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
