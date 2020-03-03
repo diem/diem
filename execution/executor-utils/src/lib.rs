@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ExecutedTrees, Executor};
+use executor::Executor;
+use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_vm::LibraVM;
 use std::sync::Arc;

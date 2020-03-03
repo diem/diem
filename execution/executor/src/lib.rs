@@ -4,12 +4,10 @@
 #![forbid(unsafe_code)]
 #![allow(dead_code)]
 
-pub mod benchmark;
 #[cfg(test)]
 mod executor_test;
 #[cfg(test)]
 mod mock_vm;
-pub mod utils;
 
 use anyhow::{bail, ensure, format_err, Result};
 use executor_types::{ExecutedTrees, ProcessedVMOutput, ProofReader, TransactionData};
