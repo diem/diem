@@ -14,7 +14,7 @@ use move_lang::{
     test_utils::{stdlib_files, FUNCTIONAL_TEST_DIR},
     to_bytecode::translate::CompiledUnit,
 };
-use std::{convert::TryFrom, io::Write, path::Path};
+use std::{convert::TryFrom, fmt, io::Write, path::Path};
 use tempfile::NamedTempFile;
 
 struct MoveSourceCompiler {
@@ -30,6 +30,17 @@ impl MoveSourceCompiler {
         }
     }
 }
+
+#[derive(Debug)]
+struct MoveSourceCompilerError(pub String);
+
+impl fmt::Display for MoveSourceCompilerError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "\n\n{}", self.0)
+    }
+}
+
+impl std::error::Error for MoveSourceCompilerError {}
 
 impl Compiler for MoveSourceCompiler {
     /// Compile a transaction script or module.
@@ -50,7 +61,9 @@ impl Compiler for MoveSourceCompiler {
         let unit = match units_or_errors {
             Err(errors) => {
                 let error_buffer = move_lang::errors::report_errors_to_buffer(files, errors);
-                bail!("{}", String::from_utf8(error_buffer).unwrap())
+                return Err(
+                    MoveSourceCompilerError(String::from_utf8(error_buffer).unwrap()).into(),
+                );
             }
             Ok(mut units) => {
                 let len = units.len();
