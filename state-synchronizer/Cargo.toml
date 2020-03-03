@@ -18,7 +18,7 @@ lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-se
 once_cell = "1.3.1"
 rand = "0.6.5"
 tokio = { version = "0.2.13", features = ["full"] }
-prometheus = { version = "0.7.0", default-features = false }
+prometheus = { version = "0.8.0", default-features = false }
 
 channel = { path = "../common/channel", version = "0.1.0" }
 executor = { path = "../executor", version = "0.1.0" }
