@@ -20,7 +20,7 @@ prometheus = { version = "0.7.0", default-features = false }
 rand = "0.6.5"
 serde = { version = "1.0.99", default-features = false }
 thiserror = "1.0"
-tokio = { version = "0.2.12", features = ["full"] }
+tokio = { version = "0.2.13", features = ["full"] }
 tokio-util = { version = "0.2", features = ["codec"] }
 tokio-retry = "0.2.0"
 
