@@ -108,7 +108,7 @@ impl MockSharedMempool {
                 .lock()
                 .expect("[mock shared mempool] failed to acquire mempool lock");
             for txn in txns {
-                if pool.add_txn(txn, 0, 0, 1000, TimelineState::NotReady).code
+                if pool.add_txn(txn, 0, 0, TimelineState::NotReady).code
                     != MempoolStatusCode::Accepted
                 {
                     return Err(format_err!("failed to insert into mock mempool"));

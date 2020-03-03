@@ -19,7 +19,6 @@ use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     transaction::SignedTransaction,
 };
-use mirai_annotations::*;
 use std::{
     collections::HashMap,
     ops::Bound,
@@ -268,18 +267,6 @@ impl TransactionStore {
         self.timeline_index.remove(&txn);
         self.parking_lot_index.remove(&txn);
         self.track_indices();
-    }
-
-    /// returns gas amount required to process all transactions for given account
-    pub(crate) fn get_required_balance(&mut self, address: &AccountAddress) -> u64 {
-        self.transactions.get_mut(&address).map_or(0, |txns| {
-            txns.iter().fold(0, |acc, (_, txn)| {
-                assume!(txn.gas_amount < u32::max_value() as u64); // seems more than reasonable
-                assume!(txn.txn.gas_unit_price() < u32::max_value() as u64);
-                assume!(acc <= u64::max_value() - txn.txn.gas_unit_price() * txn.gas_amount);
-                acc + txn.txn.gas_unit_price() * txn.gas_amount
-            })
-        })
     }
 
     /// Read `count` transactions from timeline since `timeline_id`

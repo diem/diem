@@ -98,19 +98,13 @@ impl Mempool {
         }
     }
 
-    fn get_required_balance(&mut self, txn: &SignedTransaction, gas_amount: u64) -> u128 {
-        txn.gas_unit_price() as u128 * gas_amount as u128
-            + self.transactions.get_required_balance(&txn.sender()) as u128
-    }
-
     /// Used to add a transaction to the Mempool
-    /// Performs basic validation: checks account's balance and sequence number
+    /// Performs basic validation: checks account's sequence number
     pub(crate) fn add_txn(
         &mut self,
         txn: SignedTransaction,
         gas_amount: u64,
         db_sequence_number: u64,
-        balance: u64,
         timeline_state: TimelineState,
     ) -> MempoolStatus {
         debug!(
@@ -119,17 +113,6 @@ impl Mempool {
             txn.sequence_number(),
             db_sequence_number,
         );
-
-        let required_balance = self.get_required_balance(&txn, gas_amount);
-        if (balance as u128) < required_balance {
-            return MempoolStatus::new(MempoolStatusCode::InsufficientBalance).with_message(
-                format!(
-                    "balance: {}, required_balance: {}, gas_amount: {}",
-                    balance, required_balance, gas_amount
-                ),
-            );
-        }
-
         let cached_value = self.sequence_number_cache.get_mut(&txn.sender());
         let sequence_number =
             cached_value.map_or(db_sequence_number, |value| max(*value, db_sequence_number));
