@@ -14,10 +14,11 @@ use crate::{
 use anyhow::{format_err, Result};
 use libra_config::config::MempoolConfig;
 use libra_logger::prelude::*;
-use libra_mempool_shared_proto::{
-    proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
+use libra_types::{
+    account_address::AccountAddress,
+    mempool_status::{MempoolStatus, MempoolStatusCode},
+    transaction::SignedTransaction,
 };
-use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use mirai_annotations::*;
 use std::{
     collections::HashMap,
@@ -90,23 +91,20 @@ impl TransactionStore {
         &mut self,
         txn: MempoolTransaction,
         current_sequence_number: u64,
-    ) -> MempoolAddTransactionStatus {
+    ) -> MempoolStatus {
         if self.handle_gas_price_update(&txn).is_err() {
-            return MempoolAddTransactionStatus::new(
-                MempoolAddTransactionStatusCode::InvalidUpdate,
-                format!("Failed to update gas price to {}", txn.get_gas_price()),
-            );
+            return MempoolStatus::new(MempoolStatusCode::InvalidUpdate).with_message(format!(
+                "Failed to update gas price to {}",
+                txn.get_gas_price()
+            ));
         }
 
         if self.check_if_full() {
-            return MempoolAddTransactionStatus::new(
-                MempoolAddTransactionStatusCode::MempoolIsFull,
-                format!(
-                    "mempool size: {}, capacity: {}",
-                    self.system_ttl_index.size(),
-                    self.capacity,
-                ),
-            );
+            return MempoolStatus::new(MempoolStatusCode::MempoolIsFull).with_message(format!(
+                "mempool size: {}, capacity: {}",
+                self.system_ttl_index.size(),
+                self.capacity,
+            ));
         }
 
         let address = txn.get_sender();
@@ -121,8 +119,7 @@ impl TransactionStore {
         if let Some(txns) = self.transactions.get_mut(&address) {
             // capacity check
             if txns.len() >= self.capacity_per_user {
-                return MempoolAddTransactionStatus::new(
-                    MempoolAddTransactionStatusCode::TooManyTransactions,
+                return MempoolStatus::new(MempoolStatusCode::TooManyTransactions).with_message(
                     format!(
                         "txns length: {} capacity per user: {}",
                         txns.len(),
@@ -138,7 +135,7 @@ impl TransactionStore {
             self.track_indices();
         }
         self.process_ready_transactions(&address, current_sequence_number);
-        MempoolAddTransactionStatus::new(MempoolAddTransactionStatusCode::Valid, "".to_string())
+        MempoolStatus::new(MempoolStatusCode::Accepted)
     }
 
     fn track_indices(&self) {

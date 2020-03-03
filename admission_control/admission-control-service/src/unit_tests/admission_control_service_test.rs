@@ -11,13 +11,12 @@ use admission_control_proto::{
 use anyhow::Result;
 use futures::executor::block_on;
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED};
-use libra_mempool_shared_proto::proto::mempool_status::{
-    MempoolAddTransactionStatus, MempoolAddTransactionStatusCode,
-};
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
+    mempool_status::MempoolStatusCode,
     proto::types::{
-        UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, VmStatus as VmStatusProto,
+        MempoolStatus, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+        VmStatus as VmStatusProto,
     },
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::SignedTransaction,
@@ -78,7 +77,7 @@ fn test_vm_status_submission(
 fn test_mempool_status_submission(
     account_address: AccountAddress,
     ac_service: &MockAdmissionControlService,
-    status: Option<MempoolAddTransactionStatusCode>,
+    status: Option<MempoolStatusCode>,
 ) {
     let response = submit_transaction(account_address, ac_service, true);
     if let Some(mempool_status) = status {
@@ -119,7 +118,7 @@ impl AdmissionControl for MockAdmissionControlService {
                 resp.status = Some(Status::VmStatus(VmStatusProto::from(vm_status)));
             }
             Ok(None) => {
-                let mut status = MempoolAddTransactionStatus::default();
+                let mut status = MempoolStatus::default();
                 let insufficient_balance_add = [100_u8; ADDRESS_LENGTH];
                 let invalid_seq_add = [101_u8; ADDRESS_LENGTH];
                 let sys_error_add = [102_u8; ADDRESS_LENGTH];
@@ -129,15 +128,15 @@ impl AdmissionControl for MockAdmissionControlService {
                 let sender = transaction.sender();
                 let sender_ref = sender.as_ref();
                 if sender_ref == accepted_add {
-                    status.set_code(MempoolAddTransactionStatusCode::Valid);
+                    status.code = MempoolStatusCode::Accepted.into();
                 } else if sender_ref == insufficient_balance_add {
-                    status.set_code(MempoolAddTransactionStatusCode::InsufficientBalance);
+                    status.code = MempoolStatusCode::InsufficientBalance.into();
                 } else if sender_ref == invalid_seq_add {
-                    status.set_code(MempoolAddTransactionStatusCode::InvalidSeqNumber);
+                    status.code = MempoolStatusCode::InvalidSeqNumber.into();
                 } else if sender_ref == sys_error_add {
-                    status.set_code(MempoolAddTransactionStatusCode::InvalidUpdate);
+                    status.code = MempoolStatusCode::InvalidUpdate.into();
                 } else if sender_ref == mempool_full {
-                    status.set_code(MempoolAddTransactionStatusCode::MempoolIsFull);
+                    status.code = MempoolStatusCode::MempoolIsFull.into();
                 }
                 resp.status = Some(Status::MempoolStatus(status));
             }
@@ -147,7 +146,7 @@ impl AdmissionControl for MockAdmissionControlService {
         }
 
         if let Some(Status::MempoolStatus(status)) = resp.status.clone() {
-            let code: i32 = MempoolAddTransactionStatusCode::Valid.into();
+            let code: u64 = MempoolStatusCode::Accepted.into();
             if status.code == code {
                 resp.status = Some(Status::AcStatus(AdmissionControlStatus::Accepted.into()));
             }
@@ -198,14 +197,11 @@ fn test_submit_txn_inner_mempool() {
     let ac_service = MockAdmissionControlService::new();
 
     let test_cases = vec![
-        (
-            100,
-            Some(MempoolAddTransactionStatusCode::InsufficientBalance),
-        ),
-        (101, Some(MempoolAddTransactionStatusCode::InvalidSeqNumber)),
-        (102, Some(MempoolAddTransactionStatusCode::InvalidUpdate)),
+        (100, Some(MempoolStatusCode::InsufficientBalance)),
+        (101, Some(MempoolStatusCode::InvalidSeqNumber)),
+        (102, Some(MempoolStatusCode::InvalidUpdate)),
         (103, None),
-        (104, Some(MempoolAddTransactionStatusCode::MempoolIsFull)),
+        (104, Some(MempoolStatusCode::MempoolIsFull)),
     ];
     for (sender_id, status) in test_cases.into_iter() {
         test_mempool_status_submission(

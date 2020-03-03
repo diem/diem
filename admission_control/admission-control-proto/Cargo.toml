@@ -16,7 +16,6 @@ tokio = { version = "0.2.13", features = ["full"] }
 prost = "0.6"
 
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 
 [build-dependencies]

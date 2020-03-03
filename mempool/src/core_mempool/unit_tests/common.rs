@@ -5,9 +5,9 @@ use crate::core_mempool::{CoreMempool, TimelineState, TxnPointer};
 use anyhow::{format_err, Result};
 use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::*;
-use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_types::{
     account_address::AccountAddress,
+    mempool_status::MempoolStatusCode,
     transaction::{RawTransaction, Script, SignedTransaction},
 };
 use once_cell::sync::Lazy;
@@ -112,7 +112,7 @@ pub(crate) fn add_signed_txn(pool: &mut CoreMempool, transaction: SignedTransact
         .add_txn(transaction, 0, 0, 1000, TimelineState::NotReady)
         .code
     {
-        MempoolAddTransactionStatusCode::Valid => Ok(()),
+        MempoolStatusCode::Accepted => Ok(()),
         _ => Err(format_err!("insertion failure")),
     }
 }

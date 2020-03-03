@@ -9,8 +9,7 @@ use crate::core_mempool::{
     CoreMempool, TimelineState,
 };
 use libra_config::config::NodeConfig;
-use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
-use libra_types::transaction::SignedTransaction;
+use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction};
 use std::{collections::HashSet, time::Duration};
 
 #[test]
@@ -149,7 +148,7 @@ fn test_balance_check() {
             TimelineState::NotReady
         )
         .code,
-        MempoolAddTransactionStatusCode::Valid
+        MempoolStatusCode::Accepted
     );
 
     assert_eq!(
@@ -161,7 +160,7 @@ fn test_balance_check() {
             TimelineState::NotReady
         )
         .code,
-        MempoolAddTransactionStatusCode::InsufficientBalance
+        MempoolStatusCode::InsufficientBalance
     );
 
     // check that gas unit price is taking into account for balance check
@@ -174,7 +173,7 @@ fn test_balance_check() {
             TimelineState::NotReady
         )
         .code,
-        MempoolAddTransactionStatusCode::InsufficientBalance
+        MempoolStatusCode::InsufficientBalance
     );
 }
 

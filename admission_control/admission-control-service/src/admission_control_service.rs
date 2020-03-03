@@ -6,18 +6,27 @@
 //! next step.
 
 use crate::counters;
-use admission_control_proto::proto::admission_control::{
-    admission_control_server::{AdmissionControl, AdmissionControlServer},
-    SubmitTransactionRequest, SubmitTransactionResponse,
+use admission_control_proto::{
+    proto::admission_control::{
+        admission_control_server::{AdmissionControl, AdmissionControlServer},
+        submit_transaction_response::Status,
+        SubmitTransactionRequest, SubmitTransactionResponse,
+    },
+    AdmissionControlStatus,
 };
 use anyhow::Result;
-use futures::{
-    channel::{mpsc, oneshot},
-    SinkExt,
-};
+use futures::{channel::oneshot, SinkExt};
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
-use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
+use libra_mempool::MempoolClientSender;
+use libra_types::{
+    mempool_status::MempoolStatusCode,
+    proto::types::{
+        MempoolStatus as MempoolStatusProto, SignedTransaction as SignedTransactionProto,
+        UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, VmStatus as VmStatusProto,
+    },
+    transaction::SignedTransaction,
+};
 use std::{convert::TryFrom, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
@@ -25,23 +34,14 @@ use tokio::runtime::{Builder, Runtime};
 /// Struct implementing trait (service handle) AdmissionControlService.
 #[derive(Clone)]
 pub struct AdmissionControlService {
-    ac_sender: mpsc::Sender<(
-        SubmitTransactionRequest,
-        oneshot::Sender<Result<SubmitTransactionResponse>>,
-    )>,
+    ac_sender: MempoolClientSender,
     /// gRPC client to send read requests to Storage.
     storage_read_client: Arc<dyn StorageRead>,
 }
 
 impl AdmissionControlService {
     /// Constructs a new AdmissionControlService instance.
-    pub fn new(
-        ac_sender: mpsc::Sender<(
-            SubmitTransactionRequest,
-            oneshot::Sender<Result<SubmitTransactionResponse>>,
-        )>,
-        storage_read_client: Arc<dyn StorageRead>,
-    ) -> Self {
+    pub fn new(ac_sender: MempoolClientSender, storage_read_client: Arc<dyn StorageRead>) -> Self {
         AdmissionControlService {
             ac_sender,
             storage_read_client,
@@ -50,13 +50,7 @@ impl AdmissionControlService {
 
     /// Creates and spins up AdmissionControlService on runtime
     /// Returns the runtime on which Admission Control Service is newly spawned
-    pub fn bootstrap(
-        config: &NodeConfig,
-        ac_sender: mpsc::Sender<(
-            SubmitTransactionRequest,
-            oneshot::Sender<Result<SubmitTransactionResponse>>,
-        )>,
-    ) -> Runtime {
+    pub fn bootstrap(config: &NodeConfig, ac_sender: MempoolClientSender) -> Runtime {
         let runtime = Builder::new()
             .thread_name("ac-service-")
             .threaded_scheduler()
@@ -115,12 +109,25 @@ impl AdmissionControl for AdmissionControlService {
         counters::REQUESTS
             .with_label_values(&["submit_transaction"])
             .inc();
-        let req = request.into_inner();
+        let txn_proto = request
+            .into_inner()
+            .transaction
+            .unwrap_or_else(SignedTransactionProto::default);
+
+        let txn = SignedTransaction::try_from(txn_proto).map_err(|e| {
+            tonic::Status::new(
+                tonic::Code::Internal,
+                format!(
+                    "[admission-control] Submitting transaction failed with error: {:?}",
+                    e
+                ),
+            )
+        })?;
 
         let (req_sender, res_receiver) = oneshot::channel();
         self.ac_sender
             .clone()
-            .send((req, req_sender))
+            .send((txn, req_sender))
             .await
             .map_err(|e| {
                 tonic::Status::new(
@@ -132,17 +139,32 @@ impl AdmissionControl for AdmissionControlService {
                 )
             })?;
 
-        let resp = res_receiver.await.unwrap().map_err(|e| {
-            tonic::Status::new(
-                tonic::Code::Internal,
-                format!(
-                    "[admission-control] Submitting transaction failed with error: {:?}",
-                    e
-                ),
-            )
-        })?;
-
-        Ok(tonic::Response::new(resp))
+        let response = res_receiver
+            .await
+            .unwrap()
+            .map(|(mempool_status, vm_status)| {
+                let mut resp = SubmitTransactionResponse::default();
+                if let Some(vm_error) = vm_status {
+                    resp.status = Some(Status::VmStatus(VmStatusProto::from(vm_error)));
+                } else if mempool_status.code == MempoolStatusCode::Accepted {
+                    resp.status = Some(Status::AcStatus(AdmissionControlStatus::Accepted.into()));
+                } else {
+                    resp.status = Some(Status::MempoolStatus(MempoolStatusProto::from(
+                        mempool_status,
+                    )));
+                }
+                resp
+            })
+            .map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Internal,
+                    format!(
+                        "[admission-control] Submitting transaction failed with error: {:?}",
+                        e
+                    ),
+                )
+            })?;
+        Ok(tonic::Response::new(response))
     }
 
     /// This API is used to update the client to the latest ledger version and optionally also

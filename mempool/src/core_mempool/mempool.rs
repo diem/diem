@@ -16,10 +16,11 @@ use crate::{
 use chrono::Utc;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
-use libra_mempool_shared_proto::{
-    proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
+use libra_types::{
+    account_address::AccountAddress,
+    mempool_status::{MempoolStatus, MempoolStatusCode},
+    transaction::SignedTransaction,
 };
-use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use lru_cache::LruCache;
 use std::{cmp::max, collections::HashSet, convert::TryFrom};
 use ttl_cache::TtlCache;
@@ -111,7 +112,7 @@ impl Mempool {
         db_sequence_number: u64,
         balance: u64,
         timeline_state: TimelineState,
-    ) -> MempoolAddTransactionStatus {
+    ) -> MempoolStatus {
         debug!(
             "[Mempool] Adding transaction to mempool: {}:{}:{}",
             &txn.sender(),
@@ -121,8 +122,7 @@ impl Mempool {
 
         let required_balance = self.get_required_balance(&txn, gas_amount);
         if (balance as u128) < required_balance {
-            return MempoolAddTransactionStatus::new(
-                MempoolAddTransactionStatusCode::InsufficientBalance,
+            return MempoolStatus::new(MempoolStatusCode::InsufficientBalance).with_message(
                 format!(
                     "balance: {}, required_balance: {}, gas_amount: {}",
                     balance, required_balance, gas_amount
@@ -138,14 +138,11 @@ impl Mempool {
 
         // don't accept old transactions (e.g. seq is less than account's current seq_number)
         if txn.sequence_number() < sequence_number {
-            return MempoolAddTransactionStatus::new(
-                MempoolAddTransactionStatusCode::InvalidSeqNumber,
-                format!(
-                    "transaction sequence number is {}, current sequence number is  {}",
-                    txn.sequence_number(),
-                    sequence_number,
-                ),
-            );
+            return MempoolStatus::new(MempoolStatusCode::InvalidSeqNumber).with_message(format!(
+                "transaction sequence number is {}, current sequence number is  {}",
+                txn.sequence_number(),
+                sequence_number,
+            ));
         }
 
         let expiration_time = SystemTime::now()

@@ -20,14 +20,12 @@ serde = { version = "1.0.99", default-features = false }
 tokio = { version = "0.2.13", features = ["full"] }
 ttl_cache = "0.5.1"
 
-admission-control-proto = { path = "../admission_control/admission-control-proto", version = "0.1.0" }
 bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
 channel = { path = "../common/channel", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../config", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
-libra-mempool-shared-proto = { path = "mempool-shared-proto", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-security-logger = { path = "../common/security-logger", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }

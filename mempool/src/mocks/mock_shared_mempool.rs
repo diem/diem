@@ -3,11 +3,8 @@
 use crate::{
     core_mempool::{CoreMempool, TimelineState},
     network::{MempoolNetworkEvents, MempoolNetworkSender},
-    shared_mempool::start_shared_mempool,
+    shared_mempool::{start_shared_mempool, SubmissionStatus},
     CommitNotification, ConsensusRequest,
-};
-use admission_control_proto::proto::admission_control::{
-    SubmitTransactionRequest, SubmitTransactionResponse,
 };
 use anyhow::{format_err, Result};
 use channel::{self, libra_channel, message_queues::QueueStyle};
@@ -16,8 +13,7 @@ use futures::channel::{
     oneshot,
 };
 use libra_config::config::{NetworkConfig, NodeConfig};
-use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
-use libra_types::{transaction::SignedTransaction, PeerId};
+use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction, PeerId};
 use network::peer_manager::conn_status_channel;
 use std::{
     num::NonZeroUsize,
@@ -31,10 +27,7 @@ use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 pub struct MockSharedMempool {
     _runtime: Runtime,
     /// sender from admission control to shared mempool
-    pub ac_client: mpsc::Sender<(
-        SubmitTransactionRequest,
-        oneshot::Sender<Result<SubmitTransactionResponse>>,
-    )>,
+    pub ac_client: mpsc::Sender<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     /// mempool
     pub mempool: Arc<Mutex<CoreMempool>>,
     /// sender from consensus to shared mempool
@@ -113,7 +106,7 @@ impl MockSharedMempool {
                 .expect("[mock shared mempool] failed to acquire mempool lock");
             for txn in txns {
                 if pool.add_txn(txn, 0, 0, 1000, TimelineState::NotReady).code
-                    != MempoolAddTransactionStatusCode::Valid
+                    != MempoolStatusCode::Accepted
                 {
                     return Err(format_err!("failed to insert into mock mempool"));
                 };
