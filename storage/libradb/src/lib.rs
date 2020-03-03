@@ -129,6 +129,24 @@ pub trait LibraDBTrait: Send + Sync {
     /// Returns the latest version and committed block timestamp
     fn get_latest_commit_metadata(&self) -> Result<(Version, u64)>;
 
+    fn get_txn_by_account(
+        &self,
+        address: AccountAddress,
+        seq_num: u64,
+        ledger_version: Version,
+        fetch_events: bool,
+    ) -> Result<Option<TransactionWithProof>>;
+
+    fn get_latest_version(&self) -> Result<Version>;
+
+    fn get_transactions(
+        &self,
+        start_version: Version,
+        limit: u64,
+        ledger_version: Version,
+        fetch_events: bool,
+    ) -> Result<TransactionListWithProof>;
+
     /// Returns events by given event key
     fn get_events(
         &self,
@@ -370,30 +388,6 @@ impl LibraDB {
         }
 
         Ok(events_with_proof)
-    }
-
-    /// Returns a transaction that is the `seq_num`-th one associated with the given account. If
-    /// the transaction with given `seq_num` doesn't exist, returns `None`.
-    fn get_txn_by_account(
-        &self,
-        address: AccountAddress,
-        seq_num: u64,
-        ledger_version: Version,
-        fetch_events: bool,
-    ) -> Result<Option<TransactionWithProof>> {
-        self.transaction_store
-            .lookup_transaction_by_account(address, seq_num, ledger_version)?
-            .map(|version| self.get_transaction_with_proof(version, ledger_version, fetch_events))
-            .transpose()
-    }
-
-    /// Gets the latest version number available in the ledger.
-    pub fn get_latest_version(&self) -> Result<Version> {
-        Ok(self
-            .ledger_store
-            .get_latest_ledger_info()?
-            .ledger_info()
-            .version())
     }
 
     /// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no
@@ -762,57 +756,6 @@ impl LibraDB {
         Ok(Some(startup_info))
     }
 
-    // ======================= State Synchronizer Internal APIs ===================================
-    /// Gets a batch of transactions for the purpose of synchronizing state to another node.
-    ///
-    /// This is used by the State Synchronizer module internally.
-    pub fn get_transactions(
-        &self,
-        start_version: Version,
-        limit: u64,
-        ledger_version: Version,
-        fetch_events: bool,
-    ) -> Result<TransactionListWithProof> {
-        error_if_too_many_requested(limit, MAX_LIMIT)?;
-
-        if start_version > ledger_version || limit == 0 {
-            return Ok(TransactionListWithProof::new_empty());
-        }
-
-        let limit = std::cmp::min(limit, ledger_version - start_version + 1);
-
-        let txns = (start_version..start_version + limit)
-            .map(|version| Ok(self.transaction_store.get_transaction(version)?))
-            .collect::<Result<Vec<_>>>()?;
-        let txn_infos = (start_version..start_version + limit)
-            .map(|version| Ok(self.ledger_store.get_transaction_info(version)?))
-            .collect::<Result<Vec<_>>>()?;
-        let events = if fetch_events {
-            Some(
-                (start_version..start_version + limit)
-                    .map(|version| Ok(self.event_store.get_events_by_version(version)?))
-                    .collect::<Result<Vec<_>>>()?,
-            )
-        } else {
-            None
-        };
-        let proof = TransactionListProof::new(
-            self.ledger_store.get_transaction_range_proof(
-                Some(start_version),
-                limit,
-                ledger_version,
-            )?,
-            txn_infos,
-        );
-
-        Ok(TransactionListWithProof::new(
-            txns,
-            events,
-            Some(start_version),
-            proof,
-        ))
-    }
-
     // ================================== Backup APIs ===================================
 
     /// Gets an instance of `BackupHandler` for data backup purpose.
@@ -936,6 +879,81 @@ impl LibraDBTrait for LibraDB {
         let latest_ledger_info = self.ledger_store.get_latest_ledger_info()?;
         let ledger_info = latest_ledger_info.ledger_info();
         Ok((ledger_info.version(), ledger_info.timestamp_usecs()))
+    }
+
+    /// Returns a transaction that is the `seq_num`-th one associated with the given account. If
+    /// the transaction with given `seq_num` doesn't exist, returns `None`.
+    fn get_txn_by_account(
+        &self,
+        address: AccountAddress,
+        seq_num: u64,
+        ledger_version: Version,
+        fetch_events: bool,
+    ) -> Result<Option<TransactionWithProof>> {
+        self.transaction_store
+            .lookup_transaction_by_account(address, seq_num, ledger_version)?
+            .map(|version| self.get_transaction_with_proof(version, ledger_version, fetch_events))
+            .transpose()
+    }
+
+    /// Gets the latest version number available in the ledger.
+    fn get_latest_version(&self) -> Result<Version> {
+        Ok(self
+            .ledger_store
+            .get_latest_ledger_info()?
+            .ledger_info()
+            .version())
+    }
+
+    // ======================= State Synchronizer Internal APIs ===================================
+    /// Gets a batch of transactions for the purpose of synchronizing state to another node.
+    ///
+    /// This is used by the State Synchronizer module internally.
+    fn get_transactions(
+        &self,
+        start_version: Version,
+        limit: u64,
+        ledger_version: Version,
+        fetch_events: bool,
+    ) -> Result<TransactionListWithProof> {
+        error_if_too_many_requested(limit, MAX_LIMIT)?;
+
+        if start_version > ledger_version || limit == 0 {
+            return Ok(TransactionListWithProof::new_empty());
+        }
+
+        let limit = std::cmp::min(limit, ledger_version - start_version + 1);
+
+        let txns = (start_version..start_version + limit)
+            .map(|version| Ok(self.transaction_store.get_transaction(version)?))
+            .collect::<Result<Vec<_>>>()?;
+        let txn_infos = (start_version..start_version + limit)
+            .map(|version| Ok(self.ledger_store.get_transaction_info(version)?))
+            .collect::<Result<Vec<_>>>()?;
+        let events = if fetch_events {
+            Some(
+                (start_version..start_version + limit)
+                    .map(|version| Ok(self.event_store.get_events_by_version(version)?))
+                    .collect::<Result<Vec<_>>>()?,
+            )
+        } else {
+            None
+        };
+        let proof = TransactionListProof::new(
+            self.ledger_store.get_transaction_range_proof(
+                Some(start_version),
+                limit,
+                ledger_version,
+            )?,
+            txn_infos,
+        );
+
+        Ok(TransactionListWithProof::new(
+            txns,
+            events,
+            Some(start_version),
+            proof,
+        ))
     }
 
     fn get_events(

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use hex;
 use libra_types::{
     account_config::{
@@ -10,9 +10,11 @@ use libra_types::{
     },
     contract_event::ContractEvent,
     language_storage::TypeTag,
+    transaction::{Transaction, TransactionArgument, TransactionPayload},
 };
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
+use transaction_builder::get_transaction_name;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct AccountView {
@@ -119,5 +121,103 @@ impl From<&[u8]> for BytesView {
 impl From<&Vec<u8>> for BytesView {
     fn from(bytes: &Vec<u8>) -> Self {
         Self(hex::encode(bytes))
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct TransactionView {
+    pub version: u64,
+    pub transaction: TransactionDataView,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(tag = "type")]
+pub enum TransactionDataView {
+    #[serde(rename = "blockmetadata")]
+    BlockMetadata { timestamp_usecs: u64 },
+    #[serde(rename = "writeset")]
+    WriteSet {},
+    #[serde(rename = "user")]
+    UserTransaction {
+        sender: String,
+        signature: String,
+        public_key: String,
+        sequence_number: u64,
+        max_gas_amount: u64,
+        gas_unit_price: u64,
+        expiration_time: u64,
+        script: ScriptView,
+    },
+    #[serde(rename = "unknown")]
+    UnknownTransaction {},
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(tag = "type")]
+pub enum ScriptView {
+    #[serde(rename = "peer_to_peer_transaction")]
+    PeerToPeer { receiver: String, amount: u64 },
+
+    #[serde(rename = "unknown_transaction")]
+    Unknown {},
+}
+
+impl From<Transaction> for TransactionDataView {
+    fn from(tx: Transaction) -> Self {
+        let x = match tx {
+            Transaction::BlockMetadata(t) => {
+                if let Some(x) = t.into_inner().ok() {
+                    Ok(TransactionDataView::BlockMetadata {
+                        timestamp_usecs: x.1,
+                    })
+                } else {
+                    Err(format_err!("Unable to parse metadata"))
+                }
+            }
+            Transaction::WriteSet(_) => Ok(TransactionDataView::WriteSet {}),
+            Transaction::UserTransaction(t) => Ok(TransactionDataView::UserTransaction {
+                sender: t.sender().to_string(),
+                signature: t.signature().to_string(),
+                public_key: t.public_key().to_string(),
+                sequence_number: t.sequence_number(),
+                max_gas_amount: t.max_gas_amount(),
+                gas_unit_price: t.gas_unit_price(),
+                expiration_time: t.expiration_time().as_secs(),
+                script: t.clone().into_raw_transaction().into_payload().into(),
+            }),
+        };
+
+        x.unwrap_or(TransactionDataView::UnknownTransaction {})
+    }
+}
+
+impl From<TransactionPayload> for ScriptView {
+    fn from(value: TransactionPayload) -> Self {
+        let empty_vec: Vec<TransactionArgument> = vec![];
+        let (code, args) = match value {
+            TransactionPayload::Program => ("deprecated".to_string(), empty_vec),
+            TransactionPayload::WriteSet(_) => ("genesis".to_string(), empty_vec),
+            TransactionPayload::Script(script) => {
+                (get_transaction_name(script.code()), script.args().to_vec())
+            }
+            TransactionPayload::Module(_) => ("module publishing".to_string(), empty_vec),
+        };
+
+        let res = match code.as_str() {
+            "PeerToPeer" => {
+                if let [TransactionArgument::Address(receiver), TransactionArgument::U64(amount)] =
+                    &args[..]
+                {
+                    Ok(ScriptView::PeerToPeer {
+                        receiver: receiver.to_string(),
+                        amount: *amount,
+                    })
+                } else {
+                    Err(format_err!("Unable to parse PeerToPeer arguments"))
+                }
+            }
+            _ => Err(format_err!("Unknown scripts")),
+        };
+        res.unwrap_or(ScriptView::Unknown {})
     }
 }

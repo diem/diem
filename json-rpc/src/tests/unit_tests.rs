@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::views::{TransactionDataView, TransactionView};
 use crate::{
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
@@ -17,12 +18,12 @@ use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::TransactionToCommit,
+    transaction::{Transaction, TransactionToCommit},
 };
 use libradb::{test_helper::arb_blocks_to_commit, LibraDB, LibraDBTrait};
 use proptest::prelude::*;
 use reqwest;
-use serde_json;
+use serde_json::{self, Value};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     convert::TryFrom,
@@ -315,6 +316,125 @@ proptest! {
         assert_eq!(event.sequence_number, 0);
         assert_eq!(event.transaction_version, 0);
     }
+    #[test]
+    fn test_get_transactions(blocks in arb_blocks_to_commit()) {
+        _test_get_transactions(blocks);
+    }
+
+    #[test]
+    fn test_get_account_transaction(blocks in arb_blocks_to_commit()) {
+        _test_get_account_transaction(blocks);
+    }
+}
+
+fn _test_get_transactions(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) {
+    // set up MockLibraDB
+    let mock_db = mock_db(blocks);
+
+    // set up JSON RPC
+    let address = format!("0.0.0.0:{}", utils::get_available_port());
+    let _runtime = bootstrap(
+        address.parse().unwrap(),
+        Arc::new(mock_db.clone()),
+        channel(1).0,
+    );
+    let client = reqwest::blocking::Client::new();
+    let url = format!("http://{}", address);
+
+    let version = mock_db.get_latest_version().unwrap();
+    let page = 800usize;
+
+    for base_version in (0..version).map(u64::from).take(page).collect::<Vec<_>>() {
+        let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_transactions", "params": [base_version, page as u64, false], "id": 1});
+        let resp = client.post(&url).json(&request).send().unwrap();
+        assert_eq!(resp.status(), 200);
+        let resp_json: JsonMap = resp.json().unwrap();
+        let data = fetch_result(resp_json);
+        match data {
+            serde_json::Value::Array(responses) => {
+                for (i, response) in responses.iter().enumerate() {
+                    let version = base_version + i as u64;
+                    assert_eq!(
+                        response
+                            .as_object()
+                            .unwrap()
+                            .get("version")
+                            .unwrap()
+                            .as_u64(),
+                        Some(version)
+                    );
+                    let tx = &mock_db.all_txns[version as usize];
+                    let view = response.as_object().unwrap().get("transaction").unwrap();
+                    match tx {
+                        Transaction::BlockMetadata(t) => {
+                            assert_eq!(
+                                "blockmetadata",
+                                view.get("type").unwrap().as_str().unwrap()
+                            );
+                            assert_eq!(
+                                t.clone().into_inner().unwrap().1,
+                                view.get("timestamp_usecs").unwrap().as_u64().unwrap()
+                            );
+                        }
+                        Transaction::WriteSet(_) => {
+                            assert_eq!("writeset", view.get("type").unwrap().as_str().unwrap());
+                        }
+                        Transaction::UserTransaction(t) => {
+                            assert_eq!("user", view.get("type").unwrap().as_str().unwrap());
+                            assert_eq!(
+                                t.sender().to_string(),
+                                view.get("sender").unwrap().as_str().unwrap()
+                            );
+                            // TODO: verify every field
+                        }
+                    }
+                }
+            }
+            _ => panic!("invalid server response format"),
+        }
+    }
+}
+
+fn _test_get_account_transaction(
+    blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
+) {
+    // set up MockLibraDB
+    let mock_db = mock_db(blocks);
+
+    // set up JSON RPC
+    let address = format!("0.0.0.0:{}", utils::get_available_port());
+    let _runtime = bootstrap(
+        address.parse().unwrap(),
+        Arc::new(mock_db.clone()),
+        channel(1).0,
+    );
+    let client = reqwest::blocking::Client::new();
+    let url = format!("http://{}", address);
+
+    for (acc, blob) in mock_db.all_accounts.iter() {
+        let ar = AccountResource::try_from(blob).unwrap();
+        for seq in 1..ar.sequence_number() {
+            let p_addr = String::from(acc);
+            let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_transaction", "params": [p_addr, seq, false], "id": 1});
+            let resp = client.post(&url).json(&request).send().unwrap();
+            assert_eq!(resp.status(), 200);
+
+            let data: Option<TransactionView> = fetch_data(resp);
+            let view = data.unwrap().transaction;
+            // Always user transaction
+            match view {
+                TransactionDataView::UserTransaction {
+                    sender,
+                    sequence_number,
+                    ..
+                } => {
+                    assert_eq!(acc.to_string(), sender);
+                    assert_eq!(seq, sequence_number);
+                }
+                _ => panic!("wrong type"),
+            }
+        }
+    }
 }
 
 fn fetch_data<T>(response: reqwest::blocking::Response) -> T
@@ -325,8 +445,8 @@ where
     serde_json::from_value(data.get("result").unwrap().clone()).unwrap()
 }
 
-fn fetch_result(data: JsonMap) -> JsonMap {
-    let result: JsonMap = serde_json::from_value(data.get("result").unwrap().clone()).unwrap();
+fn fetch_result(data: JsonMap) -> Value {
+    let result: Value = serde_json::from_value(data.get("result").unwrap().clone()).unwrap();
     assert_eq!(
         data.get("jsonrpc").unwrap(),
         &serde_json::Value::String("2.0".to_string())

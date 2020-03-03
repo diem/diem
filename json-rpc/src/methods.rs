@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
-use crate::views::{AccountView, BlockMetadata, EventView};
+use crate::views::{AccountView, BlockMetadata, EventView, TransactionView};
 use anyhow::{ensure, format_err, Result};
 use core::future::Future;
 use futures::{channel::oneshot, SinkExt};
@@ -13,7 +13,7 @@ use libra_types::{
     mempool_status::MempoolStatusCode,
 };
 use libradb::LibraDBTrait;
-use serde_json::Value;
+use serde_json::{Number, Value};
 use std::{collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
 
 #[derive(Clone)]
@@ -80,6 +80,72 @@ async fn get_metadata(service: JsonRpcService, _: Vec<Value>) -> Result<BlockMet
     Ok(BlockMetadata { version, timestamp })
 }
 
+/// Returns transactions by range
+async fn get_transactions(
+    service: JsonRpcService,
+    params: Vec<Value>,
+) -> Result<Vec<TransactionView>> {
+    let p_start_version: Number = serde_json::from_value(params[0].clone())?;
+    let p_limit: Number = serde_json::from_value(params[1].clone())?;
+    let include_events: bool = serde_json::from_value(params[2].clone())?;
+
+    let start_version = p_start_version
+        .as_u64()
+        .ok_or(format_err!("Invalid start_version"))?;
+    let limit = p_limit.as_u64().ok_or(format_err!("Invalid limit"))?;
+
+    ensure!(
+        limit > 0 && limit <= 1000,
+        "limit must be smaller than 1000"
+    );
+
+    let txs = service.db.get_transactions(
+        start_version,
+        limit,
+        service.db.get_latest_version()?,
+        include_events,
+    )?;
+
+    let mut result = vec![];
+
+    for (v, tx) in txs.transactions.iter().enumerate() {
+        result.push(TransactionView {
+            version: start_version + v as u64,
+            transaction: tx.clone().into(),
+        });
+    }
+    Ok(result)
+}
+
+/// Returns account transaction by account and sequence_number
+async fn get_account_transaction(
+    service: JsonRpcService,
+    params: Vec<Value>,
+) -> Result<Option<TransactionView>> {
+    let p_account: String = serde_json::from_value(params[0].clone())?;
+    let p_sequence: Number = serde_json::from_value(params[1].clone())?;
+    let include_events: bool = serde_json::from_value(params[2].clone())?;
+
+    let account = AccountAddress::try_from(p_account)?;
+    let sequence = p_sequence
+        .as_u64()
+        .ok_or(format_err!("Invalid sequence number"))?;
+
+    if let Some(tx) = service.db.get_txn_by_account(
+        account,
+        sequence,
+        service.db.get_latest_version()?,
+        include_events,
+    )? {
+        Ok(Some(TransactionView {
+            version: tx.version,
+            transaction: tx.transaction.into(),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
 /// Returns events by given access path
 async fn get_events(service: JsonRpcService, params: Vec<Value>) -> Result<Vec<EventView>> {
     let raw_event_key: String = serde_json::from_value(params[0].clone())?;
@@ -104,6 +170,8 @@ pub(crate) fn build_registry() -> RpcRegistry {
     register_rpc_method!(registry, submit, 1);
     register_rpc_method!(registry, get_metadata, 0);
     register_rpc_method!(registry, get_account_state, 1);
+    register_rpc_method!(registry, get_transactions, 3);
+    register_rpc_method!(registry, get_account_transaction, 3);
     register_rpc_method!(registry, get_events, 3);
     registry
 }
