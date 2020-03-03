@@ -26,7 +26,6 @@ use libra_types::{
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
-    block_info::Round,
     contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
@@ -52,9 +51,6 @@ use vm_runtime::VMExecutor;
 
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
     Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));
-
-const GENESIS_EPOCH: u64 = 0;
-const GENESIS_ROUND: Round = 0;
 
 /// A structure that summarizes the result of the execution needed for consensus to agree on.
 /// The execution is responsible for generating the ID of the new state, which is returned in the
@@ -183,14 +179,6 @@ impl TransactionData {
 
     fn status(&self) -> &TransactionStatus {
         &self.status
-    }
-
-    fn state_root_hash(&self) -> HashValue {
-        self.state_tree.root_hash()
-    }
-
-    fn event_root_hash(&self) -> HashValue {
-        self.event_tree.root_hash()
     }
 
     fn gas_used(&self) -> u64 {

@@ -492,22 +492,15 @@ fn test_executor_execute_and_commit_chunk_restart() {
 
 struct TestBlock {
     txns: Vec<Transaction>,
-    parent_id: HashValue,
     id: HashValue,
 }
 
 impl TestBlock {
-    fn new(
-        addr_index: std::ops::Range<u64>,
-        amount: u32,
-        parent_id: HashValue,
-        id: HashValue,
-    ) -> Self {
+    fn new(addr_index: std::ops::Range<u64>, amount: u32, id: HashValue) -> Self {
         TestBlock {
             txns: addr_index
                 .map(|index| encode_mint_transaction(gen_address(index), u64::from(amount)))
                 .collect(),
-            parent_id,
             id,
         }
     }
@@ -570,9 +563,9 @@ proptest! {
         // Genesis -> A -> B
         //            |
         //            └--> C
-        let block_a = TestBlock::new(0..a_size, amount, *PRE_GENESIS_BLOCK_ID, gen_block_id(1));
-        let block_b = TestBlock::new(0..b_size, amount, gen_block_id(1), gen_block_id(2));
-        let block_c = TestBlock::new(0..c_size, amount, gen_block_id(1), gen_block_id(3));
+        let block_a = TestBlock::new(0..a_size, amount, gen_block_id(1));
+        let block_b = TestBlock::new(0..b_size, amount, gen_block_id(2));
+        let block_c = TestBlock::new(0..c_size, amount, gen_block_id(3));
         // Execute block A, B and C. Hold all results in memory.
         let (executor, committed_trees) = TestExecutor::new();
 
@@ -616,8 +609,8 @@ proptest! {
 
     #[test]
     fn test_executor_restart(a_size in 0..30u64, b_size in 0..30u64, amount in any::<u32>()) {
-        let block_a = TestBlock::new(0..a_size, amount, *PRE_GENESIS_BLOCK_ID, gen_block_id(1));
-        let block_b = TestBlock::new(0..b_size, amount, gen_block_id(1), gen_block_id(2));
+        let block_a = TestBlock::new(0..a_size, amount, gen_block_id(1));
+        let block_b = TestBlock::new(0..b_size, amount, gen_block_id(2));
 
         let (config, _) = config_builder::test_config();
         let storage_server = start_storage_service(&config);
