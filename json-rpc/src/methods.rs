@@ -6,24 +6,23 @@ use crate::views::AccountView;
 use anyhow::{ensure, Result};
 use core::future::Future;
 use libra_types::{account_address::AccountAddress, account_config::AccountResource};
+use libradb::LibraDB;
 use serde_json::Value;
 use std::{collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
-use storage_client::StorageRead;
 
-type RpcHandler = Box<
-    fn(Arc<dyn StorageRead>, Vec<Value>) -> Pin<Box<dyn Future<Output = Result<Value>> + Send>>,
->;
+type RpcHandler =
+    Box<fn(Arc<LibraDB>, Vec<Value>) -> Pin<Box<dyn Future<Output = Result<Value>> + Send>>>;
 pub(crate) type RpcRegistry = HashMap<String, RpcHandler>;
 
 /// Returns account state (AccountView) by given address
 async fn get_account_state(
-    client: Arc<dyn StorageRead>,
+    libra_db: Arc<LibraDB>,
     params: Vec<Value>,
 ) -> Result<Option<AccountView>> {
     let address: String = serde_json::from_value(params[0].clone())?;
 
     let account_address = AccountAddress::from_str(&address)?;
-    let response = client.get_latest_account_state(account_address).await?;
+    let response = libra_db.get_latest_account_state(account_address)?;
     if let Some(blob) = response {
         if let Ok(account) = AccountResource::try_from(&blob) {
             return Ok(Some(AccountView::new(account)));

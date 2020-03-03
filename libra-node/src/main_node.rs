@@ -17,7 +17,7 @@ use network::validator_network::network_builder::{NetworkBuilder, TransportType}
 use state_synchronizer::StateSynchronizer;
 use std::{collections::HashMap, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
-use storage_service::start_storage_service;
+use storage_service::{init_libra_db, start_storage_service_with_db};
 use tokio::runtime::{Builder, Runtime};
 use vm_runtime::LibraVM;
 
@@ -164,7 +164,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         .expect("Building rayon global thread pool should work.");
 
     let mut instant = Instant::now();
-    let storage = start_storage_service(&node_config);
+    let libra_db = init_libra_db(&node_config);
+    let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
+    let rpc_runtime = bootstrap_rpc(&node_config, libra_db);
+
     debug!(
         "Storage service started in {} ms",
         instant.elapsed().as_millis()
@@ -229,8 +232,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     );
     let (ac_sender, client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
     let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
-
-    let rpc_runtime = bootstrap_rpc(&node_config);
 
     let mut consensus = None;
     let (consensus_to_mempool_sender, consensus_requests) = channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);

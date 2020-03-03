@@ -34,16 +34,29 @@ use storage_proto::proto::storage::{
 };
 use tokio::runtime::Runtime;
 
+pub fn init_libra_db(config: &NodeConfig) -> Arc<LibraDB> {
+    Arc::new(LibraDB::new(&config.storage.dir()))
+}
+
+/// Starts storage service with a given LibraDB
+pub fn start_storage_service_with_db(config: &NodeConfig, libra_db: Arc<LibraDB>) -> Runtime {
+    let storage_service = StorageService { db: libra_db };
+    start_storage_service_runtime(config, storage_service)
+}
+
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> Runtime {
+    let storage_service = StorageService::new(&config.storage.dir());
+    start_storage_service_runtime(config, storage_service)
+}
+
+fn start_storage_service_runtime(config: &NodeConfig, storage_service: StorageService) -> Runtime {
     let mut rt = tokio::runtime::Builder::new()
         .threaded_scheduler()
         .enable_all()
         .thread_name("tokio-storage")
         .build()
         .unwrap();
-
-    let storage_service = StorageService::new(&config.storage.dir());
 
     rt.spawn(
         tonic::transport::Server::builder()
