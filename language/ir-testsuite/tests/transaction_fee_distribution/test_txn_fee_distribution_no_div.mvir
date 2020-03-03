@@ -64,7 +64,7 @@ main() {
   BalanceHolder.publish(move(balances));
   return;
 }
-//! check:  gas_used: 82032
+//! check:  gas_used: 79382
 
 //! block-prologue
 //! proposer: vivian
@@ -93,7 +93,7 @@ main() {
      new_balance = LibraAccount.balance(move(addr));
      old_balance = BalanceHolder.get_balance(copy(index));
      index = move(index) + 1;
-     assert(move(new_balance) == (move(old_balance) + 10 + 82032 / copy(number_of_validators)), 1);
+     assert(move(new_balance) == (move(old_balance) + 10 + 79382 / copy(number_of_validators)), 1);
   }
 
   // The remainder in 0xFEE's balance must be less than the number of validators.
