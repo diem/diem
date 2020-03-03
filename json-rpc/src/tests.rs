@@ -3,20 +3,26 @@
 
 use crate::runtime::bootstrap;
 use libra_config::utils;
+use libra_temppath::TempPath;
+use libra_types::account_config::AccountResource;
+use libradb::{test_helper::arb_blocks_to_commit, LibraDB};
+use proptest::prelude::*;
 use reqwest;
 use serde_json;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
+    convert::TryFrom,
     sync::Arc,
 };
-use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 
 type JsonMap = HashMap<String, serde_json::Value>;
 
 #[test]
 fn test_json_rpc_protocol() {
     let address = format!("0.0.0.0:{}", utils::get_available_port());
-    let _runtime = bootstrap(address.parse().unwrap(), Arc::new(MockStorageReadClient));
+    let tmp_dir = TempPath::new();
+    let db = LibraDB::new(&tmp_dir);
+    let _runtime = bootstrap(address.parse().unwrap(), Arc::new(db));
     let client = reqwest::blocking::Client::new();
 
     // check that only root path is accessible
@@ -63,56 +69,106 @@ fn test_json_rpc_protocol() {
     assert_eq!(fetch_error(resp), -32000);
 }
 
-#[test]
-fn test_get_account_state() {
-    let address = format!("0.0.0.0:{}", utils::get_available_port());
-    let _runtime = bootstrap(address.parse().unwrap(), Arc::new(MockStorageReadClient));
-    let client = reqwest::blocking::Client::new();
-    let url = format!("http://{}", address);
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(1))]
 
-    // single call
-    let account = "0265b97523d042755f9a290fdc6e9febc9a86bdcd03b70c63a0349274e85e263";
-    let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_state", "params": [account], "id": 1});
-    let resp = client.post(&url).json(&request).send().unwrap();
-    assert_eq!(resp.status(), 200);
-    let data = fetch_result(resp.json().unwrap());
-    assert_eq!(data.get("balance").unwrap().as_u64(), Some(100));
-    assert_eq!(data.get("sequence_number").unwrap().as_u64(), Some(0));
+    #[test]
+    fn test_get_account_state(blocks in arb_blocks_to_commit()) {
+        // set up db
+        let tmp_dir = TempPath::new();
+        let db = Arc::new(LibraDB::new(&tmp_dir));
+        let mut version = 0;
+        let mut all_accounts = BTreeMap::new();
+        let mut all_txns = vec![];
 
-    // batching call
-    let accounts = vec![
-        "1ad0e745c00a6ef4a8176ddb1a5e2fdc7bc92f6ac3a7955b3aa0e3211074174a",
-        "f9841c24cf884559e79f20eb9926902eb4a072d1d78d40f11588fbc941d82150",
-        "bc1330c1c4176f50c82c7a1b9e5295eaf1eeec87a627735f4d446a55d5844ead",
-    ];
-    let requests = accounts
+        for (txns_to_commit, ledger_info_with_sigs) in &blocks {
+            db.save_transactions(
+                &txns_to_commit.clone(),
+                version,
+                Some(&ledger_info_with_sigs.clone()),
+            )
+            .unwrap();
+            version += txns_to_commit.len() as u64;
+            let mut account_states = HashMap::new();
+            // Get the ground truth of account states.
+            txns_to_commit.iter().for_each(|txn_to_commit| {
+                account_states.extend(txn_to_commit.account_states().clone())
+            });
+
+            // Record all account states.
+            for (address, blob) in account_states.iter() {
+                all_accounts.insert(address.clone(), AccountResource::try_from(blob).unwrap());
+            }
+
+            // Record all transactions.
+            all_txns.extend(
+                txns_to_commit
+                    .iter()
+                    .map(|txn_to_commit| txn_to_commit.transaction().clone()),
+            );
+        }
+
+        // set up JSON RPC
+        let address = format!("0.0.0.0:{}", utils::get_available_port());
+        let _runtime = bootstrap(address.parse().unwrap(), Arc::clone(&db));
+        let client = reqwest::blocking::Client::new();
+        let url = format!("http://{}", address);
+
+        // test case 1: single call
+        let (first_account, account_resource) = all_accounts.iter().next().unwrap();
+        let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_state", "params": [first_account], "id": 1});
+        let resp = client.post(&url).json(&request).send().unwrap();
+        assert_eq!(resp.status(), 200);
+        let data = fetch_result(resp.json().unwrap());
+        assert_eq!(data.get("balance").unwrap().as_u64(), Some(account_resource.balance()));
+        assert_eq!(data.get("sequence_number").unwrap().as_u64(), Some(account_resource.sequence_number()));
+
+        // test case 2: batch call
+        let mut batch_accounts = vec![];
+        let mut ids_expected = HashSet::new();
+        let mut id = 0;
+        let mut account_resources = HashMap::new();
+
+        for (account, account_resource) in all_accounts.iter() {
+            if account == first_account {
+                continue;
+            }
+            batch_accounts.push(account);
+            account_resources.insert(id, account_resource);
+            ids_expected.insert(id);
+            id += 1;
+            if id == 3 { break; }
+        }
+        let requests = batch_accounts
         .iter()
         .enumerate()
         .map(|(id, address)|
             serde_json::json!({"jsonrpc": "2.0", "method": "get_account_state", "params": [address], "id": id})
         )
         .collect();
-    let resp = client
-        .post(&url)
-        .json(&serde_json::Value::Array(requests))
-        .send()
-        .unwrap();
-    assert_eq!(resp.status(), 200);
-    match resp.json().unwrap() {
-        serde_json::Value::Array(responses) => {
-            let mut ids = HashSet::new();
-            for response in responses {
-                ids.insert(response.get("id").unwrap().as_u64().unwrap());
-                let result: JsonMap = serde_json::from_value(
-                    response.as_object().unwrap().get("result").unwrap().clone(),
-                )
-                .unwrap();
-                assert_eq!(result.get("balance").unwrap().as_u64(), Some(100));
+
+        let resp = client
+            .post(&url)
+            .json(&serde_json::Value::Array(requests))
+            .send()
+            .unwrap();
+        assert_eq!(resp.status(), 200);
+        match resp.json().unwrap() {
+            serde_json::Value::Array(responses) => {
+                let mut ids = HashSet::new();
+                for response in responses {
+                    let id = response.get("id").unwrap().as_u64().unwrap();
+                    ids.insert(id);
+                    let result: JsonMap = serde_json::from_value(
+                        response.as_object().unwrap().get("result").unwrap().clone(),
+                    )
+                    .unwrap();
+                    assert_eq!(result.get("balance").unwrap().as_u64(), Some(account_resources.get(&id).unwrap().balance()));
+                }
+                assert_eq!(ids, ids_expected);
             }
-            let ids_expected: HashSet<_> = vec![0, 1, 2].into_iter().collect();
-            assert_eq!(ids, ids_expected);
+            _ => panic!("invalid server response format"),
         }
-        _ => panic!("invalid server response format"),
     }
 }
 

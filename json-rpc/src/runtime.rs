@@ -4,16 +4,16 @@
 use crate::methods::{build_registry, RpcRegistry};
 use futures::future::join_all;
 use libra_config::config::NodeConfig;
+use libradb::LibraDB;
 use serde::Serialize;
 use serde_json::{map::Map, Value};
 use std::{net::SocketAddr, sync::Arc};
-use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
 use warp::Filter;
 
 /// Creates HTTP server (warp-based) that serves JSON RPC requests
 /// Returns handle to corresponding Tokio runtime
-pub fn bootstrap(address: SocketAddr, storage_client: Arc<dyn StorageRead>) -> Runtime {
+pub fn bootstrap(address: SocketAddr, libra_db: Arc<LibraDB>) -> Runtime {
     let runtime = Builder::new()
         .thread_name("rpc-")
         .threaded_scheduler()
@@ -28,7 +28,7 @@ pub fn bootstrap(address: SocketAddr, storage_client: Arc<dyn StorageRead>) -> R
         .and(warp::post())
         .and(warp::header::exact("content-type", "application/json"))
         .and(warp::body::json())
-        .and(warp::any().map(move || Arc::clone(&storage_client)))
+        .and(warp::any().map(move || Arc::clone(&libra_db)))
         .and(warp::any().map(move || Arc::clone(&registry)))
         .and_then(rpc_endpoint);
 
@@ -38,11 +38,8 @@ pub fn bootstrap(address: SocketAddr, storage_client: Arc<dyn StorageRead>) -> R
 }
 
 /// Creates JSON RPC endpoint by given node config
-pub fn bootstrap_from_config(config: &NodeConfig) -> Runtime {
-    let storage_client: Arc<dyn StorageRead> =
-        Arc::new(StorageReadServiceClient::new(&config.storage.address));
-
-    bootstrap(config.rpc.address, storage_client)
+pub fn bootstrap_from_config(config: &NodeConfig, libra_db: Arc<LibraDB>) -> Runtime {
+    bootstrap(config.rpc.address, libra_db)
 }
 
 /// JSON RPC entry point
@@ -50,19 +47,19 @@ pub fn bootstrap_from_config(config: &NodeConfig) -> Runtime {
 /// Performs routing based on methods defined in `registry`
 async fn rpc_endpoint(
     data: Value,
-    storage_client: Arc<dyn StorageRead>,
+    libra_db: Arc<LibraDB>,
     registry: Arc<RpcRegistry>,
 ) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
     if let Value::Array(requests) = data {
         // batch API call
-        let futures = requests.into_iter().map(|req| {
-            rpc_request_handler(req, Arc::clone(&storage_client), Arc::clone(&registry))
-        });
+        let futures = requests
+            .into_iter()
+            .map(|req| rpc_request_handler(req, Arc::clone(&libra_db), Arc::clone(&registry)));
         let responses = join_all(futures).await;
         Ok(Box::new(warp::reply::json(&Value::Array(responses))))
     } else {
         // single API call
-        let resp = rpc_request_handler(data, storage_client, registry).await;
+        let resp = rpc_request_handler(data, libra_db, registry).await;
         Ok(Box::new(warp::reply::json(&resp)))
     }
 }
@@ -71,7 +68,7 @@ async fn rpc_endpoint(
 /// Performs validation and executes corresponding rpc handler
 async fn rpc_request_handler(
     req: Value,
-    storage_client: Arc<dyn StorageRead>,
+    libra_db: Arc<LibraDB>,
     registry: Arc<RpcRegistry>,
 ) -> Value {
     let request: Map<String, Value>;
@@ -129,7 +126,7 @@ async fn rpc_request_handler(
     // get rpc handler
     match request.get("method") {
         Some(Value::String(name)) => match registry.get(name) {
-            Some(handler) => match handler(storage_client, params).await {
+            Some(handler) => match handler(libra_db, params).await {
                 Ok(result) => {
                     response.insert("result".to_string(), result);
                 }
