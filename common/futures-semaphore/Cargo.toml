@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-tokio = { version = "0.2.12", features = ["full"] }
+tokio = { version = "0.2.13", features = ["full"] }
 
 [dev-dependencies]
 futures = "0.3.0"
