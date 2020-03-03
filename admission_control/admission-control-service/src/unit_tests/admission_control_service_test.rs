@@ -119,7 +119,6 @@ impl AdmissionControl for MockAdmissionControlService {
             }
             Ok(None) => {
                 let mut status = MempoolStatus::default();
-                let insufficient_balance_add = [100_u8; ADDRESS_LENGTH];
                 let invalid_seq_add = [101_u8; ADDRESS_LENGTH];
                 let sys_error_add = [102_u8; ADDRESS_LENGTH];
                 let accepted_add = [103_u8; ADDRESS_LENGTH];
@@ -129,8 +128,6 @@ impl AdmissionControl for MockAdmissionControlService {
                 let sender_ref = sender.as_ref();
                 if sender_ref == accepted_add {
                     status.code = MempoolStatusCode::Accepted.into();
-                } else if sender_ref == insufficient_balance_add {
-                    status.code = MempoolStatusCode::InsufficientBalance.into();
                 } else if sender_ref == invalid_seq_add {
                     status.code = MempoolStatusCode::InvalidSeqNumber.into();
                 } else if sender_ref == sys_error_add {
@@ -197,7 +194,6 @@ fn test_submit_txn_inner_mempool() {
     let ac_service = MockAdmissionControlService::new();
 
     let test_cases = vec![
-        (100, Some(MempoolStatusCode::InsufficientBalance)),
         (101, Some(MempoolStatusCode::InvalidSeqNumber)),
         (102, Some(MempoolStatusCode::InvalidUpdate)),
         (103, None),

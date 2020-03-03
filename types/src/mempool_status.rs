@@ -42,19 +42,17 @@ impl MempoolStatus {
 pub enum MempoolStatusCode {
     // Transaction was accepted by Mempool
     Accepted = 0,
-    // The sender does not have enough balance for the transaction.
-    InsufficientBalance = 1,
     // Sequence number is old, etc.
-    InvalidSeqNumber = 2,
+    InvalidSeqNumber = 1,
     // Mempool is full (reached max global capacity)
-    MempoolIsFull = 3,
+    MempoolIsFull = 2,
     // Account reached max capacity per account
-    TooManyTransactions = 4,
+    TooManyTransactions = 3,
     // Invalid update. Only gas price increase is allowed
-    InvalidUpdate = 5,
+    InvalidUpdate = 4,
     // transaction didn't pass vm_validation
-    VmError = 6,
-    UnknownStatus = 7,
+    VmError = 5,
+    UnknownStatus = 6,
 }
 
 impl TryFrom<u64> for MempoolStatusCode {
@@ -63,13 +61,12 @@ impl TryFrom<u64> for MempoolStatusCode {
     fn try_from(value: u64) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(MempoolStatusCode::Accepted),
-            1 => Ok(MempoolStatusCode::InsufficientBalance),
-            2 => Ok(MempoolStatusCode::InvalidSeqNumber),
-            3 => Ok(MempoolStatusCode::MempoolIsFull),
-            4 => Ok(MempoolStatusCode::TooManyTransactions),
-            5 => Ok(MempoolStatusCode::InvalidUpdate),
-            6 => Ok(MempoolStatusCode::VmError),
-            7 => Ok(MempoolStatusCode::UnknownStatus),
+            1 => Ok(MempoolStatusCode::InvalidSeqNumber),
+            2 => Ok(MempoolStatusCode::MempoolIsFull),
+            3 => Ok(MempoolStatusCode::TooManyTransactions),
+            4 => Ok(MempoolStatusCode::InvalidUpdate),
+            5 => Ok(MempoolStatusCode::VmError),
+            6 => Ok(MempoolStatusCode::UnknownStatus),
             _ => Err("invalid StatusCode"),
         }
     }

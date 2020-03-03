@@ -44,7 +44,7 @@ use tokio::{
     runtime::{Builder, Handle, Runtime},
     time::interval,
 };
-use vm_validator::vm_validator::{get_account_state, TransactionValidation, VMValidator};
+use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidation, VMValidator};
 
 /// state of last sync with peer
 /// `timeline_id` is position in log of ready transactions
@@ -294,10 +294,10 @@ where
 {
     let mut statuses = vec![];
 
-    let account_states = join_all(
+    let seq_numbers = join_all(
         transactions
             .iter()
-            .map(|t| get_account_state(smp.storage_read_client.clone(), t.sender())),
+            .map(|t| get_account_sequence_number(smp.storage_read_client.clone(), t.sender())),
     )
     .await;
 
@@ -306,9 +306,9 @@ where
             .into_iter()
             .enumerate()
             .filter_map(|(idx, t)| {
-                if let Ok((sequence_number, balance)) = account_states[idx] {
+                if let Ok(sequence_number) = seq_numbers[idx] {
                     if t.sequence_number() >= sequence_number {
-                        return Some((t, sequence_number, balance));
+                        return Some((t, sequence_number));
                     } else {
                         statuses.push((
                             MempoolStatus::new(MempoolStatusCode::VmError),
@@ -340,17 +340,12 @@ where
             .mempool
             .lock()
             .expect("[shared mempool] failed to acquire mempool lock");
-        for (idx, (transaction, sequence_number, balance)) in transactions.into_iter().enumerate() {
+        for (idx, (transaction, sequence_number)) in transactions.into_iter().enumerate() {
             if let Ok(None) = validations[idx] {
                 let gas_cost = transaction.max_gas_amount();
 
-                let mempool_status = mempool.add_txn(
-                    transaction,
-                    gas_cost,
-                    sequence_number,
-                    balance,
-                    timeline_state,
-                );
+                let mempool_status =
+                    mempool.add_txn(transaction, gas_cost, sequence_number, timeline_state);
                 statuses.push((mempool_status, None));
             } else if let Ok(Some(validation_status)) = &validations[idx] {
                 statuses.push((

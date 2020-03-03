@@ -9,7 +9,7 @@ use crate::core_mempool::{
     CoreMempool, TimelineState,
 };
 use libra_config::config::NodeConfig;
-use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction};
+use libra_types::transaction::SignedTransaction;
 use std::{collections::HashSet, time::Duration};
 
 #[test]
@@ -131,50 +131,6 @@ fn test_remove_transaction() {
     // should return only txns from new_txns
     assert_eq!(consensus.get_block(&mut pool, 1), vec!(new_txns[0].clone()));
     assert_eq!(consensus.get_block(&mut pool, 1), vec!(new_txns[1].clone()));
-}
-
-#[test]
-fn test_balance_check() {
-    let mut pool = setup_mempool().0;
-    let address = 0;
-
-    let transaction1 = TestTransaction::new(address, 0, 1);
-    assert_eq!(
-        pool.add_txn(
-            transaction1.make_signed_transaction(),
-            1,
-            0,
-            2,
-            TimelineState::NotReady
-        )
-        .code,
-        MempoolStatusCode::Accepted
-    );
-
-    assert_eq!(
-        pool.add_txn(
-            TestTransaction::new(address, 1, 1).make_signed_transaction(),
-            10,
-            1,
-            5,
-            TimelineState::NotReady
-        )
-        .code,
-        MempoolStatusCode::InsufficientBalance
-    );
-
-    // check that gas unit price is taking into account for balance check
-    assert_eq!(
-        pool.add_txn(
-            TestTransaction::new(address, 1, /* gas price */ 2).make_signed_transaction(),
-            /* gas amount */ 3,
-            1,
-            5,
-            TimelineState::NotReady
-        )
-        .code,
-        MempoolStatusCode::InsufficientBalance
-    );
 }
 
 #[test]
@@ -335,7 +291,7 @@ fn test_gc_ready_transaction() {
     // insert in the middle transaction that's going to be expired
     let txn = TestTransaction::new(1, 1, 1)
         .make_signed_transaction_with_expiration_time(Duration::from_secs(0));
-    pool.add_txn(txn, 0, 0, 100, TimelineState::NotReady);
+    pool.add_txn(txn, 0, 0, TimelineState::NotReady);
 
     // insert few transactions after it
     // They supposed to be ready because there's sequential path from 0 to them
@@ -367,7 +323,7 @@ fn test_clean_stuck_transactions() {
     }
     let db_sequence_number = 10;
     let txn = TestTransaction::new(0, db_sequence_number, 1).make_signed_transaction();
-    pool.add_txn(txn, 0, db_sequence_number, 100, TimelineState::NotReady);
+    pool.add_txn(txn, 0, db_sequence_number, TimelineState::NotReady);
     let block = pool.get_block(10, HashSet::new());
     assert_eq!(block.len(), 1);
     assert_eq!(block[0].sequence_number(), 10);
