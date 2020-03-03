@@ -2,11 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::runtime::bootstrap;
+use futures::{channel::mpsc::channel, StreamExt};
+use hex;
 use libra_config::utils;
+use libra_crypto::ed25519::*;
 use libra_temppath::TempPath;
 use libra_types::{
-    account_address::AccountAddress, account_config::AccountResource,
-    crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionToCommit,
+    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_config::AccountResource,
+    crypto_proxies::LedgerInfoWithSignatures,
+    mempool_status::{MempoolStatus, MempoolStatusCode},
+    test_helpers::transaction_test_helpers::get_test_signed_txn,
+    transaction::TransactionToCommit,
 };
 use libradb::{test_helper::arb_blocks_to_commit, LibraDB};
 use proptest::prelude::*;
@@ -17,6 +24,9 @@ use std::{
     convert::TryFrom,
     sync::Arc,
 };
+use vm_validator::{
+    mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
+};
 
 type JsonMap = HashMap<String, serde_json::Value>;
 
@@ -25,7 +35,8 @@ fn test_json_rpc_protocol() {
     let address = format!("0.0.0.0:{}", utils::get_available_port());
     let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
-    let _runtime = bootstrap(address.parse().unwrap(), Arc::new(db));
+    let mp_sender = channel(1024).0;
+    let _runtime = bootstrap(address.parse().unwrap(), Arc::new(db), mp_sender);
     let client = reqwest::blocking::Client::new();
 
     // check that only root path is accessible
@@ -112,6 +123,50 @@ fn setup_db(
     (db, all_accounts)
 }
 
+#[test]
+fn test_transaction_submission() {
+    let (mp_sender, mut mp_events) = channel(1);
+    let tmp_dir = TempPath::new();
+    let db = LibraDB::new(&tmp_dir);
+    let address = format!("0.0.0.0:{}", utils::get_available_port());
+    let runtime = bootstrap(address.parse().unwrap(), Arc::new(db), mp_sender);
+    let client = reqwest::blocking::Client::new();
+    let url = format!("http://{}", address);
+
+    // future that mocks shared mempool execution
+    runtime.spawn(async move {
+        let validator = MockVMValidator;
+        while let Some((txn, cb)) = mp_events.next().await {
+            let vm_status = validator.validate_transaction(txn).await.unwrap();
+            let result = if vm_status.is_some() {
+                (MempoolStatus::new(MempoolStatusCode::VmError), vm_status)
+            } else {
+                (MempoolStatus::new(MempoolStatusCode::Accepted), None)
+            };
+            cb.send(Ok(result)).unwrap();
+        }
+    });
+
+    // closure that checks transaction submission for given account
+    let txn_submission = move |sender| {
+        let keypair = compat::generate_keypair(None);
+        let txn = get_test_signed_txn(sender, 0, &keypair.0, keypair.1, None);
+        let payload = hex::encode(lcs::to_bytes(&txn).unwrap());
+        let request =
+            serde_json::json!({"jsonrpc": "2.0", "method": "submit", "params": [payload], "id": 1});
+        client.post(&url).json(&request).send().unwrap()
+    };
+
+    // check successful submission
+    let sender = AccountAddress::new([9; ADDRESS_LENGTH]);
+    let data: JsonMap = txn_submission(sender).json().unwrap();
+    assert_eq!(data.get("result").unwrap(), &serde_json::Value::Null);
+
+    // check vm error submission
+    let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
+    assert_eq!(fetch_error(txn_submission(sender)), -32000);
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1))]
 
@@ -122,7 +177,8 @@ proptest! {
 
         // set up JSON RPC
         let address = format!("0.0.0.0:{}", utils::get_available_port());
-        let _runtime = bootstrap(address.parse().unwrap(), Arc::clone(&db));
+        let mp_sender = channel(1024).0;
+        let _runtime = bootstrap(address.parse().unwrap(), Arc::clone(&db), mp_sender);
         let client = reqwest::blocking::Client::new();
         let url = format!("http://{}", address);
 
@@ -190,7 +246,7 @@ proptest! {
 
         // set up JSON RPC
         let address = format!("0.0.0.0:{}", utils::get_available_port());
-        let _runtime = bootstrap(address.parse().unwrap(), Arc::clone(&db));
+        let _runtime = bootstrap(address.parse().unwrap(), Arc::clone(&db), channel(1).0);
         let client = reqwest::blocking::Client::new();
         let url = format!("http://{}", address);
 
