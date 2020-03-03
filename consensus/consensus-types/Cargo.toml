@@ -16,7 +16,7 @@ serde = { version = "1.0.99", default-features = false }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
-executor = { path = "../../execution/executor", version = "0.1.0" }
+executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]

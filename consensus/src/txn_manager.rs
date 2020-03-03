@@ -3,7 +3,7 @@
 
 use crate::state_replication::TxnManager;
 use anyhow::{format_err, Result};
-use executor::StateComputeResult;
+use executor_types::StateComputeResult;
 use futures::channel::{mpsc, oneshot};
 use libra_mempool::{
     CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,

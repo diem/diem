@@ -11,7 +11,7 @@ use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
-use executor::ExecutedTrees;
+use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_crypto::HashValue;
 use libra_types::{crypto_proxies::ValidatorSet, ledger_info::LedgerInfo};

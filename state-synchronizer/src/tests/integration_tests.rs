@@ -6,7 +6,7 @@ use crate::{
     StateSynchronizer, SynchronizerState,
 };
 use anyhow::{bail, Result};
-use executor::ExecutedTrees;
+use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{

@@ -21,6 +21,7 @@ structopt = "0.3"
 tokio = { version = "0.2.12", features = ["full"] }
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
+executor-types = { path = "../executor-types", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

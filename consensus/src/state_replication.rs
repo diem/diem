@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use consensus_types::{block::Block, executed_block::ExecutedBlock};
-use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
+use executor_types::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof};
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)

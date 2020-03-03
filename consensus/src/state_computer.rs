@@ -4,7 +4,8 @@
 use crate::{counters, state_replication::StateComputer};
 use anyhow::{ensure, Result};
 use consensus_types::{block::Block, executed_block::ExecutedBlock};
-use executor::{ExecutedTrees, Executor, ProcessedVMOutput};
+use executor::Executor;
+use executor_types::{ExecutedTrees, ProcessedVMOutput};
 use libra_logger::prelude::*;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
