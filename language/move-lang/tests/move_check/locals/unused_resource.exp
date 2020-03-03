@@ -8,7 +8,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/locals/unused_resource.move:5:13 ───
+   ┌── tests/move_check/locals/unused_resource.move:5:20 ───
    │
  5 │         let r = R{};
    │                    ^ Invalid return
@@ -27,7 +27,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:10:21 ───
+    ┌── tests/move_check/locals/unused_resource.move:10:31 ───
     │
  10 │         if (cond) { r = R{}; };
     │                               ^ Invalid return
@@ -46,7 +46,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:15:29 ───
+    ┌── tests/move_check/locals/unused_resource.move:15:39 ───
     │
  15 │         if (cond) {} else { r = R{}; };
     │                                       ^ Invalid return
@@ -76,7 +76,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:20:24 ───
+    ┌── tests/move_check/locals/unused_resource.move:20:33 ───
     │
  20 │         while (cond) { r = R{} };
     │                                 ^ Invalid return
@@ -106,7 +106,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:28:18 ───
+    ┌── tests/move_check/locals/unused_resource.move:28:21 ───
     │
  28 │         let _ = &R{};
     │                     ^ Invalid return
@@ -117,7 +117,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:31:15 ───
+    ┌── tests/move_check/locals/unused_resource.move:31:21 ───
     │
  31 │       fun t6<T>(x: T) {
     │ ╭─────────────────────^

@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_type_annotation.move:2:20 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_type_annotation.move:7:26 ───
    │
  7 │         ignore((abort 0: CupC<R>));
    │                          ^^^^^^^ Constraint not satisfied.

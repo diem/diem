@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/pack_unit.move:2:16 ───
+   ┌── tests/move_check/typing/pack_unit.move:5:9 ───
    │
  5 │         Box { f: () };
    │         ^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/pack_unit.move:5:9 ───
+   ┌── tests/move_check/typing/pack_unit.move:5:18 ───
    │
  5 │         Box { f: () };
    │                  ^^ Invalid argument for field 'f' for '0x8675309::M::Box'

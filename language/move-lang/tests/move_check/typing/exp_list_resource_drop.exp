@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/exp_list_resource_drop.move:2:5 ───
+   ┌── tests/move_check/typing/exp_list_resource_drop.move:7:9 ───
    │
  7 │         (0, S{}, R<u64> {});
    │         ^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/exp_list_resource_drop.move:2:5 ───
+   ┌── tests/move_check/typing/exp_list_resource_drop.move:8:9 ───
    │
  8 │         (0, S{}, Box<R<u64>> {});
    │         ^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
@@ -28,7 +28,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/exp_list_resource_drop.move:4:16 ───
+   ┌── tests/move_check/typing/exp_list_resource_drop.move:9:9 ───
    │
  9 │         (0, S{}, Box {});
    │         ^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used

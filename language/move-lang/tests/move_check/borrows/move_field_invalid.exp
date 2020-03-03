@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/move_field_invalid.move:12:17 ───
+    ┌── tests/move_check/borrows/move_field_invalid.move:13:9 ───
     │
  13 │         move s;
     │         ^^^^^^ Invalid move of local 's'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/move_field_invalid.move:17:17 ───
+    ┌── tests/move_check/borrows/move_field_invalid.move:18:9 ───
     │
  18 │         move s;
     │         ^^^^^^ Invalid move of local 's'
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/move_field_invalid.move:22:17 ───
+    ┌── tests/move_check/borrows/move_field_invalid.move:23:9 ───
     │
  23 │         move s;
     │         ^^^^^^ Invalid move of local 's'
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/move_field_invalid.move:27:17 ───
+    ┌── tests/move_check/borrows/move_field_invalid.move:28:9 ───
     │
  28 │         move s;
     │         ^^^^^^ Invalid move of local 's'

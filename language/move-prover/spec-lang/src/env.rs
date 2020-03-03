@@ -147,7 +147,7 @@ impl ModuleId {
 #[derive(Debug)]
 pub struct GlobalEnv {
     /// A Files database for the codespan crate which supports diagnostics.
-    source_files: Files,
+    source_files: Files<String>,
     /// A mapping from file names to associated FileId. Though this information is
     /// already in `source_files`, we can't get it out of there so need to book keep here.
     file_name_map: BTreeMap<String, FileId>,
@@ -178,7 +178,7 @@ impl GlobalEnv {
 
     /// Adds a source to this environment, returning a FileId for it.
     pub fn add_source(&mut self, file_name: &str, source: &str) -> FileId {
-        let file_id = self.source_files.add(file_name, source);
+        let file_id = self.source_files.add(file_name, source.to_string());
         self.file_name_map.insert(file_name.to_string(), file_id);
         file_id
     }
@@ -515,6 +515,7 @@ impl<'env> ModuleEnv<'env> {
                     self.env
                         .source_files
                         .name(self.data.source_file_id)
+                        .to_string_lossy()
                         .to_string(),
                     location,
                 )

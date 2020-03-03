@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_invalid.move:2:15 ───
+   ┌── tests/move_check/typing/borrow_local_invalid.move:3:9 ───
    │
  3 │         &r;
    │         ^^ Invalid borrow
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_invalid.move:2:28 ───
+   ┌── tests/move_check/typing/borrow_local_invalid.move:4:9 ───
    │
  4 │         &r_mut;
    │         ^^^^^^ Invalid borrow
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_invalid.move:2:15 ───
+   ┌── tests/move_check/typing/borrow_local_invalid.move:5:9 ───
    │
  5 │         &mut r;
    │         ^^^^^^ Invalid borrow
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_invalid.move:2:28 ───
+   ┌── tests/move_check/typing/borrow_local_invalid.move:6:9 ───
    │
  6 │         &mut r_mut;
    │         ^^^^^^^^^^ Invalid borrow

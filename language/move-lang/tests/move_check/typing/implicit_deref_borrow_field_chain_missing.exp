@@ -24,12 +24,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:4:20 ───
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:10:9 ───
     │
  10 │         x1.x2.x3.f.g;
     │         ^^^^^^^^^^^^ Unbound field 'g'
     ·
- 4 │     struct X3 { f: u64, }
+  4 │     struct X3 { f: u64, }
     │                    --- Expected a struct type in the current module but got: 'u64'
     │
 
@@ -59,12 +59,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:4:20 ───
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:14:9 ───
     │
  14 │         x1_mut.x2.x3.f.g;
     │         ^^^^^^^^^^^^^^^^ Unbound field 'g'
     ·
- 4 │     struct X3 { f: u64, }
+  4 │     struct X3 { f: u64, }
     │                    --- Expected a struct type in the current module but got: 'u64'
     │
 

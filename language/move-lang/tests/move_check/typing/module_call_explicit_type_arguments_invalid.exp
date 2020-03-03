@@ -84,7 +84,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:24 ───
+    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:13:9 ───
     │
  13 │         foo<U, u64>(t, 0);
     │         ^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
@@ -98,7 +98,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:30 ───
+    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:14:9 ───
     │
  14 │         foo<V, T>(u, v);
     │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
@@ -112,7 +112,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:36 ───
+    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:14:9 ───
     │
  14 │         foo<V, T>(u, v);
     │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'

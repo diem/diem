@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/mutate_resource.move:2:5 ───
+   ┌── tests/move_check/typing/mutate_resource.move:5:10 ───
    │
  5 │         *r = R {};
    │          ^ Invalid mutation. Can only assign to references of a copyable type
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/mutate_resource.move:8:12 ───
+   ┌── tests/move_check/typing/mutate_resource.move:9:10 ───
    │
  9 │         *r = x;
    │          ^ Invalid mutation. Can only assign to references of a copyable type
@@ -28,7 +28,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_resource.move:12:15 ───
+    ┌── tests/move_check/typing/mutate_resource.move:13:10 ───
     │
  13 │         *r = x;
     │          ^ Invalid mutation. Can only assign to references of a copyable type

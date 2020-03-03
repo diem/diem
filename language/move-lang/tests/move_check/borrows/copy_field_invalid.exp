@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/copy_field_invalid.move:12:17 ───
+    ┌── tests/move_check/borrows/copy_field_invalid.move:13:9 ───
     │
  13 │         copy s;
     │         ^^^^^^ Invalid copy of local 's'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/copy_field_invalid.move:18:17 ───
+    ┌── tests/move_check/borrows/copy_field_invalid.move:19:9 ───
     │
  19 │         copy s;
     │         ^^^^^^ Invalid copy of local 's'

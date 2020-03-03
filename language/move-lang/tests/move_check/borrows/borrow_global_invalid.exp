@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/borrows/borrow_global_invalid.move:5:18 ───
+   ┌── tests/move_check/borrows/borrow_global_invalid.move:6:18 ───
    │
  6 │         let r2 = borrow_global<R>(addr);
    │                  ^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_global_invalid.move:11:17 ───
+    ┌── tests/move_check/borrows/borrow_global_invalid.move:12:18 ───
     │
  12 │         let r2 = borrow_global<R>(addr);
     │                  ^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_global_invalid.move:17:18 ───
+    ┌── tests/move_check/borrows/borrow_global_invalid.move:18:18 ───
     │
  18 │         let f = &borrow_global<R>(addr).f;
     │                  ^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_global_invalid.move:23:18 ───
+    ┌── tests/move_check/borrows/borrow_global_invalid.move:24:18 ───
     │
  24 │         let r1 = borrow_global_mut<R>(addr);
     │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
@@ -44,7 +44,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_global_invalid.move:29:17 ───
+    ┌── tests/move_check/borrows/borrow_global_invalid.move:30:18 ───
     │
  30 │         let r2 = borrow_global<R>(addr);
     │                  ^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
@@ -55,7 +55,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_global_invalid.move:35:18 ───
+    ┌── tests/move_check/borrows/borrow_global_invalid.move:36:18 ───
     │
  36 │         let f = &borrow_global<R>(addr).f;
     │                  ^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
@@ -66,7 +66,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_global_invalid.move:42:32 ───
+    ┌── tests/move_check/borrows/borrow_global_invalid.move:43:18 ───
     │
  43 │         let f = &borrow_global<R>(addr).f;
     │                  ^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'

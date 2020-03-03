@@ -72,7 +72,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/assign_wrong_type.move:23:17 ───
+    ┌── tests/move_check/typing/assign_wrong_type.move:27:10 ───
     │
  27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
     │          ^ Invalid assignment to local 'x'
@@ -86,7 +86,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/assign_wrong_type.move:24:17 ───
+    ┌── tests/move_check/typing/assign_wrong_type.move:27:13 ───
     │
  27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
     │             ^ Invalid assignment to local 'b'
@@ -100,12 +100,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/assign_wrong_type.move:2:27 ───
+    ┌── tests/move_check/typing/assign_wrong_type.move:27:18 ───
     │
  27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
     │                  ^ Invalid assignment to local 'f'
     ·
- 2 │     resource struct R {f: u64}
+  2 │     resource struct R {f: u64}
     │                           --- The type: 'u64'
     ·
  25 │         let f = 0x0;
@@ -114,7 +114,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/assign_wrong_type.move:26:17 ───
+    ┌── tests/move_check/typing/assign_wrong_type.move:27:22 ───
     │
  27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
     │                      ^ Invalid assignment to local 'r'

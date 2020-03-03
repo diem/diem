@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/dereference_field_invalid.move:11:17 ───
+    ┌── tests/move_check/borrows/dereference_field_invalid.move:12:9 ───
     │
  12 │         *s;
     │         ^^ Invalid dereference.
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/dereference_field_invalid.move:15:17 ───
+    ┌── tests/move_check/borrows/dereference_field_invalid.move:16:9 ───
     │
  16 │         *s;
     │         ^^ Invalid dereference.

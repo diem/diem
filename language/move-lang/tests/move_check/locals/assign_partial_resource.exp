@@ -8,7 +8,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/locals/assign_partial_resource.move:6:21 ───
+   ┌── tests/move_check/locals/assign_partial_resource.move:7:9 ───
    │
  7 │         r = R{};
    │         ^ Invalid assignment to local 'r'
@@ -27,7 +27,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_partial_resource.move:13:29 ───
+    ┌── tests/move_check/locals/assign_partial_resource.move:14:9 ───
     │
  14 │         r = R{};
     │         ^ Invalid assignment to local 'r'
@@ -57,7 +57,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_partial_resource.move:20:24 ───
+    ┌── tests/move_check/locals/assign_partial_resource.move:21:9 ───
     │
  21 │         r = R{};
     │         ^ Invalid assignment to local 'r'
@@ -87,7 +87,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_partial_resource.move:30:27 ───
+    ┌── tests/move_check/locals/assign_partial_resource.move:31:21 ───
     │
  31 │         if (cond) { x = y };
     │                     ^ Invalid assignment to local 'x'
@@ -98,7 +98,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_partial_resource.move:31:25 ───
+    ┌── tests/move_check/locals/assign_partial_resource.move:32:13 ───
     │
  32 │         (x, y)
     │             ^ Invalid usage of local 'y'

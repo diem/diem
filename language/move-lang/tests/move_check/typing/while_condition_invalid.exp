@@ -42,7 +42,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/while_condition_invalid.move:8:28 ───
+   ┌── tests/move_check/typing/while_condition_invalid.move:9:16 ───
    │
  9 │         while (x) ();
    │                ^ Invalid while condition

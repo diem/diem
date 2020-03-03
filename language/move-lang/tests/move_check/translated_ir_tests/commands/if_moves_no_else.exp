@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/if_moves_no_else.move:4:17 ───
+   ┌── tests/move_check/translated_ir_tests/commands/if_moves_no_else.move:7:30 ───
    │
  7 │     0x0::Transaction::assert(x == 0, 42);
    │                              ^ Invalid usage of local 'x'

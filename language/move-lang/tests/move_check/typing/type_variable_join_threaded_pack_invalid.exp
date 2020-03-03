@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:35:19 ───
+    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:42:9 ───
     │
  42 │         b
     │         ^ Invalid return expression
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:10:23 ───
+    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:47:17 ───
     │
  47 │         let x = Container::get(&v);
     │                 ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.

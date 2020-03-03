@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:30:15 ───
+    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:36:9 ───
     │
  36 │         f1
     │         ^^ Invalid return expression
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:10:23 ───
+    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:43:27 ───
     │
  43 │         Box { f1, f2 }  = Container::get(&v);
     │                           ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.

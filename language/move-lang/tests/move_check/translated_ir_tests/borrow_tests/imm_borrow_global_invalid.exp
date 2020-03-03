@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_invalid.move:29:18 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_invalid.move:30:18 ───
     │
  30 │         let p2 = borrow_global_mut<Pair>(addr2);
     │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'Pair'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_invalid.move:35:18 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_invalid.move:36:25 ───
     │
  36 │         let p2 = freeze(borrow_global_mut<Pair>(addr2));
     │                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'Pair'
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_invalid.move:41:18 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_invalid.move:42:19 ───
     │
  42 │         let c2 = &borrow_global_mut<Pair>(addr2).x;
     │                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'Pair'

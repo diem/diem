@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/dereference_combo_invalid.move:12:23 ───
+    ┌── tests/move_check/borrows/dereference_combo_invalid.move:13:9 ───
     │
  13 │         *s;
     │         ^^ Invalid dereference.
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/dereference_combo_invalid.move:19:23 ───
+    ┌── tests/move_check/borrows/dereference_combo_invalid.move:20:9 ───
     │
  20 │         *s;
     │         ^^ Invalid dereference.
@@ -25,7 +25,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/dereference_combo_invalid.move:26:23 ───
+    ┌── tests/move_check/borrows/dereference_combo_invalid.move:27:9 ───
     │
  27 │         *s;
     │         ^^ Invalid dereference.

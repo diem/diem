@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/borrows/call_ordering.move:6:17 ───
+   ┌── tests/move_check/borrows/call_ordering.move:7:13 ───
    │
  7 │         foo(freeze(s), { *f = 0; 1 })
    │             ^^^^^^^^^ Invalid freeze.
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/call_ordering.move:12:13 ───
+    ┌── tests/move_check/borrows/call_ordering.move:12:25 ───
     │
  12 │         bar(&mut s.f, { s.f = 0; 1 })
     │                         ^^^^^^^ Invalid mutation of reference.

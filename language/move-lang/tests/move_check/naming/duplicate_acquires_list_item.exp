@@ -1,28 +1,28 @@
 error: 
 
-   ┌── tests/move_check/naming/duplicate_acquires_list_item.move:4:23 ───
+   ┌── tests/move_check/naming/duplicate_acquires_list_item.move:4:29 ───
    │
  4 │     fun t0() acquires R, X, R {
    │                             ^ Duplicate acquires item
    ·
  4 │     fun t0() acquires R, X, R {
-   │                       - Previously listed here
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/duplicate_acquires_list_item.move:8:23 ───
-   │
- 8 │     fun t1() acquires R, X, R, R, R {
-   │                             ^ Duplicate acquires item
-   ·
- 8 │     fun t1() acquires R, X, R, R, R {
    │                       - Previously listed here
    │
 
 error: 
 
    ┌── tests/move_check/naming/duplicate_acquires_list_item.move:8:29 ───
+   │
+ 8 │     fun t1() acquires R, X, R, R, R {
+   │                             ^ Duplicate acquires item
+   ·
+ 8 │     fun t1() acquires R, X, R, R, R {
+   │                       - Previously listed here
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/duplicate_acquires_list_item.move:8:32 ───
    │
  8 │     fun t1() acquires R, X, R, R, R {
    │                                ^ Duplicate acquires item
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_acquires_list_item.move:8:32 ───
+   ┌── tests/move_check/naming/duplicate_acquires_list_item.move:8:35 ───
    │
  8 │     fun t1() acquires R, X, R, R, R {
    │                                   ^ Duplicate acquires item

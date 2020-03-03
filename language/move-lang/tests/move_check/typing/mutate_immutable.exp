@@ -28,12 +28,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_immutable.move:9:20 ───
+    ┌── tests/move_check/typing/mutate_immutable.move:10:10 ───
     │
  10 │         *x_ref = 0;
     │          ^^^^^ Invalid mutation. Expected a mutable reference
     ·
- 9 │         let x_ref: &u64 = x_ref;
+  9 │         let x_ref: &u64 = x_ref;
     │                    ---- The type: '&u64'
     ·
  10 │         *x_ref = 0;

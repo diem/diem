@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/assign_unpack_references_invalid.move:8:17 ───
+   ┌── tests/move_check/typing/assign_unpack_references_invalid.move:9:9 ───
    │
  9 │         f = 0;
    │         ^ Invalid assignment to local 'f'
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:8:9 ───
+    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:10:9 ───
     │
  10 │         s2 = S { f: 0 }
     │         ^^ Invalid assignment to local 's2'
@@ -22,13 +22,13 @@ error:
  10 │         s2 = S { f: 0 }
     │              ---------- The type: '0x8675309::M::S'
     ·
- 8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
+  8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
     │         --------------------- Is not compatible with: '&0x8675309::M::S'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:16:17 ───
+    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:17:9 ───
     │
  17 │         f = 0;
     │         ^ Invalid assignment to local 'f'
@@ -42,7 +42,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:16:9 ───
+    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:18:9 ───
     │
  18 │         s2 = S { f: 0 }
     │         ^^ Invalid assignment to local 's2'
@@ -56,7 +56,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:25:17 ───
+    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:26:9 ───
     │
  26 │         f = &0;
     │         ^ Invalid assignment to local 'f'
@@ -70,7 +70,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:25:9 ───
+    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:27:9 ───
     │
  27 │         s2 = &S { f: 0 }
     │         ^^ Invalid assignment to local 's2'

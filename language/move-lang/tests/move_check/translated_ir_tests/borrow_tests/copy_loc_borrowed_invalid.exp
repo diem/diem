@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/copy_loc_borrowed_invalid.move:4:18 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/copy_loc_borrowed_invalid.move:5:9 ───
    │
  5 │         copy x;
    │         ^^^^^^ Invalid copy of local 'x'

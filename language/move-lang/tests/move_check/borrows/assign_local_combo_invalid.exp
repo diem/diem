@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/assign_local_combo_invalid.move:13:37 ───
+    ┌── tests/move_check/borrows/assign_local_combo_invalid.move:14:9 ───
     │
  14 │         s = S { f: 0, g: 0 };
     │         ^ Invalid assignment of local 's'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/assign_local_combo_invalid.move:22:23 ───
+    ┌── tests/move_check/borrows/assign_local_combo_invalid.move:23:9 ───
     │
  23 │         s = S { f: 0, g: 0 };
     │         ^ Invalid assignment of local 's'
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/assign_local_combo_invalid.move:31:23 ───
+    ┌── tests/move_check/borrows/assign_local_combo_invalid.move:32:9 ───
     │
  32 │         s = S { f: 0, g: 0 };
     │         ^ Invalid assignment of local 's'
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/assign_local_combo_invalid.move:40:23 ───
+    ┌── tests/move_check/borrows/assign_local_combo_invalid.move:41:9 ───
     │
  41 │         s = S { f: 0, g: 0 };
     │         ^ Invalid assignment of local 's'
@@ -44,7 +44,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/assign_local_combo_invalid.move:48:17 ───
+    ┌── tests/move_check/borrows/assign_local_combo_invalid.move:49:19 ───
     │
  49 │         if (cond) s = S { f: 0, g: 0 };
     │                   ^ Invalid assignment of local 's'

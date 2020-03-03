@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/block_single_expr_invalid.move:4:12 ───
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:4:18 ───
    │
  4 │         ({ 0 } : bool);
    │                  ^^^^ Invalid type annotation
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/block_single_expr_invalid.move:5:12 ───
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:5:19 ───
    │
  5 │         ({ &0 } : u64);
    │                   ^^^ Invalid type annotation
@@ -28,7 +28,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/block_single_expr_invalid.move:6:12 ───
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:6:23 ───
    │
  6 │         ({ &mut 0 } : ());
    │                       ^^ Invalid type annotation
@@ -42,7 +42,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/block_single_expr_invalid.move:2:5 ───
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:7:9 ───
    │
  7 │         ({ R {} } : R);
    │         ^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
@@ -56,7 +56,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/block_single_expr_invalid.move:8:12 ───
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:8:34 ───
    │
  8 │         ({ (0, false, false) } : (u64, bool));
    │                                  ^^^^^^^^^^^ Invalid type annotation

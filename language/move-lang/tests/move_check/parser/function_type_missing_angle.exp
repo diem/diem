@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parser/function_type_missing_angle.move:3:11 ───
+   ┌── tests/move_check/parser/function_type_missing_angle.move:3:19 ───
    │
  3 │     fun fn<T1, T2 () { }
    │                   ^ Expected '>'

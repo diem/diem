@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:13:30 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:14:18 ───
     │
  14 │         let f1 = &inner.f1;
     │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:24:30 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:25:18 ───
     │
  25 │         let f1 = &inner.f1;
     │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:35:30 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:36:18 ───
     │
  36 │         let f1 = &mut inner.f1;
     │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:46:30 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:47:18 ───
     │
  47 │         let f1 = &mut inner.f1;
     │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
@@ -44,7 +44,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:57:30 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:58:18 ───
     │
  58 │         let f1 = &inner.f1;
     │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
@@ -55,7 +55,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:66:61 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:67:18 ───
     │
  67 │         let f1 = &inner.f1;
     │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.

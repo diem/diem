@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parser/struct_type_missing_angle.move:3:13 ───
+   ┌── tests/move_check/parser/struct_type_missing_angle.move:3:21 ───
    │
  3 │     struct S<T1, T2 { }
    │                     ^ Expected '>'

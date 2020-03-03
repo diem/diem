@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_invalid.move:6:27 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_invalid.move:9:9 ───
    │
  9 │         root.f = 1;
    │         ^^^^^^^^^^ Invalid mutation of reference.
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_invalid.move:14:27 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_invalid.move:17:9 ───
     │
  17 │         foo(x, &mut root.f);
     │         ^^^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed

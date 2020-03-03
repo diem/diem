@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/freeze_field_invalid.move:11:17 ───
+    ┌── tests/move_check/borrows/freeze_field_invalid.move:12:9 ───
     │
  12 │         freeze(s);
     │         ^^^^^^^^^ Invalid freeze.
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/freeze_field_invalid.move:18:17 ───
+    ┌── tests/move_check/borrows/freeze_field_invalid.move:19:9 ───
     │
  19 │         freeze(s);
     │         ^^^^^^^^^ Invalid freeze.

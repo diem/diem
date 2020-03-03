@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_temp_resource.move:6:10 ───
+   ┌── tests/move_check/typing/borrow_local_temp_resource.move:7:17 ───
    │
  7 │         &mut R{};
    │                 ^ Invalid return
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_temp_resource.move:7:14 ───
+   ┌── tests/move_check/typing/borrow_local_temp_resource.move:7:17 ───
    │
  7 │         &mut R{};
    │                 ^ Invalid return
