@@ -14,7 +14,7 @@ use mirai_annotations::*;
 #[cfg(test)]
 use rand::rngs::EntropyRng;
 #[cfg(test)]
-use rand_core::RngCore;
+use rand::RngCore;
 use sha2::{Digest, Sha256};
 use std::{
     fs::{self, File},
