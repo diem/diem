@@ -9,10 +9,10 @@ macro_rules! register_rpc_method {
     ($registry:expr, $method: expr, $num_args: expr) => {
         $registry.insert(
             stringify!($method).to_string(),
-            Box::new(move |libra_db, parameters| {
+            Box::new(move |service, parameters| {
                 Box::pin(async move {
                     ensure!(parameters.len() == $num_args, "Invalid number of arguments");
-                    Ok(serde_json::to_value($method(libra_db, parameters).await?)?)
+                    Ok(serde_json::to_value($method(service, parameters).await?)?)
                 })
             }),
         );

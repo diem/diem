@@ -166,7 +166,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut instant = Instant::now();
     let libra_db = init_libra_db(&node_config);
     let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
-    let rpc_runtime = bootstrap_rpc(&node_config, libra_db);
 
     debug!(
         "Storage service started in {} ms",
@@ -235,8 +234,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         &node_config,
         reconfig_event_subscriptions,
     );
-    let (ac_sender, client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
-    let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
+    let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
+
+    let admission_control_runtime =
+        AdmissionControlService::bootstrap(&node_config, mp_client_sender.clone());
+    let rpc_runtime = bootstrap_rpc(&node_config, libra_db, mp_client_sender);
 
     let mut consensus = None;
     let (consensus_to_mempool_sender, consensus_requests) = channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
@@ -245,7 +247,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mempool = libra_mempool::bootstrap(
         node_config,
         mempool_network_handles,
-        client_events,
+        mp_client_events,
         consensus_requests,
         state_sync_requests,
         mempool_reconfig_events,

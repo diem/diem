@@ -3,26 +3,68 @@
 
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
 use crate::views::{AccountView, BlockMetadata};
-use anyhow::{ensure, Result};
+use anyhow::{ensure, format_err, Result};
 use core::future::Future;
-use libra_types::{account_address::AccountAddress, account_config::AccountResource};
+use futures::{channel::oneshot, SinkExt};
+use hex;
+use libra_mempool::MempoolClientSender;
+use libra_types::{
+    account_address::AccountAddress, account_config::AccountResource,
+    mempool_status::MempoolStatusCode,
+};
 use libradb::LibraDB;
 use serde_json::Value;
 use std::{collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
 
+#[derive(Clone)]
+pub(crate) struct JsonRpcService {
+    db: Arc<LibraDB>,
+    mempool_sender: MempoolClientSender,
+}
+
+impl JsonRpcService {
+    pub fn new(db: Arc<LibraDB>, mempool_sender: MempoolClientSender) -> Self {
+        Self { db, mempool_sender }
+    }
+}
+
 type RpcHandler =
-    Box<fn(Arc<LibraDB>, Vec<Value>) -> Pin<Box<dyn Future<Output = Result<Value>> + Send>>>;
+    Box<fn(JsonRpcService, Vec<Value>) -> Pin<Box<dyn Future<Output = Result<Value>> + Send>>>;
+
 pub(crate) type RpcRegistry = HashMap<String, RpcHandler>;
+
+/// Submits transaction to full node
+async fn submit(mut service: JsonRpcService, params: Vec<Value>) -> Result<()> {
+    let txn_payload: String = serde_json::from_value(params[0].clone())?;
+    let transaction = lcs::from_bytes(&hex::decode(txn_payload)?)?;
+
+    let (req_sender, callback) = oneshot::channel();
+    service
+        .mempool_sender
+        .send((transaction, req_sender))
+        .await?;
+    let (mempool_status, vm_status) = callback.await??;
+
+    if let Some(vm_error) = vm_status {
+        Err(format_err!("VM validation error: {:?}", vm_error))
+    } else if mempool_status.code == MempoolStatusCode::Accepted {
+        Ok(())
+    } else {
+        Err(format_err!(
+            "Mempool insertion failed: {:?}",
+            mempool_status
+        ))
+    }
+}
 
 /// Returns account state (AccountView) by given address
 async fn get_account_state(
-    libra_db: Arc<LibraDB>,
+    service: JsonRpcService,
     params: Vec<Value>,
 ) -> Result<Option<AccountView>> {
     let address: String = serde_json::from_value(params[0].clone())?;
-
     let account_address = AccountAddress::from_str(&address)?;
-    let response = libra_db.get_latest_account_state(account_address)?;
+    let response = service.db.get_latest_account_state(account_address)?;
     if let Some(blob) = response {
         if let Ok(account) = AccountResource::try_from(&blob) {
             return Ok(Some(AccountView::new(account)));
@@ -33,8 +75,8 @@ async fn get_account_state(
 
 /// Returns the current blockchain metadata
 /// Can be used to verify that target Full Node is up-to-date
-async fn get_metadata(libra_db: Arc<LibraDB>, _params: Vec<Value>) -> Result<BlockMetadata> {
-    let (version, timestamp) = libra_db.get_latest_commit_metadata()?;
+async fn get_metadata(service: JsonRpcService, _: Vec<Value>) -> Result<BlockMetadata> {
+    let (version, timestamp) = service.db.get_latest_commit_metadata()?;
     Ok(BlockMetadata { version, timestamp })
 }
 
@@ -43,8 +85,8 @@ async fn get_metadata(libra_db: Arc<LibraDB>, _params: Vec<Value>) -> Result<Blo
 /// Note that RPC method name will equal to name of function
 pub(crate) fn build_registry() -> RpcRegistry {
     let mut registry = RpcRegistry::new();
-    register_rpc_method!(registry, get_account_state, 1);
+    register_rpc_method!(registry, submit, 1);
     register_rpc_method!(registry, get_metadata, 0);
-
+    register_rpc_method!(registry, get_account_state, 1);
     registry
 }

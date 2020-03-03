@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::methods::{build_registry, RpcRegistry};
+use crate::methods::{build_registry, JsonRpcService, RpcRegistry};
 use futures::future::join_all;
 use libra_config::config::NodeConfig;
+use libra_mempool::MempoolClientSender;
 use libradb::LibraDB;
 use serde::Serialize;
 use serde_json::{map::Map, Value};
@@ -13,7 +14,11 @@ use warp::Filter;
 
 /// Creates HTTP server (warp-based) that serves JSON RPC requests
 /// Returns handle to corresponding Tokio runtime
-pub fn bootstrap(address: SocketAddr, libra_db: Arc<LibraDB>) -> Runtime {
+pub fn bootstrap(
+    address: SocketAddr,
+    libra_db: Arc<LibraDB>,
+    mp_sender: MempoolClientSender,
+) -> Runtime {
     let runtime = Builder::new()
         .thread_name("rpc-")
         .threaded_scheduler()
@@ -22,13 +27,14 @@ pub fn bootstrap(address: SocketAddr, libra_db: Arc<LibraDB>) -> Runtime {
         .expect("[rpc] failed to create runtime");
 
     let registry = Arc::new(build_registry());
+    let service = JsonRpcService::new(libra_db, mp_sender);
 
     let handler = warp::any()
         .and(warp::path::end())
         .and(warp::post())
         .and(warp::header::exact("content-type", "application/json"))
         .and(warp::body::json())
-        .and(warp::any().map(move || Arc::clone(&libra_db)))
+        .and(warp::any().map(move || service.clone()))
         .and(warp::any().map(move || Arc::clone(&registry)))
         .and_then(rpc_endpoint);
 
@@ -38,8 +44,12 @@ pub fn bootstrap(address: SocketAddr, libra_db: Arc<LibraDB>) -> Runtime {
 }
 
 /// Creates JSON RPC endpoint by given node config
-pub fn bootstrap_from_config(config: &NodeConfig, libra_db: Arc<LibraDB>) -> Runtime {
-    bootstrap(config.rpc.address, libra_db)
+pub fn bootstrap_from_config(
+    config: &NodeConfig,
+    libra_db: Arc<LibraDB>,
+    mp_sender: MempoolClientSender,
+) -> Runtime {
+    bootstrap(config.rpc.address, libra_db, mp_sender)
 }
 
 /// JSON RPC entry point
@@ -47,19 +57,19 @@ pub fn bootstrap_from_config(config: &NodeConfig, libra_db: Arc<LibraDB>) -> Run
 /// Performs routing based on methods defined in `registry`
 async fn rpc_endpoint(
     data: Value,
-    libra_db: Arc<LibraDB>,
+    service: JsonRpcService,
     registry: Arc<RpcRegistry>,
 ) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
     if let Value::Array(requests) = data {
         // batch API call
         let futures = requests
             .into_iter()
-            .map(|req| rpc_request_handler(req, Arc::clone(&libra_db), Arc::clone(&registry)));
+            .map(|req| rpc_request_handler(req, service.clone(), Arc::clone(&registry)));
         let responses = join_all(futures).await;
         Ok(Box::new(warp::reply::json(&Value::Array(responses))))
     } else {
         // single API call
-        let resp = rpc_request_handler(data, libra_db, registry).await;
+        let resp = rpc_request_handler(data, service, registry).await;
         Ok(Box::new(warp::reply::json(&resp)))
     }
 }
@@ -68,7 +78,7 @@ async fn rpc_endpoint(
 /// Performs validation and executes corresponding rpc handler
 async fn rpc_request_handler(
     req: Value,
-    libra_db: Arc<LibraDB>,
+    service: JsonRpcService,
     registry: Arc<RpcRegistry>,
 ) -> Value {
     let request: Map<String, Value>;
@@ -126,7 +136,7 @@ async fn rpc_request_handler(
     // get rpc handler
     match request.get("method") {
         Some(Value::String(name)) => match registry.get(name) {
-            Some(handler) => match handler(libra_db, params).await {
+            Some(handler) => match handler(service, params).await {
                 Ok(result) => {
                     response.insert("result".to_string(), result);
                 }
