@@ -111,11 +111,6 @@ impl<'txn> TransactionExecutionContext<'txn> {
         &self.event_data
     }
 
-    /// Return the gas remaining
-    pub fn gas_left(&self) -> GasUnits<GasCarrier> {
-        self.gas_left
-    }
-
     /// Generate a `WriteSet` as a result of an execution.
     pub fn make_write_set(&mut self) -> VMResult<WriteSet> {
         self.data_view.make_write_set()
@@ -128,7 +123,7 @@ impl<'txn> TransactionExecutionContext<'txn> {
     ) -> VMResult<TransactionOutput> {
         let gas_used: u64 = txn_data
             .max_gas_amount()
-            .sub(self.gas_left())
+            .sub(self.gas_left)
             .mul(txn_data.gas_unit_price())
             .get();
         let write_set = self.make_write_set()?;
@@ -243,7 +238,7 @@ impl<'txn> ChainState for SystemExecutionContext<'txn> {
     }
 
     fn remaining_gas(&self) -> GasUnits<GasCarrier> {
-        self.0.gas_left()
+        self.0.remaining_gas()
     }
 
     fn borrow_resource(

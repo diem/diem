@@ -313,17 +313,17 @@ impl LibraVM {
                     txn_data,
                     convert_txn_args(args),
                 );
-                let gas_usage = txn_data.max_gas_amount().sub(ctx.gas_left()).get();
+                let gas_usage = txn_data.max_gas_amount().sub(ctx.remaining_gas()).get();
                 record_stats!(observe | TXN_EXECUTION_GAS_USAGE | gas_usage);
                 ret
             }
         }
         .map_err(|err| {
-            failed_gas_left = ctx.gas_left();
+            failed_gas_left = ctx.remaining_gas();
             err
         })
         .and_then(|_| {
-            failed_gas_left = ctx.gas_left();
+            failed_gas_left = ctx.remaining_gas();
             let mut gas_free_ctx = SystemExecutionContext::from(ctx);
             self.run_epilogue(&mut gas_free_ctx, txn_data)
                 .and_then(|_| {
