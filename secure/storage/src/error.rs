@@ -11,9 +11,9 @@ pub enum Error {
     EntropyError(String),
     #[error("Internal error: {0}")]
     InternalError(String),
-    #[error("Key not set: {0}")]
-    KeyAlreadyExists(String),
     #[error("Key already exists: {0}")]
+    KeyAlreadyExists(String),
+    #[error("Key not set: {0}")]
     KeyNotSet(String),
     #[error("Permission denied")]
     PermissionDenied,
@@ -21,6 +21,8 @@ pub enum Error {
     SerializationError(String),
     #[error("Unexpected value type")]
     UnexpectedValueType,
+    #[error("Key version not found: {0}")]
+    KeyVersionNotFound(String),
 }
 
 impl From<base64::DecodeError> for Error {
