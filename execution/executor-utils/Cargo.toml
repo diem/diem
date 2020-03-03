@@ -1,0 +1,20 @@
+[package]
+name = "executor-utils"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra executor utils"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+tokio = { version = "0.2.12", features = ["full"] }
+
+executor = { path = "../executor", version = "0.1.0" }
+executor-types = { path = "../executor-types", version = "0.1.0" }
+libra-config = { path = "../../config", version = "0.1.0" }
+storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
+storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
+libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
