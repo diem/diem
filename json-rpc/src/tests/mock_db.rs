@@ -1,10 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use libra_types::{
-    account_address::AccountAddress, account_state_blob::AccountStateBlob,
-    contract_event::ContractEvent, event::EventKey, transaction::Transaction, transaction::Version,
+    account_address::AccountAddress,
+    account_state_blob::AccountStateBlob,
+    contract_event::ContractEvent,
+    event::EventKey,
+    proof::{TransactionAccumulatorProof, TransactionListProof, TransactionProof},
+    transaction::{
+        Transaction, TransactionInfo, TransactionListWithProof, TransactionWithProof, Version,
+    },
+    vm_error::StatusCode,
 };
 use libradb::LibraDBTrait;
 use std::collections::BTreeMap;
@@ -33,6 +40,67 @@ impl LibraDBTrait for MockLibraDB {
 
     fn get_latest_commit_metadata(&self) -> Result<(Version, u64)> {
         Ok((self.version, self.timestamp))
+    }
+
+    fn get_txn_by_account(
+        &self,
+        address: AccountAddress,
+        seq_num: u64,
+        _ledger_version: u64,
+        _fetch_events: bool,
+    ) -> Result<Option<TransactionWithProof>, Error> {
+        Ok(self
+            .all_txns
+            .iter()
+            .find(|x| {
+                if let Some(t) = x.as_signed_user_txn().ok() {
+                    t.sender() == address && t.sequence_number() == seq_num
+                } else {
+                    false
+                }
+            })
+            .map(|x| TransactionWithProof {
+                version: 0,
+                transaction: x.clone(),
+                events: None,
+                proof: TransactionProof::new(
+                    TransactionAccumulatorProof::new(vec![]),
+                    TransactionInfo::new(
+                        Default::default(),
+                        Default::default(),
+                        Default::default(),
+                        0,
+                        StatusCode::EXECUTED,
+                    ),
+                ),
+            }))
+    }
+
+    fn get_latest_version(&self) -> Result<u64, Error> {
+        Ok(self.version)
+    }
+
+    fn get_transactions(
+        &self,
+        start_version: u64,
+        limit: u64,
+        _ledger_version: u64,
+        _fetch_events: bool,
+    ) -> Result<TransactionListWithProof, Error> {
+        let transactions: Vec<Transaction> = self
+            .all_txns
+            .iter()
+            .skip(start_version as usize)
+            .take(limit as usize)
+            .map(|x| x.clone())
+            .collect();
+        let first_transaction_version = transactions.first().map(|_| start_version);
+        Ok(TransactionListWithProof {
+            transactions,
+            events: None,
+            first_transaction_version,
+            proof: TransactionListProof::new_empty(),
+        })
     }
 
     fn get_events(
