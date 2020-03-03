@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
-use crate::views::AccountView;
+use crate::views::{AccountView, BlockMetadata};
 use anyhow::{ensure, Result};
 use core::future::Future;
 use libra_types::{account_address::AccountAddress, account_config::AccountResource};
@@ -31,11 +31,20 @@ async fn get_account_state(
     Ok(None)
 }
 
+/// Returns the current blockchain metadata
+/// Can be used to verify that target Full Node is up-to-date
+async fn get_metadata(libra_db: Arc<LibraDB>, _params: Vec<Value>) -> Result<BlockMetadata> {
+    let (version, timestamp) = libra_db.get_latest_commit_metadata()?;
+    Ok(BlockMetadata { version, timestamp })
+}
+
 /// Builds registry of all available RPC methods
 /// To register new RPC method, add it via `register_rpc_method!` macros call
 /// Note that RPC method name will equal to name of function
 pub(crate) fn build_registry() -> RpcRegistry {
     let mut registry = RpcRegistry::new();
     register_rpc_method!(registry, get_account_state, 1);
+    register_rpc_method!(registry, get_metadata, 0);
+
     registry
 }
