@@ -22,7 +22,7 @@ static_assertions = "1.0.0"
 rand = "0.6.5"
 
 [build-dependencies]
-bindgen = "0.51.1"
+bindgen = "0.53.1"
 
 [lib]
 crate-type = ["staticlib", "cdylib"]

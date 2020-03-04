@@ -14,6 +14,7 @@ fn main() {
         .header("include/data.h")
         // Finish the builder and generate the bindings.
         .array_pointers_in_arguments(true)
+        .size_t_is_usize(true)
         .derive_default(true)
         .derive_eq(true)
         .default_enum_style(EnumVariation::Rust {
