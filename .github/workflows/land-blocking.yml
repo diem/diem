@@ -15,6 +15,7 @@ jobs:
       - name: Setup env
         run: |
           echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
+          echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
       - name: Check kill switch
         id: check_ks
         run:
@@ -26,7 +27,7 @@ jobs:
       - name: Build, tag and push images
         if: steps.check_ks.outputs.should_run == 'true'
         run: |
-          docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary
+          docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary,${TEST_TAG}
       - name: Launch cluster test
         if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
@@ -36,7 +37,7 @@ jobs:
           JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
           ./scripts/cti \
             --marker land \
-            --tag dev_$LIBRA_GIT_REV \
+            --tag ${TEST_TAG} \
             --report report.json \
             --run bench
       - name: Post test results on PR
@@ -115,7 +116,7 @@ jobs:
             try {
               body += "\nRepro cmd:\n";
               body += `
-                ./scripts/cti --tag dev_${env_vars.LIBRA_GIT_REV} --run bench
+                ./scripts/cti --tag ${env_vars.TEST_TAG} --run bench
               `;
             } catch (err) {
               if (err.code === 'ReferenceError') {

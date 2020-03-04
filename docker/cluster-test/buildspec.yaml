@@ -18,4 +18,4 @@ phases:
     commands:
       - echo Build completed on `date`
       # Tag and push the docker images
-      - SOURCE=cluster-test:latest TARGET_REPO=$LIBRA_CLUSTER_TEST_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short HEAD)" docker/tag-and-push.sh
+      - SOURCE=cluster-test:latest TARGET_REPO=$LIBRA_CLUSTER_TEST_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short=8  HEAD)" docker/tag-and-push.sh

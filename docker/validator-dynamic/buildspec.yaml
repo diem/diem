@@ -19,5 +19,5 @@ phases:
     commands:
       - echo Build completed on `date`
       # Tag and push the docker images
-      - SOURCE=libra_e2e:latest TARGET_REPO=$LIBRA_E2E_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short HEAD)" docker/tag-and-push.sh
+      - SOURCE=libra_e2e:latest TARGET_REPO=$LIBRA_E2E_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short=8  HEAD)" docker/tag-and-push.sh
       - SOURCE=libra_validator_dynamic:latest TARGET_REPO=$LIBRA_VALIDATOR_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short HEAD)" docker/tag-and-push.sh

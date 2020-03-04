@@ -15,6 +15,7 @@ function print_usage() {
   exit 1
 }
 
+USER=$(whoami)
 BUILD_PROJECTS=()
 
 while [[ "$1" =~ ^- ]]; do case $1 in
