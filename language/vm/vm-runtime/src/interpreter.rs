@@ -453,17 +453,20 @@ impl<'txn> Interpreter<'txn> {
                     Bytecode::CastU8 => {
                         gas!(const_instr: context, self, Opcodes::CAST_U8)?;
                         let integer_value = self.operand_stack.pop_as::<IntegerValue>()?;
-                        self.operand_stack.push(Value::u8(integer_value.into()))?;
+                        self.operand_stack
+                            .push(Value::u8(integer_value.cast_u8()?))?;
                     }
                     Bytecode::CastU64 => {
                         gas!(const_instr: context, self, Opcodes::CAST_U64)?;
                         let integer_value = self.operand_stack.pop_as::<IntegerValue>()?;
-                        self.operand_stack.push(Value::u64(integer_value.into()))?;
+                        self.operand_stack
+                            .push(Value::u64(integer_value.cast_u64()?))?;
                     }
                     Bytecode::CastU128 => {
                         gas!(const_instr: context, self, Opcodes::CAST_U128)?;
                         let integer_value = self.operand_stack.pop_as::<IntegerValue>()?;
-                        self.operand_stack.push(Value::u128(integer_value.into()))?;
+                        self.operand_stack
+                            .push(Value::u128(integer_value.cast_u128()?))?;
                     }
                     // Arithmetic Operations
                     Bytecode::Add => {

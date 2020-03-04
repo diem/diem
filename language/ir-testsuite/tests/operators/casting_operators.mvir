@@ -15,15 +15,9 @@ main() {
     assert(to_u8(255u64) == 255u8, 1201);
     assert(to_u8(255u128) == 255u8, 1202);
 
-    // Truncates (wraps) when overflowing.
-    assert(to_u8(256u64) == 0u8, 1300);
-    assert(to_u8(287u128) == 31u8, 1301);
-
-    // Truncating extreme values.
-    assert(to_u8(18446744073709551615u64) == 255u8, 1400);
-    assert(to_u8(340282366920938463463374607431768211455u128) == 255u8, 1400);
     return;
 }
+// check: EXECUTED
 
 // Casting to u64.
 //! new-transaction
@@ -42,15 +36,9 @@ main() {
     assert(to_u64(255u8) == 255u64, 2200);
     assert(to_u64(18446744073709551615u64) == 18446744073709551615u64, 2201);
     assert(to_u64(18446744073709551615u128) == 18446744073709551615u64, 2202);
-
-    // Truncates (wraps) when overflowing.
-    assert(to_u64(18446744073709551616u128) == 0u64, 2300);
-    assert(to_u64(18446744073709551647u128) == 31u64, 2301);
-
-    // Truncating extreme values.
-    assert(to_u64(340282366920938463463374607431768211455u128) == 18446744073709551615u64, 2400);
     return;
 }
+// check: EXECUTED
 
 // Casting to u128.
 //! new-transaction
@@ -71,3 +59,71 @@ main() {
     assert(to_u128(340282366920938463463374607431768211455u128) == 340282366920938463463374607431768211455u128, 3202);
     return;
 }
+// check: EXECUTED
+
+
+// Casting to u8, overflowing.
+//! new-transaction
+main() {
+    _ = to_u8(256u64);
+    return;
+}
+// check: ARITHMETIC_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u8(303u64);
+    return;
+}
+// check: ARITHMETIC_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u8(256u128);
+    return;
+}
+// check: ARITHMETIC_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u8(56432u128);
+    return;
+}
+// check: ARITHMETIC_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u8(18446744073709551615u64);
+    return;
+}
+// check: ARITHMETIC_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u8(340282366920938463463374607431768211455u128);
+    return;
+}
+// check: ARITHMETIC_ERROR
+
+
+// Casting to u64, overflowing.
+//! new-transaction
+main() {
+    _ = to_u64(18446744073709551616u128);
+    return;
+}
+// check: ARITHMETIC_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u64(18446744073709551647u128);
+    return;
+}
+// check: ARITHMETIC_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u64(340282366920938463463374607431768211455u128);
+    return;
+}
+// check: ARITHMETIC_ERROR
