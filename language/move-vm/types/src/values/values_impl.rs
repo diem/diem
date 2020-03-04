@@ -1260,36 +1260,56 @@ impl IntegerValue {
     }
 }
 
-impl From<IntegerValue> for u8 {
-    fn from(value: IntegerValue) -> u8 {
+impl IntegerValue {
+    pub fn cast_u8(self) -> VMResult<u8> {
         use IntegerValue::*;
-        match value {
-            U8(x) => x as u8,
-            U64(x) => x as u8,
-            U128(x) => x as u8,
+
+        match self {
+            U8(x) => Ok(x),
+            U64(x) => {
+                if x > (std::u8::MAX as u64) {
+                    Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR)
+                        .with_message(format!("Cannot cast u64({}) to u8", x)))
+                } else {
+                    Ok(x as u8)
+                }
+            }
+            U128(x) => {
+                if x > (std::u8::MAX as u128) {
+                    Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR)
+                        .with_message(format!("Cannot cast u128({}) to u8", x)))
+                } else {
+                    Ok(x as u8)
+                }
+            }
         }
     }
-}
 
-impl From<IntegerValue> for u64 {
-    fn from(value: IntegerValue) -> u64 {
+    pub fn cast_u64(self) -> VMResult<u64> {
         use IntegerValue::*;
-        match value {
-            U8(x) => x as u64,
-            U64(x) => x as u64,
-            U128(x) => x as u64,
+
+        match self {
+            U8(x) => Ok(x as u64),
+            U64(x) => Ok(x),
+            U128(x) => {
+                if x > (std::u64::MAX as u128) {
+                    Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR)
+                        .with_message(format!("Cannot cast u128({}) to u64", x)))
+                } else {
+                    Ok(x as u64)
+                }
+            }
         }
     }
-}
 
-impl From<IntegerValue> for u128 {
-    fn from(value: IntegerValue) -> u128 {
+    pub fn cast_u128(self) -> VMResult<u128> {
         use IntegerValue::*;
-        match value {
+
+        Ok(match self {
             U8(x) => x as u128,
             U64(x) => x as u128,
-            U128(x) => x as u128,
-        }
+            U128(x) => x,
+        })
     }
 }
 
