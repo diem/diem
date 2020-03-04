@@ -20,6 +20,9 @@ fi
 if [ -n "${CFG_NUM_VALIDATORS}" ]; then # Total number of nodes in this network
 	    params+="-n ${CFG_NUM_VALIDATORS} "
 fi
+if [ -n "${CFG_NUM_VALIDATORS_IN_GENESIS}" ]; then # Total number of nodes in genesis
+	    params+="-g ${CFG_NUM_VALIDATORS_IN_GENESIS} "
+fi
 if [ -n "${CFG_SEED}" ]; then # Random seed to use
 	    params+="-s ${CFG_SEED} "
 fi

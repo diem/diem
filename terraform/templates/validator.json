@@ -40,6 +40,7 @@
             {"name": "CFG_LISTEN_ADDR", "value": "${cfg_listen_addr}"},
             {"name": "CFG_NODE_INDEX", "value": "${cfg_node_index}"},
             {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},
+            {"name": "CFG_NUM_VALIDATORS_IN_GENESIS", "value": "${cfg_num_validators_in_genesis}"},
             {"name": "CFG_SEED", "value": "${cfg_seed}"},
             {"name": "CFG_SEED_PEER_IP", "value": "${cfg_seed_peer_ip}"},
             {"name": "RUST_LOG", "value": "${log_level}"}
