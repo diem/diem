@@ -45,9 +45,6 @@ spec:
   - name: main
     image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_validator:{image_tag}
     imagePullPolicy: Always
-    resources:
-      requests:
-        cpu: 7800m
     ports:
     - containerPort: 6180
     - containerPort: 6181
