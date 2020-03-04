@@ -12,18 +12,18 @@ use libra_types::{
     account_address::AccountAddress, account_config::AccountResource,
     mempool_status::MempoolStatusCode,
 };
-use libradb::LibraDB;
+use libradb::LibraDBTrait;
 use serde_json::Value;
 use std::{collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
 
 #[derive(Clone)]
 pub(crate) struct JsonRpcService {
-    db: Arc<LibraDB>,
+    db: Arc<dyn LibraDBTrait>,
     mempool_sender: MempoolClientSender,
 }
 
 impl JsonRpcService {
-    pub fn new(db: Arc<LibraDB>, mempool_sender: MempoolClientSender) -> Self {
+    pub fn new(db: Arc<dyn LibraDBTrait>, mempool_sender: MempoolClientSender) -> Self {
         Self { db, mempool_sender }
     }
 }

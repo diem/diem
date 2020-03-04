@@ -5,7 +5,7 @@ use crate::methods::{build_registry, JsonRpcService, RpcRegistry};
 use futures::future::join_all;
 use libra_config::config::NodeConfig;
 use libra_mempool::MempoolClientSender;
-use libradb::LibraDB;
+use libradb::LibraDBTrait;
 use serde::Serialize;
 use serde_json::{map::Map, Value};
 use std::{net::SocketAddr, sync::Arc};
@@ -16,7 +16,7 @@ use warp::Filter;
 /// Returns handle to corresponding Tokio runtime
 pub fn bootstrap(
     address: SocketAddr,
-    libra_db: Arc<LibraDB>,
+    libra_db: Arc<dyn LibraDBTrait>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
     let runtime = Builder::new()
@@ -46,7 +46,7 @@ pub fn bootstrap(
 /// Creates JSON RPC endpoint by given node config
 pub fn bootstrap_from_config(
     config: &NodeConfig,
-    libra_db: Arc<LibraDB>,
+    libra_db: Arc<dyn LibraDBTrait>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
     bootstrap(config.rpc.address, libra_db, mp_sender)
