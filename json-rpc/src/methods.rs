@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
-use crate::views::{AccountView, BlockMetadata};
+use crate::views::{AccountView, BlockMetadata, EventView};
 use anyhow::{ensure, format_err, Result};
 use core::future::Future;
 use futures::{channel::oneshot, SinkExt};
 use hex;
 use libra_mempool::MempoolClientSender;
 use libra_types::{
-    account_address::AccountAddress, account_config::AccountResource,
+    account_address::AccountAddress, account_config::AccountResource, event::EventKey,
     mempool_status::MempoolStatusCode,
 };
 use libradb::LibraDBTrait;
@@ -80,6 +80,22 @@ async fn get_metadata(service: JsonRpcService, _: Vec<Value>) -> Result<BlockMet
     Ok(BlockMetadata { version, timestamp })
 }
 
+/// Returns events by given access path
+async fn get_events(service: JsonRpcService, params: Vec<Value>) -> Result<Vec<EventView>> {
+    let raw_event_key: String = serde_json::from_value(params[0].clone())?;
+    let start: u64 = serde_json::from_value(params[1].clone())?;
+    let limit: u64 = serde_json::from_value(params[2].clone())?;
+
+    let event_key = EventKey::try_from(&hex::decode(raw_event_key)?[..])?;
+    let events_with_proof = service.db.get_events(&event_key, start, limit)?;
+
+    let mut events = vec![];
+    for (version, event) in events_with_proof {
+        events.push(EventView::try_from((version, event))?);
+    }
+    Ok(events)
+}
+
 /// Builds registry of all available RPC methods
 /// To register new RPC method, add it via `register_rpc_method!` macros call
 /// Note that RPC method name will equal to name of function
@@ -88,5 +104,6 @@ pub(crate) fn build_registry() -> RpcRegistry {
     register_rpc_method!(registry, submit, 1);
     register_rpc_method!(registry, get_metadata, 0);
     register_rpc_method!(registry, get_account_state, 1);
+    register_rpc_method!(registry, get_events, 3);
     registry
 }

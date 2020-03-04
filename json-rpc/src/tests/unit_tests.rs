@@ -4,7 +4,7 @@
 use crate::{
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
-    views::{AccountView, BlockMetadata},
+    views::{AccountView, BlockMetadata, EventView},
 };
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
@@ -93,6 +93,7 @@ fn mock_db(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) ->
     let mut version = 0;
     let mut all_accounts = BTreeMap::new();
     let mut all_txns = vec![];
+    let mut events = vec![];
     let mut timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -103,7 +104,15 @@ fn mock_db(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) ->
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_micros() as u64;
-        version += txns_to_commit.len() as u64;
+
+        for (idx, txn) in txns_to_commit.iter().enumerate() {
+            events.extend(
+                txn.events()
+                    .iter()
+                    .map(|e| ((idx + version) as u64, e.clone())),
+            );
+        }
+        version += txns_to_commit.len();
         let mut account_states = HashMap::new();
         // Get the ground truth of account states.
         txns_to_commit.iter().for_each(|txn_to_commit| {
@@ -125,9 +134,10 @@ fn mock_db(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) ->
 
     MockLibraDB {
         timestamp,
-        version,
+        version: version as u64,
         all_accounts,
         all_txns,
+        events,
     }
 }
 
@@ -283,6 +293,36 @@ proptest! {
         assert_eq!(data.get("version").unwrap().as_u64(), Some(actual_version));
         assert_eq!(data.get("timestamp").unwrap().as_u64(), Some(actual_timestamp));
     }
+
+
+    #[test]
+    fn test_get_events(blocks in arb_blocks_to_commit()) {
+        // set up MockLibraDB
+        let mock_db = mock_db(blocks);
+
+        // set up JSON RPC
+        let address = format!("0.0.0.0:{}", utils::get_available_port());
+        let _runtime = bootstrap(address.parse().unwrap(), Arc::new(mock_db.clone()), channel(1).0);
+        let client = reqwest::blocking::Client::new();
+        let url = format!("http://{}", address);
+
+        let event_key = hex::encode(mock_db.events.iter().next().unwrap().1.key().as_bytes());
+        let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_events", "params": [event_key, 0, 10], "id": 1});
+        let resp = client.post(&url).json(&request).send().unwrap();
+        let mut events: Vec<EventView> = fetch_data(resp);
+
+        let event = events.remove(0);
+        assert_eq!(event.sequence_number, 0);
+        assert_eq!(event.transaction_version, 0);
+    }
+}
+
+fn fetch_data<T>(response: reqwest::blocking::Response) -> T
+where
+    T: serde::de::DeserializeOwned,
+{
+    let data: JsonMap = response.json().unwrap();
+    serde_json::from_value(data.get("result").unwrap().clone()).unwrap()
 }
 
 fn fetch_result(data: JsonMap) -> JsonMap {
