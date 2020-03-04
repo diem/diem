@@ -180,6 +180,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut state_sync_network_handles = vec![];
     let mut mempool_network_handles = vec![];
     let mut validator_network_provider = None;
+    let mut reconfig_event_subscriptions = vec![];
+    let (mempool_reconfig_subscription, mempool_reconfig_events) =
+        libra_mempool::generate_reconfig_subscription();
+    reconfig_event_subscriptions.push(mempool_reconfig_subscription);
 
     if let Some(network) = node_config.validator_network.as_mut() {
         let (runtime, mut network_builder) = setup_network(network, RoleType::Validator);
@@ -229,6 +233,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         state_sync_to_mempool_sender,
         Arc::clone(&executor),
         &node_config,
+        reconfig_event_subscriptions,
     );
     let (ac_sender, client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
     let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
@@ -243,6 +248,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         client_events,
         consensus_requests,
         state_sync_requests,
+        mempool_reconfig_events,
     );
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 

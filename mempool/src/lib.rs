@@ -63,8 +63,9 @@ extern crate prometheus;
 #[cfg(feature = "fuzzing")]
 pub mod mocks;
 pub use shared_mempool::{
-    bootstrap, CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest,
-    ConsensusResponse, MempoolClientSender, SubmissionStatus, TransactionExclusion,
+    bootstrap, generate_reconfig_subscription, CommitNotification, CommitResponse,
+    CommittedTransaction, ConsensusRequest, ConsensusResponse, MempoolClientSender,
+    SubmissionStatus, TransactionExclusion,
 };
 
 mod core_mempool;

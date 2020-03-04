@@ -75,6 +75,8 @@ fn init_single_shared_mempool(smp: &mut SharedMempoolNetwork, peer_id: PeerId, c
     let network_handles = vec![(peer_id, network_sender, network_events)];
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
     let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
+    let (_reconfig_events, reconfig_events_receiver) =
+        libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
 
     let runtime = Builder::new()
         .thread_name("shared-mem-")
@@ -90,6 +92,7 @@ fn init_single_shared_mempool(smp: &mut SharedMempoolNetwork, peer_id: PeerId, c
         ac_endpoint_receiver,
         consensus_events,
         state_sync_events,
+        reconfig_events_receiver,
         Arc::new(MockStorageReadClient),
         Arc::new(MockVMValidator),
         vec![sender],

@@ -16,6 +16,7 @@ pub mod crypto_proxies;
 pub mod discovery_info;
 pub mod discovery_set;
 pub mod event;
+pub mod event_subscription;
 pub mod get_with_proof;
 pub mod identifier;
 pub mod language_storage;

@@ -417,14 +417,15 @@ where
     /// then `D` and `E` later in the another batch.
     /// Commits a block and all its ancestors in a batch manner.
     ///
-    /// Returns `Ok(Result<Vec<Transaction>>)` if successful, where Vec<Transaction>
-    /// is a vector of transactions that were kept in the submitted blocks
+    /// Returns `Ok(Result<Vec<Transaction>, Vec<ContractEvents>)` if successful,
+    /// where Vec<Transaction> is a vector of transactions that were kept from the submitted blocks, and
+    /// Vec<ContractEvents> is a vector of reconfiguration events in the submitted blocks
     pub fn commit_blocks(
         &self,
         blocks: Vec<(Vec<Transaction>, Arc<ProcessedVMOutput>)>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         synced_trees: &ExecutedTrees,
-    ) -> Result<Vec<Transaction>> {
+    ) -> Result<(Vec<Transaction>, Vec<ContractEvent>)> {
         debug!(
             "Received request to commit block {:x}.",
             ledger_info_with_sigs.ledger_info().consensus_block_id()
@@ -436,6 +437,7 @@ where
         // This must be done before calculate potential skipping of transactions in idempotent commit.
         let mut txns_to_keep = vec![];
         let mut blocks_txns = vec![];
+        let mut reconfig_events = vec![];
         for (txn, txn_data) in blocks
             .iter()
             .flat_map(|block| itertools::zip_eq(&block.0, block.1.transaction_data()))
@@ -452,6 +454,9 @@ where
                     txn_data.num_account_created(),
                 ));
                 blocks_txns.push(txn.clone());
+                reconfig_events.append(&mut Self::extract_reconfig_events(
+                    txn_data.events().to_vec(),
+                ));
             }
         }
 
@@ -530,11 +535,12 @@ where
             }
         }
         // Now that the blocks are persisted successfully, we can reply to consensus
-        Ok(blocks_txns)
+        Ok((blocks_txns, reconfig_events))
     }
 
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
     /// are valid, executes them and commits immediately if execution results match the proofs.
+    /// Returns a vector of reconfiguration events in the chunk
     pub fn execute_and_commit_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
@@ -544,7 +550,7 @@ where
         // carrying any epoch change LI.
         epoch_change_li: Option<LedgerInfoWithSignatures>,
         synced_trees: &mut ExecutedTrees,
-    ) -> Result<()> {
+    ) -> Result<Vec<ContractEvent>> {
         info!(
             "Local synced version: {}. First transaction version in request: {:?}. \
              Number of transactions in request: {}.",
@@ -600,6 +606,7 @@ where
         // Since we have verified the proofs, we just need to verify that each TransactionInfo
         // object matches what we have computed locally.
         let mut txns_to_commit = vec![];
+        let mut reconfig_events = vec![];
         for (txn, txn_data) in itertools::zip_eq(transactions, output.transaction_data()) {
             txns_to_commit.push(TransactionToCommit::new(
                 txn,
@@ -608,12 +615,15 @@ where
                 txn_data.gas_used(),
                 txn_data.status().vm_status().major_status,
             ));
+            reconfig_events.append(&mut Self::extract_reconfig_events(
+                txn_data.events().to_vec(),
+            ));
         }
 
         let ledger_info_to_commit =
             Self::find_chunk_li(verified_target_li, epoch_change_li, &output)?;
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
-            return Ok(());
+            return Ok(reconfig_events);
         }
         let write_client = self.storage_write_client.clone();
         let ledger_info = ledger_info_to_commit.clone();
@@ -634,7 +644,7 @@ where
                 "not committed"
             },
         );
-        Ok(())
+        Ok(reconfig_events)
     }
 
     /// In case there is a new LI to be added to a LedgerStore, verify and return it.
@@ -900,6 +910,14 @@ where
             WriteOp::Value(new_value) => account_state.insert(path, new_value),
             WriteOp::Deletion => account_state.remove(&path),
         };
+    }
+
+    fn extract_reconfig_events(events: Vec<ContractEvent>) -> Vec<ContractEvent> {
+        let reconfig_event_key = ValidatorSet::change_event_key();
+        events
+            .into_iter()
+            .filter(|event| *event.key() == reconfig_event_key)
+            .collect()
     }
 }
 
