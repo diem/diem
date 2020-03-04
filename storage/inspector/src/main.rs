@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use libra_logger::prelude::*;
-use libradb::LibraDB;
+use libradb::{LibraDB, LibraDBTrait};
 use std::path::PathBuf;
 use transaction_builder::get_transaction_name;
 

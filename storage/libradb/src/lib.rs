@@ -117,6 +117,18 @@ fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<(
     }
 }
 
+/// Trait that is implemented by a DB that supports certain public (to client) read APIs
+/// expected of a Libra DB
+pub trait LibraDBTrait: Send + Sync {
+    /// Given an account address, returns the latest account state. `None` if the account does not
+    /// exist.
+    fn get_latest_account_state(&self, address: AccountAddress)
+        -> Result<Option<AccountStateBlob>>;
+
+    /// Returns the latest version and committed block timestamp
+    fn get_latest_commit_metadata(&self) -> Result<(Version, u64)>;
+}
+
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
 /// access to the core Libra data structures.
 pub struct LibraDB {
@@ -353,12 +365,6 @@ impl LibraDB {
             .get_latest_ledger_info()?
             .ledger_info()
             .version())
-    }
-
-    pub fn get_latest_commit_metadata(&self) -> Result<(Version, u64)> {
-        let latest_ledger_info = self.ledger_store.get_latest_ledger_info()?;
-        let ledger_info = latest_ledger_info.ledger_info();
-        Ok((ledger_info.version(), ledger_info.timestamp_usecs()))
     }
 
     /// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no
@@ -669,20 +675,6 @@ impl LibraDB {
             .get_account_state_with_proof_by_version(address, version)
     }
 
-    /// Given an account address, returns the latest account state. `None` if the account does not
-    /// exist.
-    pub fn get_latest_account_state(
-        &self,
-        address: AccountAddress,
-    ) -> Result<Option<AccountStateBlob>> {
-        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
-        let version = ledger_info_with_sigs.ledger_info().version();
-        let (blob, _proof) = self
-            .state_store
-            .get_account_state_with_proof_by_version(address, version)?;
-        Ok(blob)
-    }
-
     /// Gets information needed from storage during the startup of the executor or state
     /// synchronizer module.
     ///
@@ -895,6 +887,26 @@ impl LibraDB {
             events,
             proof,
         })
+    }
+}
+
+impl LibraDBTrait for LibraDB {
+    fn get_latest_account_state(
+        &self,
+        address: AccountAddress,
+    ) -> Result<Option<AccountStateBlob>> {
+        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
+        let version = ledger_info_with_sigs.ledger_info().version();
+        let (blob, _proof) = self
+            .state_store
+            .get_account_state_with_proof_by_version(address, version)?;
+        Ok(blob)
+    }
+
+    fn get_latest_commit_metadata(&self) -> Result<(Version, u64)> {
+        let latest_ledger_info = self.ledger_store.get_latest_ledger_info()?;
+        let ledger_info = latest_ledger_info.ledger_info();
+        Ok((ledger_info.version(), ledger_info.timestamp_usecs()))
     }
 }
 

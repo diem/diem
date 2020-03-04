@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::runtime::bootstrap;
+use crate::{runtime::bootstrap, tests::mock_db::MockLibraDB};
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
 use libra_config::utils;
@@ -15,7 +15,7 @@ use libra_types::{
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::TransactionToCommit,
 };
-use libradb::{test_helper::arb_blocks_to_commit, LibraDB};
+use libradb::{test_helper::arb_blocks_to_commit, LibraDB, LibraDBTrait};
 use proptest::prelude::*;
 use reqwest;
 use serde_json;
@@ -23,6 +23,7 @@ use std::{
     collections::{BTreeMap, HashMap, HashSet},
     convert::TryFrom,
     sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
 };
 use vm_validator::{
     mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
@@ -83,23 +84,21 @@ fn test_json_rpc_protocol() {
     assert_eq!(fetch_error(resp), -32000);
 }
 
-fn setup_db(
-    blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
-) -> (Arc<LibraDB>, BTreeMap<AccountAddress, AccountResource>) {
-    // set up db
-    let tmp_dir = TempPath::new();
-    let db = Arc::new(LibraDB::new(&tmp_dir));
+// returns MockLibraDB for unit-testing
+fn mock_db(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) -> MockLibraDB {
     let mut version = 0;
     let mut all_accounts = BTreeMap::new();
     let mut all_txns = vec![];
+    let mut timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_micros() as u64;
 
-    for (txns_to_commit, ledger_info_with_sigs) in &blocks {
-        db.save_transactions(
-            &txns_to_commit.clone(),
-            version,
-            Some(&ledger_info_with_sigs.clone()),
-        )
-        .unwrap();
+    for (txns_to_commit, _ledger_info_with_sigs) in &blocks {
+        timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_micros() as u64;
         version += txns_to_commit.len() as u64;
         let mut account_states = HashMap::new();
         // Get the ground truth of account states.
@@ -108,8 +107,8 @@ fn setup_db(
         });
 
         // Record all account states.
-        for (address, blob) in account_states.iter() {
-            all_accounts.insert(address.clone(), AccountResource::try_from(blob).unwrap());
+        for (address, blob) in account_states.into_iter() {
+            all_accounts.insert(address.clone(), blob.clone());
         }
 
         // Record all transactions.
@@ -120,7 +119,12 @@ fn setup_db(
         );
     }
 
-    (db, all_accounts)
+    MockLibraDB {
+        timestamp,
+        version,
+        all_accounts,
+        all_txns,
+    }
 }
 
 #[test]
@@ -172,24 +176,25 @@ proptest! {
 
     #[test]
     fn test_get_account_state(blocks in arb_blocks_to_commit()) {
-        // set up LibraDB
-        let (db, all_accounts) = setup_db(blocks);
+        // set up MockLibraDB
+        let mock_db = mock_db(blocks);
 
         // set up JSON RPC
         let address = format!("0.0.0.0:{}", utils::get_available_port());
         let mp_sender = channel(1024).0;
-        let _runtime = bootstrap(address.parse().unwrap(), Arc::clone(&db), mp_sender);
+        let _runtime = bootstrap(address.parse().unwrap(), Arc::new(mock_db.clone()), mp_sender);
         let client = reqwest::blocking::Client::new();
         let url = format!("http://{}", address);
 
         // test case 1: single call
-        let (first_account, account_resource) = all_accounts.iter().next().unwrap();
+        let (first_account, blob) = mock_db.all_accounts.iter().next().unwrap();
         let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_state", "params": [first_account], "id": 1});
         let resp = client.post(&url).json(&request).send().unwrap();
         assert_eq!(resp.status(), 200);
+        let expected_resource = AccountResource::try_from(blob).unwrap();
         let data = fetch_result(resp.json().unwrap());
-        assert_eq!(data.get("balance").unwrap().as_u64(), Some(account_resource.balance()));
-        assert_eq!(data.get("sequence_number").unwrap().as_u64(), Some(account_resource.sequence_number()));
+        assert_eq!(data.get("balance").unwrap().as_u64(), Some(expected_resource.balance()));
+        assert_eq!(data.get("sequence_number").unwrap().as_u64(), Some(expected_resource.sequence_number()));
 
         // test case 2: batch call
         let mut batch_accounts = vec![];
@@ -197,12 +202,12 @@ proptest! {
         let mut id = 0;
         let mut account_resources = HashMap::new();
 
-        for (account, account_resource) in all_accounts.iter() {
+        for (account, blob) in mock_db.all_accounts.iter() {
             if account == first_account {
                 continue;
             }
             batch_accounts.push(account);
-            account_resources.insert(id, account_resource);
+            account_resources.insert(id, AccountResource::try_from(blob).unwrap());
             ids_expected.insert(id);
             id += 1;
             if id == 3 { break; }
@@ -241,16 +246,16 @@ proptest! {
 
     #[test]
     fn test_get_metadata(blocks in arb_blocks_to_commit()) {
-        // set up LibraDB
-        let (db, _all_accounts) = setup_db(blocks);
+        // set up MockLibraDB
+        let mock_db = mock_db(blocks);
 
         // set up JSON RPC
         let address = format!("0.0.0.0:{}", utils::get_available_port());
-        let _runtime = bootstrap(address.parse().unwrap(), Arc::clone(&db), channel(1).0);
+        let _runtime = bootstrap(address.parse().unwrap(), Arc::new(mock_db.clone()), channel(1).0);
         let client = reqwest::blocking::Client::new();
         let url = format!("http://{}", address);
 
-        let (actual_version, actual_timestamp) = db.get_latest_commit_metadata().unwrap();
+        let (actual_version, actual_timestamp) = mock_db.get_latest_commit_metadata().unwrap();
 
         let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_metadata", "params": [], "id": 1});
         let resp = client.post(&url).json(&request).send().unwrap();
