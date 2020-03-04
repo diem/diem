@@ -27,7 +27,7 @@ libradb = { path = "../storage/libradb", version = "0.1.0" }
 [dev-dependencies]
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
 proptest = "0.9.2"
-reqwest = { version = "0.10.3", features = ["blocking", "json"], default_features = false }
+reqwest = { version = "0.10.4", features = ["blocking", "json"], default_features = false }
 
 [features]
 fuzzing = ["libradb/fuzzing"]
