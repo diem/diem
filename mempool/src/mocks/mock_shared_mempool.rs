@@ -72,6 +72,8 @@ impl MockSharedMempool {
             }
             Some(state_sync) => (None, state_sync),
         };
+        let (_reconfig_event_publisher, reconfig_event_subscriber) =
+            libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
         let network_handles = vec![(peer_id, network_sender, network_events)];
 
         start_shared_mempool(
@@ -82,6 +84,7 @@ impl MockSharedMempool {
             client_events,
             consensus_events,
             state_sync_events,
+            reconfig_event_subscriber,
             Arc::new(MockStorageReadClient),
             Arc::new(MockVMValidator),
             vec![sender],

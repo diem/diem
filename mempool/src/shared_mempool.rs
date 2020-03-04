@@ -8,6 +8,7 @@ use crate::{
 };
 use anyhow::{format_err, Result};
 use bounded_executor::BoundedExecutor;
+use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{
     channel::{
         mpsc::{self, Receiver, UnboundedSender},
@@ -22,6 +23,8 @@ use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
     account_address::AccountAddress,
+    contract_event::ContractEvent,
+    event_subscription::EventSubscription,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     transaction::SignedTransaction,
     vm_error::{
@@ -34,6 +37,7 @@ use network::protocols::network::Event;
 use std::{
     cmp,
     collections::{HashMap, HashSet},
+    num::NonZeroUsize,
     ops::Deref,
     pin::Pin,
     sync::{Arc, Mutex},
@@ -159,6 +163,22 @@ pub struct TransactionExclusion {
     pub sender: AccountAddress,
     /// sequence number
     pub sequence_number: u64,
+}
+
+/// Mempool's subscription to reconfiguration events
+pub struct MempoolReconfigSubscription {
+    sender: libra_channel::Sender<(), ContractEvent>,
+}
+
+impl EventSubscription for MempoolReconfigSubscription {
+    fn publish(&mut self, payload: ContractEvent) {
+        if let Err(e) = self.sender.push((), payload) {
+            debug!(
+                "[shared mempool] failed to publish reconfiguration event to mempool: {}",
+                e
+            );
+        }
+    }
 }
 
 fn notify_subscribers(
@@ -595,6 +615,7 @@ async fn inbound_network_task<V>(
     )>,
     mut consensus_requests: mpsc::Receiver<ConsensusRequest>,
     mut state_sync_requests: mpsc::Receiver<CommitNotification>,
+    mut mempool_reconfig_events: libra_channel::Receiver<(), ContractEvent>,
     node_config: NodeConfig,
 ) where
     V: TransactionValidation,
@@ -629,6 +650,9 @@ async fn inbound_network_task<V>(
             }
             msg = state_sync_requests.select_next_some() => {
                 tokio::spawn(process_state_sync_request(smp.clone(), msg));
+            }
+            reconfig_event = mempool_reconfig_events.select_next_some() => {
+                // TODO actually process reconfig event
             },
             (network_id, event) = events.select_next_some() => {
                 match event {
@@ -734,6 +758,7 @@ pub(crate) fn start_shared_mempool<V>(
     client_events: mpsc::Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: mpsc::Receiver<ConsensusRequest>,
     state_sync_requests: mpsc::Receiver<CommitNotification>,
+    mempool_reconfig_events: libra_channel::Receiver<(), ContractEvent>,
     storage_read_client: Arc<dyn StorageRead>,
     validator: Arc<V>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
@@ -777,6 +802,7 @@ pub(crate) fn start_shared_mempool<V>(
         client_events,
         consensus_requests,
         state_sync_requests,
+        mempool_reconfig_events,
         config_clone,
     ));
 
@@ -795,6 +821,7 @@ pub fn bootstrap(
     client_events: Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: Receiver<ConsensusRequest>,
     state_sync_requests: Receiver<CommitNotification>,
+    mempool_reconfig_events: libra_channel::Receiver<(), ContractEvent>,
 ) -> Runtime {
     let runtime = Builder::new()
         .thread_name("shared-mem-")
@@ -819,11 +846,28 @@ pub fn bootstrap(
         client_events,
         consensus_requests,
         state_sync_requests,
+        mempool_reconfig_events,
         storage_client,
         vm_validator,
         vec![],
         None,
     );
-
     runtime
+}
+
+/// Returns a new reconfiguration event subscription for mempool, and the channel receiver to where the subscribed
+/// events will be published
+pub fn generate_reconfig_subscription() -> (
+    Box<dyn EventSubscription>,
+    libra_channel::Receiver<(), ContractEvent>,
+) {
+    let (reconfig_event_publisher, reconfig_event_subscriber) =
+        libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+    let reconfig_event_subscription = MempoolReconfigSubscription {
+        sender: reconfig_event_publisher,
+    };
+    (
+        Box::new(reconfig_event_subscription),
+        reconfig_event_subscriber,
+    )
 }

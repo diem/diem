@@ -23,6 +23,7 @@ use libra_types::{
         random_validator_verifier, LedgerInfoWithSignatures, ValidatorChangeProof,
         ValidatorPublicKeys, ValidatorSet, ValidatorSigner,
     },
+    event_subscription::EventSubscription,
     proof::TransactionListProof,
     transaction::TransactionListWithProof,
     waypoint::Waypoint,
@@ -69,6 +70,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         _synced_trees: &mut ExecutedTrees,
+        _reconfig_event_subscriptions: &mut [Box<dyn EventSubscription>],
     ) -> Result<()> {
         self.storage.write().unwrap().add_txns_with_li(
             txn_list_with_proof.transactions,
@@ -304,6 +306,7 @@ impl SynchronizerEnv {
             waypoint,
             &config.state_sync,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
+            vec![],
         );
         self.mempools
             .push(MockSharedMempool::new(Some(mempool_requests)));
@@ -336,7 +339,7 @@ impl SynchronizerEnv {
         // in commit()
         assert!(Runtime::new()
             .unwrap()
-            .block_on(self.clients[peer_id].commit(committed_txns))
+            .block_on(self.clients[peer_id].commit(committed_txns, vec![]))
             .is_ok());
         let mempool_txns = self.mempools[peer_id].read_timeline(0, signed_txns.len());
         for txn in signed_txns.iter() {

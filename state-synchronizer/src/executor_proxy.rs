@@ -7,6 +7,7 @@ use executor::{ExecutedTrees, Executor};
 use libra_config::config::NodeConfig;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    event_subscription::EventSubscription,
     transaction::TransactionListWithProof,
 };
 use std::sync::Arc;
@@ -26,6 +27,7 @@ pub trait ExecutorProxyTrait: Sync + Send {
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         synced_trees: &mut ExecutedTrees,
+        reconfig_event_subscriptions: &mut [Box<dyn EventSubscription>],
     ) -> Result<()>;
 
     /// Gets chunk of transactions given the known version, target version and the max limit.
@@ -92,13 +94,22 @@ impl ExecutorProxyTrait for ExecutorProxy {
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         synced_trees: &mut ExecutedTrees,
+        reconfig_event_subscriptions: &mut [Box<dyn EventSubscription>],
     ) -> Result<()> {
-        self.executor.execute_and_commit_chunk(
+        let reconfig_events = self.executor.execute_and_commit_chunk(
             txn_list_with_proof,
             verified_target_li,
             intermediate_end_of_epoch_li,
             synced_trees,
-        )
+        )?;
+
+        // TODO add per-subscription filter logic
+        for event in reconfig_events {
+            for subscription in reconfig_event_subscriptions.iter_mut() {
+                subscription.publish(event.clone());
+            }
+        }
+        Ok(())
     }
 
     async fn get_chunk(

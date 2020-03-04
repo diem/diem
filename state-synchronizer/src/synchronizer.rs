@@ -16,7 +16,9 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
+    contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    event_subscription::EventSubscription,
     transaction::Transaction,
     waypoint::Waypoint,
 };
@@ -39,6 +41,7 @@ impl StateSynchronizer {
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         executor: Arc<Executor<LibraVM>>,
         config: &NodeConfig,
+        reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
     ) -> Self {
         let executor_proxy = ExecutorProxy::new(executor, config);
         Self::bootstrap_with_executor_proxy(
@@ -48,6 +51,7 @@ impl StateSynchronizer {
             config.base.waypoint,
             &config.state_sync,
             executor_proxy,
+            reconfig_event_subscriptions,
         )
     }
 
@@ -58,6 +62,7 @@ impl StateSynchronizer {
         waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
         executor_proxy: E,
+        reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
     ) -> Self {
         let mut runtime = Builder::new()
             .thread_name("state-sync-")
@@ -79,6 +84,7 @@ impl StateSynchronizer {
             state_sync_config.clone(),
             executor_proxy,
             initial_state,
+            reconfig_event_subscriptions,
         );
         runtime.spawn(coordinator.start(network));
 
@@ -132,12 +138,17 @@ impl StateSyncClient {
         &self,
         // *successfully* committed transactions
         committed_txns: Vec<Transaction>,
+        reconfig_events: Vec<ContractEvent>,
     ) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         async move {
             let (callback, callback_rcv) = oneshot::channel();
             sender
-                .send(CoordinatorMessage::Commit(committed_txns, callback))
+                .send(CoordinatorMessage::Commit(
+                    committed_txns,
+                    reconfig_events,
+                    callback,
+                ))
                 .await?;
 
             match timeout(Duration::from_secs(1), callback_rcv).await {
