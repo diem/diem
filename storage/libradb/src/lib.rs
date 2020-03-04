@@ -54,8 +54,9 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
-    contract_event::EventWithProof,
+    contract_event::{ContractEvent, EventWithProof},
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    event::EventKey,
     get_with_proof::{RequestItem, ResponseItem},
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
@@ -127,6 +128,14 @@ pub trait LibraDBTrait: Send + Sync {
 
     /// Returns the latest version and committed block timestamp
     fn get_latest_commit_metadata(&self) -> Result<(Version, u64)>;
+
+    /// Returns events by given event key
+    fn get_events(
+        &self,
+        event_key: &EventKey,
+        start: u64,
+        limit: u64,
+    ) -> Result<Vec<(u64, ContractEvent)>>;
 }
 
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
@@ -265,9 +274,6 @@ impl LibraDB {
         limit: u64,
         ledger_version: Version,
     ) -> Result<(Vec<EventWithProof>, AccountStateWithProof)> {
-        error_if_too_many_requested(limit, MAX_LIMIT)?;
-
-        let get_latest = !ascending && start_seq_num == u64::max_value();
         let account_state_with_proof =
             self.get_account_state_with_proof(query_path.address, ledger_version, ledger_version)?;
 
@@ -280,6 +286,31 @@ impl LibraDB {
                 return Ok((Vec::new(), account_state_with_proof));
             }
         };
+
+        let events_with_proof = self.get_events_by_event_key(
+            &event_key,
+            start_seq_num,
+            ascending,
+            limit,
+            ledger_version,
+        )?;
+
+        // We always need to return the account blob to prove that this is indeed the event that was
+        // being queried.
+        Ok((events_with_proof, account_state_with_proof))
+    }
+
+    fn get_events_by_event_key(
+        &self,
+        event_key: &EventKey,
+        start_seq_num: u64,
+        ascending: bool,
+        limit: u64,
+        ledger_version: Version,
+    ) -> Result<Vec<EventWithProof>> {
+        error_if_too_many_requested(limit, MAX_LIMIT)?;
+        let get_latest = !ascending && start_seq_num == u64::max_value();
+
         let cursor = if get_latest {
             // Caller wants the latest, figure out the latest seq_num.
             // In the case of no events on that path, use 0 and expect empty result below.
@@ -338,9 +369,7 @@ impl LibraDB {
             events_with_proof.reverse();
         }
 
-        // We always need to return the account blob to prove that this is indeed the event that was
-        // being queried.
-        Ok((events_with_proof, account_state_with_proof))
+        Ok(events_with_proof)
     }
 
     /// Returns a transaction that is the `seq_num`-th one associated with the given account. If
@@ -907,6 +936,25 @@ impl LibraDBTrait for LibraDB {
         let latest_ledger_info = self.ledger_store.get_latest_ledger_info()?;
         let ledger_info = latest_ledger_info.ledger_info();
         Ok((ledger_info.version(), ledger_info.timestamp_usecs()))
+    }
+
+    fn get_events(
+        &self,
+        event_key: &EventKey,
+        start: u64,
+        limit: u64,
+    ) -> Result<Vec<(u64, ContractEvent)>> {
+        let version = self
+            .ledger_store
+            .get_latest_ledger_info()?
+            .ledger_info()
+            .version();
+        let events = self
+            .get_events_by_event_key(event_key, start, false, limit, version)?
+            .into_iter()
+            .map(|e| (e.transaction_version, e.event))
+            .collect();
+        Ok(events)
     }
 }
 
