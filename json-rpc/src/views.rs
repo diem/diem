@@ -3,9 +3,9 @@
 
 use hex;
 use libra_types::account_config::AccountResource;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct AccountView {
     balance: u64,
     sequence_number: u64,
@@ -15,7 +15,7 @@ pub struct AccountView {
 }
 
 impl AccountView {
-    pub fn new(account: AccountResource) -> Self {
+    pub fn new(account: &AccountResource) -> Self {
         Self {
             balance: account.balance(),
             sequence_number: account.sequence_number(),
@@ -24,15 +24,21 @@ impl AccountView {
             delegated_withdrawal_capability: account.delegated_withdrawal_capability(),
         }
     }
+
+    // TODO remove test tag once used by CLI client
+    #[cfg(test)]
+    pub(crate) fn balance(&self) -> u64 {
+        self.balance
+    }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct BlockMetadata {
     pub version: u64,
     pub timestamp: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct BytesView(String);
 
 impl From<&[u8]> for BytesView {

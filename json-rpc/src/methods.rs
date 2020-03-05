@@ -67,7 +67,7 @@ async fn get_account_state(
     let response = service.db.get_latest_account_state(account_address)?;
     if let Some(blob) = response {
         if let Ok(account) = AccountResource::try_from(&blob) {
-            return Ok(Some(AccountView::new(account)));
+            return Ok(Some(AccountView::new(&account)));
         }
     }
     Ok(None)
