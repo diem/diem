@@ -13,7 +13,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::future::join_all;
-use slog_scope::info;
+use libra_logger::info;
 use std::{
     collections::HashSet,
     fmt::{Display, Error, Formatter},

@@ -8,10 +8,9 @@ use std::{
 };
 
 use chrono::{Datelike, Timelike, Utc};
+use libra_logger::{info, warn};
 use rand::{prelude::ThreadRng, Rng};
 use reqwest::Url;
-use slog::{o, Drain};
-use slog_scope::{info, warn};
 use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
 
@@ -266,13 +265,7 @@ fn setup_log() {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info");
     }
-    let decorator = slog_term::PlainDecorator::new(std::io::stdout());
-    let drain = slog_term::CompactFormat::new(decorator).build().fuse();
-    let drain = slog_envlogger::new(drain);
-    let drain = std::sync::Mutex::new(drain).fuse();
-    let logger = slog::Logger::root(drain, o!());
-    let logger_guard = slog_scope::set_global_logger(logger);
-    std::mem::forget(logger_guard);
+    ::libra_logger::Logger::new().is_async(true).init();
 }
 
 struct BasicSwarmUtil {

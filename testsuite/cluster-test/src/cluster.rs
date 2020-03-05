@@ -12,9 +12,9 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
 };
+use libra_logger::*;
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
-use slog_scope::*;
 use std::{collections::HashMap, convert::TryInto, thread, time::Duration};
 
 #[derive(Clone)]

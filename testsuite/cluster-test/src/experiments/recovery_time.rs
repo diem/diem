@@ -16,7 +16,7 @@ use crate::{
     tx_emitter::EmitJobRequest,
 };
 use async_trait::async_trait;
-use slog_scope::info;
+use libra_logger::info;
 use std::time::Instant;
 
 #[derive(StructOpt, Debug)]

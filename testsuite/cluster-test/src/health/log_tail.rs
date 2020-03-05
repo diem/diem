@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::{health::ValidatorEvent, util::unix_timestamp_now};
-use slog_scope::*;
+use libra_logger::*;
 use std::{
     sync::{
         atomic::{AtomicI64, Ordering},
