@@ -14,7 +14,7 @@ use kube::{
     client::APIClient,
     config,
 };
-use slog_scope::*;
+use libra_logger::*;
 use util::retry;
 
 use crate::{cluster_swarm::ClusterSwarm, instance::Instance};

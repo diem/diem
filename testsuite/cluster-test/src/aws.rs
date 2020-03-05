@@ -4,13 +4,13 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{bail, format_err, Result};
+use libra_logger::error;
 use reqwest::{self, Url};
 use rusoto_core::Region;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Ec2Client};
 use rusoto_ecr::EcrClient;
 use rusoto_ecs::EcsClient;
 use rusoto_s3::{PutObjectRequest, S3Client, S3};
-use slog_scope::*;
 use std::{fs::File, io::Read, thread, time::Duration};
 
 #[derive(Clone)]

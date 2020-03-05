@@ -6,13 +6,13 @@
 use crate::instance::Instance;
 use crate::{aws::Aws, cluster::Cluster};
 use anyhow::{bail, format_err, Result};
+use libra_logger::{info, warn};
 use rusoto_core::RusotoError;
 use rusoto_ecr::{
     BatchGetImageRequest, DescribeImagesRequest, DescribeImagesResponse, Ecr, Image,
     ImageIdentifier, PutImageError, PutImageRequest,
 };
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
-use slog_scope::{info, warn};
 use std::{env, thread, time::Duration};
 use util::retry;
 

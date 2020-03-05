@@ -5,7 +5,7 @@
 use std::{fmt, time::Duration};
 
 use anyhow::Result;
-use slog_scope::{info, warn};
+use libra_logger::{info, warn};
 use structopt::StructOpt;
 
 use tokio::time;

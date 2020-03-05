@@ -10,8 +10,8 @@ use crate::{
     util::unix_timestamp_now,
 };
 use debug_interface::{proto::Event as DebugInterfaceEvent, NodeDebugClient};
+use libra_logger::*;
 use serde_json::{self, value as json};
-use slog_scope::*;
 use std::{
     env,
     sync::{atomic::AtomicI64, mpsc, Arc},

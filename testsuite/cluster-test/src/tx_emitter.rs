@@ -23,6 +23,7 @@ use libra_crypto::{
     test_utils::KeyPair,
     traits::Uniform,
 };
+use libra_logger::{debug, info};
 use libra_types::{
     account_address::AccountAddress,
     account_config::{association_address, AccountResource},
@@ -39,7 +40,6 @@ use rand::{
     seq::{IteratorRandom, SliceRandom},
     Rng, SeedableRng,
 };
-use slog_scope::{debug, info};
 use tokio::runtime::{Handle, Runtime};
 
 use futures::{executor::block_on, future::FutureExt};
