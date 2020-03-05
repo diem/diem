@@ -16,10 +16,10 @@ use futures::channel::mpsc;
 use libra_config::config::NodeConfig;
 use libra_mempool::ConsensusRequest;
 use libra_types::transaction::SignedTransaction;
+use libra_vm::LibraVM;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
-use vm_runtime::LibraVM;
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {

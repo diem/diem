@@ -3,12 +3,12 @@
 
 use crate::{account::AccountData, executor::FakeExecutor};
 use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::LibraVM;
 use move_vm_state::data_cache::BlockDataCache;
 use vm::{
     gas_schedule::{GasAlgebra, GasPrice, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
-use vm_runtime::LibraVM;
 
 #[test]
 fn failed_transaction_cleanup_test() {

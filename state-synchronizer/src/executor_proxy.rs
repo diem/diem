@@ -10,9 +10,9 @@ use libra_types::{
     event_subscription::EventSubscription,
     transaction::TransactionListWithProof,
 };
+use libra_vm::LibraVM;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
-use vm_runtime::LibraVM;
 
 /// Proxies interactions with execution and storage for state synchronization
 #[async_trait::async_trait]

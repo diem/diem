@@ -10,7 +10,7 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     write_set::WriteOp,
 };
-use vm_runtime::VMExecutor;
+use libra_vm::VMExecutor;
 
 fn gen_address(index: u8) -> AccountAddress {
     AccountAddress::new([index; ADDRESS_LENGTH])

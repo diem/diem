@@ -10,13 +10,13 @@ use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     transaction::{SignedTransaction, Transaction},
 };
+use libra_vm::LibraVM;
 use state_synchronizer::StateSyncClient;
 use std::{
     convert::TryFrom,
     sync::Arc,
     time::{Duration, Instant},
 };
-use vm_runtime::LibraVM;
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.

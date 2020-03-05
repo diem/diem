@@ -22,12 +22,12 @@ use libra_types::{
     transaction::Transaction,
     waypoint::Waypoint,
 };
+use libra_vm::LibraVM;
 use std::{sync::Arc, time::Duration};
 use tokio::{
     runtime::{Builder, Runtime},
     time::timeout,
 };
-use vm_runtime::LibraVM;
 
 pub struct StateSynchronizer {
     _runtime: Runtime,

@@ -8,9 +8,9 @@ custom_edit_url: https://github.com/libra/libra/edit/master/language/vm/vm-runti
 
 The MoveVM runtime is the verification and execution engine for the Move
 bytecode format. The runtime is imported and loaded in 2 modes:
-verification mode (by the [admission control](../../../admission_control)
-and [mempool](../../../mempool) components) and execution mode (by the
-[execution](../../../execution) component).
+verification mode (by the [admission control](../../admission_control)
+and [mempool](../../mempool) components) and execution mode (by the
+[execution](../../execution) component).
 
 ## Overview
 

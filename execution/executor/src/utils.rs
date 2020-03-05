@@ -3,11 +3,11 @@
 
 use crate::{ExecutedTrees, Executor};
 use libra_config::config::NodeConfig;
+use libra_vm::LibraVM;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::Runtime;
-use vm_runtime::LibraVM;
 
 pub fn create_storage_service_and_executor(
     config: &NodeConfig,

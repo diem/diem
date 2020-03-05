@@ -21,9 +21,9 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
+use libra_vm::VMExecutor;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use vm_runtime::VMExecutor;
 
 #[derive(Debug)]
 enum MockVMTransaction {

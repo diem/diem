@@ -8,11 +8,11 @@ use libra_types::{
     account_address::AccountAddress, account_config::AccountResource,
     transaction::SignedTransaction, vm_error::VMStatus,
 };
+use libra_vm::{LibraVM, VMVerifier};
 use scratchpad::SparseMerkleTree;
 use std::{convert::TryFrom, sync::Arc};
 use storage_client::{StorageRead, VerifiedStateView};
 use tokio::runtime::Handle;
-use vm_runtime::{LibraVM, VMVerifier};
 
 #[cfg(test)]
 #[path = "unit_tests/vm_validator_test.rs"]
