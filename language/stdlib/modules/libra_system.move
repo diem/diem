@@ -5,6 +5,7 @@ module LibraSystem {
     use 0x0::ValidatorConfig;
     use 0x0::Vector;
     use 0x0::Transaction;
+    use 0x0::LibraTimestamp;
 
     struct ValidatorInfo {
         addr: address,
@@ -21,10 +22,8 @@ module LibraSystem {
     resource struct ValidatorSet {
         // The current validator set. Updated only at epoch boundaries via reconfiguration.
         validators: vector<ValidatorInfo>,
-        // List of validators to add at the next reconfiguration.
-        additions: vector<address>,
-        // List of validators to removal at the next reconfiguration. Disjoint with additions.
-        removals: vector<address>,
+        // Last time when a reconfiguration happened.
+        last_reconfiguration_time: u64,
         // Handle where validator set change events are emitted
         change_events: LibraAccount::EventHandle<ValidatorSetChangeEvent>,
     }
@@ -48,6 +47,8 @@ module LibraSystem {
         change_events: LibraAccount::EventHandle<DiscoverySetChangeEvent>,
     }
 
+    resource struct ReconfigurationCapability {}
+
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public fun initialize_validator_set() {
@@ -56,8 +57,7 @@ module LibraSystem {
 
       move_to_sender<ValidatorSet>(ValidatorSet {
           validators: Vector::empty(),
-          additions: Vector::empty(),
-          removals: Vector::empty(),
+          last_reconfiguration_time: 0,
           change_events: LibraAccount::new_event_handle<ValidatorSetChangeEvent>(),
       });
     }
@@ -70,6 +70,16 @@ module LibraSystem {
             discovery_set: Vector::empty(),
             change_events: LibraAccount::new_event_handle<DiscoverySetChangeEvent>(),
         });
+    }
+
+    public fun grant_reconfiguration_capability(): ReconfigurationCapability {
+         // Only the Association can add new validators
+         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+         ReconfigurationCapability {}
+    }
+
+    public fun reconfigure_with_capability(capability: &ReconfigurationCapability) acquires ValidatorSet {
+        reconfigure_()
     }
 
     // ValidatorInfo public accessors
@@ -186,69 +196,186 @@ module LibraSystem {
         abort 99
     }
 
+    // Get the index of the discovery info with address `addr` in `discovery_set`.
+    // Aborts if `addr` is not in discovery set.
+    public fun get_discovery_index(discovery_set: &vector<DiscoveryInfo>, addr: address): u64 {
+        let len = Vector::length(discovery_set);
+        let i = 0;
+        loop {
+            if (get_discovery_address(Vector::borrow(discovery_set, i)) == &addr) {
+                return i
+            };
+
+            i = i + 1;
+            if (i >= len) break;
+        };
+
+        abort 99
+    }
+
     // Adds a validator to the addition buffer, which will cause it to be added to the validator
     // set in the next epoch.
     // Fails if `account_address` is already a validator or has already been added to the addition
     // buffer.
-    // Only callable by the Association address
-    public fun add_validator(account_address: address) acquires ValidatorSet {
+    // Only callabcle by the Association address
+    public fun add_validator(account_address: address) acquires ValidatorSet, DiscoverySet {
+        add_validator_(account_address);
+        reconfigure_();
+        emit_discovery_set_change();
+    }
+
+    fun add_validator_(account_address: address) acquires ValidatorSet, DiscoverySet {
         // Only the Association can add new validators
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
         // A prospective validator must have a validator config resource
         Transaction::assert(ValidatorConfig::has(account_address), 17);
 
         let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
-        let validator_set_additions = &mut validator_set_ref.additions;
+        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
+
         // Ensure that this address is not already a validator
         Transaction::assert(
             !is_validator_(&account_address, &validator_set_ref.validators),
             18
         );
-        // Ensure that this is not already an addition
-        Transaction::assert(
-            !Vector::contains(
-                validator_set_additions,
-                &account_address,
-            ),
-            19
-        );
 
-        // Add to candidates
         Vector::push_back(
-            validator_set_additions,
-            account_address,
+            &mut validator_set_ref.validators,
+            make_validator_info(account_address)
+        );
+        Vector::push_back(
+            &mut discovery_set_ref.discovery_set,
+            make_discovery_info(account_address)
         );
     }
 
-    public fun remove_validator(account_address: address) acquires ValidatorSet {
+
+
+    public fun remove_validator(account_address: address) acquires ValidatorSet, DiscoverySet {
         // Only the Association can remove validators
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
 
         let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
         // Ensure that this address is already a validator
         Transaction::assert(
             is_validator_(&account_address, &validator_set_ref.validators),
             21
         );
-        // Ensure that this is not already a removal
-        Transaction::assert(
-            !Vector::contains(
-                &validator_set_ref.removals,
-                &account_address,
-            ),
-            22
+
+        let to_remove_index = get_validator_index(
+            &validator_set_ref.validators,
+            account_address
         );
 
-        // Add to removals
-        Vector::push_back(
-            &mut validator_set_ref.removals,
-            account_address,
+        // remove corresponding ValidatorInfo from the validator set
+        _  = Vector::swap_remove(
+             &mut validator_set_ref.validators,
+            to_remove_index
+        );
+        _  = Vector::swap_remove(
+            &mut discovery_set_ref.discovery_set,
+            to_remove_index
+        );
+
+        reconfigure_();
+        emit_discovery_set_change();
+    }
+
+    public fun rotate_consensus_pubkey(consensus_pubkey: vector<u8>) acquires ValidatorSet {
+        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+        let account_address = Transaction::sender();
+
+        // Ensure that this address is already a validator
+        Transaction::assert(
+            is_validator_(&account_address, &validator_set_ref.validators),
+            21
+        );
+
+        ValidatorConfig::rotate_consensus_pubkey(consensus_pubkey);
+
+        let validator_index = get_validator_index(
+            &validator_set_ref.validators,
+            account_address
+        );
+
+        if(copy_validator_info(Vector::borrow_mut(&mut validator_set_ref.validators, validator_index))) {
+            reconfigure_();
+        }
+    }
+
+    public fun rotate_validator_network_identity_pubkey(
+        validator_network_identity_pubkey: vector<u8>
+    ) acquires DiscoverySet {
+        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
+        let account_address = Transaction::sender();
+
+        ValidatorConfig::rotate_validator_network_identity_pubkey(validator_network_identity_pubkey);
+
+        let validator_index = get_discovery_index(
+            &discovery_set_ref.discovery_set,
+            account_address
+        );
+
+        if(copy_discovery_info(Vector::borrow_mut(&mut discovery_set_ref.discovery_set, validator_index))) {
+            emit_discovery_set_change();
+        }
+    }
+
+    public fun rotate_validator_network_address(
+        validator_network_address: vector<u8>
+    ) acquires DiscoverySet {
+        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
+        let account_address = Transaction::sender();
+
+        ValidatorConfig::rotate_validator_network_address(validator_network_address);
+
+        let validator_index = get_discovery_index(
+            &discovery_set_ref.discovery_set,
+            account_address
+        );
+
+        if(copy_discovery_info(Vector::borrow_mut(&mut discovery_set_ref.discovery_set, validator_index))) {
+            emit_discovery_set_change();
+        }
+    }
+
+    fun reconfigure_() acquires ValidatorSet {
+        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+        let current_block_time = LibraTimestamp::now_microseconds();
+
+        validator_set_ref.last_reconfiguration_time = current_block_time;
+
+        // Only one reconfiguration allowed per block for now. We might want to increase the threshold here.
+        Transaction::assert(current_block_time > validator_set_ref.last_reconfiguration_time, 23);
+        emit_reconfiguration_event();
+    }
+
+    fun emit_reconfiguration_event() acquires ValidatorSet {
+        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+
+        LibraAccount::emit_event<ValidatorSetChangeEvent>(
+            &mut validator_set_ref.change_events,
+            ValidatorSetChangeEvent {
+                new_validator_set: *&validator_set_ref.validators,
+            },
+        );
+    }
+
+    fun emit_discovery_set_change() acquires DiscoverySet {
+        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
+        LibraAccount::emit_event<DiscoverySetChangeEvent>(
+            &mut discovery_set_ref.change_events,
+            DiscoverySetChangeEvent {
+                new_discovery_set: *&discovery_set_ref.discovery_set,
+            },
         );
     }
 
     // Return true if the ValidatorInfo given as input is different than the one
     // derived from the ValidatorConfig published at validator_info.addr + copies
     // the differing fields. Aborts if there is no ValidatorConfig at
+
     // validator_info.addr
     public fun copy_validator_info(validator_info: &mut ValidatorInfo): bool {
 
@@ -335,143 +462,5 @@ module LibraSystem {
            fullnodes_network_address:
                ValidatorConfig::fullnodes_network_address(&config),
        }
-    }
-
-    // Trigger a reconfiguation the Libra system by:
-    // (1) Checking if there have been any additions since the last reconfiguration (and adding
-    //     the validator's config if so)
-    // (2) Checking if there have been any removals since the last reconfiguration (and removing
-    //     the validator if so)
-    // (3) Checking if there have been any key rotations since the last reconfiguration (and
-    //     updating the key info if so)
-    // (4) Emitting an event containing new validator set or discovery set, which will be
-    //     passed to the executor
-    public fun reconfigure() acquires ValidatorSet, DiscoverySet {
-        // Only callable by the VM
-        Transaction::assert(Transaction::sender() == 0x0, 1);
-
-        // For now, this only supports a simple form of reconfiguration: allowing a fixed set of
-        // validators to rotate their keys.
-        // TODO: support adding and removing validators. Eventually, we will do this by computing
-        // the new validator set from a larger list of candidate validators sorted by stake.
-        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
-        let additions_ref = &mut validator_set_ref.additions;
-        let removals_ref = &mut validator_set_ref.removals;
-        let validators_vec_ref = &mut validator_set_ref.validators;
-        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
-        let discovery_vec_ref = &mut discovery_set_ref.discovery_set;
-        let validator_set_changed = false;
-        let discovery_set_changed = false;
-
-        // (1) Check for additions
-        let i = 0;
-        let len = Vector::length(additions_ref);
-        // if additions is nonempty, we have an addition to process
-        if (len > 0) {
-            loop {
-                // remove validator address from additions and add corresponding ValidatorInfo to
-                // the validator set and DiscoveryInfo to discovery set
-                let addr = Vector::pop_back(additions_ref);
-                Vector::push_back(
-                    validators_vec_ref,
-                    make_validator_info(addr)
-                );
-                Vector::push_back(
-                    discovery_vec_ref,
-                    make_discovery_info(addr)
-                );
-                i = i + 1;
-                if (i >= len) break;
-            };
-            // ensures additions.length == 0
-            // ensures validators.length == old(validators).length + old(additions).length
-            // ensures discovery_set.length == old(discovery_set).length + old(additions).length
-            validator_set_changed = true;
-            discovery_set_changed = true;
-        };
-
-        // (2) Check for removals
-        i = 0;
-        len = Vector::length(removals_ref);
-        if (len > 0) {
-            loop {
-                // remove validator address from removals
-                let to_remove_index = get_validator_index(
-                    validators_vec_ref,
-                    Vector::pop_back(removals_ref)
-                );
-                // remove corresponding ValidatorInfo from the validator set
-                _  = Vector::swap_remove(
-                    validators_vec_ref,
-                    to_remove_index
-                );
-                // remove corresponding DiscoveryInfo from the discovery set
-                _ = Vector::swap_remove(
-                    discovery_vec_ref,
-                    to_remove_index,
-                );
-                i = i + 1;
-                if (i >= len) break;
-            };
-            // ensures removals.length == 0
-            // ensures validators.length == old(validators).length - old(removals).length
-            // ensures discovery_set.length == old(discovery_set).length - old(removals).length
-            validator_set_changed = true;
-            discovery_set_changed = true;
-        };
-
-        // (3) Check for key rotations in the validator set
-        i = 0;
-        len = Vector::length(validators_vec_ref);
-        // assume(len > 0), since an empty validator set is nonsensical
-        let validator_info_ref = Vector::borrow_mut(validators_vec_ref, i);
-        // check if each validator has rotated their keys, copy their new info and note the change
-        // if so.
-        loop {
-            if (copy_validator_info(validator_info_ref)) {
-                validator_set_changed = true;
-            };
-
-            i = i + 1;
-            if (i >= len) break;
-            validator_info_ref = Vector::borrow_mut(validators_vec_ref, i);
-        };
-
-        // (4) Check for changes in the discovery set
-        i = 0;
-        len = Vector::length(discovery_vec_ref);
-        // assume(len > 0), since an empty validator set is nonsensical
-        let discovery_info_ref = Vector::borrow_mut(discovery_vec_ref, i);
-        // check if each validator has changed their discovery info, copy their new info, and
-        // note the change if so.
-        loop {
-            if (copy_discovery_info(discovery_info_ref)) {
-                discovery_set_changed = true;
-            };
-
-            i = i + 1;
-            if (i >= len) break;
-            discovery_info_ref = Vector::borrow_mut(discovery_vec_ref, i);
-        };
-
-        // (5) Emit validator set changed event if appropriate
-        if (validator_set_changed) {
-            LibraAccount::emit_event<ValidatorSetChangeEvent>(
-                &mut validator_set_ref.change_events,
-                ValidatorSetChangeEvent {
-                    new_validator_set: *validators_vec_ref,
-                },
-            );
-        };
-
-        // (6) Emit discovery set changed event if appropriate
-        if (discovery_set_changed) {
-            LibraAccount::emit_event<DiscoverySetChangeEvent>(
-                &mut discovery_set_ref.change_events,
-                DiscoverySetChangeEvent {
-                    new_discovery_set: *discovery_vec_ref,
-                },
-            );
-        };
     }
 }

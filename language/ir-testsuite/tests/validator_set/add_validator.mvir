@@ -1,8 +1,14 @@
 //! account: alice
 //! account: vivian, 1000000, 0, validator
 
-// add_validator cannot be called on an account without a ValidatorConfig resource
+//! block-prologue
+//! proposer: vivian
+//! block-time: 3
+
+//! new-transaction
 //! sender: association
+// add_validator cannot be called on an account without a ValidatorConfig resource
+
 import 0x0.LibraSystem;
 import 0x0.ValidatorConfig;
 main() {
@@ -63,6 +69,8 @@ main() {
     return;
 }
 
+// check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -76,4 +84,4 @@ main() {
 }
 
 // check: ABORTED
-// check: 19
+// check: 18

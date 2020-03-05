@@ -2,6 +2,11 @@
 //! account: vivian, 1000000, 0, validator
 //! account: viola, 1000000, 0, validator
 
+//! block-prologue
+//! proposer: viola
+//! block-time: 2
+
+//! new-transaction
 //! sender: association
 import 0x0.LibraSystem;
 main() {
@@ -10,6 +15,8 @@ main() {
     return;
 }
 
+// check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -24,6 +31,11 @@ main() {
 
 // check: EXECUTED
 
+
+//! block-prologue
+//! proposer: viola
+//! block-time: 3
+
 //! new-transaction
 //! sender: association
 import 0x0.LibraSystem;
@@ -33,15 +45,13 @@ main() {
     return;
 }
 
+// check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! block-prologue
 //! proposer: viola
-//! block-time: 1
-
-// check: ValidatorSetChangeEvent
-// check: DiscoverySetChangeEvent
-// check: EXECUTED
+//! block-time: 4
 
 //! new-transaction
 // check that Vivian is no longer a validator,  Alice is now a validator, and Viola is still a

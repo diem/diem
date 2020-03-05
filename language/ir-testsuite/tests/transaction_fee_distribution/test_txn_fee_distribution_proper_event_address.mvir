@@ -25,7 +25,7 @@ main() {
 
 //! block-prologue
 //! proposer: vivian
-//! block-time: 1
+//! block-time: 2
 
 // check: "key: EventKey([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 238])"
 // check: SentPaymentEvent

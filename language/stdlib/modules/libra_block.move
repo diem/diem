@@ -55,8 +55,6 @@ module LibraBlock {
       // Currently distribute once per-block.
       // TODO: Once we have a better on-chain representation of epochs we will make this per-epoch.
       TransactionFee::distribute_transaction_fees();
-
-      LibraSystem::reconfigure();
     }
 
     // Update the BlockMetadata resource with the new blockmetada coming from the consensus.

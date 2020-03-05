@@ -22,9 +22,14 @@ main() {
     return;
 }
 
+//! block-prologue
+//! proposer: vivian
+//! block-time: 2
+
 //! new-transaction
 //! sender: association
-// run a tx from the association that adds Alice and Bob as validators
+// run a tx from the association that adds Alice and Bob as validators, this will fail as only one reconfiguration is
+// allowed per block
 import 0x0.LibraSystem;
 main() {
     LibraSystem.add_validator({{alice}});
@@ -36,11 +41,42 @@ main() {
 
     return;
 }
+// check: ABORT
+// check: 23
+
+
+//! new-transaction
+//! sender: association
+// run a tx from the association that adds Alice as validators
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.add_validator({{alice}});
+
+    assert(LibraSystem.is_validator({{alice}}), 77);
+    assert(!LibraSystem.is_validator({{bob}}), 78);
+
+    return;
+}
+// check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
+// check: EXECUTED
 
 //! block-prologue
 //! proposer: vivian
-//! block-time: 1
+//! block-time: 3
 
+//! new-transaction
+//! sender: association
+// run a tx from the association that adds Alice as validators
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.add_validator({{bob}});
+
+    assert(LibraSystem.is_validator({{alice}}), 77);
+    assert(LibraSystem.is_validator({{bob}}), 78);
+
+    return;
+}
 // check: ValidatorSetChangeEvent
 // check: DiscoverySetChangeEvent
 // check: EXECUTED
