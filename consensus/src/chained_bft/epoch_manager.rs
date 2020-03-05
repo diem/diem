@@ -262,17 +262,19 @@ impl<T: Payload> EpochManager<T> {
         counters::CURRENT_EPOCH_VALIDATORS.set(validators.len() as i64);
         counters::CURRENT_EPOCH_QUORUM_SIZE.set(validators.quorum_voting_power() as i64);
         info!(
-            "Start EventProcessor with epoch {} with genesis {}, validators {}",
+            "Starting epoch {} with genesis {}, validators {}",
             epoch,
             recovery_data.root_block(),
             validators,
         );
+        info!("Update Network about new validators");
         self.network_sender
             .update_eligible_nodes(recovery_data.validator_keys())
             .await
             .expect("Unable to update network's eligible peers");
         let last_vote = recovery_data.last_vote();
 
+        info!("Create BlockStore");
         let block_store = Arc::new(BlockStore::new(
             Arc::clone(&self.storage),
             recovery_data,
@@ -280,11 +282,14 @@ impl<T: Payload> EpochManager<T> {
             self.config.max_pruned_blocks_in_mem,
         ));
 
+        info!("Update SafetyRules");
+
         let mut safety_rules = self.safety_rules_manager.client();
         safety_rules
             .start_new_epoch(block_store.highest_quorum_cert().as_ref())
             .expect("Unable to transition SafetyRules to the new epoch");
 
+        info!("Create ProposalGenerator");
         // txn manager is required both by proposal generator (to pull the proposers)
         // and by event processor (to update their status).
         let proposal_generator = ProposalGenerator::new(
@@ -295,9 +300,11 @@ impl<T: Payload> EpochManager<T> {
             self.config.max_block_size,
         );
 
+        info!("Create Pacemaker");
         let pacemaker =
             self.create_pacemaker(self.time_service.clone(), self.timeout_sender.clone());
 
+        info!("Create ProposerElection");
         let proposer_election = self.create_proposer_election(epoch, &validators);
         let network_sender = NetworkSender::new(
             self.author,
@@ -321,6 +328,7 @@ impl<T: Payload> EpochManager<T> {
         );
         processor.start().await;
         self.processor = Some(Processor::EventProcessor(processor));
+        info!("EventProcessor started");
     }
 
     // Depending on what data we can extract from consensusdb, we may or may not have an
