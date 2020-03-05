@@ -16,7 +16,7 @@ spec:
   nodeName: "{node_name}"
   initContainers:
   - name: init
-    image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_init:{image_tag}
+    image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_init:master
     volumeMounts:
     - mountPath: /opt/libra/data
       name: data
@@ -102,5 +102,8 @@ spec:
   terminationGracePeriodSeconds: 5
   tolerations:
   - key: "validators"
+    operator: "Exists"
+    effect: "NoSchedule"
+  - key: "node.kubernetes.io/not-ready"
     operator: "Exists"
     effect: "NoSchedule"

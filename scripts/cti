@@ -6,14 +6,90 @@ set -o pipefail
 
 TAG=""
 PR=""
-WORKSPACE="cluster-test-ci"
-ENV="env"
+WORKSPACE=""
+ENV=""
 REPORT=""
-MARKER=$USER
+MARKER=$(whoami)
 DEPLOY=yes
+
+K8S=""
+K8S_POOL_SIZE="3"
+K8S_CONTEXT_PATTERN='arn:aws:eks:us-west-2:853397791086:cluster/CLUSTERNAME-k8s-testnet'
+
+join_args() {
+  retval_join_args=""
+  for var in $*
+  do
+    retval_join_args="${retval_join_args}, \"${var}\""
+  done
+}
+
+join_env_vars() {
+  retval_join_env_vars=""
+  for var in $*
+  do
+    IFS='=' read -ra env_var <<< "$var"
+    retval_join_env_vars="{\"name\":\"${env_var[0]}\", \"value\":\"${env_var[1]}\"}, ${retval_join_env_vars}"
+  done
+}
+
+kube_init_context () {
+  aws eks --region us-west-2 list-clusters &> /dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
+  local highest_pool_index=$(($K8S_POOL_SIZE - 1))
+  local context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/ct-${highest_pool_index}}
+  if kubectl config get-contexts ${context} &> /dev/null; then
+    return
+  fi
+  for ((i = 0; i < ${K8S_POOL_SIZE}; i++)); do
+    aws eks --region us-west-2 update-kubeconfig --name ct-${i}-k8s-testnet
+  done
+}
+
+kube_select_cluster () {
+  retval_kube_select_cluster=""
+  for attempt in {1..360} ; do
+    for ((i = 0; i < ${K8S_POOL_SIZE}; i++)); do
+      local context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/ct-${i}}
+      local running_pods=$(kubectl --context="${context}" get pods -l app=cluster-test --field-selector=status.phase==Running 2> /dev/null | wc -l)
+      if [[ $running_pods -eq 0 ]]; then
+        retval_kube_select_cluster="ct-${i}"
+        return
+      fi
+    done
+    echo "All clusters have jobs running on them. Retrying in 10 secs."
+    sleep 10
+  done
+  echo "Failed to schedule job on a cluster as all are busy"
+  exit 1
+}
+
+kube_wait_pod () {
+  local pod_name="${1}"
+  local context="${2}"
+  for i in {1..360} ; do
+    local phase=$(kubectl --context="${context}" get pod "${pod_name}" -o jsonpath="{.status.phase}" || echo -n "kubectlfailed")
+    if [[ "${phase}" == "kubectlfailed" ]]; then
+        echo "kubectl get pod ${pod_name} failed. Retrying."
+        sleep 10
+        continue
+    fi
+    if [[ $phase != "Pending" &&  $phase != "Unknown" ]]; then
+      echo "${pod_name} reached phase : ${phase}"
+      return
+    fi
+    echo "Waiting for ${pod_name} to be scheduled. Current phase : ${phase}"
+    sleep 5
+  done
+  echo "Pod ${pod_name} failed to be scheduled"
+  exit 1
+}
 
 while (( "$#" )); do
   case "$1" in
+    --k8s)
+      K8S=1
+      shift 1
+      ;;
     -R|--report)
       REPORT=$2
       shift 2
@@ -79,10 +155,6 @@ then
       exit 1
 fi
 
-JUMPHOST=${JUMPHOST:-ssh.${WORKSPACE}.aws.hlw3truzy4ls.com}
-
-ssh $JUMPHOST echo "ssh ok" >/dev/null || (echo "Failed to ssh to jump host $JUMPHOST. Try renew corp canal cert with cc-certs"; exit 1)
-
 if [ -z "$TAG" ]; then
     aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
     ./docker/build-aws.sh --build-all --version pull/$PR
@@ -92,24 +164,66 @@ fi
 
 OUTPUT_TEE=${CTI_OUTPUT_LOG:-$(mktemp)}
 
-echo "**********"
-echo "Copy of this output: $OUTPUT_TEE"
-echo "Dashboard: http://prometheus.${WORKSPACE}.aws.hlw3truzy4ls.com:9091/"
-echo "Logs:"
-echo " * ssh ssh.${WORKSPACE}.aws.hlw3truzy4ls.com"
-echo " * ssh-peer"
-echo " * tail -f /data/libra/libra.log"
-echo "**********"
+if [[ -z "${K8S}" ]]; then
+  if [[ -z "${WORKSPACE}" ]]; then
+    WORKSPACE="cluster-test-ci"
+  fi
+  JUMPHOST=${JUMPHOST:-ssh.${WORKSPACE}.aws.hlw3truzy4ls.com}
 
-if [ "$DEPLOY" == "yes" ]
-then
-    DEPLOY_CMD="--deploy $TAG"
+  ssh $JUMPHOST echo "ssh ok" >/dev/null || (echo "Failed to ssh to jump host $JUMPHOST. Try renew corp canal cert with cc-certs"; exit 1)
+
+  echo "**********"
+  echo "Copy of this output: $OUTPUT_TEE"
+  echo "Dashboard: http://prometheus.${WORKSPACE}.aws.hlw3truzy4ls.com:9091/"
+  echo "Logs:"
+  echo " * ssh ssh.${WORKSPACE}.aws.hlw3truzy4ls.com"
+  echo " * ssh-peer"
+  echo " * tail -f /data/libra/libra.log"
+  echo "**********"
+
+  if [ "$DEPLOY" == "yes" ]
+  then
+      DEPLOY_CMD="--deploy $TAG"
+  else
+      DEPLOY_CMD=""
+  fi
+
+  ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com env $ENV CTI_MARKER=$MARKER REMOTE_USER=$MARKER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" $DEPLOY_CMD $* | tee $OUTPUT_TEE
+
 else
-    DEPLOY_CMD=""
+  if ! which kubectl &>/dev/null; then
+    echo "kubectl is not installed. Please install kubectl. On mac, you can use : brew install kubectl"
+    exit 1
+  fi
+  echo "Running cluster-test on Kubernetes"
+  kube_init_context
+  pod_name="cluster-test-$(whoami)-$(date +%s)"
+  specfile=$(mktemp)
+  echo "Pod Spec : ${specfile}"
+  join_args $*
+  join_env_vars $ENV
+  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+  sed -e "s/{pod_name}/${pod_name}/g" \
+      -e "s/{image_tag}/${TAG}/g" \
+      -e "s/{env_variables}/${retval_join_env_vars}/g" \
+      -e "s/{extra_args}/${retval_join_args}/g" \
+      ${DIR}/cluster_test_pod_template.yaml > ${specfile}
+  if [[ -z "${WORKSPACE}" ]]; then
+    kube_select_cluster
+    WORKSPACE=${retval_kube_select_cluster}
+  fi
+  echo "Using cluster : ${WORKSPACE}"
+  context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/${WORKSPACE}}
+  kubectl --context=${context} apply -f ${specfile} || (echo "Failed to create cluster-test pod"; exit 1)
+  kube_wait_pod ${pod_name} ${context}
+  echo "**********"
+  echo "Copy of this output: $OUTPUT_TEE"
+  echo "Dashboard: http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/"
+  echo "Dashboard Username: admin. Password: $(kubectl get secret grafana-admin-credentials -o jsonpath="{.data.admin-password}" | base64 --decode)"
+  echo "Kibana: http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/"
+  echo "**********"
+  kubectl --context=${context} logs -f "${pod_name}" | tee $OUTPUT_TEE
 fi
-
-
-ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com $ENV CTI_MARKER=$MARKER REMOTE_USER=$MARKER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" $DEPLOY_CMD $* | tee $OUTPUT_TEE
 
 if [ ! -z "$REPORT" ]; then
     cat $OUTPUT_TEE | awk '/====json-report-begin===/{f=1;next} /====json-report-end===/{f=0} f' > $REPORT
