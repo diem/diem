@@ -216,7 +216,7 @@ mod test {
         io::{AsyncReadExt, AsyncWriteExt},
         stream::StreamExt,
     };
-    use libra_logger::prelude::*;
+    use libra_logger::{error, info};
     use memsocket::MemorySocket;
     use std::io;
 
@@ -295,7 +295,7 @@ mod test {
 
     #[tokio::test]
     async fn open_substream() -> io::Result<()> {
-        ::libra_logger::try_init_for_testing();
+        ::libra_logger::Logger::new().environment_only(true).init();
         let (dialer, listener) = MemorySocket::new_pair();
         let msg = b"The Way of Kings";
 
@@ -347,7 +347,7 @@ mod test {
 
     #[tokio::test]
     async fn close() -> io::Result<()> {
-        ::libra_logger::try_init_for_testing();
+        ::libra_logger::Logger::new().environment_only(true).init();
         let (dialer, listener) = MemorySocket::new_pair();
         let msg = b"Words of Radiance";
 
@@ -417,7 +417,7 @@ mod test {
 
     #[tokio::test]
     async fn close_connection() -> io::Result<()> {
-        ::libra_logger::try_init_for_testing();
+        ::libra_logger::Logger::new().environment_only(true).init();
         let (dialer, listener) = MemorySocket::new_pair();
 
         let dialer = async move {

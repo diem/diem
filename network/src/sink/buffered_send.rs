@@ -82,7 +82,7 @@ mod test {
     // It should not flush where `.send` otherwise would.
     #[test]
     fn doesnt_flush() {
-        ::libra_logger::try_init_for_testing();
+        ::libra_logger::Logger::new().environment_only(true).init();
 
         // A 0-capacity channel + one sender gives the channel 1 available buffer
         // slot.

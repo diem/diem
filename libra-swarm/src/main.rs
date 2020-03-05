@@ -39,7 +39,7 @@ fn main() {
     let mut dev_config = NodeConfig::default();
     dev_config.vm_config.publishing_options = VMPublishingOption::Open;
 
-    libra_logger::init_for_e2e_testing();
+    libra_logger::Logger::new().init();
 
     let mut validator_swarm = LibraSwarm::configure_swarm(
         num_nodes,

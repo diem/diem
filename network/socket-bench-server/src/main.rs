@@ -16,7 +16,7 @@
 //!
 //! `TCP_ADDR=/ip6/::1/tcp/12345 cargo bench -p network remote_tcp`
 
-use libra_logger::{prelude::*, set_global_logger};
+use libra_logger::info;
 use netcore::transport::tcp::TcpTransport;
 use socket_bench_server::{
     build_tcp_muxer_transport, build_tcp_noise_muxer_transport, build_tcp_noise_transport,
@@ -25,7 +25,7 @@ use socket_bench_server::{
 use tokio::runtime::Runtime;
 
 fn main() {
-    let _logger = set_global_logger(false /* async */, None);
+    ::libra_logger::Logger::new().init();
 
     let args = Args::from_env();
 

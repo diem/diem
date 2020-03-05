@@ -10,8 +10,6 @@ publish = false
 edition = "2018"
 
 [dependencies]
-slog-scope = "4.0"
-
 libra-config = { path = "../../config", version = "0.1.0" }
 crash-handler = { path = "../crash-handler", version = "0.1.0" }
 libra-logger =  { path = "../logger", version = "0.1.0" }

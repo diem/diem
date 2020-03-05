@@ -14,7 +14,7 @@ fn test_network_builder() {
 
 #[test]
 fn test_direct_send() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut tn = setup_network();
     let dialer_peer_id = tn.dialer_peer_id;
     let mut dialer_events = tn.dialer_events;
@@ -59,7 +59,7 @@ fn test_direct_send() {
 
 #[test]
 fn test_rpc() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut tn = setup_network();
     let dialer_peer_id = tn.dialer_peer_id;
     let mut dialer_events = tn.dialer_events;

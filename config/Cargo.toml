@@ -17,13 +17,14 @@ mirai-annotations = "1.4.0"
 parity-multiaddr = { version = "0.7.2", default-features = false }
 rand = "0.6.5"
 serde = { version = "1.0.99", features = ["rc"], default-features = false }
-slog = { version = "2.5.0", features = ["max_level_trace", "release_max_level_debug"] }
+log = { version = "0.4.8", features = ["serde"] }
 thiserror = "1.0"
 toml = { version = "0.5.3", default-features = false }
 
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
 
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }

@@ -51,7 +51,7 @@ async fn mock_peer<TSubstream: Debug>(
 // Test the rpc substream upgrades.
 #[test]
 fn upgrades() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
     let dialer_peer_id = PeerId::random();
@@ -124,7 +124,7 @@ fn upgrades() {
 // receiving the request.
 #[test]
 fn listener_close_before_response() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -186,7 +186,7 @@ fn listener_close_before_response() {
 // negotiation but before the dialer sends their request.
 #[test]
 fn listener_close_before_dialer_send() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -232,7 +232,7 @@ fn listener_close_before_dialer_send() {
 // negotiation but before sending their request.
 #[test]
 fn dialer_close_before_listener_recv() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let protocol_id = b"/get_blocks/1.0.0";
 
@@ -267,7 +267,7 @@ fn dialer_close_before_listener_recv() {
 // reading out the response.
 #[test]
 fn dialer_close_before_listener_send() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let protocol_id = b"/get_blocks/1.0.0";
     let req_data = b"hello";
@@ -326,7 +326,7 @@ fn dialer_close_before_listener_send() {
 // Sending two requests should fail
 #[test]
 fn dialer_sends_two_requests_err() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let protocol_id = b"/get_blocks/1.0.0";
     let req_data = b"hello";
@@ -382,7 +382,7 @@ fn dialer_sends_two_requests_err() {
 // Test that outbound rpc calls will timeout.
 #[test]
 fn outbound_rpc_timeout() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -425,7 +425,7 @@ fn outbound_rpc_timeout() {
 // Test that inbound rpc calls will timeout.
 #[test]
 fn inbound_rpc_timeout() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let dialer_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -454,7 +454,7 @@ fn inbound_rpc_timeout() {
 // Test that outbound rpcs can be canceled before sending
 #[test]
 fn outbound_cancellation_before_send() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -490,7 +490,7 @@ fn outbound_cancellation_before_send() {
 // Test that outbound rpcs can be canceled while receiving response data.
 #[test]
 fn outbound_cancellation_recv() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let mut rt = Runtime::new().unwrap();
     let executor = rt.handle().clone();
@@ -586,7 +586,7 @@ fn outbound_cancellation_recv() {
 // Test the full rpc protocol actor.
 #[test]
 fn rpc_protocol() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
     let dialer_peer_id = PeerId::random();

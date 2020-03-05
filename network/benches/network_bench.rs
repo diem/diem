@@ -126,7 +126,7 @@ async fn send_rpc(
 }
 
 fn network_crate_benchmark(c: &mut Criterion) {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     // Parameterize benchmarks over the message length.
     let msg_lens = vec![32usize, 256, 1 * KiB, 4 * KiB, 64 * KiB, 256 * KiB, 1 * MiB];

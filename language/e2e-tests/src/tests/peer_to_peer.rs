@@ -17,7 +17,7 @@ use std::{convert::TryFrom, time::Instant};
 
 #[test]
 fn single_peer_to_peer_with_event() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     // create a FakeExecutor with a genesis from file
     test_all_genesis_default(|mut executor| {
         // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
@@ -69,7 +69,7 @@ fn single_peer_to_peer_with_event() {
 
 #[test]
 fn single_peer_to_peer_with_padding() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
 
