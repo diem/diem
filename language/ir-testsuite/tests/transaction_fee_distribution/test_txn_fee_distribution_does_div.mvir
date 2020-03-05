@@ -66,7 +66,7 @@ main() {
 
 //! block-prologue
 //! proposer: vivian
-//! block-time: 1
+//! block-time: 2
 
 //! new-transaction
 //! sender: alice

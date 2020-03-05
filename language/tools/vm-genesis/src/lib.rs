@@ -49,7 +49,7 @@ pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::
 });
 
 // Identifiers for well-known functions.
-static ADD_VALIDATOR: Lazy<Identifier> = Lazy::new(|| Identifier::new("add_validator").unwrap());
+static ADD_VALIDATOR: Lazy<Identifier> = Lazy::new(|| Identifier::new("add_validator_").unwrap());
 static INITIALIZE: Lazy<Identifier> = Lazy::new(|| Identifier::new("initialize").unwrap());
 static INITIALIZE_BLOCK: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("initialize_block_metadata").unwrap());
@@ -61,7 +61,10 @@ static INITIALIZE_DISCOVERY_SET: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("initialize_discovery_set").unwrap());
 static MINT_TO_ADDRESS: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("mint_to_address").unwrap());
-static RECONFIGURE: Lazy<Identifier> = Lazy::new(|| Identifier::new("reconfigure").unwrap());
+static RECONFIGURE: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("emit_reconfiguration_event").unwrap());
+static EMIT_DISCOVERY_SET: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("emit_discovery_set_change").unwrap());
 static REGISTER_CANDIDATE_VALIDATOR: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("register_candidate_validator").unwrap());
 static ROTATE_AUTHENTICATION_KEY: Lazy<Identifier> =
@@ -446,7 +449,7 @@ fn initialize_validators(
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = account_config::association_address();
 
-    for (validator_keys, discovery_info) in validator_set.iter().zip(discovery_set.iter()).rev() {
+    for (validator_keys, discovery_info) in validator_set.iter().zip(discovery_set.iter()) {
         // First, add a ValidatorConfig resource under each account
         let validator_address = *validator_keys.account_address();
         let validator_authentication_key =
@@ -538,8 +541,6 @@ fn reconfigure(
 ) {
     let txn_data = TransactionMetadata::default();
 
-    // TODO: Direct write set transactions cannot specify emitted events, so this currently
-    // will not work.
     move_vm
         .execute_function(
             &LIBRA_SYSTEM_MODULE,
@@ -550,6 +551,17 @@ fn reconfigure(
             vec![],
         )
         .expect("Failure reconfiguring the system");
+
+    move_vm
+        .execute_function(
+            &LIBRA_SYSTEM_MODULE,
+            &EMIT_DISCOVERY_SET,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+        )
+        .expect("Failure emitting discovery set change");
 }
 
 /// Verify the consistency of the genesis `WriteSet`

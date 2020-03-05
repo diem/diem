@@ -12,10 +12,12 @@ use libra_config::{
     config::{VMConfig, VMPublishingOption},
     generator,
 };
+use libra_crypto::HashValue;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_config::{AccountResource, BalanceResource},
+    block_metadata::BlockMetadata,
     crypto_proxies::ValidatorSet,
     discovery_set::mock::mock_discovery_set,
     language_storage::ModuleId,
@@ -26,6 +28,7 @@ use libra_types::{
     write_set::WriteSet,
 };
 use libra_vm::{LibraVM, VMExecutor, VMVerifier};
+use std::collections::BTreeMap;
 use stdlib::{stdlib_modules, StdLibOptions};
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
@@ -37,6 +40,7 @@ use vm_genesis::GENESIS_KEYPAIR;
 pub struct FakeExecutor {
     config: VMConfig,
     data_store: FakeDataStore,
+    block_time: u64,
 }
 
 pub fn test_all_genesis_impl<T, F>(
@@ -86,6 +90,7 @@ impl FakeExecutor {
         let mut executor = FakeExecutor {
             config,
             data_store: FakeDataStore::default(),
+            block_time: 0,
         };
         executor.apply_write_set(write_set);
         executor
@@ -111,6 +116,7 @@ impl FakeExecutor {
         FakeExecutor {
             config: VMConfig::default(),
             data_store: FakeDataStore::default(),
+            block_time: 0,
         }
     }
 
@@ -276,5 +282,24 @@ impl FakeExecutor {
     }
     pub fn config(&self) -> &VMConfig {
         &self.config
+    }
+
+    pub fn new_block(&mut self) {
+        let validator_address =
+            *generator::validator_swarm_for_testing(10).validator_set[0].account_address();
+        self.block_time += 1;
+        let new_block = BlockMetadata::new(
+            HashValue::zero(),
+            self.block_time,
+            BTreeMap::new(),
+            validator_address,
+        );
+        self.apply_write_set(
+            self.execute_transaction_block(vec![Transaction::BlockMetadata(new_block)])
+                .expect("Executing block prologue should succeed")
+                .get(0)
+                .expect("Failed to get the execution result for Block Prologue")
+                .write_set(),
+        );
     }
 }

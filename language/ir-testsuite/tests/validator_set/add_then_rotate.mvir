@@ -13,6 +13,11 @@ main() {
     return;
 }
 
+// Bump the time so that a new reconfiguration can happen
+//! block-prologue
+//! proposer: vivian
+//! block-time: 2
+
 //! new-transaction
 //! sender: association
 // run a tx from the association that adds Alice as a validator
@@ -23,22 +28,24 @@ main() {
     return;
 }
 
-//! new-transaction
-//! sender: alice
-// rotate alice's key
-import 0x0.ValidatorConfig;
-main() {
-    ValidatorConfig.rotate_consensus_pubkey(h"beefbeef");
-
-    return;
-}
+// check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
+// check: EXECUTED
 
 //! block-prologue
 //! proposer: vivian
-//! block-time: 1
+//! block-time: 3
 
+//! new-transaction
+//! sender: alice
+// rotate alice's key
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.rotate_consensus_pubkey(h"beefbeef");
+
+    return;
+}
 // check: ValidatorSetChangeEvent
-// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction

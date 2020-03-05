@@ -1,0 +1,51 @@
+//! account: alice
+//! account: vivian, 1000000, 0, validator
+//! account: viola, 1000000, 0, validator
+
+//! new-transaction
+//! sender: alice
+import 0x0.ValidatorConfig;
+
+// register Alice as a validator candidate
+main() {
+    let config: ValidatorConfig.Config;
+
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
+    return;
+}
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 2
+
+//! new-transaction
+//! sender: association
+// We don't allow two reconfiguration events to happen within the same block. That includes following examples:
+// 1. Add then remove.
+// 2. Double rotation.
+// etc.
+
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.add_validator({{alice}});
+    LibraSystem.remove_validator({{vivian}});
+
+    return;
+}
+
+// check: ABORT
+// check: 23
+
+//! new-transaction
+//! sender: vivian
+
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.rotate_consensus_pubkey(h"40");
+    LibraSystem.rotate_consensus_pubkey(h"50");
+
+    return;
+}
+
+// check: ABORT
+// check: 23
