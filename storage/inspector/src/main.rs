@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
-use libra_logger::prelude::*;
+use libra_logger::info;
 use libradb::{LibraDB, LibraDBTrait};
 use std::path::PathBuf;
 use transaction_builder::get_transaction_name;
@@ -119,7 +119,7 @@ fn list_txns(db: &LibraDB) {
 }
 
 fn main() {
-    let _logger = libra_logger::set_global_logger(false, None);
+    ::libra_logger::Logger::new().init();
 
     let opt = Opt::from_args();
 

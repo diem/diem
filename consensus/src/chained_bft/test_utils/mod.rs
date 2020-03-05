@@ -10,10 +10,9 @@ use consensus_types::{
     sync_info::SyncInfo,
 };
 use libra_crypto::HashValue;
-use libra_logger::{set_simple_logger, set_simple_logger_prefix};
+use libra_logger::Level;
 use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
 use std::sync::Arc;
-use termion::color::*;
 use tokio::runtime;
 
 mod mock_state_computer;
@@ -219,7 +218,7 @@ fn nocapture() -> bool {
 
 pub fn consensus_runtime() -> runtime::Runtime {
     if nocapture() {
-        set_simple_logger("consensus");
+        ::libra_logger::Logger::new().level(Level::Debug).init();
     }
     // setup timeout for tests
     crash_handler::setup_panic_handler();
@@ -234,8 +233,4 @@ pub fn consensus_runtime() -> runtime::Runtime {
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!")
-}
-
-pub fn with_smr_id(id: String) -> impl Fn() {
-    move || set_simple_logger_prefix(format!("{}[{}]{}", Fg(LightBlack), id, Fg(Reset)))
 }

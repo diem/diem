@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_config::config::{LoggerConfig, NodeConfig};
-use libra_logger::prelude::*;
+use libra_logger::{info, Logger};
 use libra_types::PeerId;
-use slog_scope::GlobalLoggerGuard;
 use std::path::Path;
 
 pub fn load_config_from_path(config_path: Option<&Path>) -> NodeConfig {
@@ -37,19 +36,11 @@ pub fn setup_metrics(peer_id: PeerId, node_config: &NodeConfig) {
     }
 }
 
-pub fn setup_executable(
-    config_path: Option<&Path>,
-    no_logging: bool,
-) -> (NodeConfig, Option<GlobalLoggerGuard>) {
-    crash_handler::setup_panic_handler();
-    let mut _logger = set_default_global_logger(no_logging, &LoggerConfig::default());
-
+pub fn setup_executable(config_path: Option<&Path>, no_logging: bool) -> NodeConfig {
     let config = load_config_from_path(config_path);
 
-    // Reset the global logger using config (for chan_size currently).
-    // We need to drop the global logger guard first before resetting it.
-    _logger = None;
-    let logger = set_default_global_logger(no_logging, &config.logger);
+    crash_handler::setup_panic_handler();
+    set_default_global_logger(no_logging, &config.logger);
     for network in &config.full_node_networks {
         setup_metrics(network.peer_id, &config);
     }
@@ -57,20 +48,17 @@ pub fn setup_executable(
         setup_metrics(network.peer_id, &config);
     }
 
-    (config, logger)
+    config
 }
 
-fn set_default_global_logger(
-    is_logging_disabled: bool,
-    logger_config: &LoggerConfig,
-) -> Option<GlobalLoggerGuard> {
+fn set_default_global_logger(is_logging_disabled: bool, logger_config: &LoggerConfig) {
     if is_logging_disabled {
-        return None;
+        return;
     }
 
-    Some(libra_logger::set_global_logger_with_level(
-        logger_config.is_async,
-        Some(logger_config.chan_size),
-        logger_config.filter_level,
-    ))
+    Logger::new()
+        .channel_size(logger_config.chan_size)
+        .is_async(logger_config.is_async)
+        .level(logger_config.level)
+        .init();
 }

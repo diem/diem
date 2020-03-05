@@ -3,131 +3,312 @@
 
 #![forbid(unsafe_code)]
 
-//! A default logger for Libra project.
-//!
-//! ## Usage
-//!
-//! ```rust, no_run
-//! use libra_logger::prelude::*;
-//!
-//! let _g = libra_logger::set_global_logger(false /* async */, Some(256));
-//! info!("Starting...");
-//! ```
+use env_logger::filter;
+pub use log::{debug, error, info, trace, warn, Level, Log, Metadata, Record};
+use std::{
+    env,
+    fmt::{self, Write},
+    sync::mpsc::{self, Receiver, RecvError, SyncSender, TrySendError},
+    thread,
+    time::SystemTime,
+};
 
-// This is really annoying. The `error!` and other macros in `slog_scope` depend on the
-// `slog_error!` and other macros exported by `slog`. They need to be exported into the environment
-// for the `slog_scope` macros to pick them up. However if you use `#[macro_use]` then the linter
-// complains about unused imports. Ugh.
-#[allow(unused_imports)]
-#[macro_use]
-extern crate slog;
-
-mod collector_serializer;
-mod glog_format;
-mod kv_categorizer;
-mod simple_logger;
-
-use crate::kv_categorizer::ErrorCategorizer;
-use glog_format::GlogFormat;
-use once_cell::sync::Lazy;
-use slog::{o, Discard, Drain, FilterLevel, Logger, Never};
-pub use slog::{slog_crit, slog_debug, slog_error, slog_info, slog_trace, slog_warn};
-use slog_async::Async;
-use slog_envlogger::{EnvLogger, LogBuilder};
-use slog_scope::GlobalLoggerGuard;
-pub use slog_scope::{crit, debug, error, info, trace, warn};
-use slog_term::{PlainDecorator, TermDecorator};
-use std::sync::Mutex;
-
-/// Logger prelude which includes all logging macros.
 pub mod prelude {
-    pub use slog::{slog_crit, slog_debug, slog_error, slog_info, slog_trace, slog_warn};
-    pub use slog_scope::{crit, debug, error, info, trace, warn};
+    pub use crate::{crit, debug, error, info, trace, warn};
 }
 
-pub use simple_logger::{set_simple_logger, set_simple_logger_prefix};
-
-/// Creates and sets the global logger at the default filter level.
-/// Caller must keep the returned guard alive.
-pub fn set_global_logger(async_drain: bool, chan_size: Option<usize>) -> GlobalLoggerGuard {
-    set_global_logger_with_level(async_drain, chan_size, FilterLevel::Info)
+// TODO Remove historical crit from code base since it isn't supported in Rust Log.
+#[macro_export]
+macro_rules! crit {
+    (target: $target:expr, $($arg:tt)+) => (
+        error!(target: $target, $($arg)+);
+    );
+    ($($arg:tt)+) => (
+        error!($($arg)+);
+    )
 }
 
-/// Creates and sets the global logger with the given filter level.
-pub fn set_global_logger_with_level(
-    async_drain: bool,
-    chan_size: Option<usize>,
-    filter_level: FilterLevel,
-) -> GlobalLoggerGuard {
-    let drain = GlogFormat::new(PlainDecorator::new(::std::io::stderr()), ErrorCategorizer).fuse();
-    let env_logger = create_env_logger_with_level(drain, filter_level);
-    let logger = get_logger(async_drain, chan_size, env_logger);
-    slog_scope::set_global_logger(logger)
+pub const CHANNEL_SIZE: usize = 256;
+const RUST_LOG: &str = "RUST_LOG";
+
+/// Logging framework for Libra that encapsulates a minimal dependency logger with support for
+/// environmental variable (RUST_LOG) and asynchronous logging.
+/// Note: only a single logger can be instantiated at a time. Repeated instantiates of the loggers
+/// will only adjust the global logging level but will not change the initial filter.
+pub struct Logger {
+    /// Channel size for sending logs to async handler.
+    channel_size: usize,
+    /// Only instantiate a logger if the environment is properly set
+    environment_only: bool,
+    /// Use a dedicated thread for logging.
+    is_async: bool,
+    /// The default logging level.
+    level: Level,
+    /// Override RUST_LOG even if set
+    override_rust_log: bool,
 }
 
-/// Creates a logger that respects RUST_LOG environment variable
-fn create_env_logger_with_level<D>(drain: D, level: FilterLevel) -> EnvLogger<D>
-where
-    D: Drain<Err = Never, Ok = ()> + Send + 'static,
-{
-    let mut builder = LogBuilder::new(drain);
-    // Have the default logging level be 'Info'
-    builder = builder.filter(None, level);
-
-    // Apply directives from the "RUST_LOG" env var
-    if let Ok(s) = ::std::env::var("RUST_LOG") {
-        builder = builder.parse(&s);
+impl Logger {
+    pub fn new() -> Self {
+        Self {
+            channel_size: CHANNEL_SIZE,
+            environment_only: false,
+            is_async: false,
+            level: Level::Info,
+            override_rust_log: false,
+        }
     }
-    builder.build()
-}
 
-/// slog_scope::set_global_logger() returns a guard, which must be kept in
-/// scope. If the guard is no longer scoped, Slog panics, thinking that
-/// set_global_logger() has not been called. As such, to support logging
-/// during tests, we define and keep these guards at global scope. This is
-/// ugly, but it works.
-static TESTING_ENVLOGGER_GUARD: Lazy<GlobalLoggerGuard> = Lazy::new(|| {
-    if ::std::env::var("RUST_LOG").is_ok() {
-        set_global_logger(false /* async */, None /* chan_size */)
-    } else {
-        let logger = Logger::root(Discard, o!());
-        slog_scope::set_global_logger(logger)
+    pub fn channel_size(&mut self, channel_size: usize) -> &mut Self {
+        self.channel_size = channel_size;
+        self
     }
-});
 
-/// Creates a root logger with test settings: does not do output if test passes.
-/// Caveat: cargo test does not capture output for non main thread. So this logger is not
-/// very useful for multithreading scenarios.
-static END_TO_END_TESTING_ENVLOGGER_GUARD: Lazy<GlobalLoggerGuard> = Lazy::new(|| {
-    let drain = GlogFormat::new(TermDecorator::new().build(), ErrorCategorizer).fuse();
-    let env_logger = create_env_logger_with_level(drain, FilterLevel::Debug);
-    let logger = Logger::root(Mutex::new(env_logger).fuse(), o!());
-    slog_scope::set_global_logger(logger)
-});
+    pub fn environment_only(&mut self, environment_only: bool) -> &mut Self {
+        self.environment_only = environment_only;
+        self
+    }
 
-/// Create and setup default global logger following the env-logger conventions,
-///  i.e. configured by environment variable RUST_LOG.
-/// This is useful to make logging optional in unit tests.
-pub fn try_init_for_testing() {
-    Lazy::force(&TESTING_ENVLOGGER_GUARD);
+    pub fn is_async(&mut self, is_async: bool) -> &mut Self {
+        self.is_async = is_async;
+        self
+    }
+
+    pub fn level(&mut self, level: Level) -> &mut Self {
+        self.level = level;
+        self
+    }
+
+    pub fn override_rust_log(&mut self, override_rust_log: bool) -> &mut Self {
+        self.override_rust_log = override_rust_log;
+        self
+    }
+
+    pub fn init(&mut self) {
+        self.internal_init(StderrWriter {});
+    }
+
+    fn internal_init<W: 'static + Writer>(&mut self, writer: W) {
+        // Always prefer RUST_LOG
+        let mut use_level = self.override_rust_log;
+        let mut filter_builder = filter::Builder::new();
+
+        if let Ok(s) = env::var(RUST_LOG) {
+            filter_builder.parse(&s);
+        } else if self.environment_only {
+            // Turn off in case there was an active logger
+            log::set_max_level(::log::LevelFilter::Off);
+            return;
+        } else {
+            use_level = true;
+        }
+
+        if use_level {
+            filter_builder.filter(None, self.level.to_level_filter());
+        }
+
+        let filter = filter_builder.build();
+        // Even if there is an existing logger, update the logging level
+        log::set_max_level(filter.filter());
+
+        if self.is_async {
+            let (sender, receiver) = mpsc::sync_channel(self.channel_size);
+
+            let client = AsyncLogClient { filter, sender };
+            if let Err(e) = log::set_boxed_logger(Box::new(client)) {
+                eprintln!("Unable to set logger: {}", e);
+                return;
+            };
+
+            let service = AsyncLogService { receiver, writer };
+
+            thread::spawn(move || service.log_handler());
+        } else {
+            let logger = SyncLogger { filter, writer };
+            if let Err(e) = log::set_boxed_logger(Box::new(logger)) {
+                eprintln!("Unable to set logger: {}", e);
+                return;
+            };
+        }
+    }
 }
 
-/// Create and setup default global logger for use in end to end testing.
-pub fn init_for_e2e_testing() {
-    Lazy::force(&END_TO_END_TESTING_ENVLOGGER_GUARD);
+impl Default for Logger {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
-fn get_logger<D>(is_async: bool, chan_size: Option<usize>, drain: D) -> Logger
-where
-    D: Drain<Err = Never, Ok = ()> + Send + 'static,
-{
-    if is_async {
-        let async_builder = match chan_size {
-            Some(chan_size_inner) => Async::new(drain).chan_size(chan_size_inner),
-            None => Async::new(drain),
+/// Provies the log::Log for Libra's synchronous logger
+struct SyncLogger<W> {
+    filter: filter::Filter,
+    writer: W,
+}
+
+impl<W: Writer> Log for SyncLogger<W> {
+    /// Determines if a log message with the specified metadata would be logged.
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        self.filter.enabled(metadata)
+    }
+
+    /// Logs the provided record but first evaluates the filters and then writes it.
+    fn log(&self, record: &Record) {
+        if !self.filter.matches(record) {
+            return;
+        }
+
+        match format(record) {
+            Ok(formatted) => self.writer.write(formatted),
+            Err(e) => self
+                .writer
+                .write(format!("Unable to format log {:?}: {}", record, e)),
         };
-        Logger::root(async_builder.build().fuse(), o!())
-    } else {
-        Logger::root(Mutex::new(drain).fuse(), o!())
+    }
+
+    /// In this logger, this doesn't do anything.
+    fn flush(&self) {}
+}
+
+/// Operations between the AsyncLogClient and AsyncLogService
+enum LogOp {
+    /// Send a line to log to the writer.
+    Log(String),
+}
+
+/// Provides the backend to the asynchronous interface for logging. This part actually writes the
+/// log to the writer.
+struct AsyncLogService<W> {
+    receiver: Receiver<LogOp>,
+    writer: W,
+}
+
+impl<W: Writer> AsyncLogService<W> {
+    /// Loop for handling logging
+    fn log_handler(mut self) {
+        loop {
+            if let Err(e) = self.handle_recv() {
+                // TODO write an error record and then exit
+                self.writer.write(format!("Unrecoverable error: {}", e));
+                return;
+            }
+        }
+    }
+
+    fn handle_recv(&mut self) -> Result<(), RecvError> {
+        match self.receiver.recv()? {
+            LogOp::Log(line) => self.writer.write(line),
+        };
+        Ok(())
+    }
+}
+
+/// Provides the log::Log interface for Libra's asynchronous logger
+struct AsyncLogClient {
+    filter: filter::Filter,
+    sender: SyncSender<LogOp>,
+}
+
+impl Log for AsyncLogClient {
+    /// Determines if a log message with the specified metadata would be logged.
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        self.filter.enabled(metadata)
+    }
+
+    /// Logs the provided record but first evaluates the filters and then sending it to the
+    /// AsyncLogService via a SyncSender.
+    fn log(&self, record: &Record) {
+        if !self.filter.matches(record) {
+            return;
+        }
+
+        let formatted = match format(record) {
+            Ok(formatted) => formatted,
+            Err(e) => format!("Unable to format log {:?} due to {}", record, e),
+        };
+        if let Err(e) = self.sender.try_send(LogOp::Log(formatted)) {
+            match e {
+                TrySendError::Disconnected(_) => {
+                    eprintln!("Unable to log {:?} due to {}", record, e)
+                }
+                TrySendError::Full(_) => eprintln!("Unable to log, queue full"),
+            }
+        };
+    }
+
+    /// In this logger, this doesn't do anything.
+    fn flush(&self) {}
+}
+
+/// Converts a record into a string representation:
+/// UNIX_TIMESTAMP LOG_LEVEL FILE:LINE MESSAGE
+/// Example:
+/// 1583392627 INFO common/libra-logger/src/lib.rs:261 Hello
+fn format(record: &Record) -> Result<String, fmt::Error> {
+    let mut buffer = String::new();
+
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("SystemTime before UNIX EPOCH!");
+
+    write!(buffer, "{} ", now.as_secs())?;
+    write!(buffer, "{} ", record.metadata().level())?;
+
+    if let Some(file) = record.file() {
+        write!(buffer, "{}", file)?;
+        if let Some(line) = record.line() {
+            write!(buffer, ":{}", line)?;
+        }
+        write!(buffer, " ")?;
+    }
+
+    write!(buffer, "{}", record.args())?;
+
+    Ok(buffer)
+}
+
+/// An trait encapsulating the operations required for writing logs.
+trait Writer: Send + Sync {
+    /// Write the log.
+    fn write(&self, log: String);
+}
+
+/// A struct for writing logs to stderr
+struct StderrWriter {}
+
+impl Writer for StderrWriter {
+    /// Write log to stderr
+    fn write(&self, log: String) {
+        eprintln!("{}", log);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, RwLock};
+
+    #[derive(Default)]
+    struct VecWriter {
+        logs: Arc<RwLock<Vec<String>>>,
+    }
+
+    impl Writer for VecWriter {
+        fn write(&self, log: String) {
+            self.logs.write().unwrap().push(log)
+        }
+    }
+
+    #[test]
+    fn verify_end_to_end() {
+        let writer = VecWriter::default();
+        let logs = writer.logs.clone();
+        Logger::new().override_rust_log(true).internal_init(writer);
+
+        assert_eq!(logs.read().unwrap().len(), 0);
+        info!("Hello");
+        assert_eq!(logs.read().unwrap().len(), 1);
+        let string = logs.write().unwrap().remove(0);
+        assert!(string.contains("INFO"));
+        assert!(string.ends_with("Hello"));
     }
 }

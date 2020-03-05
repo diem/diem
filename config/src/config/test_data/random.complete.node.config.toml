@@ -33,7 +33,7 @@ genesis_file_location = ""
 [logger]
 is_async = true
 chan_size = 256
-filter_level = "INFO"
+level = "INFO"
 
 [metrics]
 collection_interval_ms = 1000

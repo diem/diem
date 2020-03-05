@@ -114,7 +114,7 @@ fn generate_network_pub_keys_and_signer(peer_id: PeerId) -> (NetworkPublicKeys, 
 #[test]
 // Test behavior on receipt of an inbound DiscoveryMsg.
 fn inbound() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self.
@@ -229,7 +229,7 @@ fn inbound() {
 #[test]
 // Test that discovery actor sends a DiscoveryMsg to a neighbor on receiving a clock tick.
 fn outbound() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self peer.
@@ -297,7 +297,7 @@ fn outbound() {
 
 #[test]
 fn old_note_higher_epoch() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self peer.
@@ -387,7 +387,7 @@ fn old_note_higher_epoch() {
 
 #[test]
 fn old_note_max_epoch() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self.

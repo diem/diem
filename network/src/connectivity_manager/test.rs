@@ -11,6 +11,7 @@ use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::SinkExt;
 use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
+use libra_logger::info;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{io, num::NonZeroUsize};
 use tokio::runtime::Runtime;
@@ -181,7 +182,7 @@ async fn expect_dial_request(
 
 #[test]
 fn connect_to_seeds_on_startup() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     let seed_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
@@ -289,7 +290,7 @@ fn connect_to_seeds_on_startup() {
 
 #[test]
 fn addr_change() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -394,7 +395,7 @@ fn addr_change() {
 
 #[test]
 fn lost_connection() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -468,7 +469,7 @@ fn lost_connection() {
 
 #[test]
 fn disconnect() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -534,7 +535,7 @@ fn disconnect() {
 // Tests that connectivity manager retries dials and disconnects on failure.
 #[test]
 fn retry_on_failure() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -637,7 +638,7 @@ fn retry_on_failure() {
 // Tests that if we dial an already connected peer or disconnect from an already disconnected
 // peer, connectivity manager does not send any additional dial or disconnect requests.
 fn no_op_requests() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -736,7 +737,7 @@ fn no_op_requests() {
 
 #[test]
 fn backoff_on_failure() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let eligible_peers = vec![];
     let seed_peers = HashMap::new();
@@ -821,7 +822,7 @@ fn backoff_on_failure() {
 // multiple listen addresses and some of them don't work.
 #[test]
 fn multiple_addrs_basic() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -890,7 +891,7 @@ fn multiple_addrs_basic() {
 // retry more times than there are addresses.
 #[test]
 fn multiple_addrs_wrapping() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -973,7 +974,7 @@ fn multiple_addrs_wrapping() {
 // multiple listen addrs and then that peer advertises a smaller number of addrs.
 #[test]
 fn multiple_addrs_shrinking() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];

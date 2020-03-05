@@ -179,7 +179,7 @@ async fn assert_peer_disconnected_event<TSubstream>(
 
 #[tokio::test]
 async fn peer_open_substream() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let (
         peer,
         mut peer_handle,
@@ -224,7 +224,7 @@ async fn peer_open_substream() {
 // we won't deadlock.
 #[tokio::test]
 async fn peer_open_substream_simultaneous() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let (
         (
             peer_a,
@@ -306,7 +306,7 @@ async fn peer_disconnect_request() {
 
 #[tokio::test]
 async fn peer_disconnect_connection_lost() {
-    libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let (
         peer,
         peer_handle,

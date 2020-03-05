@@ -10,7 +10,7 @@ use crate::{
 };
 use bytes::Bytes;
 use futures::{sink::SinkExt, stream::StreamExt};
-use libra_logger::prelude::*;
+use libra_logger::debug;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::compat::IoCompat;
@@ -84,7 +84,7 @@ async fn expect_open_substream_request<TSubstream>(
 
 #[test]
 fn test_inbound_substream() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     let (_ds_requests_tx, mut ds_notifs_rx, mut peer_notifs_tx, _peer_reqs_rx) =
@@ -182,7 +182,7 @@ fn test_outbound_single_protocol() {
 
 #[test]
 fn test_outbound_multiple_protocols() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =
@@ -236,7 +236,7 @@ fn test_outbound_multiple_protocols() {
 
 #[test]
 fn test_outbound_not_connected() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =
@@ -295,7 +295,7 @@ fn test_outbound_not_connected() {
 
 #[test]
 fn test_outbound_connection_closed() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =

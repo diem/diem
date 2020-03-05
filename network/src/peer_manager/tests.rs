@@ -197,7 +197,7 @@ async fn check_correct_connection_is_live(
 
 #[test]
 fn peer_manager_simultaneous_dial_two_inbound() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.

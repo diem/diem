@@ -32,7 +32,7 @@ struct TestEnvironment {
 
 impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
-        ::libra_logger::init_for_e2e_testing();
+        ::libra_logger::Logger::new().init();
         let mut template = NodeConfig::default();
         template.state_sync.chunk_limit = 2;
         template.vm_config.publishing_options = VMPublishingOption::Open;

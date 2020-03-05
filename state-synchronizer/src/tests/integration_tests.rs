@@ -16,7 +16,6 @@ use libra_crypto::{
     x25519,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
-use libra_logger::set_simple_logger;
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
     crypto_proxies::{
@@ -206,7 +205,7 @@ impl SynchronizerEnv {
     }
 
     fn new(num_peers: usize) -> Self {
-        set_simple_logger("state-sync");
+        ::libra_logger::Logger::new().environment_only(true).init();
         let runtime = Runtime::new().unwrap();
         let (signers, network_signers, public_keys) = Self::initial_setup(num_peers);
         let peer_ids = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();

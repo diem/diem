@@ -313,7 +313,7 @@ fn bench_tcp_noise_muxer_send(b: &mut Bencher, msg_len: &usize, server_addr: Mul
 ///    benchmarks `remote_tcp`, `remote_tcp+noise`, `remote_tcp+muxer`, and
 ///    `remote_tcp+noise+muxer` respectively.
 fn socket_muxer_bench(c: &mut Criterion) {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let rt = Runtime::new().unwrap();
     let executor = rt.handle().clone();
