@@ -4,9 +4,11 @@
 use crate::{commands::is_address, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use anyhow::{bail, ensure, format_err, Error, Result};
+use libra_crypto::x25519::X25519StaticPublicKey;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
+    ValidKey, ValidKeyStringExt,
 };
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
@@ -33,6 +35,7 @@ use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
 };
+use parity_multiaddr::Multiaddr;
 use rust_decimal::Decimal;
 use std::{
     collections::HashMap,
@@ -44,6 +47,7 @@ use std::{
     str::{self, FromStr},
     thread, time,
 };
+use transaction_builder::encode_register_validator_script;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
 const GAS_UNIT_PRICE: u64 = 0;
@@ -331,7 +335,7 @@ impl ClientProxy {
     pub fn add_validator(&mut self, space_delim_strings: &[&str], is_blocking: bool) -> Result<()> {
         ensure!(
             space_delim_strings.len() == 2,
-            "Invalid number of arguments for removing validator"
+            "Invalid number of arguments for adding validator"
         );
         let account_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
         match self.faucet_account {
@@ -341,6 +345,53 @@ impl ClientProxy {
             ),
             None => unimplemented!(),
         }
+    }
+
+    /// Register an account as validator candidate with ValidatorConfig
+    pub fn register_validator(
+        &mut self,
+        space_delim_strings: &[&str],
+        is_blocking: bool,
+    ) -> Result<()> {
+        ensure!(
+            space_delim_strings.len() == 9,
+            "Invalid number of arguments for registering validator"
+        );
+        let address = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
+        let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
+        let network_signing_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[4])?;
+        let network_identity_key =
+            X25519StaticPublicKey::from_encoded_string(space_delim_strings[5])?;
+        let network_address = Multiaddr::from_str(space_delim_strings[6])?;
+        let fullnode_identity_key =
+            X25519StaticPublicKey::from_encoded_string(space_delim_strings[7])?;
+        let fullnode_network_address = Multiaddr::from_str(space_delim_strings[8])?;
+        let mut sender = Self::get_account_data_from_address(
+            &mut self.client,
+            address,
+            true,
+            Some(KeyPair::from(private_key)),
+        )?;
+        let program = encode_register_validator_script(
+            consensus_public_key.to_bytes().to_vec(),
+            network_signing_key.to_bytes().to_vec(),
+            network_identity_key.to_bytes(),
+            network_address.to_vec(),
+            fullnode_identity_key.to_bytes(),
+            fullnode_network_address.to_vec(),
+        );
+        let req = self.create_submit_transaction_req(
+            TransactionPayload::Script(program),
+            &sender,
+            None,
+            None,
+        )?;
+        self.client.submit_transaction(Some(&mut sender), &req)?;
+        if is_blocking {
+            self.wait_for_transaction(sender.address, sender.sequence_number);
+        }
+        Ok(())
     }
 
     /// Waits for the next transaction for a specific address and prints it
