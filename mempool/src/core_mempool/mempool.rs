@@ -57,9 +57,11 @@ impl Mempool {
         sequence_number: u64,
         is_rejected: bool,
     ) {
-        debug!(
+        trace!(
             "[Mempool] Removing transaction from mempool: {}:{}:{}",
-            sender, sequence_number, is_rejected
+            sender,
+            sequence_number,
+            is_rejected
         );
         self.log_latency(sender.clone(), sequence_number, "e2e.latency");
         self.metrics_cache.remove(&(*sender, sequence_number));
@@ -107,7 +109,7 @@ impl Mempool {
         db_sequence_number: u64,
         timeline_state: TimelineState,
     ) -> MempoolStatus {
-        debug!(
+        trace!(
             "[Mempool] Adding transaction to mempool: {}:{}:{}",
             &txn.sender(),
             txn.sequence_number(),
