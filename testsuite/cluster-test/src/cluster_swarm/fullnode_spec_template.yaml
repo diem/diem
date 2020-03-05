@@ -30,6 +30,40 @@ spec:
       if [[ {delete_data} = true ]]; then
         rm -rf /opt/libra/data/*
       fi
+      if [[ {fluentbit_enabled} = true ]]; then
+        libra_log_file="libra.log"
+      else
+        libra_log_file="non_existent_file"
+      fi
+      cat << EOF > /opt/libra/data/fluent-bit.conf
+      [SERVICE]
+          Flush         5
+          Log_Level     info
+          Daemon        off
+
+      [INPUT]
+          Name              tail
+          Tag               validator
+          Path              /opt/libra/data/${{libra_log_file}}
+          Mem_Buf_Limit     5MB
+          Refresh_Interval  10
+          Skip_Long_Lines   On
+
+      [FILTER]
+          Name record_modifier
+          Match *
+          Record kubernetes.pod_name fullnode-{validator_index}-{fullnode_index}
+
+      [OUTPUT]
+          Name            es
+          Match           *
+          Host            elasticsearch-master
+          Port            9200
+          Logstash_Format On
+          Replace_Dots    Off
+          Retry_Limit     False
+          Logstash_Prefix kubernetes_cluster
+      EOF
       CFG_SEED_PEER_IP=$(kubectl get pod/validator-{validator_index} -o=jsonpath='{{.status.podIP}}');
       while [ -z "${{CFG_SEED_PEER_IP}}" ]; do
         sleep 5;
@@ -38,6 +72,13 @@ spec:
       done;
       echo -n "${{CFG_SEED_PEER_IP}}" > /opt/libra/data/seed_peer_ip
   containers:
+  - name: fluent-bit
+    image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/fluent-bit:1.3.9
+    imagePullPolicy: IfNotPresent
+    command: ["/fluent-bit/bin/fluent-bit", "-c", "/opt/libra/data/fluent-bit.conf"]
+    volumeMounts:
+    - mountPath: /opt/libra/data
+      name: data
   - name: main
     image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_validator:{image_tag}
     imagePullPolicy: Always
