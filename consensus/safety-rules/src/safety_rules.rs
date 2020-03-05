@@ -16,6 +16,7 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use libra_crypto::hash::HashValue;
+use libra_logger::debug;
 use libra_types::{
     block_info::BlockInfo,
     crypto_proxies::{Signature, ValidatorSigner},
@@ -122,22 +123,30 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     /// @TODO verify QC correctness
     /// @TODO verify epoch on vote proposal
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal<T>) -> Result<Vote, Error> {
+        debug!("Incoming vote proposal to sign.");
         let proposed_block = vote_proposal.block();
 
-        if proposed_block.round() <= self.persistent_storage.last_voted_round()? {
+        let last_voted_round = self.persistent_storage.last_voted_round()?;
+        if proposed_block.round() <= last_voted_round {
+            debug!(
+                "Vote proposal is old {} <= {}",
+                proposed_block.round(),
+                last_voted_round
+            );
             return Err(Error::OldProposal {
                 proposal_round: proposed_block.round(),
                 last_voted_round: self.persistent_storage.last_voted_round()?,
             });
         }
 
-        let respects_preferred_block = proposed_block.quorum_cert().certified_block().round()
-            >= self.persistent_storage.preferred_round()?;
-
-        if !respects_preferred_block {
-            return Err(Error::ProposalRoundLowerThenPreferredBlock {
-                preferred_round: self.persistent_storage.preferred_round()?,
-            });
+        let preferred_round = self.persistent_storage.preferred_round()?;
+        if proposed_block.quorum_cert().certified_block().round() < preferred_round {
+            debug!(
+                "Vote proposal certified round is lower than preferred round, {} < {}",
+                proposed_block.quorum_cert().certified_block().round(),
+                preferred_round,
+            );
+            return Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round });
         }
 
         let new_tree = vote_proposal
@@ -174,6 +183,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     /// @TODO verify QC correctness
     /// @TODO verify QC matches preferred round
     fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
+        debug!("Incoming proposal to sign.");
         Ok(Block::new_proposal_from_block_data(
             block_data,
             &self.validator_signer,
@@ -183,6 +193,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     /// @TODO only sign a timeout if it matches last_voted_round or last_voted_round + 1
     /// @TODO update last_voted_round
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Signature, Error> {
+        debug!("Incoming timeout message to sign.");
         Ok(timeout.sign(&self.validator_signer))
     }
 }
