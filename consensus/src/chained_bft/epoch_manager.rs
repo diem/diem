@@ -256,6 +256,8 @@ impl<T: Payload> EpochManager<T> {
     }
 
     async fn start_epoch_with_recovery_data(&mut self, recovery_data: RecoveryData<T>) {
+        // Release the previous EventProcessor, especially the SafetyRule client
+        self.processor = None;
         let validators = recovery_data.validators();
         let epoch = self.epoch();
         counters::EPOCH.set(epoch as i64);
