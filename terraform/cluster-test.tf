@@ -4,9 +4,10 @@ variable "cluster_test" {
 }
 
 resource "aws_iam_role" "cluster-test-runner" {
-  name               = "ClusterTestRunner-Role-${var.region}-${terraform.workspace}"
-  path               = var.iam_path
-  assume_role_policy = data.aws_iam_policy_document.instance-assume-role.json
+  name                 = "ClusterTestRunner-Role-${var.region}-${terraform.workspace}"
+  path                 = var.iam_path
+  assume_role_policy   = data.aws_iam_policy_document.instance-assume-role.json
+  permissions_boundary = var.permissions_boundary_policy
 }
 
 data "aws_caller_identity" "current" {}
