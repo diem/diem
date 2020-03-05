@@ -10,9 +10,10 @@ data "aws_iam_policy_document" "instance-assume-role" {
 }
 
 resource "aws_iam_role" "ecsInstanceRole" {
-  name               = "${terraform.workspace}-ecsInstanceRole"
-  path               = var.iam_path
-  assume_role_policy = data.aws_iam_policy_document.instance-assume-role.json
+  name                 = "${terraform.workspace}-ecsInstanceRole"
+  path                 = var.iam_path
+  assume_role_policy   = data.aws_iam_policy_document.instance-assume-role.json
+  permissions_boundary = var.permissions_boundary_policy
 }
 
 resource "aws_iam_role_policy_attachment" "ecsInstanceRole_" {
@@ -53,9 +54,10 @@ data "aws_iam_policy_document" "task-assume-role" {
 }
 
 resource "aws_iam_role" "ecsTaskExecutionRole" {
-  name               = "${terraform.workspace}-ecsTaskExecutionRole"
-  path               = var.iam_path
-  assume_role_policy = data.aws_iam_policy_document.task-assume-role.json
+  name                 = "${terraform.workspace}-ecsTaskExecutionRole"
+  path                 = var.iam_path
+  assume_role_policy   = data.aws_iam_policy_document.task-assume-role.json
+  permissions_boundary = var.permissions_boundary_policy
 }
 
 resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_" {

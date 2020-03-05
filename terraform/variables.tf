@@ -197,3 +197,8 @@ variable "restore_vol_id" {
   default     = ""
   description = "volume id to restore validator data from"
 }
+
+variable "permissions_boundary_policy" {
+  default     = ""
+  description = "ARN of IAM policy to set as permissions boundary on created roles"
+}
