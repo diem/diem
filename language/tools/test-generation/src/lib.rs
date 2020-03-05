@@ -22,12 +22,12 @@ use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use libra_config::config::VMConfig;
+use libra_logger::{debug, error, info};
 use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray, vm_error::StatusCode};
 use libra_vm::LibraVM;
 use move_vm_types::values::Value;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use slog_scope::{debug, error, info};
 use std::{fs, io::Write, panic, thread};
 use utils::module_generation::generate_module;
 use vm::{

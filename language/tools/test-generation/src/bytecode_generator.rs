@@ -10,8 +10,8 @@ use crate::{
     control_flow_graph::CFG,
     summaries,
 };
+use libra_logger::{debug, error, warn};
 use rand::{rngs::StdRng, Rng};
-use slog_scope::{debug, error, warn};
 use vm::{
     access::ModuleAccess,
     file_format::{

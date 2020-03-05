@@ -19,13 +19,9 @@ hex = "0.4.2"
 getrandom = "0.1.13"
 crossbeam-channel = "0.4.2"
 
-slog = { version = "2.5.0", features = ["max_level_debug", "release_max_level_debug"] }
-slog-term = "2.4.1"
-slog-scope = "4.0"
-slog-envlogger = "2.1.0"
-
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 libra-config = { path = "../../../config", version = "0.1.0" }
+libra-logger = { path = "../../../common/logger", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-vm-cache = { path = "../../move-vm/cache", version = "0.1.0" }
