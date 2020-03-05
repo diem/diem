@@ -9,5 +9,4 @@ fun main() {
     0x0::Transaction::assert(overflow == 999, 1);
 }
 
-// check: ABORTED
-// check: 16
+// check: ARITHMETIC_ERROR

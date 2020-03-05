@@ -9,5 +9,4 @@ fun main() {
     0x0::Transaction::assert(FixedPoint32::get_raw_value(f1) == 999, 1);
 }
 
-// check: ABORTED
-// check: 16
+// check: ARITHMETIC_ERROR

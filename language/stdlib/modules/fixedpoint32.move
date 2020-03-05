@@ -19,8 +19,9 @@ module FixedPoint32 {
         // The unscaled product has 32 fractional bits (from the multiplier)
         // so rescale it by shifting away the low bits.
         let product = unscaled_product >> 32;
-        // If the multiplier is larger than 1.0, this can overflow; check that.
-        Transaction::assert((product >> 64) == 0, 16);
+        // Convert back to u64. If the multiplier is larger than 1.0,
+        // the value may be too large, which will cause the cast to fail
+        // with an arithmetic error.
         (product as u64)
     }
 
@@ -34,8 +35,9 @@ module FixedPoint32 {
         // Divide and convert the quotient to 64 bits. If the divisor is zero,
         // this will fail with a divide-by-zero error.
         let quotient = scaled_value / (divisor.value as u128);
-        // If the divisor is less than 1.0, this can overflow; check that.
-        Transaction::assert((quotient >> 64) == 0, 16);
+        // Convert back to u64. If the divisor is less than 1.0,
+        // the value may be too large, which will cause the cast to fail
+        // with an arithmetic error.
         (quotient as u64)
     }
 
@@ -57,9 +59,8 @@ module FixedPoint32 {
         // but if you really want a ratio of zero, it is easy to create that
         // from a raw value.
         Transaction::assert(quotient != 0 || numerator == 0, 16);
-        // This can overflow because the non-fractional part of the quotient
-        // only has 32 bits; check that.
-        Transaction::assert((quotient >> 64) == 0, 16);
+        // Return the quotient as a fixed-point number. The cast will fail
+        // with an arithmetic error if the number is too large.
         T { value: (quotient as u64) }
     }
 
