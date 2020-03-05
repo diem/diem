@@ -1,7 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{runtime::bootstrap, tests::mock_db::MockLibraDB};
+use crate::{
+    runtime::bootstrap,
+    tests::mock_db::MockLibraDB,
+    views::{AccountView, BlockMetadata},
+};
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
 use libra_config::utils;
@@ -236,7 +240,15 @@ proptest! {
                         response.as_object().unwrap().get("result").unwrap().clone(),
                     )
                     .unwrap();
-                    assert_eq!(result.get("balance").unwrap().as_u64(), Some(account_resources.get(&id).unwrap().balance()));
+                    let account_resource = account_resources.get(&id).unwrap();
+                    assert_eq!(result.get("balance").unwrap().as_u64(), Some(account_resource.balance()));
+
+                    // deserialize
+                    let result_view: AccountView =
+                        serde_json::from_value(response.get("result").unwrap().clone()).unwrap();
+                    let expected_view = AccountView::new(account_resource);
+                    assert_eq!(result_view, expected_view);
+                    assert_eq!(result_view.balance(), account_resource.balance());
                 }
                 assert_eq!(ids, ids_expected);
             }
@@ -260,7 +272,14 @@ proptest! {
         let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_metadata", "params": [], "id": 1});
         let resp = client.post(&url).json(&request).send().unwrap();
         assert_eq!(resp.status(), 200);
-        let data = fetch_result(resp.json().unwrap());
+        let resp_json: JsonMap = resp.json().unwrap();
+
+        // deserialize
+        let result_view: BlockMetadata = serde_json::from_value(resp_json.get("result").unwrap().clone()).unwrap();
+        assert_eq!(result_view.version, actual_version);
+        assert_eq!(result_view.timestamp, actual_timestamp);
+
+        let data = fetch_result(resp_json);
         assert_eq!(data.get("version").unwrap().as_u64(), Some(actual_version));
         assert_eq!(data.get("timestamp").unwrap().as_u64(), Some(actual_timestamp));
     }
