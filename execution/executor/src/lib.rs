@@ -24,6 +24,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
+    contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
