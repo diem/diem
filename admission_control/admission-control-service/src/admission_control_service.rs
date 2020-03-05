@@ -105,7 +105,7 @@ impl AdmissionControl for AdmissionControlService {
         &self,
         request: tonic::Request<SubmitTransactionRequest>,
     ) -> Result<tonic::Response<SubmitTransactionResponse>, tonic::Status> {
-        debug!("[GRPC] AdmissionControl::submit_transaction");
+        trace!("[GRPC] AdmissionControl::submit_transaction");
         counters::REQUESTS
             .with_label_values(&["submit_transaction"])
             .inc();
@@ -177,7 +177,7 @@ impl AdmissionControl for AdmissionControlService {
         &self,
         request: tonic::Request<UpdateToLatestLedgerRequest>,
     ) -> Result<tonic::Response<UpdateToLatestLedgerResponse>, tonic::Status> {
-        debug!("[GRPC] AdmissionControl::update_to_latest_ledger");
+        trace!("[GRPC] AdmissionControl::update_to_latest_ledger");
         counters::REQUESTS
             .with_label_values(&["update_to_latest_ledger"])
             .inc();

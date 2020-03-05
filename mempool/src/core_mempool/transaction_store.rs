@@ -216,7 +216,7 @@ impl TransactionStore {
                     }
                 }
             }
-            debug!("[Mempool] txns for account {:?}. Current sequence_number: {}, length: {}, parking lot: {}",
+            trace!("[Mempool] txns for account {:?}. Current sequence_number: {}, length: {}, parking lot: {}",
                 address, current_sequence_number, txns.len(), parking_lot_txns,
             );
         }
