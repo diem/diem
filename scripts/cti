@@ -16,6 +16,10 @@ K8S=""
 K8S_POOL_SIZE="3"
 K8S_CONTEXT_PATTERN='arn:aws:eks:us-west-2:853397791086:cluster/CLUSTERNAME-k8s-testnet'
 
+# Colorize Output
+RESTORE=$(echo -en '\001\033[0m\002')
+BLUE=$(echo -en '\001\033[01;34m\002')
+
 join_args() {
   retval_join_args=""
   for var in $*
@@ -217,10 +221,13 @@ else
   kubectl --context=${context} apply -f ${specfile} || (echo "Failed to create cluster-test pod"; exit 1)
   kube_wait_pod ${pod_name} ${context}
   echo "**********"
-  echo "Copy of this output: $OUTPUT_TEE"
-  echo "Dashboard: http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/"
+  echo "${BLUE}Dashboard:${RESTORE} http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/"
   echo "Dashboard Username: admin. Password: $(kubectl get secret grafana-admin-credentials -o jsonpath="{.data.admin-password}" | base64 --decode)"
-  echo "Kibana: http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/"
+  echo "${BLUE}'validator-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:validator-0),type:phrase),query:(match:(kubernetes.pod_name:(query:validator-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
+  echo
+  echo "${BLUE}'fullnode-0-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:fullnode-0-0),type:phrase),query:(match:(kubernetes.pod_name:(query:fullnode-0-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
+  echo
+  echo "${BLUE}Note:${RESTORE} Because of log volume, logs for only some of the validators and fullnodes are streamed to Kibana."
   echo "**********"
   kubectl --context=${context} logs -f "${pod_name}" | tee $OUTPUT_TEE
 fi
