@@ -23,7 +23,7 @@ move-lang = { path = "../move-lang", version = "0.0.1" }
 move-vm-runtime = { path = "../move-vm/runtime", version = "0.1.0" }
 move-vm-state = { path = "../move-vm/state", version = "0.1.0" }
 vm = { path = "../vm", version = "0.1.0" }
-vm-runtime = { path = "../vm/vm-runtime", version = "0.1.0" }
+libra-vm = { path = "../libra-vm", version = "0.1.0" }
 
 [[bench]]
 name = "benchmarks"

@@ -33,7 +33,7 @@ storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 storage-proto = { path = "../../storage/storage-proto", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
-vm-runtime = { path = "../../language/vm/vm-runtime", version = "0.1.0" }
+libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9.2"

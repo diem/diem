@@ -25,7 +25,7 @@ move-vm-types = { path = "../move-vm/types", version = "0.1.0" }
 transaction-builder = { path = "../transaction-builder", version = "0.1.0", features = ["fuzzing"]}
 vm = { path = "../vm", version = "0.1.0" }
 vm-genesis = { path = "../tools/vm-genesis", version = "0.1.0" }
-vm-runtime = { path = "../vm/vm-runtime", version = "0.1.0" }
+libra-vm = { path = "../libra-vm", version = "0.1.0" }
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }

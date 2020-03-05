@@ -13,13 +13,13 @@ use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_metrics::metric_server;
+use libra_vm::LibraVM;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
 use state_synchronizer::StateSynchronizer;
 use std::{collections::HashMap, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::{init_libra_db, start_storage_service_with_db};
 use tokio::runtime::{Builder, Runtime};
-use vm_runtime::LibraVM;
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;

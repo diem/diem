@@ -30,7 +30,7 @@ libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
-vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
+libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
 
 [dev-dependencies]
 bytes = "0.5.4"

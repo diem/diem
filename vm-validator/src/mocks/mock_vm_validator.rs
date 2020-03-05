@@ -9,8 +9,8 @@ use libra_types::{
     transaction::SignedTransaction,
     vm_error::{StatusCode, VMStatus},
 };
+use libra_vm::VMVerifier;
 use std::convert::TryFrom;
-use vm_runtime::VMVerifier;
 
 #[derive(Clone)]
 pub struct MockVMValidator;

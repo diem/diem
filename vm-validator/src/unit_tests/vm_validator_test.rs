@@ -11,13 +11,13 @@ use libra_types::{
     transaction::{Module, Script, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_error::StatusCode,
 };
+use libra_vm::LibraVM;
 use rand::SeedableRng;
 use std::{sync::Arc, u64};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::Runtime;
 use transaction_builder::encode_transfer_script;
-use vm_runtime::LibraVM;
 
 struct TestValidator {
     _storage: Runtime,

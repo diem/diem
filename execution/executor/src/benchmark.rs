@@ -15,6 +15,7 @@ use libra_types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{RawTransaction, Script, SignedTransaction, Transaction},
 };
+use libra_vm::LibraVM;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::BTreeMap,
@@ -24,7 +25,6 @@ use std::{
 };
 use storage_client::{StorageRead, StorageReadServiceClient};
 use transaction_builder::{encode_create_account_script, encode_transfer_script};
-use vm_runtime::LibraVM;
 
 struct AccountData {
     private_key: Ed25519PrivateKey,

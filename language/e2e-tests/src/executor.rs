@@ -24,10 +24,10 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
+use libra_vm::{LibraVM, VMExecutor, VMVerifier};
 use stdlib::{stdlib_modules, StdLibOptions};
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
-use vm_runtime::{LibraVM, VMExecutor, VMVerifier};
 
 /// Provides an environment to run a VM instance.
 ///

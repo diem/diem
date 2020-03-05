@@ -28,7 +28,7 @@ parity-multiaddr = "0.7.2"
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 transaction-builder = { path = "../../transaction-builder", version = "0.1.0"}
 vm = { path = "../../vm", version = "0.1.0" }
-vm-runtime = { path = "../../vm/vm-runtime", version = "0.1.0" }
+libra-vm = { path = "../../libra-vm", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9.3"

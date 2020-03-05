@@ -35,6 +35,7 @@ use libra_types::{
     },
     write_set::{WriteOp, WriteSet},
 };
+use libra_vm::VMExecutor;
 use once_cell::sync::Lazy;
 use scratchpad::{ProofRead, SparseMerkleTree};
 use serde::{Deserialize, Serialize};
@@ -47,7 +48,6 @@ use std::{
 use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
 use storage_proto::TreeState;
 use tokio::runtime::Runtime;
-use vm_runtime::VMExecutor;
 
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
     Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));
