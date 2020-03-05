@@ -18,6 +18,7 @@ libra-types = { path = "../../types", version = "0.1.0" }
 [dev-dependencies]
 rand = "0.6.5"
 proptest = "0.9.1"
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []

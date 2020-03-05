@@ -19,20 +19,12 @@ executors:
     resource_class: small
 
 commands:
-  rust_setup:
-    description: Set rustc version
-    steps:
-      - run:
-          name: Set rustc version
-          command: |
-            rustup default stable
-            rustup update stable
   print_versions:
     description: Version Info
     steps:
       - run:
           name: Version Info
-          command: rustc --version; cargo --version; rustup --version
+          command: rustup --version
   env_setup:
     description: Environment Setup
     steps:
@@ -44,6 +36,7 @@ commands:
             echo 'export LIBRA_DUMP_LOGS=1' >> $BASH_ENV
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
             echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
+            echo 'export RUST_NIGHTLY=nightly-2020-03-18' >> $BASH_ENV
   install_deps:
     steps:
       - run:
@@ -52,6 +45,15 @@ commands:
             sudo apt-get update
             sudo apt-get install -y cmake curl clang llvm
             rustup component add clippy rustfmt
+            rustup toolchain install $RUST_NIGHTLY
+      - run:
+          name: Set cargo Environment
+          command: |
+            # Use nightly version of cargo to access the new feature resolver
+            echo 'export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)' >> $BASH_ENV
+            # Turn on the experimental feature resolver in cargo. See:
+            # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
+            echo 'export CARGOFLAGS=-Zfeatures=all' >> $BASH_ENV
   install_code_coverage_deps:
     steps:
       - run:
@@ -59,7 +61,7 @@ commands:
           command: |
             sudo apt-get update
             sudo apt-get install lcov
-            cargo install --force grcov
+            $CARGO $CARGOFLAGS install --force grcov
   install_docker_linter:
     steps:
       - run:
@@ -68,11 +70,6 @@ commands:
              export HADOLINT=${HOME}/hadolint
              export HADOLINT_VER=v1.17.4
              curl -sL -o ${HADOLINT} "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VER}/hadolint-$(uname -s)-$(uname -m)" && chmod 700 ${HADOLINT}
-  install_rust_nightly_toolchain:
-    steps:
-      - run:
-          name: Install nightly toolchain for features not in beta/stable
-          command: rustup install nightly
   find_dockerfile_changes:
     steps:
       - run:
@@ -106,7 +103,6 @@ commands:
   build_setup:
     steps:
       - checkout
-      - rust_setup
       - print_versions
       - env_setup
       - install_deps
@@ -127,7 +123,7 @@ jobs:
           command: ./scripts/git-checks.sh
       - run:
           name: Fetch workspace dependencies over network
-          command: cargo fetch
+          command: $CARGO $CARGOFLAGS fetch
       - save_cargo_package_cache
       - persist_to_workspace:
           root: /home/circleci/project
@@ -148,20 +144,20 @@ jobs:
       - restore_cargo_package_cache
       - run:
           name: cargo lint
-          command: cargo x lint
+          command: $CARGO $CARGOFLAGS x lint
       - run:
           name: cargo clippy
-          command: cargo xclippy --workspace --all-targets
+          command: $CARGO $CARGOFLAGS xclippy --workspace --all-targets
       - run:
           name: cargo fmt
-          command: cargo xfmt --check
+          command: $CARGO $CARGOFLAGS xfmt --check
       - run:
           name: cargo guppy
           command: |
-            cargo install cargo-guppy \
+            $CARGO $CARGOFLAGS install cargo-guppy \
               --git http://github.com/calibra/cargo-guppy \
               --rev 8b2bc45c0cd6323a7a2b8170ddad6d2a5b79047b
-            [[ -z $(cargo guppy dups --target x86_64-unknown-linux-gnu \
+            [[ -z $($CARGO $CARGOFLAGS guppy dups --target x86_64-unknown-linux-gnu \
               --kind directthirdparty) ]]
   build-dev:
     executor: build-executor
@@ -172,19 +168,19 @@ jobs:
           at: /home/circleci/project
       - restore_cargo_package_cache
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p libra-swarm
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p libra-swarm
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p cluster-test
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p cluster-test
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p libra-fuzzer
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p libra-fuzzer
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p language_benchmarks
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p language_benchmarks
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p cost-synthesis
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p cost-synthesis
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p test-generation
       - build_teardown
   build-release:
     executor: build-executor
@@ -196,7 +192,7 @@ jobs:
       - restore_cargo_package_cache
       - run:
           name: Build release
-          command: RUST_BACKTRACE=1 cargo build -j 16 --release
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 --release
       - build_teardown
   build-e2e-test:
     executor: build-executor
@@ -209,7 +205,7 @@ jobs:
       - run:
           name: Find all e2e tests
           command: |
-            cargo x test --package testsuite -- --list | grep "::" | \
+            $CARGO $CARGOFLAGS x test --package testsuite -- --list | grep "::" | \
               sed 's/: .*$//' > e2e_tests
             cat e2e_tests
       - persist_to_workspace:
@@ -246,7 +242,7 @@ jobs:
                 RUST_BACKTRACE=1 $CI_TIMEOUT $libratest $target \
                   --test-threads 1 --exact --nocapture
               else
-                RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test $target \
+                RUST_BACKTRACE=1 $CI_TIMEOUT $CARGO $CARGOFLAGS x test $target \
                   --package testsuite -- --test-threads 1 --exact --nocapture
               fi
             done
@@ -262,7 +258,7 @@ jobs:
       - run:
           name: Run all unit tests
           command: |
-            RUST_BACKTRACE=1 $CI_TIMEOUT cargo test \
+            RUST_BACKTRACE=1 $CI_TIMEOUT $CARGO $CARGOFLAGS test \
               --all-features \
               --workspace \
               --exclude libra-node \
@@ -281,7 +277,7 @@ jobs:
           name: Run crypto unit tests
           command: |
             cd crypto/crypto && \
-            RUST_BACKTRACE=1 cargo test \
+            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS test \
               --features='std fiat_u64_backend fuzzing' \
               --no-default-features
   run-flaky-unit-test:
@@ -312,16 +308,16 @@ jobs:
     steps:
       - build_setup
       - run:
-          name: Install Cargo Audit
+          name: Install cargo-audit
           command: |
-            cargo install --force cargo-audit
+            $CARGO $CARGOFLAGS install --force cargo-audit
       - run:
           # NOTE ignored advisory rules
           # RUSTSEC-2018-0015 - term
           # RUSTSEC-2019-0031 - spin
           name: Audit crates
           command: |
-            cargo audit --deny-warnings \
+            $CARGO $CARGOFLAGS audit --deny-warnings \
               --ignore RUSTSEC-2018-0015 \
               --ignore RUSTSEC-2019-0031
       - build_teardown
@@ -331,7 +327,6 @@ jobs:
     steps:
       - build_setup
       - install_code_coverage_deps
-      - install_rust_nightly_toolchain
       - run:
           name: Setup code coverage output
           command: echo "export CODECOV_OUTPUT=codecov" >> $BASH_ENV

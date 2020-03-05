@@ -30,8 +30,9 @@ num-variants = { path = "../../common/num-variants", version = "0.1.0" }
 [dev-dependencies]
 proptest = "0.9"
 proptest-derive = "0.1.1"
-libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
 serde_json = "1"
+libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []

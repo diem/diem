@@ -60,7 +60,7 @@
 extern crate prometheus;
 
 /// This module provides mocks of shared mempool for tests.
-#[cfg(feature = "fuzzing")]
+#[cfg(any(test, feature = "fuzzing"))]
 pub mod mocks;
 pub use shared_mempool::{
     bootstrap, generate_reconfig_subscription, CommitNotification, CommitResponse,

@@ -37,6 +37,12 @@ libra-temppath = { path = "../common/temppath", version = "0.1.0", optional = tr
 storage-proto = { path = "../storage/storage-proto", version = "0.1.0" }
 
 [dev-dependencies]
+proptest = "0.9.2"
+libra-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
+libra-proptest-helpers = { path = "../common/proptest-helpers" }
+libra-temppath = { path = "../common/temppath", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0", features = ["fuzzing"] }
+libradb = { path = "../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [features]

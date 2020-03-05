@@ -44,7 +44,6 @@ struct SMRNode {
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
     storage: Arc<MockStorage<TestPayload>>,
     state_sync: mpsc::UnboundedReceiver<Vec<usize>>,
-    shared_mempool: MockSharedMempool,
 }
 
 impl SMRNode {
@@ -75,7 +74,7 @@ impl SMRNode {
         let (state_sync_client, state_sync) = mpsc::unbounded();
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let shared_mempool = MockSharedMempool::new(None);
-        let consensus_to_mempool_sender = shared_mempool.consensus_sender.clone();
+        let consensus_to_mempool_sender = shared_mempool.consensus_sender;
 
         let mut smr = ChainedBftSMR::new(
             network_sender,
@@ -101,7 +100,6 @@ impl SMRNode {
             commit_cb_receiver,
             storage,
             state_sync,
-            shared_mempool,
         }
     }
 

@@ -23,7 +23,9 @@ libra-types = { path = "../../types", version = "0.1.0" }
 tonic-build = "0.1"
 
 [dev-dependencies]
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
 libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 proptest = "0.9.2"
 proptest-derive = "0.1.0"
 

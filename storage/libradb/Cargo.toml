@@ -41,7 +41,10 @@ libra-temppath = { path = "../../common/temppath", version = "0.1.0", optional =
 [dev-dependencies]
 proptest = "0.9.2"
 proptest-derive = "0.1.2"
+jellyfish-merkle = { path = "../jellyfish-merkle", version = "0.1.0", features = ["fuzzing"] }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
+libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []

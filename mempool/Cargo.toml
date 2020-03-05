@@ -44,6 +44,7 @@ storage-service = { path = "../storage/storage-service", version = "0.1.0", opti
 [dev-dependencies]
 parity-multiaddr = { version = "0.7.2", default-features = false }
 rand = "0.6.5"
+storage-service = { path = "../storage/storage-service", version = "0.1.0", features = ["fuzzing"] }
 
 [build-dependencies]
 tonic-build = "0.1"

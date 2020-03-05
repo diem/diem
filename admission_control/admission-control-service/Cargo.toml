@@ -32,6 +32,12 @@ serde_json = "1.0"
 
 [dev-dependencies]
 assert_matches = "1.3.0"
+proptest = "0.9.4"
+libra-mempool = { path = "../../mempool", version = "0.1.0", features = ["fuzzing"] }
+libra-proptest-helpers = { path = "../../common/proptest-helpers" }
+libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+storage-service = { path = "../../storage/storage-service" }
 vm-validator = { path = "../../vm-validator", version = "0.1.0" }
 
 [features]

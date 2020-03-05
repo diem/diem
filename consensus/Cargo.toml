@@ -31,7 +31,7 @@ prometheus = { version = "0.8.0", default-features = false }
 proptest = { version = "0.9.4", optional = true }
 
 channel = { path = "../common/channel", version = "0.1.0" }
-consensus-types = { path = "consensus-types", version = "0.1.0", default-features = false }
+consensus-types = { path = "consensus-types", version = "0.1.0" }
 crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 executor = { path = "../execution/executor", version = "0.1.0" }
@@ -57,6 +57,9 @@ cached = "0.12.0"
 proptest = "0.9.4"
 tempfile = "3.1.0"
 
+consensus-types = { path = "consensus-types", version = "0.1.0", features = ["fuzzing"] }
+libra-config = { path = "../config", version = "0.1.0", features = ["fuzzing"] }
+libra-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 

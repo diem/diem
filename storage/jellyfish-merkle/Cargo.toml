@@ -30,6 +30,9 @@ libra-types = { path = "../../types", version = "0.1.0" }
 rand = "0.6.5"
 proptest = "0.9.2"
 proptest-derive = "0.1.2"
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+libra-nibble = { path = "../../common/nibble", version = "0.1.0", features = ["fuzzing"] }
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []

@@ -108,7 +108,8 @@ members = [
 
 # NOTE: These members should never include crates that require fuzzing
 # features or test features. These are the crates we want built with no extra
-# test-only code included.
+# test-only code included. These are essentially the main libra release
+# binaries.
 default-members = [
     "client/cli",
     "language/compiler",

@@ -43,6 +43,9 @@ proptest = { version = "0.9.4", default-features = true, optional = true }
 [dev-dependencies]
 criterion = "=0.3.1"
 noise = { path = "noise", version = "0.1.0", features = ["testing"] }
+proptest = { version = "0.9.4", default-features = false }
+libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0", features = ["fuzzing"] }
 socket-bench-server = { path = "socket-bench-server", version = "0.1.0" }
 
 [features]

@@ -24,6 +24,7 @@ move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9"
+vm = { path = "../../vm", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []

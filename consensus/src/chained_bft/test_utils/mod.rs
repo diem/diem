@@ -61,20 +61,6 @@ pub fn build_simple_tree() -> (
     (vec![genesis_block, a1, a2, a3, b1, b2, c1], block_store)
 }
 
-pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
-    let mut inserter = TreeInserter::default();
-    let block_store = inserter.block_store();
-    let genesis = block_store.root();
-    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
-    let a2 = inserter.insert_block(&a1, 2, None);
-    let a3 = inserter.insert_block(&a2, 3, Some(genesis.block_info()));
-    let a4 = inserter.insert_block(&a3, 4, Some(a1.block_info()));
-    let a5 = inserter.insert_block(&a4, 5, Some(a2.block_info()));
-    let a6 = inserter.insert_block(&a5, 6, Some(a3.block_info()));
-    let a7 = inserter.insert_block(&a6, 7, Some(a4.block_info()));
-    vec![genesis, a1, a2, a3, a4, a5, a6, a7]
-}
-
 pub fn build_empty_tree() -> Arc<BlockStore<TestPayload>> {
     let (initial_data, storage) = EmptyStorage::start_for_testing();
     Arc::new(BlockStore::new(

@@ -36,6 +36,7 @@ serde = { version = "1.0.105", default-features = false }
 
 [dev-dependencies]
 proptest = "0.9"
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []

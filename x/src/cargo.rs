@@ -4,6 +4,7 @@
 use crate::{utils::project_root, Result};
 use anyhow::anyhow;
 use std::{
+    env,
     ffi::{OsStr, OsString},
     path::Path,
     process::{Command, Output, Stdio},
@@ -16,7 +17,14 @@ pub struct Cargo {
 
 impl Cargo {
     pub fn new<S: AsRef<OsStr>>(command: S) -> Self {
-        let mut inner = Command::new("cargo");
+        let mut inner = match env::var("CARGO") {
+            Ok(s) => Command::new(&s),
+            Err(_) => Command::new("cargo"),
+        };
+        if let Ok(s) = env::var("CARGOFLAGS") {
+            let flags: Vec<&str> = s.split(char::is_whitespace).filter(|&a| a != "").collect();
+            inner.args(&flags);
+        }
         inner.arg(command);
         Self {
             inner,

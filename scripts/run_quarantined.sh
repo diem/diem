@@ -38,10 +38,12 @@ if [[ "$shouldfail" == false ]]; then echo command will never fail; fi
 
 count=0
 success=-1
+CARGO=${CARGO:-cargo}
+CARGOFLAGS=${CARGOFLAGS:-}
 RUST_BACKTRACE=1
 while [ $count -lt $retries ] && [ $success -ne 0 ]
 do
-  cargo xtest --package $crate && success=0
+  $CARGO $CARGOFLAGS xtest --package $crate && success=0
   count=$(( $count + 1 ))
 done
 

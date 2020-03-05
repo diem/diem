@@ -29,6 +29,9 @@ libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 
+[dev-dependencies]
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+
 [features]
 default = []
 fuzzing = ["libra-crypto/fuzzing", "libra-types/fuzzing"]

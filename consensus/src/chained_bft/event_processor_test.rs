@@ -46,10 +46,8 @@ use futures::{
 };
 use libra_crypto::HashValue;
 use libra_types::{
-    block_info::BlockInfo,
-    ledger_info::LedgerInfoWithSignatures,
-    validator_signer::ValidatorSigner,
-    validator_verifier::{random_validator_verifier, ValidatorVerifier},
+    block_info::BlockInfo, ledger_info::LedgerInfoWithSignatures,
+    validator_signer::ValidatorSigner, validator_verifier::random_validator_verifier,
 };
 use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
@@ -65,7 +63,6 @@ pub struct NodeSetup {
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner,
     proposer_author: Author,
-    validators: Arc<ValidatorVerifier>,
     safety_rules_manager: SafetyRulesManager<TestPayload>,
 }
 
@@ -143,7 +140,7 @@ impl NodeSetup {
         playground.add_node(author, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
 
         let (self_sender, self_receiver) = channel::new_test(8);
-        let network = NetworkSender::new(author, network_sender, self_sender, validators.clone());
+        let network = NetworkSender::new(author, network_sender, self_sender, validators);
 
         let (task, _receiver) = NetworkTask::<TestPayload>::new(network_events, self_receiver);
 
@@ -199,7 +196,6 @@ impl NodeSetup {
             storage,
             signer,
             proposer_author,
-            validators,
             safety_rules_manager,
         }
     }

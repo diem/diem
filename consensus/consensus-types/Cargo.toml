@@ -21,6 +21,7 @@ libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9.4"
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []
