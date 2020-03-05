@@ -175,10 +175,13 @@ fn test_reconfiguration() {
             1_000_000,
         )),
     );
+    // Create a dummy block prologue transaction that will bump the timer.
+    let txn2 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
+
     // rotate the validator's connsensus pubkey to trigger a reconfiguration
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
     let (_, new_pubkey) = compat::generate_keypair(&mut rng);
-    let txn2 = get_test_signed_transaction(
+    let txn3 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 0,
         validator_privkey.clone(),
@@ -187,8 +190,6 @@ fn test_reconfiguration() {
             new_pubkey.to_bytes().to_vec(),
         )),
     );
-    // Create a dummy block prologue transaction that will emit a ValidatorSetChanged event
-    let txn3 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
     let txn_block = vec![txn1, txn2, txn3];
     let vm_output = executor
         .execute_block(
@@ -206,7 +207,8 @@ fn test_reconfiguration() {
     );
 
     // rotating to the same key should not trigger a reconfiguration
-    let txn4 = get_test_signed_transaction(
+    let txn4 = encode_block_prologue_script(gen_block_metadata(2, validator_account));
+    let txn5 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 1,
         validator_privkey,
@@ -215,7 +217,6 @@ fn test_reconfiguration() {
             new_pubkey.to_bytes().to_vec(),
         )),
     );
-    let txn5 = encode_block_prologue_script(gen_block_metadata(2, validator_account));
     let txn_block = vec![txn4, txn5];
     let output = executor
         .execute_block(

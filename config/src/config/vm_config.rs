@@ -16,15 +16,15 @@ pub struct VMConfig {
 impl Default for VMConfig {
     fn default() -> VMConfig {
         let whitelist = vec![
-            "9e16e89c08d87c7163a82b6094ad055c97a1800e2b9cf3c5aeeaca1af0dd8447",
-            "279cee92b3e4335911467a11641063ec2b24ed04eb02aeec64055b2db6498f3c",
-            "137c1aacd8484d2a98cdfc1eb32d387cb3f8b72bdbb8769941f8f12cba98962c",
             "6005fcf681ecf5cd5d7a92f5c3d76b53720c480bd71c8c0e37b76a014e540b8f",
-            "d91b8ce171bb89a86201b7d7dda16970e937fac17666a2cc8e2826987ac58dd0",
-            "fe9f8aa470abb1284b3cd0eab8975769e20d876d02bf880471b8bd83b1d1be40",
             "37ac01c31fb95c0d3f421e0f0f3bc9627978e2f2151a8caaab0459b6a249f4c2",
-            "183b5a04393e8faccb9871374cca13c3f4a56466a48c49379698cbde19ade542",
+            "fe9f8aa470abb1284b3cd0eab8975769e20d876d02bf880471b8bd83b1d1be40",
+            "d91b8ce171bb89a86201b7d7dda16970e937fac17666a2cc8e2826987ac58dd0",
+            "8087170488249c04d1f589f1986bc19864d73cab10999052afd5a078bdc2e0df",
             "8e9b9e1a99dda2458e6e631f2e44a6cdae1b7f7132f41f9dbfacb2fe90aac149",
+            "183b5a04393e8faccb9871374cca13c3f4a56466a48c49379698cbde19ade542",
+            "137c1aacd8484d2a98cdfc1eb32d387cb3f8b72bdbb8769941f8f12cba98962c",
+            "279cee92b3e4335911467a11641063ec2b24ed04eb02aeec64055b2db6498f3c",
         ]
         .iter()
         .map(|s| string_to_script_hash(s))
