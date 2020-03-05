@@ -391,7 +391,7 @@ where
             .cloned()
             .collect();
         if !status.is_empty() {
-            debug!("Execution status: {:?}", status);
+            trace!("Execution status: {:?}", status);
         }
 
         let (account_to_state, account_to_proof) = state_view.into();
