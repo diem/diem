@@ -15,6 +15,7 @@ use admission_control_proto::{
     AdmissionControlStatus,
 };
 use anyhow::Result;
+use debug_interface::prelude::*;
 use futures::{channel::oneshot, SinkExt};
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
@@ -124,6 +125,7 @@ impl AdmissionControl for AdmissionControlService {
             )
         })?;
 
+        trace_code_block!("admission_control_service::submit_transaction", {"txn", txn.sender(), txn.sequence_number()});
         let (req_sender, res_receiver) = oneshot::channel();
         self.ac_sender
             .clone()

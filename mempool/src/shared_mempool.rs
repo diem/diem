@@ -9,6 +9,7 @@ use crate::{
 use anyhow::{format_err, Result};
 use bounded_executor::BoundedExecutor;
 use channel::{libra_channel, message_queues::QueueStyle};
+use debug_interface::prelude::*;
 use futures::{
     channel::{
         mpsc::{self, Receiver, UnboundedSender},
@@ -632,6 +633,7 @@ async fn inbound_network_task<V>(
     loop {
         ::futures::select! {
             (mut msg, callback) = client_events.select_next_some() => {
+                trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
                 bounded_executor
                 .spawn(process_client_transaction_submission(
                     smp.clone(),

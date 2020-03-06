@@ -14,7 +14,7 @@ use consensus_types::{
     block::Block, common::Payload, executed_block::ExecutedBlock, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate,
 };
-use debug_interface::event;
+use debug_interface::prelude::*;
 use executor_types::{ExecutedTrees, ProcessedVMOutput};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -254,6 +254,7 @@ impl<T: Payload> BlockStore<T> {
     }
 
     fn execute_block(&self, block: Block<T>) -> anyhow::Result<ExecutedBlock<T>> {
+        trace_code_block!("block_store::execute_block", {"block", block.id()});
         ensure!(
             self.inner.read().unwrap().root().round() < block.round(),
             "Block with old round"

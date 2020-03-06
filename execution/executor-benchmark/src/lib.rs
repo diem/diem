@@ -215,6 +215,7 @@ impl TransactionExecutor {
             let output = self
                 .executor
                 .execute_block(
+                    HashValue::zero(),
                     transactions.clone(),
                     &self.committed_trees,
                     &self.committed_trees,

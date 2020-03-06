@@ -92,7 +92,6 @@ impl DebugPortLogThread {
         let e = if event.name == "committed" {
             Self::parse_commit(json)
         } else {
-            warn!("Unknown event: {} from {}", event.name, self.instance);
             return None;
         };
         Some(ValidatorEvent {

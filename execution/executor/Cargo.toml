@@ -19,6 +19,7 @@ serde = { version = "1.0.99", default-features = false }
 tokio = { version = "0.2.12", features = ["full"] }
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
+debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
 executor-types = { path = "../executor-types", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../../config", version = "0.1.0" }
@@ -28,6 +29,7 @@ libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
 libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 scratchpad = { path = "../../storage/scratchpad", version = "0.1.0" }
+serde_json = "1.0"
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 storage-proto = { path = "../../storage/storage-proto", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }

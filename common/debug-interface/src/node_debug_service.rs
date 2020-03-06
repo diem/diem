@@ -3,6 +3,7 @@
 
 //! Debug interface to access information in a specific node.
 
+use crate::json_log::JsonLogEntry;
 use crate::{
     json_log,
     proto::{
@@ -51,4 +52,18 @@ impl NodeDebugInterface for NodeDebugService {
         }
         Ok(Response::new(response))
     }
+}
+
+pub fn parse_events(events: Vec<Event>) -> Vec<JsonLogEntry> {
+    let mut ret = vec![];
+    for event in events.into_iter() {
+        let json = serde_json::from_str(&event.json).expect("Failed to parse json");
+        let entry = JsonLogEntry {
+            name: Box::leak(event.name.into_boxed_str()),
+            timestamp: event.timestamp as u128,
+            json,
+        };
+        ret.push(entry);
+    }
+    ret
 }

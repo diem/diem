@@ -70,6 +70,7 @@ impl StateComputer for ExecutionProxy {
         // TODO: figure out error handling for the prologue txn
         self.executor
             .execute_block(
+                block.id(),
                 Self::transactions_from_block(block),
                 parent_executed_trees,
                 committed_trees,
