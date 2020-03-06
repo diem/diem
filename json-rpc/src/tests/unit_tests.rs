@@ -1,11 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::views::{TransactionDataView, TransactionView};
 use crate::{
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
-    views::{AccountView, BlockMetadata, EventView},
+    views::{AccountView, BlockMetadata, EventView, TransactionDataView, TransactionView},
 };
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
@@ -318,16 +317,16 @@ proptest! {
     }
     #[test]
     fn test_get_transactions(blocks in arb_blocks_to_commit()) {
-        _test_get_transactions(blocks);
+        test_get_transactions_impl(blocks);
     }
 
     #[test]
     fn test_get_account_transaction(blocks in arb_blocks_to_commit()) {
-        _test_get_account_transaction(blocks);
+        test_get_account_transaction_impl(blocks);
     }
 }
 
-fn _test_get_transactions(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) {
+fn test_get_transactions_impl(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) {
     // set up MockLibraDB
     let mock_db = mock_db(blocks);
 
@@ -348,8 +347,7 @@ fn _test_get_transactions(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithS
         let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_transactions", "params": [base_version, page as u64, false], "id": 1});
         let resp = client.post(&url).json(&request).send().unwrap();
         assert_eq!(resp.status(), 200);
-        let resp_json: JsonMap = resp.json().unwrap();
-        let data = fetch_result(resp_json);
+        let data = fetch_result(resp.json().unwrap());
         match data {
             serde_json::Value::Array(responses) => {
                 for (i, response) in responses.iter().enumerate() {
@@ -395,7 +393,7 @@ fn _test_get_transactions(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithS
     }
 }
 
-fn _test_get_account_transaction(
+fn test_get_account_transaction_impl(
     blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
 ) {
     // set up MockLibraDB
