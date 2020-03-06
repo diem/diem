@@ -65,7 +65,6 @@ impl ClusterSwarmKube {
         } else {
             ""
         };
-        let fluentbit_enabled = if index % 10 == 0 { "true" } else { "false" };
         let pod_yaml = format!(
             include_str!("validator_spec_template.yaml"),
             index = index,
@@ -77,7 +76,6 @@ impl ClusterSwarmKube {
             delete_data = delete_data,
             cfg_seed = CFG_SEED,
             cfg_fullnode_seed = cfg_fullnode_seed,
-            fluentbit_enabled = fluentbit_enabled,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
         serde_json::to_vec(&pod_spec).map_err(|e| format_err!("serde_json::to_vec failed: {}", e))
@@ -93,11 +91,6 @@ impl ClusterSwarmKube {
         image_tag: &str,
         delete_data: bool,
     ) -> Result<Vec<u8>> {
-        let fluentbit_enabled = if validator_index % 10 == 0 {
-            "true"
-        } else {
-            "false"
-        };
         let pod_yaml = format!(
             include_str!("fullnode_spec_template.yaml"),
             fullnode_index = fullnode_index,
@@ -110,7 +103,6 @@ impl ClusterSwarmKube {
             delete_data = delete_data,
             cfg_seed = CFG_SEED,
             cfg_fullnode_seed = CFG_FULLNODE_SEED,
-            fluentbit_enabled = fluentbit_enabled,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
         serde_json::to_vec(&pod_spec).map_err(|e| format_err!("serde_json::to_vec failed: {}", e))

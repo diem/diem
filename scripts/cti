@@ -223,11 +223,10 @@ else
   echo "**********"
   echo "${BLUE}Dashboard:${RESTORE} http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/"
   echo "Dashboard Username: admin. Password: $(kubectl get secret grafana-admin-credentials -o jsonpath="{.data.admin-password}" | base64 --decode)"
-  echo "${BLUE}'validator-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:validator-0),type:phrase),query:(match:(kubernetes.pod_name:(query:validator-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
+  echo "${BLUE}validator-0 Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:validator-0),type:phrase),query:(match:(kubernetes.pod_name:(query:validator-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
   echo
-  echo "${BLUE}'fullnode-0-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:fullnode-0-0),type:phrase),query:(match:(kubernetes.pod_name:(query:fullnode-0-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
+  echo "${BLUE}fullnode-0-0 Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:fullnode-0-0),type:phrase),query:(match:(kubernetes.pod_name:(query:fullnode-0-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
   echo
-  echo "${BLUE}Note:${RESTORE} Because of log volume, logs for only some of the validators and fullnodes are streamed to Kibana."
   echo "**********"
   kubectl --context=${context} logs -f "${pod_name}" | tee $OUTPUT_TEE
 fi
