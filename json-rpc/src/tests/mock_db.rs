@@ -53,7 +53,7 @@ impl LibraDBTrait for MockLibraDB {
             .all_txns
             .iter()
             .find(|x| {
-                if let Some(t) = x.as_signed_user_txn().ok() {
+                if let Ok(t) = x.as_signed_user_txn() {
                     t.sender() == address && t.sequence_number() == seq_num
                 } else {
                     false
@@ -92,7 +92,7 @@ impl LibraDBTrait for MockLibraDB {
             .iter()
             .skip(start_version as usize)
             .take(limit as usize)
-            .map(|x| x.clone())
+            .cloned()
             .collect();
         let first_transaction_version = transactions.first().map(|_| start_version);
         Ok(TransactionListWithProof {
