@@ -5,7 +5,7 @@
 
 use chrono::Utc;
 use env_logger::filter;
-pub use log::{debug, error, info, trace, warn, Level, Log, Metadata, Record};
+pub use log::{self, Level, Log, Metadata, Record};
 use std::{
     env,
     fmt::{self, Write},
@@ -17,19 +17,59 @@ pub mod prelude {
     pub use crate::{crit, debug, error, info, trace, warn};
 }
 
+pub const CHANNEL_SIZE: usize = 256;
+pub const DEFAULT_TARGET: &str = "libra";
+const RUST_LOG: &str = "RUST_LOG";
+
+/// Define crit macro that specify libra as the target
 // TODO Remove historical crit from code base since it isn't supported in Rust Log.
 #[macro_export]
 macro_rules! crit {
-    (target: $target:expr, $($arg:tt)+) => (
-        error!(target: $target, $($arg)+);
-    );
     ($($arg:tt)+) => (
-        error!($($arg)+);
+        $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
     )
 }
 
-pub const CHANNEL_SIZE: usize = 256;
-const RUST_LOG: &str = "RUST_LOG";
+/// Define debug macro that specify libra as the target
+// TODO Remove historical crit from code base since it isn't supported in Rust Log.
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)+) => (
+        $crate::log::debug!(target: $crate::DEFAULT_TARGET, $($arg)+);
+    )
+}
+
+/// Define  macro that specify libra as the target
+#[macro_export]
+macro_rules! error {
+    ($($arg:tt)+) => (
+        $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
+    )
+}
+
+/// Define info macro that specify libra as the target
+#[macro_export]
+macro_rules! info {
+    ($($arg:tt)+) => (
+        $crate::log::info!(target: $crate::DEFAULT_TARGET, $($arg)+);
+    )
+}
+
+/// Define trace macro that specify libra as the target
+#[macro_export]
+macro_rules! trace {
+    ($($arg:tt)+) => (
+        $crate::log::trace!(target: $crate::DEFAULT_TARGET, $($arg)+);
+    )
+}
+
+/// Define warn macro that specify libra as the target
+#[macro_export]
+macro_rules! warn {
+    ($($arg:tt)+) => (
+        $crate::log::warn!(target: $crate::DEFAULT_TARGET, $($arg)+);
+    )
+}
 
 /// Logging framework for Libra that encapsulates a minimal dependency logger with support for
 /// environmental variable (RUST_LOG) and asynchronous logging.
@@ -153,6 +193,11 @@ impl<W: Writer> Log for SyncLogger<W> {
 
     /// Logs the provided record but first evaluates the filters and then writes it.
     fn log(&self, record: &Record) {
+        // The following filters out everything that does not deal with Libra
+        if record.metadata().target() != DEFAULT_TARGET {
+            return;
+        }
+
         if !self.filter.matches(record) {
             return;
         }
@@ -217,6 +262,11 @@ impl Log for AsyncLogClient {
     /// Logs the provided record but first evaluates the filters and then sending it to the
     /// AsyncLogService via a SyncSender.
     fn log(&self, record: &Record) {
+        // The following filters out everything that does not deal with Libra
+        if record.metadata().target() != DEFAULT_TARGET {
+            return;
+        }
+
         if !self.filter.matches(record) {
             return;
         }
@@ -302,6 +352,9 @@ mod tests {
 
         assert_eq!(logs.read().unwrap().len(), 0);
         info!("Hello");
+        assert_eq!(logs.read().unwrap().len(), 1);
+        // Ensure that libra target filtering works
+        log::info!("Hello");
         assert_eq!(logs.read().unwrap().len(), 1);
         let string = logs.write().unwrap().remove(0);
         assert!(string.contains("INFO"));
