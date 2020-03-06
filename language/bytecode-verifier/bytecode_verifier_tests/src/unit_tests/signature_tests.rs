@@ -8,9 +8,9 @@ use invalid_mutations::signature::{
 };
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
-    identifier::Identifier,
     vm_error::StatusCode,
 };
+use move_core_types::identifier::Identifier;
 use proptest::{collection::vec, prelude::*};
 use vm::file_format::{Bytecode::*, CompiledModule, SignatureToken::*, *};
 

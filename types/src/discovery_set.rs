@@ -6,11 +6,11 @@ use crate::{
     account_config,
     discovery_info::DiscoveryInfo,
     event::{EventHandle, EventKey},
-    identifier::{IdentStr, Identifier},
     language_storage::StructTag,
     validator_set::validator_set_module_name,
 };
 use anyhow::Result;
+use move_core_types::identifier::{IdentStr, Identifier};
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

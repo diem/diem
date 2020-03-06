@@ -3,11 +3,8 @@
 
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::ModuleSourceMap;
-use libra_types::{
-    account_address::AccountAddress,
-    byte_array::ByteArray,
-    identifier::{IdentStr, Identifier},
-};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use move_core_types::identifier::{IdentStr, Identifier};
 use move_ir_types::{ast::*, location::*};
 use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{

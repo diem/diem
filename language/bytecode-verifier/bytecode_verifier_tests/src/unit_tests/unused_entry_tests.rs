@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::UnusedEntryChecker;
-use libra_types::{identifier::Identifier, vm_error::StatusCode};
+use libra_types::vm_error::StatusCode;
+use move_core_types::identifier::Identifier;
 use proptest::prelude::*;
 use vm::file_format::{
     CompiledModule, FieldDefinition, IdentifierIndex, LocalsSignature, ModuleHandleIndex,

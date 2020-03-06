@@ -5,12 +5,12 @@ use crate::{
     access_path::{AccessPath, Accesses},
     account_config,
     event::EventKey,
-    identifier::{IdentStr, Identifier},
     language_storage::StructTag,
     validator_public_keys::ValidatorPublicKeys,
 };
 use anyhow::{Error, Result};
 use libra_crypto::VerifyingKey;
+use move_core_types::identifier::{IdentStr, Identifier};
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

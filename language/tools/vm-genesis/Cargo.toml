@@ -20,6 +20,7 @@ libra-config = { path = "../../../config", version = "0.1.0" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
+move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-vm-cache = { path = "../../move-vm/cache", version = "0.1.0" }
 move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0"}
 move-vm-state = { path = "../../move-vm/state", version = "0.1.0"}

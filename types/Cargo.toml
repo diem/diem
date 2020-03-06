@@ -23,7 +23,6 @@ proptest-derive = { version = "0.1.2", default-features = false, optional = true
 prost = "0.6"
 radix_trie = { version = "0.1.4", default-features = false }
 rand = "0.6.5"
-ref-cast = "1.0"
 serde = { version = "1.0.99", default-features = false }
 thiserror = "1.0"
 tiny-keccak = { version = "2.0.1", default-features = false, features = ["sha3"] }
@@ -32,6 +31,7 @@ lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-se
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
+move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
 
 [build-dependencies]
 prost-build = "0.6"
@@ -47,4 +47,4 @@ serde_json = "1.0.48"
 
 [features]
 default = []
-fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-crypto/fuzzing"]
+fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-crypto/fuzzing", "move-core-types/fuzzing"]

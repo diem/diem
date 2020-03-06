@@ -5,10 +5,10 @@ use super::{hash, primitive_helpers, signature};
 use crate::values::{vector, Value};
 use libra_types::{
     account_config::CORE_CODE_ADDRESS,
-    identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
     vm_error::{StatusCode, VMStatus},
 };
+use move_core_types::identifier::IdentStr;
 use std::collections::VecDeque;
 use vm::{
     access::ModuleAccess,

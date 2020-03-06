@@ -1,13 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    access_path::AccessPath,
-    account_address::AccountAddress,
-    identifier::{IdentStr, Identifier},
-};
+use crate::{access_path::AccessPath, account_address::AccountAddress};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
 use libra_crypto_derive::CryptoHasher;
+use move_core_types::identifier::{IdentStr, Identifier};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

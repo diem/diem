@@ -186,9 +186,9 @@ fn test_libra_LibraEvent_from() {
         account_config::SentPaymentEvent,
         contract_event::ContractEvent,
         event::{EventHandle, EventKey},
-        identifier::Identifier,
         language_storage::{StructTag, TypeTag::Struct},
     };
+    use move_core_types::identifier::Identifier;
     use std::ffi::CStr;
 
     let keypair = compat::generate_keypair(None);

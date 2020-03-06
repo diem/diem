@@ -12,9 +12,9 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    identifier::Identifier,
     vm_error::{StatusCode, VMStatus},
 };
+use move_core_types::identifier::Identifier;
 use std::collections::BTreeMap;
 
 /// Resolution context for importing types

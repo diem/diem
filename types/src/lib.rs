@@ -18,7 +18,6 @@ pub mod discovery_set;
 pub mod event;
 pub mod event_subscription;
 pub mod get_with_proof;
-pub mod identifier;
 pub mod language_storage;
 pub mod ledger_info;
 pub mod mempool_status;

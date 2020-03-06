@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::module_generation::{options::ModuleGeneratorOptions, utils::random_string};
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use move_core_types::identifier::Identifier;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use vm::file_format::{Bytecode, CompiledModuleMut, LocalsSignature};
 

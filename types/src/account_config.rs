@@ -6,10 +6,10 @@ use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
     event::EventHandle,
-    identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
 use anyhow::Result;
+use move_core_types::identifier::{IdentStr, Identifier};
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

@@ -7,7 +7,7 @@ use bytecode_source_map::{
     source_map::{FunctionSourceMap, SourceName},
 };
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
-use libra_types::identifier::IdentStr;
+use move_core_types::identifier::IdentStr;
 use vm::{
     access::ModuleAccess,
     file_format::{

@@ -11,10 +11,8 @@ use num::{BigInt, Num};
 
 use bytecode_source_map::source_map::ModuleSourceMap;
 use bytecode_verifier::VerifiedModule;
-use libra_types::{
-    identifier::{IdentStr, Identifier},
-    language_storage::ModuleId,
-};
+use libra_types::language_storage::ModuleId;
+use move_core_types::identifier::{IdentStr, Identifier};
 use move_ir_types::{
     ast::{QualifiedStructIdent, Type, TypeVar_},
     location::{Loc, Spanned},

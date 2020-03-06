@@ -9,6 +9,7 @@ use anyhow::Result;
 use libra_types::{
     account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId,
 };
+use move_core_types::identifier::Identifier;
 use once_cell::sync::Lazy;
 use std::{
     collections::{HashSet, VecDeque},
@@ -671,7 +672,7 @@ fn get_external_deps(imports: &[ImportDefinition]) -> Vec<ModuleId> {
     let mut deps = HashSet::new();
     for dep in imports.iter() {
         if let ModuleIdent::Qualified(id) = &dep.ident {
-            let identifier = libra_types::identifier::Identifier::new(id.name.0.clone()).unwrap();
+            let identifier = Identifier::new(id.name.0.clone()).unwrap();
             deps.insert(ModuleId::new(id.address, identifier));
         }
     }

@@ -4,9 +4,9 @@
 //! Random valid type inhabitant generation.
 use crate::common::*;
 use libra_types::{
-    account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
-    language_storage::ModuleId,
+    account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId,
 };
+use move_core_types::identifier::Identifier;
 use move_vm_runtime::{loaded_data::loaded_module::LoadedModule, MoveVM};
 use move_vm_state::execution_context::SystemExecutionContext;
 use move_vm_types::{loaded_data::struct_def::StructDef, loaded_data::types::Type, values::*};

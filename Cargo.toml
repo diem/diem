@@ -55,6 +55,7 @@ members = [
     "language/tools/vm-genesis",
     "language/compiler/bytecode-source-map",
     "language/libra-vm",
+    "language/move-core/types",
     "language/move-ir/types",
     "language/move-prover/bytecode-to-boogie",
     "language/move-prover/spec-lang",
