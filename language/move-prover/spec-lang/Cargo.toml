@@ -1,6 +1,6 @@
 [package]
 name = "spec-lang"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Libra <oncall+libra@xmail.facebook.com>"]
 publish = false
 edition = "2018"

@@ -4,14 +4,14 @@
 #![forbid(unsafe_code)]
 
 use crate::ast::ModuleName;
-use crate::env::{GlobalEnv, ModuleId};
+use crate::env::{GlobalEnv, Loc, ModuleId};
 use crate::translate::{ModuleTranslator, Translator};
 use anyhow::anyhow;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use itertools::Itertools;
-use move_ir_types::location::Loc;
 use move_lang::errors::Errors;
-use move_lang::expansion::ast::Program;
+use move_lang::expansion::ast::{ModuleDefinition, Program};
+use move_lang::parser::ast::ModuleIdent;
 use move_lang::shared::Address;
 use move_lang::to_bytecode::translate::CompiledUnit;
 use move_lang::{move_compile_no_report, move_compile_to_expansion_no_report};
@@ -68,9 +68,9 @@ pub fn run_spec_lang_compiler(
 }
 
 fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
-    let mk_label = |env: &mut GlobalEnv, err: (Loc, String)| {
+    let mk_label = |env: &mut GlobalEnv, err: (move_ir_types::location::Loc, String)| {
         let loc = env.to_loc(&err.0);
-        Label::new(loc.file_id, loc.span, err.1)
+        Label::new(loc.file_id(), loc.span(), err.1)
     };
     for mut error in errors {
         let primary = error.remove(0);
@@ -83,27 +83,35 @@ fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
 fn run_spec_checker(
     env: &mut GlobalEnv,
     units: Vec<CompiledUnit>,
-    eprog: Program,
+    mut eprog: Program,
 ) -> anyhow::Result<()> {
     let mut translator = Translator::new(env);
-    let mut module_count = 0;
-    let mut modules = units
+    // Merge the compiled units with the expanded program, preserving the order of the compiled
+    // units which is topological w.r.t. use relation.
+    let modules = units
         .into_iter()
         .filter_map(|u| {
             if let CompiledUnit::Module(name, compiled_module, _source_map) = u {
-                Some((name, compiled_module))
+                let expanded_id = eprog
+                    .modules
+                    .iter()
+                    .map(|(module_id, _)| module_id)
+                    .find(|module_id| module_id.0.value.name.0.value == name.0.value);
+                if let Some(module_id) = expanded_id {
+                    let expanded_module = eprog.modules.remove(&module_id).unwrap();
+                    Some((module_id, expanded_module, compiled_module))
+                } else {
+                    None
+                }
             } else {
                 None
             }
         })
         .collect_vec();
-    for (module_id, expanded_module) in eprog.modules {
-        let loc = translator.to_loc(&module_id.loc());
-        let (pos, _) = modules
-            .iter()
-            .find_position(|(name, _)| name == &module_id.0.value.name)
-            .ok_or_else(|| anyhow!("cannot associate compiled module with expanded"))?;
-        let compiled_module = modules.remove(pos).1;
+    for (module_count, (module_id, expanded_module, compiled_module)) in
+        modules.into_iter().enumerate()
+    {
+        let loc = get_module_loc(&translator, &module_id, &expanded_module);
         let module_name = ModuleName::from_str(
             &module_id.0.value.address.to_string(),
             translator
@@ -112,11 +120,20 @@ fn run_spec_checker(
                 .make(&module_id.0.value.name.0.value),
         );
         let module_id = ModuleId::new(module_count);
-        module_count += 1;
         let mut module_translator = ModuleTranslator::new(&mut translator, module_id, module_name);
-        module_translator.translate(loc.file_id, expanded_module, compiled_module, None);
+        module_translator.translate(loc, expanded_module, compiled_module, None);
     }
     Ok(())
+}
+
+fn get_module_loc(translator: &Translator, module_id: &ModuleIdent, def: &ModuleDefinition) -> Loc {
+    // TODO: make ModuleDefinition Spanned in move-lang AST, or attach a location.
+    let loc = translator.to_loc(&module_id.loc());
+    let mut span = loc.span();
+    for spec in &def.specs {
+        span = span.merge(spec.loc.span());
+    }
+    Loc::new(loc.file_id(), span)
 }
 
 // =================================================================================================

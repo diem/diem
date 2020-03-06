@@ -6,7 +6,7 @@
 
 use std::cell::RefCell;
 
-use codespan::{FileId, Files, Location, Span};
+use codespan::{ByteIndex, ByteOffset, FileId, Files, Location, Span};
 use codespan_reporting::diagnostic::{Diagnostic, Label, Severity};
 use codespan_reporting::term::{emit, termcolor::WriteColor, Config};
 use itertools::Itertools;
@@ -35,11 +35,49 @@ use vm::CompiledModule;
 /// # Locations
 
 /// A location, consisting of a FileId and a span in this file.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct Loc {
-    pub file_id: FileId,
-    pub span: Span,
+    file_id: FileId,
+    span: Span,
 }
+
+impl Loc {
+    pub fn new(file_id: FileId, span: Span) -> Loc {
+        Loc { file_id, span }
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
+    }
+
+    pub fn file_id(&self) -> FileId {
+        self.file_id
+    }
+
+    // Delivers a location pointing to the end of this one.
+    pub fn at_end(&self) -> Loc {
+        if self.span.end() > ByteIndex(0) {
+            Loc::new(
+                self.file_id,
+                Span::new(self.span.end() - ByteOffset(1), self.span.end()),
+            )
+        } else {
+            self.clone()
+        }
+    }
+
+    // Delivers a location pointing to the start of this one.
+    pub fn at_start(&self) -> Loc {
+        Loc::new(
+            self.file_id,
+            Span::new(self.span.start(), self.span.start() + ByteOffset(1)),
+        )
+    }
+}
+
+/// Alias for the Loc variant of MoveIR. This uses a `&static str` instead of `FileId` for the
+/// file name.
+pub type MoveIrLoc = move_ir_types::location::Loc;
 
 // =================================================================================================
 /// # Identifiers
@@ -138,6 +176,10 @@ impl ModuleId {
     pub fn new(idx: usize) -> Self {
         Self(idx as RawIndex)
     }
+
+    pub fn to_usize(self) -> usize {
+        self.0 as usize
+    }
 }
 
 // =================================================================================================
@@ -151,6 +193,12 @@ pub struct GlobalEnv {
     /// A mapping from file names to associated FileId. Though this information is
     /// already in `source_files`, we can't get it out of there so need to book keep here.
     file_name_map: BTreeMap<String, FileId>,
+    /// A special constant location representing an unknown location.
+    /// This uses a pseudo entry in `source_files` to be safely represented.
+    unknown_loc: Loc,
+    /// A special constant location representing an opaque location.
+    /// In difference to an `unknown_loc`, this is a well-known but undisclosed location.
+    internal_loc: Loc,
     /// Accumulated diagnosis. In a RefCell so we can add to it without needing a mutable GlobalEnv.
     diags: RefCell<Vec<Diagnostic>>,
     /// Pool of symbols -- internalized strings.
@@ -162,8 +210,20 @@ pub struct GlobalEnv {
 impl GlobalEnv {
     /// Creates a new environment.
     pub fn new() -> Self {
+        let mut source_files = Files::new();
+        let mut fake_loc = |content: &str| {
+            let id = source_files.add(content, content.to_string());
+            Loc::new(
+                id,
+                Span::from(ByteIndex(0 as u32)..ByteIndex(content.len() as u32)),
+            )
+        };
+        let unknown_loc = fake_loc("<unknown>");
+        let internal_loc = fake_loc("<internal>");
         GlobalEnv {
-            source_files: Files::new(),
+            source_files,
+            unknown_loc,
+            internal_loc,
             file_name_map: BTreeMap::new(),
             diags: RefCell::new(vec![]),
             symbol_pool: SymbolPool::new(),
@@ -200,25 +260,20 @@ impl GlobalEnv {
         self.error_with_notes(loc, msg, vec![]);
     }
 
-    /// Returns a default location. This is used as location of intrinsics which do not have
-    /// a real source location. This returns a location pointing to a source which has been added
-    /// to the environment with `add_source`. It crashes if no source exists.
-    pub fn default_loc(&self) -> Loc {
-        let (_, file_id) = self
-            .file_name_map
-            .iter()
-            .nth(0)
-            .expect("no source added to the environment");
-        Loc {
-            file_id: *file_id,
-            span: Span::default(),
-        }
+    /// Returns the unknown location.
+    pub fn unknown_loc(&self) -> Loc {
+        self.unknown_loc.clone()
+    }
+
+    /// Returns the internal location.
+    pub fn internal_loc(&self) -> Loc {
+        self.internal_loc.clone()
     }
 
     /// Converts a Loc as used by the move-lang compiler to the one we are using here.
     /// TODO: move-lang should use FileId as well so we don't need this here. There is already
     /// a todo in their code to remove the current use of `&'static str` for file names in Loc.
-    pub fn to_loc(&self, loc: &move_ir_types::location::Loc) -> Loc {
+    pub fn to_loc(&self, loc: &MoveIrLoc) -> Loc {
         let file_id = self
             .file_name_map
             .get(loc.file())
@@ -249,7 +304,7 @@ impl GlobalEnv {
     /// to create them.
     pub fn add(
         &mut self,
-        source_file_id: FileId,
+        loc: Loc,
         module: CompiledModule,
         source_map: ModuleSourceMap<Span>,
         struct_data: BTreeMap<StructId, StructData>,
@@ -258,24 +313,47 @@ impl GlobalEnv {
         spec_funs: Vec<SpecFunDecl>,
         loc_map: BTreeMap<NodeId, Loc>,
         type_map: BTreeMap<NodeId, Type>,
+        instantiation_map: BTreeMap<NodeId, Vec<Type>>,
     ) {
         let idx = self.module_data.len();
         let name = ModuleName::from_str(
             &module.self_id().address().to_string(),
             self.symbol_pool.make(module.self_id().name().as_str()),
         );
+        let struct_idx_to_id: BTreeMap<StructDefinitionIndex, StructId> = struct_data
+            .iter()
+            .map(|(id, data)| (data.def_idx, *id))
+            .collect();
+        let function_idx_to_id: BTreeMap<FunctionDefinitionIndex, FunId> = function_data
+            .iter()
+            .map(|(id, data)| (data.def_idx, *id))
+            .collect();
+        let spec_vars: BTreeMap<SpecVarId, SpecVarDecl> = spec_vars
+            .into_iter()
+            .enumerate()
+            .map(|(i, v)| (SpecVarId::new(i), v))
+            .collect();
+        let spec_funs: BTreeMap<SpecFunId, SpecFunDecl> = spec_funs
+            .into_iter()
+            .enumerate()
+            .map(|(i, v)| (SpecFunId::new(i), v))
+            .collect();
+
         self.module_data.push(ModuleData {
             name,
             id: ModuleId(idx as RawIndex),
             module,
             struct_data,
+            struct_idx_to_id,
             function_data,
+            function_idx_to_id,
             spec_vars,
             spec_funs,
             source_map,
-            source_file_id,
+            loc,
             loc_map,
             type_map,
+            instantiation_map,
         });
     }
 
@@ -329,6 +407,10 @@ impl GlobalEnv {
         } else {
             BTreeMap::new()
         };
+        let field_def_idx_to_id: BTreeMap<FieldDefinitionIndex, FieldId> = field_data
+            .iter()
+            .map(|(id, data)| (data.def_idx, *id))
+            .collect();
         let mut data_invariants = vec![];
         let mut update_invariants = vec![];
         let mut pack_invariants = vec![];
@@ -347,6 +429,7 @@ impl GlobalEnv {
             def_idx,
             handle_idx,
             field_data,
+            field_def_idx_to_id,
             data_invariants,
             update_invariants,
             pack_invariants,
@@ -374,6 +457,16 @@ impl GlobalEnv {
     pub fn find_module_by_name(&self, simple_name: Symbol) -> Option<ModuleEnv<'_>> {
         self.get_modules()
             .find(|m| m.get_name().name() == simple_name)
+    }
+
+    /// Gets the module enclosing this location.
+    pub fn get_enclosing_module(&self, loc: Loc) -> Option<ModuleEnv<'_>> {
+        for data in &self.module_data {
+            if data.loc.file_id() == loc.file_id() && !data.loc.span().disjoint(loc.span()) {
+                return Some(ModuleEnv { env: self, data });
+            }
+        }
+        None
     }
 
     // Gets the number of modules in this environment.
@@ -461,26 +554,35 @@ pub struct ModuleData {
     /// Struct data.
     pub struct_data: BTreeMap<StructId, StructData>,
 
+    /// Mapping from struct definition index to id in above map.
+    pub struct_idx_to_id: BTreeMap<StructDefinitionIndex, StructId>,
+
     /// Function data.
     pub function_data: BTreeMap<FunId, FunctionData>,
 
+    /// Mapping from function definition index to id in above map.
+    pub function_idx_to_id: BTreeMap<FunctionDefinitionIndex, FunId>,
+
     /// Specification variables, in SpecVarId order.
-    pub spec_vars: Vec<SpecVarDecl>,
+    pub spec_vars: BTreeMap<SpecVarId, SpecVarDecl>,
 
     /// Specification functions, in SpecFunId order.
-    pub spec_funs: Vec<SpecFunDecl>,
+    pub spec_funs: BTreeMap<SpecFunId, SpecFunDecl>,
 
     /// Module source location information.
     pub source_map: ModuleSourceMap<Span>,
 
-    /// A FileId for the `self.source_files` database.
-    pub source_file_id: FileId,
+    /// The location of this module.
+    pub loc: Loc,
 
     /// A map from node id to associated location.
     pub loc_map: BTreeMap<NodeId, Loc>,
 
     /// A map from node id to associated type.
     pub type_map: BTreeMap<NodeId, Type>,
+
+    /// A map from node id to associated instantiation of type parameters.
+    pub instantiation_map: BTreeMap<NodeId, Vec<Type>>,
 }
 
 /// Represents a module environment.
@@ -504,17 +606,22 @@ impl<'env> ModuleEnv<'env> {
         &self.data.name
     }
 
-    /// Returns file name and line/column position for location in this module.
-    pub fn get_position(&self, loc: Span) -> Option<(String, Location)> {
+    /// Shortcut for accessing the symbol pool.
+    pub fn symbol_pool(&self) -> &SymbolPool {
+        &self.env.symbol_pool
+    }
+
+    /// Returns file name and line/column position for span in this module.
+    pub fn get_position(&self, span: Span) -> Option<(String, Location)> {
         self.env
             .source_files
-            .location(self.data.source_file_id, loc.start())
+            .location(self.data.loc.file_id(), span.start())
             .ok()
             .map(|location| {
                 (
                     self.env
                         .source_files
-                        .name(self.data.source_file_id)
+                        .name(self.data.loc.file_id())
                         .to_string_lossy()
                         .to_string(),
                     location,
@@ -542,9 +649,14 @@ impl<'env> ModuleEnv<'env> {
 
     /// Gets a FunctionEnv by id.
     pub fn get_function(&'env self, id: FunId) -> FunctionEnv<'env> {
+        self.clone().into_get_function(id)
+    }
+
+    /// Gets a FunctionEnv by id.
+    pub fn into_get_function(self, id: FunId) -> FunctionEnv<'env> {
         let data = self.data.function_data.get(&id).expect("FunId undefined");
         FunctionEnv {
-            module_env: self.clone(),
+            module_env: self,
             data,
         }
     }
@@ -565,14 +677,14 @@ impl<'env> ModuleEnv<'env> {
             })
     }
 
-    /// Returns the FunctionEnv which contains the location. This returns any function
+    /// Returns the FunctionEnv which contains the span. This returns any function
     /// which location encloses the given one.
-    pub fn get_enclosing_function(&'env self, loc: Span) -> Option<FunctionEnv<'env>> {
+    pub fn get_enclosing_function(&'env self, span: Span) -> Option<FunctionEnv<'env>> {
         // Currently we do a brute-force linear search, may need to speed this up if it appears
         // to be a bottleneck.
         for func_env in self.get_functions() {
-            let fun_loc = func_env.get_loc();
-            if loc.start() >= fun_loc.start() && loc.end() <= fun_loc.end() {
+            let fun_span = func_env.get_loc().span();
+            if span.start() >= fun_span.start() && span.end() <= fun_span.end() {
                 return Some(func_env);
             }
         }
@@ -589,9 +701,7 @@ impl<'env> ModuleEnv<'env> {
             .env
             .find_module(&module_name)
             .expect("unexpected reference to module not found in global env");
-        module_env
-            .find_function(self.env.symbol_pool.make(view.name().as_str()))
-            .expect("unexpected reference to function not found in associated module")
+        module_env.into_get_function(FunId::new(self.env.symbol_pool.make(view.name().as_str())))
     }
 
     /// Gets a StructEnv in this module by name.
@@ -607,6 +717,15 @@ impl<'env> ModuleEnv<'env> {
         }
     }
 
+    /// Gets the struct id from a definition index which must be valid for this environment.
+    pub fn get_struct_id(&self, idx: StructDefinitionIndex) -> StructId {
+        *self
+            .data
+            .struct_idx_to_id
+            .get(&idx)
+            .expect("undefined struct definition index")
+    }
+
     /// Gets a StructEnv by id.
     pub fn get_struct(&self, id: StructId) -> StructEnv<'_> {
         let data = self.data.struct_data.get(&id).expect("StructId undefined");
@@ -614,6 +733,19 @@ impl<'env> ModuleEnv<'env> {
             module_env: self.clone(),
             data,
         }
+    }
+
+    pub fn get_struct_by_def_idx(&self, idx: StructDefinitionIndex) -> StructEnv<'_> {
+        self.get_struct(self.get_struct_id(idx))
+    }
+
+    /// Gets the function id from a definition index which must be valid for this environment.
+    pub fn get_function_id(&self, idx: FunctionDefinitionIndex) -> FunId {
+        *self
+            .data
+            .function_idx_to_id
+            .get(&idx)
+            .expect("undefined function definition index")
     }
 
     /// Gets a StructEnv by id, consuming this module env.
@@ -711,13 +843,61 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Returns specification variables of this module.
-    pub fn get_spec_vars(&'env self) -> &'env [SpecVarDecl] {
-        &self.data.spec_vars
+    pub fn get_spec_vars(&'env self) -> impl Iterator<Item = (&'env SpecVarId, &'env SpecVarDecl)> {
+        self.data.spec_vars.iter()
+    }
+
+    /// Gets spec var by id.
+    pub fn get_spec_var(&self, id: SpecVarId) -> &SpecVarDecl {
+        self.data.spec_vars.get(&id).expect("spec var id defined")
     }
 
     /// Returns specification functions of this module.
-    pub fn get_spec_funs(&'env self) -> &'env [SpecFunDecl] {
-        &self.data.spec_funs
+    pub fn get_spec_funs(&'env self) -> impl Iterator<Item = (&'env SpecFunId, &'env SpecFunDecl)> {
+        self.data.spec_funs.iter()
+    }
+
+    /// Gets spec fun by id.
+    pub fn get_spec_fun(&self, id: SpecFunId) -> &SpecFunDecl {
+        self.data.spec_funs.get(&id).expect("spec fun id defined")
+    }
+
+    /// Get all spec fun overloads with the given name.
+    pub fn get_spec_funs_of_name(
+        &self,
+        name: Symbol,
+    ) -> impl Iterator<Item = (&'env SpecFunId, &'env SpecFunDecl)> {
+        self.data
+            .spec_funs
+            .iter()
+            .filter(move |(_, decl)| decl.name == name)
+    }
+
+    /// Gets the location of the given node.
+    pub fn get_node_loc(&self, node_id: NodeId) -> Loc {
+        self.data
+            .loc_map
+            .get(&node_id)
+            .cloned()
+            .unwrap_or_else(|| self.env.unknown_loc())
+    }
+
+    /// Gets the type of the given node.
+    pub fn get_node_type(&self, node_id: NodeId) -> Type {
+        self.data
+            .type_map
+            .get(&node_id)
+            .cloned()
+            .unwrap_or_else(|| Type::Error)
+    }
+
+    /// Gets the type parameter instantiation associated with the given node.
+    pub fn get_node_instantiation(&self, node_id: NodeId) -> Vec<Type> {
+        self.data
+            .instantiation_map
+            .get(&node_id)
+            .cloned()
+            .unwrap_or_else(|| vec![])
     }
 }
 
@@ -737,6 +917,9 @@ pub struct StructData {
 
     /// Field definitions.
     field_data: BTreeMap<FieldId, FieldData>,
+
+    /// Map from definition index to id.
+    field_def_idx_to_id: BTreeMap<FieldDefinitionIndex, FieldId>,
 
     // Invariants
     data_invariants: Vec<Invariant>,
@@ -760,9 +943,14 @@ impl<'env> StructEnv<'env> {
         self.data.name
     }
 
+    /// Shortcut for accessing the symbol pool.
+    pub fn symbol_pool(&self) -> &SymbolPool {
+        self.module_env.symbol_pool()
+    }
+
     /// Returns the location of this struct.
-    pub fn get_loc(&self) -> Span {
-        if let Ok(source_map) = self
+    pub fn get_loc(&self) -> Loc {
+        let span = if let Ok(source_map) = self
             .module_env
             .data
             .source_map
@@ -771,7 +959,8 @@ impl<'env> StructEnv<'env> {
             source_map.decl_location
         } else {
             Span::default()
-        }
+        };
+        Loc::new(self.module_env.data.loc.file_id(), span)
     }
 
     /// Gets the definition index associated with this struct.
@@ -824,6 +1013,17 @@ impl<'env> StructEnv<'env> {
         }
     }
 
+    /// Gets a field by its definition index.
+    pub fn get_field_by_def_idx(&'env self, idx: FieldDefinitionIndex) -> FieldEnv<'env> {
+        self.get_field(
+            *self
+                .data
+                .field_def_idx_to_id
+                .get(&idx)
+                .expect("undefined field definition index"),
+        )
+    }
+
     /// Find a field by its name.
     pub fn find_field(&'env self, name: Symbol) -> Option<FieldEnv<'env>> {
         let id = FieldId(name);
@@ -849,7 +1049,7 @@ impl<'env> StructEnv<'env> {
             .enumerate()
             .map(|(i, k)| {
                 TypeParameter(
-                    self.module_env.env.symbol_pool.make(&format!("tv{}", i)),
+                    self.module_env.env.symbol_pool.make(&format!("$tv{}", i)),
                     *k,
                 )
             })
@@ -984,9 +1184,19 @@ impl<'env> FunctionEnv<'env> {
         FunId(self.data.name)
     }
 
+    /// Gets the definition index of this function.
+    pub fn get_def_idx(&self) -> FunctionDefinitionIndex {
+        self.data.def_idx
+    }
+
+    /// Shortcut for accessing the symbol pool.
+    pub fn symbol_pool(&self) -> &SymbolPool {
+        self.module_env.symbol_pool()
+    }
+
     /// Returns the location of this function.
-    pub fn get_loc(&self) -> Span {
-        if let Ok(source_map) = self
+    pub fn get_loc(&self) -> Loc {
+        let span = if let Ok(source_map) = self
             .module_env
             .data
             .source_map
@@ -995,19 +1205,20 @@ impl<'env> FunctionEnv<'env> {
             source_map.decl_location
         } else {
             Span::default()
-        }
+        };
+        Loc::new(self.module_env.data.loc.file_id(), span)
     }
 
     /// Returns the location of the bytecode at the given offset.
-    pub fn get_bytecode_loc(&self, offset: u16) -> Span {
+    pub fn get_bytecode_loc(&self, offset: u16) -> Loc {
         if let Ok(fmap) = self
             .module_env
             .data
             .source_map
             .get_function_source_map(self.data.def_idx)
         {
-            if let Some(loc) = fmap.get_code_location(offset) {
-                return loc;
+            if let Some(span) = fmap.get_code_location(offset) {
+                return Loc::new(self.module_env.data.loc.file_id(), span);
             }
         }
         self.get_loc()
@@ -1037,7 +1248,7 @@ impl<'env> FunctionEnv<'env> {
             .enumerate()
             .map(|(i, k)| {
                 TypeParameter(
-                    self.module_env.env.symbol_pool.make(&format!("tv{}", i)),
+                    self.module_env.env.symbol_pool.make(&format!("$tv{}", i)),
                     *k,
                 )
             })
@@ -1091,7 +1302,7 @@ impl<'env> FunctionEnv<'env> {
                 return self.module_env.env.symbol_pool.make(ident.as_str());
             }
         }
-        self.module_env.env.symbol_pool.make(&format!("__t{}", idx))
+        self.module_env.env.symbol_pool.make(&format!("$t{}", idx))
     }
 
     /// Gets the number of proper locals of this function. Those are locals which are declared

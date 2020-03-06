@@ -42,6 +42,7 @@ pub enum ConditionKind {
 
 #[derive(Debug)]
 pub struct Condition {
+    pub loc: Loc,
     pub kind: ConditionKind,
     pub exp: Exp,
 }
@@ -59,7 +60,10 @@ pub enum InvariantKind {
 
 #[derive(Debug)]
 pub struct Invariant {
+    pub loc: Loc,
     pub kind: InvariantKind,
+    // If this is an assignment to a spec variable, the module and var id.
+    pub target: Option<(ModuleId, SpecVarId)>,
     pub exp: Exp,
 }
 
@@ -79,11 +83,29 @@ pub enum Exp {
     IfElse(NodeId, Box<Exp>, Box<Exp>, Box<Exp>),
 }
 
+impl Exp {
+    pub fn node_id(&self) -> NodeId {
+        use Exp::*;
+        match self {
+            Error(node_id)
+            | Value(node_id, ..)
+            | LocalVar(node_id, ..)
+            | SpecVar(node_id, ..)
+            | Call(node_id, ..)
+            | Invoke(node_id, ..)
+            | Lambda(node_id, ..)
+            | Block(node_id, ..)
+            | IfElse(node_id, ..) => *node_id,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operation {
     Function(ModuleId, SpecFunId),
     Pack(ModuleId, StructId),
-    FieldSelect(ModuleId, StructId, FieldId),
+    Tuple,
+    Select(ModuleId, StructId, FieldId),
     Result(usize),
     Index,
     Slice,
@@ -120,7 +142,7 @@ pub enum Operation {
     Global,
     Exists,
     Old,
-    VectorUpdate,
+    Update,
 }
 
 #[derive(Debug)]
