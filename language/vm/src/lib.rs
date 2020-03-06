@@ -6,9 +6,6 @@
 #[macro_use]
 extern crate mirai_annotations;
 
-#[cfg(feature = "mirai-contracts")]
-pub mod foreign_contracts;
-
 use std::fmt;
 
 pub mod access;
