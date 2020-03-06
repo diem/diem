@@ -2514,6 +2514,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
+ "libra-logger 0.1.0",
 ]
 
 [[package]]
