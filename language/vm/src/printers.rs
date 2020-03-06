@@ -3,7 +3,8 @@
 
 use crate::file_format::*;
 use anyhow::{bail, format_err, Result};
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::IdentStr};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use move_core_types::identifier::IdentStr;
 use std::{collections::VecDeque, fmt};
 
 //

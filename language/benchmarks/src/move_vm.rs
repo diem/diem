@@ -6,11 +6,9 @@ use bytecode_verifier::VerifiedModule;
 use criterion::Criterion;
 use libra_state_view::StateView;
 use libra_types::{
-    access_path::AccessPath,
-    account_address::AccountAddress,
-    identifier::{IdentStr, Identifier},
-    language_storage::ModuleId,
+    access_path::AccessPath, account_address::AccountAddress, language_storage::ModuleId,
 };
+use move_core_types::identifier::{IdentStr, Identifier};
 use move_lang::{shared::Address, to_bytecode::translate::CompiledUnit};
 use move_vm_runtime::MoveVM;
 use move_vm_state::{data_cache::BlockDataCache, execution_context::TransactionExecutionContext};

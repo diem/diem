@@ -11,7 +11,8 @@ use std::{
 use itertools::Itertools;
 use num::{BigInt, Num};
 
-use libra_types::{account_address::AccountAddress, identifier::IdentStr};
+use libra_types::account_address::AccountAddress;
+use move_core_types::identifier::IdentStr;
 use move_ir_types::{
     ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Type},
     location::{Loc, Spanned},

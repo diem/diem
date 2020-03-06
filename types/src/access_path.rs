@@ -41,13 +41,13 @@ use crate::{
         association_address, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH,
         ACCOUNT_SENT_EVENT_PATH,
     },
-    identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
 use anyhow::{Error, Result};
 use libra_crypto::hash::{CryptoHash, HashValue};
 use mirai_annotations::*;
+use move_core_types::identifier::{IdentStr, Identifier};
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

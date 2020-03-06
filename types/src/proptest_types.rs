@@ -14,7 +14,6 @@ use crate::{
     discovery_info::DiscoveryInfo,
     event::{EventHandle, EventKey, EVENT_KEY_LENGTH},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
-    identifier::Identifier,
     language_storage::{StructTag, TypeTag},
     ledger_info::LedgerInfo,
     proof::{AccumulatorConsistencyProof, TransactionListProof},
@@ -34,6 +33,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_proptest_helpers::Index;
+use move_core_types::identifier::Identifier;
 use parity_multiaddr::{Multiaddr, Protocol};
 use proptest::{
     collection::{vec, SizeRange},

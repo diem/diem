@@ -3,7 +3,7 @@
 
 //! Names of modules and functions that are somehow special to the Move VM.
 
-use libra_types::identifier::Identifier;
+use move_core_types::identifier::Identifier;
 use once_cell::sync::Lazy;
 
 pub(crate) static EMIT_EVENT_NAME: Lazy<Identifier> =

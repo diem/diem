@@ -22,10 +22,10 @@ use libra_types::{
     crypto_proxies::ValidatorSet,
     discovery_info::DiscoveryInfo,
     discovery_set::DiscoverySet,
-    identifier::Identifier,
     transaction::{ChangeSet, RawTransaction, SignatureCheckedTransaction},
 };
 use libra_vm::system_module_names::*;
+use move_core_types::identifier::Identifier;
 use move_vm_runtime::MoveVM;
 use move_vm_state::{
     data_cache::BlockDataCache,

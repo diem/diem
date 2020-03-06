@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::native_structs::def::NativeStructType;
-use libra_types::{identifier::IdentStr, language_storage::ModuleId};
+use libra_types::language_storage::ModuleId;
+use move_core_types::identifier::IdentStr;
 use vm::file_format::{Kind, StructHandleIndex};
 
 /// Struct representing the expected definition for a native struct

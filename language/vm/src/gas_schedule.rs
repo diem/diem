@@ -11,7 +11,8 @@ use crate::file_format::{
     StructDefinitionIndex, NO_TYPE_ACTUALS, NUMBER_OF_NATIVE_FUNCTIONS,
 };
 pub use crate::file_format_common::Opcodes;
-use libra_types::{identifier::Identifier, transaction::MAX_TRANSACTION_SIZE_IN_BYTES};
+use libra_types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
+use move_core_types::identifier::Identifier;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{

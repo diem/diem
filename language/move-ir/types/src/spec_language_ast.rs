@@ -5,7 +5,8 @@ use crate::{
     ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Type},
     location::*,
 };
-use libra_types::{account_address::AccountAddress, identifier::Identifier};
+use libra_types::account_address::AccountAddress;
+use move_core_types::identifier::Identifier;
 
 /// AST for the Move Prover specification language.
 

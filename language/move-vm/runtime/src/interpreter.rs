@@ -20,11 +20,11 @@ use libra_types::{
     account_config,
     contract_event::ContractEvent,
     event::EventKey,
-    identifier::IdentStr,
     language_storage::{ModuleId, StructTag, TypeTag},
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
+use move_core_types::identifier::IdentStr;
 use move_vm_types::identifier::{create_access_path, resource_storage_key};
 use move_vm_types::{
     loaded_data::{struct_def::StructDef, types::Type},

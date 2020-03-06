@@ -6,10 +6,8 @@ use crate::{
     runtime::VMRuntime,
 };
 use bytecode_verifier::VerifiedModule;
-use libra_types::{
-    identifier::{IdentStr, Identifier},
-    language_storage::{ModuleId, StructTag},
-};
+use libra_types::language_storage::{ModuleId, StructTag};
+use move_core_types::identifier::{IdentStr, Identifier};
 use move_vm_cache::Arena;
 use move_vm_definition::MoveVMImpl;
 use move_vm_types::{chain_state::ChainState, loaded_data::struct_def::StructDef, values::Value};

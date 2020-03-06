@@ -24,6 +24,7 @@ lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
 libra-types = { path = "../../types", version = "0.1.0" }
+move-core-types = { path = "../move-core/types", version = "0.1.0" }
 num-variants = { path = "../../common/num-variants", version = "0.1.0" }
 
 [dev-dependencies]

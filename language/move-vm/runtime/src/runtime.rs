@@ -11,10 +11,10 @@ use crate::{
 use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
 use libra_types::{
-    identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag},
     vm_error::{StatusCode, VMStatus},
 };
+use move_core_types::identifier::{IdentStr, Identifier};
 use move_vm_cache::Arena;
 use move_vm_types::identifier::resource_storage_key;
 use move_vm_types::{

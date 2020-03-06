@@ -4,9 +4,9 @@
 use crate::{account::AccountData, executor::test_all_genesis, gas_costs};
 use libra_config::config::VMPublishingOption;
 use libra_types::{
-    account_address::AccountAddress, identifier::Identifier, transaction::TransactionStatus,
-    vm_error::StatusCode,
+    account_address::AccountAddress, transaction::TransactionStatus, vm_error::StatusCode,
 };
+use move_core_types::identifier::Identifier;
 use vm::file_format::{
     empty_script, AddressPoolIndex, Bytecode, FunctionHandle, FunctionHandleIndex,
     FunctionSignatureIndex, IdentifierIndex, LocalsSignatureIndex, ModuleHandle, ModuleHandleIndex,

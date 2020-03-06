@@ -12,9 +12,9 @@ use crate::{
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     byte_array::ByteArray,
-    identifier::Identifier,
     language_storage::ModuleId,
 };
+use move_core_types::identifier::Identifier;
 use move_vm_runtime::{
     interpreter::InterpreterForCostSynthesis, loaded_data::loaded_module::LoadedModule, MoveVM,
 };

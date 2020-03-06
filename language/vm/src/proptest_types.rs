@@ -10,7 +10,8 @@ use crate::file_format::{
     StructHandle, StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
 };
 use libra_proptest_helpers::GrowingSubset;
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use move_core_types::identifier::Identifier;
 use proptest::{
     collection::{vec, SizeRange},
     option,

@@ -10,7 +10,6 @@ mod contract_event_test;
 mod discovery_info_test;
 mod discovery_set_test;
 mod get_with_proof_test;
-mod identifier_test;
 mod language_storage_test;
 mod ledger_info_proto_conversion_test;
 mod multiaddr_test;

@@ -13,8 +13,9 @@ use crate::{
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
 use itertools::Itertools;
-use libra_types::{account_address::AccountAddress, identifier::Identifier};
+use libra_types::account_address::AccountAddress;
 use log::info;
+use move_core_types::identifier::Identifier;
 use move_ir_types::{
     ast::ModuleDefinition,
     location::Spanned,

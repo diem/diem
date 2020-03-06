@@ -9,7 +9,8 @@
 
 use crate::{file_format::*, file_format_common::*};
 use anyhow::{bail, Result};
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use move_core_types::identifier::Identifier;
 
 impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the

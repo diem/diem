@@ -6,11 +6,8 @@ use codespan::{ByteIndex, Span};
 use std::{fmt, str::FromStr};
 
 use crate::lexer::*;
-use libra_types::{
-    account_address::AccountAddress,
-    byte_array::ByteArray,
-    identifier::{IdentStr, Identifier},
-};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use move_core_types::identifier::{IdentStr, Identifier};
 use move_ir_types::{ast::*, location::*, spec_language_ast::*};
 
 // FIXME: The following simplified version of ParseError copied from

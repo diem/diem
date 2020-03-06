@@ -6,9 +6,9 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use libra_types::{
     account_address::ADDRESS_LENGTH,
     byte_array::ByteArray,
-    identifier::Identifier,
     vm_error::{StatusCode, VMStatus},
 };
+use move_core_types::identifier::Identifier;
 use std::{
     collections::HashSet,
     convert::TryInto,

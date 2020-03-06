@@ -25,10 +25,8 @@ use crate::{
 };
 use std::collections::BTreeSet;
 
-use libra_types::{
-    identifier::IdentStr,
-    language_storage::{ModuleId, StructTag},
-};
+use libra_types::language_storage::{ModuleId, StructTag};
+use move_core_types::identifier::IdentStr;
 use std::collections::BTreeMap;
 
 /// Represents a lazily evaluated abstraction over a module.

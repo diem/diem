@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Names of modules and functions used by Libra System.
 
-use libra_types::{account_config, identifier::Identifier, language_storage::ModuleId};
+use libra_types::{account_config, language_storage::ModuleId};
+use move_core_types::identifier::Identifier;
 use once_cell::sync::Lazy;
 
 // Data to resolve basic account and transaction flow functions and structs
