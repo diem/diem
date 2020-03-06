@@ -34,5 +34,4 @@ serde_json = "1"
 
 [features]
 default = []
-mirai-contracts = []
 fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-types/fuzzing"]
