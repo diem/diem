@@ -50,3 +50,11 @@ impl From<lcs::Error> for Error {
         Self::SerializationError(format!("{}", error))
     }
 }
+
+impl From<libra_secure_net::Error> for Error {
+    fn from(error: libra_secure_net::Error) -> Self {
+        Self::InternalError {
+            error: format!("{}", error),
+        }
+    }
+}
