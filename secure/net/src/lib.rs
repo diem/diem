@@ -16,6 +16,7 @@
 //! where a block is a length prefixed array of bytes.
 
 use anyhow::{anyhow, ensure, Result};
+use libra_logger::{debug, trace};
 use std::{
     io::{Read, Write},
     net::{Shutdown, SocketAddr, TcpListener, TcpStream},
@@ -40,6 +41,7 @@ impl NetworkClient {
         let stream = self.server()?;
         let result = stream.read();
         if result.is_err() {
+            debug!("On read, upstream peer disconnected, setting stream to None");
             self.stream = None;
         }
         result
@@ -47,6 +49,7 @@ impl NetworkClient {
 
     /// Shutdown the internal network stream
     pub fn shutdown(&mut self) -> Result<()> {
+        debug!("Shutdown called");
         let stream = self
             .stream
             .take()
@@ -60,6 +63,7 @@ impl NetworkClient {
         let stream = self.server()?;
         let result = stream.write(data);
         if result.is_err() {
+            debug!("On write, upstream peer disconnected, setting stream to None");
             self.stream = None;
         }
         result
@@ -67,6 +71,7 @@ impl NetworkClient {
 
     fn server(&mut self) -> Result<&mut NetworkStream> {
         if self.stream.is_none() {
+            debug!("Attempting to connect to upstream {}", self.server);
             let mut stream = TcpStream::connect(self.server);
 
             let sleeptime = time::Duration::from_millis(100);
@@ -78,6 +83,7 @@ impl NetworkClient {
             let stream = stream?;
             stream.set_nodelay(true)?;
             self.stream = Some(NetworkStream::new(stream));
+            debug!("Connection established to upstream {}", self.server);
         }
 
         self.stream
@@ -106,6 +112,7 @@ impl NetworkServer {
         let stream = self.client()?;
         let result = stream.read();
         if result.is_err() {
+            debug!("On read, downstream peer disconnected, setting stream to None");
             self.stream = None;
         }
         result
@@ -113,6 +120,7 @@ impl NetworkServer {
 
     /// Shutdown the internal network stream
     pub fn shutdown(&mut self) -> Result<()> {
+        debug!("Shutdown called");
         self.listener
             .take()
             .ok_or_else(|| anyhow!("Listener already shutdown"))?;
@@ -130,6 +138,7 @@ impl NetworkServer {
         let stream = self.client()?;
         let result = stream.write(data);
         if result.is_err() {
+            debug!("On write, downstream peer disconnected, setting stream to None");
             self.stream = None;
         }
         result
@@ -137,11 +146,13 @@ impl NetworkServer {
 
     fn client(&mut self) -> Result<&mut NetworkStream> {
         if self.stream.is_none() {
+            debug!("Waiting for downstream to connect");
             let listener = self
                 .listener
                 .as_mut()
                 .ok_or_else(|| anyhow!("Listener already shutdown"))?;
-            let (stream, _stream_addr) = listener.accept()?;
+            let (stream, stream_addr) = listener.accept()?;
+            debug!("Connection established with downstream {}", stream_addr);
             stream.set_nodelay(true)?;
             self.stream = Some(NetworkStream::new(stream));
         }
@@ -175,15 +186,19 @@ impl NetworkStream {
         }
 
         loop {
+            trace!("Attempting to read from stream");
             let read = self.stream.read(&mut self.temp_buffer)?;
+            trace!("Read {} bytes from stream", read);
             if read == 0 {
                 anyhow::bail!("Remote stream cleanly closed");
             }
             self.buffer.extend(self.temp_buffer[0..read].to_vec());
             let result = self.read_buffer();
             if !result.is_empty() {
+                trace!("Found a message in the stream");
                 return Ok(result);
             }
+            trace!("Did not find a message yet, reading again");
         }
     }
 
@@ -201,8 +216,14 @@ impl NetworkStream {
             data.len()
         );
         let data_len = data.len() as u32;
+        trace!("Attempting to write length, {},  to the stream", data_len);
         self.write_all(&data_len.to_le_bytes())?;
+        trace!("Attempting to write data, {},  to the stream", data_len);
         self.write_all(data)?;
+        trace!(
+            "Successfully wrote length, {}, and data to the stream",
+            data_len
+        );
         Ok(())
     }
 

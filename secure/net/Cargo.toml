@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
 
 [dev-dependencies]
 libra-config = { path = "../../config", version = "0.1.0" }
