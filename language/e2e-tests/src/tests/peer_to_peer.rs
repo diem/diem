@@ -42,14 +42,14 @@ fn single_peer_to_peer_with_event() {
         let gas = output.gas_used();
         let sender_balance = 1_000_000 - transfer_amount - gas;
         let receiver_balance = 100_000 + transfer_amount;
-        let updated_sender = executor
-            .read_account_resource(sender.account())
+        let (updated_sender, updated_sender_balance) = executor
+            .read_account_info(sender.account())
             .expect("sender must exist");
-        let updated_receiver = executor
-            .read_account_resource(receiver.account())
+        let (updated_receiver, updated_receiver_balance) = executor
+            .read_account_info(receiver.account())
             .expect("receiver must exist");
-        assert_eq!(receiver_balance, updated_receiver.balance());
-        assert_eq!(sender_balance, updated_sender.balance());
+        assert_eq!(receiver_balance, updated_receiver_balance.coin());
+        assert_eq!(sender_balance, updated_sender_balance.coin());
         assert_eq!(11, updated_sender.sequence_number());
         assert_eq!(0, updated_sender.received_events().count(),);
         assert_eq!(1, updated_sender.sent_events().count());
@@ -106,14 +106,14 @@ fn single_peer_to_peer_with_padding() {
     let gas = output.gas_used();
     let sender_balance = 1_000_000 - transfer_amount - gas;
     let receiver_balance = 100_000 + transfer_amount;
-    let updated_sender = executor
-        .read_account_resource(sender.account())
+    let (updated_sender, updated_sender_balance) = executor
+        .read_account_info(sender.account())
         .expect("sender must exist");
-    let updated_receiver = executor
-        .read_account_resource(receiver.account())
-        .expect("receiver must exist");
-    assert_eq!(receiver_balance, updated_receiver.balance());
-    assert_eq!(sender_balance, updated_sender.balance());
+    let updated_receiver_balance = executor
+        .read_balance_resource(receiver.account())
+        .expect("receiver balance must exist");
+    assert_eq!(receiver_balance, updated_receiver_balance.coin());
+    assert_eq!(sender_balance, updated_sender_balance.coin());
     assert_eq!(11, updated_sender.sequence_number());
 }
 
@@ -156,26 +156,26 @@ fn few_peer_to_peer_with_event() {
                 }
             }
 
-            let original_sender = executor
-                .read_account_resource(sender.account())
-                .expect("sender must exist");
-            let original_receiver = executor
-                .read_account_resource(receiver.account())
-                .expect("receiver must exist");
+            let original_sender_balance = executor
+                .read_balance_resource(sender.account())
+                .expect("sender balance must exist");
+            let original_receiver_balance = executor
+                .read_balance_resource(receiver.account())
+                .expect("receiver balcne must exist");
             executor.apply_write_set(txn_output.write_set());
 
             // check that numbers in stored DB are correct
             let gas = txn_output.gas_used();
-            let sender_balance = original_sender.balance() - transfer_amount - gas;
-            let receiver_balance = original_receiver.balance() + transfer_amount;
-            let updated_sender = executor
-                .read_account_resource(sender.account())
+            let sender_balance = original_sender_balance.coin() - transfer_amount - gas;
+            let receiver_balance = original_receiver_balance.coin() + transfer_amount;
+            let (updated_sender, updated_sender_balance) = executor
+                .read_account_info(sender.account())
                 .expect("sender must exist");
-            let updated_receiver = executor
-                .read_account_resource(receiver.account())
+            let (updated_receiver, updated_receiver_balance) = executor
+                .read_account_info(receiver.account())
                 .expect("receiver must exist");
-            assert_eq!(receiver_balance, updated_receiver.balance());
-            assert_eq!(sender_balance, updated_sender.balance());
+            assert_eq!(receiver_balance, updated_receiver_balance.coin());
+            assert_eq!(sender_balance, updated_sender_balance.coin());
             assert_eq!(11 + idx as u64, updated_sender.sequence_number());
             assert_eq!(0, updated_sender.received_events().count());
             assert_eq!(idx as u64 + 1, updated_sender.sent_events().count());
@@ -237,14 +237,14 @@ fn peer_to_peer_create_account() {
         let gas = output.gas_used();
         let sender_balance = 1_000_000 - transfer_amount - gas;
         let receiver_balance = transfer_amount;
-        let updated_sender = executor
-            .read_account_resource(sender.account())
+        let (updated_sender, updated_sender_balance) = executor
+            .read_account_info(sender.account())
             .expect("sender must exist");
-        let updated_receiver = executor
-            .read_account_resource(&new_account)
+        let updated_receiver_balance = executor
+            .read_balance_resource(&new_account)
             .expect("receiver must exist");
-        assert_eq!(receiver_balance, updated_receiver.balance());
-        assert_eq!(sender_balance, updated_sender.balance());
+        assert_eq!(receiver_balance, updated_receiver_balance.coin());
+        assert_eq!(sender_balance, updated_sender_balance.coin());
         assert_eq!(11, updated_sender.sequence_number());
     });
 }
@@ -362,15 +362,15 @@ fn check_and_apply_transfer_output(
         let sender = &txn_info.sender;
         let receiver = &txn_info.receiver;
         let transfer_amount = txn_info.transfer_amount;
-        let sender_resource = executor
-            .read_account_resource(&sender)
+        let (sender_resource, sender_balance) = executor
+            .read_account_info(&sender)
             .expect("sender must exist");
-        let sender_initial_balance = sender_resource.balance();
+        let sender_initial_balance = sender_balance.coin();
         let sender_seq_num = sender_resource.sequence_number();
-        let receiver_resource = executor
-            .read_account_resource(&receiver)
-            .expect("receiver must exist");
-        let receiver_initial_balance = receiver_resource.balance();
+        let receiver_initial_balance = executor
+            .read_balance_resource(&receiver)
+            .expect("receiver must exist")
+            .coin();
 
         // apply single transaction to DB
         let txn_output = &output[i];
@@ -380,14 +380,14 @@ fn check_and_apply_transfer_output(
         let gas = txn_output.gas_used();
         let sender_balance = sender_initial_balance - transfer_amount - gas;
         let receiver_balance = receiver_initial_balance + transfer_amount;
-        let updated_sender = executor
-            .read_account_resource(&sender)
+        let (updated_sender, updated_sender_balance) = executor
+            .read_account_info(&sender)
             .expect("sender must exist");
-        let updated_receiver = executor
-            .read_account_resource(&receiver)
-            .expect("receiver must exist");
-        assert_eq!(receiver_balance, updated_receiver.balance());
-        assert_eq!(sender_balance, updated_sender.balance());
+        let updated_receiver_balance = executor
+            .read_balance_resource(&receiver)
+            .expect("receiver balance must exist");
+        assert_eq!(receiver_balance, updated_receiver_balance.coin());
+        assert_eq!(sender_balance, updated_sender_balance.coin());
         assert_eq!(sender_seq_num + 1, updated_sender.sequence_number());
     }
 }

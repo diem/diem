@@ -84,17 +84,19 @@ impl FakeDataStore {
 
     /// Adds an [`AccountData`] to this data store.
     pub fn add_account_data(&mut self, account_data: &AccountData) {
-        match account_data
-            .to_resource()
+        let (account_blob, balance_blob) = account_data.to_account();
+        let account = account_blob
             .value_as::<Struct>()
             .unwrap()
-            .simple_serialize(&AccountData::layout())
-        {
-            Some(blob) => {
-                self.set(account_data.make_access_path(), blob);
-            }
-            None => panic!("can't create Account data"),
-        }
+            .simple_serialize(&AccountData::account_layout())
+            .unwrap();
+        let balance = balance_blob
+            .value_as::<Struct>()
+            .unwrap()
+            .simple_serialize(&AccountData::balance_layout())
+            .unwrap();
+        self.set(account_data.make_account_access_path(), account);
+        self.set(account_data.make_balance_access_path(), balance);
     }
 
     /// Adds a [`CompiledModule`] to this data store.

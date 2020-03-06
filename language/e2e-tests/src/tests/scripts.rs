@@ -49,10 +49,10 @@ fn script_code_unverifiable() {
         // Check that numbers in store are correct.
         let gas = output.gas_used();
         let balance = 1_000_000 - gas;
-        let updated_sender = executor
-            .read_account_resource(sender.account())
+        let (updated_sender, updated_sender_balance) = executor
+            .read_account_info(sender.account())
             .expect("sender must exist");
-        assert_eq!(balance, updated_sender.balance());
+        assert_eq!(balance, updated_sender_balance.coin());
         assert_eq!(11, updated_sender.sequence_number());
     });
 }
@@ -115,10 +115,10 @@ fn script_non_existing_module_dep() {
         // Check that numbers in store are correct.
         let gas = output.gas_used();
         let balance = 1_000_000 - gas;
-        let updated_sender = executor
-            .read_account_resource(sender.account())
+        let (updated_sender, updated_sender_balance) = executor
+            .read_account_info(sender.account())
             .expect("sender must exist");
-        assert_eq!(balance, updated_sender.balance());
+        assert_eq!(balance, updated_sender_balance.coin());
         assert_eq!(11, updated_sender.sequence_number());
     });
 }
@@ -183,10 +183,10 @@ fn script_non_existing_function_dep() {
         // Check that numbers in store are correct.
         let gas = output.gas_used();
         let balance = 1_000_000 - gas;
-        let updated_sender = executor
-            .read_account_resource(sender.account())
+        let (updated_sender, updated_sender_balance) = executor
+            .read_account_info(sender.account())
             .expect("sender must exist");
-        assert_eq!(balance, updated_sender.balance());
+        assert_eq!(balance, updated_sender_balance.coin());
         assert_eq!(11, updated_sender.sequence_number());
     });
 }
@@ -253,10 +253,10 @@ fn script_bad_sig_function_dep() {
         // Check that numbers in store are correct.
         let gas = output.gas_used();
         let balance = 1_000_000 - gas;
-        let updated_sender = executor
-            .read_account_resource(sender.account())
+        let (updated_sender, updated_sender_balance) = executor
+            .read_account_info(sender.account())
             .expect("sender must exist");
-        assert_eq!(balance, updated_sender.balance());
+        assert_eq!(balance, updated_sender_balance.coin());
         assert_eq!(11, updated_sender.sequence_number());
     });
 }
