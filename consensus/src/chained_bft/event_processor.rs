@@ -39,6 +39,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
     vote_proposal::VoteProposal,
 };
+use debug_interface::prelude::*;
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
@@ -300,6 +301,12 @@ impl<T: Payload> EventProcessor<T> {
             )
             .await?;
         let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
+        if let Some(ref payload) = signed_proposal.payload() {
+            self.txn_manager
+                .trace_transactions(payload, signed_proposal.id());
+        }
+        trace_edge!("parent_proposal", {"block", signed_proposal.parent_id()}, {"block", signed_proposal.id()});
+        trace_event!("event_processor::generate_proposal", {"block", signed_proposal.id()});
         debug!("Propose {}", signed_proposal);
         // return proposal
         Ok(ProposalMsg::new(signed_proposal, self.gen_sync_info()))
@@ -320,6 +327,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. forwarding the proposals to the ProposerElection queue,
     /// which is going to eventually trigger one winning proposal per round
     async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
+        trace_event!("event_processor::pre_process_proposal", {"block", proposal_msg.proposal().id()});
         // Pacemaker is going to be updated with all the proposal certificates later,
         // but it's known that the pacemaker's round is not going to decrease so we can already
         // filter out the proposals from old rounds.
@@ -715,6 +723,7 @@ impl<T: Payload> EventProcessor<T> {
     ///
     /// This function assumes that it might be called from different tasks concurrently.
     async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> anyhow::Result<Vote> {
+        trace_code_block!("event_processor::execute_and_vote", {"block", proposed_block.id()});
         let executed_block = self
             .block_store
             .execute_and_insert_block(proposed_block)
@@ -774,6 +783,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. Add the vote to the store and check whether it finishes a QC.
     /// 3. Once the QC successfully formed, notify the Pacemaker.
     pub async fn process_vote(&mut self, vote_msg: VoteMsg) {
+        trace_code_block!("event_processor::process_vote", {"block", vote_msg.proposed_block_id()});
         // Check whether this validator is a valid recipient of the vote.
         if !vote_msg.vote().is_timeout() {
             // Unlike timeout votes regular votes are sent to the leaders of the next round only.
@@ -888,6 +898,9 @@ impl<T: Payload> EventProcessor<T> {
                 return;
             }
         };
+        for block in blocks_to_commit.iter() {
+            end_trace!("commit", {"block", block.id()});
+        }
         Self::update_counters_for_committed_blocks(blocks_to_commit.clone());
 
         // notify mempool of rejected txns via txn_manager

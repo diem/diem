@@ -255,7 +255,7 @@ impl LibraClient {
         let req =
             UpdateToLatestLedgerRequest::new(self.trusted_state.latest_version(), requested_items);
 
-        debug!("get_with_proof with request: {:?}", req);
+        trace!("get_with_proof with request: {:?}", req);
         let proto_req = req.clone().into();
         let resp = self.client.update_to_latest_ledger(proto_req)?;
         let resp = UpdateToLatestLedgerResponse::try_from(resp)?;

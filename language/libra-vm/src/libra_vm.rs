@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{counters::*, system_module_names::*, VMExecutor, VMVerifier};
+use debug_interface::prelude::*;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -522,14 +523,23 @@ impl LibraVM {
         let blocks = chunk_block_transactions(transactions);
         let mut data_cache = BlockDataCache::new(state_view);
         self.load_configs_impl(&data_cache);
+        let mut execute_block_trace_guard = vec![];
+        let mut current_block_id = HashValue::zero();
         for block in blocks {
             match block {
                 TransactionBlock::UserTransaction(txns) => {
-                    let mut outs =
-                        self.execute_user_transactions(txns, &mut data_cache, state_view)?;
+                    let mut outs = self.execute_user_transactions(
+                        current_block_id,
+                        txns,
+                        &mut data_cache,
+                        state_view,
+                    )?;
                     result.append(&mut outs);
                 }
                 TransactionBlock::BlockPrologue(block_metadata) => {
+                    execute_block_trace_guard.clear();
+                    current_block_id = block_metadata.id();
+                    trace_code_block!("libra_vm::execute_block_impl", {"block", current_block_id}, execute_block_trace_guard);
                     result.push(self.process_block_prologue(&mut data_cache, block_metadata)?)
                 }
                 TransactionBlock::WriteSet(change_set) => result.push(
@@ -545,19 +555,24 @@ impl LibraVM {
 
     fn execute_user_transactions(
         &mut self,
+        block_id: HashValue,
         txn_block: Vec<SignedTransaction>,
         data_cache: &mut BlockDataCache<'_>,
         state_view: &dyn StateView,
     ) -> VMResult<Vec<TransactionOutput>> {
-        let signature_verified_block: Vec<Result<SignatureCheckedTransaction, VMStatus>> =
-            txn_block
+        let signature_verified_block: Vec<Result<SignatureCheckedTransaction, VMStatus>>;
+        {
+            trace_code_block!("libra_vm::verify_signatures", {"block", block_id});
+            signature_verified_block = txn_block
                 .into_par_iter()
                 .map(|txn| {
                     txn.check_signature()
                         .map_err(|_| VMStatus::new(StatusCode::INVALID_SIGNATURE))
                 })
                 .collect();
+        }
         let mut result = vec![];
+        trace_code_block!("libra_vm::execute_transactions", {"block", block_id});
         for transaction in signature_verified_block {
             record_stats! {time_hist | TXN_TOTAL_TIME_TAKEN | {
                     let output = match transaction {

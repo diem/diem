@@ -10,9 +10,11 @@ mod executor_test;
 mod mock_vm;
 
 use anyhow::{bail, ensure, format_err, Result};
+use debug_interface::prelude::*;
 use executor_types::{ExecutedTrees, ProcessedVMOutput, ProofReader, TransactionData};
 use futures::executor::block_on;
 use libra_config::config::{NodeConfig, VMConfig};
+use libra_crypto::hash::GENESIS_BLOCK_ID;
 use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
@@ -115,7 +117,12 @@ where
         // We create `PRE_GENESIS_BLOCK_ID` as the parent of the genesis block.
         let pre_genesis_trees = ExecutedTrees::new_empty();
         let output = self
-            .execute_block(genesis_txns.clone(), &pre_genesis_trees, &pre_genesis_trees)
+            .execute_block(
+                *GENESIS_BLOCK_ID,
+                genesis_txns.clone(),
+                &pre_genesis_trees,
+                &pre_genesis_trees,
+            )
             .expect("Failed to execute genesis block.");
 
         let validator_set = output
@@ -138,6 +145,7 @@ where
     /// Executes a block.
     pub fn execute_block(
         &self,
+        block_id: HashValue,
         transactions: Vec<Transaction>,
         parent_trees: &ExecutedTrees,
         committed_trees: &ExecutedTrees,
@@ -153,10 +161,12 @@ where
         );
 
         let vm_outputs = {
+            trace_code_block!("executor::execute_block", {"block", block_id});
             let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
             V::execute_block(transactions.clone(), &self.vm_config, &state_view)?
         };
 
+        trace_code_block!("executor::process_vm_outputs", {"block", block_id});
         let status: Vec<_> = vm_outputs
             .iter()
             .map(TransactionOutput::status)

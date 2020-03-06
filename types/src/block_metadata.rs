@@ -44,6 +44,10 @@ impl BlockMetadata {
         }
     }
 
+    pub fn id(&self) -> HashValue {
+        self.id
+    }
+
     pub fn into_inner(self) -> Result<(Vec<u8>, u64, Vec<u8>, AccountAddress)> {
         let id = self.id.to_vec();
         let vote_maps = lcs::to_bytes(&self.previous_block_votes)?;

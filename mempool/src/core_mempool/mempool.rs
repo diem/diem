@@ -14,6 +14,7 @@ use crate::{
     OP_COUNTERS,
 };
 use chrono::Utc;
+use debug_interface::prelude::*;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_types::{
@@ -57,6 +58,7 @@ impl Mempool {
         sequence_number: u64,
         is_rejected: bool,
     ) {
+        trace_event!("mempool:remove_transaction", {"txn", sender, sequence_number});
         trace!(
             "[Mempool] Removing transaction from mempool: {}:{}:{}",
             sender,
@@ -109,6 +111,7 @@ impl Mempool {
         db_sequence_number: u64,
         timeline_state: TimelineState,
     ) -> MempoolStatus {
+        trace_event!("mempool::add_txn", {"txn", txn.sender(), txn.sequence_number()});
         trace!(
             "[Mempool] Adding transaction to mempool: {}:{}:{}",
             &txn.sender(),
@@ -183,6 +186,7 @@ impl Mempool {
             if seen_previous || account_sequence_number == Some(&mut seq) {
                 let ptr = TxnPointer::from(txn);
                 seen.insert(ptr);
+                trace_event!("mempool::get_block", {"txn", txn.address, txn.sequence_number});
                 result.push(ptr);
                 if (result.len() as u64) == batch_size {
                     break;

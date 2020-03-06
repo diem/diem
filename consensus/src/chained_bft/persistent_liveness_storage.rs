@@ -10,6 +10,7 @@ use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
+use debug_interface::prelude::*;
 use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
@@ -312,6 +313,10 @@ impl StorageWriteProxy {
 #[async_trait::async_trait]
 impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
+        let mut trace_batch = vec![];
+        for block in blocks.iter() {
+            trace_code_block!("consensusdb::save_tree", {"block", block.id()}, trace_batch);
+        }
         self.db
             .save_blocks_and_quorum_certificates(blocks, quorum_certs)
     }

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use cli::client_proxy::ClientProxy;
+use debug_interface::node_debug_service::parse_events;
+use debug_interface::{libra_trace, NodeDebugClient};
 use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, SigningKey};
 use libra_logger::prelude::*;
@@ -148,6 +150,20 @@ impl TestEnvironment {
     ) -> ClientProxy {
         let (ac_port, json_rpc_port) = self.validator_swarm.get_client_ports(node_index);
         self.get_ac_client(ac_port, json_rpc_port, waypoint)
+    }
+
+    fn get_validator_debug_interface_client(&self, node_index: usize) -> NodeDebugClient {
+        let port = self.validator_swarm.get_validators_debug_ports()[node_index];
+        NodeDebugClient::new("localhost", port)
+    }
+
+    #[allow(dead_code)]
+    fn get_validator_debug_interface_clients(&self) -> Vec<NodeDebugClient> {
+        self.validator_swarm
+            .get_validators_debug_ports()
+            .iter()
+            .map(|port| NodeDebugClient::new("localhost", *port))
+            .collect()
     }
 
     fn get_full_node_ac_client(
@@ -314,6 +330,29 @@ fn test_concurrent_transfers_single_node() {
         Decimal::from_f64(21.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
+}
+
+#[test]
+fn test_trace() {
+    let (swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    let mut debug_client = swarm.get_validator_debug_interface_client(0);
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy
+        .mint_coins(&["mintb", "0", "100"], true)
+        .unwrap();
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy
+        .transfer_coins(&["t", "0", "1", "1"], false)
+        .unwrap();
+    let events = parse_events(
+        debug_client
+            .get_events()
+            .expect("Failed to get events")
+            .events,
+    );
+    let txn_node = format!("txn::{}::{}", association_address(), 1);
+    println!("Tracing {}", txn_node);
+    libra_trace::trace_node(&events[..], &txn_node);
 }
 
 #[test]

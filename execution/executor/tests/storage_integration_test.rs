@@ -191,7 +191,12 @@ fn test_reconfiguration() {
     let txn3 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
     let txn_block = vec![txn1, txn2, txn3];
     let vm_output = executor
-        .execute_block(txn_block, &committed_trees, &committed_trees)
+        .execute_block(
+            HashValue::zero(),
+            txn_block,
+            &committed_trees,
+            &committed_trees,
+        )
         .unwrap();
 
     // Make sure the execution result sees the reconfiguration
@@ -213,7 +218,12 @@ fn test_reconfiguration() {
     let txn5 = encode_block_prologue_script(gen_block_metadata(2, validator_account));
     let txn_block = vec![txn4, txn5];
     let output = executor
-        .execute_block(txn_block, &committed_trees, &committed_trees)
+        .execute_block(
+            HashValue::zero(),
+            txn_block,
+            &committed_trees,
+            &committed_trees,
+        )
         .unwrap();
 
     assert!(
@@ -357,7 +367,12 @@ fn test_execution_with_storage() {
     }
 
     let output1 = executor
-        .execute_block(block1.clone(), &committed_trees, &committed_trees)
+        .execute_block(
+            HashValue::zero(),
+            block1.clone(),
+            &committed_trees,
+            &committed_trees,
+        )
         .unwrap();
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(6, output1.accu_root(), block1_id);
     let committed_trees_copy = committed_trees.clone();
@@ -638,7 +653,12 @@ fn test_execution_with_storage() {
 
     // Execution the 2nd block.
     let output2 = executor
-        .execute_block(block2.clone(), &committed_trees, &committed_trees)
+        .execute_block(
+            HashValue::zero(),
+            block2.clone(),
+            &committed_trees,
+            &committed_trees,
+        )
         .unwrap();
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(20, output2.accu_root(), block2_id);
     executor
