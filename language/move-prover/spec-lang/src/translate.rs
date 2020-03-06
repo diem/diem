@@ -8,7 +8,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, LinkedList};
 
-use codespan::{FileId, Span};
+use codespan::Span;
 use itertools::Itertools;
 use num::{BigUint, FromPrimitive, Num};
 
@@ -228,9 +228,18 @@ impl<'env> Translator<'env> {
             .cloned()
             .map(|e| Type::Struct(e.module_id, e.struct_id, project_2nd(&e.type_params)))
             .unwrap_or_else(|| {
+                // DEBUG
                 self.error(
                     loc,
-                    &format!("undeclared `{}`", name.display(self.env.symbol_pool())),
+                    &format!("undeclared `{}`", name.display_full(self.env.symbol_pool())),
+                );
+                self.error(
+                    loc,
+                    &self
+                        .struct_table
+                        .keys()
+                        .map(|n| format!("{}", n.display_full(self.env.symbol_pool())))
+                        .join(", "),
                 );
                 Type::Error
             })
@@ -244,7 +253,7 @@ impl<'env> Translator<'env> {
     /// to the translator which will be treated the same as user defined specification functions
     /// during translation.
     fn declare_builtins(&mut self) {
-        let loc = self.env.default_loc();
+        let loc = self.env.internal_loc();
         let bool_t = &Type::new_prim(PrimitiveType::Bool);
         let num_t = &Type::new_prim(PrimitiveType::Num);
         let range_t = &Type::new_prim(PrimitiveType::Range);
@@ -382,7 +391,7 @@ impl<'env> Translator<'env> {
                 self.builtin_fun_symbol("update"),
                 SpecFunEntry {
                     loc: loc.clone(),
-                    oper: Operation::VectorUpdate,
+                    oper: Operation::Update,
                     type_params: vec![param_t.clone()],
                     arg_types: vec![vector_t.clone(), num_t.clone(), param_t.clone()],
                     result_type: vector_t.clone(),
@@ -500,6 +509,8 @@ pub struct ModuleTranslator<'env, 'translator> {
     loc_map: BTreeMap<NodeId, Loc>,
     /// A map from node id to associated type.
     type_map: BTreeMap<NodeId, Type>,
+    /// A map from node id to associated instantiation of type parameters.
+    pub instantiation_map: BTreeMap<NodeId, Vec<Type>>,
     /// Id of the currently build module.
     module_id: ModuleId,
     /// Name of the currently build module.
@@ -530,6 +541,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             node_counter: 0,
             loc_map: BTreeMap::new(),
             type_map: BTreeMap::new(),
+            instantiation_map: BTreeMap::new(),
             module_id,
             module_name,
             spec_funs: vec![],
@@ -546,14 +558,14 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     /// in the environment for later processing.
     pub fn translate(
         &mut self,
-        file_id: FileId,
+        loc: Loc,
         module_def: EA::ModuleDefinition,
         compiled_module: CompiledModule,
         source_map: Option<ModuleSourceMap<Span>>,
     ) {
         self.decl_ana(&module_def);
         self.def_ana(&module_def);
-        self.populate_env_from_result(file_id, compiled_module, source_map);
+        self.populate_env_from_result(loc, compiled_module, source_map);
     }
 }
 
@@ -750,6 +762,15 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             let et = &mut ExpTranslator::new(self, OldExpStatus::NotSupported);
             et.translate_single_type(type_)
         };
+        if type_.is_reference() {
+            self.parent.error(
+                loc,
+                &format!(
+                    "`{}` cannot have reference type",
+                    name.display(self.symbol_pool())
+                ),
+            )
+        }
         // Add the variable to the symbol table.
         let var_id = SpecVarId::new(self.spec_vars.len());
         self.parent.define_spec_var(
@@ -884,6 +905,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 .entry(name.symbol)
                 .or_insert_with(|| vec![])
                 .push(Condition {
+                    loc: loc.clone(),
                     kind,
                     exp: translated,
                 });
@@ -925,7 +947,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         loc,
                         *n,
                         ty.clone(),
-                        Some(Operation::FieldSelect(
+                        Some(Operation::Select(
                             entry.module_id,
                             entry.struct_id,
                             FieldId::new(*n),
@@ -933,7 +955,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     );
                 }
                 // Process assignment for a spec var.
-                let (exp, expected_type) = if let EA::Exp_::Assign(list, exp) = &exp.value {
+                let (exp, expected_type, target) = if let EA::Exp_::Assign(list, exp) = &exp.value {
                     if kind == InvariantKind::Data {
                         et.error(
                             loc,
@@ -945,7 +967,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         let var_loc = et.to_loc(&list.loc);
                         let var_name = et.parent.qualified_by_module(name);
                         if let Some(spec_var) = et.parent.parent.spec_var_table.get(&var_name) {
-                            (exp.as_ref(), spec_var.type_.clone())
+                            (
+                                exp.as_ref(),
+                                spec_var.type_.clone(),
+                                Some((spec_var.module_id, spec_var.var_id)),
+                            )
                         } else {
                             et.error(
                                 &var_loc,
@@ -969,7 +995,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         );
                         return;
                     }
-                    (exp, BOOL_TYPE.clone())
+                    (exp, BOOL_TYPE.clone(), None)
                 };
 
                 let translated = et.translate_exp(exp, &expected_type);
@@ -981,7 +1007,9 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     .entry(name.symbol)
                     .or_insert_with(|| vec![])
                     .push(Invariant {
+                        loc: loc.clone(),
                         kind,
+                        target,
                         exp: translated,
                     });
             } else {
@@ -1022,7 +1050,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     fn populate_env_from_result(
         &mut self,
-        file_id: FileId,
+        loc: Loc,
         module: CompiledModule,
         source_map: Option<ModuleSourceMap<Span>>,
     ) {
@@ -1066,7 +1094,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     )))
                 } else {
                     self.parent.error(
-                        &self.parent.env.default_loc(),
+                        &self.parent.env.internal_loc(),
                         &format!("[internal] bytecode does not match AST: `{}` in bytecode but not in AST", name.display(self.symbol_pool())));
                     None
                 }
@@ -1083,8 +1111,9 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let spec_funs = std::mem::replace(&mut self.spec_funs, vec![]);
         let loc_map = std::mem::replace(&mut self.loc_map, BTreeMap::new());
         let type_map = std::mem::replace(&mut self.type_map, BTreeMap::new());
+        let instantiation_map = std::mem::replace(&mut self.instantiation_map, BTreeMap::new());
         self.parent.env.add(
-            file_id,
+            loc,
             module,
             source_map,
             struct_data,
@@ -1093,12 +1122,14 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             spec_funs,
             loc_map,
             type_map,
+            instantiation_map,
         );
     }
 }
 
 // =================================================================================================
 /// # Expression and Type Translation
+
 #[derive(Debug)]
 pub struct ExpTranslator<'env, 'translator, 'module_translator> {
     parent: &'module_translator mut ModuleTranslator<'env, 'translator>,
@@ -1177,12 +1208,22 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         var
     }
 
+    /// Creates a new node id.
+    fn new_node_id(&mut self) -> NodeId {
+        self.parent.new_node_id()
+    }
+
     /// Creates a new node id and assigns type and location to it.
-    fn new_node_type_loc(&mut self, ty: &Type, loc: &Loc) -> NodeId {
-        let id = self.parent.new_node_id();
+    fn new_node_id_with_type_loc(&mut self, ty: &Type, loc: &Loc) -> NodeId {
+        let id = self.new_node_id();
         self.parent.loc_map.insert(id, loc.clone());
         self.parent.type_map.insert(id, ty.clone());
         id
+    }
+
+    /// Sets instantiation for the given node id.
+    fn set_instantiation(&mut self, node_id: NodeId, instantiation: Vec<Type>) {
+        self.parent.instantiation_map.insert(node_id, instantiation);
     }
 
     /// Finalizes types in this translator, producing errors if some could not be inferred
@@ -1194,27 +1235,40 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             return;
         }
         for i in self.node_counter_start..self.parent.node_counter {
-            let id = NodeId::new(i);
-            if let Some(ty) = self.parent.type_map.get_mut(&id) {
-                *ty = self.subs.specialize(ty);
-                if ty.is_incomplete() {
-                    // This type could not be fully inferred.
-                    let loc = if let Some(loc) = self.parent.loc_map.get(&id) {
-                        loc.clone()
-                    } else {
-                        self.parent.parent.env.default_loc()
-                    };
-                    let ty = ty.clone(); // clone to release mut ref to self
-                    self.error(
-                        &loc,
-                        &format!(
-                            "unable to infer type: `{}`",
-                            ty.display(&self.type_display_context())
-                        ),
-                    );
-                };
+            let node_id = NodeId::new(i);
+            if let Some(ty) = self.parent.type_map.get(&node_id) {
+                let ty = self.finalize_type(node_id, ty);
+                self.parent.type_map.insert(node_id.clone(), ty);
+            }
+            if let Some(inst) = self.parent.instantiation_map.get(&node_id) {
+                let inst = inst
+                    .iter()
+                    .map(|ty| self.finalize_type(node_id, ty))
+                    .collect_vec();
+                self.parent.instantiation_map.insert(node_id.clone(), inst);
             }
         }
+    }
+
+    /// Finalize the the given type, producing an error if it is not complete.
+    fn finalize_type(&self, node_id: NodeId, ty: &Type) -> Type {
+        let ty = self.subs.specialize(ty);
+        if ty.is_incomplete() {
+            // This type could not be fully inferred.
+            let loc = if let Some(loc) = self.parent.loc_map.get(&node_id) {
+                loc.clone()
+            } else {
+                self.parent.parent.env.unknown_loc()
+            };
+            self.error(
+                &loc,
+                &format!(
+                    "unable to infer type: `{}`",
+                    ty.display(&self.type_display_context())
+                ),
+            );
+        }
+        ty
     }
 
     /// Constructs a type display context used to visualize types in error messages.
@@ -1227,7 +1281,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
     /// Creates an error expression.
     fn new_error_exp(&mut self) -> Exp {
-        let id = self.new_node_type_loc(&Type::Error, &self.parent.parent.env.default_loc());
+        let id =
+            self.new_node_id_with_type_loc(&Type::Error, &self.parent.parent.env.internal_loc());
         Exp::Error(id)
     }
 
@@ -1453,7 +1508,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let loc = self.to_loc(&exp.loc);
         let mut make_value = |val: Value, ty: Type| {
             let rty = self.check_type(&loc, &ty, expected_type);
-            let id = self.new_node_type_loc(&rty, &loc);
+            let id = self.new_node_id_with_type_loc(&rty, &loc);
             Exp::Value(id, val)
         };
         match &exp.value {
@@ -1504,9 +1559,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         let (arg_types, args) = self.translate_exp_list(&args);
                         let fun_t = Type::Fun(arg_types, Box::new(expected_type.clone()));
                         let sym_ty = self.check_type(&loc, &sym_ty, &fun_t);
-                        let local_id = self.new_node_type_loc(&sym_ty, &self.to_loc(&n.loc));
+                        let local_id =
+                            self.new_node_id_with_type_loc(&sym_ty, &self.to_loc(&n.loc));
                         let local_var = Exp::LocalVar(local_id, sym);
-                        let id = self.new_node_type_loc(expected_type, &loc);
+                        let id = self.new_node_id_with_type_loc(expected_type, &loc);
                         return Exp::Invoke(id, Box::new(local_var), args);
                     }
                 }
@@ -1540,7 +1596,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let then = self.translate_exp(&*then, expected_type);
                 let else_ = self.translate_exp(&*else_, expected_type);
                 let cond = self.translate_exp(&*cond, &Type::new_prim(PrimitiveType::Bool));
-                let id = self.new_node_type_loc(expected_type, &loc);
+                let id = self.new_node_id_with_type_loc(expected_type, &loc);
                 Exp::IfElse(id, Box::new(cond), Box::new(then), Box::new(else_))
             }
             EA::Exp_::Block(seq) => self.translate_seq(&loc, seq, expected_type),
@@ -1580,6 +1636,25 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             EA::Exp_::ExpDotted(dotted) => self.translate_dotted(dotted, expected_type),
             EA::Exp_::Index(target, index) => {
                 self.translate_index(&loc, target, index, expected_type)
+            }
+            EA::Exp_::ExpList(exps) => {
+                let mut types = vec![];
+                let exps = exps
+                    .iter()
+                    .map(|exp| {
+                        let (ty, exp) = self.translate_exp_free(exp);
+                        types.push(ty);
+                        exp
+                    })
+                    .collect_vec();
+                let ty = self.check_type(&loc, &Type::Tuple(types), expected_type);
+                let id = self.new_node_id_with_type_loc(&ty, &loc);
+                Exp::Call(id, Operation::Tuple, exps)
+            }
+            EA::Exp_::Unit => {
+                let ty = self.check_type(&loc, &Type::Tuple(vec![]), expected_type);
+                let id = self.new_node_id_with_type_loc(&ty, &loc);
+                Exp::Call(id, Operation::Tuple, vec![])
             }
             _ => {
                 self.error(&loc, "expression construct not supported in specifications");
@@ -1627,7 +1702,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                             self.enter_scope();
                             let name = self.symbol_pool().make(&var.0.value);
                             self.define_local(&bind_loc, name, t.clone(), None);
-                            let id = self.new_node_type_loc(&t, &bind_loc);
+                            let id = self.new_node_id_with_type_loc(&t, &bind_loc);
                             decls.push(LocalVarDecl {
                                 id,
                                 name,
@@ -1667,7 +1742,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             self.exit_scope();
         }
 
-        let id = self.new_node_type_loc(expected_type, loc);
+        let id = self.new_node_id_with_type_loc(expected_type, loc);
         Exp::Block(id, decls, Box::new(last))
     }
 
@@ -1679,7 +1754,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             let oper_opt = entry.operation.clone();
             let ty = entry.type_.clone();
             let ty = self.check_type(loc, &ty, expected_type);
-            let id = self.new_node_type_loc(&ty, loc);
+            let id = self.new_node_id_with_type_loc(&ty, loc);
             if let Some(oper) = oper_opt {
                 return Exp::Call(id, oper, vec![]);
             } else {
@@ -1693,7 +1768,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             let module_id = entry.module_id;
             let ty = entry.type_.clone();
             let ty = self.check_type(loc, &ty, expected_type);
-            let id = self.new_node_type_loc(&ty, loc);
+            let id = self.new_node_id_with_type_loc(&ty, loc);
             return Exp::SpecVar(id, module_id, var_id);
         }
 
@@ -1730,7 +1805,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             (elem_ty, Operation::Index)
         };
         let result_t = self.check_type(loc, &result_t, expected_type);
-        let id = self.new_node_type_loc(&result_t, &loc);
+        let id = self.new_node_id_with_type_loc(&result_t, &loc);
         Exp::Call(id, oper, vec![vector_exp, ie])
     }
 
@@ -1749,7 +1824,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         } else {
             self.error(
                 var_loc,
-                "[current restriction] unpack not supported in invariant assignment",
+                "[current restriction] unpack not supported in assignment",
             );
             None
         }
@@ -1794,10 +1869,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                             // We must instantiate the field type by the provided type args.
                             let field_ty = field_ty.instantiate(targs);
                             self.check_type(&loc, &field_ty, expected_type);
-                            let id = self.new_node_type_loc(&field_ty, &loc);
+                            let id = self.new_node_id_with_type_loc(&field_ty, &loc);
                             Exp::Call(
                                 id,
-                                Operation::FieldSelect(
+                                Operation::Select(
                                     entry.module_id,
                                     entry.struct_id,
                                     FieldId::new(field_name),
@@ -1942,7 +2017,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             }
             1 => {
                 let (cand, subs, instantiation) = matching.remove(0);
-                // Propagate the candidate substitution to this expression translator.
+                // Commit the candidate substitution to this expression translator.
                 self.subs = subs;
                 // Check result type against expected type.
                 let ty = self.check_type(
@@ -1951,7 +2026,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     expected_type,
                 );
                 // Construct result.
-                let id = self.new_node_type_loc(&ty, loc);
+                let id = self.new_node_id_with_type_loc(&ty, loc);
+                self.set_instantiation(id, instantiation);
                 Exp::Call(id, cand.oper.clone(), args)
             }
             _ => {
@@ -2082,7 +2158,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         .sorted_by_key(|(i, _)| *i)
                         .map(|(_, e)| e)
                         .collect_vec();
-                    let id = self.new_node_type_loc(&struct_ty, loc);
+                    let id = self.new_node_id_with_type_loc(&struct_ty, loc);
                     Exp::Call(id, Operation::Pack(entry.module_id, entry.struct_id), args)
                 }
             } else {
@@ -2124,7 +2200,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 EA::Bind_::Var(v) => {
                     let name = self.symbol_pool().make(&v.0.value);
                     let ty = self.fresh_type_var();
-                    let id = self.new_node_type_loc(&ty, &loc);
+                    let id = self.new_node_id_with_type_loc(&ty, &loc);
                     self.define_local(&loc, name, ty.clone(), None);
                     arg_types.push(ty);
                     decls.push(LocalVarDecl {
@@ -2143,7 +2219,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let rbody = self.translate_exp(body, &ty);
         // Check types and construct result.
         let rty = self.check_type(loc, &Type::Fun(arg_types, Box::new(ty)), expected_type);
-        let id = self.new_node_type_loc(&rty, loc);
+        let id = self.new_node_id_with_type_loc(&rty, loc);
         Exp::Lambda(id, decls, Box::new(rbody))
     }
 

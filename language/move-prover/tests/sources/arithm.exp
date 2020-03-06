@@ -1,0 +1,24 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/arithm.move:69:6 ───
+    │
+ 69 │         aborts_if false;
+    │         ^^^^^^^^^^^^^^^^
+    │
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/arithm.move:53:6 ───
+    │
+ 53 │         aborts_if false;
+    │         ^^^^^^^^^^^^^^^^
+    │
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/arithm.move:61:6 ───
+    │
+ 61 │         aborts_if false;
+    │         ^^^^^^^^^^^^^^^^
+    │

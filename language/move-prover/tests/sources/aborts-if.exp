@@ -1,0 +1,40 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/aborts-if.move:16:9 ───
+    │
+ 16 │         aborts_if x <= y;
+    │         ^^^^^^^^^^^^^^^^^
+    │
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/aborts-if.move:24:9 ───
+    │
+ 24 │         aborts_if x <= y;
+    │         ^^^^^^^^^^^^^^^^^
+    │
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/aborts-if.move:32:9 ───
+    │
+ 32 │         aborts_if x < y;
+    │         ^^^^^^^^^^^^^^^^
+    │
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/aborts-if.move:44:9 ───
+    │
+ 44 │         ensures x == y;
+    │         ^^^^^^^^^^^^^^^
+    │
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/aborts-if.move:42:9 ───
+    │
+ 42 │         aborts_if x > y;
+    │         ^^^^^^^^^^^^^^^^
+    │
