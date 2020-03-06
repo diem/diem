@@ -166,13 +166,9 @@ impl From<Transaction> for TransactionDataView {
     fn from(tx: Transaction) -> Self {
         let x = match tx {
             Transaction::BlockMetadata(t) => {
-                if let Ok(x) = t.into_inner() {
-                    Ok(TransactionDataView::BlockMetadata {
-                        timestamp_usecs: x.1,
-                    })
-                } else {
-                    Err(format_err!("Unable to parse metadata"))
-                }
+                t.into_inner().map(|x| TransactionDataView::BlockMetadata {
+                    timestamp_usecs: x.1,
+                })
             }
             Transaction::WriteSet(_) => Ok(TransactionDataView::WriteSet {}),
             Transaction::UserTransaction(t) => Ok(TransactionDataView::UserTransaction {
