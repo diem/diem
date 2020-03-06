@@ -275,6 +275,7 @@ fn get_transaction_parameters<'a>(
     config: &'a TransactionConfig,
 ) -> TransactionParameters<'a> {
     let account_resource = exec.read_account_resource(config.sender).unwrap();
+    let account_balance = exec.read_balance_resource(config.sender).unwrap();
 
     TransactionParameters {
         sender_addr: *config.sender.address(),
@@ -284,10 +285,7 @@ fn get_transaction_parameters<'a>(
             .sequence_number
             .unwrap_or_else(|| account_resource.sequence_number()),
         max_gas_amount: config.max_gas.unwrap_or_else(|| {
-            std::cmp::min(
-                MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
-                account_resource.balance(),
-            )
+            std::cmp::min(MAXIMUM_NUMBER_OF_GAS_UNITS.get(), account_balance.coin())
         }),
         gas_unit_price: 1,
         // TTL is 86400s. Initial time was set to 0.

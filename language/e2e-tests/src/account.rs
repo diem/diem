@@ -9,6 +9,7 @@ use libra_types::{
     account_address::{AccountAddress, AuthenticationKey},
     account_config,
     event::EventHandle,
+    language_storage::StructTag,
     transaction::{
         RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionPayload,
     },
@@ -101,10 +102,21 @@ impl Account {
     /// Returns the AccessPath that describes the Account resource instance.
     ///
     /// Use this to retrieve or publish the Account blob.
+    pub fn make_account_access_path(&self) -> AccessPath {
+        self.make_access_path(account_config::account_struct_tag())
+    }
+
+    /// Returns the AccessPath that describes the Account balance resource instance.
+    ///
+    /// Use this to retrieve or publish the Account balance blob.
+    pub fn make_balance_access_path(&self) -> AccessPath {
+        self.make_access_path(account_config::account_balance_struct_tag())
+    }
+
     // TODO: plug in the account type
-    pub fn make_access_path(&self) -> AccessPath {
+    fn make_access_path(&self, tag: StructTag) -> AccessPath {
         // TODO: we need a way to get the type (StructDef) of the Account in place
-        create_access_path(&self.addr, account_config::account_struct_tag())
+        create_access_path(&self.addr, tag)
     }
 
     /// Changes the keys for this account to the provided ones.
@@ -254,13 +266,41 @@ impl Default for Account {
     }
 }
 
+/// Struct that represents an account balance resource for tests.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Balance {
+    coin: u64,
+}
+
+impl Balance {
+    /// Create a new balance with amount `balance`
+    pub fn new(coin: u64) -> Self {
+        Self { coin }
+    }
+
+    /// Retrieve the balance inside of this
+    pub fn coin(&self) -> u64 {
+        self.coin
+    }
+
+    /// Returns the Move Value for the account balance
+    pub fn to_value(&self) -> Value {
+        Value::struct_(Struct::pack(vec![Value::u64(self.coin)]))
+    }
+
+    /// Returns the value layout for the account balance
+    pub fn layout() -> StructDef {
+        StructDef::new(vec![Type::U64])
+    }
+}
+
 /// Represents an account along with initial state about it.
 ///
 /// `AccountData` captures the initial state needed to create accounts for tests.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AccountData {
     account: Account,
-    balance: u64,
+    balance: Balance,
     sequence_number: u64,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
@@ -309,7 +349,7 @@ impl AccountData {
     ) -> Self {
         Self {
             account,
-            balance,
+            balance: Balance::new(balance),
             sequence_number,
             delegated_key_rotation_capability,
             delegated_withdrawal_capability,
@@ -324,10 +364,13 @@ impl AccountData {
         self.account.rotate_key(privkey, pubkey)
     }
 
-    pub fn layout() -> StructDef {
+    /// Returns the (Move value) layout of the LibraAccount::T struct
+    pub fn account_layout() -> StructDef {
         StructDef::new(vec![
             Type::Vector(Box::new(Type::U8)),
-            Type::Struct(StructDef::new(vec![Type::U64])),
+            // TODO/XXX: Remove this once the balance field is removed from the AccountResource in
+            // account_config.rs.
+            Type::U64,
             Type::Bool,
             Type::Bool,
             Type::Struct(StructDef::new(vec![
@@ -343,14 +386,22 @@ impl AccountData {
         ])
     }
 
+    /// Returns the layout for the LibraAccount::Balance struct
+    pub fn balance_layout() -> StructDef {
+        Balance::layout()
+    }
+
     /// Creates and returns a resource [`Value`] for this data.
-    pub fn to_resource(&self) -> Value {
+    pub fn to_account(&self) -> (Value, Value) {
         // TODO: publish some concept of Account
-        let coin = Value::struct_(Struct::pack(vec![Value::u64(self.balance)]));
-        Value::struct_(Struct::pack(vec![
+        let balance = self.balance.to_value();
+        let account = Value::struct_(Struct::pack(vec![
             // TODO: this needs to compute the auth key instead
             Value::vector_u8(AccountAddress::authentication_key(&self.account.pubkey).to_vec()),
-            coin,
+            // TODO/XXX: Remove this once the AccountResource in account_config.rs is updated.
+            // Make sure this doesn't track the correct balance so that we can't get away with
+            // things accidentally.
+            Value::u64(0),
             Value::bool(self.delegated_key_rotation_capability),
             Value::bool(self.delegated_withdrawal_capability),
             Value::struct_(Struct::pack(vec![
@@ -363,15 +414,22 @@ impl AccountData {
             ])),
             Value::u64(self.sequence_number),
             Value::struct_(Struct::pack(vec![Value::u64(self.event_generator)])),
-        ]))
+        ]));
+        (account, balance)
     }
 
     /// Returns the AccessPath that describes the Account resource instance.
     ///
     /// Use this to retrieve or publish the Account blob.
-    // TODO: plug in the account type
-    pub fn make_access_path(&self) -> AccessPath {
-        self.account.make_access_path()
+    pub fn make_account_access_path(&self) -> AccessPath {
+        self.account.make_account_access_path()
+    }
+
+    /// Returns the AccessPath that describes the Account balance resource instance.
+    ///
+    /// Use this to retrieve or publish the Account blob.
+    pub fn make_balance_access_path(&self) -> AccessPath {
+        self.account.make_balance_access_path()
     }
 
     /// Returns the address of the account. This is a hash of the public key the account was created
@@ -394,7 +452,7 @@ impl AccountData {
 
     /// Returns the initial balance.
     pub fn balance(&self) -> u64 {
-        self.balance
+        self.balance.coin()
     }
 
     /// Returns the initial sequence number.

@@ -27,6 +27,8 @@ pub static COIN_MODULE: Lazy<ModuleId> =
 static ACCOUNT_MODULE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("LibraAccount").unwrap());
 static ACCOUNT_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
+static ACCOUNT_BALANCE_STRUCT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("Balance").unwrap());
 
 /// The ModuleId for the Account module.
 pub static ACCOUNT_MODULE: Lazy<ModuleId> =
@@ -52,6 +54,10 @@ pub fn account_module_name() -> &'static IdentStr {
 
 pub fn account_struct_name() -> &'static IdentStr {
     &*ACCOUNT_STRUCT_NAME
+}
+
+pub fn account_balance_struct_name() -> &'static IdentStr {
+    &*ACCOUNT_BALANCE_STRUCT_NAME
 }
 
 pub fn sent_event_name() -> &'static IdentStr {
@@ -93,6 +99,15 @@ pub fn account_struct_tag() -> StructTag {
     }
 }
 
+pub fn account_balance_struct_tag() -> StructTag {
+    StructTag {
+        address: CORE_CODE_ADDRESS,
+        module: account_module_name().to_owned(),
+        name: account_balance_struct_name().to_owned(),
+        type_params: vec![],
+    }
+}
+
 pub fn sent_payment_tag() -> StructTag {
     StructTag {
         address: CORE_CODE_ADDRESS,
@@ -117,6 +132,8 @@ pub fn received_payment_tag() -> StructTag {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountResource {
     authentication_key: Vec<u8>,
+    // TODO: remove this field from the account resource, and depend upon the [`BalanceResource`]
+    // defined in this file for this information.
     balance: u64,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
@@ -183,6 +200,23 @@ impl AccountResource {
     /// Return the delegated_withdrawal_capability field for the given AccountResource
     pub fn delegated_withdrawal_capability(&self) -> bool {
         self.delegated_withdrawal_capability
+    }
+}
+
+/// The balance resource held under an account.
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct BalanceResource {
+    coin: u64,
+}
+
+impl BalanceResource {
+    pub fn new(coin: u64) -> Self {
+        Self { coin }
+    }
+
+    pub fn coin(&self) -> u64 {
+        self.coin
     }
 }
 

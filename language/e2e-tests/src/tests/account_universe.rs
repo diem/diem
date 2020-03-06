@@ -166,8 +166,8 @@ pub(crate) fn assert_accounts_match(
     executor: &FakeExecutor,
 ) -> Result<(), TestCaseError> {
     for (idx, account) in universe.accounts().iter().enumerate() {
-        let resource = executor
-            .read_account_resource(&account.account())
+        let (resource, resource_balance) = executor
+            .read_account_info(&account.account())
             .expect("resource for this account must exist");
         let auth_key = account.account().auth_key();
         prop_assert_eq!(
@@ -178,7 +178,7 @@ pub(crate) fn assert_accounts_match(
         );
         prop_assert_eq!(
             account.balance(),
-            resource.balance(),
+            resource_balance.coin(),
             "account {} should have correct balance",
             idx
         );

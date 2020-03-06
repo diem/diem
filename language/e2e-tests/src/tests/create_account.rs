@@ -34,14 +34,14 @@ fn create_account() {
         // check that numbers in stored DB are correct
         let gas = output.gas_used();
         let sender_balance = 1_000_000 - initial_amount - gas;
-        let updated_sender = executor
-            .read_account_resource(sender.account())
+        let (updated_sender, updated_sender_balance) = executor
+            .read_account_info(sender.account())
             .expect("sender must exist");
-        let updated_receiver = executor
-            .read_account_resource(&new_account)
-            .expect("receiver must exist");
-        assert_eq!(initial_amount, updated_receiver.balance(),);
-        assert_eq!(sender_balance, updated_sender.balance(),);
+        let updated_receiver_balance = executor
+            .read_balance_resource(&new_account)
+            .expect("receiver balance must exist");
+        assert_eq!(initial_amount, updated_receiver_balance.coin(),);
+        assert_eq!(sender_balance, updated_sender_balance.coin(),);
         assert_eq!(11, updated_sender.sequence_number());
     });
 }
@@ -70,14 +70,14 @@ fn create_account_zero_balance() {
         // check that numbers in stored DB are correct
         let gas = output.gas_used();
         let sender_balance = 1_000_000 - initial_amount - gas;
-        let updated_sender = executor
-            .read_account_resource(sender.account())
+        let (updated_sender, updated_sender_balance) = executor
+            .read_account_info(sender.account())
             .expect("sender must exist");
-        let updated_receiver = executor
-            .read_account_resource(&new_account)
-            .expect("receiver must exist");
-        assert_eq!(initial_amount, updated_receiver.balance());
-        assert_eq!(sender_balance, updated_sender.balance());
+        let updated_receiver_balance = executor
+            .read_balance_resource(&new_account)
+            .expect("receiver balance must exist");
+        assert_eq!(initial_amount, updated_receiver_balance.coin());
+        assert_eq!(sender_balance, updated_sender_balance.coin());
         assert_eq!(11, updated_sender.sequence_number());
     });
 }

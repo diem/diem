@@ -15,7 +15,7 @@ use libra_config::{
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
-    account_config::AccountResource,
+    account_config::{AccountResource, BalanceResource},
     crypto_proxies::ValidatorSet,
     discovery_set::mock::mock_discovery_set,
     language_storage::ModuleId,
@@ -178,11 +178,29 @@ impl FakeExecutor {
 
     /// Reads the resource [`Value`] for an account from this executor's data store.
     pub fn read_account_resource(&self, account: &Account) -> Option<AccountResource> {
-        let ap = account.make_access_path();
+        let ap = account.make_account_access_path();
         let data_blob = StateView::get(&self.data_store, &ap)
             .expect("account must exist in data store")
             .expect("data must exist in data store");
         lcs::from_bytes(data_blob.as_slice()).ok()
+    }
+
+    /// Reads the balance resource value for an account from this executor's data store.
+    pub fn read_balance_resource(&self, account: &Account) -> Option<BalanceResource> {
+        let ap = account.make_balance_access_path();
+        let data_blob = StateView::get(&self.data_store, &ap)
+            .expect("account must exist in data store")
+            .expect("data must exist in data store");
+        lcs::from_bytes(data_blob.as_slice()).ok()
+    }
+
+    /// Reads the AccountResource and BalanceResource for this account. These are coupled together.
+    pub fn read_account_info(
+        &self,
+        account: &Account,
+    ) -> Option<(AccountResource, BalanceResource)> {
+        self.read_account_resource(account)
+            .and_then(|ar| self.read_balance_resource(account).map(|br| (ar, br)))
     }
 
     /// Executes the given block of transactions.

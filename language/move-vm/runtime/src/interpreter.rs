@@ -719,7 +719,7 @@ impl<'txn> Interpreter<'txn> {
         } else if module_id == *account_config::ACCOUNT_MODULE
             && function_name == SAVE_ACCOUNT_NAME.as_ident_str()
         {
-            self.call_save_account(runtime, context)
+            self.call_save_account(runtime, context, type_actual_tags, type_actuals)
         } else {
             let mut arguments = VecDeque::new();
             let expected_args = native_function.num_args();
@@ -792,14 +792,40 @@ impl<'txn> Interpreter<'txn> {
         &mut self,
         runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
+        _type_actual_tags: Vec<TypeTag>,
+        _type_actuals: Vec<Type>,
     ) -> VMResult<()> {
+        gas!(
+            consume: context,
+            self.gas_schedule
+                .native_cost(NativeCostIndex::SAVE_ACCOUNT)
+                .total()
+        )?;
         let account_module = runtime.get_loaded_module(&account_config::ACCOUNT_MODULE, context)?;
-        let account_resource = self.operand_stack.pop_as::<Struct>()?;
         let address = self.operand_stack.pop_as::<AccountAddress>()?;
         if address == account_config::CORE_CODE_ADDRESS {
             return Err(VMStatus::new(StatusCode::CREATE_NULL_ACCOUNT));
         }
-        self.save_account(runtime, context, account_module, address, account_resource)
+        Self::save_under_address(
+            runtime,
+            context,
+            vec![],
+            vec![],
+            account_module,
+            account_config::account_struct_name(),
+            self.operand_stack.pop_as::<Struct>()?,
+            address,
+        )?;
+        Self::save_under_address(
+            runtime,
+            context,
+            vec![],
+            vec![],
+            account_module,
+            account_config::account_balance_struct_name(),
+            self.operand_stack.pop_as::<Struct>()?,
+            address,
+        )
     }
 
     /// Perform a binary operation to two values at the top of the stack.
@@ -938,30 +964,24 @@ impl<'txn> Interpreter<'txn> {
         create_access_path(&address, struct_tag)
     }
 
-    fn save_account(
-        &mut self,
+    // Save a resource under the address specified by `account_address`
+    fn save_under_address(
         runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
-        account_module: &LoadedModule,
-        addr: AccountAddress,
-        account_resource: Struct,
+        type_actual_tags: Vec<TypeTag>,
+        type_actuals: Vec<Type>,
+        module: &LoadedModule,
+        struct_name: &IdentStr,
+        resource_to_save: Struct,
+        account_address: AccountAddress,
     ) -> VMResult<()> {
-        gas!(
-            consume: context,
-            self.gas_schedule
-                .native_cost(NativeCostIndex::SAVE_ACCOUNT)
-                .total()
-        )?;
-        let account_struct_id = account_module
+        let struct_id = module
             .struct_defs_table
-            .get(account_config::account_struct_name())
+            .get(struct_name)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-        let account_struct_def =
-            runtime.resolve_struct_def(account_module, *account_struct_id, vec![], context)?;
-
-        // TODO: Adding the freshly created account's expiration date to the TransactionOutput here.
-        let account_path = Self::make_access_path(account_module, *account_struct_id, vec![], addr);
-        context.move_resource_to(&account_path, account_struct_def, account_resource)
+        let struct_def = runtime.resolve_struct_def(module, *struct_id, type_actuals, context)?;
+        let path = Self::make_access_path(module, *struct_id, type_actual_tags, account_address);
+        context.move_resource_to(&path, struct_def, resource_to_save)
     }
 
     //

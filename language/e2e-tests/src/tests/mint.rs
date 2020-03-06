@@ -43,14 +43,14 @@ fn mint_to_existing() {
     let sender_balance = ASSOCIATION_INIT_BALANCE - gas;
     let receiver_balance = 1_000_000 + mint_amount;
 
-    let updated_sender = executor
-        .read_account_resource(&genesis_account)
-        .expect("sender must exist");
-    let updated_receiver = executor
-        .read_account_resource(receiver.account())
+    let (updated_sender, updated_sender_balance) = executor
+        .read_account_info(&genesis_account)
+        .expect("sender balance must exist");
+    let (updated_receiver, updated_receiver_balance) = executor
+        .read_account_info(receiver.account())
         .expect("receiver must exist");
-    assert_eq!(sender_balance, updated_sender.balance());
-    assert_eq!(receiver_balance, updated_receiver.balance());
+    assert_eq!(sender_balance, updated_sender_balance.coin());
+    assert_eq!(receiver_balance, updated_receiver_balance.coin());
     assert_eq!(2, updated_sender.sequence_number());
     assert_eq!(10, updated_receiver.sequence_number());
 }
@@ -83,14 +83,14 @@ fn mint_to_new_account() {
     let sender_balance = ASSOCIATION_INIT_BALANCE - gas;
     let receiver_balance = mint_amount;
 
-    let updated_sender = executor
-        .read_account_resource(&genesis_account)
+    let (updated_sender, updated_sender_balance) = executor
+        .read_account_info(&genesis_account)
         .expect("sender must exist");
-    let updated_receiver = executor
-        .read_account_resource(&new_account)
+    let (updated_receiver, updated_receiver_balance) = executor
+        .read_account_info(&new_account)
         .expect("receiver must exist");
-    assert_eq!(sender_balance, updated_sender.balance());
-    assert_eq!(receiver_balance, updated_receiver.balance());
+    assert_eq!(sender_balance, updated_sender_balance.coin());
+    assert_eq!(receiver_balance, updated_receiver_balance.coin());
     assert_eq!(2, updated_sender.sequence_number());
     assert_eq!(0, updated_receiver.sequence_number());
 

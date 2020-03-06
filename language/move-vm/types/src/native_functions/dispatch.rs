@@ -4,7 +4,10 @@
 use super::{hash, primitive_helpers, signature};
 use crate::values::{vector, Value};
 use libra_types::{
-    account_config::CORE_CODE_ADDRESS,
+    account_address::AccountAddress,
+    account_config::{
+        account_balance_struct_name, account_module_name, account_struct_name, CORE_CODE_ADDRESS,
+    },
     language_storage::{ModuleId, TypeTag},
     vm_error::{StatusCode, VMStatus},
 };
@@ -157,7 +160,7 @@ impl NativeFunction {
             Self::VectorDestroyEmpty => 1,
             Self::VectorSwap => 3,
             Self::AccountWriteEvent => 3,
-            Self::AccountSaveAccount => 2,
+            Self::AccountSaveAccount => 3,
         }
     }
 
@@ -288,8 +291,23 @@ impl NativeFunction {
             ),
             Self::AccountSaveAccount => {
                 let type_formals = vec![];
-                let t_idx = struct_handle_idx(m?, "T")?;
-                let arg_types = vec![Address, Struct(t_idx, vec![])];
+                let self_t_idx = struct_handle_idx(
+                    m?,
+                    &CORE_CODE_ADDRESS,
+                    account_module_name().as_str(),
+                    account_struct_name().as_str(),
+                )?;
+                let balance_t_idx = struct_handle_idx(
+                    m?,
+                    &CORE_CODE_ADDRESS,
+                    account_module_name().as_str(),
+                    account_balance_struct_name().as_str(),
+                )?;
+                let arg_types = vec![
+                    Struct(balance_t_idx, vec![]),
+                    Struct(self_t_idx, vec![]),
+                    Address,
+                ];
                 let return_types = vec![];
                 FunctionSignature {
                     type_formals,
@@ -302,9 +320,17 @@ impl NativeFunction {
 }
 
 /// Helper for finding non-native struct handle index
-fn struct_handle_idx<T: ModuleAccess>(m: &ModuleView<T>, name: &str) -> Option<StructHandleIndex> {
+fn struct_handle_idx<T: ModuleAccess>(
+    m: &ModuleView<T>,
+    module_address: &AccountAddress,
+    module_name: &str,
+    name: &str,
+) -> Option<StructHandleIndex> {
     m.struct_handles().enumerate().find_map(|(idx, handle)| {
-        if handle.name().as_str() == name {
+        if handle.name().as_str() == name
+            && handle.module_id().name().as_str() == module_name
+            && handle.module_id().address() == module_address
+        {
             Some(StructHandleIndex::new(idx as u16))
         } else {
             None
