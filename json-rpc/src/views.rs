@@ -166,7 +166,7 @@ impl From<Transaction> for TransactionDataView {
     fn from(tx: Transaction) -> Self {
         let x = match tx {
             Transaction::BlockMetadata(t) => {
-                if let Some(x) = t.into_inner().ok() {
+                if let Ok(x) = t.into_inner() {
                     Ok(TransactionDataView::BlockMetadata {
                         timestamp_usecs: x.1,
                     })
@@ -183,7 +183,7 @@ impl From<Transaction> for TransactionDataView {
                 max_gas_amount: t.max_gas_amount(),
                 gas_unit_price: t.gas_unit_price(),
                 expiration_time: t.expiration_time().as_secs(),
-                script: t.clone().into_raw_transaction().into_payload().into(),
+                script: t.into_raw_transaction().into_payload().into(),
             }),
         };
 
