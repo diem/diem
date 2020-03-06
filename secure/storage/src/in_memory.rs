@@ -49,6 +49,7 @@ impl Storage for InMemoryStorage {
                 let key = lcs::from_bytes(&bytes)?;
                 Value::Ed25519PrivateKey(key)
             }
+            Value::HashValue(value) => Value::HashValue(*value),
             Value::U64(value) => Value::U64(*value),
         };
 

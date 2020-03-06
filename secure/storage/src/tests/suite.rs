@@ -15,19 +15,20 @@ use rand::{rngs::StdRng, SeedableRng};
 /// tests rely on first running the vault docker script in `docker/vault/run.sh`); and (ii) vault
 /// tests cannot currently be run in parallel, as each test uses the same vault instance.
 const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
-    test_ensure_storage_is_available,
-    test_create_get_set_unwrap,
-    test_create_key_value_twice,
-    test_get_set_non_existent,
-    test_verify_incorrect_value_types_unwrap,
-    test_create_get_and_test_key_pair,
-    test_create_key_pair_twice,
-    test_get_uncreated_key_pair,
     test_create_and_get_non_existent_version,
     test_create_rotate_and_check_key_pair,
     test_create_key_pair_and_perform_rotations,
     test_create_key_pair_and_perform_get_set_get,
     test_create_sign_rotate_sign,
+    test_create_get_and_test_key_pair,
+    test_create_get_set_unwrap,
+    test_create_key_pair_twice,
+    test_create_key_value_twice,
+    test_ensure_storage_is_available,
+    test_get_set_non_existent,
+    test_get_uncreated_key_pair,
+    test_hash_value,
+    test_verify_incorrect_value_types_unwrap,
 ];
 
 /// Storage data constants for testing purposes.
@@ -198,6 +199,19 @@ fn test_get_uncreated_key_pair(storage: &mut dyn Storage) {
         storage.get_public_key_for_name(key_pair_name).is_err(),
         "Accessing a key that has not yet been created should have failed!"
     );
+}
+
+/// Verify HashValues work correctly
+fn test_hash_value(storage: &mut dyn Storage) {
+    let hash_value_key = "HashValue";
+    let hash_value_value = HashValue::random();
+    let policy = Policy::public();
+
+    storage
+        .create(hash_value_key, Value::HashValue(hash_value_value), &policy)
+        .unwrap();
+    let out_value = storage.get(hash_value_key).unwrap().hash_value().unwrap();
+    assert_eq!(hash_value_value, out_value);
 }
 
 /// This test verifies the storage engine is up and running.
