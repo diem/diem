@@ -5,8 +5,6 @@ syntax = "proto3";
 
 package types;
 
-import "language_storage.proto";
-
 // The statuses and errors produced by the Mempool during transaction insertion
 message MempoolStatus {
   // e.g. assertion violation
