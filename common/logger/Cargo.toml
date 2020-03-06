@@ -12,5 +12,6 @@ edition = "2018"
 # Do NOT add any inter-project dependencies.
 # This is to avoid ever having a circular dependency with the libra-logger crate.
 [dependencies]
+chrono = "0.4.9"
 env_logger = { version = "0.7.1", default-features = false }
 log = "0.4.8"

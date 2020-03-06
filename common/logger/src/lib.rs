@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use chrono::Utc;
 use env_logger::filter;
 pub use log::{debug, error, info, trace, warn, Level, Log, Metadata, Record};
 use std::{
@@ -10,7 +11,6 @@ use std::{
     fmt::{self, Write},
     sync::mpsc::{self, Receiver, RecvError, SyncSender, TrySendError},
     thread,
-    time::SystemTime,
 };
 
 pub mod prelude {
@@ -246,12 +246,8 @@ impl Log for AsyncLogClient {
 fn format(record: &Record) -> Result<String, fmt::Error> {
     let mut buffer = String::new();
 
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("SystemTime before UNIX EPOCH!");
-
-    write!(buffer, "{} ", now.as_secs())?;
     write!(buffer, "{} ", record.metadata().level())?;
+    write!(buffer, "{} ", Utc::now().format("%F %T"))?;
 
     if let Some(file) = record.file() {
         write!(buffer, "{}", file)?;
