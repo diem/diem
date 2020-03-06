@@ -281,7 +281,7 @@ fn check_signature_no_refs(
     let (struct_handles, _) = context;
 
     match ty {
-        U8 | U64 | U128 | Bool | ByteArray | Address | TypeParameter(_) => vec![],
+        U8 | U64 | U128 | Bool | Address | TypeParameter(_) => vec![],
         Reference(_) | MutableReference(_) => {
             // TODO: Prop tests expect us to NOT check the inner types.
             // Revisit this once we rework prop tests.

@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Random valid type inhabitant generation.
-use crate::common::*;
-use libra_types::{
-    account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId,
-};
+use libra_types::{account_address::AccountAddress, language_storage::ModuleId};
 use move_core_types::identifier::Identifier;
 use move_vm_runtime::{loaded_data::loaded_module::LoadedModule, MoveVM};
 use move_vm_state::execution_context::SystemExecutionContext;
@@ -89,12 +86,6 @@ impl<'txn> RandomInhabitor<'txn> {
         self.gen.gen_bool(0.5)
     }
 
-    fn next_bytearray(&mut self) -> ByteArray {
-        let len: usize = self.gen.gen_range(1, BYTE_ARRAY_MAX_SIZE);
-        let bytes: Vec<u8> = (0..len).map(|_| self.gen.gen::<u8>()).collect();
-        ByteArray::new(bytes)
-    }
-
     fn next_addr(&mut self) -> AccountAddress {
         AccountAddress::new(self.gen.gen())
     }
@@ -151,9 +142,6 @@ impl<'txn> RandomInhabitor<'txn> {
             SignatureToken::Address => (Type::Address, Value::address(self.next_addr())),
             SignatureToken::Reference(_sig) | SignatureToken::MutableReference(_sig) => {
                 panic!("cannot inhabit references");
-            }
-            SignatureToken::ByteArray => {
-                (Type::ByteArray, Value::byte_array(self.next_bytearray()))
             }
             SignatureToken::Struct(struct_handle_idx, _) => {
                 assert!(self.root_module.struct_defs().len() > 1);

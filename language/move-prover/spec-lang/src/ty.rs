@@ -39,7 +39,6 @@ pub enum PrimitiveType {
     U8,
     U64,
     U128,
-    ByteArray,
     Address,
 
     // Types only appearing in specifications
@@ -457,7 +456,6 @@ impl fmt::Display for PrimitiveType {
             U8 => f.write_str("u8"),
             U64 => f.write_str("u64"),
             U128 => f.write_str("u128"),
-            ByteArray => f.write_str("bytearray"),
             Address => f.write_str("address"),
             Range => f.write_str("range"),
             Num => f.write_str("num"),

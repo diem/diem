@@ -32,7 +32,6 @@ use crate::{
 };
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
-    byte_array::ByteArray,
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
@@ -164,7 +163,7 @@ pub type CodeOffset = u16;
 /// The pool of identifiers.
 pub type IdentifierPool = Vec<Identifier>;
 /// The pool of `ByteArray` literals.
-pub type ByteArrayPool = Vec<ByteArray>;
+pub type ByteArrayPool = Vec<Vec<u8>>;
 /// The pool of `AccountAddress` literals.
 ///
 /// Code references have a literal addresses in `ModuleHandle`s. Literal references to data in
@@ -496,9 +495,7 @@ pub enum SignatureToken {
     U64,
     /// Unsigned integers, 128 bits length.
     U128,
-    /// ByteArray, variable size, immutable byte array.
-    ByteArray,
-    /// Address, a 16 byte immutable type.
+    /// Address, a 16 bytes immutable type.
     Address,
     /// Vector
     Vector(Box<SignatureToken>),
@@ -523,8 +520,9 @@ impl Arbitrary for SignatureToken {
 
         let leaf = prop_oneof![
             Just(Bool),
+            Just(U8),
             Just(U64),
-            Just(ByteArray),
+            Just(U128),
             Just(Address),
             // TODO: generate type actuals when generics is implemented
             any::<StructHandleIndex>().prop_map(|sh_idx| Struct(sh_idx, vec![])),
@@ -536,6 +534,7 @@ impl Arbitrary for SignatureToken {
             1,  // items per collection
             |inner| {
                 prop_oneof![
+                    inner.clone().prop_map(|token| Vector(Box::new(token))),
                     inner.clone().prop_map(|token| Reference(Box::new(token))),
                     inner.prop_map(|token| MutableReference(Box::new(token))),
                 ]
@@ -552,7 +551,6 @@ impl std::fmt::Debug for SignatureToken {
             SignatureToken::U8 => write!(f, "U8"),
             SignatureToken::U64 => write!(f, "U64"),
             SignatureToken::U128 => write!(f, "U128"),
-            SignatureToken::ByteArray => write!(f, "ByteArray"),
             SignatureToken::Address => write!(f, "Address"),
             SignatureToken::Vector(boxed) => write!(f, "Vector({:?})", boxed),
             SignatureToken::Struct(idx, types) => write!(f, "Struct({:?}, {:?})", idx, types),
@@ -606,7 +604,7 @@ impl SignatureToken {
         match self {
             Reference(_) => SignatureTokenKind::Reference,
             MutableReference(_) => SignatureTokenKind::MutableReference,
-            Bool | U8 | U64 | U128 | ByteArray | Address | Struct(_, _) | Vector(_) => {
+            Bool | U8 | U64 | U128 | Address | Struct(_, _) | Vector(_) => {
                 SignatureTokenKind::Value
             }
             // TODO: This is a temporary hack to please the verifier. SignatureTokenKind will soon
@@ -624,7 +622,7 @@ impl SignatureToken {
         match self {
             Struct(sh_idx, _) => Some(*sh_idx),
             Reference(token) | MutableReference(token) => token.struct_index(),
-            Bool | U8 | U64 | U128 | ByteArray | Address | Vector(_) | TypeParameter(_) => None,
+            Bool | U8 | U64 | U128 | Address | Vector(_) | TypeParameter(_) => None,
         }
     }
 
@@ -632,7 +630,7 @@ impl SignatureToken {
     pub fn is_primitive(&self) -> bool {
         use SignatureToken::*;
         match self {
-            Bool | U8 | U64 | U128 | ByteArray | Address => true,
+            Bool | U8 | U64 | U128 | Address => true,
             Struct(_, _) | Reference(_) | Vector(_) | MutableReference(_) | TypeParameter(_) => {
                 false
             }
@@ -645,7 +643,6 @@ impl SignatureToken {
         match self {
             U8 | U64 | U128 => true,
             Bool
-            | ByteArray
             | Address
             | Vector(_)
             | Struct(_, _)
@@ -716,7 +713,6 @@ impl SignatureToken {
             U8 => U8,
             U64 => U64,
             U128 => U128,
-            ByteArray => ByteArray,
             Address => Address,
             Vector(ty) => Vector(Box::new(ty.substitute(tys))),
             Struct(idx, actuals) => Struct(
@@ -747,7 +743,7 @@ impl SignatureToken {
 
         match ty {
             // The primitive types & references have kind unrestricted.
-            Bool | U8 | U64 | U128 | ByteArray | Address | Reference(_) | MutableReference(_) => {
+            Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => {
                 Kind::Unrestricted
             }
 
@@ -1552,7 +1548,7 @@ impl Arbitrary for CompiledScriptMut {
             ),
             (
                 vec(any::<Identifier>(), 0..=size),
-                vec(any::<ByteArray>(), 0..=size),
+                vec(vec(any::<u8>(), 0..=size), 0..=size),
                 vec(any::<AccountAddress>(), 0..=size),
             ),
             any_with::<FunctionDefinition>(size),
@@ -1602,7 +1598,7 @@ impl Arbitrary for CompiledModuleMut {
             ),
             (
                 vec(any::<Identifier>(), 0..=size),
-                vec(any::<ByteArray>(), 0..=size),
+                vec(vec(any::<u8>(), 0..=size), 0..=size),
                 vec(any::<AccountAddress>(), 0..=size),
             ),
             (

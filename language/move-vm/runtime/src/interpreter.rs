@@ -62,7 +62,6 @@ fn derive_type_tag(
         U8 => Ok(TypeTag::U8),
         U64 => Ok(TypeTag::U64),
         U128 => Ok(TypeTag::U128),
-        ByteArray => Ok(TypeTag::ByteArray),
         Vector(ty) => Ok(TypeTag::Vector(Box::new(derive_type_tag(
             module,
             type_actual_tags,

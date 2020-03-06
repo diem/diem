@@ -165,7 +165,6 @@ pub enum Value {
     Address(BigUint),
     Number(BigUint),
     Bool(bool),
-    Bytearray(Vec<u8>),
 }
 
 // =================================================================================================

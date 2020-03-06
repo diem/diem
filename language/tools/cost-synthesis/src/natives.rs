@@ -6,7 +6,6 @@
 //! This implements a `StackAccessor` that generates random bytearrays of a user defined length. We
 //! then use this ability to run the native functions with different bytearray lengths in the
 //! generated synthesis binary.
-use libra_types::byte_array::ByteArray;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 /// A wrapper around data used to generate random valid bytearrays
@@ -33,11 +32,11 @@ impl StackAccessorMocker {
     }
 
     /// Generage a fresh bytearray.
-    pub fn next_bytearray(&mut self) -> ByteArray {
+    pub fn next_bytearray(&mut self) -> Vec<u8> {
         let bytes: Vec<u8> = (0..self.hash_length)
             .map(|_| self.gen.gen::<u8>())
             .collect();
-        ByteArray::new(bytes)
+        bytes
     }
 }
 

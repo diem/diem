@@ -6,7 +6,7 @@ use codespan::{ByteIndex, Span};
 use std::{fmt, str::FromStr};
 
 use crate::lexer::*;
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use libra_types::account_address::AccountAddress;
 use move_core_types::identifier::{IdentStr, Identifier};
 use move_ir_types::{ast::*, location::*, spec_language_ast::*};
 
@@ -260,10 +260,10 @@ fn parse_copyable_val<'input>(
         }
         Tok::ByteArrayValue => {
             let s = tokens.content();
-            let buf = ByteArray::new(hex::decode(&s[2..s.len() - 1]).unwrap_or_else(|_| {
+            let buf = hex::decode(&s[2..s.len() - 1]).unwrap_or_else(|_| {
                 // The lexer guarantees this, but tracking this knowledge all the way to here is tedious
                 unreachable!("The string {:?} is not a valid hex-encoded byte array", s)
-            }));
+            });
             tokens.advance()?;
             CopyableVal_::ByteArray(buf)
         }
@@ -1179,10 +1179,6 @@ fn parse_type<'input>(tokens: &mut Lexer<'input>) -> Result<Type, ParseError<Loc
         Tok::Bool => {
             tokens.advance()?;
             Type::Bool
-        }
-        Tok::Bytearray => {
-            tokens.advance()?;
-            Type::ByteArray
         }
         Tok::Vector => {
             tokens.advance()?;

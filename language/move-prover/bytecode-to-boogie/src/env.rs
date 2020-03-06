@@ -578,7 +578,6 @@ impl<'env> ModuleEnv<'env> {
             SignatureToken::U8 => GlobalType::U8,
             SignatureToken::U64 => GlobalType::U64,
             SignatureToken::U128 => GlobalType::U128,
-            SignatureToken::ByteArray => GlobalType::ByteArray,
             SignatureToken::Address => GlobalType::Address,
             SignatureToken::Vector(t) => GlobalType::Vector(Box::new(self.globalize_signature(t))),
             SignatureToken::Reference(t) => {
@@ -660,7 +659,6 @@ impl<'env> ModuleEnv<'env> {
             Type::U64 => GlobalType::U64,
             Type::U128 => GlobalType::U128,
             Type::Bool => GlobalType::Bool,
-            Type::ByteArray => GlobalType::ByteArray,
             Type::Vector(bt) => {
                 GlobalType::Vector(Box::new(self.translate_ast_type(loc, bt, type_params)))
             }

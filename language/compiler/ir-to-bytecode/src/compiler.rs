@@ -139,7 +139,6 @@ enum InferredType {
     U8,
     U64,
     U128,
-    ByteArray,
     Address,
     Vector(Box<InferredType>),
     Struct(StructHandleIndex),
@@ -157,7 +156,6 @@ impl InferredType {
             S::U8 => I::U8,
             S::U64 => I::U64,
             S::U128 => I::U128,
-            S::ByteArray => I::ByteArray,
             S::Address => I::Address,
             S::Vector(s_inner) => I::Vector(Box::new(Self::from_signature_token(s_inner))),
             S::Struct(si, _) => I::Struct(*si),
@@ -180,7 +178,6 @@ impl InferredType {
             InferredType::U8 => bail!("no struct type for U8"),
             InferredType::U64 => bail!("no struct type for U64"),
             InferredType::U128 => bail!("no struct type for U128"),
-            InferredType::ByteArray => bail!("no struct type for ByteArray"),
             InferredType::Address => bail!("no struct type for Address"),
             InferredType::Vector(_) => bail!("no struct type for vector"),
             InferredType::Reference(inner) | InferredType::MutableReference(inner) => {
@@ -543,7 +540,6 @@ fn compile_type(context: &mut Context, ty: &Type) -> Result<SignatureToken> {
         Type::U64 => SignatureToken::U64,
         Type::U128 => SignatureToken::U128,
         Type::Bool => SignatureToken::Bool,
-        Type::ByteArray => SignatureToken::ByteArray,
         Type::Vector(inner_type) => {
             SignatureToken::Vector(Box::new(compile_type(context, inner_type)?))
         }
@@ -579,7 +575,7 @@ fn function_signature(
         .map(|(_, ty)| compile_type(context, ty))
         .collect::<Result<_>>()?;
     let type_formals = f.type_formals.iter().map(|(_, k)| kind(k)).collect();
-    Ok(FunctionSignature {
+    Ok(vm::file_format::FunctionSignature {
         return_types,
         arg_types,
         type_formals,
@@ -1091,7 +1087,7 @@ fn compile_expression(
                 let buf_idx = context.byte_array_index(&buf)?;
                 push_instr!(exp.loc, Bytecode::LdByteArray(buf_idx));
                 function_frame.push()?;
-                vec_deque![InferredType::ByteArray]
+                vec_deque![InferredType::Vector(Box::new(InferredType::U8))]
             }
             CopyableVal_::Bool(b) => {
                 push_instr! {exp.loc,

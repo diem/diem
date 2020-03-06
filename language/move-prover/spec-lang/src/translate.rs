@@ -1506,7 +1506,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         "u128" => return Type::new_prim(PrimitiveType::U128),
                         "num" => return Type::new_prim(PrimitiveType::Num),
                         "range" => return Type::new_prim(PrimitiveType::Range),
-                        "bytearray" => return Type::new_prim(PrimitiveType::ByteArray),
                         "address" => return Type::new_prim(PrimitiveType::Address),
                         "vector" => {
                             if args.len() != 1 {
@@ -1607,10 +1606,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 PA::Value_::Bool(x) => {
                     make_value(Value::Bool(*x), Type::new_prim(PrimitiveType::Bool))
                 }
-                PA::Value_::Bytearray(x) => make_value(
-                    Value::Bytearray(x.clone()),
-                    Type::new_prim(PrimitiveType::ByteArray),
-                ),
+                PA::Value_::Bytearray(_) => {
+                    self.error(&loc, "byte array construct not supported in specifications");
+                    self.new_error_exp()
+                }
             },
             EA::Exp_::InferredNum(x) => make_value(
                 Value::Number(BigUint::from_u128(*x).unwrap()),

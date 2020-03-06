@@ -109,7 +109,7 @@ impl<'a> ModuleGenerator<'a> {
             .cloned()
             .collect();
 
-        let mut end = 4;
+        let mut end = 5;
         if !ty_param_context.is_empty() {
             end += 1;
         };
@@ -119,10 +119,11 @@ impl<'a> ModuleGenerator<'a> {
 
         match self.index(end) {
             0 => Type::Address,
-            1 => Type::U64,
-            2 => Type::Bool,
-            3 => Type::ByteArray,
-            4 if !structs.is_empty() => {
+            1 => Type::U8,
+            2 => Type::U64,
+            3 => Type::U128,
+            4 => Type::Bool,
+            5 if !structs.is_empty() => {
                 let index = self.index(structs.len());
                 let struct_def = structs[index].value.clone();
                 let ty_instants = {

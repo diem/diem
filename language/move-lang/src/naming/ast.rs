@@ -101,8 +101,6 @@ pub enum BuiltinTypeName_ {
     Vector,
     // bool
     Bool,
-    // bytearray
-    Bytearray,
 }
 pub type BuiltinTypeName = Spanned<BuiltinTypeName_>;
 
@@ -268,7 +266,6 @@ impl BuiltinTypeName_ {
     pub const U_64: &'static str = "u64";
     pub const U_128: &'static str = "u128";
     pub const BOOL: &'static str = "bool";
-    pub const BYTE_ARRAY: &'static str = "bytearray";
     pub const VECTOR: &'static str = "vector";
 
     pub fn all_names() -> BTreeSet<&'static str> {
@@ -278,7 +275,6 @@ impl BuiltinTypeName_ {
         s.insert(Self::U_64);
         s.insert(Self::U_128);
         s.insert(Self::BOOL);
-        s.insert(Self::BYTE_ARRAY);
         s.insert(Self::VECTOR);
         s
     }
@@ -313,7 +309,6 @@ impl BuiltinTypeName_ {
             BT::U_64 => Some(BT::U64),
             BT::U_128 => Some(BT::U128),
             BT::BOOL => Some(BT::Bool),
-            BT::BYTE_ARRAY => Some(BT::Bytearray),
             BT::VECTOR => Some(BT::Vector),
             _ => None,
         }
@@ -323,7 +318,7 @@ impl BuiltinTypeName_ {
         use BuiltinTypeName_::*;
         // Match here to make sure this function is fixed when collections are added
         match self {
-            Address | U8 | U64 | U128 | Bool | Bytearray => vec![],
+            Address | U8 | U64 | U128 | Bool => vec![],
             Vector => vec![Spanned::new(loc, Kind_::Unknown)],
         }
     }
@@ -383,7 +378,7 @@ impl BaseType_ {
         use BuiltinTypeName_::*;
 
         let kind = match b_ {
-            U8 | U64 | U128 | Address | Bool | Bytearray => Some(sp(loc, Kind_::Unrestricted)),
+            U8 | U64 | U128 | Address | Bool => Some(sp(loc, Kind_::Unrestricted)),
             Vector => None,
         };
         let n = sp(loc, TypeName_::Builtin(sp(loc, b_)));
@@ -412,10 +407,6 @@ impl BaseType_ {
 
     pub fn u128(loc: Loc) -> BaseType {
         Self::builtin(loc, BuiltinTypeName_::U128, vec![])
-    }
-
-    pub fn bytearray(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::Bytearray, vec![])
     }
 
     pub fn builtin_name(&self) -> Option<&BuiltinTypeName> {
@@ -513,7 +504,9 @@ impl Value_ {
             U64(_) => BaseType_::u64(loc),
             U128(_) => BaseType_::u128(loc),
             Bool(_) => BaseType_::bool(loc),
-            Bytearray(_) => BaseType_::bytearray(loc),
+            Bytearray(_) => {
+                BaseType_::builtin(loc, BuiltinTypeName_::Vector, vec![BaseType_::u8(loc)])
+            }
         }
     }
 }
@@ -534,7 +527,6 @@ impl fmt::Display for BuiltinTypeName_ {
                 BT::U64 => BT::U_64,
                 BT::U128 => BT::U_128,
                 BT::Bool => BT::BOOL,
-                BT::Bytearray => BT::BYTE_ARRAY,
                 BT::Vector => BT::VECTOR,
             }
         )

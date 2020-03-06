@@ -3,7 +3,7 @@
 
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::ModuleSourceMap;
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use libra_types::account_address::AccountAddress;
 use move_core_types::identifier::{IdentStr, Identifier};
 use move_ir_types::{ast::*, location::*};
 use std::{clone::Clone, collections::HashMap, hash::Hash};
@@ -155,7 +155,7 @@ pub struct MaterializedPools {
     /// Identifier pool
     pub identifiers: Vec<Identifier>,
     /// Byte array pool
-    pub byte_array_pool: Vec<ByteArray>,
+    pub byte_array_pool: Vec<Vec<u8>>,
     /// Address pool
     pub address_pool: Vec<AccountAddress>,
 }
@@ -187,7 +187,7 @@ pub struct Context<'a> {
     type_signatures: HashMap<TypeSignature, TableIndex>,
     locals_signatures: HashMap<LocalsSignature, TableIndex>,
     identifiers: HashMap<Identifier, TableIndex>,
-    byte_array_pool: HashMap<ByteArray, TableIndex>,
+    byte_array_pool: HashMap<Vec<u8>, TableIndex>,
     address_pool: HashMap<AccountAddress, TableIndex>,
 
     // Current generic/type formal context
@@ -378,7 +378,8 @@ impl<'a> Context<'a> {
     }
 
     /// Get the byte array pool index, adds it if missing.
-    pub fn byte_array_index(&mut self, byte_array: &ByteArray) -> Result<ByteArrayPoolIndex> {
+    #[allow(clippy::ptr_arg)]
+    pub fn byte_array_index(&mut self, byte_array: &Vec<u8>) -> Result<ByteArrayPoolIndex> {
         Ok(ByteArrayPoolIndex(get_or_add_item_ref(
             &mut self.byte_array_pool,
             byte_array,
@@ -606,7 +607,6 @@ impl<'a> Context<'a> {
             | x @ SignatureToken::U8
             | x @ SignatureToken::U64
             | x @ SignatureToken::U128
-            | x @ SignatureToken::ByteArray
             | x @ SignatureToken::Address
             | x @ SignatureToken::TypeParameter(_) => x,
             SignatureToken::Vector(inner) => {
@@ -657,7 +657,7 @@ impl<'a> Context<'a> {
             .map(|t| self.reindex_signature_token(dep, t))
             .collect::<Result<_>>()?;
         let type_formals = orig.type_formals;
-        Ok(FunctionSignature {
+        Ok(vm::file_format::FunctionSignature {
             return_types,
             arg_types,
             type_formals,

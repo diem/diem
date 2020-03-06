@@ -201,7 +201,7 @@ fn transform_code_with_ld_instrs() {
         module Foobar {
 
             public load() {
-                let a: bytearray;
+                let a: vector<u8>;
                 let b: bool;
                 let c: address;
                 a = h\"deadbeef\";
@@ -226,10 +226,10 @@ fn transform_code_with_ld_instrs() {
         Ret(vec![]),
     ];
     let expected_types = vec![
-        SignatureToken::ByteArray,
+        SignatureToken::Vector(Box::new(SignatureToken::U8)),
         SignatureToken::Bool,
         SignatureToken::Address,
-        SignatureToken::ByteArray,
+        SignatureToken::Vector(Box::new(SignatureToken::U8)),
         SignatureToken::Bool,
         SignatureToken::Bool,
         SignatureToken::Address,
@@ -387,15 +387,15 @@ fn transform_code_with_function_call() {
         "
         module Foobar {
 
-            public foo(aa: address, bb: u64, cc: bytearray) {
+            public foo(aa: address, bb: u64, cc: vector<u8>) {
                 let a: address;
                 let b: u64;
-                let c: bytearray;
+                let c: vector<u8>;
                 a,b,c = Self.bar(move(cc),move(aa),move(bb));
                 return;
             }
 
-            public bar(c: bytearray, a: address, b:u64): address*u64*bytearray {
+            public bar(c: vector<u8>, a: address, b:u64): address*u64*vector<u8> {
                 return move(a), move(b), move(c);
             }
         }
@@ -420,16 +420,16 @@ fn transform_code_with_function_call() {
     let expected_types = vec![
         SignatureToken::Address,
         SignatureToken::U64,
-        SignatureToken::ByteArray,
+        SignatureToken::Vector(Box::new(SignatureToken::U8)),
         SignatureToken::Address,
         SignatureToken::U64,
-        SignatureToken::ByteArray,
-        SignatureToken::ByteArray,
+        SignatureToken::Vector(Box::new(SignatureToken::U8)),
+        SignatureToken::Vector(Box::new(SignatureToken::U8)),
         SignatureToken::Address,
         SignatureToken::U64,
         SignatureToken::Address,
         SignatureToken::U64,
-        SignatureToken::ByteArray,
+        SignatureToken::Vector(Box::new(SignatureToken::U8)),
     ];
     assert_eq!(actual_code, expected_code);
     assert_eq!(actual_types, expected_types);

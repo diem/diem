@@ -6,9 +6,7 @@ use crate::{
     spec_language_ast::{Condition, Invariant, SyntheticDefinition},
 };
 use anyhow::Result;
-use libra_types::{
-    account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId,
-};
+use libra_types::{account_address::AccountAddress, language_storage::ModuleId};
 use move_core_types::identifier::Identifier;
 use once_cell::sync::Lazy;
 use std::{
@@ -180,8 +178,6 @@ pub enum Type {
     U128,
     /// `bool`
     Bool,
-    /// `bytearray`
-    ByteArray,
     /// `vector`
     Vector(Box<Type>),
     /// A module defined struct
@@ -490,7 +486,7 @@ pub enum CopyableVal_ {
     /// true or false
     Bool(bool),
     /// `b"<bytes>"`
-    ByteArray(ByteArray),
+    ByteArray(Vec<u8>),
 }
 
 /// The type of a value and its location
@@ -618,7 +614,7 @@ pub enum Bytecode_ {
     CastU8,
     CastU64,
     CastU128,
-    LdByteArray(ByteArray),
+    LdByteArray(Vec<u8>),
     LdAddr(AccountAddress),
     LdTrue,
     LdFalse,
@@ -824,11 +820,6 @@ impl Type {
     /// Creates a new bool type
     pub fn bool() -> Type {
         Type::Bool
-    }
-
-    /// Creates a new bytearray type
-    pub fn bytearray() -> Type {
-        Type::ByteArray
     }
 }
 
@@ -1129,7 +1120,7 @@ impl Exp_ {
     }
 
     /// Creates a new bytearray `Exp` with no location information
-    pub fn byte_array(buf: ByteArray) -> Exp {
+    pub fn byte_array(buf: Vec<u8>) -> Exp {
         Exp_::value(CopyableVal_::ByteArray(buf))
     }
 
@@ -1490,7 +1481,6 @@ impl fmt::Display for Type {
             Type::U128 => write!(f, "u128"),
             Type::Bool => write!(f, "bool"),
             Type::Address => write!(f, "address"),
-            Type::ByteArray => write!(f, "bytearray"),
             Type::Vector(ty) => write!(f, "vector<{}>", ty),
             Type::Struct(ident, tys) => write!(f, "{}{}", ident, format_type_actuals(tys)),
             Type::Reference(is_mutable, t) => {
@@ -1660,8 +1650,8 @@ impl fmt::Display for CopyableVal_ {
             CopyableVal_::U64(v) => write!(f, "{}", v),
             CopyableVal_::U128(v) => write!(f, "{}u128", v),
             CopyableVal_::Bool(v) => write!(f, "{}", v),
-            CopyableVal_::ByteArray(v) => write!(f, "{}", v),
-            CopyableVal_::Address(v) => write!(f, "0x{}", hex::encode(&v)),
+            CopyableVal_::ByteArray(v) => write!(f, "0b{}", hex::encode(v)),
+            CopyableVal_::Address(v) => write!(f, "0x{}", hex::encode(v)),
         }
     }
 }
@@ -1771,7 +1761,7 @@ impl fmt::Display for Bytecode_ {
             Bytecode_::CastU8 => write!(f, "CastU8"),
             Bytecode_::CastU64 => write!(f, "CastU64"),
             Bytecode_::CastU128 => write!(f, "CastU128"),
-            Bytecode_::LdByteArray(b) => write!(f, "LdByteArray {}", b),
+            Bytecode_::LdByteArray(b) => write!(f, "LdByteArray 0b{}", hex::encode(b)),
             Bytecode_::LdAddr(a) => write!(f, "LdAddr {}", a),
             Bytecode_::LdTrue => write!(f, "LdTrue"),
             Bytecode_::LdFalse => write!(f, "LdFalse"),

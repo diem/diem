@@ -3,7 +3,7 @@
 
 use crate::file_format::*;
 use anyhow::{bail, format_err, Result};
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use libra_types::account_address::AccountAddress;
 use move_core_types::identifier::IdentStr;
 use std::{collections::VecDeque, fmt};
 
@@ -497,11 +497,8 @@ fn display_address(addr: &AccountAddress, f: &mut fmt::Formatter) -> fmt::Result
     write!(f, "0x{}", v.into_iter().collect::<String>())
 }
 
-// Clippy will complain about passing Vec<_> by reference; instead you should pass &[_]
-// In order to keep the logic of abstracting ByteArray, I think it is alright to ignore the warning
-#[allow(clippy::ptr_arg)]
-fn display_byte_array(byte_array: &ByteArray, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "0x{}", hex::encode(&byte_array.as_bytes()))
+fn display_byte_array(byte_array: &[u8], f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "0x{}", hex::encode(byte_array))
 }
 
 fn display_type_signature<T: TableAccess>(
@@ -582,7 +579,6 @@ fn display_signature_token<T: TableAccess>(
         SignatureToken::U8 => write!(f, "U8"),
         SignatureToken::U64 => write!(f, "U64"),
         SignatureToken::U128 => write!(f, "U128"),
-        SignatureToken::ByteArray => write!(f, "ByteArray"),
         SignatureToken::Address => write!(f, "Address"),
         SignatureToken::Vector(ty) => {
             write!(f, "Vector<")?;

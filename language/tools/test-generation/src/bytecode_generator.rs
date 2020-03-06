@@ -828,7 +828,6 @@ impl<'a> BytecodeGenerator<'a> {
             SignatureToken::U8 => vec![Bytecode::LdU8(0)],
             SignatureToken::U128 => vec![Bytecode::LdU128(0)],
             SignatureToken::Bool => vec![Bytecode::LdFalse],
-            SignatureToken::ByteArray => vec![Bytecode::LdByteArray(ByteArrayPoolIndex::new(0))],
             SignatureToken::Struct(handle_idx, instantiation) => {
                 let struct_def_idx = module
                     .module

@@ -275,7 +275,7 @@ fn gen_events(sender: AccountAddress) -> Vec<ContractEvent> {
     vec![ContractEvent::new(
         EventKey::new_from_address(&sender, 0),
         0,
-        TypeTag::ByteArray,
+        TypeTag::Vector(Box::new(TypeTag::U8)),
         b"event_data".to_vec(),
     )]
 }
