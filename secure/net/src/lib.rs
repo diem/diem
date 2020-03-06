@@ -15,13 +15,27 @@
 //! Internally both the client and server leverage a NetworkStream that communications in blocks
 //! where a block is a length prefixed array of bytes.
 
-use anyhow::{anyhow, ensure, Result};
 use libra_logger::{debug, trace};
 use std::{
     io::{Read, Write},
     net::{Shutdown, SocketAddr, TcpListener, TcpStream},
     thread, time,
 };
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Already called shutdown")]
+    AlreadyShutdown,
+    #[error("Found data that is too large to decode: {0}")]
+    DataTooLarge(usize),
+    #[error("Internal network error:")]
+    NetworkError(#[from] std::io::Error),
+    #[error("No active stream")]
+    NoActiveStream,
+    #[error("Remote stream cleanly closed")]
+    RemoteStreamClosed,
+}
 
 pub struct NetworkClient {
     server: SocketAddr,
@@ -37,7 +51,7 @@ impl NetworkClient {
     }
 
     /// Blocking read until able to successfully read an entire message
-    pub fn read(&mut self) -> Result<Vec<u8>> {
+    pub fn read(&mut self) -> Result<Vec<u8>, Error> {
         let stream = self.server()?;
         let result = stream.read();
         if result.is_err() {
@@ -48,18 +62,15 @@ impl NetworkClient {
     }
 
     /// Shutdown the internal network stream
-    pub fn shutdown(&mut self) -> Result<()> {
+    pub fn shutdown(&mut self) -> Result<(), Error> {
         debug!("Shutdown called");
-        let stream = self
-            .stream
-            .take()
-            .ok_or_else(|| anyhow!("No active stream"))?;
+        let stream = self.stream.take().ok_or_else(|| Error::NoActiveStream)?;
         stream.shutdown()?;
         Ok(())
     }
 
     /// Blocking read until able to successfully read an entire message
-    pub fn write(&mut self, data: &[u8]) -> Result<()> {
+    pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
         let stream = self.server()?;
         let result = stream.write(data);
         if result.is_err() {
@@ -69,7 +80,7 @@ impl NetworkClient {
         result
     }
 
-    fn server(&mut self) -> Result<&mut NetworkStream> {
+    fn server(&mut self) -> Result<&mut NetworkStream, Error> {
         if self.stream.is_none() {
             debug!("Attempting to connect to upstream {}", self.server);
             let mut stream = TcpStream::connect(self.server);
@@ -86,9 +97,7 @@ impl NetworkClient {
             debug!("Connection established to upstream {}", self.server);
         }
 
-        self.stream
-            .as_mut()
-            .ok_or_else(|| anyhow!("Unable to retrieve a stream"))
+        self.stream.as_mut().ok_or_else(|| Error::NoActiveStream)
     }
 }
 
@@ -108,7 +117,7 @@ impl NetworkServer {
 
     /// If there isn't already a downstream client, it accepts. Otherwise it
     /// blocks until able to successfully read an entire message
-    pub fn read(&mut self) -> Result<Vec<u8>> {
+    pub fn read(&mut self) -> Result<Vec<u8>, Error> {
         let stream = self.client()?;
         let result = stream.read();
         if result.is_err() {
@@ -119,22 +128,17 @@ impl NetworkServer {
     }
 
     /// Shutdown the internal network stream
-    pub fn shutdown(&mut self) -> Result<()> {
+    pub fn shutdown(&mut self) -> Result<(), Error> {
         debug!("Shutdown called");
-        self.listener
-            .take()
-            .ok_or_else(|| anyhow!("Listener already shutdown"))?;
-        let stream = self
-            .stream
-            .take()
-            .ok_or_else(|| anyhow!("No active stream"))?;
+        self.listener.take().ok_or_else(|| Error::AlreadyShutdown)?;
+        let stream = self.stream.take().ok_or_else(|| Error::NoActiveStream)?;
         stream.shutdown()?;
         Ok(())
     }
 
     /// If there isn't already a downstream client, it accepts. Otherwise it
     /// blocks until it is able to successfully send an entire message.
-    pub fn write(&mut self, data: &[u8]) -> Result<()> {
+    pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
         let stream = self.client()?;
         let result = stream.write(data);
         if result.is_err() {
@@ -144,22 +148,20 @@ impl NetworkServer {
         result
     }
 
-    fn client(&mut self) -> Result<&mut NetworkStream> {
+    fn client(&mut self) -> Result<&mut NetworkStream, Error> {
         if self.stream.is_none() {
             debug!("Waiting for downstream to connect");
             let listener = self
                 .listener
                 .as_mut()
-                .ok_or_else(|| anyhow!("Listener already shutdown"))?;
+                .ok_or_else(|| Error::AlreadyShutdown)?;
             let (stream, stream_addr) = listener.accept()?;
             debug!("Connection established with downstream {}", stream_addr);
             stream.set_nodelay(true)?;
             self.stream = Some(NetworkStream::new(stream));
         }
 
-        self.stream
-            .as_mut()
-            .ok_or_else(|| anyhow!("Unable to retrieve a stream"))
+        self.stream.as_mut().ok_or_else(|| Error::NoActiveStream)
     }
 }
 
@@ -179,7 +181,7 @@ impl NetworkStream {
     }
 
     /// Blocking read until able to successfully read an entire message
-    pub fn read(&mut self) -> Result<Vec<u8>> {
+    pub fn read(&mut self) -> Result<Vec<u8>, Error> {
         let result = self.read_buffer();
         if !result.is_empty() {
             return Ok(result);
@@ -190,7 +192,7 @@ impl NetworkStream {
             let read = self.stream.read(&mut self.temp_buffer)?;
             trace!("Read {} bytes from stream", read);
             if read == 0 {
-                anyhow::bail!("Remote stream cleanly closed");
+                return Err(Error::RemoteStreamClosed);
             }
             self.buffer.extend(self.temp_buffer[0..read].to_vec());
             let result = self.read_buffer();
@@ -203,18 +205,16 @@ impl NetworkStream {
     }
 
     /// Terminate the socket
-    pub fn shutdown(&self) -> Result<()> {
+    pub fn shutdown(&self) -> Result<(), Error> {
         Ok(self.stream.shutdown(Shutdown::Both)?)
     }
 
     /// Blocking write until able to successfully send an entire message
-    pub fn write(&mut self, data: &[u8]) -> Result<()> {
+    pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
         let u32_max = u32::max_value() as usize;
-        ensure!(
-            data.len() <= u32_max,
-            "Found data that is too large to decode: {}",
-            data.len()
-        );
+        if u32_max <= data.len() {
+            return Err(Error::DataTooLarge(data.len()));
+        }
         let data_len = data.len() as u32;
         trace!("Attempting to write length, {},  to the stream", data_len);
         self.write_all(&data_len.to_le_bytes())?;
@@ -255,7 +255,7 @@ impl NetworkStream {
 
     /// Writing to a TCP socket will take in as much data as the underlying buffer has space for.
     /// This wraps around that buffer and blocks until all the data has been pushed.
-    fn write_all(&mut self, data: &[u8]) -> Result<()> {
+    fn write_all(&mut self, data: &[u8]) -> Result<(), Error> {
         let mut unwritten = &data[..];
         let mut total_written = 0;
 
