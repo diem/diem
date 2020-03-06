@@ -5,7 +5,6 @@ fn main() {
     let proto_files = [
         "src/proto/access_path.proto",
         "src/proto/events.proto",
-        "src/proto/language_storage.proto",
         "src/proto/mempool_status.proto",
         "src/proto/proof.proto",
         "src/proto/transaction.proto",
