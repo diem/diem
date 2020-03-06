@@ -74,7 +74,6 @@ pub fn boogie_type_value(env: &GlobalEnv, ty: &Type) -> String {
             PrimitiveType::U8 | PrimitiveType::U64 | PrimitiveType::U128 | PrimitiveType::Num => {
                 "IntegerType()".to_string()
             }
-            PrimitiveType::ByteArray => "ByteArrayType()".to_string(),
             PrimitiveType::Address => "AddressType()".to_string(),
             PrimitiveType::Range => "RangeType()".to_string(),
         },
@@ -134,7 +133,6 @@ pub fn boogie_type_check_expr(env: &GlobalEnv, name: &str, ty: &Type) -> String 
             PrimitiveType::Num => conds.push(format!("$IsValidNum({})", name)),
             PrimitiveType::Bool => conds.push(format!("is#Boolean({})", name)),
             PrimitiveType::Address => conds.push(format!("is#Address({})", name)),
-            PrimitiveType::ByteArray => conds.push(format!("is#ByteArray({})", name)),
             PrimitiveType::Range => conds.push(format!("$IsValidRange({})", name)),
         },
         Type::Vector(_) => conds.push(format!("$Vector_is_well_formed({})", name)),

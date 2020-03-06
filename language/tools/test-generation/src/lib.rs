@@ -26,7 +26,6 @@ use libra_logger::{debug, error, info};
 use libra_state_view::StateView;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
-    byte_array::ByteArray,
     vm_error::StatusCode,
 };
 use libra_vm::LibraVM;
@@ -67,7 +66,9 @@ fn run_vm(module: VerifiedModule) -> VMResult<()> {
             SignatureToken::Address => Value::address(AccountAddress::new([0u8; ADDRESS_LENGTH])),
             SignatureToken::U64 => Value::u64(0),
             SignatureToken::Bool => Value::bool(true),
-            SignatureToken::ByteArray => Value::byte_array(ByteArray::new(vec![])),
+            SignatureToken::Vector(inner_tok) if **inner_tok == SignatureToken::U8 => {
+                Value::vector_u8(vec![])
+            }
             _ => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
         })
         .collect();

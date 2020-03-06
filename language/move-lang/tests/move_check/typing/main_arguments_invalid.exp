@@ -6,7 +6,7 @@ error:
    │     ^^^^ Invalid parameter for 'main'
    ·
  1 │ fun main<T>(x: T) {
-   │                - Found: 'T'. But expected: 'address', 'bool', 'bytearray', 'u128', 'u64', 'u8', 'vector'
+   │                - Found: 'T'. But expected: 'address', 'bool', 'u128', 'u64', 'u8', 'vector'
    │
 
 error: 

@@ -4,9 +4,7 @@
 use crate::global_state::inhabitor::RandomInhabitor;
 use bytecode_verifier::VerifiedModule;
 use libra_crypto::ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey};
-use libra_types::{
-    access_path::AccessPath, account_address::AccountAddress, account_config, byte_array::ByteArray,
-};
+use libra_types::{access_path::AccessPath, account_address::AccountAddress, account_config};
 use move_vm_types::{
     identifier::{create_access_path, resource_storage_key},
     loaded_data::{struct_def::StructDef, types::Type},
@@ -95,16 +93,14 @@ impl Account {
         let account = {
             let coin = Value::struct_(Struct::pack(vec![Value::u64(10_000_000)]));
             let account = Value::struct_(Struct::pack(vec![
-                Value::byte_array(ByteArray::new(
-                    AccountAddress::from_public_key(&self.pubkey).to_vec(),
-                )),
+                Value::vector_u8(AccountAddress::from_public_key(&self.pubkey).to_vec()),
                 coin,
                 Value::u64(0),
                 Value::u64(0),
                 Value::u64(1),
             ]));
             let layout = Type::Struct(StructDef::new(vec![
-                Type::ByteArray,
+                Type::Vector(Box::new(Type::U8)),
                 Type::Struct(StructDef::new(vec![Type::U64])),
                 Type::U64,
                 Type::U64,

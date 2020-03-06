@@ -314,7 +314,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             Bytecode::LdByteArray(byte_array_pool_index) => {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
-                self.local_types.push(SignatureToken::ByteArray);
+                self.local_types
+                    .push(SignatureToken::Vector(Box::new(SignatureToken::U8)));
                 self.code.push(StacklessBytecode::LdByteArray(
                     temp_index,
                     *byte_array_pool_index,
@@ -747,38 +748,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     *type_params,
                 ));
             }
-            Bytecode::GetTxnGasUnitPrice => {
-                let temp_index = self.temp_count;
-                self.temp_stack.push(temp_index);
-                self.local_types.push(SignatureToken::U64);
-                self.code
-                    .push(StacklessBytecode::GetTxnGasUnitPrice(temp_index));
-                self.temp_count += 1;
-            }
-            Bytecode::GetTxnMaxGasUnits => {
-                let temp_index = self.temp_count;
-                self.temp_stack.push(temp_index);
-                self.local_types.push(SignatureToken::U64);
-                self.code
-                    .push(StacklessBytecode::GetTxnMaxGasUnits(temp_index));
-                self.temp_count += 1;
-            }
-            Bytecode::GetGasRemaining => {
-                let temp_index = self.temp_count;
-                self.temp_stack.push(temp_index);
-                self.local_types.push(SignatureToken::U64);
-                self.code
-                    .push(StacklessBytecode::GetGasRemaining(temp_index));
-                self.temp_count += 1;
-            }
-            Bytecode::GetTxnSequenceNumber => {
-                let temp_index = self.temp_count;
-                self.temp_stack.push(temp_index);
-                self.local_types.push(SignatureToken::U64);
-                self.code
-                    .push(StacklessBytecode::GetTxnSequenceNumber(temp_index));
-                self.temp_count += 1;
-            }
 
             Bytecode::GetTxnSenderAddress => {
                 let temp_index = self.temp_count;
@@ -789,14 +758,14 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
             }
 
-            Bytecode::GetTxnPublicKey => {
-                let temp_index = self.temp_count;
-                self.temp_stack.push(temp_index);
-                self.local_types.push(SignatureToken::ByteArray);
-                self.code
-                    .push(StacklessBytecode::GetTxnPublicKey(temp_index));
-                self.temp_count += 1;
-            }
+            Bytecode::GetTxnGasUnitPrice
+            | Bytecode::GetTxnMaxGasUnits
+            | Bytecode::GetGasRemaining
+            | Bytecode::GetTxnSequenceNumber
+            | Bytecode::GetTxnPublicKey => panic!(
+                "Bytecode {:?} is deprecated and will be removed soon",
+                bytecode
+            ),
         }
     }
 

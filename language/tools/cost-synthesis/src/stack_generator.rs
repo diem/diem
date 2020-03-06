@@ -11,7 +11,6 @@ use crate::{
 };
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
-    byte_array::ByteArray,
     language_storage::ModuleId,
 };
 use move_core_types::identifier::Identifier;
@@ -240,12 +239,6 @@ impl<'txn> RandomStackGenerator<'txn> {
         self.gen.gen_bool(0.5)
     }
 
-    fn next_bytearray(&mut self) -> ByteArray {
-        let len: usize = self.gen.gen_range(1, BYTE_ARRAY_MAX_SIZE);
-        let bytes: Vec<u8> = (0..len).map(|_| self.gen.gen::<u8>()).collect();
-        ByteArray::new(bytes)
-    }
-
     fn next_addr(&mut self, is_padding: bool) -> AccountAddress {
         if is_padding {
             AccountAddress::new(self.gen.gen())
@@ -305,12 +298,11 @@ impl<'txn> RandomStackGenerator<'txn> {
     }
 
     fn next_stack_value(&mut self, stk: &[Value], is_padding: bool) -> Value {
-        match self.gen.gen_range(0, 6) {
+        match self.gen.gen_range(0, 5) {
             0 => Value::u8(self.next_u8(stk)),
             1 => Value::u64(self.next_u64(stk)),
             2 => Value::u128(self.next_u128(stk)),
             3 => Value::bool(self.next_bool()),
-            4 => Value::byte_array(self.next_bytearray()),
             _ => Value::address(self.next_addr(is_padding)),
         }
     }
@@ -500,7 +492,6 @@ impl<'txn> RandomStackGenerator<'txn> {
                     .unwrap();
                 locals.borrow_loc(0).unwrap()
             }
-            SignatureToken::ByteArray => Value::byte_array(self.next_bytearray()),
             SignatureToken::Struct(struct_handle_idx, _) => {
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self

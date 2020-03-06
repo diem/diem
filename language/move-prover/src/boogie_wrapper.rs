@@ -836,17 +836,6 @@ impl ModelValue {
                 )?;
                 Some(PrettyDoc::text(format!("0x{}", &addr.to_str_radix(16))))
             }
-            Type::Primitive(PrimitiveType::ByteArray) => {
-                // Right now byte arrays are abstract in boogie, so we can only distinguish
-                // instances.
-                let repr = self.extract_primitive("ByteArray")?;
-                let display = if repr.starts_with("T@ByteArray!val!") {
-                    &repr["T@ByteArray!val!".len()..]
-                } else {
-                    repr
-                };
-                Some(PrettyDoc::text(format!("<bytearray {}>", display)))
-            }
             Type::Vector(param) => self.pretty_vector(wrapper, model, param),
             Type::Struct(module_id, struct_id, params) => {
                 self.pretty_struct(wrapper, model, *module_id, *struct_id, &params)

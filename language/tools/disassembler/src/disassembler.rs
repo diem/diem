@@ -253,7 +253,6 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             SignatureToken::U8 => "u8".to_string(),
             SignatureToken::U64 => "u64".to_string(),
             SignatureToken::U128 => "u128".to_string(),
-            SignatureToken::ByteArray => "bytearray".to_string(),
             SignatureToken::Address => "address".to_string(),
             SignatureToken::Struct(struct_handle_idx, instantiation) => {
                 let instantiation = instantiation

@@ -10,7 +10,6 @@ pub mod account_state;
 pub mod account_state_blob;
 pub mod block_info;
 pub mod block_metadata;
-pub mod byte_array;
 pub mod contract_event;
 pub mod crypto_proxies;
 pub mod discovery_info;

@@ -7,7 +7,6 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    byte_array::ByteArray,
     language_storage::TypeTag,
     vm_error::{StatusCode, VMStatus},
 };
@@ -16,32 +15,6 @@ use vm::{
     errors::VMResult,
     gas_schedule::{CostTable, NativeCostIndex},
 };
-
-pub fn native_bytearray_concat(
-    _ty_args: Vec<TypeTag>,
-    mut arguments: VecDeque<Value>,
-    cost_table: &CostTable,
-) -> VMResult<NativeResult> {
-    if arguments.len() != 2 {
-        let msg = format!(
-            "wrong number of arguments for bytearray_concat expected 2 found {}",
-            arguments.len()
-        );
-        return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
-    }
-    let arg2 = pop_arg!(arguments, ByteArray);
-    let arg1 = pop_arg!(arguments, ByteArray);
-    let mut return_val = arg1.as_bytes().to_vec();
-    return_val.extend_from_slice(arg2.as_bytes());
-
-    let cost = native_gas(
-        cost_table,
-        NativeCostIndex::BYTEARRAY_CONCAT,
-        return_val.len(),
-    );
-    let return_values = vec![Value::byte_array(ByteArray::new(return_val))];
-    Ok(NativeResult::ok(cost, return_values))
-}
 
 pub fn native_address_to_bytes(
     _ty_args: Vec<TypeTag>,

@@ -1004,23 +1004,19 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::GetTxnGasUnitPrice
             | Bytecode::GetTxnMaxGasUnits
             | Bytecode::GetGasRemaining
-            | Bytecode::GetTxnSequenceNumber => {
-                self.stack.push(TypedAbstractValue {
-                    signature: SignatureToken::U64,
-                    value: AbstractValue::Value(Kind::Unrestricted),
-                });
+            | Bytecode::GetTxnSequenceNumber
+            | Bytecode::GetTxnPublicKey => {
+                errors.push(
+                    VMStatus::new(StatusCode::UNKNOWN_VERIFICATION_ERROR).with_message(format!(
+                        "Bytecode {:?} is deprecated and will be removed soon",
+                        bytecode
+                    )),
+                );
             }
 
             Bytecode::GetTxnSenderAddress => {
                 self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::Address,
-                    value: AbstractValue::Value(Kind::Unrestricted),
-                });
-            }
-
-            Bytecode::GetTxnPublicKey => {
-                self.stack.push(TypedAbstractValue {
-                    signature: SignatureToken::ByteArray,
                     value: AbstractValue::Value(Kind::Unrestricted),
                 });
             }

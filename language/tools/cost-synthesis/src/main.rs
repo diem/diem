@@ -262,7 +262,7 @@ macro_rules! bench_native {
                 let time = (0..$iters).fold(0, |acc, _| {
                     let before = Instant::now();
                     let mut args = VecDeque::new();
-                    args.push_front(Value::byte_array(stack_access.next_bytearray()));
+                    args.push_front(Value::vector_u8(stack_access.next_bytearray()));
                     let _ = $function(vec![], args, &cost_table);
                     acc + before.elapsed().as_nanos()
                 });

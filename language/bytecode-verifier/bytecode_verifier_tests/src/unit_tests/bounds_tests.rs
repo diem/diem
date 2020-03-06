@@ -5,7 +5,7 @@ use invalid_mutations::bounds::{
     ApplyCodeUnitBoundsContext, ApplyOutOfBoundsContext, CodeUnitBoundsMutation,
     OutOfBoundsMutation,
 };
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray, vm_error::StatusCode};
+use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
 use move_core_types::identifier::Identifier;
 use proptest::{collection::vec, prelude::*};
 use vm::{check_bounds::BoundsChecker, file_format::*, proptest_types::CompiledModuleStrategyGen};
@@ -185,7 +185,7 @@ proptest! {
     fn no_module_handles(
         identifiers in vec(any::<Identifier>(), 0..20),
         address_pool in vec(any::<AccountAddress>(), 0..20),
-        byte_array_pool in vec(any::<ByteArray>(), 0..20),
+        byte_array_pool in vec(vec(any::<u8>(), 0..10), 0..20),
     ) {
         // If there are no module handles, the only other things that can be stored are intrinsic
         // data.

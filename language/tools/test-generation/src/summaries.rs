@@ -118,7 +118,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
         Bytecode::LdByteArray(_) => Summary {
             preconditions: vec![],
             effects: Effects::NoTyParams(vec![state_stack_push!(AbstractValue::new_primitive(
-                SignatureToken::ByteArray
+                SignatureToken::Vector(Box::new(SignatureToken::U8))
             ))]),
         },
         Bytecode::CopyLoc(i) => Summary {

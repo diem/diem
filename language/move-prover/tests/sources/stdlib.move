@@ -1,7 +1,6 @@
 // dep: ../stdlib/modules/transaction.move
 // dep: ../stdlib/modules/u64_util.move
 // dep: ../stdlib/modules/address_util.move
-// dep: ../stdlib/modules/bytearray_util.move
 // dep: ../stdlib/modules/hash.move
 // dep: ../stdlib/modules/vector.move
 // dep: ../stdlib/modules/offer.move

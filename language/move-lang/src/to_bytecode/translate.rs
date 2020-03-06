@@ -13,9 +13,7 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
 };
 use bytecode_source_map::source_map::ModuleSourceMap;
-use libra_types::{
-    account_address::AccountAddress as LibraAddress, byte_array::ByteArray as LibraByteArray,
-};
+use libra_types::account_address::AccountAddress as LibraAddress;
 use move_ir_types::{ast as IR, location::*};
 use move_vm::file_format as F;
 use std::collections::HashMap;
@@ -490,7 +488,6 @@ fn base_type(context: &mut Context, sp!(_, bt_): G::BaseType) -> IR::Type {
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U128))), _) => IRT::U128,
 
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bool))), _) => IRT::Bool,
-        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bytearray))), _) => IRT::ByteArray,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Vector))), mut args) => {
             assert!(
                 args.len() == 1,
@@ -635,7 +632,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: G::Exp) {
                 loc,
                 match v.value {
                     V::Address(a) => B::LdAddr(LibraAddress::new(a.to_u8())),
-                    V::Bytearray(bytes) => B::LdByteArray(LibraByteArray::new(bytes)),
+                    V::Bytearray(bytes) => B::LdByteArray(bytes),
                     V::U8(u) => B::LdU8(u),
                     V::U64(u) => B::LdU64(u),
                     V::U128(u) => B::LdU128(u),

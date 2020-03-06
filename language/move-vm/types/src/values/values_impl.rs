@@ -7,7 +7,6 @@ use crate::{
 };
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
-    byte_array::ByteArray,
     language_storage::TypeTag,
     vm_error::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, VMStatus},
 };
@@ -49,7 +48,6 @@ enum ValueImpl {
     U128(u128),
     Bool(bool),
     Address(AccountAddress),
-    ByteArray(ByteArray),
 
     Container(Rc<RefCell<Container>>),
 
@@ -210,7 +208,6 @@ impl Value {
             (SignatureToken::U128, ValueImpl::U128(_)) => true,
             (SignatureToken::Bool, ValueImpl::Bool(_)) => true,
             (SignatureToken::Address, ValueImpl::Address(_)) => true,
-            (SignatureToken::ByteArray, ValueImpl::ByteArray(_)) => true,
             (SignatureToken::Vector(ty), ValueImpl::Container(r)) => match (&**ty, &*r.borrow()) {
                 (SignatureToken::U8, Container::U8(_)) => true,
                 _ => false,
@@ -291,7 +288,6 @@ impl_vm_value_ref!(u64, U64);
 impl_vm_value_ref!(u128, U128);
 impl_vm_value_ref!(bool, Bool);
 impl_vm_value_ref!(AccountAddress, Address);
-impl_vm_value_ref!(ByteArray, ByteArray);
 
 impl ValueImpl {
     fn as_value_ref<T>(&self) -> VMResult<&T>
@@ -323,7 +319,6 @@ impl ValueImpl {
             U128(x) => U128(*x),
             Bool(x) => Bool(*x),
             Address(x) => Address(*x),
-            ByteArray(x) => ByteArray(x.clone()),
 
             ContainerRef(r) => ContainerRef(r.copy_value()),
             IndexedRef(r) => IndexedRef(r.copy_value()),
@@ -402,7 +397,6 @@ impl ValueImpl {
             (U64(l), U64(r)) => l == r,
             (U128(l), U128(r)) => l == r,
             (Bool(l), Bool(r)) => l == r,
-            (ByteArray(l), ByteArray(r)) => l == r,
             (Address(l), Address(r)) => l == r,
 
             (Container(l), Container(r)) => l.borrow().equals(&*r.borrow())?,
@@ -717,8 +711,7 @@ impl Locals {
                 | ValueImpl::U64(_)
                 | ValueImpl::U128(_)
                 | ValueImpl::Bool(_)
-                | ValueImpl::Address(_)
-                | ValueImpl::ByteArray(_) => Ok(Value(ValueImpl::IndexedRef(IndexedRef {
+                | ValueImpl::Address(_) => Ok(Value(ValueImpl::IndexedRef(IndexedRef {
                     container_ref: ContainerRef::Local(Rc::clone(&self.0)),
                     idx,
                 }))),
@@ -840,10 +833,6 @@ impl Value {
         Self(ValueImpl::Bool(x))
     }
 
-    pub fn byte_array(x: ByteArray) -> Self {
-        Self(ValueImpl::ByteArray(x))
-    }
-
     pub fn address(x: AccountAddress) -> Self {
         Self(ValueImpl::Address(x))
     }
@@ -899,7 +888,6 @@ impl_vm_value_cast!(u64, U64);
 impl_vm_value_cast!(u128, U128);
 impl_vm_value_cast!(bool, Bool);
 impl_vm_value_cast!(AccountAddress, Address);
-impl_vm_value_cast!(ByteArray, ByteArray);
 impl_vm_value_cast!(ContainerRef, ContainerRef);
 impl_vm_value_cast!(IndexedRef, IndexedRef);
 
@@ -1411,7 +1399,6 @@ pub mod vector {
             (TypeTag::Bool, Container::Bool(v)) => v.len(),
 
             (TypeTag::Struct(_), Container::General(v))
-            | (TypeTag::ByteArray, Container::General(v))
             | (TypeTag::Address, Container::General(v)) => v.len(),
 
             (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
@@ -1444,7 +1431,6 @@ pub mod vector {
             (TypeTag::Bool, Container::Bool(v)) => v.push(e.value_as()?),
 
             (TypeTag::Struct(_), Container::General(v))
-            | (TypeTag::ByteArray, Container::General(v))
             | (TypeTag::Address, Container::General(v)) => v.push(e.0),
 
             (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
@@ -1519,7 +1505,6 @@ pub mod vector {
             },
 
             (TypeTag::Struct(_), Container::General(v))
-            | (TypeTag::ByteArray, Container::General(v))
             | (TypeTag::Address, Container::General(v)) => match v.pop() {
                 Some(x) => Value(x),
                 None => err_pop_empty_vec!(),
@@ -1549,7 +1534,6 @@ pub mod vector {
             (TypeTag::Bool, Container::Bool(v)) => v.is_empty(),
 
             (TypeTag::Struct(_), Container::General(v))
-            | (TypeTag::ByteArray, Container::General(v))
             | (TypeTag::Address, Container::General(v)) => v.is_empty(),
 
             (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
@@ -1599,8 +1583,7 @@ pub mod vector {
             (TypeTag::U128, Container::U128(v)) => swap!(v),
             (TypeTag::Bool, Container::Bool(v)) => swap!(v),
             (TypeTag::Struct(_), Container::General(v))
-            | (TypeTag::Address, Container::General(v))
-            | (TypeTag::ByteArray, Container::General(v)) => swap!(v),
+            | (TypeTag::Address, Container::General(v)) => swap!(v),
             (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
         }
 
@@ -1649,7 +1632,6 @@ impl ValueImpl {
         match self {
             Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => CONST_SIZE,
             Address(_) => AbstractMemorySize::new(ADDRESS_LENGTH as u64),
-            ByteArray(key) => AbstractMemorySize::new(key.len() as u64),
             ContainerRef(r) => r.size(),
             IndexedRef(r) => r.size(),
             // TODO: in case the borrow fails the VM will panic.
@@ -1789,7 +1771,6 @@ impl Display for ValueImpl {
             Self::U128(x) => write!(f, "U128({})", x),
             Self::Bool(x) => write!(f, "{}", x),
             Self::Address(addr) => write!(f, "Address({})", addr.short_str()),
-            Self::ByteArray(x) => write!(f, "ByteArray({})", x),
 
             Self::Container(r) => write!(f, "Container({})", &*r.borrow()),
 
@@ -1957,7 +1938,6 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
             (Type::U128, ValueImpl::U128(x)) => serializer.serialize_u128(*x),
             (Type::Bool, ValueImpl::Bool(x)) => serializer.serialize_bool(*x),
             (Type::Address, ValueImpl::Address(x)) => x.serialize(serializer),
-            (Type::ByteArray, ValueImpl::ByteArray(x)) => x.serialize(serializer),
 
             (Type::Struct(layout), ValueImpl::Container(r)) => {
                 let r = r.borrow();
@@ -1969,8 +1949,7 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
                 match (layout, &*r.borrow()) {
                     (Type::Vector(_), Container::General(v))
                     | (Type::Struct(_), Container::General(v))
-                    | (Type::Address, Container::General(v))
-                    | (Type::ByteArray, Container::General(v)) => {
+                    | (Type::Address, Container::General(v)) => {
                         let mut t = serializer.serialize_seq(Some(v.len()))?;
                         for val in v {
                             t.serialize_element(&AnnotatedValue { layout, val })?;
@@ -2042,7 +2021,6 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
             Type::U8 => u8::deserialize(deserializer).map(Value::u8),
             Type::U64 => u64::deserialize(deserializer).map(Value::u64),
             Type::U128 => u128::deserialize(deserializer).map(Value::u128),
-            Type::ByteArray => ByteArray::deserialize(deserializer).map(Value::byte_array),
             Type::Address => AccountAddress::deserialize(deserializer).map(Value::address),
 
             Type::Vector(layout) => {
@@ -2181,7 +2159,6 @@ pub mod prop {
             Type::U128 => any::<u128>().prop_map(Value::u128).boxed(),
             Type::Bool => any::<bool>().prop_map(Value::bool).boxed(),
             Type::Address => any::<AccountAddress>().prop_map(Value::address).boxed(),
-            Type::ByteArray => any::<ByteArray>().prop_map(Value::byte_array).boxed(),
 
             Type::Vector(layout) => match &**layout {
                 Type::U8 => vec(any::<u8>(), 0..10)

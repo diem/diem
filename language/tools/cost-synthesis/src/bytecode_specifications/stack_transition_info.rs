@@ -71,7 +71,6 @@ static BASE_SIG_TOKENS: Lazy<Vec<SignatureToken>> = Lazy::new(|| {
         SignatureToken::U8,
         SignatureToken::U64,
         SignatureToken::U128,
-        SignatureToken::ByteArray,
         SignatureToken::Address,
         // Bogus struct handle index, but it's fine since we disregard this in the generation of
         // instruction arguments.
@@ -153,7 +152,7 @@ fn simple_addrs(num: u64) -> Vec<SignatureTy> {
 
 fn byte_arrays(num: u64) -> Vec<SignatureTy> {
     (0..num)
-        .map(|_| ty_of_sig_tok(SignatureToken::ByteArray))
+        .map(|_| ty_of_sig_tok(SignatureToken::Vector(Box::new(SignatureToken::U8))))
         .collect()
 }
 

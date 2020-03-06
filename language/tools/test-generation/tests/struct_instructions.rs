@@ -24,7 +24,7 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
     module.type_signatures = vec![
         SignatureToken::Bool,
         SignatureToken::U64,
-        SignatureToken::ByteArray,
+        SignatureToken::Vector(Box::new(SignatureToken::U8)),
         SignatureToken::Address,
     ]
     .into_iter()

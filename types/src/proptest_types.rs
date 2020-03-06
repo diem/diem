@@ -8,7 +8,6 @@ use crate::{
     account_state_blob::AccountStateBlob,
     block_info::{BlockInfo, Round},
     block_metadata::BlockMetadata,
-    byte_array::ByteArray,
     contract_event::ContractEvent,
     crypto_proxies::{ValidatorChangeProof, ValidatorSet},
     discovery_info::DiscoveryInfo,
@@ -48,23 +47,6 @@ use std::{
     net::{Ipv4Addr, Ipv6Addr},
     time::Duration,
 };
-
-prop_compose! {
-    #[inline]
-    pub fn arb_byte_array()(byte_array in vec(any::<u8>(), 1..=10)) -> ByteArray {
-        ByteArray::new(byte_array)
-    }
-}
-
-impl Arbitrary for ByteArray {
-    type Parameters = ();
-    #[inline]
-    fn arbitrary_with(_args: ()) -> Self::Strategy {
-        arb_byte_array().boxed()
-    }
-
-    type Strategy = BoxedStrategy<Self>;
-}
 
 impl WriteOp {
     pub fn value_strategy() -> impl Strategy<Value = Self> {
@@ -742,7 +724,6 @@ impl Arbitrary for TypeTag {
             Just(U8),
             Just(U64),
             Just(U128),
-            Just(ByteArray),
             Just(Address),
             Just(Vector(Box::new(Bool))),
         ];

@@ -310,7 +310,7 @@ impl BaseType_ {
         use BuiltinTypeName_::*;
 
         let kind = match b_ {
-            U8 | U64 | U128 | Bool | Address | Bytearray => sp(loc, Kind_::Unrestricted),
+            U8 | U64 | U128 | Bool | Address => sp(loc, Kind_::Unrestricted),
             Vector => {
                 assert!(
                     ty_args.len() == 1,

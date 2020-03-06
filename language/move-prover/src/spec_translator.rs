@@ -476,15 +476,11 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ")");
     }
 
-    fn translate_value(&self, node_id: NodeId, val: &Value) {
+    fn translate_value(&self, _node_id: NodeId, val: &Value) {
         match val {
             Value::Address(addr) => emit!(self.writer, "Address({})", addr),
             Value::Number(val) => emit!(self.writer, "Integer({})", val),
             Value::Bool(val) => emit!(self.writer, "Boolean({})", val),
-            Value::Bytearray(_) => self.error(
-                &self.module_env.get_node_loc(node_id),
-                "bytearray not supported",
-            ),
         }
     }
 

@@ -16,7 +16,6 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    byte_array::ByteArray,
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
@@ -75,7 +74,7 @@ pub trait ModuleAccess: Sync {
     }
 
     fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &[u8] {
-        self.as_module().as_inner().byte_array_pool[idx.into_index()].as_bytes()
+        self.as_module().as_inner().byte_array_pool[idx.into_index()].as_slice()
     }
 
     fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
@@ -124,7 +123,7 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().locals_signatures
     }
 
-    fn byte_array_pool(&self) -> &[ByteArray] {
+    fn byte_array_pool(&self) -> &[Vec<u8>] {
         &self.as_module().as_inner().byte_array_pool
     }
 
@@ -222,7 +221,7 @@ pub trait ScriptAccess: Sync {
     }
 
     fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &[u8] {
-        self.as_script().as_inner().byte_array_pool[idx.into_index()].as_bytes()
+        self.as_script().as_inner().byte_array_pool[idx.into_index()].as_slice()
     }
 
     fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
@@ -253,7 +252,7 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().locals_signatures
     }
 
-    fn byte_array_pool(&self) -> &[ByteArray] {
+    fn byte_array_pool(&self) -> &[Vec<u8>] {
         &self.as_script().as_inner().byte_array_pool
     }
 

@@ -5,7 +5,6 @@ use crate::{errors::*, file_format::*, file_format_common::*};
 use byteorder::{LittleEndian, ReadBytesExt};
 use libra_types::{
     account_address::ADDRESS_LENGTH,
-    byte_array::ByteArray,
     vm_error::{StatusCode, VMStatus},
 };
 use move_core_types::identifier::Identifier;
@@ -558,7 +557,7 @@ fn load_byte_array_pool(
                 return Err(VMStatus::new(StatusCode::MALFORMED));
             }
 
-            byte_arrays.push(ByteArray::new(byte_array));
+            byte_arrays.push(byte_array);
         }
     }
     Ok(())
@@ -668,7 +667,6 @@ fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Signat
             SerializedType::U8 => Ok(SignatureToken::U8),
             SerializedType::U64 => Ok(SignatureToken::U64),
             SerializedType::U128 => Ok(SignatureToken::U128),
-            SerializedType::BYTEARRAY => Ok(SignatureToken::ByteArray),
             SerializedType::ADDRESS => Ok(SignatureToken::Address),
             SerializedType::VECTOR => {
                 let ty = load_signature_token(cursor)?;
@@ -1115,9 +1113,8 @@ impl SerializedType {
             0x6 => Ok(SerializedType::REFERENCE),
             0x7 => Ok(SerializedType::MUTABLE_REFERENCE),
             0x8 => Ok(SerializedType::STRUCT),
-            0x9 => Ok(SerializedType::BYTEARRAY),
-            0xA => Ok(SerializedType::TYPE_PARAMETER),
-            0xB => Ok(SerializedType::VECTOR),
+            0x9 => Ok(SerializedType::TYPE_PARAMETER),
+            0xA => Ok(SerializedType::VECTOR),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }

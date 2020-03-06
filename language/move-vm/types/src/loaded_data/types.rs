@@ -12,7 +12,6 @@ pub enum Type {
     U8,
     U64,
     U128,
-    ByteArray,
     Address,
     Vector(Box<Type>),
     Struct(StructDef),
@@ -31,14 +30,7 @@ pub mod prop {
         pub fn single_value_strategy() -> impl Strategy<Value = Self> {
             use Type::*;
 
-            prop_oneof![
-                Just(Bool),
-                Just(U8),
-                Just(U64),
-                Just(U128),
-                Just(ByteArray),
-                Just(Address),
-            ]
+            prop_oneof![Just(Bool), Just(U8), Just(U64), Just(U128), Just(Address),]
         }
 
         /// Generate a primitive Value, a Struct or a Vector.

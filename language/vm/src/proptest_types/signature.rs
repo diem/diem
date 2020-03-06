@@ -78,8 +78,9 @@ impl FunctionSignatureGen {
 pub enum SignatureTokenGen {
     // Atomic signature tokens.
     Bool,
-    Integer,
-    ByteArray,
+    U8,
+    U64,
+    U128,
     Address,
     TypeParameter(PropIndex),
 
@@ -119,7 +120,7 @@ impl SignatureTokenGen {
     pub fn owned_non_struct_strategy() -> impl Strategy<Value = Self> {
         use SignatureTokenGen::*;
 
-        static OWNED_NON_STRUCTS: &[SignatureTokenGen] = &[Bool, Integer, ByteArray, Address];
+        static OWNED_NON_STRUCTS: &[SignatureTokenGen] = &[Bool, U8, U64, U128, Address];
 
         select(OWNED_NON_STRUCTS)
     }
@@ -152,8 +153,9 @@ impl SignatureTokenGen {
 
         match self {
             Bool => SignatureToken::Bool,
-            Integer => SignatureToken::U64,
-            ByteArray => SignatureToken::ByteArray,
+            U8 => SignatureToken::U8,
+            U64 => SignatureToken::U64,
+            U128 => SignatureToken::U128,
             Address => SignatureToken::Address,
             Struct(idx, types) => SignatureToken::Struct(
                 StructHandleIndex::new(idx.index(struct_handles_len) as TableIndex),

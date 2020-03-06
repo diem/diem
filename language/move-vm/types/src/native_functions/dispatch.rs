@@ -93,7 +93,6 @@ decl_native_function_enum! {
     SigED25519ThresholdVerify = (&CORE_CODE_ADDRESS, "Signature", "ed25519_threshold_verify"),
     AddrUtilToBytes = (&CORE_CODE_ADDRESS, "AddressUtil", "address_to_bytes"),
     U64UtilToBytes = (&CORE_CODE_ADDRESS, "U64Util", "u64_to_bytes"),
-    BytearrayConcat = (&CORE_CODE_ADDRESS, "BytearrayUtil", "bytearray_concat"),
     VectorLength = (&CORE_CODE_ADDRESS, "Vector", "length"),
     VectorEmpty = (&CORE_CODE_ADDRESS, "Vector", "empty"),
     VectorBorrow = (&CORE_CODE_ADDRESS, "Vector", "borrow"),
@@ -123,7 +122,6 @@ impl NativeFunction {
             }
             Self::AddrUtilToBytes => primitive_helpers::native_address_to_bytes(t, v, c),
             Self::U64UtilToBytes => primitive_helpers::native_u64_to_bytes(t, v, c),
-            Self::BytearrayConcat => primitive_helpers::native_bytearray_concat(t, v, c),
             Self::VectorLength => vector::native_length(t, v, c),
             Self::VectorEmpty => vector::native_empty(t, v, c),
             Self::VectorBorrow => vector::native_borrow(t, v, c),
@@ -150,7 +148,6 @@ impl NativeFunction {
             Self::SigED25519ThresholdVerify => 4,
             Self::AddrUtilToBytes => 1,
             Self::U64UtilToBytes => 1,
-            Self::BytearrayConcat => 2,
             Self::VectorLength => 1,
             Self::VectorEmpty => 0,
             Self::VectorBorrow => 2,
@@ -231,7 +228,6 @@ impl NativeFunction {
             ),
             Self::AddrUtilToBytes => simple!(vec![Address], vec![Vector(Box::new(U8))]),
             Self::U64UtilToBytes => simple!(vec![U64], vec![Vector(Box::new(U8))]),
-            Self::BytearrayConcat => simple!(vec![ByteArray, ByteArray], vec![ByteArray]),
             Self::VectorLength => simple!(
                 vec![Kind::All],
                 vec![Reference(Box::new(Vector(Box::new(TypeParameter(0)))))],

@@ -621,7 +621,6 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
             | SignatureToken::U8
             | SignatureToken::U64
             | SignatureToken::U128
-            | SignatureToken::ByteArray
             | SignatureToken::Address
             | SignatureToken::TypeParameter(_) => false,
         }
