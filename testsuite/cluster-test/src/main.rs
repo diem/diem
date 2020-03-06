@@ -38,6 +38,7 @@ use futures::{
     future::{join_all, FutureExt, TryFutureExt},
     select,
 };
+use libra_config::config::AdmissionControlConfig;
 use tokio::{
     runtime::{Builder, Runtime},
     time::{delay_for, delay_until, Instant as TokioInstant},
@@ -305,6 +306,10 @@ struct ClusterTestRunner {
 
 fn parse_host_port(s: &str) -> Result<(String, u32)> {
     let v = s.split(':').collect::<Vec<&str>>();
+    if v.len() == 1 {
+        let default_port = AdmissionControlConfig::default().address.port() as u32;
+        return Ok((v[0].to_string(), default_port));
+    }
     if v.len() != 2 {
         return Err(format_err!("Failed to parse {:?} in host:port format", s));
     }
