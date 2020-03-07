@@ -4,14 +4,13 @@
 #![forbid(unsafe_code)]
 
 use crate::ast::ModuleName;
-use crate::env::{GlobalEnv, Loc, ModuleId};
+use crate::env::{GlobalEnv, ModuleId};
 use crate::translate::{ModuleTranslator, Translator};
 use anyhow::anyhow;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use itertools::Itertools;
 use move_lang::errors::Errors;
-use move_lang::expansion::ast::{ModuleDefinition, Program};
-use move_lang::parser::ast::ModuleIdent;
+use move_lang::expansion::ast::Program;
 use move_lang::shared::Address;
 use move_lang::to_bytecode::translate::CompiledUnit;
 use move_lang::{move_compile_no_report, move_compile_to_expansion_no_report};
@@ -91,7 +90,7 @@ fn run_spec_checker(
     let modules = units
         .into_iter()
         .filter_map(|u| {
-            if let CompiledUnit::Module(name, compiled_module, _source_map) = u {
+            if let CompiledUnit::Module(name, compiled_module, source_map) = u {
                 let expanded_id = eprog
                     .modules
                     .iter()
@@ -99,7 +98,7 @@ fn run_spec_checker(
                     .find(|module_id| module_id.0.value.name.0.value == name.0.value);
                 if let Some(module_id) = expanded_id {
                     let expanded_module = eprog.modules.remove(&module_id).unwrap();
-                    Some((module_id, expanded_module, compiled_module))
+                    Some((module_id, expanded_module, compiled_module, source_map))
                 } else {
                     None
                 }
@@ -108,10 +107,10 @@ fn run_spec_checker(
             }
         })
         .collect_vec();
-    for (module_count, (module_id, expanded_module, compiled_module)) in
+    for (module_count, (module_id, expanded_module, compiled_module, source_map)) in
         modules.into_iter().enumerate()
     {
-        let loc = get_module_loc(&translator, &module_id, &expanded_module);
+        let loc = translator.to_loc(&expanded_module.loc);
         let module_name = ModuleName::from_str(
             &module_id.0.value.address.to_string(),
             translator
@@ -121,19 +120,9 @@ fn run_spec_checker(
         );
         let module_id = ModuleId::new(module_count);
         let mut module_translator = ModuleTranslator::new(&mut translator, module_id, module_name);
-        module_translator.translate(loc, expanded_module, compiled_module, None);
+        module_translator.translate(loc, expanded_module, compiled_module, Some(source_map));
     }
     Ok(())
-}
-
-fn get_module_loc(translator: &Translator, module_id: &ModuleIdent, def: &ModuleDefinition) -> Loc {
-    // TODO: make ModuleDefinition Spanned in move-lang AST, or attach a location.
-    let loc = translator.to_loc(&module_id.loc());
-    let mut span = loc.span();
-    for spec in &def.specs {
-        span = span.merge(spec.loc.span());
-    }
-    Loc::new(loc.file_id(), span)
 }
 
 // =================================================================================================

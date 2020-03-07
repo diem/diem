@@ -7,14 +7,14 @@
 // Debug tracking is used to inject information used for model analysis. The generated code emits statements
 // like this:
 //
-//     assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_position, value);
+//     assume $DebugTrackLocal(file_id, byte_index, var_idx, value);
 //
 // While those tracking assumptions are trivially true for the provers logic, the solver (at least Z3)
 // will construct a function mapping which appears in the model, e.g.:
 //
 //     $DebugTrackLocal -> {
-//         1 1 0 440 (Vector (ValueArray |T@[Int]Value!val!0| 0)) -> true
-//         1 1 2 533 (Integer 1) -> true
+//         1 440 0 (Vector (ValueArray |T@[Int]Value!val!0| 0)) -> true
+//         1 533 1 (Integer 1) -> true
 //         ...
 //         else -> true
 //     }
@@ -24,12 +24,12 @@
 
 // Tracks debug information for a parameter, local or a return parameter. Return parameter indices start at
 // the overall number of locals (including parameters).
-function $DebugTrackLocal(module_idx: int, func_idx: int, var_idx: int, code_index: int, value: Value) : bool {
+function $DebugTrackLocal(file_id: int, byte_index:  int, var_idx: int, value: Value) : bool {
   true
 }
 
 // Tracks at which location a function was aborted.
-function $DebugTrackAbort(module_idx: int, func_idx: int, code_index: int) : bool {
+function $DebugTrackAbort(file_id: int, byte_index: int) : bool {
   true
 }
 

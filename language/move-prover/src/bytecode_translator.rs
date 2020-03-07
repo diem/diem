@@ -204,7 +204,7 @@ impl<'env> ModuleTranslator<'env> {
             .join(", ");
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} Pack_{}(module_idx: int, func_idx: int, var_idx: int, code_idx: int, {}) returns (_struct: Value)\n{{",
+            "procedure {{:inline 1}} Pack_{}($file_id: int, $byte_index: int, $var_idx: int, {}) returns ($struct: Value)\n{{",
             boogie_struct_name(struct_env),
             separate(vec![type_args_str, args_str.clone()], ", ")
         );
@@ -223,18 +223,18 @@ impl<'env> ModuleTranslator<'env> {
                 field_env.get_name().display(struct_env.symbol_pool())
             );
         }
-        emitln!(self.writer, "_struct := Vector({});", fields_str);
+        emitln!(self.writer, "$struct := Vector({});", fields_str);
 
         // Generate $DebugTrackLocal so we can see the constructed value before invariant
         // evaluation may abort.
         emitln!(
             self.writer,
-            "if (code_idx > 0) { assume $DebugTrackLocal(module_idx, func_idx, var_idx, code_idx, _struct); }"
+            "if ($byte_index > 0) { assume $DebugTrackLocal($file_id, $byte_index, $var_idx, $struct); }"
         );
 
         // Insert invariant code.
         let spec_translator = SpecTranslator::new(self.writer, &struct_env.module_env, false);
-        spec_translator.emit_pack_invariants(struct_env, "_struct");
+        spec_translator.emit_pack_invariants(struct_env, "$struct");
 
         self.writer.unindent();
         emitln!(self.writer, "}\n");
@@ -242,16 +242,16 @@ impl<'env> ModuleTranslator<'env> {
         // Unpack function
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} Unpack_{}(_struct: Value) returns ({})\n{{",
+            "procedure {{:inline 1}} Unpack_{}($struct: Value) returns ({})\n{{",
             boogie_struct_name(struct_env),
             args_str
         );
         self.writer.indent();
-        emitln!(self.writer, "assume is#Vector(_struct);");
+        emitln!(self.writer, "assume is#Vector($struct);");
         for field_env in struct_env.get_fields() {
             emitln!(
                 self.writer,
-                "{} := $SelectField(_struct, {});",
+                "{} := $SelectField($struct, {});",
                 field_env.get_name().display(struct_env.symbol_pool()),
                 boogie_field_name(&field_env)
             );
@@ -265,7 +265,7 @@ impl<'env> ModuleTranslator<'env> {
 
         // Insert invariant checking code.
         let spec_translator = SpecTranslator::new(self.writer, &struct_env.module_env, false);
-        spec_translator.emit_unpack_invariants(struct_env, "_struct");
+        spec_translator.emit_unpack_invariants(struct_env, "$struct");
 
         self.writer.unindent();
         emitln!(self.writer, "}\n");
@@ -406,9 +406,8 @@ impl<'env> ModuleTranslator<'env> {
         };
 
         let propagate_abort = &format!(
-            "if ($abort_flag) {{\n  assume $DebugTrackAbort({}, {}, {});\n  goto Label_Abort;\n}}",
-            func_env.module_env.get_id().to_usize(),
-            func_env.get_def_idx(),
+            "if ($abort_flag) {{\n  assume $DebugTrackAbort({}, {});\n  goto Label_Abort;\n}}",
+            func_env.module_env.env.file_id_to_idx(loc.file_id()),
             loc.span().start(),
         );
         match bytecode {
@@ -606,14 +605,13 @@ impl<'env> ModuleTranslator<'env> {
                 let effective_dest = effective_dest_func(*dest);
                 let track_args = if effective_dest < func_env.get_local_count() {
                     format!(
-                        "{}, {}, {}, {}",
-                        func_env.module_env.get_id().to_usize(),
-                        func_env.get_def_idx(),
+                        "{}, {}, {}",
+                        func_env.module_env.env.file_id_to_idx(loc.file_id()),
+                        loc.span().start(),
                         effective_dest_func(*dest),
-                        loc.span().start()
                     )
                 } else {
-                    "0, 0, 0, 0".to_string()
+                    "0, 0, 0".to_string()
                 };
                 let args_str = func_env
                     .module_env
@@ -984,9 +982,8 @@ impl<'env> ModuleTranslator<'env> {
                 // a execution trace entry for this statement.
                 emitln!(
                     self.writer,
-                    "if (true) {{ assume $DebugTrackAbort({}, {}, {}); }}",
-                    func_env.module_env.get_id().to_usize(),
-                    func_env.get_def_idx(),
+                    "if (true) {{ assume $DebugTrackAbort({}, {}); }}",
+                    func_env.module_env.env.file_id_to_idx(loc.file_id()),
                     loc.span().start(),
                 );
                 emitln!(self.writer, "goto Label_Abort;")
@@ -1345,7 +1342,7 @@ impl<'env> ModuleTranslator<'env> {
                         .module_env
                         .env
                         .get_module(*module_idx)
-                        .into_get_struct(*struct_idx);
+                        .into_struct(*struct_idx);
                     if !struct_env.get_data_invariants().is_empty()
                         || !struct_env.get_update_invariants().is_empty()
                     {
@@ -1366,7 +1363,7 @@ impl<'env> ModuleTranslator<'env> {
                     .module_env
                     .env
                     .get_module(*module_idx)
-                    .into_get_struct(*struct_idx);
+                    .into_struct(*struct_idx);
                 emitln!(
                     self.writer,
                     "call ${}_update_inv({}, $Dereference($m, {}_ref));",
@@ -1413,21 +1410,19 @@ impl<'env> ModuleTranslator<'env> {
             let deref = format!("$Dereference($m, {})", value);
             let type_check = boogie_type_check(self.module_env.env, &deref, &*bt);
             format!(
-                "{}assume $DebugTrackLocal({}, {}, {}, {}, {});",
+                "{}assume $DebugTrackLocal({}, {}, {}, {});",
                 type_check,
-                func_env.module_env.get_id().to_usize(),
-                func_env.get_def_idx(),
-                idx,
+                func_env.module_env.env.file_id_to_idx(loc.file_id()),
                 loc.span().start(),
+                idx,
                 deref
             )
         } else {
             format!(
-                "assume $DebugTrackLocal({}, {}, {}, {}, {});",
-                func_env.module_env.get_id().to_usize(),
-                func_env.get_def_idx(),
-                idx,
+                "assume $DebugTrackLocal({}, {}, {}, {});",
+                func_env.module_env.env.file_id_to_idx(loc.file_id()),
                 loc.span().start(),
+                idx,
                 value
             )
         }

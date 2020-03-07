@@ -8,7 +8,6 @@
 
 use std::collections::{BTreeMap, BTreeSet, LinkedList};
 
-use codespan::Span;
 use itertools::Itertools;
 use num::{BigUint, FromPrimitive, Num};
 
@@ -26,8 +25,8 @@ use crate::ast::{
     QualifiedSymbol, SpecFunDecl, SpecVarDecl, Value,
 };
 use crate::env::{
-    FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, NodeId, SpecFunId, SpecVarId,
-    StructData, StructId,
+    FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, SpecFunId,
+    SpecVarId, StructData, StructId,
 };
 use crate::symbol::{Symbol, SymbolPool};
 use crate::ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE};
@@ -561,7 +560,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         loc: Loc,
         module_def: EA::ModuleDefinition,
         compiled_module: CompiledModule,
-        source_map: Option<ModuleSourceMap<Span>>,
+        source_map: Option<ModuleSourceMap<MoveIrLoc>>,
     ) {
         self.decl_ana(&module_def);
         self.def_ana(&module_def);
@@ -671,7 +670,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let mut et = ExpTranslator::new(self, OldExpStatus::NotSupported);
         let type_params = et.analyze_and_add_type_params(&def.type_parameters);
         et.parent.parent.define_struct(
-            et.to_loc(&name.0.loc),
+            et.to_loc(&def.loc),
             qsym,
             et.parent.module_id,
             StructId::new(sym),
@@ -691,7 +690,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let params = et.analyze_and_add_params(&def.signature.parameters);
         let result_type = et.translate_type(&def.signature.return_type);
         et.parent.parent.define_fun(
-            et.to_loc(&name.0.loc),
+            et.to_loc(&def.loc),
             qsym,
             et.parent.module_id,
             FunId::new(sym),
@@ -1052,25 +1051,40 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         &mut self,
         loc: Loc,
         module: CompiledModule,
-        source_map: Option<ModuleSourceMap<Span>>,
+        source_map: Option<ModuleSourceMap<MoveIrLoc>>,
     ) {
         let struct_data: BTreeMap<StructId, StructData> = (0..module.struct_defs().len())
-            .map(|idx| {
+            .filter_map(|idx| {
                 let def_idx = StructDefinitionIndex(idx as u16);
                 let handle_idx = module.struct_def_at(def_idx).struct_handle;
                 let handle = module.struct_handle_at(handle_idx);
                 let view = StructHandleView::new(&module, handle);
                 let name = self.symbol_pool().make(view.name().as_str());
-                let invariants = self
-                    .struct_invariants
-                    .remove(&name)
-                    .unwrap_or_else(|| vec![]);
-                (
-                    StructId::new(name),
-                    self.parent
-                        .env
-                        .create_struct_data(&module, def_idx, name, invariants),
-                )
+                if let Some(entry) = self
+                    .parent
+                    .struct_table
+                    .get(&self.qualified_by_module(name))
+                {
+                    let invariants = self
+                        .struct_invariants
+                        .remove(&name)
+                        .unwrap_or_else(|| vec![]);
+                    Some((
+                        StructId::new(name),
+                        self.parent.env.create_struct_data(
+                            &module,
+                            def_idx,
+                            name,
+                            entry.loc.clone(),
+                            invariants,
+                        ),
+                    ))
+                } else {
+                    self.parent.error(
+                        &self.parent.env.internal_loc(),
+                        &format!("[internal] bytecode does not match AST: `{}` in bytecode but not in AST", name.display(self.symbol_pool())));
+                    None
+                }
             })
             .collect();
         let function_data: BTreeMap<FunId, FunctionData> = (0..module.function_defs().len())
@@ -1088,6 +1102,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         &module,
                         def_idx,
                         name,
+                        entry.loc.clone(),
                         arg_names,
                         type_arg_names,
                         conditions,
@@ -1101,9 +1116,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             })
             .collect();
         let source_map = source_map.unwrap_or_else(|| {
-            let default = move_ir_types::location::Spanned::unsafe_no_loc(())
-                .loc
-                .span();
+            let default = self.parent.env.unknown_move_ir_loc();
             ModuleSourceMap::dummy_from_module(&module, default)
                 .expect("cannot create dummy source map")
         });
@@ -1129,7 +1142,6 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
 // =================================================================================================
 /// # Expression and Type Translation
-
 #[derive(Debug)]
 pub struct ExpTranslator<'env, 'translator, 'module_translator> {
     parent: &'module_translator mut ModuleTranslator<'env, 'translator>,
