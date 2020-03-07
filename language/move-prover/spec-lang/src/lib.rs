@@ -90,7 +90,7 @@ fn run_spec_checker(
     let mut modules = units
         .into_iter()
         .filter_map(|u| {
-            if let CompiledUnit::Module(name, compiled_module) = u {
+            if let CompiledUnit::Module(name, compiled_module, _source_map) = u {
                 Some((name, compiled_module))
             } else {
                 None

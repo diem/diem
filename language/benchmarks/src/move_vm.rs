@@ -38,7 +38,7 @@ fn compile_module() -> VerifiedModule {
     let (_, mut modules) =
         move_lang::move_compile(&[s], &[], Some(Address::default())).expect("Error compiling...");
     match modules.remove(0) {
-        CompiledUnit::Module(_, module) => {
+        CompiledUnit::Module(_, module, _) => {
             VerifiedModule::new(module).expect("Cannot verify code in file")
         }
         _ => panic!("no module compiled, is the file empty?"),

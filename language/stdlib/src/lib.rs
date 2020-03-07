@@ -115,8 +115,8 @@ pub fn build_stdlib() -> Vec<VerifiedModule> {
         compiled_units
             .into_iter()
             .map(|compiled_unit| match compiled_unit {
-                CompiledUnit::Module(_, m) => m,
-                CompiledUnit::Script(_, _) => panic!("Unexpected Script in stdlib"),
+                CompiledUnit::Module(_, m, _) => m,
+                CompiledUnit::Script(_, _, _) => panic!("Unexpected Script in stdlib"),
             })
             .collect(),
     )
@@ -132,8 +132,8 @@ pub fn compile_script(source_file_str: String) -> Vec<u8> {
     let mut script_bytes = vec![];
     assert!(compiled_program.len() == 1);
     match compiled_program.pop().unwrap() {
-        CompiledUnit::Module(_, _) => panic!("Unexpected module when compiling script"),
-        CompiledUnit::Script(_, s) => s.serialize(&mut script_bytes).unwrap(),
+        CompiledUnit::Module(_, _, _) => panic!("Unexpected module when compiling script"),
+        CompiledUnit::Script(_, s, _) => s.serialize(&mut script_bytes).unwrap(),
     };
     script_bytes
 }

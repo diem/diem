@@ -12,6 +12,7 @@ use crate::{
     },
     shared::{unique_map::UniqueMap, *},
 };
+use bytecode_source_map::source_map::ModuleSourceMap;
 use libra_types::{
     account_address::AccountAddress as LibraAddress, byte_array::ByteArray as LibraByteArray,
 };
@@ -25,23 +26,23 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum CompiledUnit {
-    Module(ModuleName, F::CompiledModule),
-    Script(Loc, F::CompiledScript),
+    Module(ModuleName, F::CompiledModule, ModuleSourceMap<Loc>),
+    Script(Loc, F::CompiledScript, ModuleSourceMap<Loc>),
 }
 
 impl CompiledUnit {
     pub fn name(&self) -> String {
         match self {
-            CompiledUnit::Module(m, _) => format!("module_{}", m),
-            CompiledUnit::Script(_, _) => "script".into(),
+            CompiledUnit::Module(m, _, _) => format!("module_{}", m),
+            CompiledUnit::Script(_, _, _) => "script".into(),
         }
     }
 
     pub fn serialize(self) -> Vec<u8> {
         let mut serialized = Vec::<u8>::new();
         match self {
-            CompiledUnit::Module(_, m) => m.serialize(&mut serialized).unwrap(),
-            CompiledUnit::Script(_, s) => s.serialize(&mut serialized).unwrap(),
+            CompiledUnit::Module(_, m, _) => m.serialize(&mut serialized).unwrap(),
+            CompiledUnit::Script(_, s, _) => s.serialize(&mut serialized).unwrap(),
         };
         serialized
     }
@@ -49,21 +50,21 @@ impl CompiledUnit {
     #[allow(dead_code)]
     pub fn serialize_debug(self) -> Vec<u8> {
         match self {
-            CompiledUnit::Module(_, m) => format!("{}", m),
-            CompiledUnit::Script(_, s) => format!("{}", s),
+            CompiledUnit::Module(_, m, _) => format!("{}", m),
+            CompiledUnit::Script(_, s, _) => format!("{}", s),
         }
         .into()
     }
 
     pub fn verify(self) -> (Self, Errors) {
         match self {
-            CompiledUnit::Module(n, m) => {
+            CompiledUnit::Module(n, m, map) => {
                 let (m, errors) = verify_module(n.loc(), m);
-                (CompiledUnit::Module(n, m), errors)
+                (CompiledUnit::Module(n, m, map), errors)
             }
-            CompiledUnit::Script(loc, s) => {
+            CompiledUnit::Script(loc, s, map) => {
                 let (s, errors) = verify_script(loc, s);
-                (CompiledUnit::Script(loc, s), errors)
+                (CompiledUnit::Script(loc, s, map), errors)
             }
         }
     }
@@ -148,13 +149,13 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
     source_modules.sort_by_key(|(_, mdef)| mdef.is_source_module.unwrap());
     for (m, mdef) in source_modules {
         match module(m, mdef, &sdecls, &fdecls) {
-            Ok((n, cm)) => units.push(CompiledUnit::Module(n, cm)),
+            Ok((n, cm, map)) => units.push(CompiledUnit::Module(n, cm, map)),
             Err(err) => errors.push(err),
         }
     }
     if let Some((addr, n, fdef)) = prog.main {
         match main(addr, n.clone(), fdef, &sdecls, &fdecls) {
-            Ok(cs) => units.push(CompiledUnit::Script(n.loc(), cs)),
+            Ok((cs, map)) => units.push(CompiledUnit::Script(n.loc(), cs, map)),
             Err(err) => errors.push(err),
         }
     }
@@ -170,7 +171,7 @@ fn module(
     mdef: G::ModuleDefinition,
     struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
     function_declarations: &HashMap<(ModuleIdent, FunctionName), IR::FunctionSignature>,
-) -> Result<(ModuleName, F::CompiledModule), Error> {
+) -> Result<(ModuleName, F::CompiledModule, ModuleSourceMap<Loc>), Error> {
     let mut context = Context::new(Some(&ident));
     let structs = mdef
         .structs
@@ -197,11 +198,12 @@ fn module(
         synthetics: vec![],
     };
     let deps: Vec<&F::CompiledModule> = vec![];
-    let compiled_module = match ir_to_bytecode::compiler::compile_module(addr, ir_module, deps) {
-        Ok((compiled_module, _)) => compiled_module,
-        Err(e) => return Err(vec![(ident.loc(), format!("IR ERROR: {}", e))]),
-    };
-    Ok((mname, compiled_module))
+    let (compiled_module, source_map) =
+        match ir_to_bytecode::compiler::compile_module(addr, ir_module, deps) {
+            Ok(res) => res,
+            Err(e) => return Err(vec![(ident.loc(), format!("IR ERROR: {}", e))]),
+        };
+    Ok((mname, compiled_module, source_map))
 }
 
 fn main(
@@ -210,7 +212,7 @@ fn main(
     fdef: G::Function,
     struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
     function_declarations: &HashMap<(ModuleIdent, FunctionName), IR::FunctionSignature>,
-) -> Result<F::CompiledScript, Error> {
+) -> Result<(F::CompiledScript, ModuleSourceMap<Loc>), Error> {
     let loc = main_name.loc();
     let mut context = Context::new(None);
 
@@ -225,11 +227,8 @@ fn main(
     };
     let addr = LibraAddress::new(addr.to_u8());
     let deps: Vec<&F::CompiledModule> = vec![];
-    let compiled_script = match ir_to_bytecode::compiler::compile_script(addr, ir_script, deps) {
-        Ok((compiled_script, _)) => compiled_script,
-        Err(e) => return Err(vec![(loc, format!("IR ERROR: {}", e))]),
-    };
-    Ok(compiled_script)
+    ir_to_bytecode::compiler::compile_script(addr, ir_script, deps)
+        .map_err(|e| vec![(loc, format!("IR ERROR: {}", e))])
 }
 
 //**************************************************************************************************
