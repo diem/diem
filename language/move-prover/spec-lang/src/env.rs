@@ -4,6 +4,9 @@
 //! Provides an environment -- global state -- for translation, including helper functions
 //! to interpret metadata about the translation target.
 
+#[allow(unused_imports)]
+use log::info;
+
 use std::cell::RefCell;
 
 use codespan::{ByteIndex, ByteOffset, FileId, Files, Location, Span};
@@ -193,9 +196,17 @@ pub struct GlobalEnv {
     /// A mapping from file names to associated FileId. Though this information is
     /// already in `source_files`, we can't get it out of there so need to book keep here.
     file_name_map: BTreeMap<String, FileId>,
+    /// Bijective mapping between FileId and a plain int. FileId's are themselves wrappers around
+    /// ints, but the inner representation is opaque and cannot be accessed. This is used so we
+    /// can emit FileId's to generated code and read them back.
+    file_id_to_idx: BTreeMap<FileId, u16>,
+    file_idx_to_id: BTreeMap<u16, FileId>,
     /// A special constant location representing an unknown location.
     /// This uses a pseudo entry in `source_files` to be safely represented.
     unknown_loc: Loc,
+    /// An equivalent of the MoveIrLoc to the above location. Used to map back and force between
+    /// them.
+    unknown_move_ir_loc: MoveIrLoc,
     /// A special constant location representing an opaque location.
     /// In difference to an `unknown_loc`, this is a well-known but undisclosed location.
     internal_loc: Loc,
@@ -211,20 +222,31 @@ impl GlobalEnv {
     /// Creates a new environment.
     pub fn new() -> Self {
         let mut source_files = Files::new();
+        let mut file_name_map = BTreeMap::new();
+        let mut file_id_to_idx = BTreeMap::new();
+        let mut file_idx_to_id = BTreeMap::new();
         let mut fake_loc = |content: &str| {
-            let id = source_files.add(content, content.to_string());
+            let file_id = source_files.add(content, content.to_string());
+            file_name_map.insert(content.to_string(), file_id);
+            let file_idx = file_id_to_idx.len() as u16;
+            file_id_to_idx.insert(file_id, file_idx);
+            file_idx_to_id.insert(file_idx, file_id);
             Loc::new(
-                id,
+                file_id,
                 Span::from(ByteIndex(0 as u32)..ByteIndex(content.len() as u32)),
             )
         };
         let unknown_loc = fake_loc("<unknown>");
+        let unknown_move_ir_loc = MoveIrLoc::new("<unknown>", Span::default());
         let internal_loc = fake_loc("<internal>");
         GlobalEnv {
             source_files,
             unknown_loc,
+            unknown_move_ir_loc,
             internal_loc,
-            file_name_map: BTreeMap::new(),
+            file_name_map,
+            file_id_to_idx,
+            file_idx_to_id,
             diags: RefCell::new(vec![]),
             symbol_pool: SymbolPool::new(),
             module_data: vec![],
@@ -240,6 +262,9 @@ impl GlobalEnv {
     pub fn add_source(&mut self, file_name: &str, source: &str) -> FileId {
         let file_id = self.source_files.add(file_name, source.to_string());
         self.file_name_map.insert(file_name.to_string(), file_id);
+        let file_idx = self.file_id_to_idx.len() as u16;
+        self.file_id_to_idx.insert(file_id, file_idx);
+        self.file_idx_to_id.insert(file_idx, file_id);
         file_id
     }
 
@@ -265,6 +290,12 @@ impl GlobalEnv {
         self.unknown_loc.clone()
     }
 
+    /// Returns a Move IR version of the unknown location which is guaranteed to map to the
+    /// regular unknown location via `to_loc`.
+    pub fn unknown_move_ir_loc(&self) -> MoveIrLoc {
+        self.unknown_move_ir_loc
+    }
+
     /// Returns the internal location.
     pub fn internal_loc(&self) -> Loc {
         self.internal_loc.clone()
@@ -282,6 +313,43 @@ impl GlobalEnv {
             file_id: *file_id,
             span: loc.span(),
         }
+    }
+
+    /// Maps a FileId to an index which can be mapped back to a FileId.
+    pub fn file_id_to_idx(&self, file_id: FileId) -> u16 {
+        *self
+            .file_id_to_idx
+            .get(&file_id)
+            .expect("file_id undefined")
+    }
+
+    /// Maps a an index which was obtained by `file_id_to_idx` back to a FileId.
+    pub fn file_idx_to_id(&self, file_idx: u16) -> FileId {
+        *self
+            .file_idx_to_id
+            .get(&file_idx)
+            .expect("file_idx undefined")
+    }
+
+    /// Returns file name and line/column position for a location, if available.
+    pub fn get_position(&self, loc: Loc) -> Option<(String, Location)> {
+        self.source_files
+            .location(loc.file_id(), loc.span().start())
+            .ok()
+            .map(|line_column| {
+                (
+                    self.source_files
+                        .name(loc.file_id())
+                        .to_string_lossy()
+                        .to_string(),
+                    line_column,
+                )
+            })
+    }
+
+    // Gets the number of source files in this environment.
+    pub fn get_file_count(&self) -> usize {
+        self.file_name_map.len()
     }
 
     /// Returns true if diagnostics have error severity or worse.
@@ -306,7 +374,7 @@ impl GlobalEnv {
         &mut self,
         loc: Loc,
         module: CompiledModule,
-        source_map: ModuleSourceMap<Span>,
+        source_map: ModuleSourceMap<MoveIrLoc>,
         struct_data: BTreeMap<StructId, StructData>,
         function_data: BTreeMap<FunId, FunctionData>,
         spec_vars: Vec<SpecVarDecl>,
@@ -364,6 +432,7 @@ impl GlobalEnv {
         module: &CompiledModule,
         def_idx: FunctionDefinitionIndex,
         name: Symbol,
+        loc: Loc,
         arg_names: Vec<Symbol>,
         type_arg_names: Vec<Symbol>,
         spec: Vec<Condition>,
@@ -371,6 +440,7 @@ impl GlobalEnv {
         let handle_idx = module.function_def_at(def_idx).function;
         FunctionData {
             name,
+            loc,
             def_idx,
             handle_idx,
             arg_names,
@@ -386,6 +456,7 @@ impl GlobalEnv {
         module: &CompiledModule,
         def_idx: StructDefinitionIndex,
         name: Symbol,
+        loc: Loc,
         invariants: Vec<Invariant>,
     ) -> StructData {
         let handle_idx = module.struct_def_at(def_idx).struct_handle;
@@ -426,6 +497,7 @@ impl GlobalEnv {
         }
         StructData {
             name,
+            loc,
             def_idx,
             handle_idx,
             field_data,
@@ -459,14 +531,44 @@ impl GlobalEnv {
             .find(|m| m.get_name().name() == simple_name)
     }
 
-    /// Gets the module enclosing this location.
+    /// Return the module enclosing this location.
     pub fn get_enclosing_module(&self, loc: Loc) -> Option<ModuleEnv<'_>> {
         for data in &self.module_data {
-            if data.loc.file_id() == loc.file_id() && !data.loc.span().disjoint(loc.span()) {
+            if data.loc.file_id() == loc.file_id()
+                && Self::enclosing_span(data.loc.span(), loc.span())
+            {
                 return Some(ModuleEnv { env: self, data });
             }
         }
         None
+    }
+
+    /// Returns the function enclosing this location.
+    pub fn get_enclosing_function(&self, loc: Loc) -> Option<FunctionEnv<'_>> {
+        // Currently we do a brute-force linear search, may need to speed this up if it appears
+        // to be a bottleneck.
+        let module_env = self.get_enclosing_module(loc.clone())?;
+        for func_env in module_env.into_functions() {
+            if Self::enclosing_span(func_env.get_loc().span(), loc.span()) {
+                return Some(func_env.clone());
+            }
+        }
+        None
+    }
+
+    /// Returns the struct enclosing this location.
+    pub fn get_enclosing_struct(&self, loc: Loc) -> Option<StructEnv<'_>> {
+        let module_env = self.get_enclosing_module(loc.clone())?;
+        for struct_env in module_env.into_structs() {
+            if Self::enclosing_span(struct_env.get_loc().span(), loc.span()) {
+                return Some(struct_env);
+            }
+        }
+        None
+    }
+
+    fn enclosing_span(outer: Span, inner: Span) -> bool {
+        inner.start() >= outer.start() && inner.end() <= outer.end()
     }
 
     // Gets the number of modules in this environment.
@@ -570,7 +672,7 @@ pub struct ModuleData {
     pub spec_funs: BTreeMap<SpecFunId, SpecFunDecl>,
 
     /// Module source location information.
-    pub source_map: ModuleSourceMap<Span>,
+    pub source_map: ModuleSourceMap<MoveIrLoc>,
 
     /// The location of this module.
     pub loc: Loc,
@@ -611,24 +713,6 @@ impl<'env> ModuleEnv<'env> {
         &self.env.symbol_pool
     }
 
-    /// Returns file name and line/column position for span in this module.
-    pub fn get_position(&self, span: Span) -> Option<(String, Location)> {
-        self.env
-            .source_files
-            .location(self.data.loc.file_id(), span.start())
-            .ok()
-            .map(|location| {
-                (
-                    self.env
-                        .source_files
-                        .name(self.data.loc.file_id())
-                        .to_string_lossy()
-                        .to_string(),
-                    location,
-                )
-            })
-    }
-
     /// Gets the underlying bytecode module.
     pub fn get_verified_module(&'env self) -> &'env CompiledModule {
         &self.data.module
@@ -649,11 +733,11 @@ impl<'env> ModuleEnv<'env> {
 
     /// Gets a FunctionEnv by id.
     pub fn get_function(&'env self, id: FunId) -> FunctionEnv<'env> {
-        self.clone().into_get_function(id)
+        self.clone().into_function(id)
     }
 
     /// Gets a FunctionEnv by id.
-    pub fn into_get_function(self, id: FunId) -> FunctionEnv<'env> {
+    pub fn into_function(self, id: FunId) -> FunctionEnv<'env> {
         let data = self.data.function_data.get(&id).expect("FunId undefined");
         FunctionEnv {
             module_env: self,
@@ -668,6 +752,11 @@ impl<'env> ModuleEnv<'env> {
 
     /// Returns iterator over FunctionEnvs in this module.
     pub fn get_functions(&'env self) -> impl Iterator<Item = FunctionEnv<'env>> {
+        self.clone().into_functions()
+    }
+
+    /// Returns iterator over FunctionEnvs in this module.
+    pub fn into_functions(self) -> impl Iterator<Item = FunctionEnv<'env>> {
         self.data
             .function_data
             .iter()
@@ -675,20 +764,6 @@ impl<'env> ModuleEnv<'env> {
                 module_env: self.clone(),
                 data,
             })
-    }
-
-    /// Returns the FunctionEnv which contains the span. This returns any function
-    /// which location encloses the given one.
-    pub fn get_enclosing_function(&'env self, span: Span) -> Option<FunctionEnv<'env>> {
-        // Currently we do a brute-force linear search, may need to speed this up if it appears
-        // to be a bottleneck.
-        for func_env in self.get_functions() {
-            let fun_span = func_env.get_loc().span();
-            if span.start() >= fun_span.start() && span.end() <= fun_span.end() {
-                return Some(func_env);
-            }
-        }
-        None
     }
 
     /// Get FunctionEnv for a function used in this module, via the FunctionHandleIndex. The
@@ -701,7 +776,7 @@ impl<'env> ModuleEnv<'env> {
             .env
             .find_module(&module_name)
             .expect("unexpected reference to module not found in global env");
-        module_env.into_get_function(FunId::new(self.env.symbol_pool.make(view.name().as_str())))
+        module_env.into_function(FunId::new(self.env.symbol_pool.make(view.name().as_str())))
     }
 
     /// Gets a StructEnv in this module by name.
@@ -749,7 +824,7 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Gets a StructEnv by id, consuming this module env.
-    pub fn into_get_struct(self, id: StructId) -> StructEnv<'env> {
+    pub fn into_struct(self, id: StructId) -> StructEnv<'env> {
         let data = self.data.struct_data.get(&id).expect("StructId undefined");
         StructEnv {
             module_env: self,
@@ -776,6 +851,11 @@ impl<'env> ModuleEnv<'env> {
 
     /// Returns iterator over structs in this module.
     pub fn get_structs(&'env self) -> impl Iterator<Item = StructEnv<'env>> {
+        self.clone().into_structs()
+    }
+
+    /// Returns iterator over structs in this module.
+    pub fn into_structs(self) -> impl Iterator<Item = StructEnv<'env>> {
         self.data
             .struct_data
             .iter()
@@ -909,6 +989,9 @@ pub struct StructData {
     /// The name of this struct.
     name: Symbol,
 
+    /// The location of this struct.
+    loc: Loc,
+
     /// The definition index of this struct in its module.
     def_idx: StructDefinitionIndex,
 
@@ -950,17 +1033,7 @@ impl<'env> StructEnv<'env> {
 
     /// Returns the location of this struct.
     pub fn get_loc(&self) -> Loc {
-        let span = if let Ok(source_map) = self
-            .module_env
-            .data
-            .source_map
-            .get_struct_source_map(self.data.def_idx)
-        {
-            source_map.decl_location
-        } else {
-            Span::default()
-        };
-        Loc::new(self.module_env.data.loc.file_id(), span)
+        self.data.loc.clone()
     }
 
     /// Gets the definition index associated with this struct.
@@ -1148,6 +1221,9 @@ pub struct FunctionData {
     /// Name of this function.
     name: Symbol,
 
+    /// Location of this function.
+    loc: Loc,
+
     /// The definition index of this function in its module.
     def_idx: FunctionDefinitionIndex,
 
@@ -1164,7 +1240,7 @@ pub struct FunctionData {
     spec: Vec<Condition>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionEnv<'env> {
     /// Reference to enclosing module.
     pub module_env: ModuleEnv<'env>,
@@ -1196,17 +1272,7 @@ impl<'env> FunctionEnv<'env> {
 
     /// Returns the location of this function.
     pub fn get_loc(&self) -> Loc {
-        let span = if let Ok(source_map) = self
-            .module_env
-            .data
-            .source_map
-            .get_function_source_map(self.data.def_idx)
-        {
-            source_map.decl_location
-        } else {
-            Span::default()
-        };
-        Loc::new(self.module_env.data.loc.file_id(), span)
+        self.data.loc.clone()
     }
 
     /// Returns the location of the bytecode at the given offset.
@@ -1217,8 +1283,8 @@ impl<'env> FunctionEnv<'env> {
             .source_map
             .get_function_source_map(self.data.def_idx)
         {
-            if let Some(span) = fmap.get_code_location(offset) {
-                return Loc::new(self.module_env.data.loc.file_id(), span);
+            if let Some(loc) = fmap.get_code_location(offset) {
+                return self.module_env.env.to_loc(&loc);
             }
         }
         self.get_loc()
@@ -1299,6 +1365,9 @@ impl<'env> FunctionEnv<'env> {
             .get_function_source_map(self.data.def_idx)
         {
             if let Some((ident, _)) = fmap.get_local_name(idx as u64) {
+                // The move compiler produces temporay names of the form `<foo>%#<num>`.
+                // Replace occurences of `%#` so they are accepted by boogie.
+                let ident = ident.replace("%#", "$$");
                 return self.module_env.env.symbol_pool.make(ident.as_str());
             }
         }

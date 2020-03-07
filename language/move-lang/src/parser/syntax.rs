@@ -1147,6 +1147,7 @@ fn parse_function_decl<'input>(
     tokens: &mut Lexer<'input>,
     allow_native: bool,
 ) -> Result<Function, Error> {
+    let start_loc = tokens.start_loc();
     // Record the source location of the "native" keyword (if there is one).
     let native_opt = if allow_native {
         consume_optional_token_with_loc(tokens, Tok::Native)?
@@ -1244,7 +1245,9 @@ fn parse_function_decl<'input>(
         return_type,
     };
 
+    let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(Function {
+        loc,
         visibility,
         signature,
         acquires,
@@ -1274,6 +1277,8 @@ fn parse_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Var, SingleTyp
 //          <Name>
 //          | <Name> "<" Comma<TypeParameter> ">"
 fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructDefinition, Error> {
+    let start_loc = tokens.start_loc();
+
     // Record the source location of the "native" keyword (if there is one).
     let native_opt = consume_optional_token_with_loc(tokens, Tok::Native)?;
 
@@ -1313,7 +1318,9 @@ fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructD
         }
     };
 
+    let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(StructDefinition {
+        loc,
         resource_opt,
         name,
         type_parameters,
@@ -1366,6 +1373,8 @@ fn is_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<bool, Erro
 //              ( <StructDefinition> | <FunctionDecl> | <Spec> )*
 //          "}"
 fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, Error> {
+    let start_loc = tokens.start_loc();
+
     consume_token(tokens, Tok::Module)?;
     let name = parse_module_name(tokens)?;
     consume_token(tokens, Tok::LBrace)?;
@@ -1389,7 +1398,9 @@ fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, 
     }
     tokens.advance()?; // consume the RBrace
 
+    let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(ModuleDefinition {
+        loc,
         uses,
         name,
         structs,

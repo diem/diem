@@ -89,6 +89,7 @@ pub struct ModuleIdent(pub Spanned<ModuleIdent_>);
 
 #[derive(Debug)]
 pub struct ModuleDefinition {
+    pub loc: Loc,
     pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
     pub name: ModuleName,
     pub structs: Vec<StructDefinition>,
@@ -107,6 +108,7 @@ pub type ResourceLoc = Option<Loc>;
 
 #[derive(Debug, PartialEq)]
 pub struct StructDefinition {
+    pub loc: Loc,
     pub resource_opt: ResourceLoc,
     pub name: StructName,
     pub type_parameters: Vec<(Name, Kind)>,
@@ -151,6 +153,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 //  }
 // (public?) native foo<T1(: copyable?), ..., TN(: copyable?)>(x1: t1, ..., xn: tn): t1 * ... * tn;
 pub struct Function {
+    pub loc: Loc,
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
     pub acquires: Vec<ModuleAccess>,
@@ -701,6 +704,7 @@ impl AstDebug for ModuleOrAddress {
 impl AstDebug for ModuleDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ModuleDefinition {
+            loc: _loc,
             uses,
             name,
             structs,
@@ -747,6 +751,7 @@ impl AstDebug for (ModuleIdent, Option<ModuleName>) {
 impl AstDebug for StructDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let StructDefinition {
+            loc: _loc,
             resource_opt,
             name,
             type_parameters,
@@ -839,6 +844,7 @@ impl AstDebug for SpecBlockMember_ {
 impl AstDebug for Function {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Function {
+            loc: _loc,
             visibility,
             signature,
             acquires,

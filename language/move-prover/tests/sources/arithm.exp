@@ -6,6 +6,8 @@ error:  A postcondition might not hold on this return path.
  69 │         aborts_if false;
     │         ^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/arithm.move:64:5: div_by_zero (entry)
+    =     at tests/sources/arithm.move:66:11: div_by_zero (ABORTED)
 
 error:  A postcondition might not hold on this return path.
 
@@ -14,6 +16,8 @@ error:  A postcondition might not hold on this return path.
  53 │         aborts_if false;
     │         ^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/arithm.move:48:2: overflow (entry)
+    =     at tests/sources/arithm.move:50:11: overflow (ABORTED)
 
 error:  A postcondition might not hold on this return path.
 
@@ -22,3 +26,5 @@ error:  A postcondition might not hold on this return path.
  61 │         aborts_if false;
     │         ^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/arithm.move:56:5: underflow (entry)
+    =     at tests/sources/arithm.move:58:11: underflow (ABORTED)

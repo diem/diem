@@ -222,6 +222,7 @@ fn module(
 ) -> (ModuleIdent, E::ModuleDefinition) {
     assert!(context.aliases.is_empty());
     let P::ModuleDefinition {
+        loc,
         uses,
         name,
         structs: pstructs,
@@ -251,6 +252,7 @@ fn module(
     let (uses, unused_aliases) = check_aliases(context, used_aliases, alias_map);
     let is_source_module = is_source_module && !fake_natives::is_fake_native(&current_module);
     let def = E::ModuleDefinition {
+        loc,
         uses,
         unused_aliases,
         is_source_module,
@@ -397,6 +399,7 @@ fn struct_def(
     pstruct: P::StructDefinition,
 ) -> (StructName, E::StructDefinition) {
     let P::StructDefinition {
+        loc,
         name,
         resource_opt,
         type_parameters: pty_params,
@@ -405,6 +408,7 @@ fn struct_def(
     let type_parameters = type_parameters(context, pty_params);
     let fields = struct_fields(context, &name, pfields);
     let sdef = E::StructDefinition {
+        loc,
         resource_opt,
         type_parameters,
         fields,
@@ -470,6 +474,7 @@ fn functions(
 
 fn function_def(context: &mut Context, pfunction: P::Function) -> (FunctionName, E::Function) {
     let P::Function {
+        loc,
         name,
         visibility,
         signature: psignature,
@@ -483,6 +488,7 @@ fn function_def(context: &mut Context, pfunction: P::Function) -> (FunctionName,
         .collect();
     let body = function_body(context, pbody);
     let fdef = E::Function {
+        loc,
         visibility,
         signature,
         acquires,

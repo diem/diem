@@ -139,7 +139,7 @@ pub fn boogie_type_check_expr(env: &GlobalEnv, name: &str, ty: &Type) -> String 
         },
         Type::Vector(_) => conds.push(format!("$Vector_is_well_formed({})", name)),
         Type::Struct(module_idx, struct_idx, _) => {
-            let struct_env = env.get_module(*module_idx).into_get_struct(*struct_idx);
+            let struct_env = env.get_module(*module_idx).into_struct(*struct_idx);
             conds.push(format!(
                 "${}_is_well_formed({})",
                 boogie_struct_name(&struct_env),

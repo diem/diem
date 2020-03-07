@@ -12,7 +12,7 @@ use std::{
     process::Command,
 };
 
-use codespan::{ByteIndex, ColumnIndex, FileId, LineIndex, Location, RawIndex, Span};
+use codespan::{ByteIndex, ByteOffset, ColumnIndex, FileId, LineIndex, Location, Span};
 use codespan_reporting::diagnostic::{Diagnostic, Label, Severity};
 use itertools::Itertools;
 use log::{debug, info, warn};
@@ -20,9 +20,8 @@ use num::BigInt;
 use pretty::RcDoc;
 use regex::Regex;
 
-use spec_lang::env::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, StructId};
+use spec_lang::env::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, StructId};
 use spec_lang::ty::{PrimitiveType, Type};
-use vm::file_format::FunctionDefinitionIndex;
 
 use crate::cli::Options;
 use crate::code_writer::CodeWriter;
@@ -133,6 +132,7 @@ impl<'env> BoogieWrapper<'env> {
                 None
             }
         });
+        let on_source = loc_opt.is_some();
         let label = if let Some(loc) = &loc_opt {
             Label::new(loc.file_id(), loc.span(), "")
         } else {
@@ -141,7 +141,7 @@ impl<'env> BoogieWrapper<'env> {
 
         // Create the error
         let mut diag = Diagnostic::new(
-            if loc_opt.is_some() {
+            if on_source {
                 Severity::Error
             } else {
                 // Consider diags on boogie source as bugs
@@ -158,17 +158,13 @@ impl<'env> BoogieWrapper<'env> {
             let cleaned_trace = error
                 .execution_trace
                 .iter()
-                .filter_map(|(pos, kind, msg)| {
+                .filter_map(|(trace_pos, kind, msg)| {
                     // If trace entry has no source location or is from prelude, skip
-                    let trace_location =
-                        self.to_proper_source_location(self.get_locations(*pos).1)?;
-
-                    // If trace info is not about function code, skip.
-                    self.env
-                        .get_enclosing_module(trace_location.clone())
-                        .map(|me| (pos, me.get_id(), trace_location.clone(), kind, msg))
+                    let trace_loc =
+                        self.to_proper_source_location(self.get_locations(*trace_pos).1)?;
+                    Some((trace_pos, trace_loc, kind, msg))
                 })
-                .dedup_by(|(_, _, location1, _, _), (_, _, location2, kind2, _)| {
+                .dedup_by(|(_, location1, _, _), (_, location2, kind2, _)| {
                     // Removes consecutive entries which point to the same location if trace
                     // minimization is active.
                     self.options.minimize_execution_trace
@@ -178,24 +174,19 @@ impl<'env> BoogieWrapper<'env> {
                 })
                 // Cut the trace after abort -- the remaining only propagates the abort up
                 // the call stack and isn't useful.
-                .filter_map(|(pos, module_id, loc, mut kind, msg)| {
+                .filter_map(|(trace_pos, trace_loc, mut kind, msg)| {
                     if aborted {
                         return None;
                     }
-                    let module_env = self.env.get_module(module_id);
-                    module_env.get_position(loc.span())?; // filter out if no position
-                    aborted = if let Some(model) = &error.model {
-                        model
-                            .tracked_aborts
-                            .get(&(module_id, loc.span().start()))
-                            .is_some()
-                    } else {
-                        false
-                    };
+                    aborted = error
+                        .model
+                        .as_ref()
+                        .map(|model| model.tracked_aborts.get(&trace_loc).is_some())
+                        .unwrap_or(false);
                     if aborted {
                         kind = &TraceKind::Aborted
                     }
-                    Some((pos, module_id, loc, kind, msg))
+                    Some((trace_pos, trace_loc, kind, msg))
                 })
                 .collect_vec();
 
@@ -203,32 +194,35 @@ impl<'env> BoogieWrapper<'env> {
             let trace = cleaned_trace
                 .into_iter()
                 .enumerate()
-                .map(|(i, (pos, module_id, loc, kind, msg))| {
-                    if loc_opt.is_some() {
-                        // Reporting on source.
-                        let module_env = self.env.get_module(module_id);
-                        let (source_file, source_pos) =
-                            module_env.get_position(loc.span()).unwrap();
-                        self.render_trace_info(
-                            source_file,
-                            source_pos,
-                            self.pretty_trace_info(
-                                &module_env,
-                                loc,
-                                error.model.as_ref(),
-                                &mut locals_shown,
-                                *kind,
-                                i == n - 1,
-                                msg,
-                            ),
-                        )
-                    } else {
-                        self.render_trace_info(
-                            self.options.output_path.clone(),
-                            *pos,
-                            PrettyDoc::text(format!("<boogie>: {}", msg)),
-                        )
-                    }
+                .map(|(i, (trace_pos, trace_loc, kind, msg))| {
+                    if on_source {
+                        if let Some((source_file, source_pos)) =
+                            self.env.get_position(trace_loc.clone())
+                        {
+                            return self.render_trace_info(
+                                source_file,
+                                source_pos,
+                                self.pretty_trace_info(
+                                    trace_loc,
+                                    error.model.as_ref(),
+                                    &mut locals_shown,
+                                    *kind,
+                                    i == n - 1,
+                                ),
+                            );
+                        }
+                    };
+                    // Fall back to report on boogie level
+                    self.render_trace_info(
+                        self.options.output_path.clone(),
+                        *trace_pos,
+                        PrettyDoc::text(format!("<boogie>: {}", msg)),
+                    )
+                })
+                .flat_map(|entry| {
+                    str::lines(entry.as_str())
+                        .map(|s| s.to_string())
+                        .collect_vec()
                 })
                 .collect_vec();
             diag = diag.with_notes(trace);
@@ -236,7 +230,7 @@ impl<'env> BoogieWrapper<'env> {
         self.env.add_diag(diag);
     }
 
-    /// Transform a source location into a proper one, filtering out internal location.
+    /// Transform a source location into a proper one, filtering out internal locations.
     fn to_proper_source_location(&self, location: Option<Loc>) -> Option<Loc> {
         location.filter(|loc| loc != &self.env.internal_loc())
     }
@@ -269,20 +263,16 @@ impl<'env> BoogieWrapper<'env> {
     /// Pretty print trace information, injecting function name and variable bindings if available.
     fn pretty_trace_info(
         &'env self,
-        module_env: &ModuleEnv<'env>,
         mut loc: Loc,
         model_opt: Option<&'env Model>,
-        locals_shown: &mut BTreeSet<(CodeIndex, LocalDescriptor)>,
+        locals_shown: &mut BTreeSet<(Loc, LocalDescriptor)>,
         kind: TraceKind,
         is_last: bool,
-        _boogie_msg: &str,
     ) -> PrettyDoc {
         let mut has_info = false;
         let kind_tag = match kind {
             TraceKind::EnterFunction => {
-                // Narrow location to the beginning of the function.
-                // Do not narrow location if this is the last trace entry --
-                // otherwise we wont show variables at this point.
+                // Narrow location to the start of the function.
                 loc = loc.at_start();
                 " (entry)"
             }
@@ -296,20 +286,13 @@ impl<'env> BoogieWrapper<'env> {
             TraceKind::Pack => " (pack)",
             _ => "",
         };
-        if let Some(func_env) = module_env.get_enclosing_function(loc.span()) {
+        if let Some(func_env) = self.env.get_enclosing_function(loc.clone()) {
             let func_name = format!("{}", func_env.get_name().display(func_env.symbol_pool()));
             let func_display = format!("{}{}", func_name, kind_tag);
             if is_last {
                 // If this is the last trace entry, set the location to the end of the function.
                 // This ensures that all variables which haven't yet will be printed
-                let mut end = func_env.get_loc().span().end().to_usize();
-                if end > 0 {
-                    end -= 1;
-                }
-                loc = Loc::new(
-                    loc.file_id(),
-                    Span::new(ByteIndex(end as u32), ByteIndex((end + 1) as u32)),
-                );
+                loc = loc.at_end();
             }
             let model_info = if let Some(model) = model_opt {
                 let displayed_info = model
@@ -331,7 +314,7 @@ impl<'env> BoogieWrapper<'env> {
             if has_info {
                 PrettyDoc::text(func_display)
                     // DEBUG
-                    // .append(PrettyDoc::text(format!(" ({}) ", loc)))
+                    // .append(PrettyDoc::text(format!(" ({}) ", loc.span())))
                     .append(PrettyDoc::hardline())
                     .append(model_info)
             } else {
@@ -491,16 +474,12 @@ fn make_position(line_str: &str, col_str: &str) -> Location {
 // -----------------------------------------------
 // # Boogie Model Analysis
 
-/// A type to uniquely describe a code location -- consisting of a module index and the byte index
-/// into that modules code.
-type CodeIndex = (ModuleId, ByteIndex);
-
 /// Represents a boogie model.
 #[derive(Debug)]
 pub struct Model {
     vars: BTreeMap<ModelValue, ModelValue>,
-    tracked_locals: BTreeMap<CodeIndex, Vec<(LocalDescriptor, ModelValue)>>,
-    tracked_aborts: BTreeMap<CodeIndex, AbortDescriptor>,
+    tracked_locals: BTreeMap<Loc, Vec<(LocalDescriptor, ModelValue)>>,
+    tracked_aborts: BTreeMap<Loc, AbortDescriptor>,
 }
 
 impl Model {
@@ -519,7 +498,7 @@ impl Model {
             })
             .and_then(|vars| {
                 // Extract the tracked locals.
-                let mut tracked_locals: BTreeMap<CodeIndex, Vec<(LocalDescriptor, ModelValue)>> =
+                let mut tracked_locals: BTreeMap<Loc, Vec<(LocalDescriptor, ModelValue)>> =
                     BTreeMap::new();
                 let track_local_map = vars
                     .get(&ModelValue::literal("$DebugTrackLocal"))
@@ -529,13 +508,11 @@ impl Model {
                     if k == &ModelValue::literal("else") {
                         continue;
                     }
-                    let (var, code_idx, value) = Self::extract_debug_var(env, k)?;
-                    let idx = (var.module_id, code_idx);
-                    if let Some(vec) = tracked_locals.get_mut(&idx) {
-                        vec.push((var, value));
-                    } else {
-                        tracked_locals.insert(idx, vec![(var, value)]);
-                    }
+                    let (var, loc, value) = Self::extract_debug_var(env, k)?;
+                    tracked_locals
+                        .entry(loc)
+                        .or_insert_with(|| vec![])
+                        .push((var, value));
                 }
 
                 // Extract the tracked aborts.
@@ -548,12 +525,12 @@ impl Model {
                     if k == &ModelValue::literal("else") {
                         continue;
                     }
-                    let (mark, code_idx) = Self::extract_abort_marker(env, k)?;
-                    tracked_aborts.insert((mark.module_id, code_idx), mark);
+                    let (mark, loc) = Self::extract_abort_marker(env, k)?;
+                    tracked_aborts.insert(loc, mark);
                 }
                 // DEBUG
-                // for ((_, byte_idx), values) in &tracked_locals {
-                //     info!("{} -> ", byte_idx);
+                // for (loc, values) in &tracked_locals {
+                //     info!("{} -> ", loc.span());
                 //     for (var, val) in values {
                 //         info!("  {} -> {:?}", var.var_idx, val);
                 //     }
@@ -572,40 +549,29 @@ impl Model {
     fn extract_debug_var(
         env: &GlobalEnv,
         map_entry: &ModelValue,
-    ) -> Result<(LocalDescriptor, ByteIndex, ModelValue), ModelParseError> {
+    ) -> Result<(LocalDescriptor, Loc, ModelValue), ModelParseError> {
         if let ModelValue::List(args) = map_entry {
-            if args.len() != 5 {
+            if args.len() != 4 {
                 return Err(Self::invalid_track_info());
             }
-            let module_idx = args[0]
-                .extract_number()
-                .ok_or_else(Self::invalid_track_info)
-                .and_then(Self::index_range_check(env.get_module_count()))?;
-            let module_env = env.get_module(ModuleId::new(module_idx));
-            let func_idx = args[1]
-                .extract_number()
-                .ok_or_else(Self::invalid_track_info)
-                .and_then(Self::index_range_check(module_env.get_function_count()))?;
-            let func_env = module_env
-                .get_function(module_env.get_function_id(FunctionDefinitionIndex(func_idx as u16)));
+            let loc = Self::extract_loc(env, args)?;
+            let func_env = env
+                .get_enclosing_function(loc.clone())
+                .ok_or_else(Self::invalid_track_info)?;
             let var_idx = args[2]
                 .extract_number()
                 .ok_or_else(Self::invalid_track_info)
                 .and_then(Self::index_range_check(
                     func_env.get_local_count() + func_env.get_return_count(),
                 ))?;
-
-            let code_idx = args[3]
-                .extract_number()
-                .ok_or_else(Self::invalid_track_info)?;
             Ok((
                 LocalDescriptor {
-                    module_id: ModuleId::new(module_idx),
-                    func_id: module_env.get_function_id(FunctionDefinitionIndex(func_idx as u16)),
+                    module_id: func_env.module_env.get_id(),
+                    func_id: func_env.get_id(),
                     var_idx,
                 },
-                ByteIndex(code_idx as RawIndex),
-                (&args[4]).clone(),
+                loc,
+                (&args[3]).clone(),
             ))
         } else {
             Err(Self::invalid_track_info())
@@ -616,32 +582,48 @@ impl Model {
     fn extract_abort_marker(
         env: &GlobalEnv,
         map_entry: &ModelValue,
-    ) -> Result<(AbortDescriptor, ByteIndex), ModelParseError> {
+    ) -> Result<(AbortDescriptor, Loc), ModelParseError> {
         if let ModelValue::List(args) = map_entry {
-            if args.len() != 3 {
+            if args.len() != 2 {
                 return Err(Self::invalid_track_info());
             }
-            let module_idx = args[0]
-                .extract_number()
-                .ok_or_else(Self::invalid_track_info)
-                .and_then(Self::index_range_check(env.get_module_count()))?;
-            let module_env = env.get_module(ModuleId::new(module_idx));
-            let func_idx = args[1]
-                .extract_number()
-                .ok_or_else(Self::invalid_track_info)
-                .and_then(Self::index_range_check(module_env.get_function_count()))?;
-            let code_idx = args[2]
-                .extract_number()
+            let loc = Self::extract_loc(env, args)?;
+            let func_env = env
+                .get_enclosing_function(loc.clone())
                 .ok_or_else(Self::invalid_track_info)?;
             Ok((
                 AbortDescriptor {
-                    module_id: ModuleId::new(module_idx),
-                    func_id: module_env.get_function_id(FunctionDefinitionIndex(func_idx as u16)),
+                    module_id: func_env.module_env.get_id(),
+                    func_id: func_env.get_id(),
                 },
-                ByteIndex(code_idx as RawIndex),
+                loc,
             ))
         } else {
             Err(Self::invalid_track_info())
+        }
+    }
+
+    // Extract Loc from model values.
+    fn extract_loc(env: &GlobalEnv, args: &[ModelValue]) -> Result<Loc, ModelParseError> {
+        if args.len() < 2 {
+            Err(Self::invalid_track_info())
+        } else {
+            let file_idx = args[0]
+                .extract_number()
+                .ok_or_else(Self::invalid_track_info)
+                .and_then(Self::index_range_check(env.get_file_count()))?;
+            let file_id = env.file_idx_to_id(file_idx as u16);
+            let byte_index = ByteIndex(
+                args[1]
+                    .extract_number()
+                    .ok_or_else(Self::invalid_track_info)
+                    .and_then(Self::index_range_check(std::u32::MAX as usize))?
+                    as u32,
+            );
+            Ok(Loc::new(
+                file_id,
+                Span::new(byte_index, byte_index + ByteOffset(1)),
+            ))
         }
     }
 
@@ -675,16 +657,15 @@ impl Model {
         &self,
         func_env: &FunctionEnv<'_>,
         loc: Loc,
-        locals_shown: &mut BTreeSet<(CodeIndex, LocalDescriptor)>,
+        locals_shown: &mut BTreeSet<(Loc, LocalDescriptor)>,
     ) -> Vec<(LocalDescriptor, ModelValue)> {
-        let module_id = func_env.module_env.get_id();
-        let range = (module_id, func_env.get_loc().span().start())..(module_id, loc.span().end());
+        let func_loc = func_env.get_loc();
         self.tracked_locals
-            .range(range)
-            .flat_map(|(idx, vars)| {
+            .range(func_loc.at_start()..loc.at_end())
+            .flat_map(|(loc, vars)| {
                 let mut res = vec![];
                 for (var, val) in vars {
-                    if locals_shown.insert((*idx, var.clone())) {
+                    if locals_shown.insert((loc.clone(), var.clone())) {
                         res.push((var.clone(), val.clone()))
                     }
                 }
@@ -945,7 +926,7 @@ struct LocalDescriptor {
 }
 
 impl LocalDescriptor {
-    /// Pretty prints a tracked locals.
+    /// Pretty prints a tracked local.
     fn pretty(
         &self,
         env: &GlobalEnv,

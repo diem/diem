@@ -6,6 +6,10 @@ error:  A postcondition might not hold on this return path.
  16 │         aborts_if x <= y;
     │         ^^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/aborts-if.move:12:5: abort2 (entry)
+    =     at tests/sources/aborts-if.move:12:5: abort2 (exit)
+    =         x = 281,
+    =         y = 281
 
 error:  A postcondition might not hold on this return path.
 
@@ -14,6 +18,11 @@ error:  A postcondition might not hold on this return path.
  24 │         aborts_if x <= y;
     │         ^^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/aborts-if.move:20:5: abort3 (entry)
+    =     at tests/sources/aborts-if.move:21:9: abort3
+    =         x = 1323,
+    =         y = 1323
+    =     at tests/sources/aborts-if.move:20:5: abort3 (exit)
 
 error:  A postcondition might not hold on this return path.
 
@@ -22,6 +31,12 @@ error:  A postcondition might not hold on this return path.
  32 │         aborts_if x < y;
     │         ^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/aborts-if.move:28:5: abort4 (entry)
+    =     at tests/sources/aborts-if.move:29:9: abort4
+    =         x = 8879,
+    =         y = 8879
+    =     at tests/sources/aborts-if.move:29:23: abort4
+    =     at tests/sources/aborts-if.move:28:5: abort4 (exit)
 
 error:  A postcondition might not hold on this return path.
 
@@ -30,6 +45,11 @@ error:  A postcondition might not hold on this return path.
  44 │         ensures x == y;
     │         ^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/aborts-if.move:38:5: abort9 (entry)
+    =     at tests/sources/aborts-if.move:39:9: abort9
+    =         x = 854,
+    =         y = 853
+    =     at tests/sources/aborts-if.move:38:5: abort9 (exit)
 
 error:  A postcondition might not hold on this return path.
 
@@ -38,3 +58,7 @@ error:  A postcondition might not hold on this return path.
  42 │         aborts_if x > y;
     │         ^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/aborts-if.move:38:5: abort9 (entry)
+    =     at tests/sources/aborts-if.move:39:9: abort9
+    =     at tests/sources/aborts-if.move:39:23: abort9
+    =     at tests/sources/aborts-if.move:38:5: abort9 (exit)
