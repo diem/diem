@@ -3,9 +3,11 @@
 
 #![forbid(unsafe_code)]
 
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 use stdlib::{
     build_stdlib, compile_script, filter_move_files, STAGED_EXTENSION, STAGED_OUTPUT_PATH,
     STAGED_STDLIB_NAME, TRANSACTION_SCRIPTS,

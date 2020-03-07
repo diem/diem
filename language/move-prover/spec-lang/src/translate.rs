@@ -13,25 +13,27 @@ use itertools::Itertools;
 use num::{BigUint, FromPrimitive, Num};
 
 use bytecode_source_map::source_map::ModuleSourceMap;
-use move_lang::expansion::ast as EA;
-use move_lang::parser::ast as PA;
-use move_lang::shared::Name;
-use vm::access::ModuleAccess;
-use vm::file_format::{FunctionDefinitionIndex, StructDefinitionIndex};
-use vm::views::{FunctionHandleView, StructHandleView};
-use vm::CompiledModule;
+use move_lang::{expansion::ast as EA, parser::ast as PA, shared::Name};
+use vm::{
+    access::ModuleAccess,
+    file_format::{FunctionDefinitionIndex, StructDefinitionIndex},
+    views::{FunctionHandleView, StructHandleView},
+    CompiledModule,
+};
 
-use crate::ast::{
-    Condition, ConditionKind, Exp, Invariant, InvariantKind, LocalVarDecl, ModuleName, Operation,
-    QualifiedSymbol, SpecFunDecl, SpecVarDecl, Value,
+use crate::{
+    ast::{
+        Condition, ConditionKind, Exp, Invariant, InvariantKind, LocalVarDecl, ModuleName,
+        Operation, QualifiedSymbol, SpecFunDecl, SpecVarDecl, Value,
+    },
+    env::{
+        FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, NodeId, SpecFunId, SpecVarId,
+        StructData, StructId,
+    },
+    project_1st, project_2nd,
+    symbol::{Symbol, SymbolPool},
+    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
 };
-use crate::env::{
-    FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, NodeId, SpecFunId, SpecVarId,
-    StructData, StructId,
-};
-use crate::symbol::{Symbol, SymbolPool};
-use crate::ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE};
-use crate::{project_1st, project_2nd};
 
 // =================================================================================================
 /// # Translator

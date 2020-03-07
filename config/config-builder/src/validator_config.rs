@@ -11,8 +11,7 @@ use libra_config::{
     generator,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
-use libra_types::crypto_proxies::ValidatorSet;
-use libra_types::transaction::Transaction;
+use libra_types::{crypto_proxies::ValidatorSet, transaction::Transaction};
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{collections::HashMap, net::SocketAddr};

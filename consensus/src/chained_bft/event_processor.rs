@@ -18,8 +18,7 @@ use crate::{
         },
     },
     counters,
-    state_replication::StateComputer,
-    state_replication::TxnManager,
+    state_replication::{StateComputer, TxnManager},
     util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },

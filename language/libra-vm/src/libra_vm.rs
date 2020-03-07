@@ -22,8 +22,7 @@ use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
     execution_context::{ExecutionContext, SystemExecutionContext, TransactionExecutionContext},
 };
-use move_vm_types::identifier::create_access_path;
-use move_vm_types::{chain_state::ChainState, values::Value};
+use move_vm_types::{chain_state::ChainState, identifier::create_access_path, values::Value};
 use rayon::prelude::*;
 use std::sync::Arc;
 use vm::{

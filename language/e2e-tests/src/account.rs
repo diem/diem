@@ -13,8 +13,8 @@ use libra_types::{
         RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionPayload,
     },
 };
-use move_vm_types::identifier::create_access_path;
 use move_vm_types::{
+    identifier::create_access_path,
     loaded_data::{struct_def::StructDef, types::Type},
     values::{Struct, Value},
 };

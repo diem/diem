@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Error, Policy, Value};
-use libra_crypto::{ed25519::Ed25519PrivateKey, ed25519::Ed25519PublicKey, PrivateKey, Uniform};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    PrivateKey, Uniform,
+};
 use rand::{rngs::OsRng, Rng, SeedableRng};
 
 /// Libra interface into storage. Create takes a policy that is enforced internally by the actual

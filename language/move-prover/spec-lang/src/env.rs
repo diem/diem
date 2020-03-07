@@ -7,27 +7,33 @@
 use std::cell::RefCell;
 
 use codespan::{FileId, Files, Location, Span};
-use codespan_reporting::diagnostic::{Diagnostic, Label, Severity};
-use codespan_reporting::term::{emit, termcolor::WriteColor, Config};
+use codespan_reporting::{
+    diagnostic::{Diagnostic, Label, Severity},
+    term::{emit, termcolor::WriteColor, Config},
+};
 use itertools::Itertools;
 use num::{BigUint, Num};
 
 use bytecode_source_map::source_map::ModuleSourceMap;
 use libra_types::language_storage;
-use vm::access::ModuleAccess;
-use vm::file_format::{
-    AddressPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, Kind,
-    LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, StructFieldInformation,
-    StructHandleIndex,
-};
-use vm::views::{
-    FieldDefinitionView, FunctionDefinitionView, FunctionHandleView, SignatureTokenView,
-    StructDefinitionView, StructHandleView, ViewInternals,
+use vm::{
+    access::ModuleAccess,
+    file_format::{
+        AddressPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, Kind,
+        LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, StructFieldInformation,
+        StructHandleIndex,
+    },
+    views::{
+        FieldDefinitionView, FunctionDefinitionView, FunctionHandleView, SignatureTokenView,
+        StructDefinitionView, StructHandleView, ViewInternals,
+    },
 };
 
-use crate::ast::{Condition, Invariant, InvariantKind, ModuleName, SpecFunDecl, SpecVarDecl};
-use crate::symbol::{Symbol, SymbolPool};
-use crate::ty::{PrimitiveType, Type};
+use crate::{
+    ast::{Condition, Invariant, InvariantKind, ModuleName, SpecFunDecl, SpecVarDecl},
+    symbol::{Symbol, SymbolPool},
+    ty::{PrimitiveType, Type},
+};
 use std::collections::BTreeMap;
 use vm::CompiledModule;
 

@@ -4,10 +4,10 @@
 use crate::{commands::is_address, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use anyhow::{bail, ensure, format_err, Error, Result};
-use libra_crypto::x25519::X25519StaticPublicKey;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
+    x25519::X25519StaticPublicKey,
     ValidKey, ValidKeyStringExt,
 };
 use libra_logger::prelude::*;

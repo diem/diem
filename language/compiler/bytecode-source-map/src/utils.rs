@@ -6,8 +6,7 @@ use crate::{
     source_map::{ModuleSourceMap, SourceMap},
 };
 use anyhow::{format_err, Result};
-use codespan::Span;
-use codespan::{FileId, Files};
+use codespan::{FileId, Files, Span};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
     term::{
@@ -17,10 +16,7 @@ use codespan_reporting::{
     },
 };
 use move_ir_types::location::Loc;
-use serde::{
-    de::DeserializeOwned,
-    {Deserialize, Serialize},
-};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, fs::File, path::Path};
 
 pub type Error = (Loc, String);

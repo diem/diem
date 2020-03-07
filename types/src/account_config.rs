@@ -1,13 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::language_storage::ModuleId;
 use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
     event::EventHandle,
     identifier::{IdentStr, Identifier},
-    language_storage::StructTag,
+    language_storage::{ModuleId, StructTag},
 };
 use anyhow::Result;
 use once_cell::sync::Lazy;
