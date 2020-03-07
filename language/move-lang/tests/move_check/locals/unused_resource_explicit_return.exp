@@ -96,6 +96,6 @@ error:
     │         ^^^^^^^^^ Invalid return
     ·
  37 │     fun t6<T>(x: T) {
-    │               - The local 'x' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+    │               - The parameter 'x' might still contain a resource value. The resource must be consumed before the function returns
     │
 

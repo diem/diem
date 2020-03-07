@@ -20,26 +20,33 @@ use std::collections::{BTreeMap, BTreeSet};
 
 struct LocalsSafety<'a> {
     local_types: &'a UniqueMap<Var, SingleType>,
+    signature: &'a FunctionSignature,
 }
 
 impl<'a> LocalsSafety<'a> {
-    fn new(local_types: &'a UniqueMap<Var, SingleType>) -> Self {
-        Self { local_types }
+    fn new(local_types: &'a UniqueMap<Var, SingleType>, signature: &'a FunctionSignature) -> Self {
+        Self {
+            local_types,
+            signature,
+        }
     }
 }
 
 struct Context<'a, 'b> {
     local_types: &'a UniqueMap<Var, SingleType>,
     local_states: &'b mut LocalStates,
+    signature: &'a FunctionSignature,
     errors: Errors,
 }
 
 impl<'a, 'b> Context<'a, 'b> {
     fn new(locals_safety: &'a LocalsSafety, local_states: &'b mut LocalStates) -> Self {
         let local_types = &locals_safety.local_types;
+        let signature = &locals_safety.signature;
         Self {
             local_types,
             local_states,
+            signature,
             errors: vec![],
         }
     }
@@ -92,7 +99,7 @@ pub fn verify(
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, LocalStates> {
     let initial_state = LocalStates::initial(&signature.parameters, locals);
-    let mut locals_safety = LocalsSafety::new(locals);
+    let mut locals_safety = LocalsSafety::new(locals, signature);
     let (final_state, mut es) = locals_safety.analyze_function(cfg, initial_state);
     errors.append(&mut es);
     final_state
@@ -136,10 +143,16 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                                 DisplayVar::Tmp => {
                                     "The resource is created but not used".to_owned()
                                 }
-                                DisplayVar::Orig(l) => format!(
-                                    "The local '{}' {} a resource value due to this assignment",
-                                    l, verb
-                                ),
+                                DisplayVar::Orig(l) => {
+                                    if context.signature.is_parameter(&local) {
+                                        format!("The parameter '{}' {} a resource value", l, verb)
+                                    } else {
+                                        format!(
+                                            "The local '{}' {} a resource value due to this assignment",
+                                            l, verb
+                                        )
+                                    }
+                                }
                             };
                             let msg = format!(
                                 "{}. The resource must be consumed before the function returns",

@@ -233,6 +233,14 @@ impl std::fmt::Display for Label {
     }
 }
 
+impl FunctionSignature {
+    pub fn is_parameter(&self, v: &Var) -> bool {
+        self.parameters
+            .iter()
+            .any(|(parameter_name, _)| parameter_name == v)
+    }
+}
+
 impl Command_ {
     pub fn is_terminal(&self) -> bool {
         use Command_::*;
