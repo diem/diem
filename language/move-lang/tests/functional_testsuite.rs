@@ -75,8 +75,8 @@ impl Compiler for MoveSourceCompiler {
         };
 
         Ok(match unit {
-            CompiledUnit::Script(_, compiled_script) => ScriptOrModule::Script(compiled_script),
-            CompiledUnit::Module(_, compiled_module) => {
+            CompiledUnit::Script(_, compiled_script, _) => ScriptOrModule::Script(compiled_script),
+            CompiledUnit::Module(_, compiled_module, _) => {
                 let input = format!("address {}:\n{}", sender_addr, input);
                 cur_file.reopen()?.write_all(input.as_bytes())?;
                 self.temp_files.push(cur_file);
@@ -93,8 +93,8 @@ impl Compiler for MoveSourceCompiler {
             compiled_units
                 .into_iter()
                 .map(|compiled_unit| match compiled_unit {
-                    CompiledUnit::Module(_, m) => m,
-                    CompiledUnit::Script(_, _) => panic!("Unexpected Script in stdlib"),
+                    CompiledUnit::Module(_, m, _) => m,
+                    CompiledUnit::Script(_, _, _) => panic!("Unexpected Script in stdlib"),
                 })
                 .collect(),
         ))

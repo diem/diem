@@ -2990,6 +2990,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "borrow-graph 0.0.1",
+ "bytecode-source-map 0.1.0",
  "bytecode-verifier 0.1.0",
  "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",

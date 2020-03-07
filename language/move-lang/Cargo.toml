@@ -21,6 +21,8 @@ libra-types = { path = "../../types" }
 move-ir-types = {path = "../move-ir/types" }
 ir-to-bytecode = {path = "../compiler/ir-to-bytecode" }
 borrow-graph = { path = "../borrow-graph" }
+bytecode-source-map = { path = "../compiler/bytecode-source-map" }
+
 
 [dev-dependencies]
 anyhow = "1.0"
