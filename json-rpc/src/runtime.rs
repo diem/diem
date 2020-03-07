@@ -38,7 +38,14 @@ pub fn bootstrap(
         .and(warp::any().map(move || Arc::clone(&registry)))
         .and_then(rpc_endpoint);
 
-    let server = warp::serve(handler).run(address);
+    // Ensure that we actually bind to the socket first before spawning the
+    // server tasks. This helps in tests to prevent races where a client attempts
+    // to make a request before the server task is actually listening on the
+    // socket.
+    //
+    // Note: we need to enter the runtime context first to actually bind, since
+    //       tokio TcpListener can only be bound inside a tokio context.
+    let server = runtime.enter(move || warp::serve(handler).bind(address));
     runtime.handle().spawn(server);
     runtime
 }
