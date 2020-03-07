@@ -11,3 +11,4 @@ pub mod rpc;
 pub(crate) mod discovery;
 pub(crate) mod health_checker;
 pub(crate) mod identity;
+pub(crate) mod wire;
