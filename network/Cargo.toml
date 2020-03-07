@@ -19,6 +19,7 @@ pin-project = "0.4.2"
 prometheus = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
 serde = { version = "1.0.99", default-features = false }
+serde_repr = "0.1"
 thiserror = "1.0"
 tokio = { version = "0.2.13", features = ["full"] }
 tokio-util = { version = "0.3", features = ["codec"] }
@@ -35,9 +36,8 @@ libra-security-logger = { path = "../common/security-logger", version = "0.1.0" 
 memsocket = { path = "memsocket", version = "0.1.0" }
 netcore = { path = "netcore", version = "0.1.0" }
 noise = { path = "noise", version = "0.1.0" }
-
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
-proptest = { version = "0.9.4", default-features = false, optional = true }
+proptest = { version = "0.9.4", default-features = true, optional = true }
 
 [dev-dependencies]
 criterion = "=0.3.1"

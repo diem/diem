@@ -143,7 +143,7 @@
 //! Structures are fixed length sequences consisting of fields with potentially different types.
 //! Each field within a struct is serialized in the order specified by the canonical structure
 //! definition. Structs can exist within other structs and as such, LCS recurses into each struct
-//! ans serializes them in order. There are no labels in the serialized format, the struct ordering
+//! and serializes them in order. There are no labels in the serialized format, the struct ordering
 //! defines the organization within the serialization stream.
 //!
 //! ```rust
