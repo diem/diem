@@ -9,7 +9,6 @@ use bytecode_source_map::{
     utils::{module_source_map_from_file, remap_owned_loc_to_loc, OwnedLoc},
 };
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
-use libra_types::transaction::Module;
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
 use structopt::StructOpt;
@@ -18,40 +17,40 @@ use vm::file_format::{CompiledModule, CompiledScript};
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "Move Bytecode Disassembler",
-    about = "Move IR bytecode disassembler."
+    about = "Print a human-readable version of Move bytecode (.mv files)"
 )]
 struct Args {
-    /// Shows only public functions.
-    #[structopt(short = "p", long = "public")]
-    pub only_public: bool,
+    /// Skip printing of private functions.
+    #[structopt(long = "skip-private")]
+    pub skip_private: bool,
 
-    /// Prints out the disassembled bytecodes for each function.
-    #[structopt(short = "c", long = "code")]
-    pub print_code: bool,
+    /// Do not print the disassembled bytecodes of each function.
+    #[structopt(long = "skip-code")]
+    pub skip_code: bool,
+
+    /// Do not print locals of each function.
+    #[structopt(long = "skip-locals")]
+    pub skip_locals: bool,
+
+    /// Do not print the basic blocks of each function.
+    #[structopt(long = "skip-basic-blocks")]
+    pub skip_basic_blocks: bool,
 
     /// The path to the bytecode file to disassemble; let's call it file.mv. We assume that two
     /// other files reside under the same directory: a source map file.mvsm (possibly) and the Move
-    /// IR source code file.mvir.
+    /// source code file.move.
     #[structopt(short = "s", long = "script")]
     pub is_script: bool,
 
     /// The path to the bytecode file.
     #[structopt(short = "b", long = "bytecode")]
     pub bytecode_file_path: String,
-
-    /// Print basic blocks.
-    #[structopt(long = "basic-blocks")]
-    pub print_basic_blocks: bool,
-
-    /// Print locals within each function.
-    #[structopt(long = "locals")]
-    pub print_locals: bool,
 }
 
 fn main() {
     let args = Args::from_args();
 
-    let mvir_extension = "mvir";
+    let move_extension = "move";
     let mv_bytecode_extension = "mv";
     let source_map_extension = "mvsm";
 
@@ -67,34 +66,32 @@ fn main() {
         std::process::exit(1);
     }
 
-    let bytecode_source =
-        fs::read_to_string(args.bytecode_file_path.clone()).expect("Unable to read bytecode file");
-    let module_bytes: Module = serde_json::from_str(bytecode_source.as_str())
-        .expect("Unable to deserialize bytecode file");
+    let bytecode_bytes = fs::read(&args.bytecode_file_path).expect("Unable to read bytecode file");
 
-    let ir_source_path = Path::new(&args.bytecode_file_path).with_extension(mvir_extension);
-    let ir_source = fs::read_to_string(&ir_source_path).ok();
+    let source_path = Path::new(&args.bytecode_file_path).with_extension(move_extension);
+    let source = fs::read_to_string(&source_path).ok();
     let source_map = module_source_map_from_file::<OwnedLoc>(
         &Path::new(&args.bytecode_file_path).with_extension(source_map_extension),
     )
     .map(remap_owned_loc_to_loc);
 
     let mut disassembler_options = DisassemblerOptions::new();
-    disassembler_options.print_code = args.print_code | args.print_basic_blocks;
-    disassembler_options.only_public = args.only_public;
-    disassembler_options.print_basic_blocks = args.print_basic_blocks;
-    disassembler_options.print_locals = args.print_locals;
+    disassembler_options.print_code = !args.skip_code;
+    disassembler_options.only_public = !args.skip_private;
+    disassembler_options.print_basic_blocks = !args.skip_basic_blocks;
+    disassembler_options.print_locals = !args.skip_locals;
 
+    // TODO: make source mapping work with the move source language
     let no_loc = Spanned::unsafe_no_loc(()).loc;
     let mut source_mapping = if args.is_script {
-        let compiled_script = CompiledScript::deserialize(module_bytes.code())
+        let compiled_script = CompiledScript::deserialize(&bytecode_bytes)
             .expect("Script blob can't be deserialized");
         source_map
             .or_else(|_| ModuleSourceMap::dummy_from_script(&compiled_script, no_loc))
             .and_then(|source_map| Ok(SourceMapping::new_from_script(source_map, compiled_script)))
             .expect("Unable to build source mapping for compiled script")
     } else {
-        let compiled_module = CompiledModule::deserialize(module_bytes.code())
+        let compiled_module = CompiledModule::deserialize(&bytecode_bytes)
             .expect("Module blob can't be deserialized");
         source_map
             .or_else(|_| ModuleSourceMap::dummy_from_module(&compiled_module, no_loc))
@@ -102,9 +99,8 @@ fn main() {
             .expect("Unable to build source mapping for compiled module")
     };
 
-    if let Some(source_code) = ir_source {
-        source_mapping
-            .with_source_code((ir_source_path.to_str().unwrap().to_string(), source_code));
+    if let Some(source_code) = source {
+        source_mapping.with_source_code((source_path.to_str().unwrap().to_string(), source_code));
     }
 
     let disassembler = Disassembler::new(source_mapping, disassembler_options);
