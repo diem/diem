@@ -254,4 +254,4 @@ pub const MAX_SEQUENCE_LENGTH: usize = 1 << 31;
 
 pub use de::{from_bytes, from_bytes_seed};
 pub use error::{Error, Result};
-pub use ser::to_bytes;
+pub use ser::{is_human_readable, to_bytes};

@@ -504,6 +504,7 @@ impl Arbitrary for TransactionPayload {
             4 => Self::script_strategy(),
             1 => Self::module_strategy(),
             1 => Self::write_set_strategy(),
+            1 => Just(TransactionPayload::Program),
         ]
         .boxed()
     }
@@ -542,6 +543,7 @@ impl Arbitrary for TransactionArgument {
     type Parameters = ();
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         prop_oneof![
+            any::<bool>().prop_map(TransactionArgument::Bool),
             any::<u64>().prop_map(TransactionArgument::U64),
             any::<AccountAddress>().prop_map(TransactionArgument::Address),
             vec(any::<u8>(), 0..10).prop_map(TransactionArgument::U8Vector),
@@ -735,7 +737,15 @@ impl Arbitrary for TypeTag {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use TypeTag::*;
-        let leaf = prop_oneof![Just(Bool), Just(U64), Just(ByteArray), Just(Address),];
+        let leaf = prop_oneof![
+            Just(Bool),
+            Just(U8),
+            Just(U64),
+            Just(U128),
+            Just(ByteArray),
+            Just(Address),
+            Just(Vector(Box::new(Bool))),
+        ];
         leaf.prop_recursive(
             8,  // levels deep
             16, // max size

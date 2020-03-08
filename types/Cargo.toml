@@ -42,8 +42,6 @@ proptest = "0.9.4"
 proptest-derive = "0.1.2"
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
 libra-prost-ext = { path = "../common/prost-ext", version = "0.1.0" }
-serde_json = "1.0.48"
-
 
 [features]
 default = []
