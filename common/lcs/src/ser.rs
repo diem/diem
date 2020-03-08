@@ -56,6 +56,11 @@ where
     Ok(serializer.end())
 }
 
+pub fn is_human_readable() -> bool {
+    let mut serializer = Serializer::new();
+    ser::Serializer::is_human_readable(&&mut serializer)
+}
+
 /// Serialization implementation for LCS
 struct Serializer {
     output: Vec<u8>,

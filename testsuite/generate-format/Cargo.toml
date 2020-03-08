@@ -1,0 +1,18 @@
+[package]
+name = "generate-format"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra types"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+proptest = "0.9.4"
+serde_yaml = "0.8"
+
+libra_types = { path = "../../types", version = "0.1.0", package = "libra-types", features=["fuzzing"] }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+serde_reflection = { path = "../../common/serde-reflection", version = "0.1.0", package = "libra-serde-reflection" }
